@@ -1,6 +1,7 @@
 import { BookingState } from "@/data/bookingData";
 import { useTreatments } from "@/data/servicesStore";
 import { useTermsSections } from "@/components/admin/AdminTerms";
+import { useBusinessConfig } from "@/data/businessStore";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
@@ -11,25 +12,24 @@ interface ReviewStepProps {
   booking: BookingState;
 }
 
-const RATE_PER_KM = 3.6;
-
 const ReviewStep = ({ booking }: ReviewStepProps) => {
   const treatments = useTreatments();
   const termsSections = useTermsSections();
+  const config = useBusinessConfig();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
   const selected = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
   
-  // Call-out fee: placeholder distance estimate until Google Maps API is connected
-  // For now use a flat estimate; will be replaced with real distance calculation
-  const estimatedDistanceKm = booking.address ? 15 : 0; // placeholder
-  const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * RATE_PER_KM) : 0; // round trip
+  const estimatedDistanceKm = booking.address ? config.defaultDistanceKm : 0;
+  const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
   
   const total = servicesTotal + callOutFee;
-  const deposit = Math.ceil(total * 0.5);
+  const depositPercent = config.depositPercent;
+  const deposit = Math.ceil(total * (depositPercent / 100));
   const balance = total - deposit;
+  const cur = config.currency;
 
   if (confirmed) {
     return <BookingConfirmation booking={booking} />;
@@ -52,7 +52,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         {selected.map((t) => (
           <div key={t.id} className="flex items-center justify-between">
             <span className="text-sm text-foreground">{t.name}</span>
-            <span className="text-sm font-semibold text-foreground">R{t.price}</span>
+            <span className="text-sm font-semibold text-foreground">{cur}{t.price}</span>
           </div>
         ))}
       </motion.div>
@@ -96,26 +96,26 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       >
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Services</span>
-          <span className="text-foreground font-semibold">R{servicesTotal}</span>
+          <span className="text-foreground font-semibold">{cur}{servicesTotal}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">
             Call-out fee{booking.address ? ` (~${estimatedDistanceKm * 2}km round trip)` : ""}
           </span>
-          <span className="text-foreground font-semibold">R{callOutFee}</span>
+          <span className="text-foreground font-semibold">{cur}{callOutFee}</span>
         </div>
         <div className="h-px bg-border/50 my-1" />
         <div className="flex justify-between text-base font-bold">
           <span className="text-foreground">Total</span>
-          <span className="text-foreground">R{total}</span>
+          <span className="text-foreground">{cur}{total}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Deposit due now (50%)</span>
-          <span className="text-primary font-semibold">R{deposit}</span>
+          <span className="text-muted-foreground">Deposit due now ({depositPercent}%)</span>
+          <span className="text-primary font-semibold">{cur}{deposit}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Balance due on the day</span>
-          <span className="text-foreground">R{balance}</span>
+          <span className="text-foreground">{cur}{balance}</span>
         </div>
       </motion.div>
 
@@ -150,7 +150,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
                 <div>
-                  <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">PhenomeBeauty</p>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">{config.name}</p>
                   <h3 className="font-display text-lg font-bold text-foreground">Terms & Conditions</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Refund & Cancellation Policy · Effective January 2026</p>
                 </div>
