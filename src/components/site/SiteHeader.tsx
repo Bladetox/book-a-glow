@@ -11,7 +11,7 @@ const SiteHeader = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="NextSlot" className="h-14 w-auto mix-blend-multiply dark:mix-blend-screen" />
+            <img src={logo} alt="NextSlot" className="h-14 w-auto" />
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <Link to="/product" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Product</Link>
