@@ -87,7 +87,7 @@ const AdminSettings = () => {
   };
 
   const saveTenantFields = (section: string, fields: string[]) => {
-    const tenantFields = ["name", "email", "phone", "address", "currency", "theme_id"];
+    const tenantFields = ["name", "email", "phone", "address", "currency", "theme_id", "custom_domain"];
     const tenantUpdates: Record<string, unknown> = {};
     const settingUpdates: Record<string, string> = {};
 
