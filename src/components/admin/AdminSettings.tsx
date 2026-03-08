@@ -156,9 +156,6 @@ const AdminSettings = () => {
       <SettingsCard title="Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]">
         <div className="grid grid-cols-2 gap-2">
           {businessThemes.map(t => {
-            const bgParts = t.colors.background.split(/\s+/);
-            const primaryParts = t.colors.primary.split(/\s+/);
-            const accentParts = t.colors.accent.split(/\s+/);
             return (
               <button
                 key={t.id}
@@ -300,7 +297,7 @@ const AdminSettings = () => {
       <SettingsCard title="Reset" icon={RotateCcw} gradient="from-red-500/[0.04] to-white/[0.01]">
         <p className="text-xs text-white/40">Reset all business settings to the NextSlot defaults. This won't affect your services or terms.</p>
         <button
-          onClick={() => { resetBusinessConfig(); setDraft(useBusinessConfig()); }}
+          onClick={() => { resetBusinessConfig(); setDraft({ ...defaultBusinessConfig }); }}
           className="self-start px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-colors flex items-center gap-1.5"
         >
           <RotateCcw className="w-3 h-3" />
