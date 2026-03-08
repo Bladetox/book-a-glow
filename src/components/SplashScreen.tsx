@@ -1,10 +1,26 @@
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 20 }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 2 + 1,
+        duration: Math.random() * 8 + 10,
+        delay: Math.random() * 5,
+        driftX: (Math.random() - 0.5) * 40,
+        driftY: (Math.random() - 0.5) * 30,
+      })),
+    []
+  );
+
   return (
     <motion.div
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center px-6"
@@ -13,6 +29,33 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Ambient dust particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {particles.map((p) => (
+          <motion.div
+            key={p.id}
+            className="absolute rounded-full bg-white"
+            style={{
+              width: p.size,
+              height: p.size,
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+            }}
+            animate={{
+              x: [0, p.driftX, 0],
+              y: [0, p.driftY, 0],
+              opacity: [0, 0.15, 0],
+            }}
+            transition={{
+              duration: p.duration,
+              repeat: Infinity,
+              delay: p.delay,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+
       {/* Logo */}
       <div className="relative mb-16">
         {/* Pulsing glow */}
