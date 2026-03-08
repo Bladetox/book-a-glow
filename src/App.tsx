@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
-import { PublicTenantProvider } from "./contexts/PublicTenantContext";
+import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantContext";
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import Index from "./pages/Index";
 import Book from "./pages/Book";
@@ -17,6 +17,7 @@ import SiteTerms from "./pages/SiteTerms";
 import Admin from "./pages/Admin";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import TenantNotFound from "./pages/TenantNotFound";
 
 const queryClient = new QueryClient();
 
@@ -39,16 +40,22 @@ const MarketingRoutes = () => (
 );
 
 /** Tenant booking app routes (subdomain) */
-const TenantRoutes = () => (
-  <PublicTenantProvider>
+const TenantRoutes = () => {
+  const { notFound } = usePublicTenant();
+
+  if (notFound) {
+    return <TenantNotFound hostname={window.location.hostname} />;
+  }
+
+  return (
     <Routes>
       <Route path="/" element={<Book />} />
       <Route path="/book" element={<Book />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
-  </PublicTenantProvider>
-);
+  );
+};
 
 const App = () => {
   const tenantSlug = getTenantSlug();
@@ -62,7 +69,13 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            {isSubdomain ? <TenantRoutes /> : <MarketingRoutes />}
+            {isSubdomain ? (
+              <PublicTenantProvider>
+                <TenantRoutes />
+              </PublicTenantProvider>
+            ) : (
+              <MarketingRoutes />
+            )}
           </BrowserRouter>
         </BusinessThemeProvider>
       </TooltipProvider>
