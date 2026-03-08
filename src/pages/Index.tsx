@@ -5,6 +5,7 @@ import DetailsStep from "@/components/DetailsStep";
 import ReviewStep from "@/components/ReviewStep";
 import StickyBottomBar from "@/components/StickyBottomBar";
 import ThemeToggle from "@/components/ThemeToggle";
+import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
 import { treatments } from "@/data/bookingData";
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
@@ -43,8 +44,13 @@ const stepVariants = {
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
   const [direction, setDirection] = useState(1);
+  const [showSplash, setShowSplash] = useState(true);
   const dragX = useMotionValue(0);
   const dragOpacity = useTransform(dragX, [-150, 0, 150], [0.5, 1, 0.5]);
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   const canProceed = () => {
     switch (step) {
