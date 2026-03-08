@@ -14,7 +14,7 @@ import AdminSettings from "@/components/admin/AdminSettings";
 import AdminLoyalty from "@/components/admin/AdminLoyalty";
 
 const views = [
-  "Dashboard", "Bookings", "New Divas", "Availability",
+  "Dashboard", "Bookings", "Consultations", "Availability",
   "Stock", "Reviews", "Integrations", "Settings", "Loyalty Tracker",
 ] as const;
 
@@ -33,7 +33,7 @@ const Admin = () => {
     switch (activeView) {
       case "Dashboard": return <AdminDashboard />;
       case "Bookings": return <AdminBookings />;
-      case "New Divas": return <AdminConsultations />;
+      case "Consultations": return <AdminConsultations />;
       case "Availability": return <AdminAvailability />;
       case "Stock": return <AdminStock />;
       case "Reviews": return <AdminReviews />;

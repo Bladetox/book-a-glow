@@ -7,7 +7,7 @@ import {
 const iconMap: Record<string, React.ElementType> = {
   "Dashboard": LayoutDashboard,
   "Bookings": CalendarCheck,
-  "New Divas": Sparkles,
+  "Consultations": Sparkles,
   "Availability": Clock,
   "Stock": Package,
   "Reviews": Star,
