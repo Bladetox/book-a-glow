@@ -1,7 +1,50 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, KeyRound } from "lucide-react";
+import { Check, KeyRound, CreditCard } from "lucide-react";
 import { getAdminPassword, setAdminPassword } from "./AdminLogin";
+
+const paymentGateways = [
+  { id: "yoco", name: "Yoco", region: "South Africa", fields: [
+    { label: "Secret Key", placeholder: "sk_live_••••••••••••••", type: "password" },
+    { label: "Payment Page URL", placeholder: "https://pay.yoco.com/yourbusiness", type: "text" },
+  ]},
+  { id: "stripe", name: "Stripe", region: "Global", fields: [
+    { label: "Secret Key", placeholder: "sk_live_••••••••••••••", type: "password" },
+    { label: "Publishable Key", placeholder: "pk_live_••••••••••••••", type: "text" },
+  ]},
+  { id: "paystack", name: "Paystack", region: "Africa", fields: [
+    { label: "Secret Key", placeholder: "sk_live_••••••••••••••", type: "password" },
+    { label: "Public Key", placeholder: "pk_live_••••••••••••••", type: "text" },
+  ]},
+  { id: "payfast", name: "PayFast", region: "South Africa", fields: [
+    { label: "Merchant ID", placeholder: "10000100", type: "text" },
+    { label: "Merchant Key", placeholder: "46f0cd694581a", type: "password" },
+    { label: "Passphrase", placeholder: "••••••••••", type: "password" },
+  ]},
+  { id: "flutterwave", name: "Flutterwave", region: "Africa / Global", fields: [
+    { label: "Secret Key", placeholder: "FLWSECK_TEST-••••••••••••••", type: "password" },
+    { label: "Public Key", placeholder: "FLWPUBK_TEST-••••••••••••••", type: "text" },
+  ]},
+  { id: "square", name: "Square", region: "Global", fields: [
+    { label: "Access Token", placeholder: "EAAAl••••••••••••••", type: "password" },
+    { label: "Location ID", placeholder: "L••••••••••••••", type: "text" },
+  ]},
+  { id: "razorpay", name: "Razorpay", region: "India / Global", fields: [
+    { label: "Key ID", placeholder: "rzp_live_••••••••••••••", type: "text" },
+    { label: "Key Secret", placeholder: "••••••••••••••", type: "password" },
+  ]},
+  { id: "mollie", name: "Mollie", region: "Europe", fields: [
+    { label: "API Key", placeholder: "live_••••••••••••••", type: "password" },
+  ]},
+  { id: "paypal", name: "PayPal", region: "Global", fields: [
+    { label: "Client ID", placeholder: "A••••••••••••••", type: "text" },
+    { label: "Client Secret", placeholder: "E••••••••••••••", type: "password" },
+  ]},
+  { id: "peach", name: "Peach Payments", region: "South Africa", fields: [
+    { label: "Entity ID", placeholder: "8ac7a4c•••••••", type: "text" },
+    { label: "Access Token", placeholder: "OGFjN•••••••", type: "password" },
+  ]},
+];
 
 const SettingsCard = ({ title, gradient, children }: { title: string; gradient: string; children: React.ReactNode }) => (
   <motion.div
@@ -33,6 +76,7 @@ const AdminSettings = () => {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
+  const [selectedGateway, setSelectedGateway] = useState("yoco");
 
   const handlePasswordChange = () => {
     setPwError("");
@@ -56,6 +100,8 @@ const AdminSettings = () => {
     setPwSuccess("Password updated successfully");
   };
 
+  const activeGateway = paymentGateways.find(g => g.id === selectedGateway)!;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Password Change Card */}
@@ -78,10 +124,37 @@ const AdminSettings = () => {
         <button className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors">Save</button>
       </SettingsCard>
 
+      {/* Payment Gateway Card */}
       <SettingsCard title="Payments" gradient="from-white/[0.04] to-white/[0.01]">
+        <div className="flex flex-col gap-3">
+          <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 flex items-center gap-1.5">
+            <CreditCard className="w-3 h-3" />
+            Payment Gateway
+          </label>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+            {paymentGateways.map(g => (
+              <button
+                key={g.id}
+                onClick={() => setSelectedGateway(g.id)}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all border flex flex-col items-start gap-0.5 min-w-[100px] ${
+                  selectedGateway === g.id
+                    ? "border-white/20 text-white/90 bg-white/[0.1]"
+                    : "border-white/[0.06] text-white/30 hover:text-white/50 hover:border-white/[0.1]"
+                }`}
+              >
+                <span>{g.name}</span>
+                <span className="text-[9px] font-normal text-white/20">{g.region}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <SettingRow label="Deposit Percent (%)" placeholder="50" type="number" />
-        <SettingRow label="Yoco Secret Key" placeholder="sk_live_••••••••••••••" type="password" />
-        <SettingRow label="Yoco Payment Page URL" placeholder="https://pay.yoco.com/yourbusiness" />
+
+        {activeGateway.fields.map(f => (
+          <SettingRow key={f.label} label={`${activeGateway.name} ${f.label}`} placeholder={f.placeholder} type={f.type} />
+        ))}
+
         <button className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors">Save</button>
       </SettingsCard>
 
