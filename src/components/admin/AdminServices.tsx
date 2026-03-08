@@ -1,125 +1,113 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, Check, X, RotateCcw, Search, ChevronDown } from "lucide-react";
-import type { Treatment } from "@/data/bookingData";
+import { Plus, Pencil, Trash2, Check, Search, ChevronDown, Loader2 } from "lucide-react";
 import {
-  useTreatments,
-  useCategories,
-  saveTreatments,
-  saveCategories,
-  resetToDefaults,
-} from "@/data/servicesStore";
+  useSupabaseServices,
+  useServiceCategories,
+  useUpsertService,
+  useDeleteService,
+  type Service,
+} from "@/hooks/useSupabaseServices";
 
-interface EditingTreatment extends Omit<Treatment, "price" | "duration"> {
+interface EditingService {
+  id?: string;
+  name: string;
+  description: string;
   price: string;
-  duration: string;
+  duration_minutes: string;
+  category: string;
+  is_active: boolean;
 }
 
-const emptyTreatment = (): EditingTreatment => ({
-  id: crypto.randomUUID(),
+const emptyService = (): EditingService => ({
   name: "",
   description: "",
   price: "",
-  duration: "",
+  duration_minutes: "",
   category: "",
+  is_active: true,
 });
 
 const AdminServices = () => {
-  const treatments = useTreatments();
-  const categories = useCategories();
+  const { data: services = [], isLoading } = useSupabaseServices();
+  const { data: categories = [] } = useServiceCategories();
+  const upsertMutation = useUpsertService();
+  const deleteMutation = useDeleteService();
 
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<EditingTreatment | null>(null);
+  const [editing, setEditing] = useState<EditingService | null>(null);
   const [isNew, setIsNew] = useState(false);
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [newCategoryLabel, setNewCategoryLabel] = useState("");
-  const [confirmReset, setConfirmReset] = useState(false);
 
   const filtered = useMemo(() => {
-    let list = treatments;
+    let list = services;
     if (filterCategory !== "all") list = list.filter((t) => t.category === filterCategory);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
-        (t) => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
+        (t) => t.name.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q)
       );
     }
     return list;
-  }, [treatments, filterCategory, search]);
+  }, [services, filterCategory, search]);
 
-  const categoryLabel = (id: string) => categories.find((c) => c.id === id)?.label || id;
-
-  const startEdit = (t: Treatment) => {
-    setEditing({ ...t, price: String(t.price), duration: String(t.duration) });
+  const startEdit = (t: Service) => {
+    setEditing({
+      id: t.id,
+      name: t.name,
+      description: t.description ?? "",
+      price: String(t.price),
+      duration_minutes: String(t.duration_minutes),
+      category: t.category,
+      is_active: t.is_active,
+    });
     setIsNew(false);
   };
 
   const startNew = () => {
-    setEditing({ ...emptyTreatment(), category: filterCategory === "all" ? (categories[0]?.id || "") : filterCategory });
+    setEditing({
+      ...emptyService(),
+      category: filterCategory === "all" ? (categories[0]?.id || "") : filterCategory,
+    });
     setIsNew(true);
   };
 
-  const cancelEdit = () => {
-    setEditing(null);
-    setIsNew(false);
-  };
+  const cancelEdit = () => { setEditing(null); setIsNew(false); };
 
   const saveEdit = () => {
     if (!editing) return;
     const price = parseFloat(editing.price);
-    const duration = parseInt(editing.duration, 10);
+    const duration = parseInt(editing.duration_minutes, 10);
     if (!editing.name.trim() || isNaN(price) || isNaN(duration) || !editing.category) return;
 
-    const treatment: Treatment = {
-      id: editing.id,
-      name: editing.name.trim(),
-      description: editing.description.trim(),
-      price,
-      duration,
-      category: editing.category,
-    };
-
-    if (isNew) {
-      saveTreatments([...treatments, treatment]);
-    } else {
-      saveTreatments(treatments.map((t) => (t.id === treatment.id ? treatment : t)));
-    }
-    cancelEdit();
+    upsertMutation.mutate(
+      {
+        id: isNew ? undefined : editing.id,
+        name: editing.name.trim(),
+        description: editing.description.trim() || null,
+        price,
+        duration_minutes: duration,
+        category: editing.category,
+        is_active: editing.is_active,
+      },
+      { onSuccess: cancelEdit }
+    );
   };
 
-  const deleteTreatment = (id: string) => {
-    saveTreatments(treatments.filter((t) => t.id !== id));
-  };
-
-  const addCategory = () => {
-    const label = newCategoryLabel.trim();
-    if (!label) return;
-    const id = label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    if (categories.some((c) => c.id === id)) return;
-    saveCategories([...categories, { id, label }]);
-    setNewCategoryLabel("");
-  };
-
-  const deleteCategory = (id: string) => {
-    saveCategories(categories.filter((c) => c.id !== id));
-    saveTreatments(treatments.filter((t) => t.category !== id));
-    if (filterCategory === id) setFilterCategory("all");
-  };
-
-  const handleReset = () => {
-    if (!confirmReset) {
-      setConfirmReset(true);
-      setTimeout(() => setConfirmReset(false), 3000);
-      return;
-    }
-    resetToDefaults();
-    setConfirmReset(false);
-    setEditing(null);
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const inputClass =
     "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors";
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
@@ -128,84 +116,18 @@ const AdminServices = () => {
         <div>
           <h3 className="text-base font-semibold text-white/90">Services Menu</h3>
           <p className="text-xs text-white/40 mt-0.5">
-            {treatments.length} treatment{treatments.length !== 1 ? "s" : ""} across {categories.length} categories
+            {services.length} service{services.length !== 1 ? "s" : ""} across {categories.length} categories
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowCategoryManager(!showCategoryManager)}
-            className="text-xs px-3 py-2 rounded-xl border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors"
-          >
-            Categories
-          </button>
-          <button
-            onClick={handleReset}
-            className={`text-xs px-3 py-2 rounded-xl border transition-colors flex items-center gap-1.5 ${
-              confirmReset
-                ? "border-red-500/40 text-red-400 bg-red-500/10"
-                : "border-white/[0.08] text-white/40 hover:text-white/60 hover:bg-white/[0.04]"
-            }`}
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            {confirmReset ? "Confirm Reset" : "Reset"}
-          </button>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={startNew}
-            className="text-xs px-4 py-2 rounded-xl bg-white/[0.1] text-white hover:bg-white/[0.15] transition-colors flex items-center gap-1.5 font-medium"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add
-          </motion.button>
-        </div>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={startNew}
+          className="text-xs px-4 py-2 rounded-xl bg-white/[0.1] text-white hover:bg-white/[0.15] transition-colors flex items-center gap-1.5 font-medium"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add
+        </motion.button>
       </div>
-
-      {/* Category manager */}
-      <AnimatePresence>
-        {showCategoryManager && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3">
-              <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Manage Categories</p>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-xs text-white/70"
-                  >
-                    {c.label}
-                    <button
-                      onClick={() => deleteCategory(c.id)}
-                      className="text-white/30 hover:text-red-400 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  className={inputClass}
-                  placeholder="New category name…"
-                  value={newCategoryLabel}
-                  onChange={(e) => setNewCategoryLabel(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addCategory()}
-                />
-                <button
-                  onClick={addCategory}
-                  className="px-4 py-2 rounded-xl bg-white/[0.08] text-white/70 hover:bg-white/[0.12] text-sm font-medium transition-colors shrink-0"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
@@ -213,7 +135,7 @@ const AdminServices = () => {
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-white/25" />
           <input
             className={`${inputClass} pl-9`}
-            placeholder="Search treatments…"
+            placeholder="Search services…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -243,64 +165,24 @@ const AdminServices = () => {
             className="bg-white/[0.04] border border-white/[0.1] rounded-2xl p-4 flex flex-col gap-3"
           >
             <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">
-              {isNew ? "New Treatment" : "Edit Treatment"}
+              {isNew ? "New Service" : "Edit Service"}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                className={inputClass}
-                placeholder="Name *"
-                value={editing.name}
-                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-              />
-              <div className="relative">
-                <select
-                  value={editing.category}
-                  onChange={(e) => setEditing({ ...editing, category: e.target.value })}
-                  className={`${inputClass} pr-8 appearance-none cursor-pointer`}
-                >
-                  <option value="">Select category…</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-3 w-3.5 h-3.5 text-white/30 pointer-events-none" />
-              </div>
-              <input
-                className={inputClass}
-                placeholder="Price (R) *"
-                type="number"
-                min="0"
-                value={editing.price}
-                onChange={(e) => setEditing({ ...editing, price: e.target.value })}
-              />
-              <input
-                className={inputClass}
-                placeholder="Duration (min) *"
-                type="number"
-                min="0"
-                value={editing.duration}
-                onChange={(e) => setEditing({ ...editing, duration: e.target.value })}
-              />
+              <input className={inputClass} placeholder="Name *" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+              <input className={inputClass} placeholder="Category *" value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} />
+              <input className={inputClass} placeholder="Price *" type="number" min="0" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} />
+              <input className={inputClass} placeholder="Duration (min) *" type="number" min="0" value={editing.duration_minutes} onChange={(e) => setEditing({ ...editing, duration_minutes: e.target.value })} />
             </div>
-            <input
-              className={inputClass}
-              placeholder="Description"
-              value={editing.description}
-              onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-            />
+            <input className={inputClass} placeholder="Description" value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
             <div className="flex gap-2 justify-end">
-              <button
-                onClick={cancelEdit}
-                className="px-4 py-2 rounded-xl border border-white/[0.08] text-white/50 hover:text-white/70 text-sm transition-colors"
-              >
-                Cancel
-              </button>
+              <button onClick={cancelEdit} className="px-4 py-2 rounded-xl border border-white/[0.08] text-white/50 hover:text-white/70 text-sm transition-colors">Cancel</button>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={saveEdit}
-                className="px-4 py-2 rounded-xl bg-white/[0.12] text-white text-sm font-medium hover:bg-white/[0.18] transition-colors flex items-center gap-1.5"
+                disabled={upsertMutation.isPending}
+                className="px-4 py-2 rounded-xl bg-white/[0.12] text-white text-sm font-medium hover:bg-white/[0.18] transition-colors flex items-center gap-1.5 disabled:opacity-50"
               >
-                <Check className="w-3.5 h-3.5" />
+                {upsertMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 Save
               </motion.button>
             </div>
@@ -308,10 +190,10 @@ const AdminServices = () => {
         )}
       </AnimatePresence>
 
-      {/* Treatments list */}
+      {/* Services list */}
       <div className="flex flex-col gap-2">
         {filtered.length === 0 && (
-          <p className="text-sm text-white/30 text-center py-8">No treatments found</p>
+          <p className="text-sm text-white/30 text-center py-8">No services found</p>
         )}
         {filtered.map((t) => (
           <motion.div
@@ -325,26 +207,20 @@ const AdminServices = () => {
               <div className="flex items-baseline gap-2 flex-wrap">
                 <h4 className="text-sm font-semibold text-white/90">{t.name}</h4>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-white/40 uppercase tracking-wider">
-                  {categoryLabel(t.category)}
+                  {t.category}
                 </span>
               </div>
-              <p className="text-xs text-white/40 mt-0.5">{t.description}</p>
+              {t.description && <p className="text-xs text-white/40 mt-0.5">{t.description}</p>}
               <div className="flex gap-3 mt-1.5">
                 <span className="text-sm font-bold text-white/80">R{t.price}</span>
-                <span className="text-xs text-white/30">{t.duration} min</span>
+                <span className="text-xs text-white/30">{t.duration_minutes} min</span>
               </div>
             </div>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button
-                onClick={() => startEdit(t)}
-                className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
-              >
+              <button onClick={() => startEdit(t)} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={() => deleteTreatment(t.id)}
-                className="p-2 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
-              >
+              <button onClick={() => handleDelete(t.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
