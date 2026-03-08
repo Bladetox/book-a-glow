@@ -255,5 +255,5 @@ export function findTheme(idOrLabel: string): BusinessTheme | undefined {
 
 /** Get the default theme (used before Supabase config is loaded) */
 export function getDefaultTheme(): BusinessTheme {
-  return businessThemes.find((t) => t.id === "beautician") ?? businessThemes[0];
+  return businessThemes.find((t) => t.id === "standard") ?? businessThemes[0];
 }
