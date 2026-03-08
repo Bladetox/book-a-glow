@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Edit3, Save, Trash2, ChevronDown, ChevronUp,
-  CalendarCheck, CircleDollarSign, MessageSquare
+  CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { availableTimes } from "@/data/bookingData";
 
 // ─── Types (maps to future Supabase `bookings` table) ───
 interface Booking {
@@ -107,12 +116,34 @@ const statusColors: Record<Booking["status"], string> = {
   cancelled: "bg-red-500/10 text-red-400",
 };
 
-const AdminBookings = () => {
+interface AdminBookingsProps {
+  initialClient?: string | null;
+  onClearClient?: () => void;
+}
+
+const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Booking>>({});
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
+  const [rescheduleTime, setRescheduleTime] = useState<string | null>(null);
+
+  // Auto-expand booking when navigating from dashboard appointment
+  useEffect(() => {
+    if (initialClient) {
+      const match = bookings.find(b =>
+        b.client.toLowerCase().includes(initialClient.toLowerCase().split(" ")[0].replace(".", ""))
+      );
+      if (match) {
+        setExpandedId(match.id);
+        setActiveFilter("All");
+      }
+      onClearClient?.();
+    }
+  }, [initialClient]);
 
   const filtered = bookings.filter(b => {
     if (activeFilter === "All") return true;
