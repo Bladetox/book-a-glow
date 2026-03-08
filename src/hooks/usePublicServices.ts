@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 export interface PublicService {
   id: string;
@@ -16,16 +17,17 @@ export interface ServiceCategory {
   label: string;
 }
 
-const TENANT_ID = "phenomebeauty";
-
 export function usePublicServices() {
+  const { tenantId } = usePublicTenant();
+
   return useQuery({
-    queryKey: ["public-services", TENANT_ID],
+    queryKey: ["public-services", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
         .select("id, name, description, price, duration_minutes, category, is_call_out_available")
-        .eq("tenant_id", TENANT_ID)
+        .eq("tenant_id", tenantId)
         .eq("is_active", true)
         .order("category")
         .order("price");
@@ -45,13 +47,16 @@ export function usePublicServices() {
 }
 
 export function usePublicCategories() {
+  const { tenantId } = usePublicTenant();
+
   return useQuery({
-    queryKey: ["public-categories", TENANT_ID],
+    queryKey: ["public-categories", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
         .select("category")
-        .eq("tenant_id", TENANT_ID)
+        .eq("tenant_id", tenantId)
         .eq("is_active", true);
       if (error) throw error;
       const unique = [...new Set((data ?? []).map((s) => s.category))];
