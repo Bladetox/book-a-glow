@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  TrendingUp, TrendingDown, Clock, Users, CalendarCheck, DollarSign,
-  AlertTriangle, Star, ShoppingBag, Eye, EyeOff, ChevronRight,
-  Flame, BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Shield, Mail, Calendar, Link2,
-  Instagram, Search, Share2, Smartphone, MessageSquare
+  TrendingUp, TrendingDown, CalendarCheck,
+  AlertTriangle, Star, ShoppingBag, Eye, EyeOff,
+  BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
+  XCircle, Package, Bell, Mail, Calendar,
+  Instagram, Search, Share2, Smartphone
 } from "lucide-react";
-import { treatments } from "@/data/bookingData";
 
 // --- Toggle visibility hook (localStorage) ---
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
