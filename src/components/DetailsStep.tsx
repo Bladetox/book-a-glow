@@ -1,7 +1,7 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState } from "react";
-import { User, Phone, Mail, MapPin, ShieldCheck, ChevronLeft, ChevronRight, Star, Sparkles } from "lucide-react";
+import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -27,17 +27,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
-  const referralIndex = referralOptions.indexOf(booking.referralSource);
-  const [currentReferralIndex, setCurrentReferralIndex] = useState(
-    referralIndex >= 0 ? referralIndex : 0
-  );
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const swipeReferral = (dir: number) => {
-    const newIndex = Math.max(0, Math.min(referralOptions.length - 1, currentReferralIndex + dir));
-    setCurrentReferralIndex(newIndex);
-    onUpdate({ referralSource: referralOptions[newIndex] });
-  };
+  const referralScrollRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col gap-5">
@@ -159,57 +149,22 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           </p>
         </div>
 
-        {/* Swipeable referral selector */}
+        {/* Swipeable referral pills */}
         <div>
           <label className="text-xs text-muted-foreground mb-2 block">How did you hear about us?</label>
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.85 }}
-              onClick={() => swipeReferral(-1)}
-              disabled={currentReferralIndex === 0}
-              className="w-8 h-8 rounded-full flex items-center justify-center glass-card-service shrink-0 disabled:opacity-25"
-            >
-              <ChevronLeft className="w-4 h-4 text-foreground" />
-            </motion.button>
-
-            <div ref={scrollRef} className="flex-1 overflow-hidden rounded-2xl">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentReferralIndex}
-                  initial={{ x: 30, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -30, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`py-3 px-4 text-center text-sm font-medium rounded-2xl ${
-                    booking.referralSource === referralOptions[currentReferralIndex]
-                      ? "bg-primary text-primary-foreground"
-                      : "glass-card-service text-foreground"
-                  }`}
-                  onClick={() => onUpdate({ referralSource: referralOptions[currentReferralIndex] })}
-                >
-                  {referralOptions[currentReferralIndex]}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            <motion.button
-              whileTap={{ scale: 0.85 }}
-              onClick={() => swipeReferral(1)}
-              disabled={currentReferralIndex === referralOptions.length - 1}
-              className="w-8 h-8 rounded-full flex items-center justify-center glass-card-service shrink-0 disabled:opacity-25"
-            >
-              <ChevronRight className="w-4 h-4 text-foreground" />
-            </motion.button>
-          </div>
-          {/* Dots indicator */}
-          <div className="flex justify-center gap-1 mt-2">
-            {referralOptions.map((_, i) => (
-              <div
-                key={i}
-                className={`w-1 h-1 rounded-full transition-all duration-200 ${
-                  i === currentReferralIndex ? "bg-primary w-3" : "bg-muted-foreground/30"
-                }`}
-              />
+          <div
+            ref={referralScrollRef}
+            className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+          >
+            {referralOptions.map((opt) => (
+              <motion.button
+                key={opt}
+                whileTap={{ scale: 0.93 }}
+                className={`category-pill whitespace-nowrap ${booking.referralSource === opt ? "active" : ""}`}
+                onClick={() => onUpdate({ referralSource: opt })}
+              >
+                {opt}
+              </motion.button>
             ))}
           </div>
         </div>
