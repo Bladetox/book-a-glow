@@ -233,7 +233,7 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
 };
 
 // ─── Mobile-optimized Appointments ───
-const AppointmentsList = ({ appointments }: { appointments: Appointment[] }) => (
+const AppointmentsList = ({ appointments, onSelect }: { appointments: Appointment[]; onSelect?: (client: string) => void }) => (
   <>
     {/* Desktop table */}
     <div className="hidden sm:block overflow-x-auto -mx-1">
@@ -249,7 +249,11 @@ const AppointmentsList = ({ appointments }: { appointments: Appointment[] }) => 
         </thead>
         <tbody>
           {appointments.map(a => (
-            <tr key={a.id} className="border-t border-white/[0.04]">
+            <tr
+              key={a.id}
+              className="border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.04] transition-colors"
+              onClick={() => onSelect?.(a.client)}
+            >
               <td className="py-2.5 text-white/60">{a.time}</td>
               <td className="py-2.5 text-white/80 font-medium">{a.client}</td>
               <td className="py-2.5 text-white/50">{a.service}</td>
@@ -268,7 +272,11 @@ const AppointmentsList = ({ appointments }: { appointments: Appointment[] }) => 
     {/* Mobile cards */}
     <div className="sm:hidden flex flex-col gap-2">
       {appointments.map(a => (
-        <div key={a.id} className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3">
+        <div
+          key={a.id}
+          className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
+          onClick={() => onSelect?.(a.client)}
+        >
           <div className="flex flex-col items-center shrink-0 w-12">
             <Clock className="w-3 h-3 text-white/30 mb-0.5" />
             <span className="text-xs font-semibold text-white/70">{a.time}</span>
@@ -301,7 +309,7 @@ const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
 );
 
 // ─── Main Dashboard ───
-const AdminDashboard = () => {
+const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client: string) => void }) => {
   const [visibility, setVisibility] = useState(getVisibility);
   const [showCustomize, setShowCustomize] = useState(false);
 
@@ -511,7 +519,7 @@ const AdminDashboard = () => {
       {visibility.todayAppointments && (
         <motion.div {...fadeUp} transition={{ delay: 0.18 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
           <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today's Appointments</h4>
-          <AppointmentsList appointments={mockAppointments} />
+          <AppointmentsList appointments={mockAppointments} onSelect={onSelectAppointment} />
         </motion.div>
       )}
 
