@@ -188,8 +188,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
         <div className="relative">
           <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-          <select
-            className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10"
+            <select
+            className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10 [&>option]:bg-background [&>option]:text-foreground"
             value={booking.phoneCode}
             onChange={(e) => onUpdate({ phoneCode: e.target.value })}
           >
