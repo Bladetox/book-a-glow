@@ -12,46 +12,94 @@ const STORAGE_KEY = "pb_terms_and_conditions";
 
 const defaultSections: TermsSection[] = [
   {
-    id: "booking",
-    title: "Booking & Deposits",
+    id: "cancellation-before",
+    title: "1. Cancellation — Before Service",
     content:
-      "A 50% deposit is required to confirm your booking. Deposits are non-refundable unless cancelled more than 48 hours before your appointment. The remaining balance is due on the day of your appointment.",
+      "7+ days before: Full refund. 3–6 days before: 50% refund. Within 48 hours: 25% refund. Within 24 hours: No refund — full amount retained.",
   },
   {
-    id: "cancellation",
-    title: "Cancellation & Rescheduling",
+    id: "cancellation-after",
+    title: "2. Cancellation — After Service",
     content:
-      "Cancellations made less than 24 hours before your appointment will forfeit the full deposit. Rescheduling is allowed up to 24 hours in advance, subject to availability. No-shows will be charged the full service amount.",
+      "Not applicable once service has been rendered. For unsatisfactory service, see Section 3.",
   },
   {
-    id: "late",
-    title: "Late Arrivals",
+    id: "not-as-described",
+    title: "3. Service Not As Described",
     content:
-      "If you are more than 15 minutes late, your appointment may be shortened or rescheduled at the therapist's discretion. The full service fee will still apply.",
+      "Notify within 48 hours. Remedies: redo at no charge, partial refund (20–50%), or full refund if unusable. Processing: 5 business days.",
   },
   {
-    id: "health",
-    title: "Health & Safety",
+    id: "unsatisfactory",
+    title: "4. Unsatisfactory Service",
     content:
-      "Clients must complete a consultation form before their first appointment. You must disclose any medical conditions, allergies, medications, or skin sensitivities. PhenomeBeauty reserves the right to refuse service if it is deemed unsafe.",
+      "Contact within 7 days with documented examples. Review may result in redo or partial refund (25–50%).",
   },
   {
-    id: "callout",
-    title: "Call-Out Fee",
+    id: "partial-services",
+    title: "5. Partial Services",
     content:
-      "A call-out fee is calculated based on the round-trip distance from our base at R3.60 per kilometre. This fee is non-refundable and is included in your total quote.",
+      "Completed sessions non-refundable. Remaining sessions refunded within 7 business days.",
   },
   {
-    id: "results",
-    title: "Results & Liability",
+    id: "payment-terms",
+    title: "6. Payment Terms",
     content:
-      "Results may vary between individuals. PhenomeBeauty is not liable for adverse reactions if the client has failed to disclose relevant medical or skin information. Aftercare instructions must be followed for optimal results.",
+      "Deposit: Non-refundable once service has begun. Constitutes booking confirmation. Rescheduling by PhenomeBeauty: We'll give at least 24 hours notice and offer the next available slot. Balance: Due on completion of service. Refunds: Issued to original payment method only.",
   },
   {
-    id: "privacy",
-    title: "Privacy & Data",
+    id: "rescheduling",
+    title: "7. Rescheduling",
     content:
-      "Your personal information is collected solely for booking and consultation purposes. We will never share your data with third parties without your consent. Photos may be taken for records with your permission only.",
+      "Available at any time. Refunds follow cancellation terms above.",
+  },
+  {
+    id: "transaction-fees",
+    title: "8. Transaction Fees",
+    content:
+      "Refunds issued as original at purchase.",
+  },
+  {
+    id: "disputes",
+    title: "9. Disputes & Escalation",
+    content:
+      "Reviewed within 5 business days.",
+  },
+  {
+    id: "cpa",
+    title: "10. Consumer Protection Act",
+    content:
+      "This policy does not limit your statutory rights under South African consumer protection law.",
+  },
+  {
+    id: "contact",
+    title: "11. Contact",
+    content:
+      "Questions or concerns? phenomebeauty@gmail.co.za · +27 74 511 5725. We respond within 24 hours.",
+  },
+  {
+    id: "client-responsibilities",
+    title: "Client Responsibilities",
+    content:
+      "By proceeding with payment, I confirm I will provide: A clean, safe, well-lit space with accessible power. Secured pets and a calm environment. Sufficient space for the treatment bed and equipment. A smoke-free environment during treatment.",
+  },
+  {
+    id: "consent-liability",
+    title: "Consent & Liability",
+    content:
+      "By completing payment I confirm I am over 18 years of age (or under 18 with parent/guardian consent), understand the nature of the treatment, accept full responsibility for results and outcomes, and release Phenome Beauty from liability for adverse reactions due to undisclosed information or failure to follow aftercare instructions.",
+  },
+  {
+    id: "medical-disclosure",
+    title: "Medical Disclosure",
+    content:
+      "All medical conditions, allergies, medications, and pregnancy status have been honestly disclosed. I understand that providing false information increases risk and may affect eligibility.",
+  },
+  {
+    id: "treatment-expectations",
+    title: "Treatment Expectations",
+    content:
+      "I understand results vary between individuals, temporary redness or sensitivity may occur, and I will follow all aftercare instructions provided.",
   },
 ];
 
