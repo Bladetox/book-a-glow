@@ -8,7 +8,7 @@
  *   4. null → show marketing site
  */
 
-const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app", "lovable.app"];
+const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app", "lovable.app", "lovableproject.com"];
 
 export interface TenantResolution {
   /** The tenant slug/id, or null for marketing site */
