@@ -5,6 +5,7 @@ import DetailsStep from "@/components/DetailsStep";
 import ReviewStep from "@/components/ReviewStep";
 import StickyBottomBar from "@/components/StickyBottomBar";
 import ThemeToggle from "@/components/ThemeToggle";
+import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
 import { treatments } from "@/data/bookingData";
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
@@ -43,23 +44,24 @@ const stepVariants = {
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
   const [direction, setDirection] = useState(1);
+  const [showSplash, setShowSplash] = useState(true);
   const dragX = useMotionValue(0);
   const dragOpacity = useTransform(dragX, [-150, 0, 150], [0.5, 1, 0.5]);
 
-  const canProceed = () => {
+  const canProceed = useCallback(() => {
     switch (step) {
       case 0: return booking.selectedTreatments.length > 0;
       case 1: return booking.selectedDate !== null && booking.selectedTime !== null;
       case 2: return booking.fullName && booking.phone && booking.email && booking.isExistingClient !== null;
       default: return true;
     }
-  };
+  }, [step, booking]);
 
   const handleNext = useCallback(() => {
     if (!canProceed()) return;
     setDirection(1);
     nextStep();
-  }, [step, booking]);
+  }, [canProceed]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
@@ -70,19 +72,21 @@ const Index = () => {
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
     const { offset, velocity } = info;
     if (offset.x < -SWIPE_THRESHOLD || velocity.x < -500) {
-      // Swiped left → next
       if (canProceed() && step < 3) {
         setDirection(1);
         nextStep();
       }
     } else if (offset.x > SWIPE_THRESHOLD || velocity.x > 500) {
-      // Swiped right → prev
       if (step > 0) {
         setDirection(-1);
         prevStep();
       }
     }
-  }, [step, booking]);
+  }, [step, canProceed]);
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   const totalPrice = treatments
     .filter((t) => booking.selectedTreatments.includes(t.id))
