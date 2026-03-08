@@ -8,8 +8,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
 import { usePublicServices } from "@/hooks/usePublicServices";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
-import { useState, useCallback } from "react";
 
 const SWIPE_THRESHOLD = 50;
 
@@ -44,6 +44,7 @@ const stepVariants = {
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
   const { data: treatments = [] } = usePublicServices();
+  const { tenantId, name: tenantName, loading: tenantLoading, notFound } = usePublicTenant();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
   const dragX = useMotionValue(0);
@@ -85,10 +86,31 @@ const Index = () => {
     }
   }, [step, canProceed]);
 
+  if (tenantLoading || !tenantId) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-background to-muted">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
+  // Generate abbreviation from business name
+  const getAbbreviation = (name: string) => {
+    if (!name) return "?";
+    const words = name.split(" ").filter(Boolean);
+    if (words.length >= 2) {
+      return words.slice(0, 2).map(w => w[0]?.toUpperCase()).join("");
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const businessName = tenantName || tenantId;
+  const abbreviation = businessName ? getAbbreviation(businessName) : "?";
+  
   const selectedServices = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
   const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
@@ -110,13 +132,13 @@ const Index = () => {
             whileTap={{ scale: 0.95 }}
             className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center"
           >
-            <span className="font-display text-xl font-bold text-foreground">.pb</span>
+            <span className="font-display text-xl font-bold text-foreground">{abbreviation}</span>
           </motion.div>
           <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
             Mobile Beauty Studio
           </p>
           <h1 className="font-display text-2xl font-bold text-foreground mt-1">
-            PhenomeBeauty
+            {businessName}
           </h1>
           <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground mt-0.5">
             Premium At-Home Treatments
