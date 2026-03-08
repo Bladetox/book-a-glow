@@ -19,21 +19,17 @@ const StepIndicator = ({ currentStep }: StepIndicatorProps) => {
           <div key={s.number} className="flex flex-col items-center gap-1.5 flex-1">
             {/* Progress line */}
             <div className="w-full flex items-center">
-              {i > 0 && (
-                <div
-                  className={`h-0.5 flex-1 transition-colors duration-300 ${
-                    i <= currentStep ? "bg-primary" : "bg-muted"
-                  }`}
-                />
-              )}
+              <div
+                className={`h-0.5 flex-1 transition-colors duration-300 ${
+                  i === 0 ? "bg-transparent" : i <= currentStep ? "bg-primary" : "bg-muted"
+                }`}
+              />
               <div className={`step-indicator ${status}`}>{s.number}</div>
-              {i < steps.length - 1 && (
-                <div
-                  className={`h-0.5 flex-1 transition-colors duration-300 ${
-                    i < currentStep ? "bg-primary" : "bg-muted"
-                  }`}
-                />
-              )}
+              <div
+                className={`h-0.5 flex-1 transition-colors duration-300 ${
+                  i === steps.length - 1 ? "bg-transparent" : i < currentStep ? "bg-primary" : "bg-muted"
+                }`}
+              />
             </div>
             <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
               {s.label}
