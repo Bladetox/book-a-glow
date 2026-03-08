@@ -19,8 +19,8 @@ const phoneCodes = [
 ];
 
 const referralOptions = [
-  "Instagram", "TikTok", "Facebook", "Google Search",
-  "Word of Mouth", "Referred by a Friend", "I'm a returning client", "Other",
+  "I'm a returning client", "Instagram", "TikTok", "Facebook", "Google Search",
+  "Word of Mouth", "Referred by a Friend", "Other",
 ];
 
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
