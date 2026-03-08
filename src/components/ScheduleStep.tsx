@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isBefore, isToday, isSameDay } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getAvailableSlotsForDate, isDayAvailable } from "@/data/availabilityStore";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useMonthAvailability, useDateSlots } from "@/hooks/usePublicAvailability";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ScheduleStepProps {
@@ -14,13 +14,29 @@ interface ScheduleStepProps {
 const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth() + 1;
+  const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(year, month);
+
+  const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
+  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr);
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startDayOfWeek = getDay(monthStart);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
+
+  const isDayAvailable = (day: Date) => {
+    if (!monthAvailability) return false;
+    const ds = format(day, "yyyy-MM-dd");
+    return (monthAvailability[ds]?.length ?? 0) > 0;
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -34,8 +50,9 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }
           <motion.button whileTap={{ scale: 0.85 }} onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50">
             <ChevronLeft className="w-5 h-5" />
           </motion.button>
-          <span className="font-display text-base font-semibold text-foreground">
+          <span className="font-display text-base font-semibold text-foreground flex items-center gap-2">
             {format(currentMonth, "MMMM yyyy")}
+            {loadingMonth && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
           </span>
           <motion.button whileTap={{ scale: 0.85 }} onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50">
             <ChevronRight className="w-5 h-5" />
@@ -90,25 +107,33 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }
             <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-3">
               Available times
             </h4>
-            <div className="grid grid-cols-4 gap-2">
-              {getAvailableSlotsForDate(selectedDate).map((time, i) => (
-                <motion.button
-                  key={time}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.02 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => onSelectTime(time)}
-                  className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                    ${selectedTime === time
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                      : "glass-card-service text-foreground"
-                    }`}
-                >
-                  {time}
-                </motion.button>
-              ))}
-            </div>
+            {loadingSlots ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : dateSlots.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No slots available for this date</p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2">
+                {dateSlots.map((time, i) => (
+                  <motion.button
+                    key={time}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => onSelectTime(time)}
+                    className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                      ${selectedTime === time
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                        : "glass-card-service text-foreground"
+                      }`}
+                  >
+                    {time}
+                  </motion.button>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

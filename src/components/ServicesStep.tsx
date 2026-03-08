@@ -1,6 +1,6 @@
-import { useTreatments, useCategories } from "@/data/servicesStore";
+import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
 import { useState, useRef } from "react";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface ServicesStepProps {
@@ -9,12 +9,22 @@ interface ServicesStepProps {
 }
 
 const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
-  const treatments = useTreatments();
-  const categories = useCategories();
-  const [activeCategory, setActiveCategory] = useState(categories[0]?.id || "");
+  const { data: treatments = [], isLoading: loadingServices } = usePublicServices();
+  const { data: categories = [], isLoading: loadingCats } = usePublicCategories();
+  const [activeCategory, setActiveCategory] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const filtered = treatments.filter((t) => t.category === activeCategory);
+  // Set first category once loaded
+  const effectiveCat = activeCategory || categories[0]?.id || "";
+  const filtered = treatments.filter((t) => t.category === effectiveCat);
+
+  if (loadingServices || loadingCats) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -31,7 +41,7 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
           <motion.button
             key={cat.id}
             whileTap={{ scale: 0.93 }}
-            className={`category-pill whitespace-nowrap ${activeCategory === cat.id ? "active" : ""}`}
+            className={`category-pill whitespace-nowrap ${effectiveCat === cat.id ? "active" : ""}`}
             onClick={() => setActiveCategory(cat.id)}
           >
             {cat.label}
