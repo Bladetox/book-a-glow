@@ -88,6 +88,7 @@ export type BookingState = {
   referralSource: string;
   safetyAnswers: Record<number, boolean | null>;
   additionalNotes: string;
+  existingClientNotes: string;
 };
 
 export const initialBookingState: BookingState = {
@@ -103,6 +104,7 @@ export const initialBookingState: BookingState = {
   referralSource: "",
   safetyAnswers: {},
   additionalNotes: "",
+  existingClientNotes: "",
 };
 
 export const safetyQuestions = [

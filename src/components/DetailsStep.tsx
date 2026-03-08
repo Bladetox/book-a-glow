@@ -1,5 +1,7 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRef, useState } from "react";
+import { User, Phone, Mail, MapPin, ShieldCheck, ChevronLeft, ChevronRight, Star, Sparkles } from "lucide-react";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -7,13 +9,13 @@ interface DetailsStepProps {
 }
 
 const phoneCodes = [
-  { flag: "🇿🇦", code: "+27" },
-  { flag: "🇺🇸", code: "+1" },
-  { flag: "🇬🇧", code: "+44" },
-  { flag: "🇦🇺", code: "+61" },
-  { flag: "🇳🇿", code: "+64" },
-  { flag: "🇩🇪", code: "+49" },
-  { flag: "🇫🇷", code: "+33" },
+  { label: "ZA", code: "+27" },
+  { label: "US", code: "+1" },
+  { label: "UK", code: "+44" },
+  { label: "AU", code: "+61" },
+  { label: "NZ", code: "+64" },
+  { label: "DE", code: "+49" },
+  { label: "FR", code: "+33" },
 ];
 
 const referralOptions = [
@@ -24,6 +26,18 @@ const referralOptions = [
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full bg-muted/40 border border-border/60 rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 backdrop-blur-sm";
+
+  const referralIndex = referralOptions.indexOf(booking.referralSource);
+  const [currentReferralIndex, setCurrentReferralIndex] = useState(
+    referralIndex >= 0 ? referralIndex : 0
+  );
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const swipeReferral = (dir: number) => {
+    const newIndex = Math.max(0, Math.min(referralOptions.length - 1, currentReferralIndex + dir));
+    setCurrentReferralIndex(newIndex);
+    onUpdate({ referralSource: referralOptions[newIndex] });
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -36,24 +50,48 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         <p className="text-sm text-foreground mb-3">Have you booked with us before?</p>
         <div className="flex gap-3">
           {[
-            { label: "✨ Existing Diva", value: true },
-            { label: "🌸 New Diva", value: false },
+            { label: "Existing Diva", value: true, icon: Star },
+            { label: "New Diva", value: false, icon: Sparkles },
           ].map((opt) => (
             <motion.button
               key={String(opt.value)}
               whileTap={{ scale: 0.95 }}
               onClick={() => onUpdate({ isExistingClient: opt.value })}
-              className={`flex-1 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200
+              className={`flex-1 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2
                 ${booking.isExistingClient === opt.value
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                   : "glass-card-service text-foreground"
                 }`}
             >
+              <opt.icon className="w-4 h-4" />
               {opt.label}
             </motion.button>
           ))}
         </div>
       </div>
+
+      {/* Existing client follow-up */}
+      <AnimatePresence>
+        {booking.isExistingClient === true && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="glass-card-service rounded-2xl p-4 flex flex-col gap-2">
+              <p className="text-sm text-foreground">Anything we need to know since your last appointment?</p>
+              <textarea
+                className={`${inputClass} min-h-[70px]`}
+                placeholder="e.g. skin sensitivity changes, new medications, preferences…"
+                value={booking.existingClientNotes}
+                onChange={(e) => onUpdate({ existingClientNotes: e.target.value })}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Form fields */}
       <motion.div
@@ -63,7 +101,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         className="flex flex-col gap-3"
       >
         <div className="relative">
-          <span className="absolute left-3.5 top-3.5 text-sm">👤</span>
+          <User className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
             className={`${inputClass} pl-10`}
             placeholder="Full Name"
@@ -80,20 +118,23 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           >
             {phoneCodes.map((pc) => (
               <option key={pc.code} value={pc.code}>
-                {pc.flag} {pc.code}
+                {pc.label} {pc.code}
               </option>
             ))}
           </select>
-          <input
-            className={inputClass}
-            placeholder="e.g. 082 123 4567"
-            value={booking.phone}
-            onChange={(e) => onUpdate({ phone: e.target.value })}
-          />
+          <div className="relative flex-1">
+            <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+            <input
+              className={`${inputClass} pl-10`}
+              placeholder="e.g. 082 123 4567"
+              value={booking.phone}
+              onChange={(e) => onUpdate({ phone: e.target.value })}
+            />
+          </div>
         </div>
 
         <div className="relative">
-          <span className="absolute left-3.5 top-3.5 text-sm">✉️</span>
+          <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
             className={`${inputClass} pl-10`}
             type="email"
@@ -105,7 +146,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
         <div>
           <div className="relative">
-            <span className="absolute left-3.5 top-3.5 text-sm">📍</span>
+            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
             <input
               className={`${inputClass} pl-10`}
               placeholder="Home Address"
@@ -118,18 +159,59 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           </p>
         </div>
 
+        {/* Swipeable referral selector */}
         <div>
-          <label className="text-xs text-muted-foreground mb-1.5 block">How did you hear about us?</label>
-          <select
-            className={`${inputClass} appearance-none`}
-            value={booking.referralSource}
-            onChange={(e) => onUpdate({ referralSource: e.target.value })}
-          >
-            <option value="">Select an option…</option>
-            {referralOptions.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
+          <label className="text-xs text-muted-foreground mb-2 block">How did you hear about us?</label>
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.85 }}
+              onClick={() => swipeReferral(-1)}
+              disabled={currentReferralIndex === 0}
+              className="w-8 h-8 rounded-full flex items-center justify-center glass-card-service shrink-0 disabled:opacity-25"
+            >
+              <ChevronLeft className="w-4 h-4 text-foreground" />
+            </motion.button>
+
+            <div ref={scrollRef} className="flex-1 overflow-hidden rounded-2xl">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentReferralIndex}
+                  initial={{ x: 30, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -30, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`py-3 px-4 text-center text-sm font-medium rounded-2xl ${
+                    booking.referralSource === referralOptions[currentReferralIndex]
+                      ? "bg-primary text-primary-foreground"
+                      : "glass-card-service text-foreground"
+                  }`}
+                  onClick={() => onUpdate({ referralSource: referralOptions[currentReferralIndex] })}
+                >
+                  {referralOptions[currentReferralIndex]}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.85 }}
+              onClick={() => swipeReferral(1)}
+              disabled={currentReferralIndex === referralOptions.length - 1}
+              className="w-8 h-8 rounded-full flex items-center justify-center glass-card-service shrink-0 disabled:opacity-25"
+            >
+              <ChevronRight className="w-4 h-4 text-foreground" />
+            </motion.button>
+          </div>
+          {/* Dots indicator */}
+          <div className="flex justify-center gap-1 mt-2">
+            {referralOptions.map((_, i) => (
+              <div
+                key={i}
+                className={`w-1 h-1 rounded-full transition-all duration-200 ${
+                  i === currentReferralIndex ? "bg-primary w-3" : "bg-muted-foreground/30"
+                }`}
+              />
             ))}
-          </select>
+          </div>
         </div>
       </motion.div>
 
@@ -145,7 +227,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           >
             <div>
               <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                🌸 New Client Safety Check
+                <ShieldCheck className="w-4 h-4" />
+                New Client Safety Check
               </h4>
               <p className="text-xs text-muted-foreground mt-1">
                 Answer all questions honestly. Your information is strictly confidential.
