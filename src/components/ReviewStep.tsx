@@ -18,74 +18,40 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const deposit = Math.ceil(total * 0.5);
   const balance = total - deposit;
 
-  const formattedDate = booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—";
-  const formattedTime = booking.selectedTime || "—";
-
   if (confirmed) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="flex flex-col py-8 gap-6"
-      >
+        className="flex-col py-16 gap-4 text-center flex items-center justify-center">
+        
         <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.2 }}
+          className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+          
+          <Check className="w-10 h-10 text-primary-foreground" />
+        </motion.div>
+        <motion.h2
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-center"
-        >
-          <h2 className="font-display text-2xl font-bold text-foreground mb-1">A date with yourself</h2>
-          <p className="text-sm text-muted-foreground italic">I see you choosing you.</p>
-        </motion.div>
-
+          transition={{ delay: 0.4 }}
+          className="font-display text-2xl font-bold text-foreground">
+          
+          You're booked!
+        </motion.h2>
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-sm text-muted-foreground leading-relaxed"
-        >
-          I've received your deposit, and your space in my calendar is now officially held. This isn't just a booking; it's a promise you've made to yourself to pause, and I am so honoured to be the one holding that space for you.
+          transition={{ delay: 0.5 }}
+          className="text-sm text-muted-foreground max-w-xs">
+          
+          We've sent a confirmation to {booking.email}. See you soon, diva! 💜
         </motion.p>
+      </motion.div>);
 
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex flex-col gap-4"
-        >
-          <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">What happens next</h4>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-foreground">The Arrival</span>
-            <span className="text-sm text-muted-foreground">I'll be arriving on {formattedDate} at {formattedTime}.</span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-foreground">The Space</span>
-            <span className="text-sm text-muted-foreground">{booking.address || "To be confirmed"}</span>
-            <span className="text-sm text-muted-foreground">No need to overthink it, just find a spot where you feel most at peace, and I'll handle the rest.</span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-foreground">The Intent</span>
-            <span className="text-sm text-muted-foreground">Bring nothing but yourself.</span>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="flex flex-col gap-4 text-sm text-muted-foreground leading-relaxed"
-        >
-          <p>We spend so much of our lives pouring into others. Thank you for trusting me to pour back into you.</p>
-          <p>I'm looking forward to our time together.</p>
-          <p>Until then, keep choosing yourself in the small moments, too.</p>
-          <p className="font-semibold text-foreground">Toodles. 💛</p>
-        </motion.div>
-      </motion.div>
-    );
   }
 
   return (
@@ -99,15 +65,15 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2.5"
-      >
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2.5">
+        
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Services</h4>
-        {selected.map((t) => (
-          <div key={t.id} className="flex items-center justify-between">
+        {selected.map((t) =>
+        <div key={t.id} className="flex items-center justify-between">
             <span className="text-sm text-foreground">{t.name}</span>
             <span className="text-sm font-semibold text-foreground">R{t.price}</span>
           </div>
-        ))}
+        )}
       </motion.div>
 
       {/* Schedule */}
@@ -115,8 +81,8 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1"
-      >
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
+        
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Schedule</h4>
         <span className="text-sm text-foreground">
           {booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—"}
@@ -129,8 +95,8 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1"
-      >
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
+        
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Contact</h4>
         <span className="text-sm text-foreground">{booking.fullName || "—"}</span>
         <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
@@ -142,8 +108,8 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2"
-      >
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2">
+        
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Services</span>
           <span className="text-foreground font-semibold">R{servicesTotal}</span>
@@ -174,13 +140,13 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={() => setConfirmed(true)}
-        className="btn-next flex items-center justify-center gap-2"
-      >
+        className="btn-next flex items-center justify-center gap-2">
+        
         <Sparkles className="w-4 h-4" />
         Confirm & Pay Deposit
       </motion.button>
-    </div>
-  );
+    </div>);
+
 };
 
 export default ReviewStep;
