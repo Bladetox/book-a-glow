@@ -56,8 +56,8 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }
           ))}
           {days.map((day) => {
             const isPast = isBefore(day, today) && !isToday(day);
-            const isSunday = getDay(day) === 0;
-            const isDisabled = isPast || isSunday;
+            const isAvailable = isDayAvailable(day);
+            const isDisabled = isPast || !isAvailable;
             const isActive = selectedDate && isSameDay(day, selectedDate);
 
             return (
@@ -91,7 +91,7 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }
               Available times
             </h4>
             <div className="grid grid-cols-4 gap-2">
-              {availableTimes.map((time, i) => (
+              {getAvailableSlotsForDate(selectedDate).map((time, i) => (
                 <motion.button
                   key={time}
                   initial={{ opacity: 0, scale: 0.9 }}
