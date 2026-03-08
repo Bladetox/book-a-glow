@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
 import { PublicTenantProvider } from "./contexts/PublicTenantContext";
-import { getTenantSlug } from "./lib/tenant-resolver";
+import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import Index from "./pages/Index";
 import Book from "./pages/Book";
 import Product from "./pages/Product";
@@ -52,7 +52,8 @@ const TenantRoutes = () => (
 
 const App = () => {
   const tenantSlug = getTenantSlug();
-  const isSubdomain = !!tenantSlug;
+  const customDomain = isCustomDomainHost();
+  const isSubdomain = !!tenantSlug || !!customDomain;
 
   return (
     <QueryClientProvider client={queryClient}>
