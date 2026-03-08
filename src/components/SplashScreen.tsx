@@ -18,7 +18,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-        className="w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center mb-8"
+        className="w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center mb-16"
       >
         <span className="font-display text-2xl font-bold text-white">.pb</span>
       </motion.div>
@@ -44,7 +44,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.65, duration: 0.4 }}
-        className="text-[10px] font-semibold tracking-[0.3em] uppercase text-white/50 mt-3"
+        className="text-[10px] font-semibold tracking-[0.3em] uppercase text-white/50 mt-5"
       >
         Mobile Beauty Studio
       </motion.p>
@@ -65,7 +65,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         onClick={onComplete}
-        className="mt-12 px-8 py-3.5 rounded-2xl border border-white/15 bg-white/5 backdrop-blur-xl text-xs font-semibold tracking-[0.15em] uppercase text-white relative overflow-hidden group cursor-pointer"
+        className="mt-24 px-8 py-3.5 rounded-2xl border border-white/15 bg-white/5 backdrop-blur-xl text-xs font-semibold tracking-[0.15em] uppercase text-white relative overflow-hidden group cursor-pointer"
       >
         {/* Shimmer sweep on hover */}
         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-700" />
