@@ -44,7 +44,7 @@ const stepVariants = {
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
   const { data: treatments = [] } = usePublicServices();
-  const { tenantId, name: tenantName, loading: tenantLoading, notFound } = usePublicTenant();
+  const { tenantId, name: tenantName, loading: tenantLoading } = usePublicTenant();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
   const dragX = useMotionValue(0);
