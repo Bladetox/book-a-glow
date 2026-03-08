@@ -13,10 +13,11 @@ import AdminIntegrations from "@/components/admin/AdminIntegrations";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminLoyalty from "@/components/admin/AdminLoyalty";
 import AdminServices from "@/components/admin/AdminServices";
+import AdminTerms from "@/components/admin/AdminTerms";
 
 const views = [
   "Dashboard", "Bookings", "Services", "Consultations", "Availability",
-  "Stock", "Reviews", "Integrations", "Settings", "Loyalty Tracker",
+  "Stock", "Reviews", "Integrations", "Settings", "Loyalty Tracker", "Terms & Conditions",
 ] as const;
 
 type ViewName = typeof views[number];
@@ -48,6 +49,7 @@ const Admin = () => {
       case "Integrations": return <AdminIntegrations />;
       case "Settings": return <AdminSettings />;
       case "Loyalty Tracker": return <AdminLoyalty />;
+      case "Terms & Conditions": return <AdminTerms />;
       default: return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
     }
   };

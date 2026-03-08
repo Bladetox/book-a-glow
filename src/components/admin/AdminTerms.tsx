@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Check, GripVertical, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Check, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
 
 interface TermsSection {
   id: string;

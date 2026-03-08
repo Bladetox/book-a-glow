@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { 
   LayoutDashboard, CalendarCheck, Sparkles, Clock, 
-  Package, Star, Link2, Settings, Gem, Scissors
+  Package, Star, Link2, Settings, Gem, Scissors, FileText
 } from "lucide-react";
 
 const iconMap: Record<string, React.ElementType> = {
@@ -15,6 +15,7 @@ const iconMap: Record<string, React.ElementType> = {
   "Integrations": Link2,
   "Settings": Settings,
   "Loyalty Tracker": Gem,
+  "Terms & Conditions": FileText,
 };
 
 interface AdminSidebarProps {
