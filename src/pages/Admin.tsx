@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { TenantProvider } from "@/contexts/TenantContext";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -25,6 +26,8 @@ type ViewName = typeof views[number];
 
 const Admin = () => {
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -39,13 +42,16 @@ const Admin = () => {
 
       const { data: roles } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, tenant_id")
         .eq("user_id", user.id);
 
-      const isAdmin = roles?.some(r => r.role === "owner" || r.role === "admin");
-      setAuthState(isAdmin ? "authenticated" : "unauthenticated");
-
-      if (!isAdmin) {
+      const adminRole = roles?.find(r => r.role === "owner" || r.role === "admin");
+      if (adminRole) {
+        setTenantId(adminRole.tenant_id);
+        setUserId(user.id);
+        setAuthState("authenticated");
+      } else {
+        setAuthState("unauthenticated");
         await supabase.auth.signOut();
       }
     } catch {
@@ -54,19 +60,24 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    // Set up auth state listener BEFORE checking session
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         setAuthState("unauthenticated");
+        setTenantId(null);
+        setUserId(null);
       } else if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
         checkAdminSession();
       }
     });
 
     checkAdminSession();
-
     return () => subscription.unsubscribe();
   }, []);
+
+  const tenantCtx = useMemo(
+    () => (tenantId && userId ? { tenantId, userId } : null),
+    [tenantId, userId]
+  );
 
   if (authState === "loading") {
     return (
@@ -76,8 +87,8 @@ const Admin = () => {
     );
   }
 
-  if (authState === "unauthenticated") {
-    return <AdminLogin onLogin={() => setAuthState("authenticated")} />;
+  if (authState === "unauthenticated" || !tenantCtx) {
+    return <AdminLogin onLogin={() => checkAdminSession()} />;
   }
 
   const handleSelectAppointment = (client: string) => {
@@ -108,52 +119,51 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-dvh bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex">
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+    <TenantProvider value={tenantCtx}>
+      <div className="min-h-dvh bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex">
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
 
-      <AdminSidebar
-        views={views as unknown as string[]}
-        activeView={activeView}
-        onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
-        isOpen={sidebarOpen}
-      />
+        <AdminSidebar
+          views={views as unknown as string[]}
+          activeView={activeView}
+          onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
+          isOpen={sidebarOpen}
+        />
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-dvh min-w-0">
-        {/* Topbar */}
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06]">
-          <button
-            className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <h2 className="font-display text-base sm:text-lg font-semibold text-white/90 truncate">{activeView}</h2>
-          <div className="flex-1" />
-          <button
-            className="text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08]"
-            onClick={handleSignOut}
-          >
-            Sign out
-          </button>
-        </div>
+        <div className="flex-1 flex flex-col min-h-dvh min-w-0">
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06]">
+            <button
+              className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="font-display text-base sm:text-lg font-semibold text-white/90 truncate">{activeView}</h2>
+            <div className="flex-1" />
+            <button
+              className="text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08]"
+              onClick={handleSignOut}
+            >
+              Sign out
+            </button>
+          </div>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {renderView()}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            {renderView()}
+          </div>
         </div>
       </div>
-    </div>
+    </TenantProvider>
   );
 };
 
