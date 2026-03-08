@@ -48,6 +48,42 @@ const Index = () => {
   const dragX = useMotionValue(0);
   const dragOpacity = useTransform(dragX, [-150, 0, 150], [0.5, 1, 0.5]);
 
+  const canProceed = useCallback(() => {
+    switch (step) {
+      case 0: return booking.selectedTreatments.length > 0;
+      case 1: return booking.selectedDate !== null && booking.selectedTime !== null;
+      case 2: return booking.fullName && booking.phone && booking.email && booking.isExistingClient !== null;
+      default: return true;
+    }
+  }, [step, booking]);
+
+  const handleNext = useCallback(() => {
+    if (!canProceed()) return;
+    setDirection(1);
+    nextStep();
+  }, [canProceed]);
+
+  const handlePrev = useCallback(() => {
+    if (step === 0) return;
+    setDirection(-1);
+    prevStep();
+  }, [step]);
+
+  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
+    const { offset, velocity } = info;
+    if (offset.x < -SWIPE_THRESHOLD || velocity.x < -500) {
+      if (canProceed() && step < 3) {
+        setDirection(1);
+        nextStep();
+      }
+    } else if (offset.x > SWIPE_THRESHOLD || velocity.x > 500) {
+      if (step > 0) {
+        setDirection(-1);
+        prevStep();
+      }
+    }
+  }, [step, canProceed]);
+
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
