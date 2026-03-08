@@ -10,7 +10,7 @@ const tiers = [
 ];
 
 const Pricing = () => (
-  <div className="min-h-screen bg-background">
+  <div className="min-h-screen nextslot-theme bg-background">
     <SiteHeader />
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <section className="py-16 md:py-24 text-center">

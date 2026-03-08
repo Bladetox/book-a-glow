@@ -518,3 +518,93 @@
     display: none;
   }
 }
+
+/* ===== NEXTSLOT SITE THEME ===== */
+/* Scoped theme for the NextSlot marketing / site pages */
+.nextslot-theme {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 7%;
+  --card: 0 0% 96%;
+  --card-foreground: 0 0% 7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 7%;
+  --primary: 0 0% 7%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 7%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 38 33% 74%;
+  --accent-foreground: 0 0% 7%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 0 0% 7%;
+  --radius: 0.625rem;
+
+  --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(38 30% 97%) 100%);
+  --gradient-section: linear-gradient(180deg, hsl(0 0% 98%) 0%, hsl(0 0% 100%) 100%);
+  --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(38 20% 98%) 100%);
+  --gradient-dark-section: linear-gradient(180deg, hsl(0 0% 7%) 0%, hsl(0 0% 12%) 100%);
+  --gradient-glow: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(38 33% 74% / 0.15), transparent);
+  --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
+  --shadow-soft: 0 1px 3px hsl(0 0% 0% / 0.04), 0 4px 12px hsl(0 0% 0% / 0.03);
+  --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.06), 0 12px 40px hsl(0 0% 0% / 0.04);
+  --shadow-glow: 0 0 40px hsl(38 33% 74% / 0.12);
+
+  font-family: 'Inter', system-ui, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.nextslot-theme.dark,
+.dark .nextslot-theme {
+  --background: 0 0% 5%;
+  --foreground: 0 0% 96%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 96%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 96%;
+  --primary: 0 0% 96%;
+  --primary-foreground: 0 0% 7%;
+  --secondary: 0 0% 14%;
+  --secondary-foreground: 0 0% 96%;
+  --muted: 0 0% 14%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 38 30% 45%;
+  --accent-foreground: 0 0% 96%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 96%;
+  --border: 0 0% 18%;
+  --input: 0 0% 18%;
+  --ring: 0 0% 96%;
+
+  --gradient-hero: linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 8%) 100%);
+  --gradient-section: linear-gradient(180deg, hsl(0 0% 8%) 0%, hsl(0 0% 5%) 100%);
+  --gradient-card: linear-gradient(135deg, hsl(0 0% 10%) 0%, hsl(0 0% 8%) 100%);
+  --gradient-dark-section: linear-gradient(180deg, hsl(0 0% 96%) 0%, hsl(0 0% 90%) 100%);
+  --gradient-glow: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(38 30% 45% / 0.1), transparent);
+  --gradient-surface: linear-gradient(180deg, hsl(0 0% 10%) 0%, hsl(0 0% 8%) 100%);
+  --shadow-soft: 0 1px 3px hsl(0 0% 0% / 0.2), 0 4px 12px hsl(0 0% 0% / 0.15);
+  --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.3), 0 12px 40px hsl(0 0% 0% / 0.2);
+  --shadow-glow: 0 0 40px hsl(38 30% 45% / 0.08);
+}
+
+/* NextSlot utility classes */
+.nextslot-theme .gradient-hero { background: var(--gradient-hero); }
+.nextslot-theme .gradient-section { background: var(--gradient-section); }
+.nextslot-theme .gradient-card { background: var(--gradient-card); }
+.nextslot-theme .gradient-dark { background: var(--gradient-dark-section); }
+.nextslot-theme .gradient-surface { background: var(--gradient-surface); }
+.nextslot-theme .shadow-soft { box-shadow: var(--shadow-soft); }
+.nextslot-theme .shadow-elevated { box-shadow: var(--shadow-elevated); }
+.nextslot-theme .shadow-glow { box-shadow: var(--shadow-glow); }
+.nextslot-theme .glow-overlay { position: relative; }
+.nextslot-theme .glow-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-glow);
+  pointer-events: none;
+}
