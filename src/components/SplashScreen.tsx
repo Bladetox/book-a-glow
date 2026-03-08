@@ -1,11 +1,14 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
+import { useBusinessConfig } from "@/data/businessStore";
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
+  const config = useBusinessConfig();
+
   const particles = useMemo(
     () =>
       Array.from({ length: 20 }, (_, i) => ({
@@ -58,7 +61,6 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
       {/* Logo */}
       <div className="relative mb-16">
-        {/* Pulsing glow */}
         <motion.div
           className="absolute inset-0 rounded-3xl bg-white/8 blur-2xl scale-150"
           animate={{ opacity: [0.15, 0.35, 0.15], scale: [1.4, 1.6, 1.4] }}
@@ -70,7 +72,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
           className="relative w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center"
         >
-          <span className="font-display text-2xl font-bold text-white">.pb</span>
+          <span className="font-display text-2xl font-bold text-white">{config.abbreviation}</span>
         </motion.div>
       </div>
 
@@ -89,7 +91,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         transition={{ delay: 0.5, duration: 0.4 }}
         className="font-display text-3xl font-bold text-white mt-2"
       >
-        PhenomeBeauty
+        {config.name}
       </motion.h1>
       <motion.p
         initial={{ opacity: 0, y: 10 }}
@@ -97,7 +99,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         transition={{ delay: 0.65, duration: 0.4 }}
         className="text-[10px] font-semibold tracking-[0.3em] uppercase text-white/50 mt-5"
       >
-        Mobile Beauty Studio
+        {config.tagline}
       </motion.p>
       <motion.p
         initial={{ opacity: 0, y: 10 }}
@@ -105,7 +107,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         transition={{ delay: 0.8, duration: 0.4 }}
         className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/40 mt-1"
       >
-        Premium At-Home Treatments
+        {config.subtitle}
       </motion.p>
 
       {/* CTA Button */}
@@ -118,9 +120,8 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         onClick={onComplete}
         className="mt-24 px-8 py-3.5 rounded-2xl border border-white/15 bg-white/5 backdrop-blur-xl text-xs font-semibold tracking-[0.15em] uppercase text-white relative overflow-hidden group cursor-pointer"
       >
-        {/* Shimmer sweep on hover */}
         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-700" />
-        <span className="relative">Select Your Treatments</span>
+        <span className="relative">{config.ctaLabel}</span>
       </motion.button>
     </motion.div>
   );

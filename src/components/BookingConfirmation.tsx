@@ -1,4 +1,5 @@
 import { BookingState } from "@/data/bookingData";
+import { useBusinessConfig } from "@/data/businessStore";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -7,6 +8,7 @@ interface BookingConfirmationProps {
 }
 
 const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
+  const config = useBusinessConfig();
   const formattedDate = booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "TBC";
   const formattedTime = booking.selectedTime || "TBC";
 
@@ -23,7 +25,7 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
         transition={{ delay: 0.1 }}
         className="font-display text-2xl font-bold text-foreground text-center"
       >
-        A date with yourself
+        {config.confirmationTitle}
       </motion.h2>
 
       <motion.p
@@ -41,7 +43,7 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
         transition={{ delay: 0.2 }}
         className="text-sm text-muted-foreground leading-relaxed"
       >
-        I've received your deposit, and your space in my calendar is now officially held. This isn't just a booking; it's a promise you've made to yourself to pause, and I am so honored to be the one holding that space for you.
+        {config.confirmationIntro}
       </motion.p>
 
       <motion.div
@@ -100,7 +102,7 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
         transition={{ delay: 0.4 }}
         className="text-sm text-muted-foreground leading-relaxed"
       >
-        Until then, keep choosing yourself in the small moments, too.
+        {config.confirmationOutro}
       </motion.p>
 
       <motion.p
@@ -109,7 +111,7 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
         transition={{ delay: 0.45 }}
         className="text-sm font-semibold text-foreground"
       >
-        Toodles.
+        {config.signOff}
       </motion.p>
     </motion.div>
   );
