@@ -1,0 +1,2 @@
+ALTER TABLE public.tenants ADD COLUMN custom_domain text DEFAULT NULL;
+COMMENT ON COLUMN public.tenants.custom_domain IS 'Optional custom domain (e.g. bookings.phenomebeauty.co.za). If null, uses <tenant_id>.nextslot.co.za';
