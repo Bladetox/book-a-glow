@@ -14,14 +14,22 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       transition={{ duration: 0.5 }}
     >
       {/* Logo */}
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-        className="w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center mb-16"
-      >
-        <span className="font-display text-2xl font-bold text-white">.pb</span>
-      </motion.div>
+      <div className="relative mb-16">
+        {/* Pulsing glow */}
+        <motion.div
+          className="absolute inset-0 rounded-3xl bg-white/8 blur-2xl scale-150"
+          animate={{ opacity: [0.15, 0.35, 0.15], scale: [1.4, 1.6, 1.4] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
+          className="relative w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center"
+        >
+          <span className="font-display text-2xl font-bold text-white">.pb</span>
+        </motion.div>
+      </div>
 
       {/* Copy hierarchy */}
       <motion.p
