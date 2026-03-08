@@ -1,23 +1,34 @@
-import { useState, useEffect } from "react";
+import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 
-type Theme = "dark" | "light";
-
+/**
+ * useTheme — reads the dark/light mode from the active business theme.
+ * The BusinessThemeProvider already sets the dark/light class on <html>.
+ * This hook exposes the current mode for components that need it.
+ */
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
-    const stored = localStorage.getItem("pb-theme") as Theme | null;
-    if (stored) return stored;
-    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-  });
+  const { theme, allThemes, setThemeById } = useBusinessTheme();
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
-    localStorage.setItem("pb-theme", theme);
-  }, [theme]);
+  // Determine if current theme is dark based on background lightness
+  const bgParts = theme.colors.background.split(/\s+/);
+  const lightness = parseFloat(bgParts[2] ?? "50");
+  const isDark = lightness < 50;
 
-  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const toggle = () => {
+    // Find the opposite-mode version: pick first dark theme if currently light, or first light theme
+    if (isDark) {
+      const lightTheme = allThemes.find((t) => {
+        const l = parseFloat(t.colors.background.split(/\s+/)[2] ?? "50");
+        return l >= 50;
+      });
+      if (lightTheme) setThemeById(lightTheme.id);
+    } else {
+      const darkTheme = allThemes.find((t) => {
+        const l = parseFloat(t.colors.background.split(/\s+/)[2] ?? "50");
+        return l < 50;
+      });
+      if (darkTheme) setThemeById(darkTheme.id);
+    }
+  };
 
-  return { theme, toggle };
+  return { theme: isDark ? "dark" : "light", toggle } as const;
 }
