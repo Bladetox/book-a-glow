@@ -81,8 +81,8 @@ const Onboarding = () => {
               <div className="space-y-2">
                 {businessThemes.map((type) => (
                   <button key={type.label} onClick={() => setBusinessType(type.label)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 text-left ${businessType === type.label ? "border-primary bg-card shadow-lg" : "border-border hover:border-foreground/20"}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${businessType === type.label ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
-                      {type.icon && <type.icon className="h-5 w-5" />}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-colors ${businessType === type.label ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+                      {type.label.charAt(0)}
                     </div>
                     <div className="flex-1"><p className="text-sm font-semibold">{type.label}</p><p className="text-xs text-muted-foreground">{type.vibe}</p></div>
                     {businessType === type.label && <Check className="h-4 w-4 text-primary" />}
