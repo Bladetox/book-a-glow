@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Edit3, Save, Trash2, ChevronDown, ChevronUp,
-  CalendarCheck, CircleDollarSign, MessageSquare
+  CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { availableTimes } from "@/data/bookingData";
 
 // ─── Types (maps to future Supabase `bookings` table) ───
 interface Booking {
@@ -107,12 +111,34 @@ const statusColors: Record<Booking["status"], string> = {
   cancelled: "bg-red-500/10 text-red-400",
 };
 
-const AdminBookings = () => {
+interface AdminBookingsProps {
+  initialClient?: string | null;
+  onClearClient?: () => void;
+}
+
+const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Booking>>({});
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
+  const [rescheduleTime, setRescheduleTime] = useState<string | null>(null);
+
+  // Auto-expand booking when navigating from dashboard appointment
+  useEffect(() => {
+    if (initialClient) {
+      const match = bookings.find(b =>
+        b.client.toLowerCase().includes(initialClient.toLowerCase().split(" ")[0].replace(".", ""))
+      );
+      if (match) {
+        setExpandedId(match.id);
+        setActiveFilter("All");
+      }
+      onClearClient?.();
+    }
+  }, [initialClient]);
 
   const filtered = bookings.filter(b => {
     if (activeFilter === "All") return true;
@@ -369,6 +395,13 @@ const AdminBookings = () => {
 
                               {/* Action buttons */}
                               <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                  <ActionBtn icon={CalendarClock} label="Reschedule" color="text-sky-400" onClick={() => {
+                                    setReschedulingId(reschedulingId === b.id ? null : b.id);
+                                    setRescheduleDate(undefined);
+                                    setRescheduleTime(null);
+                                  }} />
+                                )}
                                 {b.status === "pending" && (
                                   <ActionBtn icon={Check} label="Confirm" color="text-emerald-400" onClick={() => updateBooking(b.id, { status: "confirmed" })} />
                                 )}
@@ -382,6 +415,94 @@ const AdminBookings = () => {
                                 <div className="flex-1" />
                                 <ActionBtn icon={Trash2} label="Delete" color="text-red-400/60" onClick={() => deleteBooking(b.id)} />
                               </div>
+
+                              {/* Reschedule panel */}
+                              <AnimatePresence>
+                                {reschedulingId === b.id && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                                      <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/40 mb-3">Reschedule Booking</p>
+                                      <div className="flex flex-col sm:flex-row gap-3">
+                                        {/* Date picker */}
+                                        <div className="flex-1">
+                                          <p className="text-[10px] text-white/30 mb-1.5">New Date</p>
+                                          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+                                            <Calendar
+                                              mode="single"
+                                              selected={rescheduleDate}
+                                              onSelect={setRescheduleDate}
+                                              disabled={(date) => date < new Date()}
+                                              className={cn("p-3 pointer-events-auto [&_.rdp-day_focus]:bg-white/10 [&_.rdp-day]:text-white/70")}
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Time slots */}
+                                        <div className="flex-1">
+                                          <p className="text-[10px] text-white/30 mb-1.5">New Time</p>
+                                          <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
+                                            {availableTimes.map(t => (
+                                              <button
+                                                key={t}
+                                                onClick={() => setRescheduleTime(t)}
+                                                className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                                                  rescheduleTime === t
+                                                    ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                                                    : "bg-white/[0.04] text-white/50 border border-white/[0.06] hover:text-white/70"
+                                                }`}
+                                              >
+                                                {t}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Confirm reschedule */}
+                                      <div className="flex items-center justify-between mt-4">
+                                        <div className="text-xs text-white/40">
+                                          {rescheduleDate && rescheduleTime ? (
+                                            <span>New: <span className="text-white/70 font-medium">{format(rescheduleDate, "d MMM yyyy")} at {rescheduleTime}</span></span>
+                                          ) : (
+                                            <span>Select a date and time</span>
+                                          )}
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => { setReschedulingId(null); setRescheduleDate(undefined); setRescheduleTime(null); }}
+                                            className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors"
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            disabled={!rescheduleDate || !rescheduleTime}
+                                            onClick={() => {
+                                              if (rescheduleDate && rescheduleTime) {
+                                                updateBooking(b.id, {
+                                                  date: format(rescheduleDate, "yyyy-MM-dd"),
+                                                  time: rescheduleTime,
+                                                });
+                                                setReschedulingId(null);
+                                                setRescheduleDate(undefined);
+                                                setRescheduleTime(null);
+                                              }
+                                            }}
+                                            className="px-4 py-1.5 rounded-lg bg-sky-500/20 border border-sky-500/30 text-xs font-semibold text-sky-400 hover:bg-sky-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                          >
+                                            <CalendarClock className="w-3 h-3" />
+                                            Confirm Reschedule
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
                           )}
                         </div>
