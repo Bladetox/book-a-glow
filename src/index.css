@@ -305,6 +305,23 @@
     );
   }
 
+  /* ===== VALIDATION GLOW ===== */
+  .glass-input.valid {
+    border-color: hsl(142 76% 36% / 0.5);
+    box-shadow:
+      0 0 0 3px hsl(142 76% 36% / 0.1),
+      0 0 12px hsl(142 76% 36% / 0.08),
+      0 2px 8px hsl(0 0% 0% / 0.06);
+  }
+
+  .glass-input.invalid {
+    border-color: hsl(0 84% 60% / 0.5);
+    box-shadow:
+      0 0 0 3px hsl(0 84% 60% / 0.1),
+      0 0 12px hsl(0 84% 60% / 0.08),
+      0 2px 8px hsl(0 0% 0% / 0.06);
+  }
+
   /* ===== CATEGORY PILLS ===== */
   .category-pill {
     @apply px-5 py-2 rounded-full text-[11px] font-semibold tracking-[0.15em] uppercase cursor-pointer;
