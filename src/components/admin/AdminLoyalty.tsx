@@ -23,7 +23,7 @@ const AdminLoyalty = () => {
             className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4"
           >
             <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-1">{s.label}</p>
-            <p className={`font-display text-2xl font-bold ${s.color || "text-white/80"}`}>{s.value}</p>
+            <p className={`font-display text-xl sm:text-2xl font-bold ${s.color || "text-white/80"}`}>{s.value}</p>
           </motion.div>
         ))}
       </div>
@@ -48,19 +48,19 @@ const AdminLoyalty = () => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
+        className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-x-auto"
       >
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-white/[0.06]">
-              {["Client", "Phone", "Status", "Last Wax", "Next Due", "Pack Progress", "Notes", "WhatsApp"].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-[10px] font-semibold tracking-wider uppercase text-white/30">{h}</th>
+              {["Client", "Phone", "Status", "Last Wax", "Next Due", "Pack", "Notes"].map((h) => (
+                <th key={h} className="text-left px-3 sm:px-4 py-3 text-[10px] font-semibold tracking-wider uppercase text-white/30">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td colSpan={8} className="px-4 py-8 text-center text-white/30">
+              <td colSpan={7} className="px-4 py-8 text-center text-white/30">
                 No loyalty data yet.
               </td>
             </tr>

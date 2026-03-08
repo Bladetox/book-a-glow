@@ -1,15 +1,19 @@
 import { motion } from "framer-motion";
+import { 
+  LayoutDashboard, CalendarCheck, Sparkles, Clock, 
+  Package, Star, Link2, Settings, Gem, Menu 
+} from "lucide-react";
 
-const icons: Record<string, string> = {
-  "Dashboard": "📊",
-  "Bookings": "📋",
-  "New Divas": "✨",
-  "Availability": "🕐",
-  "Stock": "📦",
-  "Reviews": "⭐",
-  "Integrations": "🔗",
-  "Settings": "⚙️",
-  "Loyalty Tracker": "💎",
+const iconMap: Record<string, React.ElementType> = {
+  "Dashboard": LayoutDashboard,
+  "Bookings": CalendarCheck,
+  "New Divas": Sparkles,
+  "Availability": Clock,
+  "Stock": Package,
+  "Reviews": Star,
+  "Integrations": Link2,
+  "Settings": Settings,
+  "Loyalty Tracker": Gem,
 };
 
 interface AdminSidebarProps {
@@ -37,20 +41,23 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen }: AdminSidebarProps
 
       {/* Nav */}
       <nav className="flex-1 px-3 flex flex-col gap-1">
-        {views.map((view) => (
-          <button
-            key={view}
-            onClick={() => onSelect(view)}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left
-              ${activeView === view
-                ? "bg-white/[0.08] text-white"
-                : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
-              }`}
-          >
-            <span className="text-base">{icons[view] || "•"}</span>
-            {view}
-          </button>
-        ))}
+        {views.map((view) => {
+          const Icon = iconMap[view] || LayoutDashboard;
+          return (
+            <button
+              key={view}
+              onClick={() => onSelect(view)}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left
+                ${activeView === view
+                  ? "bg-white/[0.08] text-white"
+                  : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+                }`}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              {view}
+            </button>
+          );
+        })}
       </nav>
     </motion.aside>
   );
