@@ -102,7 +102,7 @@ const AdminSettings = () => {
       <SettingsCard title="Booking Rules" gradient="from-white/[0.04] to-white/[0.01]">
         <SettingRow label="Min Notice (hours)" placeholder="24" type="number" />
         <SettingRow label="Max Advance Booking (days)" placeholder="60" type="number" />
-        <SettingRow label="Booking Ref Prefix" placeholder="PB-" />
+        <SettingRow label="Booking Ref Prefix" placeholder="" />
         <button className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors">Save</button>
       </SettingsCard>
 
