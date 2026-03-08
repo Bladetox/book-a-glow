@@ -2,7 +2,7 @@ import { BookingState, treatments } from "@/data/bookingData";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Check, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface ReviewStepProps {
   booking: BookingState;

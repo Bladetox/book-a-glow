@@ -20,7 +20,7 @@ const stepVariants = {
     opacity: 1,
     scale: 1,
     transition: {
-      x: { type: "spring", stiffness: 350, damping: 35 },
+      x: { type: "spring" as const, stiffness: 350, damping: 35 },
       opacity: { duration: 0.25 },
       scale: { duration: 0.25 },
     },
@@ -30,7 +30,7 @@ const stepVariants = {
     opacity: 0,
     scale: 0.98,
     transition: {
-      x: { type: "spring", stiffness: 350, damping: 35 },
+      x: { type: "spring" as const, stiffness: 350, damping: 35 },
       opacity: { duration: 0.2 },
       scale: { duration: 0.2 },
     },
