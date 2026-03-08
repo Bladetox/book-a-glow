@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
+import { PublicTenantProvider } from "./contexts/PublicTenantContext";
+import { getTenantSlug } from "./lib/tenant-resolver";
 import Index from "./pages/Index";
 import Book from "./pages/Book";
 import Product from "./pages/Product";
@@ -18,30 +20,53 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BusinessThemeProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/book" element={<Book />} />
-            <Route path="/product" element={<Product />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<SiteTerms />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </BusinessThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+/** Marketing site routes (main domain) */
+const MarketingRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Index />} />
+    <Route path="/product" element={<Product />} />
+    <Route path="/pricing" element={<Pricing />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/onboarding" element={<Onboarding />} />
+    <Route path="/privacy" element={<Privacy />} />
+    <Route path="/terms" element={<SiteTerms />} />
+    <Route path="/admin" element={<Admin />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
+    {/* /book on main domain still needs tenant context — default to query param ?tenant=xxx */}
+    <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
 );
+
+/** Tenant booking app routes (subdomain) */
+const TenantRoutes = () => (
+  <PublicTenantProvider>
+    <Routes>
+      <Route path="/" element={<Book />} />
+      <Route path="/book" element={<Book />} />
+      <Route path="/admin" element={<Admin />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </PublicTenantProvider>
+);
+
+const App = () => {
+  const tenantSlug = getTenantSlug();
+  const isSubdomain = !!tenantSlug;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BusinessThemeProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            {isSubdomain ? <TenantRoutes /> : <MarketingRoutes />}
+          </BrowserRouter>
+        </BusinessThemeProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

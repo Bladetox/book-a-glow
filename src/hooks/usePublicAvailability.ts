@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
-const TENANT_ID = "phenomebeauty";
-
-/** Resolve the staff/owner id for this tenant */
-async function getStaffId(): Promise<string> {
+/** Resolve the staff/owner id for a tenant */
+async function getStaffId(tenantId: string): Promise<string> {
   const { data, error } = await supabase
     .from("tenants")
     .select("owner_id")
-    .eq("id", TENANT_ID)
+    .eq("id", tenantId)
     .single();
   if (error || !data?.owner_id) throw new Error("Tenant not found");
   return data.owner_id;
@@ -19,10 +18,13 @@ async function getStaffId(): Promise<string> {
  * Returns a map: { "2026-03-10": ["08:00-08:30", "09:00-09:30", ...], ... }
  */
 export function useMonthAvailability(year: number, month: number) {
+  const { tenantId } = usePublicTenant();
+
   return useQuery({
-    queryKey: ["public-month-availability", TENANT_ID, year, month],
+    queryKey: ["public-month-availability", tenantId, year, month],
+    enabled: !!tenantId,
     queryFn: async () => {
-      const staffId = await getStaffId();
+      const staffId = await getStaffId(tenantId);
       const { data, error } = await supabase.rpc("get_month_availability", {
         p_staff_id: staffId,
         p_year: year,
@@ -44,12 +46,14 @@ export function useMonthAvailability(year: number, month: number) {
  * Returns array of "HH:MM" strings for available slots.
  */
 export function useDateSlots(date: string | null) {
+  const { tenantId } = usePublicTenant();
+
   return useQuery({
-    queryKey: ["public-date-slots", TENANT_ID, date],
-    enabled: !!date,
+    queryKey: ["public-date-slots", tenantId, date],
+    enabled: !!date && !!tenantId,
     queryFn: async () => {
       if (!date) return [];
-      const staffId = await getStaffId();
+      const staffId = await getStaffId(tenantId);
       const { data, error } = await supabase.rpc("get_available_slots", {
         p_staff_id: staffId,
         p_date: date,
@@ -64,6 +68,16 @@ export function useDateSlots(date: string | null) {
 }
 
 /** Get the resolved staff ID for booking creation */
+export function useResolveStaffId() {
+  const { tenantId } = usePublicTenant();
+  return async () => getStaffId(tenantId);
+}
+
+// Keep backward-compat export for ReviewStep (will be migrated)
 export async function resolveStaffId(): Promise<string> {
-  return getStaffId();
+  // Fallback: reads from tenant resolver
+  const { getTenantSlug } = await import("@/lib/tenant-resolver");
+  const slug = getTenantSlug();
+  if (!slug) throw new Error("No tenant context");
+  return getStaffId(slug);
 }
