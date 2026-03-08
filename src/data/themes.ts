@@ -219,16 +219,52 @@ export const businessThemes: BusinessTheme[] = [
   },
 ];
 
+/** Parse "H S% L%" into [h, s, l] numbers */
+function parseHSL(hsl: string): [number, number, number] {
+  const parts = hsl.replace(/%/g, "").split(/\s+/).map(Number);
+  return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 50];
+}
+
 /** Convert a theme's colors to CSS custom properties */
 export function getThemeCssVars(theme: BusinessTheme): Record<string, string> {
   const c = theme.colors;
+  const [bgH, bgS, bgL] = parseHSL(c.background);
+  const isDark = bgL < 50;
+
+  // Derive glass variables that match the theme's hue
+  const glassVars = isDark
+    ? {
+        "--glass-bg": `${bgH} ${Math.min(bgS + 2, 100)}% ${bgL + 4}%`,
+        "--glass-border": `${bgH} ${bgS}% ${bgL + 14}%`,
+        "--glass-highlight": `${bgH} ${bgS}% ${bgL + 32}%`,
+        "--glass-shimmer": `${bgH} ${bgS}% ${bgL + 42}%`,
+      }
+    : {
+        "--glass-bg": `${bgH} ${Math.max(bgS - 5, 0)}% ${Math.min(bgL + 3, 100)}%`,
+        "--glass-border": `${bgH} ${Math.max(bgS - 8, 0)}% ${bgL - 15}%`,
+        "--glass-highlight": `${bgH} ${Math.max(bgS - 10, 0)}% ${bgL - 27}%`,
+        "--glass-shimmer": `${bgH} ${Math.max(bgS - 5, 0)}% ${bgL - 10}%`,
+      };
+
+  // Derive sidebar variables from theme
+  const sidebarVars = {
+    "--sidebar-background": c.background,
+    "--sidebar-foreground": c.foreground,
+    "--sidebar-primary": c.primary,
+    "--sidebar-primary-foreground": c.primaryForeground,
+    "--sidebar-accent": c.secondary,
+    "--sidebar-accent-foreground": c.secondaryForeground,
+    "--sidebar-border": c.border,
+    "--sidebar-ring": c.ring,
+  };
+
   return {
     "--background": c.background,
     "--foreground": c.foreground,
     "--card": c.card,
     "--card-foreground": c.cardForeground,
-    "--popover": c.background,
-    "--popover-foreground": c.foreground,
+    "--popover": c.card,
+    "--popover-foreground": c.cardForeground,
     "--primary": c.primary,
     "--primary-foreground": c.primaryForeground,
     "--secondary": c.secondary,
@@ -237,12 +273,16 @@ export function getThemeCssVars(theme: BusinessTheme): Record<string, string> {
     "--muted-foreground": c.mutedForeground,
     "--accent": c.accent,
     "--accent-foreground": c.accentForeground,
+    "--destructive": "0 84.2% 60.2%",
+    "--destructive-foreground": "0 0% 98%",
     "--border": c.border,
     "--input": c.input,
     "--ring": c.ring,
     "--gradient-hero": c.gradientHero,
     "--gradient-card": c.gradientCard,
     "--gradient-surface": c.gradientSurface,
+    ...glassVars,
+    ...sidebarVars,
   };
 }
 
