@@ -1,25 +1,29 @@
-import { BookingState } from "@/data/bookingData";
-import { useTreatments } from "@/data/servicesStore";
+import { BookingState, safetyQuestions } from "@/data/bookingData";
+import { usePublicServices } from "@/hooks/usePublicServices";
+import { resolveStaffId } from "@/hooks/usePublicAvailability";
 import { useTermsSections } from "@/components/admin/AdminTerms";
 import { useBusinessConfig } from "@/data/businessStore";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
+import { toast } from "sonner";
 
 interface ReviewStepProps {
   booking: BookingState;
 }
 
 const ReviewStep = ({ booking }: ReviewStepProps) => {
-  const treatments = useTreatments();
+  const { data: allServices = [] } = usePublicServices();
   const termsSections = useTermsSections();
   const config = useBusinessConfig();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const selected = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
+  const selected = allServices.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
   
   const estimatedDistanceKm = booking.address ? config.defaultDistanceKm : 0;
@@ -30,6 +34,100 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const deposit = Math.ceil(total * (depositPercent / 100));
   const balance = total - deposit;
   const cur = config.currency;
+
+  const handleConfirm = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+
+    try {
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      let clientId: string;
+
+      if (!user) {
+        // Create anonymous/guest account via signUp with the client's email
+        const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: booking.email,
+          password: tempPassword,
+          options: {
+            data: {
+              full_name: booking.fullName,
+              phone: `${booking.phoneCode}${booking.phone}`,
+            },
+          },
+        });
+        if (signUpError) throw signUpError;
+        if (!signUpData.user) throw new Error("Sign up failed");
+        clientId = signUpData.user.id;
+
+        // Update profile with booking details
+        await supabase.from("profiles").update({
+          full_name: booking.fullName,
+          phone: `${booking.phoneCode}${booking.phone}`,
+          address: booking.address,
+        }).eq("id", clientId);
+      } else {
+        clientId = user.id;
+        // Update profile with latest details
+        await supabase.from("profiles").update({
+          full_name: booking.fullName,
+          phone: `${booking.phoneCode}${booking.phone}`,
+          address: booking.address,
+        }).eq("id", clientId);
+      }
+
+      const staffId = await resolveStaffId();
+      const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
+      const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
+
+      // Map safety answers to consultation fields
+      const safetyMap: Record<number, string> = {};
+      safetyQuestions.forEach((q) => {
+        const answer = booking.safetyAnswers[q.id];
+        if (answer !== null && answer !== undefined) {
+          safetyMap[q.id] = answer ? "Yes" : "No";
+        }
+      });
+
+      const { data, error } = await supabase.rpc("create_booking_with_consultation", {
+        p_client_id: clientId,
+        p_staff_id: staffId,
+        p_booking_date: bookingDate,
+        p_start_time: startTime,
+        p_service_ids: booking.selectedTreatments,
+        p_is_callout: !!booking.address,
+        p_callout_address: booking.address || null,
+        p_callout_distance_km: estimatedDistanceKm,
+        p_client_notes: booking.additionalNotes || booking.existingClientNotes || null,
+        p_client_type: booking.isExistingClient ? "existing" : "new",
+        p_lead_source: booking.referralSource || null,
+        p_skin_conditions: safetyMap[1] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_medications: safetyMap[2] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_allergies: safetyMap[3] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_pregnancy: safetyMap[4] === "Yes" ? "Yes" : (booking.isExistingClient ? "On File" : "No"),
+        p_health_conditions: safetyMap[5] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_environmental_exposure: safetyMap[6] === "Yes" ? "Flagged by client" : null,
+        p_physical_factors: safetyMap[7] === "Yes" ? "Flagged by client" : null,
+        p_hair_length_ok: safetyMap[8] === "No" ? "No - insufficient growth" : "Yes",
+        p_additional_notes: booking.additionalNotes || null,
+      });
+
+      if (error) throw error;
+
+      const result = (data as any)?.[0];
+      if (result && !result.success) throw new Error(result.message);
+
+      setConfirmed(true);
+      toast.success("Booking created successfully!");
+    } catch (err: any) {
+      console.error("Booking error:", err);
+      toast.error(err.message || "Failed to create booking. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (confirmed) {
     return <BookingConfirmation booking={booking} />;
@@ -147,7 +245,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
               onClick={(e) => e.stopPropagation()}
               className="glass-card rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
                 <div>
                   <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">{config.name}</p>
@@ -161,8 +258,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
-              {/* Content */}
               <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4 scrollbar-hide">
                 {termsSections.map((section) => (
                   <div key={section.id}>
@@ -171,8 +266,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
                   </div>
                 ))}
               </div>
-
-              {/* Footer */}
               <div className="px-5 py-4 border-t border-border/30">
                 <motion.button
                   whileTap={{ scale: 0.96 }}
@@ -189,11 +282,16 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
       <motion.button
         whileTap={{ scale: 0.96 }}
-        onClick={() => setConfirmed(true)}
-        className="btn-next flex items-center justify-center gap-2"
+        onClick={handleConfirm}
+        disabled={submitting}
+        className="btn-next flex items-center justify-center gap-2 disabled:opacity-50"
       >
-        <Sparkles className="w-4 h-4" />
-        Confirm & Pay Deposit
+        {submitting ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Sparkles className="w-4 h-4" />
+        )}
+        {submitting ? "Creating Booking..." : "Confirm & Pay Deposit"}
       </motion.button>
     </div>
   );
