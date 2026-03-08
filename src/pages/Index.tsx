@@ -138,7 +138,7 @@ const Index = () => {
         <section className="bg-secondary/40 py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center mb-6">
-              <img src={logoImg} alt="NextSlot" className="h-32 md:h-40 w-auto mix-blend-multiply dark:mix-blend-screen" />
+              <img src={logoImg} alt="NextSlot" className="h-32 md:h-40 w-auto" />
             </div>
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-16">How NextSlot works</h2>
             <div className="grid md:grid-cols-3 gap-8 lg:gap-12">

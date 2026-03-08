@@ -72,7 +72,7 @@ const Onboarding = () => {
     <div className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground" style={themeStyle}>
       <div className="border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2"><img src={logo} alt="NextSlot" className="h-10 w-auto mix-blend-multiply dark:mix-blend-screen" /></Link>
+          <Link to="/" className="flex items-center gap-2"><img src={logo} alt="NextSlot" className="h-10 w-auto" /></Link>
           <div className="flex items-center gap-3">
             {activeTheme && <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-accent/20 text-accent-foreground transition-colors duration-500">{activeTheme.vibe}</span>}
             <span className="text-xs text-muted-foreground">Step {step} of {totalSteps}</span>

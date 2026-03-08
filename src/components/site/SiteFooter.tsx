@@ -6,7 +6,7 @@ const SiteFooter = () => (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex flex-col md:flex-row justify-between gap-8">
         <div className="max-w-xs">
-          <img src={logo} alt="NextSlot" className="h-12 w-auto mb-2 mix-blend-multiply dark:mix-blend-screen" />
+          <img src={logo} alt="NextSlot" className="h-12 w-auto mb-2" />
           <p className="text-sm text-muted-foreground">Booking infrastructure for modern service businesses.</p>
         </div>
         <div className="flex gap-16">
