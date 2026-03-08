@@ -61,6 +61,7 @@ const AdminSettings = () => {
         address: tenant.address ?? "",
         currency: tenant.currency ?? "R",
         themeId: tenant.theme_id ?? "standard",
+        custom_domain: tenant.custom_domain ?? "",
       }));
     }
   }, [tenant]);
