@@ -72,7 +72,7 @@ const AdminSettings = () => {
       </SettingsCard>
 
       <SettingsCard title="Business" gradient="from-white/[0.05] to-white/[0.02]">
-        <SettingRow label="Business Name" placeholder="PhenomeBeauty" />
+        <SettingRow label="Business Name" placeholder="Your Business Name" />
         <SettingRow label="Admin Email" placeholder="phenomebeautys@gmail.com" type="email" />
         <SettingRow label="App Base URL" placeholder="https://phenomebeauty.lovable.app" />
         <button className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors">Save</button>
