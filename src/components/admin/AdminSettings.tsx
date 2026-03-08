@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Check, KeyRound, CreditCard, Palette, Building2, MapPin, Mail, Clock, FileText, RotateCcw } from "lucide-react";
-import { getAdminPassword, setAdminPassword } from "./AdminLogin";
+import { supabase } from "@/integrations/supabase/client";
 import { useBusinessConfig, saveBusinessConfig, resetBusinessConfig, defaultBusinessConfig, BusinessConfig } from "@/data/businessStore";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
@@ -91,7 +91,6 @@ const AdminSettings = () => {
   // Sync draft when config changes externally
   useEffect(() => { setDraft(config); }, [config]);
 
-  const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
@@ -118,14 +117,14 @@ const AdminSettings = () => {
     flash(section);
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     setPwError("");
     setPwSuccess("");
-    if (currentPw !== getAdminPassword()) { setPwError("Current password is incorrect"); return; }
     if (newPw.length < 6) { setPwError("New password must be at least 6 characters"); return; }
     if (newPw !== confirmPw) { setPwError("Passwords do not match"); return; }
-    setAdminPassword(newPw);
-    setCurrentPw(""); setNewPw(""); setConfirmPw("");
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    if (error) { setPwError(error.message); return; }
+    setNewPw(""); setConfirmPw("");
     setPwSuccess("Password updated successfully");
   };
 
@@ -282,7 +281,6 @@ const AdminSettings = () => {
 
       {/* Password Change */}
       <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]">
-        <SettingRow label="Current Password" placeholder="Enter current password" type="password" value={currentPw} onChange={setCurrentPw} />
         <SettingRow label="New Password" placeholder="Min 6 characters" type="password" value={newPw} onChange={setNewPw} />
         <SettingRow label="Confirm New Password" placeholder="Confirm new password" type="password" value={confirmPw} onChange={setConfirmPw} />
         {pwError && <p className="text-xs text-red-400">{pwError}</p>}

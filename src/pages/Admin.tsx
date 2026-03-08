@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu } from "lucide-react";
+import { Menu, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -23,18 +24,70 @@ const views = [
 type ViewName = typeof views[number];
 
 const Admin = () => {
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
   const [activeView, setActiveView] = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
-  if (!authenticated) {
-    return <AdminLogin onLogin={() => setAuthenticated(true)} />;
+  const checkAdminSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setAuthState("unauthenticated");
+        return;
+      }
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id);
+
+      const isAdmin = roles?.some(r => r.role === "owner" || r.role === "admin");
+      setAuthState(isAdmin ? "authenticated" : "unauthenticated");
+
+      if (!isAdmin) {
+        await supabase.auth.signOut();
+      }
+    } catch {
+      setAuthState("unauthenticated");
+    }
+  };
+
+  useEffect(() => {
+    // Set up auth state listener BEFORE checking session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        setAuthState("unauthenticated");
+      } else if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+        checkAdminSession();
+      }
+    });
+
+    checkAdminSession();
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (authState === "loading") {
+    return (
+      <div className="min-h-dvh bg-[hsl(0,0%,3%)] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+      </div>
+    );
+  }
+
+  if (authState === "unauthenticated") {
+    return <AdminLogin onLogin={() => setAuthState("authenticated")} />;
   }
 
   const handleSelectAppointment = (client: string) => {
     setSelectedClient(client);
     setActiveView("Bookings");
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setAuthState("unauthenticated");
   };
 
   const renderView = () => {
@@ -90,7 +143,7 @@ const Admin = () => {
           <div className="flex-1" />
           <button
             className="text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08]"
-            onClick={() => setAuthenticated(false)}
+            onClick={handleSignOut}
           >
             Sign out
           </button>
