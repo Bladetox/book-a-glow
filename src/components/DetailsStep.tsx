@@ -1,4 +1,5 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -22,7 +23,7 @@ const referralOptions = [
 
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
-    "w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all";
+    "w-full bg-muted/40 border border-border/60 rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 backdrop-blur-sm";
 
   return (
     <div className="flex flex-col gap-5">
@@ -38,25 +39,31 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             { label: "✨ Existing Diva", value: true },
             { label: "🌸 New Diva", value: false },
           ].map((opt) => (
-            <button
+            <motion.button
               key={String(opt.value)}
+              whileTap={{ scale: 0.95 }}
               onClick={() => onUpdate({ isExistingClient: opt.value })}
-              className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all
+              className={`flex-1 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200
                 ${booking.isExistingClient === opt.value
-                  ? "bg-primary text-primary-foreground shadow-lg"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                   : "glass-card-service text-foreground"
                 }`}
             >
               {opt.label}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
 
       {/* Form fields */}
-      <div className="flex flex-col gap-3">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col gap-3"
+      >
         <div className="relative">
-          <span className="absolute left-3 top-3.5 text-sm">👤</span>
+          <span className="absolute left-3.5 top-3.5 text-sm">👤</span>
           <input
             className={`${inputClass} pl-10`}
             placeholder="Full Name"
@@ -86,7 +93,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         </div>
 
         <div className="relative">
-          <span className="absolute left-3 top-3.5 text-sm">✉️</span>
+          <span className="absolute left-3.5 top-3.5 text-sm">✉️</span>
           <input
             className={`${inputClass} pl-10`}
             type="email"
@@ -98,7 +105,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
         <div>
           <div className="relative">
-            <span className="absolute left-3 top-3.5 text-sm">📍</span>
+            <span className="absolute left-3.5 top-3.5 text-sm">📍</span>
             <input
               className={`${inputClass} pl-10`}
               placeholder="Home Address"
@@ -106,13 +113,13 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               onChange={(e) => onUpdate({ address: e.target.value })}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1 ml-1">
+          <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
             Used to calculate your call-out fee
           </p>
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">How did you hear about us?</label>
+          <label className="text-xs text-muted-foreground mb-1.5 block">How did you hear about us?</label>
           <select
             className={`${inputClass} appearance-none`}
             value={booking.referralSource}
@@ -124,59 +131,74 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             ))}
           </select>
         </div>
-      </div>
+      </motion.div>
 
       {/* Safety check for new clients */}
-      {booking.isExistingClient === false && (
-        <div className="glass-card-service rounded-xl p-4 flex flex-col gap-4">
-          <div>
-            <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              🌸 New Client Safety Check
-            </h4>
-            <p className="text-xs text-muted-foreground mt-1">
-              Answer all questions honestly. Your information is strictly confidential.
-            </p>
-          </div>
-
-          {safetyQuestions.map((q) => (
-            <div key={q.id} className="flex flex-col gap-2">
-              <div>
-                <p className="text-sm text-foreground">{q.id}. {q.question}</p>
-                {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
-              </div>
-              <div className="flex gap-2">
-                {[
-                  { label: "No", value: false },
-                  { label: "Yes", value: true },
-                ].map((opt) => (
-                  <button
-                    key={String(opt.value)}
-                    onClick={() =>
-                      onUpdate({
-                        safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value },
-                      })
-                    }
-                    className={`px-5 py-1.5 rounded-lg text-xs font-medium transition-all
-                      ${booking.safetyAnswers[q.id] === opt.value
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+      <AnimatePresence>
+        {booking.isExistingClient === false && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+            className="glass-card-service rounded-2xl p-4 flex flex-col gap-4 overflow-hidden"
+          >
+            <div>
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                🌸 New Client Safety Check
+              </h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                Answer all questions honestly. Your information is strictly confidential.
+              </p>
             </div>
-          ))}
 
-          <textarea
-            className={`${inputClass} min-h-[60px]`}
-            placeholder="Anything else we should know? (optional)"
-            value={booking.additionalNotes}
-            onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
-          />
-        </div>
-      )}
+            {safetyQuestions.map((q, i) => (
+              <motion.div
+                key={q.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex flex-col gap-2"
+              >
+                <div>
+                  <p className="text-sm text-foreground">{q.id}. {q.question}</p>
+                  {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
+                </div>
+                <div className="flex gap-2">
+                  {[
+                    { label: "No", value: false },
+                    { label: "Yes", value: true },
+                  ].map((opt) => (
+                    <motion.button
+                      key={String(opt.value)}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() =>
+                        onUpdate({
+                          safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value },
+                        })
+                      }
+                      className={`px-5 py-1.5 rounded-xl text-xs font-medium transition-all duration-200
+                        ${booking.safetyAnswers[q.id] === opt.value
+                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                          : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                      {opt.label}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+
+            <textarea
+              className={`${inputClass} min-h-[60px]`}
+              placeholder="Anything else we should know? (optional)"
+              value={booking.additionalNotes}
+              onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

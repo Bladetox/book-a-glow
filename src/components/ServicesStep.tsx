@@ -1,6 +1,7 @@
-import { treatments, categories, type Treatment } from "@/data/bookingData";
-import { useState, useRef, useEffect } from "react";
+import { treatments, categories } from "@/data/bookingData";
+import { useState, useRef } from "react";
 import { Check } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface ServicesStepProps {
   selectedTreatments: string[];
@@ -12,9 +13,6 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const filtered = treatments.filter((t) => t.category === activeCategory);
-  const totalPrice = treatments
-    .filter((t) => selectedTreatments.includes(t.id))
-    .reduce((sum, t) => sum + t.price, 0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -26,26 +24,30 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
       <div
         ref={scrollRef}
         className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-        style={{ scrollbarWidth: "none" }}
       >
         {categories.map((cat) => (
-          <button
+          <motion.button
             key={cat.id}
+            whileTap={{ scale: 0.93 }}
             className={`category-pill whitespace-nowrap ${activeCategory === cat.id ? "active" : ""}`}
             onClick={() => setActiveCategory(cat.id)}
           >
             {cat.label}
-          </button>
+          </motion.button>
         ))}
       </div>
 
       {/* Treatment list */}
       <div className="flex flex-col gap-3">
-        {filtered.map((t) => {
+        {filtered.map((t, i) => {
           const isSelected = selectedTreatments.includes(t.id);
           return (
-            <button
+            <motion.button
               key={t.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.3 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => onToggle(t.id)}
               className={`glass-card-service rounded-xl p-4 flex items-center gap-3 text-left ${isSelected ? "selected" : ""}`}
             >
@@ -58,22 +60,16 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
                   {t.description} · {t.duration} min
                 </p>
               </div>
-              <div className={`selection-circle ${isSelected ? "checked" : ""}`}>
+              <motion.div
+                animate={isSelected ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                transition={{ duration: 0.25 }}
+                className={`selection-circle ${isSelected ? "checked" : ""}`}
+              >
                 {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
-              </div>
-            </button>
+              </motion.div>
+            </motion.button>
           );
         })}
-      </div>
-
-      {/* Selection summary bar */}
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
-          Your Selection
-        </span>
-        <span className="font-display text-lg font-bold text-foreground">
-          R{totalPrice}
-        </span>
       </div>
     </div>
   );
