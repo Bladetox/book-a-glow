@@ -24,15 +24,21 @@ const Admin = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
   if (!authenticated) {
     return <AdminLogin onLogin={() => setAuthenticated(true)} />;
   }
 
+  const handleSelectAppointment = (client: string) => {
+    setSelectedClient(client);
+    setActiveView("Bookings");
+  };
+
   const renderView = () => {
     switch (activeView) {
-      case "Dashboard": return <AdminDashboard />;
-      case "Bookings": return <AdminBookings />;
+      case "Dashboard": return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
+      case "Bookings": return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
       case "Consultations": return <AdminConsultations />;
       case "Availability": return <AdminAvailability />;
       case "Stock": return <AdminStock />;
@@ -40,7 +46,7 @@ const Admin = () => {
       case "Integrations": return <AdminIntegrations />;
       case "Settings": return <AdminSettings />;
       case "Loyalty Tracker": return <AdminLoyalty />;
-      default: return <AdminDashboard />;
+      default: return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
     }
   };
 
