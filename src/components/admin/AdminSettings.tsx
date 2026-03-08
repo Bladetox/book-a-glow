@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Check, KeyRound, CreditCard, Palette, Building2, MapPin, Mail, Clock, FileText, RotateCcw } from "lucide-react";
 import { getAdminPassword, setAdminPassword } from "./AdminLogin";
-import { useBusinessConfig, saveBusinessConfig, resetBusinessConfig, BusinessConfig } from "@/data/businessStore";
+import { useBusinessConfig, saveBusinessConfig, resetBusinessConfig, defaultBusinessConfig, BusinessConfig } from "@/data/businessStore";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 
