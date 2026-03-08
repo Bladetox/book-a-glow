@@ -59,13 +59,8 @@ const mockSources: { source: string; count: number; icon: React.ElementType }[] 
   { source: "TikTok", count: 0, icon: Smartphone },
 ];
 
-// Revenue trend (last 30 days) — mock
-const mockRevenueTrend = Array.from({ length: 30 }, (_, i) => ({
-  day: i + 1,
-  value: 0,
-}));
+const mockRevenueTrend = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 0 }));
 
-// Heatmap mock (7 days x time blocks)
 const heatmapDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const heatmapSlots = ["08–10", "10–12", "12–14", "14–16", "16–18"];
 const mockHeatmap = heatmapDays.map(day => ({
@@ -81,22 +76,12 @@ const mockSettings = [
 ];
 
 // --- Components ---
-
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
 const StatPill = ({ label, value, color }: { label: string; value: string; color?: string }) => (
   <div className="flex flex-col gap-0.5">
     <span className="text-[10px] tracking-[0.12em] uppercase text-white/30">{label}</span>
     <span className={`text-sm sm:text-base font-semibold ${color || "text-white/90"}`}>{value}</span>
-  </div>
-);
-
-const SectionHeader = ({ title, visible, onToggle }: { title: string; visible: boolean; onToggle: () => void }) => (
-  <div className="flex items-center justify-between mb-3">
-    <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">{title}</h4>
-    <button onClick={onToggle} className="text-white/20 hover:text-white/50 transition-colors p-1">
-      {visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-    </button>
   </div>
 );
 
@@ -188,7 +173,6 @@ const AdminDashboard = () => {
             </p>
           </div>
 
-          {/* Sub stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-white/[0.06]">
             <StatPill label="Revenue Today" value={`R ${mockRevenue.today.toLocaleString()}`} />
             <StatPill label="Appointments" value={String(mockToday.appointments)} />
@@ -210,9 +194,8 @@ const AdminDashboard = () => {
         </motion.div>
       )}
 
-      {/* 3. TOP SERVICES + CLIENT INSIGHTS side by side */}
+      {/* 3. TOP SERVICES + CLIENT INSIGHTS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Top Services */}
         {visibility.topServices && (
           <motion.div {...fadeUp} transition={{ delay: 0.08 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
             <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-4">Top Services</h4>
@@ -235,7 +218,6 @@ const AdminDashboard = () => {
           </motion.div>
         )}
 
-        {/* Client Insights */}
         {visibility.clientInsights && (
           <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
             <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-4">Client Insights</h4>
@@ -257,7 +239,6 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Client Sources */}
             <p className="text-[10px] tracking-[0.12em] uppercase text-white/30 mb-2">Client Sources</p>
             <div className="flex flex-col gap-2">
               {mockSources.map(s => (
