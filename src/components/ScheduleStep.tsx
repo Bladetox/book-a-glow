@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isBefore, isToday, isSameDay } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { availableTimes } from "@/data/bookingData";
+import { getAvailableSlotsForDate, isDayAvailable } from "@/data/availabilityStore";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ScheduleStepProps {

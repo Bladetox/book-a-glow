@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { 
   LayoutDashboard, CalendarCheck, Sparkles, Clock, 
-  Package, Star, Link2, Settings, Gem, Menu 
+  Package, Star, Link2, Settings, Gem 
 } from "lucide-react";
 
 const iconMap: Record<string, React.ElementType> = {
