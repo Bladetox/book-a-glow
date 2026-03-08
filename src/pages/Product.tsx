@@ -27,7 +27,7 @@ const features = [
 ];
 
 const Product = () => (
-  <div className="min-h-screen bg-background">
+  <div className="min-h-screen nextslot-theme bg-background">
     <SiteHeader />
     <main>
       <section className="relative">

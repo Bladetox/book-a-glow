@@ -45,7 +45,7 @@ const Index = () => {
   const [hoveredProblem, setHoveredProblem] = useState<number | null>(null);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen nextslot-theme bg-background">
       <SiteHeader />
       <StickyCtaBar />
       <main>

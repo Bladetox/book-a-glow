@@ -2,7 +2,7 @@ import SiteHeader from "@/components/site/SiteHeader";
 import { Link } from "react-router-dom";
 
 const Login = () => (
-  <div className="min-h-screen bg-background">
+  <div className="min-h-screen nextslot-theme bg-background">
     <SiteHeader />
     <main className="max-w-sm mx-auto px-4 py-24">
       <h1 className="text-2xl font-semibold tracking-tight mb-2">Welcome back</h1>
