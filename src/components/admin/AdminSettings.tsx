@@ -150,6 +150,24 @@ const AdminSettings = () => {
         </div>
       </SettingsCard>
 
+      {/* Domain Settings */}
+      <SettingsCard title="Booking Domain" icon={MapPin} gradient="from-white/[0.06] to-white/[0.02]">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Default URL</label>
+          <p className="text-sm text-white/60 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            {draft.name ? draft.name.toLowerCase().replace(/\s+/g, "") : "yourbusiness"}.nextslot.co.za
+          </p>
+        </div>
+        <SettingRow label="Custom Domain (optional)" placeholder="book.yourdomain.co.za" value={draft.custom_domain} onChange={v => update("custom_domain", v)} />
+        <p className="text-[9px] text-white/25 leading-relaxed">
+          Point a CNAME record from your domain to <span className="text-white/40 font-mono">cname.vercel-dns.com</span>. Leave empty to use the default NextSlot subdomain.
+        </p>
+        <div className="flex items-center gap-3">
+          <SaveBtn onClick={() => saveTenantFields("domain", ["custom_domain"])} loading={updateTenant.isPending} />
+          <SavedBadge section="domain" />
+        </div>
+      </SettingsCard>
+
       {/* Theme Picker */}
       <SettingsCard title="Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]">
         <div className="grid grid-cols-2 gap-2">
