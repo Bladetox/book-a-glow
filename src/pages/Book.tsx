@@ -7,7 +7,7 @@ import StickyBottomBar from "@/components/StickyBottomBar";
 import ThemeToggle from "@/components/ThemeToggle";
 import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
-import { useTreatments, useCategories } from "@/data/servicesStore";
+import { usePublicServices } from "@/hooks/usePublicServices";
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { useState, useCallback } from "react";
 
@@ -43,7 +43,7 @@ const stepVariants = {
 
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
-  const treatments = useTreatments();
+  const { data: treatments = [] } = usePublicServices();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
   const dragX = useMotionValue(0);
@@ -89,13 +89,9 @@ const Index = () => {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  const totalPrice = treatments
-    .filter((t) => booking.selectedTreatments.includes(t.id))
-    .reduce((sum, t) => sum + t.price, 0);
-
-  const totalDuration = treatments
-    .filter((t) => booking.selectedTreatments.includes(t.id))
-    .reduce((sum, t) => sum + t.duration, 0);
+  const selectedServices = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
+  const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
+  const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
 
   return (
     <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-36">
@@ -107,11 +103,9 @@ const Index = () => {
           transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
           className="text-center mb-6 relative"
         >
-          {/* Theme toggle */}
           <div className="absolute right-0 top-0">
             <ThemeToggle />
           </div>
-
           <motion.div
             whileTap={{ scale: 0.95 }}
             className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center"
@@ -129,7 +123,6 @@ const Index = () => {
           </p>
         </motion.div>
 
-        {/* Step indicator */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -139,7 +132,6 @@ const Index = () => {
           <StepIndicator currentStep={step} />
         </motion.div>
 
-        {/* Main card with swipe gestures */}
         <div className="glass-card rounded-3xl p-5 mb-4 overflow-hidden">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -178,7 +170,6 @@ const Index = () => {
           </AnimatePresence>
         </div>
 
-        {/* Swipe hint */}
         {step < 3 && (
           <motion.p
             initial={{ opacity: 0 }}
@@ -191,7 +182,6 @@ const Index = () => {
         )}
       </div>
 
-      {/* Sticky bottom bar */}
       {step < 3 && (
         <StickyBottomBar
           step={step}
