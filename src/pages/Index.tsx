@@ -3,10 +3,53 @@ import ServicesStep from "@/components/ServicesStep";
 import ScheduleStep from "@/components/ScheduleStep";
 import DetailsStep from "@/components/DetailsStep";
 import ReviewStep from "@/components/ReviewStep";
+import StickyBottomBar from "@/components/StickyBottomBar";
 import { useBooking } from "@/hooks/useBooking";
+import { treatments } from "@/data/bookingData";
+import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+
+const stepVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 80 : -80,
+    opacity: 0,
+    scale: 0.98,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    transition: {
+      x: { type: "spring", stiffness: 350, damping: 35 },
+      opacity: { duration: 0.25 },
+      scale: { duration: 0.25 },
+    },
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 80 : -80,
+    opacity: 0,
+    scale: 0.98,
+    transition: {
+      x: { type: "spring", stiffness: 350, damping: 35 },
+      opacity: { duration: 0.2 },
+      scale: { duration: 0.2 },
+    },
+  }),
+};
 
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
+  const [direction, setDirection] = useState(1);
+
+  const handleNext = () => {
+    setDirection(1);
+    nextStep();
+  };
+
+  const handlePrev = () => {
+    setDirection(-1);
+    prevStep();
+  };
 
   const canProceed = () => {
     switch (step) {
@@ -17,14 +60,30 @@ const Index = () => {
     }
   };
 
+  const totalPrice = treatments
+    .filter((t) => booking.selectedTreatments.includes(t.id))
+    .reduce((sum, t) => sum + t.price, 0);
+
+  const totalDuration = treatments
+    .filter((t) => booking.selectedTreatments.includes(t.id))
+    .reduce((sum, t) => sum + t.duration, 0);
+
   return (
-    <div className="min-h-screen flex items-start justify-center px-4 py-8">
+    <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-36">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-card mx-auto mb-3 flex items-center justify-center shadow-lg border border-border">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          className="text-center mb-6"
+        >
+          <motion.div
+            whileTap={{ scale: 0.95 }}
+            className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center"
+          >
             <span className="font-display text-xl font-bold text-foreground">.pb</span>
-          </div>
+          </motion.div>
           <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
             Mobile Beauty Studio
           </p>
@@ -34,49 +93,64 @@ const Index = () => {
           <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground mt-0.5">
             Premium At-Home Treatments
           </p>
-        </div>
+        </motion.div>
 
         {/* Step indicator */}
-        <div className="mb-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
           <StepIndicator currentStep={step} />
-        </div>
+        </motion.div>
 
-        {/* Main card */}
-        <div className="glass-card rounded-2xl p-5 mb-4">
-          {step === 0 && (
-            <ServicesStep
-              selectedTreatments={booking.selectedTreatments}
-              onToggle={toggleTreatment}
-            />
-          )}
-          {step === 1 && (
-            <ScheduleStep
-              selectedDate={booking.selectedDate}
-              selectedTime={booking.selectedTime}
-              onSelectDate={(d) => updateBooking({ selectedDate: d })}
-              onSelectTime={(t) => updateBooking({ selectedTime: t })}
-            />
-          )}
-          {step === 2 && (
-            <DetailsStep booking={booking} onUpdate={updateBooking} />
-          )}
-          {step === 3 && <ReviewStep booking={booking} />}
+        {/* Main card with animated step transitions */}
+        <div className="glass-card rounded-3xl p-5 mb-4 overflow-hidden">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={step}
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              {step === 0 && (
+                <ServicesStep
+                  selectedTreatments={booking.selectedTreatments}
+                  onToggle={toggleTreatment}
+                />
+              )}
+              {step === 1 && (
+                <ScheduleStep
+                  selectedDate={booking.selectedDate}
+                  selectedTime={booking.selectedTime}
+                  onSelectDate={(d) => updateBooking({ selectedDate: d })}
+                  onSelectTime={(t) => updateBooking({ selectedTime: t })}
+                />
+              )}
+              {step === 2 && (
+                <DetailsStep booking={booking} onUpdate={updateBooking} />
+              )}
+              {step === 3 && <ReviewStep booking={booking} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
-
-        {/* Navigation */}
-        {step < 3 && (
-          <div className="flex gap-3">
-            {step > 0 && (
-              <button onClick={prevStep} className="btn-next flex-1 !bg-muted !text-muted-foreground">
-                Back
-              </button>
-            )}
-            <button onClick={nextStep} disabled={!canProceed()} className="btn-next flex-1">
-              Next
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* Sticky bottom bar */}
+      {step < 3 && (
+        <StickyBottomBar
+          step={step}
+          totalPrice={totalPrice}
+          totalDuration={totalDuration}
+          selectedCount={booking.selectedTreatments.length}
+          canProceed={canProceed()}
+          onNext={handleNext}
+          onPrev={handlePrev}
+        />
+      )}
     </div>
   );
 };
