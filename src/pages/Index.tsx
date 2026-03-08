@@ -52,7 +52,7 @@ const Index = () => {
     switch (step) {
       case 0: return booking.selectedTreatments.length > 0;
       case 1: return booking.selectedDate !== null && booking.selectedTime !== null;
-      case 2: return booking.fullName && booking.phone && booking.email && booking.isExistingClient !== null;
+      case 2: return booking.fullName.trim().length >= 2 && /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) && booking.address.trim().length >= 5 && booking.isExistingClient !== null;
       default: return true;
     }
   }, [step, booking]);
