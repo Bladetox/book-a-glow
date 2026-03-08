@@ -18,38 +18,72 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const deposit = Math.ceil(total * 0.5);
   const balance = total - deposit;
 
+  const formattedDate = booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—";
+  const formattedTime = booking.selectedTime || "—";
+
   if (confirmed) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="flex flex-col items-center justify-center py-16 gap-4 text-center"
+        className="flex flex-col py-8 gap-6"
       >
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.2 }}
-          className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
-        >
-          <Check className="w-10 h-10 text-primary-foreground" />
-        </motion.div>
-        <motion.h2
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="font-display text-2xl font-bold text-foreground"
+          transition={{ delay: 0.1 }}
+          className="text-center"
         >
-          You're booked!
-        </motion.h2>
+          <h2 className="font-display text-2xl font-bold text-foreground mb-1">A date with yourself</h2>
+          <p className="text-sm text-muted-foreground italic">I see you choosing you.</p>
+        </motion.div>
+
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-sm text-muted-foreground max-w-xs"
+          transition={{ delay: 0.2 }}
+          className="text-sm text-muted-foreground leading-relaxed"
         >
-          We've sent a confirmation to {booking.email}. See you soon, diva!
+          I've received your deposit, and your space in my calendar is now officially held. This isn't just a booking; it's a promise you've made to yourself to pause, and I am so honoured to be the one holding that space for you.
         </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col gap-4"
+        >
+          <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">What happens next</h4>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-foreground">The Arrival</span>
+            <span className="text-sm text-muted-foreground">I'll be arriving on {formattedDate} at {formattedTime}.</span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-foreground">The Space</span>
+            <span className="text-sm text-muted-foreground">{booking.address || "To be confirmed"}</span>
+            <span className="text-sm text-muted-foreground">No need to overthink it, just find a spot where you feel most at peace, and I'll handle the rest.</span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-foreground">The Intent</span>
+            <span className="text-sm text-muted-foreground">Bring nothing but yourself.</span>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-col gap-4 text-sm text-muted-foreground leading-relaxed"
+        >
+          <p>We spend so much of our lives pouring into others. Thank you for trusting me to pour back into you.</p>
+          <p>I'm looking forward to our time together.</p>
+          <p>Until then, keep choosing yourself in the small moments, too.</p>
+          <p className="font-semibold text-foreground">Toodles. 💛</p>
+        </motion.div>
       </motion.div>
     );
   }
