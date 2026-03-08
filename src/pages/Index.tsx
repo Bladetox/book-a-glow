@@ -49,7 +49,6 @@ const Index = () => {
       <SiteHeader />
       <StickyCtaBar />
       <main>
-        {/* HERO */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-8 animate-fade-in">
@@ -61,13 +60,14 @@ const Index = () => {
                 Run your bookings.<br />
                 <span className="text-muted-foreground">Not your messages.</span>
               </h1>
-              <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
-                NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artist and mobile service providers.
+              <p className="text-lg text-muted-foreground max-w-md leading-relaxed">NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artist and mobile service providers.
               </p>
+
               <div className="border-l-2 border-accent pl-4 space-y-1">
                 <p className="text-sm font-semibold">Data-driven insight, to choose your marketing channels.</p>
                 <p className="text-xs text-muted-foreground">"Where did you hear about us?" Tracking is rare in booking systems, invaluable for your growth.</p>
               </div>
+
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
                 <Link to="/onboarding" className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200">
                   Create Your Booking Page
@@ -77,10 +77,12 @@ const Index = () => {
                   See how it works <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
+
               <div className="pt-4 border-t border-border">
                 <TrustBadges />
               </div>
             </div>
+
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-square rounded-full opacity-30 blur-3xl pointer-events-none -z-0" style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, hsl(var(--accent) / 0.3) 50%, transparent 80%)" }} />
               <div className="flex-1 relative z-10">
@@ -93,17 +95,16 @@ const Index = () => {
           </div>
         </section>
 
-        {/* SOCIAL CONTEXT */}
         <section className="bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Built for modern service businesses</h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">If your business runs on appointments, NextSlot runs your schedule.</p>
             <div className="max-w-4xl mx-auto mb-14">
               <div className="rounded-2xl overflow-hidden shadow-lg">
-                <img src={serviceProvidersImg} alt="South African service providers at work" className="w-full h-auto border-solid border-black rounded-lg shadow-lg" />
+                <img src={serviceProvidersImg} alt="South African service providers: barber, nail technician, lash technician and tattoo artist at work" className="w-full h-auto border-solid border-black rounded-lg shadow-lg" />
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-3xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-3xl mx-auto border-black border-solid shadow-sm">
               {industries.map((ind) => (
                 <div key={ind.label} className="bg-background border border-border rounded-xl p-4 text-center hover:border-foreground/20 transition-all duration-200 cursor-default shadow-md">
                   <p className="text-sm font-semibold mb-0.5">{ind.label}</p>
@@ -114,7 +115,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* PROBLEM */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Most service businesses manage bookings like this</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">Sound familiar?</p>
@@ -135,7 +135,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
         <section className="bg-secondary/40 py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center mb-6">
@@ -156,12 +155,11 @@ const Index = () => {
           </div>
         </section>
 
-        {/* PRODUCT SHOWCASE */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">Built lean so you can focus on your craft.</p>
           <div className="max-w-3xl mx-auto mb-14">
-            <img src={productFeaturesImg} alt="Features" className="w-full h-auto opacity-70 mix-blend-multiply dark:mix-blend-screen" />
+            <img src={productFeaturesImg} alt="Scheduling, tracking, clients, and dashboard features" className="w-full h-auto opacity-70 mix-blend-multiply dark:mix-blend-screen" />
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {showcaseCards.map((card) => (
@@ -176,7 +174,6 @@ const Index = () => {
 
         <LiveDemoSection />
 
-        {/* CASE STUDY */}
         <section className="bg-primary text-primary-foreground py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
@@ -199,23 +196,15 @@ const Index = () => {
                 ))}
               </div>
               <div className="grid md:grid-cols-2 gap-6">
-                {[
-                  { title: "Client Source Tracking", text: 'PhenomeBeauty discovered that <span class="text-primary-foreground font-semibold">40% of new bookings</span> came from Instagram referrals, not WhatsApp status posts. They shifted their marketing budget and doubled down on what actually works.' },
-                  { title: "Smart Scheduling", text: 'No more double bookings or WhatsApp back-and-forth. Clients see only available slots, book instantly, and <span class="text-primary-foreground font-semibold">92% return</span> because the experience feels professional.' },
-                  { title: "Client History", text: 'Every client\'s booking history, preferences and frequency is tracked automatically. PhenomeBeauty uses this to identify <span class="text-primary-foreground font-semibold">VIP clients</span> and offer personalised service packages.' },
-                  { title: "Business Dashboard", text: 'Weekly revenue trends, peak booking times, and service popularity, all in one view. PhenomeBeauty uses the dashboard to <span class="text-primary-foreground font-semibold">plan staffing and stock</span> based on real demand.' },
-                ].map((item) => (
-                  <div key={item.title} className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">{item.title}</p>
-                    <p className="text-sm text-primary-foreground/70 leading-relaxed" dangerouslySetInnerHTML={{ __html: item.text }} />
-                  </div>
-                ))}
+                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20"><p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Client Source Tracking</p><p className="text-sm text-primary-foreground/70 leading-relaxed">PhenomeBeauty discovered that <span className="text-primary-foreground font-semibold">40% of new bookings</span> came from Instagram referrals, not WhatsApp status posts. They shifted their marketing budget and doubled down on what actually works.</p></div>
+                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20"><p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Smart Scheduling</p><p className="text-sm text-primary-foreground/70 leading-relaxed">No more double bookings or WhatsApp back-and-forth. Clients see only available slots, book instantly, and <span className="text-primary-foreground font-semibold">92% return</span> because the experience feels professional.</p></div>
+                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20"><p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Client History</p><p className="text-sm text-primary-foreground/70 leading-relaxed">Every client's booking history, preferences and frequency is tracked automatically. PhenomeBeauty uses this to identify <span className="text-primary-foreground font-semibold">VIP clients</span> and offer personalised service packages.</p></div>
+                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20"><p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Business Dashboard</p><p className="text-sm text-primary-foreground/70 leading-relaxed">Weekly revenue trends, peak booking times, and service popularity, all in one view. PhenomeBeauty uses the dashboard to <span className="text-primary-foreground font-semibold">plan staffing and stock</span> based on real demand.</p></div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* FINAL CTA */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 text-center">
           <div className="max-w-2xl mx-auto space-y-8">
             <h2 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">Your next booking should not depend on a message.</h2>
@@ -227,6 +216,7 @@ const Index = () => {
           </div>
         </section>
       </main>
+
       <SiteFooter />
     </div>
   );
