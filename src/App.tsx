@@ -32,8 +32,8 @@ const MarketingRoutes = () => (
     <Route path="/terms" element={<SiteTerms />} />
     <Route path="/admin" element={<Admin />} />
     <Route path="/reset-password" element={<ResetPassword />} />
-    {/* Allow /book on main domain too for now */}
-    <Route path="/book" element={<Book />} />
+    {/* /book on main domain still needs tenant context — default to query param ?tenant=xxx */}
+    <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
