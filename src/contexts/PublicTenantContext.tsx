@@ -1,11 +1,15 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { getTenantSlug } from "@/lib/tenant-resolver";
+import { resolveTenantSync } from "@/lib/tenant-resolver";
 import { supabase } from "@/integrations/supabase/client";
 
 interface PublicTenantData {
   tenantId: string;
   name: string;
   ownerId: string;
+  /** Default subdomain: <tenantId>.nextslot.co.za */
+  defaultSubdomain: string;
+  /** Optional custom domain set by tenant */
+  customDomain: string | null;
   loading: boolean;
   notFound: boolean;
 }
@@ -13,38 +17,76 @@ interface PublicTenantData {
 const PublicTenantContext = createContext<PublicTenantData | null>(null);
 
 export function PublicTenantProvider({ children }: { children: ReactNode }) {
-  const slug = getTenantSlug();
+  const resolution = resolveTenantSync();
+
   const [state, setState] = useState<PublicTenantData>({
-    tenantId: slug ?? "",
+    tenantId: resolution.slug ?? "",
     name: "",
     ownerId: "",
-    loading: !!slug,
+    defaultSubdomain: resolution.slug ? `${resolution.slug}.nextslot.co.za` : "",
+    customDomain: null,
+    loading: true,
     notFound: false,
   });
 
   useEffect(() => {
-    if (!slug) return;
+    const resolve = async () => {
+      try {
+        if (resolution.slug) {
+          // Standard subdomain resolution — look up by tenant id
+          const { data, error } = await supabase
+            .from("tenants")
+            .select("id, name, owner_id, custom_domain")
+            .eq("id", resolution.slug)
+            .eq("is_active", true)
+            .single();
 
-    supabase
-      .from("tenants")
-      .select("id, name, owner_id")
-      .eq("id", slug)
-      .eq("is_active", true)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data) {
-          setState((s) => ({ ...s, loading: false, notFound: true }));
+          if (error || !data) {
+            setState((s) => ({ ...s, loading: false, notFound: true }));
+          } else {
+            setState({
+              tenantId: data.id,
+              name: data.name,
+              ownerId: data.owner_id ?? "",
+              defaultSubdomain: `${data.id}.nextslot.co.za`,
+              customDomain: data.custom_domain ?? null,
+              loading: false,
+              notFound: false,
+            });
+          }
+        } else if (resolution.isCustomDomain && resolution.customDomainHost) {
+          // Custom domain resolution — look up by custom_domain column
+          const { data, error } = await supabase
+            .from("tenants")
+            .select("id, name, owner_id, custom_domain")
+            .eq("custom_domain", resolution.customDomainHost)
+            .eq("is_active", true)
+            .single();
+
+          if (error || !data) {
+            setState((s) => ({ ...s, loading: false, notFound: true }));
+          } else {
+            setState({
+              tenantId: data.id,
+              name: data.name,
+              ownerId: data.owner_id ?? "",
+              defaultSubdomain: `${data.id}.nextslot.co.za`,
+              customDomain: data.custom_domain ?? null,
+              loading: false,
+              notFound: false,
+            });
+          }
         } else {
-          setState({
-            tenantId: data.id,
-            name: data.name,
-            ownerId: data.owner_id ?? "",
-            loading: false,
-            notFound: false,
-          });
+          // No tenant context (marketing site)
+          setState((s) => ({ ...s, loading: false }));
         }
-      });
-  }, [slug]);
+      } catch {
+        setState((s) => ({ ...s, loading: false, notFound: true }));
+      }
+    };
+
+    resolve();
+  }, [resolution.slug, resolution.isCustomDomain, resolution.customDomainHost]);
 
   return (
     <PublicTenantContext.Provider value={state}>
