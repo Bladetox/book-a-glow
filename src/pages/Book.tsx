@@ -10,6 +10,7 @@ import { useBooking } from "@/hooks/useBooking";
 import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { useState, useCallback } from "react";
 
 const SWIPE_THRESHOLD = 50;
 
