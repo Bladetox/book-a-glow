@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, Check, X, Search, ChevronDown, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Search, ChevronDown, Loader2 } from "lucide-react";
 import {
   useSupabaseServices,
   useServiceCategories,
