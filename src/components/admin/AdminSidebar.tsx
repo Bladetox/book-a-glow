@@ -3,6 +3,8 @@ import {
   LayoutDashboard, CalendarCheck, Sparkles, Clock, 
   Package, Star, Link2, Settings, Gem, Scissors, FileText
 } from "lucide-react";
+import { useTenant } from "@/contexts/TenantContext";
+import { useTenantSettings } from "@/hooks/useSupabaseSettings";
 
 const iconMap: Record<string, React.ElementType> = {
   "Dashboard": LayoutDashboard,
@@ -26,6 +28,22 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar = ({ views, activeView, onSelect, isOpen }: AdminSidebarProps) => {
+  const { tenantId } = useTenant();
+  const { data: tenant } = useTenantSettings();
+
+  // Generate abbreviation from business name (first letters or initials)
+  const getAbbreviation = (name: string) => {
+    if (!name) return "NS";
+    const words = name.split(" ").filter(Boolean);
+    if (words.length >= 2) {
+      return words.slice(0, 2).map(w => w[0]?.toUpperCase()).join("");
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const businessName = tenant?.name || tenantId;
+  const abbreviation = businessName ? getAbbreviation(businessName) : "NS";
+
   return (
     <motion.aside
       className={`fixed lg:static z-50 top-0 left-0 h-full w-64 border-r border-white/[0.06] bg-[hsl(0,0%,5%)] flex flex-col py-6 transition-transform lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
@@ -33,10 +51,10 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen }: AdminSidebarProps
       {/* Logo */}
       <div className="px-6 mb-8 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center">
-          <span className="font-display text-sm font-bold text-white">.pb</span>
+          <span className="font-display text-sm font-bold text-white">{abbreviation}</span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">PhenomeBeauty</p>
+          <p className="text-sm font-semibold text-white truncate">{businessName}</p>
           <p className="text-[9px] text-white/30 tracking-wider uppercase">Admin</p>
         </div>
       </div>
