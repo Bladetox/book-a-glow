@@ -86,7 +86,7 @@ const AdminSettings = () => {
       </SettingsCard>
 
       <SettingsCard title="Travel & Callout Fee" gradient="from-white/[0.05] to-white/[0.02]">
-        <SettingRow label="Origin Address" placeholder="14 Kunene Drive, Portlands, Cape Town" />
+        <SettingRow label="Origin Address" placeholder="Your Business Address" />
         <SettingRow label="Free Zone (km round trip)" placeholder="0" type="number" />
         <SettingRow label="Rate per km (R)" placeholder="3.60" type="number" />
         <button className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors">Save</button>
