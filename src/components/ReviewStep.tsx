@@ -1,9 +1,10 @@
 import { BookingState } from "@/data/bookingData";
 import { useTreatments } from "@/data/servicesStore";
+import { useTermsSections } from "@/components/admin/AdminTerms";
 import { format } from "date-fns";
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
+import { Sparkles, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
 
 interface ReviewStepProps {
@@ -14,7 +15,9 @@ const RATE_PER_KM = 3.6;
 
 const ReviewStep = ({ booking }: ReviewStepProps) => {
   const treatments = useTreatments();
+  const termsSections = useTermsSections();
   const [confirmed, setConfirmed] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const selected = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
@@ -117,8 +120,72 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       </motion.div>
 
       <p className="text-[10px] text-muted-foreground text-center">
-        By making payment you agree to our Terms & Conditions
+        By making payment you agree to our{" "}
+        <button
+          onClick={() => setShowTerms(true)}
+          className="underline text-foreground hover:text-primary transition-colors"
+        >
+          Terms & Conditions
+        </button>
       </p>
+
+      {/* Terms modal */}
+      <AnimatePresence>
+        {showTerms && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowTerms(false)}
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 350, damping: 35 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-card rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">PhenomeBeauty</p>
+                  <h3 className="font-display text-lg font-bold text-foreground">Terms & Conditions</h3>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Refund & Cancellation Policy · Effective January 2026</p>
+                </div>
+                <button
+                  onClick={() => setShowTerms(false)}
+                  className="p-2 rounded-xl hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4 scrollbar-hide">
+                {termsSections.map((section) => (
+                  <div key={section.id}>
+                    <h4 className="text-sm font-semibold text-foreground">{section.title}</h4>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{section.content}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-4 border-t border-border/30">
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setShowTerms(false)}
+                  className="btn-next w-full"
+                >
+                  Close
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.button
         whileTap={{ scale: 0.96 }}
