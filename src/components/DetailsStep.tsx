@@ -25,7 +25,7 @@ const referralOptions = [
 
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
-    "w-full bg-muted/40 border border-border/60 rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 backdrop-blur-sm";
+    "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
   const referralIndex = referralOptions.indexOf(booking.referralSource);
   const [currentReferralIndex, setCurrentReferralIndex] = useState(
