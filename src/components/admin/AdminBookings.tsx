@@ -7,11 +7,6 @@ import {
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { availableTimes } from "@/data/bookingData";
 
