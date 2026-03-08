@@ -100,9 +100,10 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="relative">
+          <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <select
-            className={`${inputClass} w-24 appearance-none`}
+            className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10"
             value={booking.phoneCode}
             onChange={(e) => onUpdate({ phoneCode: e.target.value })}
           >
@@ -112,15 +113,14 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               </option>
             ))}
           </select>
-          <div className="relative flex-1">
-            <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-            <input
-              className={`${inputClass} pl-10`}
-              placeholder="e.g. 082 123 4567"
-              value={booking.phone}
-              onChange={(e) => onUpdate({ phone: e.target.value })}
-            />
-          </div>
+          <input
+            className={`${inputClass} pl-[7.5rem]`}
+            placeholder="e.g. 82 123 4567"
+            type="tel"
+            inputMode="tel"
+            value={booking.phone}
+            onChange={(e) => onUpdate({ phone: e.target.value })}
+          />
         </div>
 
         <div className="relative">
