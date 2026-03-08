@@ -7,7 +7,7 @@ import StickyBottomBar from "@/components/StickyBottomBar";
 import ThemeToggle from "@/components/ThemeToggle";
 import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
-import { treatments } from "@/data/bookingData";
+import { useTreatments, useCategories } from "@/data/servicesStore";
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { useState, useCallback } from "react";
 
@@ -43,6 +43,7 @@ const stepVariants = {
 
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
+  const treatments = useTreatments();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
   const dragX = useMotionValue(0);

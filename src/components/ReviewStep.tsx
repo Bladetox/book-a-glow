@@ -1,4 +1,5 @@
-import { BookingState, treatments } from "@/data/bookingData";
+import { BookingState } from "@/data/bookingData";
+import { useTreatments } from "@/data/servicesStore";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
@@ -12,6 +13,7 @@ interface ReviewStepProps {
 const RATE_PER_KM = 3.6;
 
 const ReviewStep = ({ booking }: ReviewStepProps) => {
+  const treatments = useTreatments();
   const [confirmed, setConfirmed] = useState(false);
 
   const selected = treatments.filter((t) => booking.selectedTreatments.includes(t.id));

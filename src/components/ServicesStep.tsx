@@ -1,4 +1,4 @@
-import { treatments, categories } from "@/data/bookingData";
+import { useTreatments, useCategories } from "@/data/servicesStore";
 import { useState, useRef } from "react";
 import { Check } from "lucide-react";
 import { motion } from "framer-motion";
@@ -9,7 +9,9 @@ interface ServicesStepProps {
 }
 
 const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
-  const [activeCategory, setActiveCategory] = useState(categories[0].id);
+  const treatments = useTreatments();
+  const categories = useCategories();
+  const [activeCategory, setActiveCategory] = useState(categories[0]?.id || "");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const filtered = treatments.filter((t) => t.category === activeCategory);
