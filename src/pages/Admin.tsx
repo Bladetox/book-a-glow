@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Menu } from "lucide-react";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -66,16 +67,16 @@ const Admin = () => {
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-dvh">
+      <div className="flex-1 flex flex-col min-h-dvh min-w-0">
         {/* Topbar */}
-        <div className="flex items-center gap-4 px-6 py-4 border-b border-white/[0.06]">
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06]">
           <button
-            className="lg:hidden text-xl text-white/60 hover:text-white"
+            className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
             onClick={() => setSidebarOpen(true)}
           >
-            ☰
+            <Menu className="w-5 h-5" />
           </button>
-          <h2 className="font-display text-lg font-semibold text-white/90">{activeView}</h2>
+          <h2 className="font-display text-base sm:text-lg font-semibold text-white/90 truncate">{activeView}</h2>
           <div className="flex-1" />
           <button
             className="text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08]"
@@ -85,7 +86,7 @@ const Admin = () => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {renderView()}
         </div>
       </div>
