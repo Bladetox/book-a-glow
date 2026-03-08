@@ -4,10 +4,13 @@ import ScheduleStep from "@/components/ScheduleStep";
 import DetailsStep from "@/components/DetailsStep";
 import ReviewStep from "@/components/ReviewStep";
 import StickyBottomBar from "@/components/StickyBottomBar";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useBooking } from "@/hooks/useBooking";
 import { treatments } from "@/data/bookingData";
-import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { useState, useCallback } from "react";
+
+const SWIPE_THRESHOLD = 50;
 
 const stepVariants = {
   enter: (direction: number) => ({
@@ -40,16 +43,8 @@ const stepVariants = {
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
   const [direction, setDirection] = useState(1);
-
-  const handleNext = () => {
-    setDirection(1);
-    nextStep();
-  };
-
-  const handlePrev = () => {
-    setDirection(-1);
-    prevStep();
-  };
+  const dragX = useMotionValue(0);
+  const dragOpacity = useTransform(dragX, [-150, 0, 150], [0.5, 1, 0.5]);
 
   const canProceed = () => {
     switch (step) {
@@ -59,6 +54,35 @@ const Index = () => {
       default: return true;
     }
   };
+
+  const handleNext = useCallback(() => {
+    if (!canProceed()) return;
+    setDirection(1);
+    nextStep();
+  }, [step, booking]);
+
+  const handlePrev = useCallback(() => {
+    if (step === 0) return;
+    setDirection(-1);
+    prevStep();
+  }, [step]);
+
+  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
+    const { offset, velocity } = info;
+    if (offset.x < -SWIPE_THRESHOLD || velocity.x < -500) {
+      // Swiped left → next
+      if (canProceed() && step < 3) {
+        setDirection(1);
+        nextStep();
+      }
+    } else if (offset.x > SWIPE_THRESHOLD || velocity.x > 500) {
+      // Swiped right → prev
+      if (step > 0) {
+        setDirection(-1);
+        prevStep();
+      }
+    }
+  }, [step, booking]);
 
   const totalPrice = treatments
     .filter((t) => booking.selectedTreatments.includes(t.id))
@@ -76,8 +100,13 @@ const Index = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-          className="text-center mb-6"
+          className="text-center mb-6 relative"
         >
+          {/* Theme toggle */}
+          <div className="absolute right-0 top-0">
+            <ThemeToggle />
+          </div>
+
           <motion.div
             whileTap={{ scale: 0.95 }}
             className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center"
@@ -105,7 +134,7 @@ const Index = () => {
           <StepIndicator currentStep={step} />
         </motion.div>
 
-        {/* Main card with animated step transitions */}
+        {/* Main card with swipe gestures */}
         <div className="glass-card rounded-3xl p-5 mb-4 overflow-hidden">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -115,6 +144,12 @@ const Index = () => {
               initial="enter"
               animate="center"
               exit="exit"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.15}
+              onDragEnd={handleDragEnd}
+              style={{ x: dragX, opacity: dragOpacity }}
+              className="touch-pan-y"
             >
               {step === 0 && (
                 <ServicesStep
@@ -137,6 +172,18 @@ const Index = () => {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Swipe hint */}
+        {step < 3 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="text-[10px] text-center text-muted-foreground/40 tracking-wider"
+          >
+            Swipe to navigate
+          </motion.p>
+        )}
       </div>
 
       {/* Sticky bottom bar */}
