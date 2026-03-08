@@ -136,14 +136,14 @@ const AdminSettings = () => {
               <button
                 key={g.id}
                 onClick={() => setSelectedGateway(g.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all border flex flex-col items-start gap-0.5 min-w-[100px] ${
+                className={`px-3 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all border flex flex-col items-start gap-0.5 shrink-0 ${
                   selectedGateway === g.id
                     ? "border-white/20 text-white/90 bg-white/[0.1]"
                     : "border-white/[0.06] text-white/30 hover:text-white/50 hover:border-white/[0.1]"
                 }`}
               >
-                <span>{g.name}</span>
-                <span className="text-[9px] font-normal text-white/20">{g.region}</span>
+                <span className="leading-tight">{g.name}</span>
+                <span className="text-[9px] font-normal text-white/20 leading-tight">{g.region}</span>
               </button>
             ))}
           </div>
