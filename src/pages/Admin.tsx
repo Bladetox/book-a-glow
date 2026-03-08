@@ -31,8 +31,8 @@ const Admin = () => {
 
   const checkAdminSession = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!user || error) {
         setAuthState("unauthenticated");
         return;
       }
@@ -40,7 +40,7 @@ const Admin = () => {
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", session.user.id);
+        .eq("user_id", user.id);
 
       const isAdmin = roles?.some(r => r.role === "owner" || r.role === "admin");
       setAuthState(isAdmin ? "authenticated" : "unauthenticated");
