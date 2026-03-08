@@ -12,9 +12,10 @@ import AdminReviews from "@/components/admin/AdminReviews";
 import AdminIntegrations from "@/components/admin/AdminIntegrations";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminLoyalty from "@/components/admin/AdminLoyalty";
+import AdminServices from "@/components/admin/AdminServices";
 
 const views = [
-  "Dashboard", "Bookings", "Consultations", "Availability",
+  "Dashboard", "Bookings", "Services", "Consultations", "Availability",
   "Stock", "Reviews", "Integrations", "Settings", "Loyalty Tracker",
 ] as const;
 
@@ -39,6 +40,7 @@ const Admin = () => {
     switch (activeView) {
       case "Dashboard": return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
       case "Bookings": return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
+      case "Services": return <AdminServices />;
       case "Consultations": return <AdminConsultations />;
       case "Availability": return <AdminAvailability />;
       case "Stock": return <AdminStock />;

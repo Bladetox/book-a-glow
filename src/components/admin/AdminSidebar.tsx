@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 import { 
   LayoutDashboard, CalendarCheck, Sparkles, Clock, 
-  Package, Star, Link2, Settings, Gem 
+  Package, Star, Link2, Settings, Gem, Scissors
 } from "lucide-react";
 
 const iconMap: Record<string, React.ElementType> = {
   "Dashboard": LayoutDashboard,
   "Bookings": CalendarCheck,
+  "Services": Scissors,
   "Consultations": Sparkles,
   "Availability": Clock,
   "Stock": Package,

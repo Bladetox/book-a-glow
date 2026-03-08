@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Pencil, Trash2, Check, X, RotateCcw, Search, ChevronDown } from "lucide-react";
-import { Treatment, Category } from "@/data/bookingData";
+import type { Treatment } from "@/data/bookingData";
 import {
   useTreatments,
   useCategories,

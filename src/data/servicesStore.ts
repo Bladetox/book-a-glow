@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { Treatment, Category, treatments as defaultTreatments, categories as defaultCategories } from "./bookingData";
 
 const TREATMENTS_KEY = "pb_treatments";
