@@ -48,7 +48,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
           transition={{ delay: 0.5 }}
           className="text-sm text-muted-foreground max-w-xs"
         >
-          We've sent a confirmation to {booking.email}. See you soon, diva! 💜
+          We've sent a confirmation to {booking.email}. See you soon, diva!
         </motion.p>
       </motion.div>
     );
