@@ -29,7 +29,7 @@ export type Database = {
           description?: string | null
           id?: string
           key: string
-          tenant_id?: string
+          tenant_id: string
           updated_at?: string | null
           value?: string | null
         }
@@ -243,7 +243,7 @@ export type Database = {
           physical_factors?: string | null
           pregnancy?: string | null
           skin_conditions?: string | null
-          tenant_id?: string
+          tenant_id: string
           updated_at?: string | null
         }
         Update: {
@@ -311,7 +311,7 @@ export type Database = {
           pack_progress?: string | null
           phone?: string | null
           status?: string | null
-          tenant_id?: string
+          tenant_id: string
           updated_at?: string | null
           whatsapp_link?: string | null
         }
@@ -488,7 +488,7 @@ export type Database = {
           rating?: number | null
           relative_time?: string | null
           review_text?: string | null
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           author_name?: string | null
@@ -585,7 +585,7 @@ export type Database = {
           slot_start_time: string
           specific_date?: string | null
           staff_id: string
-          tenant_id?: string
+          tenant_id: string
           updated_at?: string | null
         }
         Update: {
@@ -633,7 +633,7 @@ export type Database = {
           item_name: string
           notes?: string | null
           stock_on_hand?: number
-          tenant_id?: string
+          tenant_id: string
           total_cost?: number | null
           updated_at?: string | null
         }
@@ -755,7 +755,7 @@ export type Database = {
           processed_at?: string | null
           processing_started_at?: string | null
           retry_count?: number | null
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           booking_id?: string | null
