@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2, Copy, ExternalLink } from "lucide-react";
+import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2, Copy, ExternalLink, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useTenantSettings, useAppSettings, useUpdateTenant, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
+import { toast } from "sonner";
 
 const SettingsCard = ({ title, icon: Icon, gradient, children }: { title: string; icon?: React.ElementType; gradient: string; children: React.ReactNode }) => (
   <motion.div
@@ -49,6 +50,8 @@ const AdminSettings = () => {
   const upsertSetting = useUpsertAppSetting();
   const { setThemeById } = useBusinessTheme();
   const [copied, setCopied] = useState(false);
+  const [registeringDomain, setRegisteringDomain] = useState(false);
+  const [dnsInstructions, setDnsInstructions] = useState<string | null>(null);
 
   const bookingUrl = `${tenantId}.nextslot.co.za`;
 
@@ -57,6 +60,32 @@ const AdminSettings = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const registerCustomDomain = async () => {
+    const domain = draft.custom_domain?.trim();
+    if (!domain) { toast.error("Enter a domain first."); return; }
+    setRegisteringDomain(true);
+    setDnsInstructions(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("register-custom-domain", {
+        body: { domain, tenantId },
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      // Also save custom_domain to tenant record
+      saveTenantFields("domain", ["custom_domain"]);
+      setDnsInstructions(`Domain registered! Add a CNAME record in your DNS:\n  ${domain} → cname.vercel-dns.com`);
+      toast.success("Custom domain registered with Vercel");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to register domain");
+    } finally {
+      setRegisteringDomain(false);
+    }
   };
 
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -182,12 +211,25 @@ const AdminSettings = () => {
             </button>
           </div>
         </div>
-        <SettingRow label="Custom Domain (optional)" placeholder="book.yourdomain.co.za" value={draft.custom_domain} onChange={v => update("custom_domain", v)} />
+        <SettingRow label="Custom Domain (optional)" placeholder="book.yourdomain.co.za" value={draft.custom_domain} onChange={v => { update("custom_domain", v); setDnsInstructions(null); }} />
         <p className="text-[9px] text-white/25 leading-relaxed">
-          Point a CNAME record from your domain to <span className="text-white/40 font-mono">cname.vercel-dns.com</span>. Leave empty to use the default NextSlot subdomain.
+          Enter your domain then click <strong className="text-white/40">Register Domain</strong>. We'll add it to Vercel automatically. Then point a CNAME from your domain to <span className="text-white/40 font-mono">cname.vercel-dns.com</span>.
         </p>
+        {dnsInstructions && (
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <p className="text-[10px] font-semibold text-emerald-400 mb-1">DNS Setup</p>
+            <pre className="text-[10px] text-white/50 whitespace-pre-wrap">{dnsInstructions}</pre>
+          </div>
+        )}
         <div className="flex items-center gap-3">
-          <SaveBtn onClick={() => saveTenantFields("domain", ["custom_domain"])} loading={updateTenant.isPending} />
+          <button
+            onClick={registerCustomDomain}
+            disabled={registeringDomain}
+            className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {registeringDomain ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}
+            {registeringDomain ? "Registering…" : "Register Domain"}
+          </button>
           <SavedBadge section="domain" />
         </div>
       </SettingsCard>

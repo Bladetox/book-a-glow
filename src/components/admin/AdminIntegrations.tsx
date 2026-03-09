@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard, Calendar, MapPin, Mail, ChevronDown, ChevronUp, Check, Loader2, Eye, EyeOff, Zap, Repeat } from "lucide-react";
+import { CreditCard, Calendar, MapPin, Mail, ChevronDown, ChevronUp, Check, Loader2, Eye, EyeOff, Zap, Repeat, Star } from "lucide-react";
 import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
 import { toast } from "sonner";
 
@@ -80,6 +80,17 @@ const INTEGRATIONS: IntegrationDef[] = [
     fields: [
       { key: "paystack_public_key", label: "Public Key", placeholder: "pk_live_..." },
       { key: "paystack_secret_key", label: "Secret Key", placeholder: "sk_live_...", secret: true },
+    ],
+  },
+  {
+    id: "google_reviews",
+    icon: Star,
+    name: "Google Reviews",
+    desc: "Display Google reviews and collect feedback from clients",
+    gradient: "from-white/[0.04] to-white/[0.01]",
+    fields: [
+      { key: "google_place_id", label: "Google Place ID", placeholder: "ChIJN1t_tDeuEmsRUsoyG83frY4" },
+      { key: "google_review_url", label: "Review Link (for clients)", placeholder: "https://g.page/r/YOUR_ID/review" },
     ],
   },
 ];
