@@ -153,7 +153,7 @@ const AdminReviews = () => {
           <p className="text-sm text-white/30">No reviews yet.</p>
           <p className="text-xs text-white/20 mt-1">
             {placeId
-              ? "Click "Fetch Reviews" to pull your latest Google reviews."
+              ? 'Click "Fetch Reviews" to pull your latest Google reviews.'
               : "Configure your Google Place ID in Integrations first."}
           </p>
         </motion.div>
