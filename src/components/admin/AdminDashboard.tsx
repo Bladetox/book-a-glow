@@ -34,7 +34,9 @@ function getVisibility(): Record<SectionKey, boolean> {
   try {
     const stored = localStorage.getItem(DASHBOARD_VIS_KEY);
     if (stored) return JSON.parse(stored);
-  } catch {}
+  } catch (_e) {
+    // localStorage parse error – fall back to showing all sections
+  }
   return Object.fromEntries(ALL_SECTIONS.map(s => [s, true])) as Record<SectionKey, boolean>;
 }
 

@@ -67,7 +67,7 @@ export const defaultBusinessConfig: BusinessConfig = {
 const STORAGE_KEY = "ns_business_config";
 
 let cache: BusinessConfig | null = null;
-let listeners: Set<() => void> = new Set();
+const listeners: Set<() => void> = new Set();
 
 function notify() {
   listeners.forEach((l) => l());

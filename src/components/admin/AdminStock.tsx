@@ -52,7 +52,7 @@ const AdminStock = () => {
       toast.success(editingId ? "Item updated" : "Item added");
       resetForm();
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const remove = useMutation({
@@ -64,7 +64,7 @@ const AdminStock = () => {
       qc.invalidateQueries({ queryKey: ["stock", tenantId] });
       toast.success("Item deleted");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const resetForm = () => {

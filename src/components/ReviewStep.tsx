@@ -116,14 +116,14 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
       if (error) throw error;
 
-      const result = (data as any)?.[0];
+      const result = (data as { success: boolean; message?: string }[])?.[0];
       if (result && !result.success) throw new Error(result.message);
 
       setConfirmed(true);
       toast.success("Booking created successfully!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Booking error:", err);
-      toast.error(err.message || "Failed to create booking. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Failed to create booking. Please try again.");
     } finally {
       setSubmitting(false);
     }

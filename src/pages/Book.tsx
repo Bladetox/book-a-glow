@@ -66,15 +66,15 @@ const Index = () => {
     if (!canProceed()) return;
     setDirection(1);
     nextStep();
-  }, [canProceed]);
+  }, [canProceed, nextStep]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
     setDirection(-1);
     prevStep();
-  }, [step]);
+  }, [step, prevStep]);
 
-  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const { offset, velocity } = info;
     if (offset.x < -SWIPE_THRESHOLD || velocity.x < -500) {
       if (canProceed() && step < 3) {
@@ -87,7 +87,7 @@ const Index = () => {
         prevStep();
       }
     }
-  }, [step, canProceed]);
+  }, [step, canProceed, nextStep, prevStep]);
 
   if (tenantLoading || !tenantId) {
     return (

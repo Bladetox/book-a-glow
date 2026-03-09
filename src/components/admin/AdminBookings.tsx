@@ -54,7 +54,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       }
       onClearClient?.();
     }
-  }, [initialClient, bookings.length]);
+  }, [initialClient, bookings, onClearClient]);
 
   const filtered = bookings.filter(b => {
     if (activeFilter === "All") return true;
@@ -75,8 +75,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     try {
       await updateStatus.mutateAsync({ bookingId, status });
       toast.success(`Status updated to ${status}`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update status");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update status");
     }
   };
 
@@ -92,8 +92,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       setReschedulingId(null);
       setRescheduleDate(undefined);
       setRescheduleTime(null);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to reschedule");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to reschedule");
     }
   };
 
@@ -102,8 +102,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       await deleteBooking.mutateAsync(id);
       toast.success("Booking deleted");
       if (expandedId === id) setExpandedId(null);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to delete");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete");
     }
   };
 
@@ -128,8 +128,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       toast.success("Booking updated");
       setEditingId(null);
       setEditDraft({});
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
     }
   };
 

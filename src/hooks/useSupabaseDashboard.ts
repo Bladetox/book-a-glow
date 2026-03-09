@@ -3,6 +3,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
+interface DashBookingItem {
+  service_name: string;
+  price: number | string;
+  duration_minutes?: number;
+}
+
+interface DashBooking {
+  id: string;
+  booking_date: string;
+  start_time?: string;
+  status: string;
+  total_amount?: number | string;
+  deposit_amount?: number | string;
+  deposit_paid?: boolean;
+  client_id?: string;
+  client?: { full_name?: string; email?: string; phone?: string };
+  items?: DashBookingItem[];
+}
+
+interface DashPayment {
+  amount: number | string;
+  created_at?: string;
+}
+
+interface DashStockAlert {
+  item_name: string;
+  stock_on_hand: number;
+}
+
 export function useDashboardData() {
   const { tenantId } = useTenant();
   const now = new Date();
@@ -24,7 +53,7 @@ export function useDashboardData() {
         .order("booking_date", { ascending: false })
         .order("start_time", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as DashBooking[];
     },
   });
 
@@ -39,7 +68,7 @@ export function useDashboardData() {
         .gte("created_at", prevStart)
         .lte("created_at", monthEnd + "T23:59:59");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as DashPayment[];
     },
   });
 
@@ -53,32 +82,32 @@ export function useDashboardData() {
         .lte("stock_on_hand", 5)
         .order("stock_on_hand");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as DashStockAlert[];
     },
   });
 
   // Derived computations
-  const todayBookings = bookings.filter((b: any) => b.booking_date === todayStr);
-  const active = bookings.filter((b: any) => b.status !== "cancelled");
+  const todayBookings = bookings.filter((b) => b.booking_date === todayStr);
+  const active = bookings.filter((b) => b.status !== "cancelled");
 
-  const thisMonthPay = payments.filter((p: any) => (p.created_at ?? "").slice(0, 7) === monthStart.slice(0, 7));
-  const prevMonthPay = payments.filter((p: any) => (p.created_at ?? "").slice(0, 7) === prevStart.slice(0, 7));
-  const monthRevenue = thisMonthPay.reduce((s: number, p: any) => s + Number(p.amount), 0);
-  const prevMonthRevenue = prevMonthPay.reduce((s: number, p: any) => s + Number(p.amount), 0);
-  const todayRevenue = thisMonthPay.filter((p: any) => (p.created_at ?? "").startsWith(todayStr)).reduce((s: number, p: any) => s + Number(p.amount), 0);
+  const thisMonthPay = payments.filter((p) => (p.created_at ?? "").slice(0, 7) === monthStart.slice(0, 7));
+  const prevMonthPay = payments.filter((p) => (p.created_at ?? "").slice(0, 7) === prevStart.slice(0, 7));
+  const monthRevenue = thisMonthPay.reduce((s, p) => s + Number(p.amount), 0);
+  const prevMonthRevenue = prevMonthPay.reduce((s, p) => s + Number(p.amount), 0);
+  const todayRevenue = thisMonthPay.filter((p) => (p.created_at ?? "").startsWith(todayStr)).reduce((s, p) => s + Number(p.amount), 0);
 
   // Next appointment
   const nowMins = now.getHours() * 60 + now.getMinutes();
   const upcoming = todayBookings
-    .filter((b: any) => b.status !== "cancelled")
-    .filter((b: any) => { const [h, m] = (b.start_time || "00:00").split(":").map(Number); return h * 60 + m > nowMins; })
-    .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time));
-  const nextAppt = upcoming[0] as any;
+    .filter((b) => b.status !== "cancelled")
+    .filter((b) => { const [h, m] = (b.start_time || "00:00").split(":").map(Number); return h * 60 + m > nowMins; })
+    .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
+  const nextAppt = upcoming[0];
 
   // Top services
   const svcMap = new Map<string, { count: number; revenue: number }>();
-  active.forEach((b: any) => {
-    (b.items ?? []).forEach((i: any) => {
+  active.forEach((b) => {
+    (b.items ?? []).forEach((i) => {
       const prev = svcMap.get(i.service_name) || { count: 0, revenue: 0 };
       svcMap.set(i.service_name, { count: prev.count + 1, revenue: prev.revenue + Number(i.price) });
     });
@@ -88,11 +117,11 @@ export function useDashboardData() {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
 
-  const cancelled = bookings.filter((b: any) => b.status === "cancelled");
+  const cancelled = bookings.filter((b) => b.status === "cancelled");
 
   // Revenue trend by day
   const trendMap: Record<number, number> = {};
-  thisMonthPay.forEach((p: any) => {
+  thisMonthPay.forEach((p) => {
     const d = parseInt((p.created_at ?? "").slice(8, 10));
     if (d) trendMap[d] = (trendMap[d] || 0) + Number(p.amount);
   });
@@ -110,7 +139,7 @@ export function useDashboardData() {
     day,
     slots: heatSlots.map((slot, si) => {
       const startHour = 8 + si * 2;
-      const count = active.filter((b: any) => {
+      const count = active.filter((b) => {
         const bDate = new Date(b.booking_date + "T00:00:00");
         const bDow = dayToIdx[bDate.getDay()];
         const bHour = parseInt((b.start_time || "00").split(":")[0]);
@@ -121,15 +150,15 @@ export function useDashboardData() {
   }));
 
   // Unique clients
-  const clientIds = new Set(active.map((b: any) => b.client_id));
+  const clientIds = new Set(active.map((b) => b.client_id));
 
   // Alerts
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts: Alert[] = [];
-  const pendingDeposits = bookings.filter((b: any) => !b.deposit_paid && b.status !== "cancelled").length;
+  const pendingDeposits = bookings.filter((b) => !b.deposit_paid && b.status !== "cancelled").length;
   if (pendingDeposits > 0) alerts.push({ text: `${pendingDeposits} deposit${pendingDeposits > 1 ? "s" : ""} still pending`, type: "warning" });
   if (cancelled.length > 0) alerts.push({ text: `${cancelled.length} cancellation${cancelled.length > 1 ? "s" : ""} this month`, type: "info" });
-  stockAlerts.forEach((s: any) => {
+  stockAlerts.forEach((s) => {
     alerts.push({ text: `${s.item_name} — ${s.stock_on_hand <= 2 ? "critical" : "low"} stock (${s.stock_on_hand})`, type: s.stock_on_hand <= 2 ? "danger" : "warning" });
   });
 
@@ -137,32 +166,32 @@ export function useDashboardData() {
     isLoading: l1 || l2,
     revenue: { month: monthRevenue, today: todayRevenue, lastMonth: prevMonthRevenue },
     today: {
-      appointments: todayBookings.filter((b: any) => b.status !== "cancelled").length,
+      appointments: todayBookings.filter((b) => b.status !== "cancelled").length,
       remaining: upcoming.length,
       nextAppointment: nextAppt ? `${(nextAppt.start_time || "").slice(0, 5)} • ${nextAppt.client?.full_name || "Client"}` : null,
     },
     health: {
       fillRate: 0,
-      avgBasket: active.length > 0 ? Math.round(active.reduce((s: number, b: any) => s + Number(b.total_amount), 0) / active.length) : 0,
+      avgBasket: active.length > 0 ? Math.round(active.reduce((s, b) => s + Number(b.total_amount), 0) / active.length) : 0,
       totalAppointments: active.length,
       cancellationRate: bookings.length > 0 ? Math.round((cancelled.length / bookings.length) * 100) : 0,
-      revenueLost: cancelled.reduce((s: number, b: any) => s + Number(b.total_amount), 0),
+      revenueLost: cancelled.reduce((s, b) => s + Number(b.total_amount), 0),
     },
     clients: { total: clientIds.size, newClients: 0, returning: 0, retentionRate: 0 },
     topServices,
     alerts,
     todayAppointments: todayBookings
-      .filter((b: any) => b.status !== "cancelled")
-      .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
-      .map((b: any) => ({
+      .filter((b) => b.status !== "cancelled")
+      .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""))
+      .map((b) => ({
         id: b.id,
         time: (b.start_time || "").slice(0, 5),
         client: b.client?.full_name || "Unknown",
-        service: (b.items ?? []).map((i: any) => i.service_name).join(", ") || "—",
+        service: (b.items ?? []).map((i) => i.service_name).join(", ") || "—",
         status: b.status as "confirmed" | "pending" | "complete" | "cancelled",
         balance: Math.max(0, Number(b.total_amount) - Number(b.deposit_amount)),
       })),
-    stockAlerts: stockAlerts.map((s: any) => ({
+    stockAlerts: stockAlerts.map((s) => ({
       item: s.item_name,
       level: (s.stock_on_hand <= 2 ? "critical" : "low") as "critical" | "low",
     })),

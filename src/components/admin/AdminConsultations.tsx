@@ -7,6 +7,26 @@ import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 
 const filters = ["All", "New", "Existing"];
 
+interface ConsultationRow {
+  id: string;
+  client_type: string;
+  skin_conditions?: string;
+  medications?: string;
+  allergies?: string;
+  health_conditions?: string;
+  pregnancy?: string;
+  environmental_exposure?: string;
+  physical_factors?: string;
+  hair_length_ok?: string;
+  lead_source?: string;
+  additional_notes?: string;
+  booking?: {
+    booking_date?: string;
+    start_time?: string;
+    client?: { full_name?: string; email?: string; phone?: string };
+  };
+}
+
 const AdminConsultations = () => {
   const { tenantId } = useTenant();
   const [activeFilter, setActiveFilter] = useState("All");
@@ -27,11 +47,11 @@ const AdminConsultations = () => {
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as ConsultationRow[];
     },
   });
 
-  const filtered = consultations.filter((c: any) => {
+  const filtered = consultations.filter((c) => {
     if (activeFilter === "All") return true;
     if (activeFilter === "New") return c.client_type === "new";
     return c.client_type === "existing";
@@ -46,7 +66,7 @@ const AdminConsultations = () => {
               ${activeFilter === f ? "bg-white/[0.12] text-white border border-white/[0.15]" : "text-white/35 border border-white/[0.06] hover:text-white/60"}`}>
             {f}
             <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-white/10" : "bg-white/[0.04]"}`}>
-              {activeFilter === f ? filtered.length : consultations.filter((c: any) => f === "All" ? true : f === "New" ? c.client_type === "new" : c.client_type === "existing").length}
+              {activeFilter === f ? filtered.length : consultations.filter((c) => f === "All" ? true : f === "New" ? c.client_type === "new" : c.client_type === "existing").length}
             </span>
           </button>
         ))}
@@ -60,7 +80,7 @@ const AdminConsultations = () => {
         </motion.div>
       ) : (
         <div className="flex flex-col gap-2">
-          {filtered.map((c: any) => {
+          {filtered.map((c) => {
             const isExpanded = expandedId === c.id;
             const booking = c.booking;
             const client = booking?.client;
