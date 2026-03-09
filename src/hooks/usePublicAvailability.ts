@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import { getTenantSlug } from "@/lib/tenant-resolver";
 
 /** Resolve the staff/owner id for a tenant */
 async function getStaffId(tenantId: string): Promise<string> {
@@ -75,8 +76,6 @@ export function useResolveStaffId() {
 
 // Keep backward-compat export for ReviewStep (will be migrated)
 export async function resolveStaffId(): Promise<string> {
-  // Fallback: reads from tenant resolver
-  const { getTenantSlug } = await import("@/lib/tenant-resolver");
   const slug = getTenantSlug();
   if (!slug) throw new Error("No tenant context");
   return getStaffId(slug);
