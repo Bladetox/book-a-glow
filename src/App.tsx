@@ -12,6 +12,7 @@ import Product from "./pages/Product";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
+import Signup from "./pages/Signup";
 import Privacy from "./pages/Privacy";
 import SiteTerms from "./pages/SiteTerms";
 import Admin from "./pages/Admin";
@@ -29,6 +30,7 @@ const MarketingRoutes = () => (
     <Route path="/pricing" element={<Pricing />} />
     <Route path="/login" element={<Login />} />
     <Route path="/onboarding" element={<Onboarding />} />
+    <Route path="/signup" element={<Signup />} />
     <Route path="/privacy" element={<Privacy />} />
     <Route path="/terms" element={<SiteTerms />} />
     <Route path="/admin" element={<Admin />} />

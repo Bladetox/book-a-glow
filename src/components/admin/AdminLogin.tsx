@@ -99,7 +99,7 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
       >
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl p-8 flex flex-col items-center gap-6">
           <div className="w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center">
-            <span className="font-display text-lg font-bold text-white">.pb</span>
+            <span className="font-display text-lg font-bold text-white">.ns</span>
           </div>
 
           <AnimatePresence mode="wait">
