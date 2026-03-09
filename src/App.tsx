@@ -30,6 +30,7 @@ const MarketingRoutes = () => (
     <Route path="/pricing" element={<Pricing />} />
     <Route path="/login" element={<Login />} />
     <Route path="/onboarding" element={<Onboarding />} />
+    <Route path="/signup" element={<Signup />} />
     <Route path="/privacy" element={<Privacy />} />
     <Route path="/terms" element={<SiteTerms />} />
     <Route path="/admin" element={<Admin />} />
