@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from "date-fns";
-import { availableTimes } from "@/data/bookingData";
+
 import { useTenant } from "@/contexts/TenantContext";
 import {
   useStaffAvailability,
@@ -12,7 +12,12 @@ import {
   type WeekAvailability,
 } from "@/hooks/useSupabaseAvailability";
 
-const ALL_SLOTS = [...availableTimes];
+const ALL_SLOTS = [
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+  "17:00",
+];
 
 const AdminAvailability = () => {
   const { userId } = useTenant();
