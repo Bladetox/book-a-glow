@@ -1,1 +1,10 @@
 project_id = "kjibbbuceipnialfgflt"
+
+[functions.create-tenant]
+verify_jwt = false
+
+[functions.yoco-checkout]
+verify_jwt = false
+
+[functions.yoco-webhook]
+verify_jwt = false
