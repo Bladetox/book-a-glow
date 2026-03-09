@@ -36,17 +36,17 @@ export interface BusinessConfig {
 }
 
 export const defaultBusinessConfig: BusinessConfig = {
-  name: "PhenomeBeauty",
-  abbreviation: ".pb",
-  tagline: "Mobile Beauty Studio",
-  subtitle: "Premium At-Home Treatments",
-  ctaLabel: "Select Your Treatments",
-  signOff: "Toodles.",
+  name: "NextSlot",
+  abbreviation: ".ns",
+  tagline: "Booking Made Simple",
+  subtitle: "Professional Services",
+  ctaLabel: "Book Now",
+  signOff: "Thank you.",
 
-  email: "phenomebeauty@gmail.co.za",
-  phone: "74 511 5725",
+  email: "hello@nextslot.co.za",
+  phone: "",
   phoneCode: "+27",
-  address: "14 Kunene Drive, Portlands, Cape Town",
+  address: "",
 
   themeId: "standard",
 
@@ -59,9 +59,9 @@ export const defaultBusinessConfig: BusinessConfig = {
   maxAdvanceDays: 60,
   bookingRefPrefix: "",
 
-  confirmationTitle: "A date with yourself",
-  confirmationIntro: "I've received your deposit, and your space in my calendar is now officially held. This isn't just a booking; it's a promise you've made to yourself to pause, and I am so honored to be the one holding that space for you.",
-  confirmationOutro: "Until then, keep choosing yourself in the small moments, too.",
+  confirmationTitle: "Your booking is confirmed",
+  confirmationIntro: "Thank you for your booking. Your deposit has been received and your appointment is now confirmed.",
+  confirmationOutro: "We look forward to seeing you.",
 };
 
 const STORAGE_KEY = "ns_business_config";
