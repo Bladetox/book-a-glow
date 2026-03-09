@@ -264,8 +264,11 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
 
   if (data.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+      <div className="flex flex-col gap-4 sm:gap-5 max-w-5xl">
+        <BookingLinkBanner />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+        </div>
       </div>
     );
   }
