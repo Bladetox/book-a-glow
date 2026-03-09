@@ -42,32 +42,27 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
     try {
       // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       let clientId: string;
 
       if (!user) {
-        // Create anonymous/guest account via signUp with the client's email
-        const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: booking.email,
-          password: tempPassword,
-          options: {
-            data: {
+        // Use edge function to get-or-create client — handles returning customers
+        // who already have an auth account from a previous booking.
+        const { data: clientData, error: clientError } = await supabase.functions.invoke(
+          "get-or-create-client",
+          {
+            body: {
+              email: booking.email,
               full_name: booking.fullName,
               phone: `${booking.phoneCode}${booking.phone}`,
+              address: booking.address || null,
             },
           },
-        });
-        if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error("Sign up failed");
-        clientId = signUpData.user.id;
-
-        // Update profile with booking details
-        await supabase.from("profiles").update({
-          full_name: booking.fullName,
-          phone: `${booking.phoneCode}${booking.phone}`,
-          address: booking.address,
-        }).eq("id", clientId);
+        );
+        if (clientError) throw clientError;
+        if (clientData?.error) throw new Error(clientData.error);
+        if (!clientData?.userId) throw new Error("Could not resolve client account");
+        clientId = clientData.userId;
       } else {
         clientId = user.id;
         // Update profile with latest details
