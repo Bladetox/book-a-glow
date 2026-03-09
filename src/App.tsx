@@ -12,6 +12,7 @@ import Product from "./pages/Product";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
+import Signup from "./pages/Signup";
 import Privacy from "./pages/Privacy";
 import SiteTerms from "./pages/SiteTerms";
 import Admin from "./pages/Admin";
