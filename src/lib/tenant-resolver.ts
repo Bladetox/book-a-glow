@@ -35,25 +35,19 @@ export function resolveTenantSync(): TenantResolution {
 
   const hostname = window.location.hostname;
 
-  // 2. Bare localhost → fallback to demo tenant for development
+  // 2. Bare localhost → show marketing site (use ?tenant=xxx to test tenant mode)
   if (hostname === "localhost" || hostname === "127.0.0.1") {
-    return { slug: DEMO_TENANT_SLUG, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+    return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
   }
 
-  // 3. Check for Lovable preview environments
+  // 3. Lovable preview environments → show marketing site
   for (const domain of LOVABLE_DOMAINS) {
     if (hostname === domain || hostname === `www.${domain}`) {
-      return { slug: DEMO_TENANT_SLUG, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+      return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
     }
 
     if (hostname.endsWith(`.${domain}`)) {
-      const subdomain = hostname.slice(0, -(domain.length + 1));
-      // If subdomain is a UUID (Lovable preview), fall back to demo tenant
-      if (subdomain && UUID_PATTERN.test(subdomain)) {
-        return { slug: DEMO_TENANT_SLUG, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
-      }
-      // Otherwise treat as marketing site
-      return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
+      return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
     }
   }
 
