@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useBusinessTheme } from "./contexts/BusinessThemeProvider";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
 import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantContext";
@@ -62,6 +63,20 @@ const MarketingRoutes = () => (
   </>
 );
 
+/** Syncs the tenant's theme from PublicTenantContext into BusinessThemeProvider */
+const TenantThemeSync = () => {
+  const { themeId, loading } = usePublicTenant();
+  const { setThemeById } = useBusinessTheme();
+
+  useEffect(() => {
+    if (!loading && themeId) {
+      setThemeById(themeId);
+    }
+  }, [themeId, loading, setThemeById]);
+
+  return null;
+};
+
 /** Tenant booking app routes (subdomain) */
 const TenantRoutes = () => {
   const { notFound } = usePublicTenant();
@@ -71,12 +86,15 @@ const TenantRoutes = () => {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<Book />} />
-      <Route path="/book" element={<Book />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      <TenantThemeSync />
+      <Routes>
+        <Route path="/" element={<Book />} />
+        <Route path="/book" element={<Book />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 };
 

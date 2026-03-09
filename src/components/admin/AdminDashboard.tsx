@@ -4,9 +4,11 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Loader2
+  XCircle, Package, Bell, Clock, Loader2, Copy, Check, ExternalLink
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
+import { useTenant } from "@/contexts/TenantContext";
+import { useTenantSettings } from "@/hooks/useSupabaseSettings";
 
 // ─── Toggle visibility (localStorage) ───
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
@@ -215,6 +217,39 @@ const alertIcons: Record<string, React.ElementType> = {
   danger: Package,
 };
 
+// ─── Booking Link Banner ───
+const BookingLinkBanner = () => {
+  const { tenantId } = useTenant();
+  const { data: tenant } = useTenantSettings();
+  const [copied, setCopied] = useState(false);
+
+  const url = tenant?.custom_domain
+    ? `https://${tenant.custom_domain}`
+    : `https://${tenantId}.nextslot.co.za`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mb-0.5">Your Booking Link</p>
+        <p className="text-sm text-white/60 font-mono truncate">{url}</p>
+      </div>
+      <a href={url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg text-white/30 hover:text-white/60 transition-colors">
+        <ExternalLink className="w-3.5 h-3.5" />
+      </a>
+      <button onClick={copy} className="p-2 rounded-lg text-white/30 hover:text-white/60 transition-colors">
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+    </div>
+  );
+};
+
 // ─── Main Dashboard ───
 const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client: string) => void }) => {
   const [visibility, setVisibility] = useState(getVisibility);
@@ -242,6 +277,9 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5 max-w-5xl">
+      {/* Booking link */}
+      <BookingLinkBanner />
+
       {/* Customize toggle */}
       <div className="flex justify-end">
         <button onClick={() => setShowCustomize(!showCustomize)} className="text-[10px] tracking-[0.12em] uppercase text-white/30 hover:text-white/60 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]">

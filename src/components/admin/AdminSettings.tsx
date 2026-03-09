@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2 } from "lucide-react";
+import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2, Copy, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useTenantSettings, useAppSettings, useUpdateTenant, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
+import { useTenant } from "@/contexts/TenantContext";
 
 const SettingsCard = ({ title, icon: Icon, gradient, children }: { title: string; icon?: React.ElementType; gradient: string; children: React.ReactNode }) => (
   <motion.div
@@ -41,11 +42,22 @@ const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; la
 );
 
 const AdminSettings = () => {
+  const { tenantId } = useTenant();
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
   const updateTenant = useUpdateTenant();
   const upsertSetting = useUpsertAppSetting();
   const { setThemeById } = useBusinessTheme();
+  const [copied, setCopied] = useState(false);
+
+  const bookingUrl = `${tenantId}.nextslot.co.za`;
+
+  const copyBookingUrl = () => {
+    navigator.clipboard.writeText(`https://${bookingUrl}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<string | null>(null);
@@ -153,10 +165,22 @@ const AdminSettings = () => {
       {/* Domain Settings */}
       <SettingsCard title="Booking Domain" icon={MapPin} gradient="from-white/[0.06] to-white/[0.02]">
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Default URL</label>
-          <p className="text-sm text-white/60 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-            {draft.name ? draft.name.toLowerCase().replace(/\s+/g, "") : "yourbusiness"}.nextslot.co.za
-          </p>
+          <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Your Booking URL</label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <span className="text-sm text-white/60 font-mono truncate">{bookingUrl}</span>
+              <a href={`https://${bookingUrl}`} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0 text-white/30 hover:text-white/60 transition-colors">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+            <button
+              onClick={copyBookingUrl}
+              className="px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/60 hover:bg-white/[0.1] transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
         </div>
         <SettingRow label="Custom Domain (optional)" placeholder="book.yourdomain.co.za" value={draft.custom_domain} onChange={v => update("custom_domain", v)} />
         <p className="text-[9px] text-white/25 leading-relaxed">

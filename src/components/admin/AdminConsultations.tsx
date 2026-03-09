@@ -1,10 +1,150 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
-import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { useUpsertAppSetting, useAppSettings } from "@/hooks/useSupabaseSettings";
+import { Loader2, ChevronDown, ChevronUp, ClipboardList, Settings2, Check } from "lucide-react";
+import { toast } from "sonner";
 
+// ─── Fixed consultation question definitions ───
+const ALL_QUESTIONS = [
+  { key: "skin_conditions", label: "Skin Conditions", description: "Eczema, psoriasis, rosacea, sensitive skin, etc.", required: false },
+  { key: "medications", label: "Medications", description: "Current medications that may affect treatment", required: false },
+  { key: "allergies", label: "Allergies", description: "Known allergies to products, latex, fragrances, etc.", required: false },
+  { key: "pregnancy", label: "Pregnancy", description: "Are you pregnant or breastfeeding?", required: true },
+  { key: "health_conditions", label: "Health Conditions", description: "Diabetes, heart conditions, blood disorders, etc.", required: false },
+  { key: "environmental_exposure", label: "Environmental Exposure", description: "Sun, heat, chemicals, gym within 24-48 hrs", required: false },
+  { key: "physical_factors", label: "Physical Factors", description: "Recent surgery, injuries, scar tissue in treatment area", required: false },
+  { key: "hair_length_ok", label: "Hair Growth Check", description: "Is hair the right length for your service?", required: true },
+];
+
+const SETTINGS_KEY = "consultation_question_config";
+
+interface QuestionConfig {
+  key: string;
+  enabled: boolean;
+  label: string;
+}
+
+// ─── Form Builder Tab ───
+const FormBuilderTab = () => {
+  const { data: appSettings = {} } = useAppSettings();
+  const upsertSetting = useUpsertAppSetting();
+  const [saved, setSaved] = useState(false);
+
+  const storedConfig: QuestionConfig[] = (() => {
+    try {
+      return appSettings[SETTINGS_KEY] ? JSON.parse(appSettings[SETTINGS_KEY]) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const [config, setConfig] = useState<QuestionConfig[]>(() => {
+    if (storedConfig.length > 0) return storedConfig;
+    return ALL_QUESTIONS.map((q) => ({ key: q.key, enabled: true, label: q.label }));
+  });
+
+  // Re-init when settings load
+  const initialised = storedConfig.length > 0;
+  if (initialised && config.every((c) => c.enabled) && storedConfig.length > 0) {
+    const configKeys = config.map((c) => c.key).join(",");
+    const storedKeys = storedConfig.map((c) => c.key).join(",");
+    if (configKeys !== storedKeys) {
+      setConfig(storedConfig);
+    }
+  }
+
+  const toggle = (key: string) => {
+    setConfig((prev) =>
+      prev.map((q) => (q.key === key ? { ...q, enabled: !q.enabled } : q))
+    );
+  };
+
+  const rename = (key: string, label: string) => {
+    setConfig((prev) => prev.map((q) => (q.key === key ? { ...q, label } : q)));
+  };
+
+  const save = () => {
+    upsertSetting.mutate(
+      { [SETTINGS_KEY]: JSON.stringify(config) },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          toast.success("Form configuration saved");
+          setTimeout(() => setSaved(false), 2000);
+        },
+        onError: (e: Error) => toast.error(e.message),
+      }
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-white/40">
+          Toggle questions on/off and rename them. Changes apply to new client bookings.
+        </p>
+        <button
+          onClick={save}
+          disabled={upsertSetting.isPending}
+          className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
+        >
+          {upsertSetting.isPending ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : saved ? (
+            <Check className="w-3 h-3 text-emerald-400" />
+          ) : null}
+          {saved ? "Saved" : "Save Changes"}
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {ALL_QUESTIONS.map((q) => {
+          const cfg = config.find((c) => c.key === q.key) ?? { key: q.key, enabled: true, label: q.label };
+          return (
+            <div
+              key={q.key}
+              className={`rounded-xl border px-4 py-3 flex items-start gap-3 transition-all ${
+                cfg.enabled ? "border-white/[0.08] bg-white/[0.03]" : "border-white/[0.04] bg-white/[0.01] opacity-50"
+              }`}
+            >
+              <button
+                onClick={() => toggle(q.key)}
+                className={`mt-0.5 w-8 h-4 rounded-full relative transition-colors shrink-0 ${
+                  cfg.enabled ? "bg-emerald-500/40" : "bg-white/10"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${
+                    cfg.enabled ? "right-0.5 bg-emerald-400" : "left-0.5 bg-white/30"
+                  }`}
+                />
+              </button>
+              <div className="flex-1 min-w-0">
+                <input
+                  value={cfg.label}
+                  onChange={(e) => rename(q.key, e.target.value)}
+                  className="text-sm font-medium text-white/80 bg-transparent border-b border-transparent hover:border-white/20 focus:border-white/30 focus:outline-none w-full transition-colors pb-0.5"
+                />
+                <p className="text-xs text-white/30 mt-0.5">{q.description}</p>
+              </div>
+              {q.required && (
+                <span className="text-[10px] text-amber-400/70 font-medium shrink-0 mt-0.5">Required</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-white/25 leading-relaxed">
+        Note: "Required" questions (Pregnancy, Hair Growth) are always shown to ensure safety. You can rename them but not disable them.
+      </p>
+    </div>
+  );
+};
+
+// ─── Consultations List Tab ───
 const filters = ["All", "New", "Existing"];
 
 interface ConsultationRow {
@@ -27,7 +167,7 @@ interface ConsultationRow {
   };
 }
 
-const AdminConsultations = () => {
+const ConsultationsListTab = () => {
   const { tenantId } = useTenant();
   const [activeFilter, setActiveFilter] = useState("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -66,7 +206,7 @@ const AdminConsultations = () => {
               ${activeFilter === f ? "bg-white/[0.12] text-white border border-white/[0.15]" : "text-white/35 border border-white/[0.06] hover:text-white/60"}`}>
             {f}
             <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-white/10" : "bg-white/[0.04]"}`}>
-              {activeFilter === f ? filtered.length : consultations.filter((c) => f === "All" ? true : f === "New" ? c.client_type === "new" : c.client_type === "existing").length}
+              {f === "All" ? consultations.length : consultations.filter((c) => f === "New" ? c.client_type === "new" : c.client_type === "existing").length}
             </span>
           </button>
         ))}
@@ -128,6 +268,42 @@ const AdminConsultations = () => {
           })}
         </div>
       )}
+    </div>
+  );
+};
+
+// ─── Main Component ───
+const AdminConsultations = () => {
+  const [tab, setTab] = useState<"responses" | "form">("responses");
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab("responses")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase transition-all ${
+            tab === "responses"
+              ? "bg-white/[0.12] text-white border border-white/[0.15]"
+              : "text-white/35 border border-white/[0.06] hover:text-white/60"
+          }`}
+        >
+          <ClipboardList className="w-3.5 h-3.5" />
+          Responses
+        </button>
+        <button
+          onClick={() => setTab("form")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase transition-all ${
+            tab === "form"
+              ? "bg-white/[0.12] text-white border border-white/[0.15]"
+              : "text-white/35 border border-white/[0.06] hover:text-white/60"
+          }`}
+        >
+          <Settings2 className="w-3.5 h-3.5" />
+          Edit Form
+        </button>
+      </div>
+
+      {tab === "responses" ? <ConsultationsListTab /> : <FormBuilderTab />}
     </div>
   );
 };
