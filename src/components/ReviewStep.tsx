@@ -1,8 +1,8 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { usePublicServices } from "@/hooks/usePublicServices";
 import { resolveStaffId } from "@/hooks/usePublicAvailability";
-import { useTermsSections } from "@/components/admin/AdminTerms";
-import { useBusinessConfig } from "@/data/businessStore";
+import { usePublicTerms } from "@/hooks/usePublicTerms";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -17,8 +17,8 @@ interface ReviewStepProps {
 
 const ReviewStep = ({ booking }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
-  const termsSections = useTermsSections();
-  const config = useBusinessConfig();
+  const { sections: termsSections } = usePublicTerms();
+  const config = usePublicBusinessConfig();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);

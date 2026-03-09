@@ -1,5 +1,5 @@
 import { BookingState } from "@/data/bookingData";
-import { useBusinessConfig } from "@/data/businessStore";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -8,7 +8,7 @@ interface BookingConfirmationProps {
 }
 
 const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
-  const config = useBusinessConfig();
+  const config = usePublicBusinessConfig();
   const formattedDate = booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "TBC";
   const formattedTime = booking.selectedTime || "TBC";
 
