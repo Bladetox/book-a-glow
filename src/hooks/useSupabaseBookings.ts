@@ -182,3 +182,44 @@ export function useDeleteBooking() {
     },
   });
 }
+
+export function useRequestBalance() {
+  const qc = useQueryClient();
+  const { tenantId } = useTenant();
+
+  return useMutation({
+    mutationFn: async (bookingId: string): Promise<{ redirect_url: string; balance: number }> => {
+      const { data, error } = await supabase.functions.invoke("yoco-balance", {
+        body: { booking_id: bookingId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { redirect_url: string; balance: number };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
+    },
+  });
+}
+
+export function useAddBookingService() {
+  const qc = useQueryClient();
+  const { tenantId } = useTenant();
+
+  return useMutation({
+    mutationFn: async ({ bookingId, serviceId }: { bookingId: string; serviceId: string }) => {
+      const { data, error } = await supabase.rpc("add_service_to_booking", {
+        p_booking_id: bookingId,
+        p_service_id: serviceId,
+      });
+      if (error) throw error;
+      const result = (data as { success: boolean; message?: string; new_total?: number; new_balance?: number }[])?.[0];
+      if (result && !result.success) throw new Error(result.message);
+      return result;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
+    },
+  });
+}

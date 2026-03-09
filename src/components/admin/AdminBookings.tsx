@@ -4,11 +4,13 @@ import { format } from "date-fns";
 import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Edit3, Save, Trash2, ChevronDown, ChevronUp,
-  CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2
+  CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
+  SendHorizonal, PlusCircle, ExternalLink
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
+import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, useRequestBalance, useAddBookingService, BookingRow } from "@/hooks/useSupabaseBookings";
+import { useSupabaseServices } from "@/hooks/useSupabaseServices";
 import { toast } from "sonner";
 
 const filters = ["All", "Today", "Pending", "Confirmed", "Complete", "Cancelled"] as const;
@@ -28,10 +30,13 @@ interface AdminBookingsProps {
 
 const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const { data: bookings = [], isLoading } = useSupabaseBookings();
+  const { data: allServices = [] } = useSupabaseServices();
   const updateStatus = useUpdateBookingStatus();
   const reschedule = useRescheduleBooking();
   const updateFields = useUpdateBookingFields();
   const deleteBooking = useDeleteBooking();
+  const requestBalance = useRequestBalance();
+  const addService = useAddBookingService();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -40,6 +45,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
   const [rescheduleTime, setRescheduleTime] = useState<string | null>(null);
+  const [addServiceId, setAddServiceId] = useState<string | null>(null);
+  const [selectedServiceToAdd, setSelectedServiceToAdd] = useState<string>("");
+  const [balanceLink, setBalanceLink] = useState<Record<string, string>>({});
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -134,6 +142,28 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   };
 
   const cancelEdit = () => { setEditingId(null); setEditDraft({}); };
+
+  const handleRequestBalance = async (bookingId: string) => {
+    try {
+      const result = await requestBalance.mutateAsync(bookingId);
+      setBalanceLink((prev) => ({ ...prev, [bookingId]: result.redirect_url }));
+      toast.success("Balance link sent to client via email!");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to request balance");
+    }
+  };
+
+  const handleAddService = async (bookingId: string) => {
+    if (!selectedServiceToAdd) return;
+    try {
+      await addService.mutateAsync({ bookingId, serviceId: selectedServiceToAdd });
+      toast.success("Service added and totals updated");
+      setAddServiceId(null);
+      setSelectedServiceToAdd("");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to add service");
+    }
+  };
 
   // Available time slots for rescheduling
   const timeSlots = Array.from({ length: 19 }, (_, i) => {
@@ -314,10 +344,74 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 {b.status !== "cancelled" && b.status !== "complete" && (
                                   <ActionBtn icon={X} label="Cancel" color="text-red-400" onClick={() => handleStatusChange(b.id, "cancelled")} />
                                 )}
+                                {/* Add Service */}
+                                {b.status !== "cancelled" && (
+                                  <ActionBtn icon={PlusCircle} label="Add Service" color="text-violet-400" onClick={() => {
+                                    setAddServiceId(addServiceId === b.id ? null : b.id);
+                                    setSelectedServiceToAdd("");
+                                  }} />
+                                )}
+                                {/* Request Balance */}
+                                {b.depositPaid && b.balance > 0 && b.status !== "cancelled" && (
+                                  <ActionBtn
+                                    icon={SendHorizonal}
+                                    label={requestBalance.isPending ? "Sending…" : "Request Balance"}
+                                    color="text-amber-400"
+                                    onClick={() => handleRequestBalance(b.id)}
+                                  />
+                                )}
                                 <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
                                 <div className="flex-1" />
                                 <ActionBtn icon={Trash2} label="Delete" color="text-red-400/60" onClick={() => handleDelete(b.id)} />
                               </div>
+
+                              {/* Balance link copy area */}
+                              {balanceLink[b.id] && (
+                                <div className="mt-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+                                  <SendHorizonal className="w-3 h-3 text-amber-400 shrink-0" />
+                                  <span className="text-[10px] text-amber-300 flex-1">Balance link sent to client.</span>
+                                  <a href={balanceLink[b.id]} target="_blank" rel="noopener noreferrer"
+                                    className="text-[10px] text-amber-400 underline flex items-center gap-1">
+                                    Open <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                </div>
+                              )}
+
+                              {/* Add Service panel */}
+                              <AnimatePresence>
+                                {addServiceId === b.id && (
+                                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                                      <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/40 mb-2">Add a Service</p>
+                                      <div className="flex gap-2">
+                                        <select
+                                          value={selectedServiceToAdd}
+                                          onChange={(e) => setSelectedServiceToAdd(e.target.value)}
+                                          className="flex-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 focus:outline-none"
+                                        >
+                                          <option value="">Select a service…</option>
+                                          {allServices.filter((s) => s.is_active).map((s) => (
+                                            <option key={s.id} value={s.id}>
+                                              {s.name} — R{s.price} ({s.duration_minutes}min)
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <button
+                                          disabled={!selectedServiceToAdd || addService.isPending}
+                                          onClick={() => handleAddService(b.id)}
+                                          className="px-3 py-2 rounded-lg bg-violet-500/20 border border-violet-500/30 text-xs font-semibold text-violet-400 hover:bg-violet-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                        >
+                                          {addService.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlusCircle className="w-3 h-3" />}
+                                          Add
+                                        </button>
+                                        <button onClick={() => setAddServiceId(null)} className="px-2 py-2 rounded-lg text-xs text-white/30 hover:text-white/60 transition-colors">
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
 
                               {/* Reschedule panel */}
                               <AnimatePresence>
