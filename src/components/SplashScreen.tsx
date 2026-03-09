@@ -1,13 +1,13 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
-import { useBusinessConfig } from "@/data/businessStore";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  const config = useBusinessConfig();
+  const config = usePublicBusinessConfig();
 
   const particles = useMemo(
     () =>

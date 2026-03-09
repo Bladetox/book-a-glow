@@ -9,6 +9,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
 import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { useState, useCallback } from "react";
 
@@ -45,7 +46,8 @@ const stepVariants = {
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
   const { data: treatments = [] } = usePublicServices();
-  const { tenantId, name: tenantName, loading: tenantLoading } = usePublicTenant();
+  const { tenantId, loading: tenantLoading } = usePublicTenant();
+  const config = usePublicBusinessConfig();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
   const dragX = useMotionValue(0);
@@ -99,18 +101,8 @@ const Index = () => {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Generate abbreviation from business name
-  const getAbbreviation = (name: string) => {
-    if (!name) return "?";
-    const words = name.split(" ").filter(Boolean);
-    if (words.length >= 2) {
-      return words.slice(0, 2).map(w => w[0]?.toUpperCase()).join("");
-    }
-    return name.slice(0, 2).toUpperCase();
-  };
-
-  const businessName = tenantName || tenantId;
-  const abbreviation = businessName ? getAbbreviation(businessName) : "?";
+  const businessName = config.name || tenantId;
+  const abbreviation = config.abbreviation || businessName.slice(0, 2).toUpperCase();
   
   const selectedServices = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
   const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
@@ -136,13 +128,13 @@ const Index = () => {
             <span className="font-display text-xl font-bold text-foreground">{abbreviation}</span>
           </motion.div>
           <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
-            Mobile Beauty Studio
+            {config.tagline}
           </p>
           <h1 className="font-display text-2xl font-bold text-foreground mt-1">
             {businessName}
           </h1>
           <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground mt-0.5">
-            Premium At-Home Treatments
+            {config.subtitle}
           </p>
         </motion.div>
 
