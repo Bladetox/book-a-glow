@@ -46,8 +46,9 @@ Deno.serve(async (req) => {
       .from("bookings")
       .select(`
         id, client_id, tenant_id, deposit_amount, total_amount,
-        deposit_paid, full_payment_received, booking_date, start_time,
-        client:profiles!bookings_client_id_fkey(full_name, email),
+        deposit_paid, full_payment_received, booking_date, start_time, end_time,
+        is_call_out, call_out_address, call_out_fee, client_notes,
+        client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
         items:booking_items(service_name, sort_order)
       `);
 
@@ -94,6 +95,7 @@ Deno.serve(async (req) => {
       });
 
       await sendDepositEmails(supabase, booking, resolvedTenantId);
+      await createCalendarEvent(supabase, booking, resolvedTenantId);
 
       return new Response(
         JSON.stringify({ received: true, booking_id: booking.id }),
@@ -137,12 +139,187 @@ Deno.serve(async (req) => {
   }
 });
 
-async function sendDepositEmails(supabase, booking, tenantId) {
+// ── Google Calendar ────────────────────────────────────────────────────────────
+
+async function getGoogleAccessToken(serviceAccountJson: string): Promise<string> {
+  const sa = JSON.parse(serviceAccountJson);
+  const now = Math.floor(Date.now() / 1000);
+
+  const encodeBase64Url = (str: string) =>
+    btoa(str).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+  const header  = encodeBase64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = encodeBase64Url(JSON.stringify({
+    iss:   sa.client_email,
+    scope: "https://www.googleapis.com/auth/calendar",
+    aud:   "https://oauth2.googleapis.com/token",
+    exp:   now + 3600,
+    iat:   now,
+  }));
+
+  const signingInput = `${header}.${payload}`;
+
+  // Strip PEM armor and decode
+  const pemBody = sa.private_key
+    .replace(/-----[^-]+-----/g, "")
+    .replace(/\s+/g, "");
+  const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryKey,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const sigBytes = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    new TextEncoder().encode(signingInput),
+  );
+
+  const signature = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
+    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+  const jwt = `${signingInput}.${signature}`;
+
+  const res  = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+  });
+  const data = await res.json();
+
+  if (!data.access_token) {
+    throw new Error(`Google token error: ${JSON.stringify(data)}`);
+  }
+  return data.access_token;
+}
+
+async function createCalendarEvent(supabase, booking, tenantId: string) {
+  try {
+    const serviceAccountJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
+    if (!serviceAccountJson) {
+      console.log("No GOOGLE_SERVICE_ACCOUNT_JSON — skipping calendar event");
+      return;
+    }
+
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", tenantId)
+      .in("key", ["google_calendar_id", "business_name", "currency", "timezone"]);
+
+    const cfg: Record<string, string> = {};
+    (settingsRows ?? []).forEach((r) => { if (r.value) cfg[r.key] = r.value; });
+
+    const calendarId = cfg.google_calendar_id;
+    if (!calendarId) {
+      console.log("No google_calendar_id in app_settings — skipping calendar event");
+      return;
+    }
+
+    const clientName  = booking.client?.full_name || "Client";
+    const clientEmail = booking.client?.email;
+    const clientPhone = booking.client?.phone;
+    const services    = (booking.items ?? [])
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((i) => i.service_name)
+      .join(", ");
+
+    const location   = booking.call_out_address || booking.client?.address || "";
+    const currency   = cfg.currency || "R";
+    const tz         = cfg.timezone || "Africa/Johannesburg";
+
+    const dateStr      = booking.booking_date;              // YYYY-MM-DD
+    const startTimeStr = (booking.start_time || "").slice(0, 5); // HH:MM
+    const endTimeStr   = (booking.end_time   || "").slice(0, 5);
+
+    const depositAmt = Number(booking.deposit_amount);
+    const totalAmt   = Number(booking.total_amount);
+    const balanceAmt = Math.max(0, totalAmt - depositAmt);
+
+    const descriptionLines = [
+      `Client: ${clientName}`,
+      clientEmail ? `Email: ${clientEmail}` : "",
+      clientPhone ? `Phone: ${clientPhone}` : "",
+      "",
+      `Services: ${services}`,
+      "",
+      `Total:         ${currency}${totalAmt.toFixed(2)}`,
+      `Deposit Paid:  ${currency}${depositAmt.toFixed(2)}`,
+      `Balance Due:   ${currency}${balanceAmt.toFixed(2)}`,
+    ];
+
+    if (booking.is_call_out) {
+      descriptionLines.push("", `Call-out: Yes`);
+      if (booking.call_out_fee) {
+        descriptionLines.push(`Call-out Fee: ${currency}${Number(booking.call_out_fee).toFixed(2)}`);
+      }
+    }
+
+    if (booking.client_notes) {
+      descriptionLines.push("", `Notes: ${booking.client_notes}`);
+    }
+
+    const event: Record<string, unknown> = {
+      summary:     `${clientName} — ${services}`,
+      location:    location || undefined,
+      description: descriptionLines.filter((l, i, arr) =>
+        // collapse consecutive blank lines
+        !(l === "" && arr[i - 1] === "")
+      ).join("\n"),
+      start: { dateTime: `${dateStr}T${startTimeStr}:00`, timeZone: tz },
+      end:   { dateTime: `${dateStr}T${endTimeStr}:00`,   timeZone: tz },
+    };
+
+    if (clientEmail) {
+      event.attendees = [{ email: clientEmail, responseStatus: "accepted" }];
+      // Don't send invite emails to the client — the confirmation email handles that
+      event.guestsCanSeeOtherGuests = false;
+      event.sendUpdates = "none";
+    }
+
+    const accessToken = await getGoogleAccessToken(serviceAccountJson);
+
+    const calRes = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none`,
+      {
+        method:  "POST",
+        headers: {
+          Authorization:  `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(event),
+      },
+    );
+
+    const calData = await calRes.json();
+
+    if (calData.id) {
+      console.log("Calendar event created:", calData.id);
+      // Store event ID in booking.notes for future updates/deletions
+      await supabase
+        .from("bookings")
+        .update({ notes: calData.id })
+        .eq("id", booking.id);
+    } else {
+      console.error("Calendar API error:", JSON.stringify(calData));
+    }
+  } catch (e) {
+    console.error("createCalendarEvent error:", e);
+  }
+}
+
+// ── Email ─────────────────────────────────────────────────────────────────────
+
+async function sendDepositEmails(supabase, booking, tenantId: string) {
   try {
     const { data: settingsRows } = await supabase
       .from("app_settings").select("key, value").eq("tenant_id", tenantId);
 
-    const cfg = {};
+    const cfg: Record<string, string> = {};
     (settingsRows ?? []).forEach((r) => { if (r.value) cfg[r.key] = r.value; });
 
     const currency     = cfg.currency || "R";
