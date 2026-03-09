@@ -199,20 +199,20 @@ async function getGoogleAccessToken(serviceAccountJson: string): Promise<string>
 
 async function createCalendarEvent(supabase, booking, tenantId: string) {
   try {
-    const serviceAccountJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
-    if (!serviceAccountJson) {
-      console.log("No GOOGLE_SERVICE_ACCOUNT_JSON — skipping calendar event");
-      return;
-    }
-
     const { data: settingsRows } = await supabase
       .from("app_settings")
       .select("key, value")
       .eq("tenant_id", tenantId)
-      .in("key", ["google_calendar_id", "business_name", "currency", "timezone"]);
+      .in("key", ["google_calendar_id", "google_service_account_json", "business_name", "currency", "timezone"]);
 
     const cfg: Record<string, string> = {};
     (settingsRows ?? []).forEach((r) => { if (r.value) cfg[r.key] = r.value; });
+
+    const serviceAccountJson = cfg.google_service_account_json || Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
+    if (!serviceAccountJson) {
+      console.log("No google_service_account_json — skipping calendar event");
+      return;
+    }
 
     const calendarId = cfg.google_calendar_id;
     if (!calendarId) {
