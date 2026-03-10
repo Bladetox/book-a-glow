@@ -1,117 +1,88 @@
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createHmac } from "https://deno.land/std@0.177.0/node/crypto.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+serve(async (req) => {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  const body = await req.text();
+  const signature = req.headers.get("x-yoco-signature") ?? "";
+
+  // Parse event
+  let event: any;
+  try {
+    event = JSON.parse(body);
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+  const tenantId = event?.metadata?.tenant_id;
+  const paymentType = event?.metadata?.payment_type ?? "deposit";
+  const bookingId = event?.metadata?.booking_id;
 
-    const body = await req.json();
-    const { type, payload } = body;
+  if (!tenantId || !bookingId) {
+    return new Response("Missing metadata", { status: 400 });
+  }
 
-    console.log("Yoco webhook received:", type, JSON.stringify(payload));
+  // Verify HMAC signature using tenant webhook secret
+  if (signature) {
+    const { data: secretRow } = await supabase
+      .from("tenant_secrets")
+      .select("value")
+      .eq("tenant_id", tenantId)
+      .eq("key", "yoco_webhook_secret")
+      .single();
 
-    // Yoco sends "payment.succeeded" when checkout is completed
-    if (type !== "payment.succeeded") {
-      return new Response(JSON.stringify({ received: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (secretRow?.value) {
+      const expected = createHmac("sha256", secretRow.value).update(body).digest("hex");
+      if (signature !== expected) {
+        return new Response("Invalid signature", { status: 401 });
+      }
     }
+  }
 
-    const checkoutId = payload?.metadata?.checkoutId ?? payload?.checkoutId;
-    const bookingId = payload?.metadata?.booking_id;
-    const tenantId = payload?.metadata?.tenant_id;
-    const transactionId = payload?.id;
+  const eventType = event?.type;
 
-    if (!bookingId && !checkoutId) {
-      console.error("No booking_id or checkoutId in webhook payload");
-      return new Response(JSON.stringify({ error: "Missing identifiers" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Find booking by booking_id from metadata or by yoco_checkout_id
-    let bookingQuery = supabase.from("bookings").select("id, client_id, tenant_id, deposit_amount, deposit_paid");
-
-    if (bookingId) {
-      bookingQuery = bookingQuery.eq("id", bookingId);
-    } else {
-      bookingQuery = bookingQuery.eq("yoco_checkout_id", checkoutId);
-    }
-
-    const { data: booking, error: bookingErr } = await bookingQuery.single();
-
-    if (bookingErr || !booking) {
-      console.error("Booking not found for webhook:", bookingId || checkoutId);
-      return new Response(JSON.stringify({ error: "Booking not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (booking.deposit_paid) {
-      console.log("Deposit already marked paid for booking:", booking.id);
-      return new Response(JSON.stringify({ received: true, already_paid: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Mark deposit as paid and confirm booking
-    const { error: updateErr } = await supabase
-      .from("bookings")
-      .update({
+  if (eventType === "payment.succeeded") {
+    if (paymentType === "deposit") {
+      await supabase.from("bookings").update({
         deposit_paid: true,
         status: "confirmed",
-        confirmed_at: new Date().toISOString(),
-      })
-      .eq("id", booking.id);
+      }).eq("id", bookingId);
 
-    if (updateErr) {
-      console.error("Failed to update booking:", updateErr);
-      return new Response(JSON.stringify({ error: "Update failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Fire confirmation email (async, don't await)
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-booking-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({ booking_id: bookingId, tenant_id: tenantId, email_type: "confirmation" }),
       });
+
+      // Fire admin notification (async)
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-booking-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({ booking_id: bookingId, tenant_id: tenantId, email_type: "admin_notification" }),
+      });
+    } else if (paymentType === "final") {
+      await supabase.from("bookings").update({
+        final_payment_paid: true,
+        full_payment_received: true,
+        balance_due: 0,
+        status: "completed",
+      }).eq("id", bookingId);
     }
-
-    // Record payment
-    await supabase.from("payments").insert({
-      booking_id: booking.id,
-      client_id: booking.client_id,
-      tenant_id: booking.tenant_id ?? tenantId,
-      amount: booking.deposit_amount,
-      payment_type: "deposit",
-      payment_method: "card",
-      gateway: "yoco",
-      status: "completed",
-      transaction_id: transactionId,
-      completed_at: new Date().toISOString(),
-    });
-
-    console.log("Deposit confirmed for booking:", booking.id);
-
-    return new Response(
-      JSON.stringify({ received: true, booking_id: booking.id }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   }
+
+  return new Response(JSON.stringify({ received: true }), {
+    headers: { "Content-Type": "application/json" },
+  });
 });

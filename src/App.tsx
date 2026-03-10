@@ -21,26 +21,22 @@ import Admin from "./pages/Admin";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import TenantNotFound from "./pages/TenantNotFound";
+import DepositSuccessPage from "./pages/DepositSuccessPage";
+import FinalPaymentSuccessPage from "./pages/FinalPaymentSuccessPage";
 
 const queryClient = new QueryClient();
 
-/** Listens for PASSWORD_RECOVERY event and redirects to /reset-password */
 const AuthRecoveryHandler = () => {
   const navigate = useNavigate();
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        navigate("/reset-password");
-      }
+      if (event === "PASSWORD_RECOVERY") navigate("/reset-password");
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
-
   return null;
 };
 
-/** Marketing site routes (main domain) */
 const MarketingRoutes = () => (
   <>
     <AuthRecoveryHandler />
@@ -55,25 +51,34 @@ const MarketingRoutes = () => (
       <Route path="/terms" element={<SiteTerms />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      {/* /book on main domain still needs tenant context — default to query param ?tenant=xxx */}
       <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
+      {/* Success pages — need tenant context for copy */}
+      <Route path="/booking/success" element={<PublicTenantProvider><SuccessPageRouter /></PublicTenantProvider>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </>
 );
 
-/** Tenant booking app routes (subdomain) */
+/** Route to correct success page based on ?type= param */
+const SuccessPageRouter = () => {
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get("type") ?? "deposit";
+  if (type === "final") return <FinalPaymentSuccessPage />;
+  return <DepositSuccessPage />;
+};
+
 const TenantRoutes = () => {
   const { notFound } = usePublicTenant();
 
-  if (notFound) {
-    return <TenantNotFound hostname={window.location.hostname} />;
-  }
+  if (notFound) return <TenantNotFound hostname={window.location.hostname} />;
 
   return (
     <Routes>
       <Route path="/" element={<Book />} />
       <Route path="/book" element={<Book />} />
+      <Route path="/booking/success" element={<SuccessPageRouter />} />
+      <Route path="/:tenant/book" element={<Book />} />
+      <Route path="/:tenant/booking/success" element={<SuccessPageRouter />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
