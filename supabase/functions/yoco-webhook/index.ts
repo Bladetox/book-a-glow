@@ -6,6 +6,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+async function verifyYocoSignature(
+  payloadBytes: Uint8Array,
+  signatureHeader: string,
+  secret: string
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
+  const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
+  return computedB64 === signatureHeader;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,12 +35,56 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const body = await req.json();
+    // Read raw bytes BEFORE parsing JSON — required for signature verification
+    const rawBody = await req.arrayBuffer();
+    const payloadBytes = new Uint8Array(rawBody);
+    const bodyText = new TextDecoder().decode(payloadBytes);
+    const body = JSON.parse(bodyText);
+
     const { type, payload } = body;
 
-    console.log("Yoco webhook received:", type, JSON.stringify(payload));
+    console.log("Yoco webhook received:", type);
 
-    // Yoco sends "payment.succeeded" when checkout is completed
+    // Extract tenant_id from metadata to look up their webhook secret
+    const tenantId = payload?.metadata?.tenant_id;
+    const signatureHeader = req.headers.get("X-Yoco-Signature");
+
+    // Only verify signature if we have both tenant_id and a signature header
+    if (tenantId && signatureHeader) {
+      const { data: business, error: bizErr } = await supabase
+        .from("businesses")
+        .select("yoco_webhook_secret")
+        .eq("id", tenantId)
+        .single();
+
+      if (bizErr || !business?.yoco_webhook_secret) {
+        console.error("Could not find webhook secret for tenant:", tenantId);
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const valid = await verifyYocoSignature(
+        payloadBytes,
+        signatureHeader,
+        business.yoco_webhook_secret
+      );
+
+      if (!valid) {
+        console.error("Invalid Yoco webhook signature for tenant:", tenantId);
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Signature verified for tenant:", tenantId);
+    } else {
+      console.warn("Skipping signature verification — missing tenant_id or signature header");
+    }
+
+    // Only process payment.succeeded events
     if (type !== "payment.succeeded") {
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
@@ -31,7 +94,6 @@ Deno.serve(async (req) => {
 
     const checkoutId = payload?.metadata?.checkoutId ?? payload?.checkoutId;
     const bookingId = payload?.metadata?.booking_id;
-    const tenantId = payload?.metadata?.tenant_id;
     const transactionId = payload?.id;
 
     if (!bookingId && !checkoutId) {
@@ -43,7 +105,9 @@ Deno.serve(async (req) => {
     }
 
     // Find booking by booking_id from metadata or by yoco_checkout_id
-    let bookingQuery = supabase.from("bookings").select("id, client_id, tenant_id, deposit_amount, deposit_paid");
+    let bookingQuery = supabase
+      .from("bookings")
+      .select("id, client_id, tenant_id, deposit_amount, deposit_paid");
 
     if (bookingId) {
       bookingQuery = bookingQuery.eq("id", bookingId);
@@ -61,12 +125,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Idempotency guard — don't double-process
     if (booking.deposit_paid) {
       console.log("Deposit already marked paid for booking:", booking.id);
-      return new Response(JSON.stringify({ received: true, already_paid: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ received: true, already_paid: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Mark deposit as paid and confirm booking
