@@ -144,8 +144,9 @@ const AdminSettings = () => {
         <SettingRow label="Business Name" placeholder="Your Business Name" value={draft.name} onChange={v => update("name", v)} />
         <SettingRow label="Email" placeholder="your@email.com" type="email" value={draft.email} onChange={v => update("email", v)} />
         <SettingRow label="Phone" placeholder="074 511 5725" value={draft.phone} onChange={v => update("phone", v)} />
+        <SettingRow label="Logo URL" placeholder="https://yourdomain.com/logo.png" value={draft.logo_url} onChange={v => update("logo_url", v)} />
         <div className="flex items-center gap-3">
-          <SaveBtn onClick={() => saveTenantFields("info", ["name", "email", "phone"])} loading={updateTenant.isPending} />
+          <SaveBtn onClick={() => saveTenantFields("info", ["name", "email", "phone", "logo_url"])} loading={updateTenant.isPending} />
           <SavedBadge section="info" />
         </div>
       </SettingsCard>
@@ -154,9 +155,14 @@ const AdminSettings = () => {
       <SettingsCard title="Booking Domain" icon={MapPin} gradient="from-white/[0.06] to-white/[0.02]">
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Default URL</label>
-          <p className="text-sm text-white/60 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-            {draft.name ? draft.name.toLowerCase().replace(/\s+/g, "") : "yourbusiness"}.nextslot.co.za
-          </p>
+          <a
+            href={`https://${tenant?.id || "yourbusiness"}.nextslot.co.za`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-white/60 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.15] hover:text-white/80 transition-colors"
+          >
+            {tenant?.id || "yourbusiness"}.nextslot.co.za
+          </a>
         </div>
         <SettingRow label="Custom Domain (optional)" placeholder="book.yourdomain.co.za" value={draft.custom_domain} onChange={v => update("custom_domain", v)} />
         <p className="text-[9px] text-white/25 leading-relaxed">

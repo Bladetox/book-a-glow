@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { GlassButton } from "@/components/ui/glass-button";
 
 interface StickyBottomBarProps {
   step: number;
@@ -58,22 +59,22 @@ const StickyBottomBar = ({
         {/* Buttons */}
         <div className="flex gap-3">
           {step > 0 && (
-            <motion.button
-              whileTap={{ scale: 0.96 }}
+            <GlassButton
+              size="default"
               onClick={onPrev}
-              className="btn-back flex-1"
+              className="flex-1 glass-button-back"
             >
               Back
-            </motion.button>
+            </GlassButton>
           )}
-          <motion.button
-            whileTap={{ scale: canProceed ? 0.96 : 1 }}
+          <GlassButton
+            size="default"
             onClick={onNext}
             disabled={!canProceed}
-            className="btn-next flex-1"
+            className="flex-1"
           >
             Next
-          </motion.button>
+          </GlassButton>
         </div>
       </div>
     </motion.div>

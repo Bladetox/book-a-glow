@@ -6,6 +6,8 @@ import {
   getDefaultTheme,
   getThemeCssVars,
 } from "@/data/themes";
+import { supabase } from "@/integrations/supabase/client";
+import { getTenantSlug, isCustomDomainHost } from "@/lib/tenant-resolver";
 
 interface BusinessThemeContextValue {
   /** The currently active theme */
@@ -99,28 +101,49 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("ns_business_theme", activeThemeId);
   }, [activeThemeId]);
 
-  /**
-   * TODO: Supabase integration
-   * When Supabase is connected, this effect will:
-   * 1. Fetch the business record by business_id
-   * 2. Read the `theme_id` column
-   * 3. Call setActiveThemeId(themeId)
-   * 
-   * Example:
-   * useEffect(() => {
-   *   if (!businessId) return;
-   *   setLoading(true);
-   *   supabase
-   *     .from("businesses")
-   *     .select("theme_id")
-   *     .eq("id", businessId)
-   *     .single()
-   *     .then(({ data }) => {
-   *       if (data?.theme_id) setActiveThemeId(data.theme_id);
-   *     })
-   *     .finally(() => setLoading(false));
-   * }, [businessId]);
-   */
+  // Fetch theme from Supabase based on current tenant
+  useEffect(() => {
+    const fetchTenantTheme = async () => {
+      try {
+        const tenantSlug = getTenantSlug();
+        const customDomainHost = isCustomDomainHost();
+
+        let tenantId: string | null = null;
+
+        if (tenantSlug) {
+          tenantId = tenantSlug;
+        } else if (customDomainHost) {
+          const { data } = await supabase
+            .from("tenants")
+            .select("id")
+            .eq("custom_domain", customDomainHost)
+            .eq("is_active", true)
+            .single();
+          tenantId = data?.id ?? null;
+        }
+
+        if (!tenantId) return;
+
+        setLoading(true);
+        const { data } = await supabase
+          .from("tenants")
+          .select("theme_id")
+          .eq("id", tenantId)
+          .eq("is_active", true)
+          .single();
+
+        if (data?.theme_id && findTheme(data.theme_id)) {
+          setActiveThemeId(data.theme_id);
+        }
+      } catch {
+        // Silently fallback to default/stored theme
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTenantTheme();
+  }, []);
 
   const setThemeById = (id: string) => {
     if (findTheme(id)) {

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { GlassButton } from "@/components/ui/glass-button";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -60,69 +61,101 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       </div>
 
       {/* Logo */}
-      <div className="relative mb-16">
+      <div className="relative mb-12">
         <motion.div
           className="absolute inset-0 rounded-3xl bg-white/8 blur-2xl scale-150"
           animate={{ opacity: [0.15, 0.35, 0.15], scale: [1.4, 1.6, 1.4] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-          className="relative w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center"
-        >
-          <span className="font-display text-2xl font-bold text-white">{config.abbreviation}</span>
-        </motion.div>
+        {config.logoUrl ? (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
+            className="relative w-24 h-24 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl overflow-hidden flex items-center justify-center"
+          >
+            <img
+              src={config.logoUrl}
+              alt={config.name}
+              className="w-full h-full object-contain p-2"
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
+            className="relative w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center"
+          >
+            <span className="font-display text-2xl font-bold text-white">{config.abbreviation}</span>
+          </motion.div>
+        )}
       </div>
 
-      {/* Copy hierarchy */}
-      <motion.p
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.4 }}
-        className="text-[10px] font-semibold tracking-[0.3em] uppercase text-white/50"
-      >
-        Welcome to
-      </motion.p>
-      <motion.h1
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.4 }}
-        className="font-display text-3xl font-bold text-white mt-2"
-      >
-        {config.name}
-      </motion.h1>
-      <motion.p
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.65, duration: 0.4 }}
-        className="text-[10px] font-semibold tracking-[0.3em] uppercase text-white/50 mt-5"
-      >
-        {config.tagline}
-      </motion.p>
-      <motion.p
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.4 }}
-        className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/40 mt-1"
-      >
-        {config.subtitle}
-      </motion.p>
+      {/* Copy hierarchy — luxurious breathing layout */}
+      <div className="flex flex-col items-center text-center gap-0">
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-[10px] font-medium tracking-[0.45em] uppercase text-white/35 mb-3"
+        >
+          Welcome to
+        </motion.p>
 
-      {/* CTA Button */}
-      <motion.button
+        <motion.h1
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.5 }}
+          className="font-display text-4xl font-bold text-white tracking-tight leading-none mb-4"
+        >
+          {config.name}
+        </motion.h1>
+
+        <motion.div
+          initial={{ opacity: 0, scaleX: 0 }}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ delay: 0.7, duration: 0.4 }}
+          className="w-8 h-px bg-white/20 mb-4"
+        />
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75, duration: 0.5 }}
+          className="text-sm font-light tracking-[0.25em] uppercase text-white/60 mb-2"
+        >
+          {config.tagline}
+        </motion.p>
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, duration: 0.5 }}
+          className="text-[10px] font-light tracking-[0.3em] uppercase text-white/35"
+        >
+          {config.subtitle}
+        </motion.p>
+      </div>
+
+      {/* CTA Glass Button */}
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.1, duration: 0.5 }}
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        onClick={onComplete}
-        className="mt-24 px-8 py-3.5 rounded-2xl border border-white/15 bg-white/5 backdrop-blur-xl text-xs font-semibold tracking-[0.15em] uppercase text-white relative overflow-hidden group cursor-pointer"
+        transition={{ delay: 1.2, duration: 0.5 }}
+        className="mt-16"
       >
-        <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-700" />
-        <span className="relative">{config.ctaLabel}</span>
-      </motion.button>
+        <GlassButton
+          size="lg"
+          onClick={onComplete}
+          className="splash-cta-btn"
+          style={{
+            background: "transparent",
+          }}
+        >
+          {config.ctaLabel || "Select your treatments"}
+        </GlassButton>
+      </motion.div>
     </motion.div>
   );
 };
