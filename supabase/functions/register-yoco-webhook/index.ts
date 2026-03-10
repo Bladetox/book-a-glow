@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Store the webhook secret and ID against the tenant
+    // Store against the tenant — match by owner_id (UUID) since id is a slug
     const { error: updateErr } = await supabase
       .from("tenants")
       .update({
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
         yoco_webhook_secret,
         yoco_secret_key,
       })
-      .eq("id", tenant_id);
+      .eq("owner_id", tenant_id);
 
     if (updateErr) {
       console.error("Failed to store webhook secret:", updateErr);
