@@ -32,34 +32,19 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Ambient dust particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {particles.map((p) => (
           <motion.div
             key={p.id}
             className="absolute rounded-full bg-white"
-            style={{
-              width: p.size,
-              height: p.size,
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-            }}
-            animate={{
-              x: [0, p.driftX, 0],
-              y: [0, p.driftY, 0],
-              opacity: [0, 0.15, 0],
-            }}
-            transition={{
-              duration: p.duration,
-              repeat: Infinity,
-              delay: p.delay,
-              ease: "easeInOut",
-            }}
+            style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%` }}
+            animate={{ x: [0, p.driftX, 0], y: [0, p.driftY, 0], opacity: [0, 0.15, 0] }}
+            transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: "easeInOut" }}
           />
         ))}
       </div>
 
-      {/* Logo */}
+      {/* Logo or abbreviation */}
       <div className="relative mb-16">
         <motion.div
           className="absolute inset-0 rounded-3xl bg-white/8 blur-2xl scale-150"
@@ -70,13 +55,20 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-          className="relative w-20 h-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center"
+          className="relative w-24 h-24 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center overflow-hidden"
         >
-          <span className="font-display text-2xl font-bold text-white">{config.abbreviation}</span>
+          {config.logoUrl ? (
+            <img
+              src={config.logoUrl}
+              alt={config.name}
+              className="w-full h-full object-cover rounded-3xl"
+            />
+          ) : (
+            <span className="font-display text-2xl font-bold text-white">{config.abbreviation}</span>
+          )}
         </motion.div>
       </div>
 
-      {/* Copy hierarchy */}
       <motion.p
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,7 +81,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.4 }}
-        className="font-display text-3xl font-bold text-white mt-2"
+        className="font-display text-3xl font-bold text-white mt-2 text-center"
       >
         {config.name}
       </motion.h1>
@@ -110,7 +102,6 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         {config.subtitle}
       </motion.p>
 
-      {/* CTA Button */}
       <motion.button
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
