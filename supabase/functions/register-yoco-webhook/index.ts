@@ -61,9 +61,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Store the webhook secret and ID against the business (tenant)
+    // Store the webhook secret and ID against the tenant
     const { error: updateErr } = await supabase
-      .from("businesses")
+      .from("tenants")
       .update({
         yoco_webhook_id,
         yoco_webhook_secret,
