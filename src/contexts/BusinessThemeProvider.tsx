@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   BusinessTheme,
   businessThemes,
@@ -6,79 +6,121 @@ import {
   getDefaultTheme,
   getThemeCssVars,
 } from "@/data/themes";
+import { getThemeVariant } from "@/lib/theme-utils";
+import { resolveTenantSync } from "@/lib/tenant-resolver";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BusinessThemeContextValue {
-  /** The currently active theme */
+  /** The currently active theme (may be a light/dark variant) */
   theme: BusinessTheme;
+  /** The base theme (without light/dark override) */
+  baseTheme: BusinessTheme;
   /** All available themes */
   allThemes: BusinessTheme[];
-  /** Change theme locally (for admin preview / testing) */
+  /** Change base theme by id (for admin preview / onboarding) */
   setThemeById: (id: string) => void;
+  /** Override mode to light or dark — inverts active theme in place */
+  setThemeOverride: (mode: "light" | "dark") => void;
   /** Whether the theme is still loading from Supabase */
   loading: boolean;
-  /** Business ID this app instance is scoped to */
-  businessId: string | null;
+  /** Tenant slug this app instance is scoped to */
+  tenantId: string | null;
 }
 
 const BusinessThemeContext = createContext<BusinessThemeContextValue>({
   theme: getDefaultTheme(),
+  baseTheme: getDefaultTheme(),
   allThemes: businessThemes,
   setThemeById: () => {},
+  setThemeOverride: () => {},
   loading: false,
-  businessId: null,
+  tenantId: null,
 });
 
 export const useBusinessTheme = () => useContext(BusinessThemeContext);
 
 /**
  * BusinessThemeProvider
- * 
- * Wraps the client-facing app and dynamically applies CSS variables
- * based on the business's selected theme.
- * 
+ *
  * Resolution order:
- * 1. Supabase `businesses` table (by business_id) — when connected
+ * 1. Supabase `tenants` table — reads theme_id for the current tenant slug
  * 2. URL param `?theme=barber` — for previewing
  * 3. localStorage fallback — for dev/testing
- * 4. Default theme (beautician)
+ * 4. Default theme (standard)
+ *
+ * Light/dark toggle: inverts current theme's lightness in place.
+ * Same hues, same accents — only luminance flips.
  */
-export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [loading, setLoading] = useState(false);
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [activeThemeId, setActiveThemeId] = useState<string>(() => {
-    // Check URL param first
+export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const resolution = resolveTenantSync();
+  const tenantSlug = resolution.slug;
+
+  const [loading, setLoading] = useState(!!tenantSlug);
+  const [baseThemeId, setBaseThemeId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlTheme = params.get("theme");
       if (urlTheme && findTheme(urlTheme)) return urlTheme;
-
-      const urlBizId = params.get("business_id");
-      if (urlBizId) setBusinessId(urlBizId);
-
-      // Check localStorage
       const stored = localStorage.getItem("ns_business_theme");
       if (stored && findTheme(stored)) return stored;
     }
     return getDefaultTheme().id;
   });
 
-  const theme = useMemo(
-    () => findTheme(activeThemeId) ?? getDefaultTheme(),
-    [activeThemeId]
+  // null = use theme's natural mode, "light" | "dark" = user override
+  const [modeOverride, setModeOverride] = useState<"light" | "dark" | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("ns_theme_mode");
+      if (stored === "light" || stored === "dark") return stored;
+    }
+    return null;
+  });
+
+  // Fetch theme_id from Supabase for the resolved tenant
+  useEffect(() => {
+    if (!tenantSlug) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    supabase
+      .from("tenants")
+      .select("theme_id")
+      .eq("id", tenantSlug)
+      .eq("is_active", true)
+      .single()
+      .then(({ data, error }) => {
+        if (!error && data?.theme_id) {
+          const found = findTheme(data.theme_id);
+          if (found) {
+            setBaseThemeId(found.id);
+            localStorage.setItem("ns_business_theme", found.id);
+          }
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [tenantSlug]);
+
+  const baseTheme = useMemo(
+    () => findTheme(baseThemeId) ?? getDefaultTheme(),
+    [baseThemeId]
   );
+
+  // Apply mode override (light/dark) by inverting base theme lightness in place
+  const theme = useMemo(() => {
+    if (!modeOverride) return baseTheme;
+    return getThemeVariant(baseTheme, modeOverride);
+  }, [baseTheme, modeOverride]);
 
   const cssVars = useMemo(() => getThemeCssVars(theme), [theme]);
 
-  // Apply CSS variables to document root for global effect
+  // Apply CSS variables to document root
   useEffect(() => {
     const root = document.documentElement;
     Object.entries(cssVars).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
 
-    // Determine if theme is "dark" based on background lightness
     const bgParts = theme.colors.background.split(/\s+/);
     const lightness = parseFloat(bgParts[2] ?? "50");
     if (lightness < 50) {
@@ -88,49 +130,38 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       root.classList.add("light");
       root.classList.remove("dark");
     }
-
-    return () => {
-      // Cleanup is handled by the next theme application
-    };
   }, [cssVars, theme]);
 
-  // Persist selection
+  // Persist base theme id
   useEffect(() => {
-    localStorage.setItem("ns_business_theme", activeThemeId);
-  }, [activeThemeId]);
+    localStorage.setItem("ns_business_theme", baseThemeId);
+  }, [baseThemeId]);
 
-  /**
-   * TODO: Supabase integration
-   * When Supabase is connected, this effect will:
-   * 1. Fetch the business record by business_id
-   * 2. Read the `theme_id` column
-   * 3. Call setActiveThemeId(themeId)
-   * 
-   * Example:
-   * useEffect(() => {
-   *   if (!businessId) return;
-   *   setLoading(true);
-   *   supabase
-   *     .from("businesses")
-   *     .select("theme_id")
-   *     .eq("id", businessId)
-   *     .single()
-   *     .then(({ data }) => {
-   *       if (data?.theme_id) setActiveThemeId(data.theme_id);
-   *     })
-   *     .finally(() => setLoading(false));
-   * }, [businessId]);
-   */
-
-  const setThemeById = (id: string) => {
+  const setThemeById = useCallback((id: string) => {
     if (findTheme(id)) {
-      setActiveThemeId(id);
+      setBaseThemeId(id);
+      // Reset mode override when base theme changes
+      setModeOverride(null);
+      localStorage.removeItem("ns_theme_mode");
     }
-  };
+  }, []);
+
+  const setThemeOverride = useCallback((mode: "light" | "dark") => {
+    setModeOverride(mode);
+    localStorage.setItem("ns_theme_mode", mode);
+  }, []);
 
   return (
     <BusinessThemeContext.Provider
-      value={{ theme, allThemes: businessThemes, setThemeById, loading, businessId }}
+      value={{
+        theme,
+        baseTheme,
+        allThemes: businessThemes,
+        setThemeById,
+        setThemeOverride,
+        loading,
+        tenantId: tenantSlug,
+      }}
     >
       {children}
     </BusinessThemeContext.Provider>
