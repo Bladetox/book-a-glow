@@ -13,6 +13,8 @@ export interface PublicBusinessConfig {
   phone: string;
   address: string;
   currency: string;
+  logoUrl: string;
+  requiresDeposit: boolean;
   depositPercent: number;
   ratePerKm: number;
   defaultDistanceKm: number;
@@ -21,6 +23,22 @@ export interface PublicBusinessConfig {
   confirmationTitle: string;
   confirmationIntro: string;
   confirmationOutro: string;
+  // Deposit success page
+  successDepositTitle: string;
+  successDepositTagline: string;
+  successDepositBody: string;
+  successDepositIntent: string;
+  successDepositClosing: string;
+  successDepositSignoff: string;
+  // Final payment success page
+  successFinalTitle: string;
+  successFinalBody: string;
+  successFinalReviewCta: string;
+  successFinalRebook: string;
+  successFinalSignoff: string;
+  // Links
+  googleReviewLink: string;
+  termsUrl: string;
 }
 
 const defaults: PublicBusinessConfig = {
@@ -34,6 +52,8 @@ const defaults: PublicBusinessConfig = {
   phone: "",
   address: "",
   currency: "R",
+  logoUrl: "",
+  requiresDeposit: true,
   depositPercent: 50,
   ratePerKm: 3.6,
   defaultDistanceKm: 15,
@@ -42,12 +62,21 @@ const defaults: PublicBusinessConfig = {
   confirmationTitle: "Your booking is confirmed",
   confirmationIntro: "Thank you for your booking.",
   confirmationOutro: "We look forward to seeing you.",
+  successDepositTitle: "Your booking is confirmed",
+  successDepositTagline: "Thank you for choosing us.",
+  successDepositBody: "We have received your deposit and your appointment is now secured.",
+  successDepositIntent: "Please bring nothing but yourself.",
+  successDepositClosing: "We look forward to seeing you.",
+  successDepositSignoff: "Thank you.",
+  successFinalTitle: "Payment received — thank you!",
+  successFinalBody: "Your full payment has been received. We appreciate your trust in us.",
+  successFinalReviewCta: "Share your experience",
+  successFinalRebook: "We hope to see you again soon.",
+  successFinalSignoff: "Thank you.",
+  googleReviewLink: "",
+  termsUrl: "",
 };
 
-/**
- * Public-facing hook: reads business config from Supabase tenant + app_settings.
- * No auth required — uses the public RLS policy on app_settings.
- */
 export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boolean } {
   const { tenantId, name: tenantName, loading: tenantLoading } = usePublicTenant();
 
@@ -56,9 +85,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     enabled: !!tenantId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      // Set tenant context for RPC functions
       await supabase.rpc("set_tenant_context", { tenant: tenantId });
-
       const { data, error } = await supabase
         .from("app_settings")
         .select("key, value")
@@ -70,7 +97,22 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     },
   });
 
+  const { data: tenantRow } = useQuery({
+    queryKey: ["public-tenant-row", tenantId],
+    enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tenants")
+        .select("logo_url")
+        .eq("id", tenantId)
+        .single();
+      return data;
+    },
+  });
+
   const s = appSettings ?? {};
+  const slug = tenantId ?? "";
 
   return {
     name: tenantName || s.business_name || defaults.name,
@@ -83,6 +125,8 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     phone: s.phone || defaults.phone,
     address: s.fixed_origin_address || defaults.address,
     currency: s.currency || defaults.currency,
+    logoUrl: tenantRow?.logo_url || "",
+    requiresDeposit: s.requires_deposit !== "false",
     depositPercent: s.deposit_percent ? Number(s.deposit_percent) : defaults.depositPercent,
     ratePerKm: s.rate_per_km ? Number(s.rate_per_km) : defaults.ratePerKm,
     defaultDistanceKm: s.default_distance_km ? Number(s.default_distance_km) : defaults.defaultDistanceKm,
@@ -91,6 +135,19 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     confirmationTitle: s.confirmation_title || defaults.confirmationTitle,
     confirmationIntro: s.confirmation_intro || defaults.confirmationIntro,
     confirmationOutro: s.confirmation_outro || defaults.confirmationOutro,
+    successDepositTitle: s.success_deposit_title || defaults.successDepositTitle,
+    successDepositTagline: s.success_deposit_tagline || defaults.successDepositTagline,
+    successDepositBody: s.success_deposit_body || defaults.successDepositBody,
+    successDepositIntent: s.success_deposit_intent || defaults.successDepositIntent,
+    successDepositClosing: s.success_deposit_closing || defaults.successDepositClosing,
+    successDepositSignoff: s.success_deposit_signoff || defaults.successDepositSignoff,
+    successFinalTitle: s.success_final_title || defaults.successFinalTitle,
+    successFinalBody: s.success_final_body || defaults.successFinalBody,
+    successFinalReviewCta: s.success_final_review_cta || defaults.successFinalReviewCta,
+    successFinalRebook: s.success_final_rebook || defaults.successFinalRebook,
+    successFinalSignoff: s.success_final_signoff || defaults.successFinalSignoff,
+    googleReviewLink: s.google_review_link || "",
+    termsUrl: slug ? `/${slug}/terms` : "/terms",
     loading: tenantLoading || settingsLoading,
   };
 }
