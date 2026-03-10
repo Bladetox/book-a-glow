@@ -1,136 +1,101 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const yocoSecret = Deno.env.get("YOCO_SECRET_KEY");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    if (!yocoSecret) {
-      return new Response(
-        JSON.stringify({ error: "Yoco not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { booking_id, payment_type = "deposit" } = await req.json();
+    if (!booking_id) throw new Error("booking_id required");
 
-    // Authenticate user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: authError } = await anonClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { booking_id } = await req.json();
-    if (!booking_id) {
-      return new Response(
-        JSON.stringify({ error: "booking_id required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch booking details
-    const { data: booking, error: bookingErr } = await supabase
+    // Fetch booking
+    const { data: booking, error: bErr } = await supabase
       .from("bookings")
-      .select("id, deposit_amount, deposit_paid, client_id, tenant_id")
+      .select("id,tenant_id,deposit_amount,balance_due,total_amount,deposit_paid,final_payment_paid")
       .eq("id", booking_id)
       .single();
+    if (bErr || !booking) throw new Error(bErr?.message || "Booking not found");
 
-    if (bookingErr || !booking) {
-      return new Response(
-        JSON.stringify({ error: "Booking not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Determine amount in cents
+    let amountCents: number;
+    if (payment_type === "final") {
+      if (booking.final_payment_paid) throw new Error("Final payment already received");
+      amountCents = Math.round(booking.balance_due * 100);
+    } else {
+      if (booking.deposit_paid) throw new Error("Deposit already paid");
+      amountCents = Math.round(booking.deposit_amount * 100);
     }
 
-    if (booking.client_id !== user.id) {
-      return new Response(
-        JSON.stringify({ error: "Not your booking" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (amountCents <= 0) throw new Error("Amount must be greater than zero");
+
+    // Fetch Yoco secret from tenant_secrets
+    const { data: secretRow, error: sErr } = await supabase
+      .from("tenant_secrets")
+      .select("value")
+      .eq("tenant_id", booking.tenant_id)
+      .eq("key", "yoco_secret_key")
+      .single();
+
+    let yocoKey: string;
+    if (sErr || !secretRow) {
+      // Fall back to global env var during transition
+      yocoKey = Deno.env.get("YOCO_SECRET_KEY") ?? "";
+    } else {
+      yocoKey = secretRow.value;
     }
+    if (!yocoKey) throw new Error("Yoco secret key not configured");
 
-    if (booking.deposit_paid) {
-      return new Response(
-        JSON.stringify({ error: "Deposit already paid" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const siteUrl = Deno.env.get("SITE_URL") ?? "https://nextslot.co.za";
+    const successUrl = `${siteUrl}/booking/success?id=${booking_id}&type=${payment_type}`;
+    const cancelUrl = `${siteUrl}/booking/cancelled?id=${booking_id}`;
 
-    // Create Yoco checkout
-    const amountInCents = Math.round(booking.deposit_amount * 100);
-
+    // Call Yoco Checkout API
     const yocoRes = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${yocoSecret}`,
+        Authorization: `Bearer ${yocoKey}`,
       },
       body: JSON.stringify({
-        amount: amountInCents,
+        amount: amountCents,
         currency: "ZAR",
-        metadata: {
-          booking_id: booking.id,
-          tenant_id: booking.tenant_id,
-        },
+        successUrl,
+        cancelUrl,
+        metadata: { booking_id, payment_type, tenant_id: booking.tenant_id },
       }),
     });
 
     const yocoData = await yocoRes.json();
+    if (!yocoRes.ok) throw new Error(yocoData.displayMessage || yocoData.errorCode || "Yoco error");
 
-    if (!yocoRes.ok) {
-      console.error("Yoco error:", yocoData);
-      return new Response(
-        JSON.stringify({ error: "Failed to create checkout" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const checkoutId = yocoData.id as string;
+    const redirectUrl = yocoData.redirectUrl as string;
 
-    // Store checkout ID and link on booking
-    await supabase
-      .from("bookings")
-      .update({
-        yoco_checkout_id: yocoData.id,
-        yoco_link: yocoData.redirectUrl,
-      })
-      .eq("id", booking.id);
+    // Store checkout ID + link on booking
+    const updateField = payment_type === "final"
+      ? { yoco_final_checkout_id: checkoutId, yoco_final_link: redirectUrl }
+      : { yoco_checkout_id: checkoutId, yoco_link: redirectUrl, status: "pending_payment" };
+
+    await supabase.from("bookings").update(updateField).eq("id", booking_id);
 
     return new Response(
-      JSON.stringify({
-        checkout_id: yocoData.id,
-        redirect_url: yocoData.redirectUrl,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ checkout_id: checkoutId, redirect_url: redirectUrl }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
-    console.error("Checkout error:", err);
+  } catch (err: any) {
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: err.message }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
