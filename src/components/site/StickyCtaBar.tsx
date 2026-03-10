@@ -6,7 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 const StickyCtaBar = () => {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 500);
+    const onScroll = () => {
+      const scrolled = window.scrollY > 500;
+      const nearBottom =
+        window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 140;
+      setVisible(scrolled && !nearBottom);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
