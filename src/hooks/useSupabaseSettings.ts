@@ -4,9 +4,11 @@ import { useTenant } from "@/contexts/TenantContext";
 
 // Keys that are stored encrypted in Supabase Vault.
 // The app_settings table only holds the marker "vault:configured" for these.
+// Note: "yoco_webhook_secret" is intentionally absent — it is written
+// automatically by the save-secret function during Yoco webhook registration
+// and is never entered manually by the admin.
 export const VAULT_KEYS = new Set([
   "yoco_secret_key",
-  "yoco_webhook_secret",
   "google_service_account_json",
   "google_maps_api_key",
   "smtp_password",
@@ -96,13 +98,16 @@ export function useUpsertAppSetting() {
 /**
  * Save a sensitive credential to Supabase Vault via the save-secret edge function.
  * The actual value is never stored in app_settings — only a "vault:configured" marker.
+ *
+ * For "yoco_secret_key", the function also auto-registers the Yoco webhook and
+ * stores the signing secret internally. Returns { webhook_registered, webhook_warning }.
  */
 export function useSaveSecret() {
   const qc = useQueryClient();
   const { tenantId } = useTenant();
 
   return useMutation({
-    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+    mutationFn: async ({ key, value }: { key: string; value: string }): Promise<{ webhook_registered?: boolean; webhook_warning?: string }> => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
@@ -112,6 +117,8 @@ export function useSaveSecret() {
 
       if (res.error) throw res.error;
       if (res.data?.error) throw new Error(res.data.error);
+
+      return res.data ?? {};
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["app-settings", tenantId] });

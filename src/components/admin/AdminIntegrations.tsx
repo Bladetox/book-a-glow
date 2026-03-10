@@ -21,6 +21,7 @@ interface IntegrationDef {
   desc: string;
   gradient: string;
   fields: FieldDef[];
+  autoNote?: string; // informational note shown in the expanded form
 }
 
 const INTEGRATIONS: IntegrationDef[] = [
@@ -30,10 +31,10 @@ const INTEGRATIONS: IntegrationDef[] = [
     name: "Yoco Payments",
     desc: "Online checkout, deposit & balance collection",
     gradient: "from-white/[0.05] to-white/[0.02]",
+    autoNote: "Webhook registered automatically when you save your Secret Key — no manual setup needed.",
     fields: [
-      { key: "yoco_public_key",     label: "Public Key",       placeholder: "pk_live_..." },
-      { key: "yoco_secret_key",     label: "Secret Key",       placeholder: "sk_live_...",      secret: true },
-      { key: "yoco_webhook_secret", label: "Webhook Secret",   placeholder: "whsec_...",        secret: true },
+      { key: "yoco_public_key", label: "Public Key",  placeholder: "pk_test_... or pk_live_..." },
+      { key: "yoco_secret_key", label: "Secret Key",  placeholder: "sk_test_... or sk_live_...", secret: true },
     ],
   },
   {
@@ -116,6 +117,7 @@ const IntegrationCard = ({
   settings: Record<string, string>;
   onSave: (publicUpdates: Record<string, string>, secretUpdates: Record<string, string>) => void;
   saving: boolean;
+  webhookConfigured?: boolean;
 }) => {
   const Icon = integration.icon;
   const [open, setOpen] = useState(false);
@@ -205,6 +207,18 @@ const IntegrationCard = ({
             exit={{ opacity: 0, height: 0 }}
             className="border-t border-white/[0.06] px-5 pb-5 pt-4 flex flex-col gap-3 overflow-hidden"
           >
+            {integration.autoNote && (
+              <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <Shield className="w-3 h-3 text-emerald-400/60 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-white/35 leading-relaxed">{integration.autoNote}</p>
+              </div>
+            )}
+            {integration.id === "yoco" && settings["yoco_webhook_secret"] === "vault:configured" && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+                <Check className="w-3 h-3 text-emerald-400/70 shrink-0" />
+                <p className="text-[11px] text-emerald-400/70">Webhook active</p>
+              </div>
+            )}
             {integration.fields.map((f) => {
               const isVault      = VAULT_KEYS.has(f.key);
               const isConfigured = settings[f.key] === "vault:configured";
@@ -300,17 +314,28 @@ const AdminIntegrations = () => {
     }
 
     // Secret credentials → vault via save-secret edge function
+    const secretResults: Array<{ key: string; result: { webhook_registered?: boolean; webhook_warning?: string } }> = [];
     for (const [key, value] of Object.entries(secretUpdates)) {
       tasks.push(
-        saveSecret.mutateAsync({ key, value }).catch((e: Error) => {
-          throw e;
-        }),
+        saveSecret.mutateAsync({ key, value })
+          .then((result) => { secretResults.push({ key, result }); })
+          .catch((e: Error) => { throw e; }),
       );
     }
 
     try {
       await Promise.all(tasks);
-      toast.success("Integration saved");
+
+      // Check if Yoco webhook was auto-registered
+      const yocoResult = secretResults.find((r) => r.key === "yoco_secret_key");
+      if (yocoResult?.result.webhook_registered) {
+        toast.success("Yoco keys saved & webhook registered automatically");
+      } else if (yocoResult?.result.webhook_warning) {
+        toast.success("Yoco keys saved");
+        toast.warning(`Webhook registration: ${yocoResult.result.webhook_warning}`);
+      } else {
+        toast.success("Integration saved");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     }
