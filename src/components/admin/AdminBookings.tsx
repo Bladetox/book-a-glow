@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
 import { toast } from "sonner";
+import RequestOutstandingPayment from "@/components/admin/RequestOutstandingPayment";
 
 const filters = ["All", "Today", "Pending", "Confirmed", "Complete", "Cancelled"] as const;
 type FilterType = typeof filters[number];
@@ -295,6 +296,20 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                               <div className="text-[10px] text-white/20">
                                 Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
                               </div>
+
+                              {/* ── Outstanding payment request ── */}
+                              {b.balance > 0 && b.status !== "cancelled" && (
+                                <div className="pt-1 border-t border-white/[0.06]">
+                                  <RequestOutstandingPayment
+                                    bookingId={b.id}
+                                    clientName={b.client}
+                                    clientPhone={b.phone}
+                                    clientEmail={b.email}
+                                    balanceDue={b.balance}
+                                    currency="R"
+                                  />
+                                </div>
+                              )}
 
                               {/* Action buttons */}
                               <div className="flex items-center gap-2 pt-1 flex-wrap">

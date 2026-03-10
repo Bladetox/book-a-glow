@@ -10,6 +10,7 @@ import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
 import Book from "./pages/Book";
+import BookingSuccess from "./pages/BookingSuccess";
 import Product from "./pages/Product";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
@@ -57,6 +58,7 @@ const MarketingRoutes = () => (
       <Route path="/reset-password" element={<ResetPassword />} />
       {/* /book on main domain still needs tenant context — default to query param ?tenant=xxx */}
       <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
+      <Route path="/booking/success" element={<PublicTenantProvider><BookingSuccess /></PublicTenantProvider>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </>
@@ -74,6 +76,7 @@ const TenantRoutes = () => {
     <Routes>
       <Route path="/" element={<Book />} />
       <Route path="/book" element={<Book />} />
+      <Route path="/booking/success" element={<BookingSuccess />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

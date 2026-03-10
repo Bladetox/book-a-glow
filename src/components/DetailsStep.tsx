@@ -1,7 +1,8 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback } from "react";
-import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
+import { User, Phone, Mail, ShieldCheck, Star, Sparkles } from "lucide-react";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -168,7 +169,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         )}
       </AnimatePresence>
 
-      {/* Form fields with validation glow */}
+      {/* Form fields */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -188,7 +189,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
         <div className="relative">
           <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-            <select
+          <select
             className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10 [&>option]:bg-background [&>option]:text-foreground"
             value={booking.phoneCode}
             onChange={(e) => onUpdate({ phoneCode: e.target.value })}
@@ -222,15 +223,22 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
+        {/* Address — Google Places Autocomplete */}
         <div>
-          <div className="relative">
-            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-            <input
-              className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
-              placeholder="Home Address *"
+          <div
+            className={`${
+              touched.address
+                ? validators.address(booking.address)
+                  ? "[&_input]:ring-1 [&_input]:ring-green-500/40"
+                  : "[&_input]:ring-1 [&_input]:ring-red-500/40"
+                : ""
+            }`}
+            onBlur={() => markTouched("address")}
+          >
+            <AddressAutocomplete
               value={booking.address}
-              onChange={(e) => onUpdate({ address: e.target.value })}
-              onBlur={() => markTouched("address")}
+              onChange={(addr) => onUpdate({ address: addr })}
+              placeholder="Home Address *"
             />
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
