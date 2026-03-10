@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard, Calendar, MapPin, Mail, ChevronDown, ChevronUp, Check, Loader2, Eye, EyeOff, Zap, Repeat, Star } from "lucide-react";
-import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
+import {
+  CreditCard, Calendar, MapPin, Mail, ChevronDown, ChevronUp,
+  Check, Loader2, Eye, EyeOff, Zap, Repeat, Star, Shield,
+} from "lucide-react";
+import { useAppSettings, useUpsertAppSetting, useSaveSecret, VAULT_KEYS } from "@/hooks/useSupabaseSettings";
 import { toast } from "sonner";
+
+interface FieldDef {
+  key: string;
+  label: string;
+  placeholder: string;
+  secret?: boolean;
+}
 
 interface IntegrationDef {
   id: string;
@@ -10,7 +20,7 @@ interface IntegrationDef {
   name: string;
   desc: string;
   gradient: string;
-  fields: { key: string; label: string; placeholder: string; secret?: boolean }[];
+  fields: FieldDef[];
 }
 
 const INTEGRATIONS: IntegrationDef[] = [
@@ -21,8 +31,9 @@ const INTEGRATIONS: IntegrationDef[] = [
     desc: "Online checkout, deposit & balance collection",
     gradient: "from-white/[0.05] to-white/[0.02]",
     fields: [
-      { key: "yoco_public_key", label: "Public Key", placeholder: "pk_live_..." },
-      { key: "yoco_secret_key", label: "Secret Key", placeholder: "sk_live_...", secret: true },
+      { key: "yoco_public_key",     label: "Public Key",       placeholder: "pk_live_..." },
+      { key: "yoco_secret_key",     label: "Secret Key",       placeholder: "sk_live_...",      secret: true },
+      { key: "yoco_webhook_secret", label: "Webhook Secret",   placeholder: "whsec_...",        secret: true },
     ],
   },
   {
@@ -32,8 +43,8 @@ const INTEGRATIONS: IntegrationDef[] = [
     desc: "Auto-creates events when bookings are confirmed",
     gradient: "from-white/[0.04] to-white/[0.01]",
     fields: [
-      { key: "google_calendar_id", label: "Calendar ID", placeholder: "yourname@gmail.com" },
-      { key: "google_service_account_json", label: "Service Account JSON", placeholder: '{"type":"service_account",...}', secret: true },
+      { key: "google_calendar_id",          label: "Calendar ID",           placeholder: "yourname@gmail.com" },
+      { key: "google_service_account_json", label: "Service Account JSON",  placeholder: '{"type":"service_account",...}', secret: true },
     ],
   },
   {
@@ -53,11 +64,11 @@ const INTEGRATIONS: IntegrationDef[] = [
     desc: "Transactional emails to clients and admin",
     gradient: "from-white/[0.04] to-white/[0.01]",
     fields: [
-      { key: "smtp_from_email", label: "From Email", placeholder: "bookings@yourbusiness.co.za" },
-      { key: "smtp_host", label: "SMTP Host", placeholder: "smtp.gmail.com" },
-      { key: "smtp_port", label: "SMTP Port", placeholder: "587" },
-      { key: "smtp_username", label: "SMTP Username", placeholder: "yourname@gmail.com" },
-      { key: "smtp_password", label: "SMTP Password / App Password", placeholder: "••••••••", secret: true },
+      { key: "smtp_from_email", label: "From Email",                  placeholder: "bookings@yourbusiness.co.za" },
+      { key: "smtp_host",       label: "SMTP Host",                   placeholder: "smtp.gmail.com" },
+      { key: "smtp_port",       label: "SMTP Port",                   placeholder: "587" },
+      { key: "smtp_username",   label: "SMTP Username",               placeholder: "yourname@gmail.com" },
+      { key: "smtp_password",   label: "SMTP Password / App Password", placeholder: "••••••••", secret: true },
     ],
   },
   {
@@ -68,7 +79,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     gradient: "from-white/[0.04] to-white/[0.01]",
     fields: [
       { key: "stripe_public_key", label: "Publishable Key", placeholder: "pk_live_..." },
-      { key: "stripe_secret_key", label: "Secret Key", placeholder: "sk_live_...", secret: true },
+      { key: "stripe_secret_key", label: "Secret Key",      placeholder: "sk_live_...", secret: true },
     ],
   },
   {
@@ -78,8 +89,8 @@ const INTEGRATIONS: IntegrationDef[] = [
     desc: "African card payments",
     gradient: "from-white/[0.05] to-white/[0.02]",
     fields: [
-      { key: "paystack_public_key", label: "Public Key", placeholder: "pk_live_..." },
-      { key: "paystack_secret_key", label: "Secret Key", placeholder: "sk_live_...", secret: true },
+      { key: "paystack_public_key", label: "Public Key",  placeholder: "pk_live_..." },
+      { key: "paystack_secret_key", label: "Secret Key",  placeholder: "sk_live_...", secret: true },
     ],
   },
   {
@@ -89,7 +100,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     desc: "Display Google reviews and collect feedback from clients",
     gradient: "from-white/[0.04] to-white/[0.01]",
     fields: [
-      { key: "google_place_id", label: "Google Place ID", placeholder: "ChIJN1t_tDeuEmsRUsoyG83frY4" },
+      { key: "google_place_id",   label: "Google Place ID",           placeholder: "ChIJN1t_tDeuEmsRUsoyG83frY4" },
       { key: "google_review_url", label: "Review Link (for clients)", placeholder: "https://g.page/r/YOUR_ID/review" },
     ],
   },
@@ -103,7 +114,7 @@ const IntegrationCard = ({
 }: {
   integration: IntegrationDef;
   settings: Record<string, string>;
-  onSave: (updates: Record<string, string>) => void;
+  onSave: (publicUpdates: Record<string, string>, secretUpdates: Record<string, string>) => void;
   saving: boolean;
 }) => {
   const Icon = integration.icon;
@@ -112,20 +123,35 @@ const IntegrationCard = ({
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
 
   const isConnected = integration.fields.some(
-    (f) => settings[f.key] && settings[f.key].length > 3
+    (f) => settings[f.key] && settings[f.key].length > 3,
   );
 
   const handleOpen = () => {
     if (!open) {
       const initial: Record<string, string> = {};
-      integration.fields.forEach((f) => { initial[f.key] = settings[f.key] ?? ""; });
+      integration.fields.forEach((f) => {
+        // Never pre-fill vault-managed fields — show empty to indicate "write new value"
+        initial[f.key] = VAULT_KEYS.has(f.key) ? "" : (settings[f.key] ?? "");
+      });
       setDraft(initial);
     }
     setOpen(!open);
   };
 
   const handleSave = () => {
-    onSave(draft);
+    const publicUpdates: Record<string, string> = {};
+    const secretUpdates: Record<string, string> = {};
+
+    Object.entries(draft).forEach(([key, value]) => {
+      if (VAULT_KEYS.has(key)) {
+        // Only send to vault if the user actually typed something new
+        if (value.trim() !== "") secretUpdates[key] = value;
+      } else {
+        publicUpdates[key] = value;
+      }
+    });
+
+    onSave(publicUpdates, secretUpdates);
     setOpen(false);
   };
 
@@ -158,7 +184,9 @@ const IntegrationCard = ({
         </div>
 
         <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
-          <span className="text-xs text-white/25">{integration.fields.length} credential{integration.fields.length !== 1 ? "s" : ""}</span>
+          <span className="text-xs text-white/25">
+            {integration.fields.length} credential{integration.fields.length !== 1 ? "s" : ""}
+          </span>
           <button
             onClick={handleOpen}
             className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1"
@@ -177,29 +205,55 @@ const IntegrationCard = ({
             exit={{ opacity: 0, height: 0 }}
             className="border-t border-white/[0.06] px-5 pb-5 pt-4 flex flex-col gap-3 overflow-hidden"
           >
-            {integration.fields.map((f) => (
-              <div key={f.key} className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">{f.label}</label>
-                <div className="relative">
-                  <input
-                    type={f.secret && !showSecrets[f.key] ? "password" : "text"}
-                    placeholder={f.placeholder}
-                    value={draft[f.key] ?? ""}
-                    onChange={(e) => setDraft((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors pr-10"
-                  />
-                  {f.secret && (
-                    <button
-                      type="button"
-                      onClick={() => setShowSecrets((prev) => ({ ...prev, [f.key]: !prev[f.key] }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                    >
-                      {showSecrets[f.key] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  )}
+            {integration.fields.map((f) => {
+              const isVault      = VAULT_KEYS.has(f.key);
+              const isConfigured = settings[f.key] === "vault:configured";
+
+              return (
+                <div key={f.key} className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                      {f.label}
+                    </label>
+                    {isVault && (
+                      <span className="flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-400/60">
+                        <Shield className="w-2.5 h-2.5" />
+                        encrypted
+                      </span>
+                    )}
+                  </div>
+
+                  {isVault && isConfigured && draft[f.key] === "" ? (
+                    <div className="px-4 py-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-emerald-400/70 flex items-center gap-2">
+                      <Shield className="w-3 h-3 shrink-0" />
+                      Saved securely in vault — enter a new value to update
+                    </div>
+                  ) : null}
+
+                  <div className="relative">
+                    <input
+                      type={f.secret && !showSecrets[f.key] ? "password" : "text"}
+                      placeholder={isVault && isConfigured ? "Enter new value to replace…" : f.placeholder}
+                      value={draft[f.key] ?? ""}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors pr-10"
+                    />
+                    {f.secret && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSecrets((prev) => ({ ...prev, [f.key]: !prev[f.key] }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                      >
+                        {showSecrets[f.key]
+                          ? <EyeOff className="w-3.5 h-3.5" />
+                          : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+
             <div className="flex justify-end gap-2 pt-1">
               <button
                 onClick={() => setOpen(false)}
@@ -226,12 +280,40 @@ const IntegrationCard = ({
 const AdminIntegrations = () => {
   const { data: settings = {}, isLoading } = useAppSettings();
   const upsertSetting = useUpsertAppSetting();
+  const saveSecret    = useSaveSecret();
 
-  const handleSave = (updates: Record<string, string>) => {
-    upsertSetting.mutate(updates, {
-      onSuccess: () => toast.success("Integration saved"),
-      onError: (e: Error) => toast.error(e.message),
-    });
+  const isSaving = upsertSetting.isPending || saveSecret.isPending;
+
+  const handleSave = async (
+    publicUpdates: Record<string, string>,
+    secretUpdates: Record<string, string>,
+  ) => {
+    const tasks: Promise<void>[] = [];
+
+    // Public settings → direct upsert to app_settings
+    if (Object.keys(publicUpdates).length > 0) {
+      tasks.push(
+        upsertSetting.mutateAsync(publicUpdates).catch((e: Error) => {
+          throw e;
+        }),
+      );
+    }
+
+    // Secret credentials → vault via save-secret edge function
+    for (const [key, value] of Object.entries(secretUpdates)) {
+      tasks.push(
+        saveSecret.mutateAsync({ key, value }).catch((e: Error) => {
+          throw e;
+        }),
+      );
+    }
+
+    try {
+      await Promise.all(tasks);
+      toast.success("Integration saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    }
   };
 
   if (isLoading) {
@@ -248,7 +330,8 @@ const AdminIntegrations = () => {
         <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">Connected Services</p>
         <h3 className="font-display text-xl sm:text-2xl font-bold text-white/90">Integrations</h3>
         <p className="text-sm text-white/40 mt-2 leading-relaxed">
-          Enter API keys and credentials for each service. Keys are stored securely in your settings.
+          API keys are stored using industry-standard encryption (AES-256 via Supabase Vault).
+          Secrets are never readable after saving — only you can replace them.
         </p>
       </div>
 
@@ -259,7 +342,7 @@ const AdminIntegrations = () => {
             integration={integration}
             settings={settings}
             onSave={handleSave}
-            saving={upsertSetting.isPending}
+            saving={isSaving}
           />
         ))}
       </div>
