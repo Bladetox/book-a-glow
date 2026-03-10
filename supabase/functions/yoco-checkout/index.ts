@@ -14,14 +14,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const yocoSecret = Deno.env.get("YOCO_SECRET_KEY");
-
-    if (!yocoSecret) {
-      return new Response(
-        JSON.stringify({ error: "Yoco not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Authenticate user
     const authHeader = req.headers.get("Authorization");
@@ -78,6 +70,33 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Deposit already paid" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Resolve Yoco secret key: prefer app_settings for tenant, fall back to env var
+    let yocoSecret: string | undefined;
+
+    if (booking.tenant_id) {
+      const { data: settingRow } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("tenant_id", booking.tenant_id)
+        .eq("key", "yoco_secret_key")
+        .single();
+
+      if (settingRow?.value) {
+        yocoSecret = settingRow.value;
+      }
+    }
+
+    if (!yocoSecret) {
+      yocoSecret = Deno.env.get("YOCO_SECRET_KEY");
+    }
+
+    if (!yocoSecret) {
+      return new Response(
+        JSON.stringify({ error: "Yoco not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

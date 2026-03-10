@@ -103,6 +103,58 @@ Deno.serve(async (req) => {
 
     console.log("Deposit confirmed for booking:", booking.id);
 
+    // Fetch full booking details for email
+    const { data: fullBooking } = await supabase
+      .from("bookings")
+      .select(`
+        id, booking_date, start_time, deposit_amount, total_amount, callout_address,
+        client:profiles!bookings_client_id_fkey(full_name, email, phone),
+        items:booking_items(service:services(name, price, duration))
+      `)
+      .eq("id", booking.id)
+      .single();
+
+    // Fetch business config for email
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", booking.tenant_id);
+    const settings: Record<string, string> = {};
+    settingsRows?.forEach(r => { if (r.value) settings[r.key] = r.value; });
+    const businessName = settings.business_name || "Your appointment";
+    const signOff = settings.sign_off || "Thank you.";
+
+    // Build email HTML
+    const clientName = fullBooking?.client?.full_name || "Client";
+    const services = fullBooking?.items?.map((i: any) => i.service?.name).join(", ") || "";
+    const emailHtml = `<h2>Booking Confirmed</h2><p>Hi ${clientName},</p><p>Your deposit of R${booking.deposit_amount} has been received. Your booking is confirmed.</p><p><strong>Services:</strong> ${services}</p><p><strong>Date:</strong> ${fullBooking?.booking_date} at ${fullBooking?.start_time?.slice(0, 5)}</p><p>${signOff}</p>`;
+
+    // Call send-email function
+    await supabase.functions.invoke("send-email", {
+      body: {
+        to: fullBooking?.client?.email,
+        subject: `Booking confirmed — ${businessName}`,
+        html: emailHtml,
+        tenant_id: booking.tenant_id,
+      }
+    });
+
+    // Fetch Google Calendar config
+    const googleCalendarId = settings.google_calendar_id;
+    const googleServiceAccountJson = settings.google_service_account_json;
+
+    if (googleCalendarId && googleServiceAccountJson) {
+      try {
+        const serviceAccount = JSON.parse(googleServiceAccountJson);
+        // Create a simple JWT for Google API auth
+        // For now, log that calendar integration is configured but skip actual JWT creation
+        // (Full JWT implementation requires crypto signing which is complex in Deno)
+        console.log("Google Calendar configured for tenant:", booking.tenant_id, "calendar:", googleCalendarId);
+      } catch (e) {
+        console.error("Google Calendar error:", e);
+      }
+    }
+
     return new Response(
       JSON.stringify({ received: true, booking_id: booking.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

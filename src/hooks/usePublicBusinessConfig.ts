@@ -22,6 +22,7 @@ export interface PublicBusinessConfig {
   confirmationIntro: string;
   confirmationOutro: string;
   logoUrl: string;
+  googleMapsApiKey: string;
 }
 
 const defaults: PublicBusinessConfig = {
@@ -44,6 +45,7 @@ const defaults: PublicBusinessConfig = {
   confirmationIntro: "Thank you for your booking.",
   confirmationOutro: "We look forward to seeing you.",
   logoUrl: "",
+  googleMapsApiKey: "",
 };
 
 /**
@@ -94,6 +96,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     confirmationIntro: s.confirmation_intro || defaults.confirmationIntro,
     confirmationOutro: s.confirmation_outro || defaults.confirmationOutro,
     logoUrl: s.logo_url || defaults.logoUrl,
+    googleMapsApiKey: s.google_maps_api_key || defaults.googleMapsApiKey,
     loading: tenantLoading || settingsLoading,
   };
 }

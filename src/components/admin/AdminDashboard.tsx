@@ -4,9 +4,11 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Loader2
+  XCircle, Package, Bell, Clock, Loader2, Copy, ExternalLink
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
+import { useTenantSettings } from "@/hooks/useSupabaseSettings";
+import { toast } from "sonner";
 
 // ─── Toggle visibility (localStorage) ───
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
@@ -218,6 +220,7 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
   const [visibility, setVisibility] = useState(getVisibility);
   const [showCustomize, setShowCustomize] = useState(false);
   const data = useDashboardData();
+  const { data: tenant } = useTenantSettings();
 
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
@@ -238,8 +241,42 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
     : 0;
   const pctUp = pctChange >= 0;
 
+  const bookingUrl = tenant?.custom_domain
+    ? `https://${tenant.custom_domain}`
+    : `https://${tenant?.id || "yourbusiness"}.nextslot.co.za`;
+
   return (
     <div className="flex flex-col gap-4 sm:gap-5 max-w-5xl">
+      {/* Booking link banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl border border-white/[0.08] bg-gradient-to-r from-white/[0.05] to-white/[0.02] px-4 py-3 flex items-center justify-between gap-3"
+      >
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Your booking page</span>
+          <span className="text-sm text-white/60 truncate mt-0.5">{bookingUrl}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => { navigator.clipboard.writeText(bookingUrl); toast.success("Link copied!"); }}
+            className="p-2 rounded-xl bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] transition-all text-white/50 hover:text-white/80"
+            title="Copy link"
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+          <a
+            href={bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 rounded-xl bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] transition-all text-white/50 hover:text-white/80"
+            title="Open booking page"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </motion.div>
+
       {/* Customize toggle */}
       <div className="flex justify-end">
         <button onClick={() => setShowCustomize(!showCustomize)} className="text-[10px] tracking-[0.12em] uppercase text-white/30 hover:text-white/60 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]">

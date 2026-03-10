@@ -10,7 +10,7 @@
  */
 
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
-const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com"];
+const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com", "vercel.app"];
 const DEMO_TENANT_SLUG = "phenomebeauty";
 
 // UUID pattern for Lovable preview subdomains

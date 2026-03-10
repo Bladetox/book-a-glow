@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2 } from "lucide-react";
+import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2, Copy, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
@@ -155,14 +156,27 @@ const AdminSettings = () => {
       <SettingsCard title="Booking Domain" icon={MapPin} gradient="from-white/[0.06] to-white/[0.02]">
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Default URL</label>
-          <a
-            href={`https://${tenant?.id || "yourbusiness"}.nextslot.co.za`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-white/60 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.15] hover:text-white/80 transition-colors"
-          >
-            {tenant?.id || "yourbusiness"}.nextslot.co.za
-          </a>
+          <div className="flex items-center gap-2">
+            <span className="flex-1 text-sm text-white/60 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] truncate">
+              {tenant?.id || "yourbusiness"}.nextslot.co.za
+            </span>
+            <button
+              onClick={() => { navigator.clipboard.writeText(`https://${tenant?.id || "yourbusiness"}.nextslot.co.za`); toast.success("Copied!"); }}
+              className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-all text-white/40 hover:text-white/70 shrink-0"
+              title="Copy URL"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <a
+              href={`https://${tenant?.id || "yourbusiness"}.nextslot.co.za`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-all text-white/40 hover:text-white/70 shrink-0"
+              title="Open booking page"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
         </div>
         <SettingRow label="Custom Domain (optional)" placeholder="book.yourdomain.co.za" value={draft.custom_domain} onChange={v => update("custom_domain", v)} />
         <p className="text-[9px] text-white/25 leading-relaxed">

@@ -1,7 +1,8 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -33,6 +34,8 @@ const validators = {
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const referralScrollRef = useRef<HTMLDivElement>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const config = usePublicBusinessConfig();
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -45,6 +48,30 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
+
+  useEffect(() => {
+    const apiKey = (config as any).googleMapsApiKey;
+    if (!apiKey || document.getElementById("google-places-script")) return;
+    const script = document.createElement("script");
+    script.id = "google-places-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.onload = () => {
+      if (addressInputRef.current && (window as any).google) {
+        const autocomplete = new (window as any).google.maps.places.Autocomplete(addressInputRef.current, {
+          types: ["address"],
+          componentRestrictions: { country: "za" },
+        });
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          if (place.formatted_address) {
+            onUpdate({ address: place.formatted_address });
+          }
+        });
+      }
+    };
+    document.head.appendChild(script);
+  }, [(config as any).googleMapsApiKey]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -226,6 +253,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
             <input
+              ref={addressInputRef}
               className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
               placeholder="Home Address *"
               value={booking.address}

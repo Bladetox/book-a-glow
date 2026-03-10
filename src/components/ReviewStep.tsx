@@ -3,6 +3,7 @@ import { usePublicServices } from "@/hooks/usePublicServices";
 import { resolveStaffId } from "@/hooks/usePublicAvailability";
 import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -19,6 +20,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
+  const { tenantId } = usePublicTenant();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -46,28 +48,18 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       let clientId: string;
 
       if (!user) {
-        // Create anonymous/guest account via signUp with the client's email
-        const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: booking.email,
-          password: tempPassword,
-          options: {
-            data: {
-              full_name: booking.fullName,
-              phone: `${booking.phoneCode}${booking.phone}`,
-            },
+        // Use get-or-create-client edge function to avoid 'user already registered' error
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("get-or-create-client", {
+          body: {
+            email: booking.email,
+            full_name: booking.fullName,
+            phone: `${booking.phoneCode}${booking.phone}`,
+            address: booking.address,
           },
         });
-        if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error("Sign up failed");
-        clientId = signUpData.user.id;
-
-        // Update profile with booking details
-        await supabase.from("profiles").update({
-          full_name: booking.fullName,
-          phone: `${booking.phoneCode}${booking.phone}`,
-          address: booking.address,
-        }).eq("id", clientId);
+        if (fnError) throw fnError;
+        if (!fnData?.client_id) throw new Error("Could not resolve client account");
+        clientId = fnData.client_id;
       } else {
         clientId = user.id;
         // Update profile with latest details
@@ -92,6 +84,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       });
 
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
+        p_tenant_id: tenantId,
         p_client_id: clientId,
         p_staff_id: staffId,
         p_booking_date: bookingDate,
