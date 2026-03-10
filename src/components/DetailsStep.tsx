@@ -1,7 +1,8 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -30,9 +31,18 @@ const validators = {
   address: (v: string) => v.trim().length >= 5,
 };
 
+interface PlaceSuggestion {
+  place_id: string;
+  description: string;
+}
+
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const referralScrollRef = useRef<HTMLDivElement>(null);
+  const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -45,6 +55,49 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
+
+  // Debounced address autocomplete
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const query = booking.address.trim();
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setAddressLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("places-autocomplete", {
+          body: { input: query },
+        });
+        if (!error && data?.predictions?.length > 0) {
+          setAddressSuggestions(data.predictions.slice(0, 5));
+          setShowSuggestions(true);
+        } else {
+          setAddressSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch {
+        setAddressSuggestions([]);
+      } finally {
+        setAddressLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [booking.address]);
+
+  const handleSelectSuggestion = (description: string) => {
+    onUpdate({ address: description });
+    setShowSuggestions(false);
+    setAddressSuggestions([]);
+    markTouched("address");
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -188,7 +241,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
         <div className="relative">
           <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-            <select
+          <select
             className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10 [&>option]:bg-background [&>option]:text-foreground"
             value={booking.phoneCode}
             onChange={(e) => onUpdate({ phoneCode: e.target.value })}
@@ -222,17 +275,58 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        <div>
+        {/* Address with autocomplete */}
+        <div className="relative">
           <div className="relative">
-            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
+            {addressLoading && (
+              <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+            )}
             <input
               className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
               placeholder="Home Address *"
               value={booking.address}
-              onChange={(e) => onUpdate({ address: e.target.value })}
-              onBlur={() => markTouched("address")}
+              onChange={(e) => {
+                onUpdate({ address: e.target.value });
+                if (showSuggestions && e.target.value.length < 3) setShowSuggestions(false);
+              }}
+              onBlur={() => {
+                markTouched("address");
+                // Delay hide so click on suggestion registers
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              onFocus={() => {
+                if (addressSuggestions.length > 0) setShowSuggestions(true);
+              }}
+              autoComplete="off"
             />
           </div>
+
+          {/* Suggestions dropdown */}
+          <AnimatePresence>
+            {showSuggestions && addressSuggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="absolute top-full left-0 right-0 z-50 mt-1 glass-card rounded-2xl overflow-hidden shadow-lg"
+              >
+                {addressSuggestions.map((s) => (
+                  <button
+                    key={s.place_id}
+                    type="button"
+                    onMouseDown={() => handleSelectSuggestion(s.description)}
+                    className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 transition-colors border-b border-border/20 last:border-0 flex items-start gap-2"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                    <span className="line-clamp-2">{s.description}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
             Used to calculate your call-out fee (round trip from our base)
           </p>

@@ -25,64 +25,107 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
   const selected = allServices.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
-  
+
   const estimatedDistanceKm = booking.address ? config.defaultDistanceKm : 0;
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
-  
+
   const total = servicesTotal + callOutFee;
   const depositPercent = config.depositPercent;
   const deposit = Math.ceil(total * (depositPercent / 100));
   const balance = total - deposit;
   const cur = config.currency;
 
+  /**
+   * Resolve a clientId for this booking without blocking on auth errors.
+   * Strategy:
+   *   1. If already signed in — use that user.
+   *   2. Try signUp — if it succeeds we have a new user.
+   *   3. If signUp fails with "already registered" — try signInWithPassword
+   *      using the same temp password scheme won't work, so instead we
+   *      look up the existing profile by email to get the id.
+   *   4. Fallback — use a deterministic guest UUID derived from email so
+   *      repeat bookings by the same person are linked.
+   */
+  const resolveClientId = async (): Promise<string> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("profiles").update({
+        full_name: booking.fullName,
+        phone: `${booking.phoneCode}${booking.phone}`,
+        address: booking.address,
+      }).eq("id", user.id);
+      return user.id;
+    }
+
+    // Try to sign up
+    const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: booking.email,
+      password: tempPassword,
+      options: {
+        data: {
+          full_name: booking.fullName,
+          phone: `${booking.phoneCode}${booking.phone}`,
+        },
+      },
+    });
+
+    // New user created successfully
+    if (!signUpError && signUpData.user) {
+      await supabase.from("profiles").update({
+        full_name: booking.fullName,
+        phone: `${booking.phoneCode}${booking.phone}`,
+        address: booking.address,
+      }).eq("id", signUpData.user.id);
+      return signUpData.user.id;
+    }
+
+    // User already exists — look up their profile by email
+    const isAlreadyRegistered =
+      signUpError?.message?.toLowerCase().includes("already registered") ||
+      signUpError?.message?.toLowerCase().includes("already exists") ||
+      // Supabase sometimes returns a fake user with identities=[] instead of an error
+      (signUpData?.user && (signUpData.user as any).identities?.length === 0);
+
+    if (isAlreadyRegistered || (signUpData?.user && (signUpData.user as any).identities?.length === 0)) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", booking.email)
+        .maybeSingle();
+
+      if (profile?.id) {
+        await supabase.from("profiles").update({
+          full_name: booking.fullName,
+          phone: `${booking.phoneCode}${booking.phone}`,
+          address: booking.address,
+        }).eq("id", profile.id);
+        return profile.id;
+      }
+    }
+
+    // Final fallback: use a UUID v5-style hash from email
+    // We use a simple hash so repeat bookings with the same email link together
+    const encoder = new TextEncoder();
+    const data = encoder.encode(booking.email.toLowerCase().trim());
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    // Format as UUID
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
+  };
+
   const handleConfirm = async () => {
     if (submitting) return;
     setSubmitting(true);
 
     try {
-      // Check if user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      let clientId: string;
-
-      if (!user) {
-        // Create anonymous/guest account via signUp with the client's email
-        const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: booking.email,
-          password: tempPassword,
-          options: {
-            data: {
-              full_name: booking.fullName,
-              phone: `${booking.phoneCode}${booking.phone}`,
-            },
-          },
-        });
-        if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error("Sign up failed");
-        clientId = signUpData.user.id;
-
-        // Update profile with booking details
-        await supabase.from("profiles").update({
-          full_name: booking.fullName,
-          phone: `${booking.phoneCode}${booking.phone}`,
-          address: booking.address,
-        }).eq("id", clientId);
-      } else {
-        clientId = user.id;
-        // Update profile with latest details
-        await supabase.from("profiles").update({
-          full_name: booking.fullName,
-          phone: `${booking.phoneCode}${booking.phone}`,
-          address: booking.address,
-        }).eq("id", clientId);
-      }
+      const clientId = await resolveClientId();
 
       const staffId = await resolveStaffId();
       const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
       const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
 
-      // Map safety answers to consultation fields
       const safetyMap: Record<number, string> = {};
       safetyQuestions.forEach((q) => {
         const answer = booking.safetyAnswers[q.id];
