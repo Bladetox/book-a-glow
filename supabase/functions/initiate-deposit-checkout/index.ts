@@ -1,9 +1,17 @@
+/**
+ * initiate-deposit-checkout
+ *
+ * Creates a Yoco deposit checkout for a booking.
+ * Does NOT require user authentication — called right after booking creation
+ * (the guest user may not be signed in client-side).
+ * Uses service role to access booking data safely.
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders, getSecret } from "../_shared/security.ts";
 
 Deno.serve(async (req) => {
   const cors = buildCorsHeaders(req);
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405, headers: { ...cors, "Content-Type": "application/json" },
@@ -11,31 +19,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey     = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    // ── Auth ──────────────────────────────────────────────────────────────────
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase   = createClient(supabaseUrl, serviceKey);
-    const anonClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: authErr } = await anonClient.auth.getUser();
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-
-    // ── Parse + validate body ─────────────────────────────────────────────────
     let body: { booking_id?: string };
     try { body = await req.json(); } catch {
       return new Response(JSON.stringify({ error: "Invalid JSON" }), {
@@ -50,10 +33,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
     // ── Fetch booking ─────────────────────────────────────────────────────────
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
-      .select("id, deposit_amount, deposit_paid, client_id, tenant_id")
+      .select("id, deposit_amount, deposit_paid, client_id, tenant_id, yoco_link, yoco_checkout_id")
       .eq("id", booking_id)
       .single();
 
@@ -63,30 +51,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Ensure the caller owns this booking
-    if (booking.client_id !== user.id) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403, headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-
     if (booking.deposit_paid) {
-      return new Response(JSON.stringify({ error: "Deposit already paid" }), {
-        status: 400, headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ redirect_url: booking.yoco_link, already_paid: true }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
     }
 
-    // ── Load Yoco secret from Vault ───────────────────────────────────────────
+    // Reuse existing checkout if already created
+    if (booking.yoco_link && booking.yoco_checkout_id) {
+      return new Response(
+        JSON.stringify({ redirect_url: booking.yoco_link }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ── Load Yoco secret from vault ───────────────────────────────────────────
+    const tenantId = booking.tenant_id;
     const { data: cfgRows } = await supabase
       .from("app_settings")
       .select("key, value")
-      .eq("tenant_id", booking.tenant_id)
+      .eq("tenant_id", tenantId)
       .in("key", ["yoco_secret_key"]);
 
     const cfg: Record<string, string> = {};
+    // deno-lint-ignore no-explicit-any
     (cfgRows ?? []).forEach((r: any) => { if (r.value) cfg[r.key] = r.value; });
 
-    const yocoSecret = await getSecret(supabase, booking.tenant_id, "yoco_secret_key", cfg);
+    const yocoSecret = await getSecret(supabase, tenantId, "yoco_secret_key", cfg);
     if (!yocoSecret) {
       return new Response(JSON.stringify({ error: "Yoco not configured" }), {
         status: 500, headers: { ...cors, "Content-Type": "application/json" },
@@ -94,7 +86,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Create Yoco checkout ──────────────────────────────────────────────────
-    const amountInCents = Math.round(Number(booking.deposit_amount) * 100);
+    const amountCents = Math.round(Number(booking.deposit_amount) * 100);
     const yocoRes = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
       headers: {
@@ -102,16 +94,16 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${yocoSecret}`,
       },
       body: JSON.stringify({
-        amount: amountInCents,
+        amount: amountCents,
         currency: "ZAR",
-        metadata: { booking_id: booking.id, tenant_id: booking.tenant_id },
+        metadata: { booking_id: booking.id, tenant_id: tenantId },
       }),
     });
 
     const yocoData = await yocoRes.json();
     if (!yocoRes.ok) {
       console.error("Yoco error:", yocoData);
-      return new Response(JSON.stringify({ error: "Failed to create checkout" }), {
+      return new Response(JSON.stringify({ error: "Failed to create Yoco checkout" }), {
         status: 500, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
@@ -122,11 +114,11 @@ Deno.serve(async (req) => {
       .eq("id", booking.id);
 
     return new Response(
-      JSON.stringify({ checkout_id: yocoData.id, redirect_url: yocoData.redirectUrl }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
+      JSON.stringify({ redirect_url: yocoData.redirectUrl, checkout_id: yocoData.id }),
+      { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error("yoco-checkout error:", err);
+    console.error("initiate-deposit-checkout error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500, headers: { ...buildCorsHeaders(req), "Content-Type": "application/json" },
     });

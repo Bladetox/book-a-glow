@@ -2,12 +2,14 @@ import { BookingState } from "@/data/bookingData";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { CreditCard, ExternalLink } from "lucide-react";
 
 interface BookingConfirmationProps {
   booking: BookingState;
+  checkoutUrl?: string | null;
 }
 
-const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
+const BookingConfirmation = ({ booking, checkoutUrl }: BookingConfirmationProps) => {
   const config = usePublicBusinessConfig();
   const formattedDate = booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "TBC";
   const formattedTime = booking.selectedTime || "TBC";
@@ -77,6 +79,38 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
           <span className="text-sm text-muted-foreground">Bring nothing but yourself.</span>
         </div>
       </motion.div>
+
+      {/* Deposit payment CTA */}
+      {checkoutUrl && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+          className="glass-card-service rounded-2xl p-5 flex flex-col gap-3 border border-primary/20"
+        >
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-primary" />
+            <h4 className="text-sm font-semibold text-foreground">Secure your booking</h4>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Your booking is pending deposit payment. Complete the payment to confirm your spot.
+          </p>
+          <motion.a
+            href={checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            whileTap={{ scale: 0.97 }}
+            className="btn-next flex items-center justify-center gap-2"
+          >
+            <CreditCard className="w-4 h-4" />
+            Pay Deposit Now
+            <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+          </motion.a>
+          <p className="text-[10px] text-muted-foreground text-center">
+            Secure payment via Yoco.
+          </p>
+        </motion.div>
+      )}
 
       <motion.p
         initial={{ opacity: 0 }}

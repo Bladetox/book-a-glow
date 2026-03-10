@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard, CalendarCheck, Sparkles, Clock,
   Package, Star, Link2, Settings, Gem,
@@ -24,8 +24,24 @@ const sidebarNav = [
   { icon: Gem, label: "Loyalty" },
 ];
 
-const DashboardPreview = () => {
-  const [activeItem, setActiveItem] = useState("Dashboard");
+interface DashboardPreviewProps {
+  /** Optionally control the active section from a parent (product showcase). */
+  activeSection?: string;
+  onSectionChange?: (section: string) => void;
+}
+
+const DashboardPreview = ({ activeSection, onSectionChange }: DashboardPreviewProps = {}) => {
+  const [activeItem, setActiveItem] = useState(activeSection ?? "Dashboard");
+
+  // Sync when parent drives the section (product showcase feature chips)
+  useEffect(() => {
+    if (activeSection && activeSection !== activeItem) setActiveItem(activeSection);
+  }, [activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleNav = (item: string) => {
+    setActiveItem(item);
+    onSectionChange?.(item);
+  };
 
   const renderContent = () => {
     switch (activeItem) {
@@ -59,7 +75,7 @@ const DashboardPreview = () => {
           <div className="space-y-1">
             <div className="mb-4"><img src={logo} alt="NextSlot" className="h-9 w-auto opacity-90" /></div>
             {sidebarNav.map((item) => (
-              <button key={item.label} onClick={() => setActiveItem(item.label)} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 ${activeItem === item.label ? "bg-white/[0.08] text-white" : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"}`} title={item.label}>
+              <button key={item.label} onClick={() => handleNav(item.label)} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 ${activeItem === item.label ? "bg-white/[0.08] text-white" : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"}`} title={item.label}>
                 <item.icon className="h-4 w-4" strokeWidth={1.5} />
               </button>
             ))}

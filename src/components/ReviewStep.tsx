@@ -3,6 +3,7 @@ import { usePublicServices } from "@/hooks/usePublicServices";
 import { resolveStaffId } from "@/hooks/usePublicAvailability";
 import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -19,16 +20,18 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
+  const { tenantId } = usePublicTenant();
   const [confirmed, setConfirmed] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const selected = allServices.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
-  
+
   const estimatedDistanceKm = booking.address ? config.defaultDistanceKm : 0;
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
-  
+
   const total = servicesTotal + callOutFee;
   const depositPercent = config.depositPercent;
   const deposit = Math.ceil(total * (depositPercent / 100));
@@ -42,32 +45,27 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
     try {
       // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       let clientId: string;
 
       if (!user) {
-        // Create anonymous/guest account via signUp with the client's email
-        const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: booking.email,
-          password: tempPassword,
-          options: {
-            data: {
+        // Use edge function to get-or-create client — handles returning customers
+        // who already have an auth account from a previous booking.
+        const { data: clientData, error: clientError } = await supabase.functions.invoke(
+          "get-or-create-client",
+          {
+            body: {
+              email: booking.email,
               full_name: booking.fullName,
               phone: `${booking.phoneCode}${booking.phone}`,
+              address: booking.address || null,
             },
           },
-        });
-        if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error("Sign up failed");
-        clientId = signUpData.user.id;
-
-        // Update profile with booking details
-        await supabase.from("profiles").update({
-          full_name: booking.fullName,
-          phone: `${booking.phoneCode}${booking.phone}`,
-          address: booking.address,
-        }).eq("id", clientId);
+        );
+        if (clientError) throw clientError;
+        if (clientData?.error) throw new Error(clientData.error);
+        if (!clientData?.userId) throw new Error("Could not resolve client account");
+        clientId = clientData.userId;
       } else {
         clientId = user.id;
         // Update profile with latest details
@@ -97,6 +95,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         p_booking_date: bookingDate,
         p_start_time: startTime,
         p_service_ids: booking.selectedTreatments,
+        p_tenant_id: tenantId || null,
         p_is_callout: !!booking.address,
         p_callout_address: booking.address || null,
         p_callout_distance_km: estimatedDistanceKm,
@@ -116,21 +115,34 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
       if (error) throw error;
 
-      const result = (data as any)?.[0];
+      const result = (data as { success: boolean; message?: string; booking_id?: string }[])?.[0];
       if (result && !result.success) throw new Error(result.message);
+
+      const bookingId = result?.booking_id;
+
+      // Initiate deposit checkout (guest-safe, no user auth required)
+      if (bookingId) {
+        const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke(
+          "initiate-deposit-checkout",
+          { body: { booking_id: bookingId } },
+        );
+        if (!checkoutErr && checkoutData?.redirect_url) {
+          setCheckoutUrl(checkoutData.redirect_url);
+        }
+      }
 
       setConfirmed(true);
       toast.success("Booking created successfully!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Booking error:", err);
-      toast.error(err.message || "Failed to create booking. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Failed to create booking. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
   if (confirmed) {
-    return <BookingConfirmation booking={booking} />;
+    return <BookingConfirmation booking={booking} checkoutUrl={checkoutUrl} />;
   }
 
   return (

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import { getTenantSlug } from "@/lib/tenant-resolver";
 
 /** Resolve the staff/owner id for a tenant */
 async function getStaffId(tenantId: string): Promise<string> {
@@ -32,7 +33,7 @@ export function useMonthAvailability(year: number, month: number) {
       });
       if (error) throw error;
       const map: Record<string, string[]> = {};
-      (data ?? []).forEach((row: any) => {
+      (data ?? []).forEach((row: { date_str: string; available_slots?: string[] }) => {
         map[row.date_str] = row.available_slots ?? [];
       });
       return map;
@@ -60,8 +61,8 @@ export function useDateSlots(date: string | null) {
       });
       if (error) throw error;
       return (data ?? [])
-        .filter((s: any) => s.is_available)
-        .map((s: any) => (s.slot_start as string).slice(0, 5));
+        .filter((s: { is_available: boolean; slot_start: string }) => s.is_available)
+        .map((s: { is_available: boolean; slot_start: string }) => s.slot_start.slice(0, 5));
     },
     staleTime: 30 * 1000,
   });
@@ -75,8 +76,6 @@ export function useResolveStaffId() {
 
 // Keep backward-compat export for ReviewStep (will be migrated)
 export async function resolveStaffId(): Promise<string> {
-  // Fallback: reads from tenant resolver
-  const { getTenantSlug } = await import("@/lib/tenant-resolver");
   const slug = getTenantSlug();
   if (!slug) throw new Error("No tenant context");
   return getStaffId(slug);

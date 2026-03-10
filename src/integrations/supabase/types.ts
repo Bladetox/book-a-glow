@@ -127,6 +127,8 @@ export type Database = {
           updated_at: string | null
           yoco_checkout_id: string | null
           yoco_link: string | null
+          balance_checkout_id: string | null
+          balance_link: string | null
         }
         Insert: {
           booking_date: string
@@ -159,6 +161,8 @@ export type Database = {
           updated_at?: string | null
           yoco_checkout_id?: string | null
           yoco_link?: string | null
+          balance_checkout_id?: string | null
+          balance_link?: string | null
         }
         Update: {
           booking_date?: string
@@ -191,6 +195,8 @@ export type Database = {
           updated_at?: string | null
           yoco_checkout_id?: string | null
           yoco_link?: string | null
+          balance_checkout_id?: string | null
+          balance_link?: string | null
         }
         Relationships: [
           {

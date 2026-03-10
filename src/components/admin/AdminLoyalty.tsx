@@ -13,6 +13,17 @@ const statusColors: Record<string, string> = {
   "OVERDUE": "bg-red-500/10 text-red-400",
 };
 
+interface LoyaltyRow {
+  id: string;
+  client_name: string;
+  phone?: string;
+  status?: string;
+  last_wax_date?: string;
+  next_due_date?: string;
+  pack_progress?: string;
+  notes?: string;
+}
+
 const AdminLoyalty = () => {
   const { tenantId } = useTenant();
   const [activeFilter, setActiveFilter] = useState("All");
@@ -26,20 +37,20 @@ const AdminLoyalty = () => {
         .eq("tenant_id", tenantId)
         .order("next_due_date");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as LoyaltyRow[];
     },
   });
 
-  const filtered = rows.filter((r: any) => {
+  const filtered = rows.filter((r) => {
     if (activeFilter === "All") return true;
     return (r.status || "").toUpperCase() === activeFilter.toUpperCase();
   });
 
   const counts = {
     total: rows.length,
-    onTrack: rows.filter((r: any) => (r.status || "").toUpperCase() === "ON TRACK").length,
-    timeToBook: rows.filter((r: any) => (r.status || "").toUpperCase() === "TIME TO BOOK").length,
-    overdue: rows.filter((r: any) => (r.status || "").toUpperCase() === "OVERDUE").length,
+    onTrack: rows.filter((r) => (r.status || "").toUpperCase() === "ON TRACK").length,
+    timeToBook: rows.filter((r) => (r.status || "").toUpperCase() === "TIME TO BOOK").length,
+    overdue: rows.filter((r) => (r.status || "").toUpperCase() === "OVERDUE").length,
   };
 
   return (
@@ -86,7 +97,7 @@ const AdminLoyalty = () => {
             <tbody>
               {filtered.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-white/30">No loyalty data yet.</td></tr>
-              ) : filtered.map((r: any) => (
+              ) : filtered.map((r) => (
                 <tr key={r.id} className="border-t border-white/[0.04]">
                   <td className="px-3 sm:px-4 py-3 text-white/80">{r.client_name}</td>
                   <td className="px-3 sm:px-4 py-3 text-white/60">{r.phone || "—"}</td>

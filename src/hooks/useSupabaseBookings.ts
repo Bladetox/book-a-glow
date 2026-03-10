@@ -28,10 +28,31 @@ export interface BookingRow {
   createdAt: string;
 }
 
-function mapBooking(b: any): BookingRow {
+interface BookingRaw {
+  id: string;
+  booking_date: string;
+  start_time?: string;
+  end_time?: string;
+  client_id: string;
+  status: string;
+  deposit_amount?: number | string;
+  total_amount?: number | string;
+  deposit_paid?: boolean;
+  client_notes?: string;
+  staff_notes?: string;
+  is_call_out?: boolean;
+  call_out_fee?: number | string;
+  call_out_address?: string;
+  created_at?: string;
+  service_duration_minutes?: number | string;
+  client?: { full_name?: string; email?: string; phone?: string; address?: string };
+  items?: { service_name: string; price: number | string; duration_minutes?: number; sort_order?: number }[];
+}
+
+function mapBooking(b: BookingRaw): BookingRow {
   const items = b.items ?? [];
-  const services = items.map((i: any) => i.service_name).join(", ");
-  const totalDuration = items.reduce((s: number, i: any) => s + (i.duration_minutes || 0), 0);
+  const services = items.map((i) => i.service_name).join(", ");
+  const totalDuration = items.reduce((s, i) => s + (i.duration_minutes || 0), 0);
   const dep = Number(b.deposit_amount) || 0;
   const tot = Number(b.total_amount) || 0;
 
@@ -79,7 +100,7 @@ export function useSupabaseBookings() {
         .order("booking_date", { ascending: false })
         .order("start_time", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map(mapBooking);
+      return (data ?? []).map((b) => mapBooking(b as BookingRaw));
     },
   });
 }
@@ -95,7 +116,7 @@ export function useUpdateBookingStatus() {
         p_new_status: status,
       });
       if (error) throw error;
-      const result = (data as any)?.[0];
+      const result = (data as { success: boolean; message?: string }[])?.[0];
       if (result && !result.success) throw new Error(result.message);
     },
     onSuccess: () => {
@@ -117,7 +138,7 @@ export function useRescheduleBooking() {
         p_new_start_time: newStartTime,
       });
       if (error) throw error;
-      const result = (data as any)?.[0];
+      const result = (data as { success: boolean; message?: string }[])?.[0];
       if (result && !result.success) throw new Error(result.message);
     },
     onSuccess: () => {
@@ -154,6 +175,47 @@ export function useDeleteBooking() {
     mutationFn: async (bookingId: string) => {
       const { error } = await supabase.from("bookings").delete().eq("id", bookingId);
       if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
+    },
+  });
+}
+
+export function useRequestBalance() {
+  const qc = useQueryClient();
+  const { tenantId } = useTenant();
+
+  return useMutation({
+    mutationFn: async (bookingId: string): Promise<{ redirect_url: string; balance: number }> => {
+      const { data, error } = await supabase.functions.invoke("yoco-balance", {
+        body: { booking_id: bookingId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { redirect_url: string; balance: number };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
+    },
+  });
+}
+
+export function useAddBookingService() {
+  const qc = useQueryClient();
+  const { tenantId } = useTenant();
+
+  return useMutation({
+    mutationFn: async ({ bookingId, serviceId }: { bookingId: string; serviceId: string }) => {
+      const { data, error } = await supabase.rpc("add_service_to_booking", {
+        p_booking_id: bookingId,
+        p_service_id: serviceId,
+      });
+      if (error) throw error;
+      const result = (data as { success: boolean; message?: string; new_total?: number; new_balance?: number }[])?.[0];
+      if (result && !result.success) throw new Error(result.message);
+      return result;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
