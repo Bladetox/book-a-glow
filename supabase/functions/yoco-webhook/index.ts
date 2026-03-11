@@ -11,31 +11,21 @@ async function verifyYocoSignature(
   secret: string
 ): Promise<boolean> {
   const encoder = new TextEncoder();
-
-  // Yoco stores the secret as base64 — decode it to raw bytes first
-  let keyBytes: Uint8Array;
-  try {
-    const decoded = atob(secret);
-    keyBytes = new Uint8Array(decoded.split("").map((c) => c.charCodeAt(0)));
-  } catch {
-    // If not base64, use raw string bytes
-    keyBytes = encoder.encode(secret);
-  }
+  // Use the secret as raw UTF-8 bytes (the whsec_ string itself is the key)
+  const keyBytes = encoder.encode(secret);
 
   const cryptoKey = await crypto.subtle.importKey(
     "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const signature = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
 
-  // Yoco sends signature as lowercase hex
-  const computedHex = Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  // Yoco sends signature as base64 (per API guide)
+  const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
 
-  console.log("Computed signature:", computedHex);
+  console.log("Computed signature (b64):", computedB64);
   console.log("Received signature:", signatureHeader);
 
-  return computedHex === signatureHeader;
+  return computedB64 === signatureHeader;
 }
 
 Deno.serve(async (req) => {
@@ -44,6 +34,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("Yoco webhook function started");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -55,11 +46,11 @@ Deno.serve(async (req) => {
 
     const { type, payload } = body;
     console.log("Yoco webhook received:", type);
+    console.log("Payload metadata:", JSON.stringify(payload?.metadata));
 
     const tenantId = payload?.metadata?.tenant_id;
     const signatureHeader = req.headers.get("X-Yoco-Signature");
 
-    // Verify signature using secret stored on tenants table
     if (tenantId && signatureHeader) {
       const { data: tenant, error: tenantErr } = await supabase
         .from("tenants")
@@ -92,9 +83,11 @@ Deno.serve(async (req) => {
       console.log("Signature verified for tenant:", tenantId);
     } else {
       console.warn("Skipping signature verification — missing tenant_id or signature header");
+      console.warn("tenant_id:", tenantId, "| signature header present:", !!signatureHeader);
     }
 
     if (type !== "payment.succeeded") {
+      console.log("Ignoring event type:", type);
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -104,6 +97,8 @@ Deno.serve(async (req) => {
     const checkoutId = payload?.metadata?.checkoutId ?? payload?.checkoutId;
     const bookingId = payload?.metadata?.booking_id;
     const transactionId = payload?.id;
+
+    console.log("Identifiers — bookingId:", bookingId, "checkoutId:", checkoutId);
 
     if (!bookingId && !checkoutId) {
       console.error("No booking_id or checkoutId in webhook payload");
@@ -126,7 +121,7 @@ Deno.serve(async (req) => {
     const { data: booking, error: bookingErr } = await bookingQuery.single();
 
     if (bookingErr || !booking) {
-      console.error("Booking not found for webhook:", bookingId || checkoutId);
+      console.error("Booking not found:", bookingId || checkoutId, bookingErr);
       return new Response(JSON.stringify({ error: "Booking not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -134,14 +129,13 @@ Deno.serve(async (req) => {
     }
 
     if (booking.deposit_paid) {
-      console.log("Deposit already marked paid for booking:", booking.id);
+      console.log("Deposit already paid for booking:", booking.id);
       return new Response(
         JSON.stringify({ received: true, already_paid: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Mark deposit paid and confirm booking
     const { error: updateErr } = await supabase
       .from("bookings")
       .update({
@@ -159,7 +153,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Record payment
     await supabase.from("payments").insert({
       booking_id: booking.id,
       client_id: booking.client_id,
@@ -175,18 +168,18 @@ Deno.serve(async (req) => {
 
     console.log("Deposit confirmed for booking:", booking.id);
 
-    // Trigger booking confirmation email
+    // Trigger confirmation email — non-fatal
     try {
-      await supabase.functions.invoke("send-booking-email", {
+      const emailRes = await supabase.functions.invoke("send-booking-email", {
         body: {
           booking_id: booking.id,
           tenant_id: booking.tenant_id ?? tenantId,
           email_type: "booking_confirmed",
         },
       });
-      console.log("Booking confirmation email triggered for:", booking.id);
+      console.log("Email function response:", JSON.stringify(emailRes));
     } catch (emailErr) {
-      console.error("Failed to trigger confirmation email:", emailErr);
+      console.error("Failed to invoke send-booking-email:", emailErr);
     }
 
     return new Response(
@@ -194,7 +187,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("Webhook error:", err);
+    console.error("Webhook unhandled error:", err);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
