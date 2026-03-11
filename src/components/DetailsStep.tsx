@@ -1,8 +1,9 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
+import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -37,11 +38,13 @@ interface PlaceSuggestion {
 }
 
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
+  const config = usePublicBusinessConfig();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const referralScrollRef = useRef<HTMLDivElement>(null);
   const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [distanceLoading, setDistanceLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const markTouched = useCallback((field: string) => {
@@ -92,11 +95,29 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     };
   }, [booking.address]);
 
-  const handleSelectSuggestion = (description: string) => {
-    onUpdate({ address: description });
+  // When a suggestion is selected, fetch real distance from Distance Matrix
+  const handleSelectSuggestion = async (description: string) => {
+    onUpdate({ address: description, distanceKm: null });
     setShowSuggestions(false);
     setAddressSuggestions([]);
     markTouched("address");
+
+    const origin = config.address;
+    if (!origin) return;
+
+    setDistanceLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("places-autocomplete", {
+        body: { input: description, origin },
+      });
+      if (!error && data?.distanceKm != null) {
+        onUpdate({ distanceKm: data.distanceKm });
+      }
+    } catch {
+      // silently fall back to default distance in ReviewStep
+    } finally {
+      setDistanceLoading(false);
+    }
   };
 
   return (
@@ -221,7 +242,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         )}
       </AnimatePresence>
 
-      {/* Form fields with validation glow */}
+      {/* Form fields */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -287,12 +308,11 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               placeholder="Home Address *"
               value={booking.address}
               onChange={(e) => {
-                onUpdate({ address: e.target.value });
+                onUpdate({ address: e.target.value, distanceKm: null });
                 if (showSuggestions && e.target.value.length < 3) setShowSuggestions(false);
               }}
               onBlur={() => {
                 markTouched("address");
-                // Delay hide so click on suggestion registers
                 setTimeout(() => setShowSuggestions(false), 200);
               }}
               onFocus={() => {
@@ -327,9 +347,37 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             )}
           </AnimatePresence>
 
-          <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
-            Used to calculate your call-out fee (round trip from our base)
-          </p>
+          {/* Distance badge shown after selection */}
+          <AnimatePresence>
+            {distanceLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-muted-foreground"
+              >
+                <div className="w-3 h-3 border border-primary/40 border-t-primary rounded-full animate-spin" />
+                Calculating distance...
+              </motion.div>
+            )}
+            {!distanceLoading && booking.distanceKm != null && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-primary font-medium"
+              >
+                <Navigation className="w-3 h-3" />
+                {booking.distanceKm} km from our base
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!distanceLoading && booking.distanceKm == null && (
+            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
+              Used to calculate your call-out fee (round trip from our base)
+            </p>
+          )}
         </div>
 
         {/* Swipeable referral pills */}

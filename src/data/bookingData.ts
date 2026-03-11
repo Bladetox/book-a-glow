@@ -22,6 +22,7 @@ export type BookingState = {
   phoneCode: string;
   email: string;
   address: string;
+  distanceKm: number | null;
   referralSource: string;
   safetyAnswers: Record<number, boolean | null>;
   additionalNotes: string;
@@ -38,6 +39,7 @@ export const initialBookingState: BookingState = {
   phoneCode: "+27",
   email: "",
   address: "",
+  distanceKm: null,
   referralSource: "",
   safetyAnswers: {},
   additionalNotes: "",

@@ -26,7 +26,8 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const selected = allServices.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
 
-  const estimatedDistanceKm = booking.address ? config.defaultDistanceKm : 0;
+  // Use real measured distance if available, otherwise fall back to config default
+  const estimatedDistanceKm = booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0);
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
 
   const total = servicesTotal + callOutFee;
@@ -35,17 +36,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const balance = total - deposit;
   const cur = config.currency;
 
-  /**
-   * Resolve a clientId for this booking without blocking on auth errors.
-   * Strategy:
-   *   1. If already signed in — use that user.
-   *   2. Try signUp — if it succeeds we have a new user.
-   *   3. If signUp fails with "already registered" — try signInWithPassword
-   *      using the same temp password scheme won't work, so instead we
-   *      look up the existing profile by email to get the id.
-   *   4. Fallback — use a deterministic guest UUID derived from email so
-   *      repeat bookings by the same person are linked.
-   */
   const resolveClientId = async (): Promise<string> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -57,7 +47,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       return user.id;
     }
 
-    // Try to sign up
     const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: booking.email,
@@ -70,7 +59,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       },
     });
 
-    // New user created successfully
     if (!signUpError && signUpData.user) {
       await supabase.from("profiles").update({
         full_name: booking.fullName,
@@ -80,11 +68,9 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       return signUpData.user.id;
     }
 
-    // User already exists — look up their profile by email
     const isAlreadyRegistered =
       signUpError?.message?.toLowerCase().includes("already registered") ||
       signUpError?.message?.toLowerCase().includes("already exists") ||
-      // Supabase sometimes returns a fake user with identities=[] instead of an error
       (signUpData?.user && (signUpData.user as any).identities?.length === 0);
 
     if (isAlreadyRegistered || (signUpData?.user && (signUpData.user as any).identities?.length === 0)) {
@@ -104,14 +90,11 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       }
     }
 
-    // Final fallback: use a UUID v5-style hash from email
-    // We use a simple hash so repeat bookings with the same email link together
     const encoder = new TextEncoder();
     const data = encoder.encode(booking.email.toLowerCase().trim());
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-    // Format as UUID
     return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
   };
 
@@ -121,7 +104,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
     try {
       const clientId = await resolveClientId();
-
       const staffId = await resolveStaffId();
       const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
       const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
@@ -162,6 +144,25 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       const result = (data as any)?.[0];
       if (result && !result.success) throw new Error(result.message);
 
+      // Booking created — now initiate Yoco deposit checkout
+      const bookingId = result?.booking_id;
+      if (bookingId) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
+          body: { booking_id: bookingId },
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {},
+        });
+
+        if (checkoutErr) throw checkoutErr;
+        if (checkoutData?.redirect_url) {
+          window.location.href = checkoutData.redirect_url;
+          return;
+        }
+      }
+
+      // Fallback if no payment required (deposit = 0)
       setConfirmed(true);
       toast.success("Booking created successfully!");
     } catch (err: any) {
@@ -224,7 +225,9 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
         <span className="text-sm text-muted-foreground">{booking.email || "—"}</span>
         {booking.address && (
-          <span className="text-sm text-muted-foreground">{booking.address}</span>
+          <span className="text-sm text-muted-foreground">
+            {booking.address}{booking.distanceKm != null ? ` · ${booking.distanceKm} km` : ""}
+          </span>
         )}
       </motion.div>
 
@@ -241,7 +244,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">
-            Call-out fee{booking.address ? ` (~${estimatedDistanceKm * 2}km round trip)` : ""}
+            Call-out fee{booking.address ? ` (~${Math.round(estimatedDistanceKm * 2)}km round trip)` : ""}
           </span>
           <span className="text-foreground font-semibold">{cur}{callOutFee}</span>
         </div>
