@@ -11,13 +11,31 @@ async function verifyYocoSignature(
   secret: string
 ): Promise<boolean> {
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
+
+  // Yoco stores the secret as base64 — decode it to raw bytes first
+  let keyBytes: Uint8Array;
+  try {
+    const decoded = atob(secret);
+    keyBytes = new Uint8Array(decoded.split("").map((c) => c.charCodeAt(0)));
+  } catch {
+    // If not base64, use raw string bytes
+    keyBytes = encoder.encode(secret);
+  }
+
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const signature = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
-  const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
-  return computedB64 === signatureHeader;
+
+  // Yoco sends signature as lowercase hex
+  const computedHex = Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  console.log("Computed signature:", computedHex);
+  console.log("Received signature:", signatureHeader);
+
+  return computedHex === signatureHeader;
 }
 
 Deno.serve(async (req) => {
@@ -168,7 +186,6 @@ Deno.serve(async (req) => {
       });
       console.log("Booking confirmation email triggered for:", booking.id);
     } catch (emailErr) {
-      // Non-fatal — log but don't fail the webhook
       console.error("Failed to trigger confirmation email:", emailErr);
     }
 
