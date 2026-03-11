@@ -2,8 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 async function verifyYocoSignature(
@@ -14,11 +13,7 @@ async function verifyYocoSignature(
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
   const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
+    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const signature = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
   const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
@@ -35,30 +30,27 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Read raw bytes BEFORE parsing JSON — required for signature verification
     const rawBody = await req.arrayBuffer();
     const payloadBytes = new Uint8Array(rawBody);
     const bodyText = new TextDecoder().decode(payloadBytes);
     const body = JSON.parse(bodyText);
 
     const { type, payload } = body;
-
     console.log("Yoco webhook received:", type);
 
-    // Extract tenant_id from metadata to look up their webhook secret
     const tenantId = payload?.metadata?.tenant_id;
     const signatureHeader = req.headers.get("X-Yoco-Signature");
 
-    // Only verify signature if we have both tenant_id and a signature header
+    // Verify signature using secret stored on tenants table
     if (tenantId && signatureHeader) {
-      const { data: business, error: bizErr } = await supabase
-        .from("businesses")
+      const { data: tenant, error: tenantErr } = await supabase
+        .from("tenants")
         .select("yoco_webhook_secret")
         .eq("id", tenantId)
         .single();
 
-      if (bizErr || !business?.yoco_webhook_secret) {
-        console.error("Could not find webhook secret for tenant:", tenantId);
+      if (tenantErr || !tenant?.yoco_webhook_secret) {
+        console.error("Could not find webhook secret for tenant:", tenantId, tenantErr);
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -68,7 +60,7 @@ Deno.serve(async (req) => {
       const valid = await verifyYocoSignature(
         payloadBytes,
         signatureHeader,
-        business.yoco_webhook_secret
+        tenant.yoco_webhook_secret
       );
 
       if (!valid) {
@@ -84,7 +76,6 @@ Deno.serve(async (req) => {
       console.warn("Skipping signature verification — missing tenant_id or signature header");
     }
 
-    // Only process payment.succeeded events
     if (type !== "payment.succeeded") {
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
@@ -104,7 +95,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find booking by booking_id from metadata or by yoco_checkout_id
     let bookingQuery = supabase
       .from("bookings")
       .select("id, client_id, tenant_id, deposit_amount, deposit_paid");
@@ -125,7 +115,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Idempotency guard — don't double-process
     if (booking.deposit_paid) {
       console.log("Deposit already marked paid for booking:", booking.id);
       return new Response(
@@ -134,7 +123,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Mark deposit as paid and confirm booking
+    // Mark deposit paid and confirm booking
     const { error: updateErr } = await supabase
       .from("bookings")
       .update({
@@ -167,6 +156,21 @@ Deno.serve(async (req) => {
     });
 
     console.log("Deposit confirmed for booking:", booking.id);
+
+    // Trigger booking confirmation email
+    try {
+      await supabase.functions.invoke("send-booking-email", {
+        body: {
+          booking_id: booking.id,
+          tenant_id: booking.tenant_id ?? tenantId,
+          email_type: "booking_confirmed",
+        },
+      });
+      console.log("Booking confirmation email triggered for:", booking.id);
+    } catch (emailErr) {
+      // Non-fatal — log but don't fail the webhook
+      console.error("Failed to trigger confirmation email:", emailErr);
+    }
 
     return new Response(
       JSON.stringify({ received: true, booking_id: booking.id }),

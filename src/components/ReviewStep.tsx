@@ -3,6 +3,7 @@ import { usePublicServices } from "@/hooks/usePublicServices";
 import { resolveStaffId } from "@/hooks/usePublicAvailability";
 import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -19,6 +20,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
+  const { tenantId } = usePublicTenant();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +28,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const selected = allServices.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
 
-  // Use real measured distance if available, otherwise fall back to config default
   const estimatedDistanceKm = booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0);
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
 
@@ -51,12 +52,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: booking.email,
       password: tempPassword,
-      options: {
-        data: {
-          full_name: booking.fullName,
-          phone: `${booking.phoneCode}${booking.phone}`,
-        },
-      },
+      options: { data: { full_name: booking.fullName, phone: `${booking.phoneCode}${booking.phone}` } },
     });
 
     if (!signUpError && signUpData.user) {
@@ -75,11 +71,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
     if (isAlreadyRegistered || (signUpData?.user && (signUpData.user as any).identities?.length === 0)) {
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", booking.email)
-        .maybeSingle();
-
+        .from("profiles").select("id").eq("email", booking.email).maybeSingle();
       if (profile?.id) {
         await supabase.from("profiles").update({
           full_name: booking.fullName,
@@ -144,12 +136,15 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       const result = (data as any)?.[0];
       if (result && !result.success) throw new Error(result.message);
 
-      // Booking created — now initiate Yoco deposit checkout
       const bookingId = result?.booking_id;
       if (bookingId) {
         const { data: { session } } = await supabase.auth.getSession();
+        const origin = window.location.origin;
+        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}`;
+        const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
+
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-          body: { booking_id: bookingId },
+          body: { booking_id: bookingId, tenant_slug: tenantId, success_url: successUrl, cancel_url: cancelUrl },
           headers: session?.access_token
             ? { Authorization: `Bearer ${session.access_token}` }
             : {},
@@ -162,7 +157,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         }
       }
 
-      // Fallback if no payment required (deposit = 0)
       setConfirmed(true);
       toast.success("Booking created successfully!");
     } catch (err: any) {
@@ -173,23 +167,14 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
     }
   };
 
-  if (confirmed) {
-    return <BookingConfirmation booking={booking} />;
-  }
+  if (confirmed) return <BookingConfirmation booking={booking} />;
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-        Review booking
-      </h3>
+      <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">Review booking</h3>
 
-      {/* Services summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2.5"
-      >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2.5">
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Services</h4>
         {selected.map((t) => (
           <div key={t.id} className="flex items-center justify-between">
@@ -199,27 +184,15 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         ))}
       </motion.div>
 
-      {/* Schedule */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1"
-      >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Schedule</h4>
-        <span className="text-sm text-foreground">
-          {booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—"}
-        </span>
+        <span className="text-sm text-foreground">{booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—"}</span>
         <span className="text-sm text-muted-foreground">{booking.selectedTime || "—"}</span>
       </motion.div>
 
-      {/* Contact */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1"
-      >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Contact</h4>
         <span className="text-sm text-foreground">{booking.fullName || "—"}</span>
         <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
@@ -231,21 +204,14 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         )}
       </motion.div>
 
-      {/* Pricing */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2"
-      >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="glass-card-service rounded-2xl p-4 flex flex-col gap-2">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Services</span>
           <span className="text-foreground font-semibold">{cur}{servicesTotal}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">
-            Call-out fee{booking.address ? ` (~${Math.round(estimatedDistanceKm * 2)}km round trip)` : ""}
-          </span>
+          <span className="text-muted-foreground">Call-out fee{booking.address ? ` (~${Math.round(estimatedDistanceKm * 2)}km round trip)` : ""}</span>
           <span className="text-foreground font-semibold">{cur}{callOutFee}</span>
         </div>
         <div className="h-px bg-border/50 my-1" />
@@ -265,42 +231,28 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
       <p className="text-[10px] text-muted-foreground text-center">
         By making payment you agree to our{" "}
-        <button
-          onClick={() => setShowTerms(true)}
-          className="underline text-foreground hover:text-primary transition-colors"
-        >
+        <button onClick={() => setShowTerms(true)} className="underline text-foreground hover:text-primary transition-colors">
           Terms & Conditions
         </button>
       </p>
 
-      {/* Terms modal */}
       <AnimatePresence>
         {showTerms && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={() => setShowTerms(false)}
-          >
+            onClick={() => setShowTerms(false)}>
             <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
+              initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
               transition={{ type: "spring", stiffness: 350, damping: 35 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass-card rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
-            >
+              className="glass-card rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
                 <div>
                   <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">{config.name}</p>
                   <h3 className="font-display text-lg font-bold text-foreground">Terms & Conditions</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Refund & Cancellation Policy · Effective January 2026</p>
                 </div>
-                <button
-                  onClick={() => setShowTerms(false)}
-                  className="p-2 rounded-xl hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                <button onClick={() => setShowTerms(false)} className="p-2 rounded-xl hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -313,30 +265,16 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
                 ))}
               </div>
               <div className="px-5 py-4 border-t border-border/30">
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => setShowTerms(false)}
-                  className="btn-next w-full"
-                >
-                  Close
-                </motion.button>
+                <motion.button whileTap={{ scale: 0.96 }} onClick={() => setShowTerms(false)} className="btn-next w-full">Close</motion.button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <motion.button
-        whileTap={{ scale: 0.96 }}
-        onClick={handleConfirm}
-        disabled={submitting}
-        className="btn-next flex items-center justify-center gap-2 disabled:opacity-50"
-      >
-        {submitting ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Sparkles className="w-4 h-4" />
-        )}
+      <motion.button whileTap={{ scale: 0.96 }} onClick={handleConfirm} disabled={submitting}
+        className="btn-next flex items-center justify-center gap-2 disabled:opacity-50">
+        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
         {submitting ? "Creating Booking..." : "Confirm & Pay Deposit"}
       </motion.button>
     </div>

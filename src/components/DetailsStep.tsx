@@ -2,8 +2,10 @@ import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, Navigation } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+
+const SUPABASE_URL = "https://kjibbbuceipnialfgflt.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -59,6 +61,19 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
+  // Direct fetch — bypasses supabase.functions.invoke JWT requirement
+  const callPlacesFunction = async (body: object) => {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  };
+
   // Debounced address autocomplete
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -73,10 +88,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     debounceRef.current = setTimeout(async () => {
       setAddressLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke("places-autocomplete", {
-          body: { input: query },
-        });
-        if (!error && data?.predictions?.length > 0) {
+        const data = await callPlacesFunction({ input: query });
+        if (data?.predictions?.length > 0) {
           setAddressSuggestions(data.predictions.slice(0, 5));
           setShowSuggestions(true);
         } else {
@@ -95,7 +108,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     };
   }, [booking.address]);
 
-  // When a suggestion is selected, fetch real distance from Distance Matrix
+  // When a suggestion is selected, fetch real distance
   const handleSelectSuggestion = async (description: string) => {
     onUpdate({ address: description, distanceKm: null });
     setShowSuggestions(false);
@@ -107,10 +120,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
     setDistanceLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("places-autocomplete", {
-        body: { input: description, origin },
-      });
-      if (!error && data?.distanceKm != null) {
+      const data = await callPlacesFunction({ input: description, origin });
+      if (data?.distanceKm != null) {
         onUpdate({ distanceKm: data.distanceKm });
       }
     } catch {
@@ -322,7 +333,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             />
           </div>
 
-          {/* Suggestions dropdown */}
           <AnimatePresence>
             {showSuggestions && addressSuggestions.length > 0 && (
               <motion.div
@@ -347,13 +357,10 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             )}
           </AnimatePresence>
 
-          {/* Distance badge shown after selection */}
           <AnimatePresence>
             {distanceLoading && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-muted-foreground"
               >
                 <div className="w-3 h-3 border border-primary/40 border-t-primary rounded-full animate-spin" />
@@ -362,9 +369,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             )}
             {!distanceLoading && booking.distanceKm != null && (
               <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-primary font-medium"
               >
                 <Navigation className="w-3 h-3" />
@@ -383,10 +388,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         {/* Swipeable referral pills */}
         <div>
           <label className="text-xs text-muted-foreground mb-2 block">How did you hear about us?</label>
-          <div
-            ref={referralScrollRef}
-            className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-          >
+          <div ref={referralScrollRef} className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {referralOptions.map((opt) => (
               <motion.button
                 key={opt}

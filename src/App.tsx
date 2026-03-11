@@ -21,26 +21,21 @@ import Admin from "./pages/Admin";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import TenantNotFound from "./pages/TenantNotFound";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 const queryClient = new QueryClient();
 
-/** Listens for PASSWORD_RECOVERY event and redirects to /reset-password */
 const AuthRecoveryHandler = () => {
   const navigate = useNavigate();
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        navigate("/reset-password");
-      }
+      if (event === "PASSWORD_RECOVERY") navigate("/reset-password");
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
-
   return null;
 };
 
-/** Marketing site routes (main domain) */
 const MarketingRoutes = () => (
   <>
     <AuthRecoveryHandler />
@@ -55,25 +50,21 @@ const MarketingRoutes = () => (
       <Route path="/terms" element={<SiteTerms />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      {/* /book on main domain still needs tenant context — default to query param ?tenant=xxx */}
+      <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
       <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </>
 );
 
-/** Tenant booking app routes (subdomain) */
 const TenantRoutes = () => {
   const { notFound } = usePublicTenant();
-
-  if (notFound) {
-    return <TenantNotFound hostname={window.location.hostname} />;
-  }
-
+  if (notFound) return <TenantNotFound hostname={window.location.hostname} />;
   return (
     <Routes>
       <Route path="/" element={<Book />} />
       <Route path="/book" element={<Book />} />
+      <Route path="/payment" element={<PaymentSuccess />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -2,8 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
@@ -23,7 +22,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -45,7 +43,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { booking_id } = await req.json();
+    const { booking_id, tenant_slug, success_url, cancel_url } = await req.json();
     if (!booking_id) {
       return new Response(
         JSON.stringify({ error: "booking_id required" }),
@@ -53,7 +51,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch booking details
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
       .select("id, deposit_amount, deposit_paid, client_id, tenant_id")
@@ -81,8 +78,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Yoco checkout
     const amountInCents = Math.round(booking.deposit_amount * 100);
+
+    // Build redirect URLs — use provided ones or derive from request origin
+    const origin = req.headers.get("origin") || "https://book-a-glow.vercel.app";
+    const slug = tenant_slug || booking.tenant_id;
+    const finalSuccessUrl = success_url || `${origin}/?tenant=${slug}&payment=success&booking_id=${booking_id}`;
+    const finalCancelUrl = cancel_url || `${origin}/?tenant=${slug}&payment=cancelled`;
 
     const yocoRes = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
@@ -93,6 +95,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         amount: amountInCents,
         currency: "ZAR",
+        successUrl: finalSuccessUrl,
+        cancelUrl: finalCancelUrl,
         metadata: {
           booking_id: booking.id,
           tenant_id: booking.tenant_id,
@@ -110,7 +114,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Store checkout ID and link on booking
     await supabase
       .from("bookings")
       .update({
