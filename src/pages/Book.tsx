@@ -10,10 +10,8 @@ import { useBooking } from "@/hooks/useBooking";
 import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
-import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useState, useCallback } from "react";
-
-const SWIPE_THRESHOLD = 50;
 
 const stepVariants = {
   enter: (direction: number) => ({
@@ -50,8 +48,6 @@ const Index = () => {
   const config = usePublicBusinessConfig();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
-  const dragX = useMotionValue(0);
-  const dragOpacity = useTransform(dragX, [-150, 0, 150], [0.5, 1, 0.5]);
 
   const canProceed = useCallback(() => {
     switch (step) {
@@ -73,21 +69,6 @@ const Index = () => {
     setDirection(-1);
     prevStep();
   }, [step]);
-
-  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
-    const { offset, velocity } = info;
-    if (offset.x < -SWIPE_THRESHOLD || velocity.x < -500) {
-      if (canProceed() && step < 3) {
-        setDirection(1);
-        nextStep();
-      }
-    } else if (offset.x > SWIPE_THRESHOLD || velocity.x > 500) {
-      if (step > 0) {
-        setDirection(-1);
-        prevStep();
-      }
-    }
-  }, [step, canProceed]);
 
   if (tenantLoading || !tenantId) {
     return (
@@ -156,12 +137,6 @@ const Index = () => {
               initial="enter"
               animate="center"
               exit="exit"
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.15}
-              onDragEnd={handleDragEnd}
-              style={{ x: dragX, opacity: dragOpacity }}
-              className="touch-pan-y"
             >
               {step === 0 && (
                 <ServicesStep
@@ -185,16 +160,6 @@ const Index = () => {
           </AnimatePresence>
         </div>
 
-        {step < 3 && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="text-[10px] text-center text-muted-foreground/40 tracking-wider"
-          >
-            Swipe to navigate
-          </motion.p>
-        )}
       </div>
 
       {step < 3 && (

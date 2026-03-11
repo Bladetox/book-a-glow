@@ -68,18 +68,28 @@ Deno.serve(async (req) => {
       .eq("id", booking.tenant_id)
       .single();
 
-    // Fetch service names
+    // Fetch service names — handle both string[] and JSON-encoded string cases
     let serviceNames = "Beauty Service";
     if (booking.service_ids) {
-      const ids = Array.isArray(booking.service_ids)
-        ? booking.service_ids
-        : [booking.service_ids];
-      const { data: services } = await supabase
-        .from("services")
-        .select("name")
-        .in("id", ids);
-      if (services && services.length > 0) {
-        serviceNames = services.map((s: any) => s.name).join(", ");
+      let ids: string[] = [];
+      if (Array.isArray(booking.service_ids)) {
+        ids = booking.service_ids;
+      } else if (typeof booking.service_ids === "string") {
+        try {
+          const parsed = JSON.parse(booking.service_ids);
+          ids = Array.isArray(parsed) ? parsed : booking.service_ids.split(",").map((s: string) => s.trim());
+        } catch {
+          ids = booking.service_ids.split(",").map((s: string) => s.trim());
+        }
+      }
+      if (ids.length > 0) {
+        const { data: services } = await supabase
+          .from("services")
+          .select("name")
+          .in("id", ids);
+        if (services && services.length > 0) {
+          serviceNames = services.map((s: any) => s.name).join(", ");
+        }
       }
     }
 
@@ -145,7 +155,7 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: "PhenomeBeauty <bookings@book-a-glow.com>",
+            from: `${tenantName} <bookings@book-a-glow.com>`,
             to: [clientEmail],
             subject: `Booking Confirmed – ${formattedDate} at ${formattedTime}`,
             html: clientHtml,

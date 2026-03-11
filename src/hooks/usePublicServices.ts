@@ -57,7 +57,8 @@ export function usePublicCategories() {
         .from("services")
         .select("category")
         .eq("tenant_id", tenantId)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("category");
       if (error) throw error;
       const unique = [...new Set((data ?? []).map((s) => s.category))];
       return unique.map((c): ServiceCategory => ({

@@ -61,13 +61,14 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
-  // Direct fetch — bypasses supabase.functions.invoke JWT requirement
+  // Direct fetch to edge function — requires both apikey and Authorization headers
   const callPlacesFunction = async (body: object) => {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify(body),
     });
