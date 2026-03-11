@@ -2,12 +2,29 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
+export const defaultReferralOptions = [
+  "Instagram",
+  "TikTok",
+  "Facebook",
+  "Google Search",
+  "Word of Mouth",
+  "Referred by a Friend",
+  "Returning Client",
+  "Other",
+];
+
 export interface PublicBusinessConfig {
   name: string;
   abbreviation: string;
+  logoUrl: string | null;
   tagline: string;
   subtitle: string;
   ctaLabel: string;
+  splashWelcomeLabel: string;
+  splashTagline1: string;
+  splashTagline2: string;
+  splashCtaLabel: string;
+  referralOptions: string[];
   signOff: string;
   email: string;
   phone: string;
@@ -26,9 +43,15 @@ export interface PublicBusinessConfig {
 const defaults: PublicBusinessConfig = {
   name: "NextSlot",
   abbreviation: ".ns",
-  tagline: "Booking Made Simple",
-  subtitle: "Professional Services",
+  logoUrl: null,
+  tagline: "Mobile Beauty Services",
+  subtitle: "Premium At-Home Treatments",
   ctaLabel: "Book Now",
+  splashWelcomeLabel: "Welcome to",
+  splashTagline1: "Mobile Beauty Services",
+  splashTagline2: "Premium At-Home Treatments",
+  splashCtaLabel: "Select Your Treatment",
+  referralOptions: defaultReferralOptions,
   signOff: "Thank you.",
   email: "",
   phone: "",
@@ -49,7 +72,7 @@ const defaults: PublicBusinessConfig = {
  * No auth required — uses the public RLS policy on app_settings.
  */
 export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boolean } {
-  const { tenantId, name: tenantName, loading: tenantLoading } = usePublicTenant();
+  const { tenantId, name: tenantName, logoUrl: tenantLogoUrl, loading: tenantLoading } = usePublicTenant();
 
   const { data: appSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ["public-app-settings", tenantId],
@@ -72,12 +95,28 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
 
   const s = appSettings ?? {};
 
+  let referralOptions = defaults.referralOptions;
+  if (s.referral_options) {
+    try {
+      const parsed = JSON.parse(s.referral_options);
+      if (Array.isArray(parsed) && parsed.length > 0) referralOptions = parsed;
+    } catch {
+      // ignore parse error, use defaults
+    }
+  }
+
   return {
     name: tenantName || s.business_name || defaults.name,
     abbreviation: s.abbreviation || defaults.abbreviation,
+    logoUrl: tenantLogoUrl || null,
     tagline: s.tagline || defaults.tagline,
     subtitle: s.subtitle || defaults.subtitle,
     ctaLabel: s.cta_label || defaults.ctaLabel,
+    splashWelcomeLabel: s.splash_welcome_label || defaults.splashWelcomeLabel,
+    splashTagline1: s.splash_tagline1 || s.tagline || defaults.splashTagline1,
+    splashTagline2: s.splash_tagline2 || s.subtitle || defaults.splashTagline2,
+    splashCtaLabel: s.splash_cta_label || defaults.splashCtaLabel,
+    referralOptions,
     signOff: s.sign_off || defaults.signOff,
     email: s.email || defaults.email,
     phone: s.phone || defaults.phone,
