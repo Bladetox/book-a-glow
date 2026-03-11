@@ -37,57 +37,68 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const balance = total - deposit;
   const cur = config.currency;
 
-  const resolveClientId = async (): Promise<string> => {
+  /**
+   * Resolve a valid client_id (may be null for guest bookings).
+   * Always returns a UUID or null — never a hash fallback that would
+   * violate the profiles FK.
+   */
+  const resolveClientId = async (): Promise<string | null> => {
+    const fullPhone = `${booking.phoneCode}${booking.phone}`;
+
+    // Case 1: already signed in
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from("profiles").update({
+      // Upsert profile so it exists for the FK
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        email: booking.email,
         full_name: booking.fullName,
-        phone: `${booking.phoneCode}${booking.phone}`,
+        phone: fullPhone,
         address: booking.address,
-      }).eq("id", user.id);
+        role: "client",
+        tenant_id: tenantId,
+      }, { onConflict: "id" });
       return user.id;
     }
 
+    // Case 2: sign up a new user
     const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: booking.email,
       password: tempPassword,
-      options: { data: { full_name: booking.fullName, phone: `${booking.phoneCode}${booking.phone}` } },
+      options: { data: { full_name: booking.fullName, phone: fullPhone } },
     });
 
-    if (!signUpError && signUpData.user) {
-      await supabase.from("profiles").update({
+    const newUserId = signUpData?.user?.id;
+
+    if (!signUpError && newUserId) {
+      // Upsert profile (trigger may not exist)
+      await supabase.from("profiles").upsert({
+        id: newUserId,
+        email: booking.email,
         full_name: booking.fullName,
-        phone: `${booking.phoneCode}${booking.phone}`,
+        phone: fullPhone,
         address: booking.address,
-      }).eq("id", signUpData.user.id);
-      return signUpData.user.id;
+        role: "client",
+        tenant_id: tenantId,
+      }, { onConflict: "id" });
+      return newUserId;
     }
 
+    // Case 3: email already registered — the SECURITY DEFINER DB function
+    // will look up the profile by email; return null here and let it resolve
     const isAlreadyRegistered =
       signUpError?.message?.toLowerCase().includes("already registered") ||
       signUpError?.message?.toLowerCase().includes("already exists") ||
       (signUpData?.user && (signUpData.user as any).identities?.length === 0);
 
-    if (isAlreadyRegistered || (signUpData?.user && (signUpData.user as any).identities?.length === 0)) {
-      const { data: profile } = await supabase
-        .from("profiles").select("id").eq("email", booking.email).maybeSingle();
-      if (profile?.id) {
-        await supabase.from("profiles").update({
-          full_name: booking.fullName,
-          phone: `${booking.phoneCode}${booking.phone}`,
-          address: booking.address,
-        }).eq("id", profile.id);
-        return profile.id;
-      }
+    if (isAlreadyRegistered) {
+      // Return null — the DB fn will find the profile via p_client_email
+      return null;
     }
 
-    const encoder = new TextEncoder();
-    const data = encoder.encode(booking.email.toLowerCase().trim());
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-    return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
+    // Case 4: genuine sign-up failure (network error, etc.)
+    throw new Error(signUpError?.message || "Could not create your account. Please try again.");
   };
 
   const handleConfirm = async () => {
@@ -110,6 +121,9 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
         p_client_id: clientId,
+        p_client_email: booking.email,
+        p_client_name: booking.fullName,
+        p_client_phone: `${booking.phoneCode}${booking.phone}`,
         p_staff_id: staffId,
         p_booking_date: bookingDate,
         p_start_time: startTime,
@@ -193,11 +207,10 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
         )}
       </motion.div>
 
-      {/* Summary card — services + callout + totals + T&C + CTA */}
+      {/* Summary card */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-0">
 
-        {/* Service lines */}
         {selected.map((t) => (
           <div key={t.id} className="flex items-baseline justify-between py-1.5">
             <span className="text-sm text-foreground">{t.name}</span>
@@ -205,7 +218,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
           </div>
         ))}
 
-        {/* Call-out fee */}
         {callOutFee > 0 && (
           <div className="flex items-baseline justify-between py-1.5">
             <span className="text-sm text-muted-foreground">Call-out fee</span>
@@ -215,19 +227,14 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
         <div className="h-px bg-border/50 my-2" />
 
-        {/* Total */}
         <div className="flex justify-between items-baseline py-1">
           <span className="text-base font-bold text-foreground">Total</span>
           <span className="text-base font-bold text-foreground">{cur}{total}</span>
         </div>
-
-        {/* Deposit */}
         <div className="flex justify-between items-baseline py-1">
           <span className="text-sm text-muted-foreground">Deposit due now ({depositPercent}%)</span>
           <span className="text-sm font-semibold text-primary">{cur}{deposit}</span>
         </div>
-
-        {/* Balance */}
         <div className="flex justify-between items-baseline py-1">
           <span className="text-sm text-muted-foreground">Balance remaining</span>
           <span className="text-sm font-semibold text-foreground">{cur}{balance}</span>
@@ -235,7 +242,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
         <div className="h-px bg-border/30 my-3" />
 
-        {/* T&C */}
         <p className="text-[10px] text-muted-foreground text-center mb-3">
           By confirming you agree to our{" "}
           <button onClick={() => setShowTerms(true)} className="underline text-foreground hover:text-primary transition-colors font-medium">
@@ -243,7 +249,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
           </button>
         </p>
 
-        {/* CTA */}
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={handleConfirm}
@@ -270,7 +275,6 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
                 <div>
                   <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">{config.name}</p>
                   <h3 className="font-display text-lg font-bold text-foreground">Terms &amp; Conditions</h3>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Refund &amp; Cancellation Policy · Effective January 2026</p>
                 </div>
                 <button onClick={() => setShowTerms(false)} className="p-2 rounded-xl hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
                   <X className="w-5 h-5" />
