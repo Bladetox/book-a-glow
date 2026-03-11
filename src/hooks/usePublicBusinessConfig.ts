@@ -3,13 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 export const defaultReferralOptions = [
+  "Returning Client",
   "Instagram",
   "TikTok",
   "Facebook",
   "Google Search",
   "Word of Mouth",
   "Referred by a Friend",
-  "Returning Client",
   "Other",
 ];
 

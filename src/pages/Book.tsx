@@ -69,12 +69,14 @@ const Index = () => {
     if (!canProceed()) return;
     setDirection(1);
     nextStep();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [canProceed, nextStep]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
     setDirection(-1);
     prevStep();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step, prevStep]);
 
   const handleSplashComplete = useCallback(() => {
@@ -149,7 +151,8 @@ const Index = () => {
           <StepIndicator currentStep={step} />
         </motion.div>
 
-        <div className="glass-card rounded-3xl p-5 mb-4 overflow-hidden">
+        {/* overflow-x-clip: clips horizontal slide animation without hiding vertical content */}
+        <div className="glass-card rounded-3xl p-5 mb-4" style={{ overflowX: "clip" }}>
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={step}
