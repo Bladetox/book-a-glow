@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: `${tenantName} <bookings@book-a-glow.com>`,
+            from: `${tenantName} <bookings@nextslot.co.za>`,
             to: [clientEmail],
             subject: `Booking Confirmed – ${formattedDate} at ${formattedTime}`,
             html: clientHtml,
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: "Book-a-Glow <bookings@book-a-glow.com>",
+          from: `${tenantName} <bookings@nextslot.co.za>`,
           to: [tenantEmail],
           subject: `New Booking: ${clientName} – ${formattedDate} at ${formattedTime}`,
           html: ownerHtml,
