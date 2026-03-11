@@ -53,7 +53,14 @@ const Index = () => {
     switch (step) {
       case 0: return booking.selectedTreatments.length > 0;
       case 1: return booking.selectedDate !== null && booking.selectedTime !== null;
-      case 2: return booking.fullName.trim().length >= 2 && /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) && booking.address.trim().length >= 5 && booking.isExistingClient !== null;
+      case 2:
+        return (
+          booking.fullName.trim().length >= 2 &&
+          /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) &&
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) &&
+          booking.address.trim().length >= 5 &&
+          booking.isExistingClient !== null
+        );
       default: return true;
     }
   }, [step, booking]);
@@ -62,13 +69,17 @@ const Index = () => {
     if (!canProceed()) return;
     setDirection(1);
     nextStep();
-  }, [canProceed]);
+  }, [canProceed, nextStep]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
     setDirection(-1);
     prevStep();
-  }, [step]);
+  }, [step, prevStep]);
+
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
+  }, []);
 
   if (tenantLoading || !tenantId) {
     return (
@@ -79,12 +90,18 @@ const Index = () => {
   }
 
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    return (
+      <SplashScreen
+        onComplete={handleSplashComplete}
+        referralSource={booking.referralSource}
+        onReferralChange={(source) => updateBooking({ referralSource: source })}
+      />
+    );
   }
 
   const businessName = config.name || tenantId;
   const abbreviation = config.abbreviation || businessName.slice(0, 2).toUpperCase();
-  
+
   const selectedServices = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
   const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
@@ -104,9 +121,13 @@ const Index = () => {
           </div>
           <motion.div
             whileTap={{ scale: 0.95 }}
-            className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center"
+            className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center overflow-hidden"
           >
-            <span className="font-display text-xl font-bold text-foreground">{abbreviation}</span>
+            {config.logoUrl ? (
+              <img src={config.logoUrl} alt={businessName} className="w-full h-full object-contain p-1" />
+            ) : (
+              <span className="font-display text-xl font-bold text-foreground">{abbreviation}</span>
+            )}
           </motion.div>
           <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
             {config.tagline}
@@ -159,7 +180,6 @@ const Index = () => {
             </motion.div>
           </AnimatePresence>
         </div>
-
       </div>
 
       {step < 3 && (
@@ -173,6 +193,19 @@ const Index = () => {
           onPrev={handlePrev}
         />
       )}
+
+      {/* Footer */}
+      <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] mt-4 pb-4">
+        Powered by{" "}
+        <a
+          href="https://nextslot.co.za"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-muted-foreground transition-colors underline underline-offset-2"
+        >
+          nextslot.co.za
+        </a>
+      </p>
     </div>
   );
 };

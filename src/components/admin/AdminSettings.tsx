@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2 } from "lucide-react";
+import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2, Image, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useTenantSettings, useAppSettings, useUpdateTenant, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
+import { useTenant } from "@/contexts/TenantContext";
 
 const SettingsCard = ({ title, icon: Icon, gradient, children }: { title: string; icon?: React.ElementType; gradient: string; children: React.ReactNode }) => (
   <motion.div
@@ -46,9 +47,12 @@ const AdminSettings = () => {
   const updateTenant = useUpdateTenant();
   const upsertSetting = useUpsertAppSetting();
   const { setThemeById } = useBusinessTheme();
+  const { tenantId } = useTenant();
 
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Sync tenant + app_settings into draft
   useEffect(() => {
@@ -62,6 +66,7 @@ const AdminSettings = () => {
         currency: tenant.currency ?? "R",
         themeId: tenant.theme_id ?? "standard",
         custom_domain: tenant.custom_domain ?? "",
+        logo_url: (tenant as any).logo_url ?? "",
       }));
     }
   }, [tenant]);
@@ -87,7 +92,7 @@ const AdminSettings = () => {
   };
 
   const saveTenantFields = (section: string, fields: string[]) => {
-    const tenantFields = ["name", "email", "phone", "address", "currency", "theme_id", "custom_domain"];
+    const tenantFields = ["name", "email", "phone", "address", "currency", "theme_id", "custom_domain", "logo_url"];
     const tenantUpdates: Record<string, unknown> = {};
     const settingUpdates: Record<string, string> = {};
 
@@ -111,6 +116,32 @@ const AdminSettings = () => {
       setThemeById(draft.themeId || "standard");
     }
     flash(section);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${tenantId}/logo.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("business-logos")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage
+        .from("business-logos")
+        .getPublicUrl(path);
+      const publicUrl = urlData.publicUrl;
+      update("logo_url", publicUrl);
+      await updateTenant.mutateAsync({ logo_url: publicUrl });
+      flash("logo");
+    } catch (err: any) {
+      console.error("Logo upload failed:", err);
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
   };
 
   const handlePasswordChange = async () => {
@@ -147,6 +178,50 @@ const AdminSettings = () => {
         <div className="flex items-center gap-3">
           <SaveBtn onClick={() => saveTenantFields("info", ["name", "email", "phone"])} loading={updateTenant.isPending} />
           <SavedBadge section="info" />
+        </div>
+      </SettingsCard>
+
+      {/* Logo */}
+      <SettingsCard title="Business Logo" icon={Image} gradient="from-white/[0.06] to-white/[0.02]">
+        {draft.logo_url && (
+          <div className="flex items-center gap-3">
+            <img src={draft.logo_url} alt="Logo" className="w-14 h-14 rounded-xl object-contain bg-white/5 border border-white/10 p-1" />
+            <span className="text-xs text-white/40 flex-1 truncate">{draft.logo_url}</span>
+          </div>
+        )}
+        <SettingRow label="Logo URL" placeholder="https://your-logo-url.com/logo.png" value={draft.logo_url} onChange={v => update("logo_url", v)} />
+        <p className="text-[9px] text-white/25 -mt-2">Or upload directly below. Recommended: square, min 200×200px.</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => logoInputRef.current?.click()}
+            disabled={logoUploading}
+            className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
+            {logoUploading ? "Uploading…" : "Upload File"}
+          </button>
+          <SaveBtn onClick={() => saveTenantFields("logo", ["logo_url"])} loading={updateTenant.isPending} />
+          <SavedBadge section="logo" />
+        </div>
+        <input
+          ref={logoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/svg+xml"
+          className="hidden"
+          onChange={handleLogoUpload}
+        />
+      </SettingsCard>
+
+      {/* Welcome Splash Copy */}
+      <SettingsCard title="Welcome Splash" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]">
+        <SettingRow label="Welcome Label" placeholder="Welcome to" value={draft.splash_welcome_label} onChange={v => update("splash_welcome_label", v)} />
+        <SettingRow label="Tagline Line 1" placeholder="Mobile Beauty Services" value={draft.splash_tagline1} onChange={v => update("splash_tagline1", v)} />
+        <SettingRow label="Tagline Line 2" placeholder="Premium At-Home Treatments" value={draft.splash_tagline2} onChange={v => update("splash_tagline2", v)} />
+        <SettingRow label="CTA Button Label" placeholder="Select Your Treatment" value={draft.splash_cta_label} onChange={v => update("splash_cta_label", v)} />
+        <p className="text-[9px] text-white/25 -mt-2">These fields control the text shown on the welcome splash screen clients see first.</p>
+        <div className="flex items-center gap-3">
+          <SaveBtn onClick={() => saveTenantFields("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])} loading={upsertSetting.isPending} />
+          <SavedBadge section="splash" />
         </div>
       </SettingsCard>
 

@@ -22,11 +22,6 @@ const phoneCodes = [
   { label: "FR", code: "+33" },
 ];
 
-const referralOptions = [
-  "I'm a returning client", "Instagram", "TikTok", "Facebook", "Google Search",
-  "Word of Mouth", "Referred by a Friend", "Other",
-];
-
 const validators = {
   fullName: (v: string) => v.trim().length >= 2,
   phone: (v: string) => /^\d{7,15}$/.test(v.replace(/\s/g, "")),
@@ -42,12 +37,13 @@ interface PlaceSuggestion {
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const config = usePublicBusinessConfig();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const referralScrollRef = useRef<HTMLDivElement>(null);
   const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
   const [distanceLoading, setDistanceLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Prevent autocomplete re-trigger when a suggestion was just selected
+  const justSelectedRef = useRef(false);
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -61,7 +57,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
-  // Direct fetch to edge function — requires both apikey and Authorization headers
   const callPlacesFunction = async (body: object) => {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
       method: "POST",
@@ -75,11 +70,17 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     return res.json();
   };
 
-  // Debounced address autocomplete
+  // Debounced address autocomplete — skips if a suggestion was just selected
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const query = booking.address.trim();
+
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
+
     if (query.length < 3) {
       setAddressSuggestions([]);
       setShowSuggestions(false);
@@ -109,8 +110,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     };
   }, [booking.address]);
 
-  // When a suggestion is selected, fetch real distance
   const handleSelectSuggestion = async (description: string) => {
+    justSelectedRef.current = true;
     onUpdate({ address: description, distanceKm: null });
     setShowSuggestions(false);
     setAddressSuggestions([]);
@@ -308,7 +309,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/* Address with autocomplete */}
+        {/* Address with Google Places autocomplete */}
         <div className="relative">
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
@@ -365,7 +366,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-muted-foreground"
               >
                 <div className="w-3 h-3 border border-primary/40 border-t-primary rounded-full animate-spin" />
-                Calculating distance...
+                Calculating distance…
               </motion.div>
             )}
             {!distanceLoading && booking.distanceKm != null && (
@@ -381,26 +382,9 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
           {!distanceLoading && booking.distanceKm == null && (
             <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
-              Used to calculate your call-out fee (round trip from our base)
+              Used to calculate your call-out fee
             </p>
           )}
-        </div>
-
-        {/* Swipeable referral pills */}
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block">How did you hear about us?</label>
-          <div ref={referralScrollRef} className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {referralOptions.map((opt) => (
-              <motion.button
-                key={opt}
-                whileTap={{ scale: 0.93 }}
-                className={`category-pill whitespace-nowrap ${booking.referralSource === opt ? "active" : ""}`}
-                onClick={() => onUpdate({ referralSource: opt })}
-              >
-                {opt}
-              </motion.button>
-            ))}
-          </div>
         </div>
       </motion.div>
     </div>

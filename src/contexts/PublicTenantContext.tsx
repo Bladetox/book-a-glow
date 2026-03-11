@@ -6,6 +6,7 @@ interface PublicTenantData {
   tenantId: string;
   name: string;
   ownerId: string;
+  logoUrl: string | null;
   /** Default subdomain: <tenantId>.nextslot.co.za */
   defaultSubdomain: string;
   /** Optional custom domain set by tenant */
@@ -23,6 +24,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
     tenantId: resolution.slug ?? "",
     name: "",
     ownerId: "",
+    logoUrl: null,
     defaultSubdomain: resolution.slug ? `${resolution.slug}.nextslot.co.za` : "",
     customDomain: null,
     loading: true,
@@ -33,10 +35,9 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
     const resolve = async () => {
       try {
         if (resolution.slug) {
-          // Standard subdomain resolution — look up by tenant id
           const { data, error } = await supabase
             .from("tenants")
-            .select("id, name, owner_id, custom_domain")
+            .select("id, name, owner_id, custom_domain, logo_url")
             .eq("id", resolution.slug)
             .eq("is_active", true)
             .single();
@@ -48,6 +49,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
               tenantId: data.id,
               name: data.name,
               ownerId: data.owner_id ?? "",
+              logoUrl: (data as any).logo_url ?? null,
               defaultSubdomain: `${data.id}.nextslot.co.za`,
               customDomain: data.custom_domain ?? null,
               loading: false,
@@ -55,10 +57,9 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             });
           }
         } else if (resolution.isCustomDomain && resolution.customDomainHost) {
-          // Custom domain resolution — look up by custom_domain column
           const { data, error } = await supabase
             .from("tenants")
-            .select("id, name, owner_id, custom_domain")
+            .select("id, name, owner_id, custom_domain, logo_url")
             .eq("custom_domain", resolution.customDomainHost)
             .eq("is_active", true)
             .single();
@@ -70,6 +71,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
               tenantId: data.id,
               name: data.name,
               ownerId: data.owner_id ?? "",
+              logoUrl: (data as any).logo_url ?? null,
               defaultSubdomain: `${data.id}.nextslot.co.za`,
               customDomain: data.custom_domain ?? null,
               loading: false,
