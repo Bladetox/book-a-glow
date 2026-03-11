@@ -62,14 +62,7 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold text-foreground">The Space</span>
           <span className="text-sm text-muted-foreground">{booking.address || "To be confirmed"}</span>
-          <span className="text-sm text-muted-foreground">No need to overthink it, just find a spot where you feel most at peace, and I'll handle the rest.</span>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-semibold text-foreground">The Client</span>
-          <span className="text-sm text-muted-foreground">{booking.fullName}</span>
-          <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
-          <span className="text-sm text-muted-foreground">{booking.email}</span>
+          <span className="text-sm text-muted-foreground">No need to overthink it, just find a spot where you feel most comfortable, and I'll handle the rest.</span>
         </div>
 
         <div className="flex flex-col gap-1">
