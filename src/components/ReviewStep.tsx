@@ -29,7 +29,7 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
 
   const estimatedDistanceKm = booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0);
-  const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
+  const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * config.ratePerKm) : 0;
 
   const total = servicesTotal + callOutFee;
   const depositPercent = config.depositPercent;

@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     }
 
     // --- Autocomplete mode: input only ---
-    if (!input || typeof input !== 'string' || input.trim().length < 3) {
+    if (!input || typeof input !== 'string' || input.trim().length < 5) {
       return new Response(
         JSON.stringify({ predictions: [] }),
         { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
