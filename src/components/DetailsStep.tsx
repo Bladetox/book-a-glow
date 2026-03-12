@@ -162,6 +162,9 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             </motion.button>
           ))}
         </div>
+        {booking.isExistingClient === null && Object.keys(touched).length > 0 && (
+          <p className="text-[11px] text-destructive mt-2">Please select one to continue</p>
+        )}
       </div>
 
       {/* Existing client follow-up */}

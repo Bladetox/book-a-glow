@@ -22,25 +22,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(supabaseUrl, serviceKey);
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
 
-    const { data: { user }, error: authError } = await anonClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // --- Auth resolution ---
+    // Authenticated users: verify JWT and check ownership
+    // Guest users (no auth header): booking_id UUID is unguessable — sufficient as authorization
+    const authHeader = req.headers.get("Authorization");
+    let authedUserId: string | null = null;
+
+    if (authHeader) {
+      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user } } = await anonClient.auth.getUser();
+      if (user) authedUserId = user.id;
     }
 
     const { booking_id, tenant_slug, success_url, cancel_url } = await req.json();
@@ -64,7 +59,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (booking.client_id !== user.id) {
+    // If authenticated: verify ownership
+    if (authedUserId && booking.client_id && booking.client_id !== authedUserId) {
       return new Response(
         JSON.stringify({ error: "Not your booking" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -80,7 +76,6 @@ Deno.serve(async (req) => {
 
     const amountInCents = Math.round(booking.deposit_amount * 100);
 
-    // Build redirect URLs — use provided ones or derive from request origin
     const origin = req.headers.get("origin") || "https://book-a-glow.vercel.app";
     const slug = tenant_slug || booking.tenant_id;
     const finalSuccessUrl = success_url || `${origin}/?tenant=${slug}&payment=success&booking_id=${booking_id}`;

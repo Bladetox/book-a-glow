@@ -5,12 +5,25 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 
+interface BookingSummary {
+  booking_date?: string;
+  start_time?: string;
+  deposit_amount?: number;
+  deposit_paid?: boolean;
+}
+
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const config = usePublicBusinessConfig();
   const payment = searchParams.get("payment");
   const bookingId = searchParams.get("booking_id");
-  const [booking, setBooking] = useState<any>(null);
+
+  // URL-encoded fallback values (always present for guest users who can't query the DB)
+  const urlDate = searchParams.get("date") ?? "";
+  const urlTime = searchParams.get("time") ?? "";
+  const urlDeposit = searchParams.get("deposit") ? Number(searchParams.get("deposit")) : null;
+
+  const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isSuccess = payment === "success";
@@ -21,25 +34,42 @@ const PaymentSuccess = () => {
       setLoading(false);
       return;
     }
-    // Poll briefly — webhook may arrive just after redirect
+
+    // Seed from URL params immediately so guests always see their info
+    if (urlDate || urlTime || urlDeposit != null) {
+      setBooking({ booking_date: urlDate || undefined, start_time: urlTime || undefined, deposit_amount: urlDeposit ?? undefined, deposit_paid: true });
+      setLoading(false);
+    }
+
+    // Also try DB poll (works for authenticated users; silently falls back to URL data for guests)
     let attempts = 0;
     const poll = async () => {
       attempts++;
       const { data } = await supabase
         .from("bookings")
-        .select("id, booking_date, start_time, deposit_amount, status, deposit_paid")
+        .select("id, booking_date, start_time, deposit_amount, deposit_paid")
         .eq("id", bookingId)
         .single();
 
-      if (data?.deposit_paid || attempts >= 6) {
+      if (data) {
         setBooking(data);
         setLoading(false);
-      } else {
+      } else if (attempts < 5) {
         setTimeout(poll, 2000);
+      } else {
+        setLoading(false);
       }
     };
     poll();
   }, [bookingId, isSuccess]);
+
+  const displayDate = booking?.booking_date
+    ? new Date(booking.booking_date).toLocaleDateString("en-ZA", {
+        weekday: "short", day: "numeric", month: "long", year: "numeric",
+      })
+    : null;
+  const displayTime = (booking?.start_time?.slice(0, 5)) || urlTime || null;
+  const displayDeposit = booking?.deposit_amount ?? urlDeposit;
 
   if (isCancelled) {
     return (
@@ -94,37 +124,43 @@ const PaymentSuccess = () => {
               <p className="text-sm text-muted-foreground italic">You're all confirmed.</p>
             </div>
 
-            {booking && (
+            {(displayDate || displayTime || displayDeposit != null) && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
                 className="glass-card-service rounded-2xl p-4 w-full flex flex-col gap-2 text-left"
               >
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Date</span>
-                  <span className="text-foreground font-medium">
-                    {new Date(booking.booking_date).toLocaleDateString("en-ZA", {
-                      weekday: "short", day: "numeric", month: "long", year: "numeric",
-                    })}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Time</span>
-                  <span className="text-foreground font-medium">
-                    {booking.start_time?.slice(0, 5)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Deposit paid</span>
-                  <span className="text-primary font-semibold">R{booking.deposit_amount}</span>
-                </div>
+                {displayDate && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Date</span>
+                    <span className="text-foreground font-medium">{displayDate}</span>
+                  </div>
+                )}
+                {displayTime && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Time</span>
+                    <span className="text-foreground font-medium">{displayTime}</span>
+                  </div>
+                )}
+                {displayDeposit != null && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Deposit paid</span>
+                    <span className="text-primary font-semibold">R{displayDeposit}</span>
+                  </div>
+                )}
               </motion.div>
             )}
 
             <p className="text-sm text-muted-foreground leading-relaxed">
-              A confirmation email is on its way to you. We spend so much of our lives pouring into others — thank you for trusting us to pour back into you.
+              A confirmation email is on its way to you.
             </p>
+
+            {config.confirmationOutro && (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {config.confirmationOutro}
+              </p>
+            )}
 
             <p className="text-sm font-semibold text-foreground">{config.signOff}</p>
           </>

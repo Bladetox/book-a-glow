@@ -72,7 +72,7 @@ const StickyBottomBar = ({
             disabled={!canProceed}
             className="btn-next flex-1"
           >
-            Next
+            {step === 2 ? "Review" : "Next"}
           </motion.button>
         </div>
       </div>

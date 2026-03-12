@@ -32,6 +32,10 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }
     return t;
   }, []);
 
+  const isCurrentMonth =
+    currentMonth.getFullYear() === today.getFullYear() &&
+    currentMonth.getMonth() === today.getMonth();
+
   const isDayAvailable = (day: Date) => {
     if (!monthAvailability) return false;
     const ds = format(day, "yyyy-MM-dd");
@@ -47,7 +51,7 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }
       {/* Calendar */}
       <div className="glass-card-service rounded-2xl p-4">
         <div className="flex items-center justify-between mb-4">
-          <motion.button whileTap={{ scale: 0.85 }} onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50">
+          <motion.button whileTap={!isCurrentMonth ? { scale: 0.85 } : undefined} disabled={isCurrentMonth} onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))} className={`transition-colors p-1.5 rounded-full ${isCurrentMonth ? "text-muted-foreground/20 cursor-not-allowed" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}>
             <ChevronLeft className="w-5 h-5" />
           </motion.button>
           <span className="font-display text-base font-semibold text-foreground flex items-center gap-2">
