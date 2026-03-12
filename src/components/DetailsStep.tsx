@@ -1,7 +1,7 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, Navigation } from "lucide-react";
+import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
@@ -42,11 +42,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
-  const [distanceLoading, setDistanceLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Prevent autocomplete re-trigger when a suggestion was just selected
   const justSelectedRef = useRef(false);
-  // Prevent onBlur from closing the dropdown while the user is clicking a suggestion
   const suppressBlurRef = useRef(false);
 
   const markTouched = useCallback((field: string) => {
@@ -74,24 +71,18 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     return res.json();
   };
 
-  // Debounced address autocomplete — skips if a suggestion was just selected
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-
     const query = booking.address.trim();
-
     if (justSelectedRef.current) {
       justSelectedRef.current = false;
       return;
     }
-
-    // FIX 1: was < 5, now < 3 — matches the edge function threshold
     if (query.length < 3) {
       setAddressSuggestions([]);
       setShowSuggestions(false);
       return;
     }
-
     debounceRef.current = setTimeout(async () => {
       setAddressLoading(true);
       try {
@@ -109,10 +100,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         setAddressLoading(false);
       }
     }, 350);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [booking.address]);
 
   const handleSelectSuggestion = async (description: string) => {
@@ -122,21 +110,13 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     setShowSuggestions(false);
     setAddressSuggestions([]);
     markTouched("address");
-
+    // Silently calculate distance in background for ReviewStep fee calc — not shown to client
     const origin = config.address;
     if (!origin) return;
-
-    setDistanceLoading(true);
     try {
       const data = await callPlacesFunction({ input: description, origin, tenant_id: tenantId });
-      if (data?.distanceKm != null) {
-        onUpdate({ distanceKm: data.distanceKm });
-      }
-    } catch {
-      // silently fall back to default distance in ReviewStep
-    } finally {
-      setDistanceLoading(false);
-    }
+      if (data?.distanceKm != null) onUpdate({ distanceKm: data.distanceKm });
+    } catch { /* fallback to defaultDistanceKm in ReviewStep */ }
   };
 
   return (
@@ -215,7 +195,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 Answer all questions honestly. Your information is strictly confidential.
               </p>
             </div>
-
             {safetyQuestions.map((q, i) => (
               <motion.div
                 key={q.id}
@@ -237,9 +216,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                       key={String(opt.value)}
                       whileTap={{ scale: 0.9 }}
                       onClick={() =>
-                        onUpdate({
-                          safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value },
-                        })
+                        onUpdate({ safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value } })
                       }
                       className={`px-5 py-1.5 rounded-xl text-xs font-medium transition-all duration-200
                         ${booking.safetyAnswers[q.id] === opt.value
@@ -253,7 +230,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 </div>
               </motion.div>
             ))}
-
             <textarea
               className={`${inputClass} min-h-[60px]`}
               placeholder="Anything else we should know? (optional)"
@@ -318,40 +294,34 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/* Address with Google Places autocomplete */}
-        <div className="relative">
-          <div className="relative">
-            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-            {addressLoading && (
-              <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-            )}
-            <input
-              className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
-              placeholder="Home Address *"
-              value={booking.address}
-              onChange={(e) => {
-                onUpdate({ address: e.target.value, distanceKm: null });
-                if (showSuggestions && e.target.value.length < 3) setShowSuggestions(false);
-              }}
-              onBlur={() => {
-                markTouched("address");
-                // FIX 2: check suppressBlurRef before closing — prevents touch/click race
-                // FIX 3: increased timeout from 200ms → 300ms for slower devices
-                setTimeout(() => {
-                  if (!suppressBlurRef.current) {
-                    setShowSuggestions(false);
-                  }
-                  suppressBlurRef.current = false;
-                }, 300);
-              }}
-              onFocus={() => {
-                if (addressSuggestions.length > 0) setShowSuggestions(true);
-              }}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </div>
+        {/* Address — dropdown renders outside normal flow so it's never clipped */}
+        <div className="relative" style={{ zIndex: 40 }}>
+          <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
+          {addressLoading && (
+            <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
+          )}
+          <input
+            className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
+            placeholder="Home Address *"
+            value={booking.address}
+            onChange={(e) => {
+              onUpdate({ address: e.target.value, distanceKm: null });
+              if (showSuggestions && e.target.value.length < 3) setShowSuggestions(false);
+            }}
+            onBlur={() => {
+              markTouched("address");
+              setTimeout(() => {
+                if (!suppressBlurRef.current) setShowSuggestions(false);
+                suppressBlurRef.current = false;
+              }, 300);
+            }}
+            onFocus={() => {
+              if (addressSuggestions.length > 0) setShowSuggestions(true);
+            }}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
 
           <AnimatePresence>
             {showSuggestions && addressSuggestions.length > 0 && (
@@ -360,49 +330,31 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
-                // FIX 2: suppress the onBlur close when user interacts with this container
                 onMouseDown={() => { suppressBlurRef.current = true; }}
                 onTouchStart={() => { suppressBlurRef.current = true; }}
-                className="absolute top-full left-0 right-0 z-50 mt-1 glass-card rounded-2xl overflow-hidden shadow-lg"
+                className="absolute top-full left-0 right-0 z-50 mt-1 glass-card rounded-2xl shadow-xl"
+                style={{ overflow: "visible" }}
               >
-                {addressSuggestions.map((s) => (
-                  <button
-                    key={s.place_id}
-                    type="button"
-                    onMouseDown={() => handleSelectSuggestion(s.description)}
-                    onTouchEnd={(e) => { e.preventDefault(); handleSelectSuggestion(s.description); }}
-                    className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 transition-colors border-b border-border/20 last:border-0 flex items-start gap-2"
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                    <span className="line-clamp-2">{s.description}</span>
-                  </button>
-                ))}
+                <div className="rounded-2xl overflow-hidden">
+                  {addressSuggestions.map((s) => (
+                    <button
+                      key={s.place_id}
+                      type="button"
+                      onMouseDown={() => handleSelectSuggestion(s.description)}
+                      onTouchEnd={(e) => { e.preventDefault(); handleSelectSuggestion(s.description); }}
+                      className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors border-b border-border/20 last:border-0 flex items-start gap-2"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                      <span className="line-clamp-2">{s.description}</span>
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <AnimatePresence>
-            {distanceLoading && (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-muted-foreground"
-              >
-                <div className="w-3 h-3 border border-primary/40 border-t-primary rounded-full animate-spin" />
-                Calculating distance…
-              </motion.div>
-            )}
-            {!distanceLoading && booking.distanceKm != null && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                className="mt-1.5 ml-1 flex items-center gap-1.5 text-[10px] text-primary font-medium"
-              >
-                <Navigation className="w-3 h-3" />
-                {booking.distanceKm} km from our base
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {!distanceLoading && booking.distanceKm == null && (
+          {/* Helper text — no distance shown to client */}
+          {!showSuggestions && (
             <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
               Used to calculate your call-out fee
             </p>

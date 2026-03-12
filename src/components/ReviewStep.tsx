@@ -45,10 +45,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
     setSubmitting(true);
 
     try {
-      // Clients are always guests — no sign-up, no auth account required.
-      // The DB function resolves or creates the client record internally via SECURITY DEFINER.
+      // Clients are always guests — no auth account required.
       const clientId = null;
-      // Look up staff via tenantId from context — works on all domains including custom ones
+
       const { data: tenantRow } = await supabase
         .from("tenants")
         .select("owner_id")
@@ -56,6 +55,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         .single();
       const staffId = tenantRow?.owner_id;
       if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
+
       const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
       const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
 
@@ -67,11 +67,11 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         }
       });
 
+      // NOTE: p_client_email / p_client_name / p_client_phone have been removed.
+      // The current DB function signature (20260311_splash_logo_rls_booking_fix.sql)
+      // does NOT include these params. Passing them caused PGRST203 ambiguity.
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
         p_client_id: clientId,
-        p_client_email: booking.email,
-        p_client_name: booking.fullName,
-        p_client_phone: `${booking.phoneCode}${booking.phone}`,
         p_staff_id: staffId,
         p_booking_date: bookingDate,
         p_start_time: startTime,
@@ -101,12 +101,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       const bookingId = result?.booking_id;
       if (bookingId) {
         const origin = window.location.origin;
-        // Encode booking summary in URL so PaymentSuccess renders correctly for guests
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${deposit}`;
         const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
 
-        // No auth header — clients are always guests (no accounts)
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
           body: { booking_id: bookingId, tenant_slug: tenantId, success_url: successUrl, cancel_url: cancelUrl },
         });
@@ -116,8 +114,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
           window.location.href = checkoutData.redirect_url;
           return;
         } else {
-            throw new Error("Payment gateway did not return a redirect URL. Please try again.");
-          }
+          throw new Error("Payment gateway did not return a redirect URL. Please try again.");
+        }
       }
 
       setConfirmed(true);
@@ -125,12 +123,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
     } catch (err: any) {
       console.error("Booking error:", err);
       const msg: string = err.message || "";
-      const slotTaken = /slot|time|already booked|unavailable|available/i.test(msg);
+      const code: string = (err as any)?.code || "";
+      // Only treat as slot-taken if the DB function itself returned a slot conflict message,
+      // NOT for PGRST203 (function overload ambiguity) or other infrastructure errors.
+      const slotTaken =
+        code !== "PGRST203" &&
+        /time.*already booked|slot.*taken|no longer available|is not available/i.test(msg);
       if (slotTaken) {
-        // Invalidate availability so the calendar shows fresh data
         queryClient.invalidateQueries({ queryKey: ["public-date-slots"] });
         queryClient.invalidateQueries({ queryKey: ["public-month-availability"] });
-        // Clear the stale selection and send the user back to pick a new time
         onUpdate({ selectedDate: null, selectedTime: null });
         toast.error("That time slot was just taken. Please pick a new time.");
         onGoToStep(1);
