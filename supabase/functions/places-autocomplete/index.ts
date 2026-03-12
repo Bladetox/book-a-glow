@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Autocomplete mode (Places API New) ---
+    // --- Autocomplete mode (Legacy Places API) ---
     if (!input || typeof input !== 'string' || input.trim().length < 3) {
       return new Response(
         JSON.stringify({ predictions: [] }),
@@ -79,36 +79,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    const acRes = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-      },
-      body: JSON.stringify({
-        input: input.trim(),
-        includedRegionCodes: ['za'],
-        languageCode: 'en',
-      }),
+    const acParams = new URLSearchParams({
+      input: input.trim(),
+      key: apiKey,
+      components: 'country:za',
+      language: 'en',
+      types: 'address',
     });
 
+    const acRes = await fetch(
+      `https://maps.googleapis.com/maps/api/place/autocomplete/json?${acParams}`
+    );
     const acData = await acRes.json();
 
-    if (!acRes.ok || acData.error) {
-      console.error('Places API (New) error:', acData.error?.message ?? acData);
+    if (acData.status !== 'OK' && acData.status !== 'ZERO_RESULTS') {
+      console.error('Places API error:', acData.status, acData.error_message);
       return new Response(
-        JSON.stringify({ predictions: [], error: acData.error?.message }),
+        JSON.stringify({ predictions: [], error: acData.status + ': ' + (acData.error_message ?? '') }),
         { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
       );
     }
 
-    const predictions = (acData.suggestions ?? []).map((s: any) => ({
-      place_id: s.placePrediction?.placeId ?? '',
-      description: s.placePrediction?.text?.text ?? s.placePrediction?.structuredFormat?.mainText?.text ?? '',
+    const predictions = (acData.predictions ?? []).map((p: any) => ({
+      place_id: p.place_id ?? '',
+      description: p.description ?? '',
     })).filter((p: any) => p.description);
 
     return new Response(
-      JSON.stringify({ predictions }),
+      JSON.stringify({ predictions: predictions.slice(0, 5) }),
       { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     );
 
