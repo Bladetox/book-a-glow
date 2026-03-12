@@ -36,76 +36,14 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
   const balance = total - deposit;
   const cur = config.currency;
 
-  /**
-   * Resolve a valid client_id (may be null for guest bookings).
-   * Always returns a UUID or null — never a hash fallback that would
-   * violate the profiles FK.
-   */
-  const resolveClientId = async (): Promise<string | null> => {
-    const fullPhone = `${booking.phoneCode}${booking.phone}`;
-
-    // Case 1: already signed in
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      // Upsert profile so it exists for the FK
-      await supabase.from("profiles").upsert({
-        id: user.id,
-        email: booking.email,
-        full_name: booking.fullName,
-        phone: fullPhone,
-        address: booking.address,
-        role: "client",
-        tenant_id: tenantId,
-      }, { onConflict: "id" });
-      return user.id;
-    }
-
-    // Case 2: sign up a new user
-    const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: booking.email,
-      password: tempPassword,
-      options: { data: { full_name: booking.fullName, phone: fullPhone } },
-    });
-
-    const newUserId = signUpData?.user?.id;
-
-    if (!signUpError && newUserId) {
-      // Upsert profile (trigger may not exist)
-      await supabase.from("profiles").upsert({
-        id: newUserId,
-        email: booking.email,
-        full_name: booking.fullName,
-        phone: fullPhone,
-        address: booking.address,
-        role: "client",
-        tenant_id: tenantId,
-      }, { onConflict: "id" });
-      return newUserId;
-    }
-
-    // Case 3: email already registered — the SECURITY DEFINER DB function
-    // will look up the profile by email; return null here and let it resolve
-    const isAlreadyRegistered =
-      signUpError?.message?.toLowerCase().includes("already registered") ||
-      signUpError?.message?.toLowerCase().includes("already exists") ||
-      (signUpData?.user && (signUpData.user as any).identities?.length === 0);
-
-    if (isAlreadyRegistered) {
-      // Return null — the DB fn will find the profile via p_client_email
-      return null;
-    }
-
-    // Case 4: genuine sign-up failure (network error, etc.)
-    throw new Error(signUpError?.message || "Could not create your account. Please try again.");
-  };
-
   const handleConfirm = async () => {
     if (submitting) return;
     setSubmitting(true);
 
     try {
-      const clientId = await resolveClientId();
+      // Clients are always guests — no sign-up, no auth account required.
+      // The DB function resolves or creates the client record internally via SECURITY DEFINER.
+      const clientId = null;
       // Look up staff via tenantId from context — works on all domains including custom ones
       const { data: tenantRow } = await supabase
         .from("tenants")
@@ -158,18 +96,15 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
       const bookingId = result?.booking_id;
       if (bookingId) {
-        const { data: { session } } = await supabase.auth.getSession();
         const origin = window.location.origin;
-        // Encode booking summary in URL so PaymentSuccess renders correctly for guest (no-auth) users
+        // Encode booking summary in URL so PaymentSuccess renders correctly for guests
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${deposit}`;
         const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
 
+        // No auth header — clients are always guests (no accounts)
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
           body: { booking_id: bookingId, tenant_slug: tenantId, success_url: successUrl, cancel_url: cancelUrl },
-          headers: session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {},
         });
 
         if (checkoutErr) throw checkoutErr;
