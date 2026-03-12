@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, Navigation } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 const SUPABASE_URL = "https://kjibbbuceipnialfgflt.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE";
@@ -36,6 +37,7 @@ interface PlaceSuggestion {
 
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const config = usePublicBusinessConfig();
+  const { tenantId } = usePublicTenant();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -90,7 +92,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     debounceRef.current = setTimeout(async () => {
       setAddressLoading(true);
       try {
-        const data = await callPlacesFunction({ input: query });
+        const data = await callPlacesFunction({ input: query, tenant_id: tenantId });
         if (data?.predictions?.length > 0) {
           setAddressSuggestions(data.predictions.slice(0, 5));
           setShowSuggestions(true);
@@ -122,7 +124,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
     setDistanceLoading(true);
     try {
-      const data = await callPlacesFunction({ input: description, origin });
+      const data = await callPlacesFunction({ input: description, origin, tenant_id: tenantId });
       if (data?.distanceKm != null) {
         onUpdate({ distanceKm: data.distanceKm });
       }

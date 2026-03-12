@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -10,12 +12,33 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { input, origin } = body;
+    const { input, origin, tenant_id } = body;
 
-    const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY');
+    // --- Resolve the Google Maps API key from app_settings (DB), not env ---
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    let apiKey: string | null = null;
+
+    if (tenant_id) {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('tenant_id', tenant_id)
+        .eq('key', 'google_maps_api_key')
+        .maybeSingle();
+      apiKey = data?.value ?? null;
+    }
+
+    // Fallback to Supabase secret (manual override / local dev)
+    if (!apiKey) {
+      apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? null;
+    }
+
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'API key not configured', predictions: [] }),
+        JSON.stringify({ error: 'Google Maps API key not configured', predictions: [] }),
         { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
       );
     }
@@ -60,7 +83,7 @@ Deno.serve(async (req) => {
       input: input.trim(),
       key: apiKey,
       components: 'country:za',
-      types: 'address',
+      types: 'geocode',
       language: 'en',
     });
 
