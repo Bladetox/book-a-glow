@@ -46,6 +46,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Prevent autocomplete re-trigger when a suggestion was just selected
   const justSelectedRef = useRef(false);
+  // Prevent onBlur from closing the dropdown while the user is clicking a suggestion
+  const suppressBlurRef = useRef(false);
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -83,7 +85,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       return;
     }
 
-    if (query.length < 5) {
+    // FIX 1: was < 5, now < 3 — matches the edge function threshold
+    if (query.length < 3) {
       setAddressSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -114,6 +117,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
   const handleSelectSuggestion = async (description: string) => {
     justSelectedRef.current = true;
+    suppressBlurRef.current = false;
     onUpdate({ address: description, distanceKm: null });
     setShowSuggestions(false);
     setAddressSuggestions([]);
@@ -327,16 +331,25 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               value={booking.address}
               onChange={(e) => {
                 onUpdate({ address: e.target.value, distanceKm: null });
-                if (showSuggestions && e.target.value.length < 5) setShowSuggestions(false);
+                if (showSuggestions && e.target.value.length < 3) setShowSuggestions(false);
               }}
               onBlur={() => {
                 markTouched("address");
-                setTimeout(() => setShowSuggestions(false), 200);
+                // FIX 2: check suppressBlurRef before closing — prevents touch/click race
+                // FIX 3: increased timeout from 200ms → 300ms for slower devices
+                setTimeout(() => {
+                  if (!suppressBlurRef.current) {
+                    setShowSuggestions(false);
+                  }
+                  suppressBlurRef.current = false;
+                }, 300);
               }}
               onFocus={() => {
                 if (addressSuggestions.length > 0) setShowSuggestions(true);
               }}
               autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </div>
 
@@ -347,6 +360,9 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
+                // FIX 2: suppress the onBlur close when user interacts with this container
+                onMouseDown={() => { suppressBlurRef.current = true; }}
+                onTouchStart={() => { suppressBlurRef.current = true; }}
                 className="absolute top-full left-0 right-0 z-50 mt-1 glass-card rounded-2xl overflow-hidden shadow-lg"
               >
                 {addressSuggestions.map((s) => (
@@ -354,6 +370,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                     key={s.place_id}
                     type="button"
                     onMouseDown={() => handleSelectSuggestion(s.description)}
+                    onTouchEnd={(e) => { e.preventDefault(); handleSelectSuggestion(s.description); }}
                     className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 transition-colors border-b border-border/20 last:border-0 flex items-start gap-2"
                   >
                     <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
