@@ -22,7 +22,6 @@ Deno.serve(async (req) => {
     let tenantId = bodyTenantId ?? null;
     if (!tenantId) {
       const reqOrigin = req.headers.get('Origin') ?? req.headers.get('Referer') ?? '';
-      // e.g. https://phenomebeauty.nextslot.co.za  ->  phenomebeauty
       const sub = reqOrigin.match(/https?:\/\/([^.]+)\.nextslot\.co\.za/);
       if (sub) tenantId = sub[1];
     }
@@ -72,38 +71,47 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Autocomplete mode ---
-    if (!input || typeof input !== 'string' || input.trim().length < 5) {
+    // --- Autocomplete mode (Places API New) ---
+    if (!input || typeof input !== 'string' || input.trim().length < 3) {
       return new Response(
         JSON.stringify({ predictions: [] }),
         { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
       );
     }
 
-    const params = new URLSearchParams({
-      input: input.trim(),
-      key: apiKey,
-      components: 'country:za',
-      types: 'geocode',
-      language: 'en',
+    const acRes = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+      },
+      body: JSON.stringify({
+        input: input.trim(),
+        includedRegionCodes: ['za'],
+        languageCode: 'en',
+      }),
     });
 
-    const response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`);
-    const data = await response.json();
+    const acData = await acRes.json();
 
-    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      console.error('Google Places API error:', data.status, data.error_message);
+    if (!acRes.ok || acData.error) {
+      console.error('Places API (New) error:', acData.error?.message ?? acData);
+      return new Response(
+        JSON.stringify({ predictions: [], error: acData.error?.message }),
+        { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const predictions = (data.predictions ?? []).map((p: any) => ({
-      place_id: p.place_id,
-      description: p.description,
-    }));
+    const predictions = (acData.suggestions ?? []).map((s: any) => ({
+      place_id: s.placePrediction?.placeId ?? '',
+      description: s.placePrediction?.text?.text ?? s.placePrediction?.structuredFormat?.mainText?.text ?? '',
+    })).filter((p: any) => p.description);
 
     return new Response(
       JSON.stringify({ predictions }),
       { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     );
+
   } catch (err) {
     console.error('places-autocomplete error:', err);
     return new Response(
