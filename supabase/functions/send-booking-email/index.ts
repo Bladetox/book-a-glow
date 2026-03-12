@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       .select(`
         id, booking_date, start_time, end_time, total_amount, deposit_amount,
         is_call_out, call_out_address, call_out_fee, service_ids,
-        tenant_id,
+        tenant_id, guest_email, guest_name, guest_phone,
         client:profiles!bookings_client_id_fkey(full_name, email, phone)
       `)
       .eq("id", booking_id)
@@ -93,8 +93,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    const clientName = (booking.client as any)?.full_name ?? "Client";
-    const clientEmail = (booking.client as any)?.email;
+    // Prefer authenticated profile; fall back to guest fields stored at booking time
+    const clientName  = (booking.client as any)?.full_name ?? (booking as any).guest_name  ?? "Client";
+    const clientEmail = (booking.client as any)?.email      ?? (booking as any).guest_email ?? null;
     const tenantName = tenant?.name ?? "PhenomeBeauty";
     const tenantEmail = tenant?.email ?? "phenomebeauty@gmail.co.za";
     const formattedDate = formatDate(booking.booking_date);

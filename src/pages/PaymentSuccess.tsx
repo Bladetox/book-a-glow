@@ -41,6 +41,11 @@ const PaymentSuccess = () => {
       setLoading(false);
     }
 
+    // Clean the URL so refreshing the page doesn't re-show the success screen
+    // (the booking data is already captured in state above)
+    const cleanUrl = `${window.location.pathname}?confirmed=1`;
+    window.history.replaceState(null, "", cleanUrl);
+
     // Also try DB poll (works for authenticated users; silently falls back to URL data for guests)
     let attempts = 0;
     const poll = async () => {
