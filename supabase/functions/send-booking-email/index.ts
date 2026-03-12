@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch booking with client and tenant details
+    // Fetch booking
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
       .select(`
@@ -61,14 +61,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch tenant details
+    // Fetch tenant (include logo_url)
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("name, email, phone, address")
+      .select("name, email, phone, address, logo_url")
       .eq("id", booking.tenant_id)
       .single();
 
-    // Fetch service names — handle both string[] and JSON-encoded string cases
+    // Fetch app_settings for editable copy
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", booking.tenant_id);
+
+    const settings: Record<string, string> = {};
+    settingsRows?.forEach((r: any) => { if (r.value) settings[r.key] = r.value; });
+
+    // Fetch service names
     let serviceNames = "Beauty Service";
     if (booking.service_ids) {
       let ids: string[] = [];
@@ -93,23 +102,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Prefer authenticated profile; fall back to guest fields stored at booking time
     const clientName  = (booking.client as any)?.full_name ?? (booking as any).guest_name  ?? "Client";
     const clientEmail = (booking.client as any)?.email      ?? (booking as any).guest_email ?? null;
-    const tenantName = tenant?.name ?? "PhenomeBeauty";
+    const tenantName  = tenant?.name ?? "PhenomeBeauty";
     const tenantEmail = tenant?.email ?? "phenomebeauty@gmail.co.za";
-    const formattedDate = formatDate(booking.booking_date);
-    const formattedTime = formatTime(booking.start_time);
-    const depositAmount = `R${parseFloat(booking.deposit_amount).toFixed(2)}`;
-    const totalAmount = `R${parseFloat(booking.total_amount).toFixed(2)}`;
-    const balanceDue = `R${(parseFloat(booking.total_amount) - parseFloat(booking.deposit_amount)).toFixed(2)}`;
-    const location = booking.is_call_out
+    const logoUrl     = (tenant as any)?.logo_url ?? null;
+    const formattedDate  = formatDate(booking.booking_date);
+    const formattedTime  = formatTime(booking.start_time);
+    const depositAmount  = `R${parseFloat(booking.deposit_amount).toFixed(2)}`;
+    const totalAmount    = `R${parseFloat(booking.total_amount).toFixed(2)}`;
+    const balanceDue     = `R${(parseFloat(booking.total_amount) - parseFloat(booking.deposit_amount)).toFixed(2)}`;
+    const location       = booking.is_call_out
       ? `Call-out to ${booking.call_out_address}`
       : tenant?.address ?? "Our Studio";
 
     if (email_type === "booking_confirmed") {
-      // --- Client confirmation email ---
+      // ── CLIENT EMAIL ──────────────────────────────────────────────────────────
       if (clientEmail) {
+        const logoHtml = logoUrl
+          ? `<img src="${logoUrl}" alt="${tenantName}" style="width:60px;height:60px;object-fit:contain;border-radius:10px;margin-bottom:12px;" /><br/>`
+          : "";
+
         const clientHtml = `
 <!DOCTYPE html>
 <html>
@@ -117,6 +130,7 @@ Deno.serve(async (req) => {
 <body style="font-family: -apple-system, sans-serif; background: #f9f9f9; margin: 0; padding: 20px;">
   <div style="max-width: 560px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
     <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 32px; text-align: center;">
+      ${logoHtml}
       <h1 style="color: #fff; margin: 0; font-size: 24px; font-weight: 700;">${tenantName}</h1>
       <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;">Booking Confirmed ✨</p>
     </div>
@@ -146,7 +160,7 @@ Deno.serve(async (req) => {
       <p style="color: #666; font-size: 13px; margin: 0;">Questions? Contact us at <a href="tel:${tenant?.phone}" style="color: #1a1a2e;">${tenant?.phone}</a></p>
     </div>
     <div style="background: #f0f0f0; padding: 16px 32px; text-align: center;">
-      <p style="color: #999; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} ${tenantName} · Powered by Book-a-Glow</p>
+      <p style="color: #999; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot</p>
     </div>
   </div>
 </body>
@@ -158,7 +172,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: `${tenantName} <bookings@nextslot.co.za>`,
             to: [clientEmail],
-            subject: `Booking Confirmed – ${formattedDate} at ${formattedTime}`,
+            subject: `Booking Confirmed \u2013 ${formattedDate} at ${formattedTime}`,
             html: clientHtml,
           }),
         });
@@ -166,21 +180,41 @@ Deno.serve(async (req) => {
         console.log("Client email sent:", JSON.stringify(clientResJson));
       }
 
-      // --- Owner notification email ---
+      // ── ADMIN / OWNER EMAIL ───────────────────────────────────────────────────
       const ownerHtml = `
 <!DOCTYPE html>
 <html>
-<body style="font-family: -apple-system, sans-serif; background: #f9f9f9; margin: 0; padding: 20px;">
-  <div style="max-width: 560px; margin: 0 auto; background: white; border-radius: 16px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-    <h2 style="margin: 0 0 20px; color: #111;">New Booking Confirmed 🎉</h2>
-    <table style="width: 100%; border-collapse: collapse;">
-      <tr><td style="padding: 8px 0; color: #666; width: 35%;">Client</td><td style="padding: 8px 0; color: #111; font-weight: 600;">${clientName}</td></tr>
-      <tr><td style="padding: 8px 0; color: #666;">Service</td><td style="padding: 8px 0; color: #111; font-weight: 600;">${serviceNames}</td></tr>
-      <tr><td style="padding: 8px 0; color: #666;">Date</td><td style="padding: 8px 0; color: #111; font-weight: 600;">${formattedDate}</td></tr>
-      <tr><td style="padding: 8px 0; color: #666;">Time</td><td style="padding: 8px 0; color: #111; font-weight: 600;">${formattedTime}</td></tr>
-      <tr><td style="padding: 8px 0; color: #666;">Location</td><td style="padding: 8px 0; color: #111; font-weight: 600;">${location}</td></tr>
-      <tr><td style="padding: 8px 0; color: #666;">Deposit</td><td style="padding: 8px 0; color: #16a34a; font-weight: 700;">${depositAmount} received</td></tr>
-      <tr><td style="padding: 8px 0; color: #666;">Balance Due</td><td style="padding: 8px 0; color: #111; font-weight: 600;">${balanceDue}</td></tr>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; background-color: #ffffff; color: #000000; }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    h2 { font-size: 18px; font-weight: 700; margin: 0 0 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 10px 0; font-size: 14px; border-bottom: 1px solid #e5e5e5; }
+    td:first-child { color: #555555; width: 38%; }
+    td:last-child { font-weight: 600; color: #000000; }
+    .deposit-val { color: #16a34a !important; }
+    @media (prefers-color-scheme: dark) {
+      body { background-color: #000000 !important; color: #ffffff !important; }
+      td:first-child { color: #aaaaaa !important; }
+      td:last-child { color: #ffffff !important; }
+      td { border-bottom-color: #333333 !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>New booking received</h2>
+    <table>
+      <tr><td>Client</td><td>${clientName}</td></tr>
+      <tr><td>Service</td><td>${serviceNames}</td></tr>
+      <tr><td>Date</td><td>${formattedDate}</td></tr>
+      <tr><td>Time</td><td>${formattedTime}</td></tr>
+      <tr><td>Location</td><td>${location}</td></tr>
+      <tr><td>Deposit received</td><td class="deposit-val">${depositAmount}</td></tr>
+      <tr><td>Balance due</td><td>${balanceDue}</td></tr>
     </table>
   </div>
 </body>
@@ -192,7 +226,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           from: `${tenantName} <bookings@nextslot.co.za>`,
           to: [tenantEmail],
-          subject: `New Booking: ${clientName} – ${formattedDate} at ${formattedTime}`,
+          subject: `New booking received`,
           html: ownerHtml,
         }),
       });

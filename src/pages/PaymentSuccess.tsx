@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,19 +12,23 @@ interface BookingSummary {
   deposit_paid?: boolean;
 }
 
+const REDIRECT_SECONDS = 5;
+
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const config = usePublicBusinessConfig();
   const payment = searchParams.get("payment");
   const bookingId = searchParams.get("booking_id");
+  const tenant = searchParams.get("tenant") ?? "";
 
-  // URL-encoded fallback values (always present for guest users who can't query the DB)
   const urlDate = searchParams.get("date") ?? "";
   const urlTime = searchParams.get("time") ?? "";
   const urlDeposit = searchParams.get("deposit") ? Number(searchParams.get("deposit")) : null;
 
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
   const isSuccess = payment === "success";
   const isCancelled = payment === "cancelled";
@@ -35,18 +39,14 @@ const PaymentSuccess = () => {
       return;
     }
 
-    // Seed from URL params immediately so guests always see their info
     if (urlDate || urlTime || urlDeposit != null) {
       setBooking({ booking_date: urlDate || undefined, start_time: urlTime || undefined, deposit_amount: urlDeposit ?? undefined, deposit_paid: true });
       setLoading(false);
     }
 
-    // Clean the URL so refreshing the page doesn't re-show the success screen
-    // (the booking data is already captured in state above)
     const cleanUrl = `${window.location.pathname}?confirmed=1`;
     window.history.replaceState(null, "", cleanUrl);
 
-    // Also try DB poll (works for authenticated users; silently falls back to URL data for guests)
     let attempts = 0;
     const poll = async () => {
       attempts++;
@@ -67,6 +67,24 @@ const PaymentSuccess = () => {
     };
     poll();
   }, [bookingId, isSuccess]);
+
+  // 5-second countdown redirect on success
+  useEffect(() => {
+    if (!isSuccess || loading) return;
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          navigate(`/?tenant=${tenant}`);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSuccess, loading, navigate, tenant]);
 
   const displayDate = booking?.booking_date
     ? new Date(booking.booking_date).toLocaleDateString("en-ZA", {
@@ -124,10 +142,16 @@ const PaymentSuccess = () => {
 
             <div className="flex flex-col gap-1">
               <h2 className="font-display text-2xl font-bold text-foreground">
-                Deposit Paid
+                {config.confirmationTitle || "Deposit Paid"}
               </h2>
               <p className="text-sm text-muted-foreground italic">You're all confirmed.</p>
             </div>
+
+            {config.confirmationIntro && (
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {config.confirmationIntro}
+              </p>
+            )}
 
             {(displayDate || displayTime || displayDeposit != null) && (
               <motion.div
@@ -157,17 +181,24 @@ const PaymentSuccess = () => {
               </motion.div>
             )}
 
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              A confirmation email is on its way to you.
-            </p>
-
             {config.confirmationOutro && (
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                 {config.confirmationOutro}
               </p>
             )}
 
-            <p className="text-sm font-semibold text-foreground">{config.signOff}</p>
+            {config.signOff && (
+              <p className="text-sm font-semibold text-foreground">{config.signOff}</p>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-2">
+              A confirmation email is on its way to you.
+            </p>
+
+            <p className="text-xs text-muted-foreground/60">
+              Redirecting you back in{" "}
+              <span className="font-semibold text-muted-foreground">{countdown}</span>s…
+            </p>
           </>
         )}
       </motion.div>
