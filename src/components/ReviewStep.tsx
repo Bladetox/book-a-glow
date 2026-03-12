@@ -133,7 +133,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         // Clear the stale selection and send the user back to pick a new time
         onUpdate({ selectedDate: null, selectedTime: null });
         toast.error("That time slot was just taken. Please pick a new time.");
-        onGoToStep(2);
+        onGoToStep(1);
       } else {
         toast.error(msg || "Failed to create booking. Please try again.");
       }
