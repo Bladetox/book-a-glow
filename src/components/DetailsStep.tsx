@@ -81,7 +81,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       return;
     }
 
-    if (query.length < 3) {
+    if (query.length < 5) {
       setAddressSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -322,7 +322,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               value={booking.address}
               onChange={(e) => {
                 onUpdate({ address: e.target.value, distanceKm: null });
-                if (showSuggestions && e.target.value.length < 3) setShowSuggestions(false);
+                if (showSuggestions && e.target.value.length < 5) setShowSuggestions(false);
               }}
               onBlur={() => {
                 markTouched("address");
