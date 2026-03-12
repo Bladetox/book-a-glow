@@ -1,6 +1,5 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { usePublicServices } from "@/hooks/usePublicServices";
-import { resolveStaffId } from "@/hooks/usePublicAvailability";
 import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
@@ -107,7 +106,14 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
 
     try {
       const clientId = await resolveClientId();
-      const staffId = await resolveStaffId();
+      // Look up staff via tenantId from context — works on all domains including custom ones
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("owner_id")
+        .eq("id", tenantId)
+        .single();
+      const staffId = tenantRow?.owner_id;
+      if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
       const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
       const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
 
@@ -154,7 +160,9 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       if (bookingId) {
         const { data: { session } } = await supabase.auth.getSession();
         const origin = window.location.origin;
-        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}`;
+        // Encode booking summary in URL so PaymentSuccess renders correctly for guest (no-auth) users
+        const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
+        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${deposit}`;
         const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
 
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
