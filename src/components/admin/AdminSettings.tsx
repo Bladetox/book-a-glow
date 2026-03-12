@@ -54,7 +54,6 @@ const AdminSettings = () => {
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync tenant + app_settings into draft
   useEffect(() => {
     if (tenant) {
       setDraft((prev) => ({
@@ -190,7 +189,7 @@ const AdminSettings = () => {
           </div>
         )}
         <SettingRow label="Logo URL" placeholder="https://your-logo-url.com/logo.png" value={draft.logo_url} onChange={v => update("logo_url", v)} />
-        <p className="text-[9px] text-white/25 -mt-2">Or upload directly below. Recommended: square, min 200×200px.</p>
+        <p className="text-[9px] text-white/25 -mt-2">Or upload directly below. Recommended: square, min 200\u00d7200px.</p>
         <div className="flex items-center gap-3">
           <button
             onClick={() => logoInputRef.current?.click()}
@@ -198,7 +197,7 @@ const AdminSettings = () => {
             className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
           >
             {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
-            {logoUploading ? "Uploading…" : "Upload File"}
+            {logoUploading ? "Uploading\u2026" : "Upload File"}
           </button>
           <SaveBtn onClick={() => saveTenantFields("logo", ["logo_url"])} loading={updateTenant.isPending} />
           <SavedBadge section="logo" />
@@ -297,19 +296,32 @@ const AdminSettings = () => {
 
       {/* Confirmation Page Copy */}
       <SettingsCard title="Confirmation Page" icon={FileText} gradient="from-white/[0.05] to-white/[0.02]">
-        <SettingRow label="Title" placeholder="A date with yourself" value={draft.confirmation_title} onChange={v => update("confirmation_title", v)} />
+        <SettingRow label="Email Subject" placeholder="Your booking is confirmed" value={draft.confirmation_subject} onChange={v => update("confirmation_subject", v)} />
+        <SettingRow label="Page Title" placeholder="Deposit Paid" value={draft.confirmation_title} onChange={v => update("confirmation_title", v)} />
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Intro Message</label>
           <textarea
-            placeholder="Your intro message..."
+            placeholder="I see you choosing you..."
             value={draft.confirmation_intro ?? ""}
             onChange={(e) => update("confirmation_intro", e.target.value)}
             rows={3}
             className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
           />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Outro / Closing Message</label>
+          <textarea
+            placeholder="We look forward to seeing you."
+            value={draft.confirmation_outro ?? ""}
+            onChange={(e) => update("confirmation_outro", e.target.value)}
+            rows={4}
+            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
+          />
+        </div>
+        <SettingRow label="Sign-off" placeholder="Toodles" value={draft.sign_off} onChange={v => update("sign_off", v)} />
+        <p className="text-[9px] text-white/25 -mt-2">Text shown on the success page after payment. Client auto-redirects to booking page after 5 seconds.</p>
         <div className="flex items-center gap-3">
-          <SaveBtn onClick={() => saveTenantFields("confirmation", ["confirmation_title", "confirmation_intro"])} loading={upsertSetting.isPending} />
+          <SaveBtn onClick={() => saveTenantFields("confirmation", ["confirmation_subject", "confirmation_title", "confirmation_intro", "confirmation_outro", "sign_off"])} loading={upsertSetting.isPending} />
           <SavedBadge section="confirmation" />
         </div>
       </SettingsCard>
