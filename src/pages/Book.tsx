@@ -107,6 +107,8 @@ const Index = () => {
   const selectedServices = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
   const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
+  // Minimum 30 min so the slot query always has a valid range
+  const durationForSlots = Math.max(totalDuration, 30);
 
   return (
     <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-36">
@@ -174,6 +176,7 @@ const Index = () => {
                   selectedTime={booking.selectedTime}
                   onSelectDate={(d) => updateBooking({ selectedDate: d })}
                   onSelectTime={(t) => updateBooking({ selectedTime: t })}
+                  totalDuration={durationForSlots}
                 />
               )}
               {step === 2 && (

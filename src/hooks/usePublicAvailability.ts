@@ -15,13 +15,13 @@ async function getStaffId(tenantId: string): Promise<string> {
 
 /**
  * Fetch a full month of availability (dates with open slots).
- * Returns a map: { "2026-03-10": ["08:00-08:30", "09:00-09:30", ...], ... }
+ * Duration-aware: only marks a day available if it has slots that fit the full service duration.
  */
-export function useMonthAvailability(year: number, month: number) {
+export function useMonthAvailability(year: number, month: number, durationMinutes: number = 60) {
   const { tenantId } = usePublicTenant();
 
   return useQuery({
-    queryKey: ["public-month-availability", tenantId, year, month],
+    queryKey: ["public-month-availability", tenantId, year, month, durationMinutes],
     enabled: !!tenantId,
     queryFn: async () => {
       const staffId = await getStaffId(tenantId);
@@ -43,13 +43,13 @@ export function useMonthAvailability(year: number, month: number) {
 
 /**
  * Fetch available time slots for a specific date.
- * Returns array of "HH:MM" strings for available slots.
+ * Passes durationMinutes to DB so only slots with enough consecutive free time are returned.
  */
-export function useDateSlots(date: string | null) {
+export function useDateSlots(date: string | null, durationMinutes: number = 60) {
   const { tenantId } = usePublicTenant();
 
   return useQuery({
-    queryKey: ["public-date-slots", tenantId, date],
+    queryKey: ["public-date-slots", tenantId, date, durationMinutes],
     enabled: !!date && !!tenantId,
     queryFn: async () => {
       if (!date) return [];
@@ -57,6 +57,7 @@ export function useDateSlots(date: string | null) {
       const { data, error } = await supabase.rpc("get_available_slots", {
         p_staff_id: staffId,
         p_date: date,
+        p_duration_minutes: durationMinutes,
       });
       if (error) throw error;
       return (data ?? [])
@@ -73,9 +74,8 @@ export function useResolveStaffId() {
   return async () => getStaffId(tenantId);
 }
 
-// Keep backward-compat export for ReviewStep (will be migrated)
+// Keep backward-compat export for ReviewStep
 export async function resolveStaffId(): Promise<string> {
-  // Fallback: reads from tenant resolver
   const { getTenantSlug } = await import("@/lib/tenant-resolver");
   const slug = getTenantSlug();
   if (!slug) throw new Error("No tenant context");

@@ -9,17 +9,20 @@ interface ScheduleStepProps {
   selectedTime: string | null;
   onSelectDate: (date: Date) => void;
   onSelectTime: (time: string) => void;
+  totalDuration: number; // minutes — used to filter slots
 }
 
-const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime }: ScheduleStepProps) => {
+const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, totalDuration }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
-  const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(year, month);
+  // Pass duration so month view only highlights days that can actually fit the booking
+  const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(year, month, totalDuration);
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
-  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr);
+  // Pass duration so only slots with enough consecutive free time are shown
+  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr, totalDuration);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
