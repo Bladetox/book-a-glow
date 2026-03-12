@@ -12,29 +12,33 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { input, origin, tenant_id } = body;
+    const { input, origin: distanceOrigin, tenant_id: bodyTenantId } = body;
 
-    // --- Resolve the Google Maps API key from app_settings (DB), not env ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    let apiKey: string | null = null;
+    // Resolve tenant_id: body > Origin header subdomain > skip
+    let tenantId = bodyTenantId ?? null;
+    if (!tenantId) {
+      const reqOrigin = req.headers.get('Origin') ?? req.headers.get('Referer') ?? '';
+      // e.g. https://phenomebeauty.nextslot.co.za  ->  phenomebeauty
+      const sub = reqOrigin.match(/https?:\/\/([^.]+)\.nextslot\.co\.za/);
+      if (sub) tenantId = sub[1];
+    }
 
-    if (tenant_id) {
+    // Fetch API key from DB (preferred) then fall back to Supabase secret
+    let apiKey: string | null = null;
+    if (tenantId) {
       const { data } = await supabase
         .from('app_settings')
         .select('value')
-        .eq('tenant_id', tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('key', 'google_maps_api_key')
         .maybeSingle();
       apiKey = data?.value ?? null;
     }
-
-    // Fallback to Supabase secret (manual override / local dev)
-    if (!apiKey) {
-      apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? null;
-    }
+    if (!apiKey) apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? null;
 
     if (!apiKey) {
       return new Response(
@@ -43,23 +47,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Distance Matrix mode: origin + destination provided ---
-    if (origin && input) {
+    // --- Distance Matrix mode ---
+    if (distanceOrigin && input) {
       const dmParams = new URLSearchParams({
-        origins: origin,
+        origins: distanceOrigin,
         destinations: input,
         key: apiKey,
         units: 'metric',
         region: 'za',
       });
-      const dmUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?${dmParams}`;
-      const dmRes = await fetch(dmUrl);
+      const dmRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?${dmParams}`);
       const dmData = await dmRes.json();
-
       const element = dmData?.rows?.[0]?.elements?.[0];
       if (element?.status === 'OK') {
-        const distanceMeters = element.distance.value;
-        const distanceKm = Math.round((distanceMeters / 1000) * 10) / 10;
+        const distanceKm = Math.round((element.distance.value / 1000) * 10) / 10;
         return new Response(
           JSON.stringify({ distanceKm }),
           { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Autocomplete mode: input only ---
+    // --- Autocomplete mode ---
     if (!input || typeof input !== 'string' || input.trim().length < 5) {
       return new Response(
         JSON.stringify({ predictions: [] }),
@@ -87,8 +88,7 @@ Deno.serve(async (req) => {
       language: 'en',
     });
 
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`;
-    const response = await fetch(url);
+    const response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`);
     const data = await response.json();
 
     if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
