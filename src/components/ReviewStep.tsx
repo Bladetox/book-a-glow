@@ -45,8 +45,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
     setSubmitting(true);
 
     try {
-      // Clients are always guests — no auth account required.
-      const clientId = null;
+      const clientId = null; // always guest — no auth required
 
       const { data: tenantRow } = await supabase
         .from("tenants")
@@ -67,9 +66,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         }
       });
 
-      // NOTE: p_client_email / p_client_name / p_client_phone have been removed.
-      // The current DB function signature (20260311_splash_logo_rls_booking_fix.sql)
-      // does NOT include these params. Passing them caused PGRST203 ambiguity.
+      // Compose full phone string for storage e.g. "+27 821234567"
+      const guestPhone = `${booking.phoneCode} ${booking.phone}`.trim();
+
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
         p_client_id: clientId,
         p_staff_id: staffId,
@@ -91,6 +90,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         p_physical_factors: safetyMap[7] === "Yes" ? "Flagged by client" : null,
         p_hair_length_ok: safetyMap[8] === "No" ? "No - insufficient growth" : "Yes",
         p_additional_notes: booking.additionalNotes || null,
+        // Guest contact — stored on booking row so emails & admin view work
+        p_guest_name: booking.fullName || null,
+        p_guest_email: booking.email || null,
+        p_guest_phone: guestPhone || null,
       });
 
       if (error) throw error;
@@ -124,8 +127,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       console.error("Booking error:", err);
       const msg: string = err.message || "";
       const code: string = (err as any)?.code || "";
-      // Only treat as slot-taken if the DB function itself returned a slot conflict message,
-      // NOT for PGRST203 (function overload ambiguity) or other infrastructure errors.
       const slotTaken =
         code !== "PGRST203" &&
         /time.*already booked|slot.*taken|no longer available|is not available/i.test(msg);
