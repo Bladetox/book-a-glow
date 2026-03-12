@@ -11,20 +11,14 @@ async function verifyYocoSignature(
   secret: string
 ): Promise<boolean> {
   const encoder = new TextEncoder();
-  // Use the secret as raw UTF-8 bytes (the whsec_ string itself is the key)
   const keyBytes = encoder.encode(secret);
-
   const cryptoKey = await crypto.subtle.importKey(
     "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const signature = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
-
-  // Yoco sends signature as base64 (per API guide)
   const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
-
   console.log("Computed signature (b64):", computedB64);
   console.log("Received signature:", signatureHeader);
-
   return computedB64 === signatureHeader;
 }
 
@@ -95,7 +89,7 @@ Deno.serve(async (req) => {
     }
 
     const checkoutId = payload?.metadata?.checkoutId ?? payload?.checkoutId;
-    const bookingId = payload?.metadata?.booking_id;
+    const bookingId  = payload?.metadata?.booking_id;
     const transactionId = payload?.id;
 
     console.log("Identifiers — bookingId:", bookingId, "checkoutId:", checkoutId);
@@ -108,6 +102,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── STEP 1: Fetch booking (read-only, just to get metadata) ─────────────────
     let bookingQuery = supabase
       .from("bookings")
       .select("id, client_id, tenant_id, deposit_amount, deposit_paid");
@@ -128,22 +123,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (booking.deposit_paid) {
-      console.log("Deposit already paid for booking:", booking.id);
-      return new Response(
-        JSON.stringify({ received: true, already_paid: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { error: updateErr } = await supabase
+    // ── STEP 2: ATOMIC update — only succeeds if deposit_paid is still false ─────
+    // Using .select() + count so we know if THIS request was the one that did it.
+    // If Yoco fires twice simultaneously, only one will get count > 0.
+    const { data: updatedRows, error: updateErr } = await supabase
       .from("bookings")
       .update({
         deposit_paid: true,
         status: "confirmed",
         confirmed_at: new Date().toISOString(),
       })
-      .eq("id", booking.id);
+      .eq("id", booking.id)
+      .eq("deposit_paid", false)   // ← atomic guard: only matches unpaid bookings
+      .select("id");              // returns the rows that were actually updated
 
     if (updateErr) {
       console.error("Failed to update booking:", updateErr);
@@ -153,27 +145,38 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If no rows were updated, this is a duplicate webhook — another request
+    // already processed this payment. Return 200 immediately, no email sent.
+    if (!updatedRows || updatedRows.length === 0) {
+      console.log("Duplicate webhook — booking already processed:", booking.id);
+      return new Response(
+        JSON.stringify({ received: true, already_paid: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── STEP 3: Only ONE request reaches here — safe to insert payment + email ──
+    console.log("Deposit confirmed for booking:", booking.id);
+
     await supabase.from("payments").insert({
       booking_id: booking.id,
-      client_id: booking.client_id,
-      tenant_id: booking.tenant_id ?? tenantId,
-      amount: booking.deposit_amount,
-      payment_type: "deposit",
+      client_id:  booking.client_id,
+      tenant_id:  booking.tenant_id ?? tenantId,
+      amount:     booking.deposit_amount,
+      payment_type:   "deposit",
       payment_method: "card",
-      gateway: "yoco",
-      status: "completed",
+      gateway:        "yoco",
+      status:         "completed",
       transaction_id: transactionId,
-      completed_at: new Date().toISOString(),
+      completed_at:   new Date().toISOString(),
     });
-
-    console.log("Deposit confirmed for booking:", booking.id);
 
     // Trigger confirmation email — non-fatal
     try {
       const emailRes = await supabase.functions.invoke("send-booking-email", {
         body: {
           booking_id: booking.id,
-          tenant_id: booking.tenant_id ?? tenantId,
+          tenant_id:  booking.tenant_id ?? tenantId,
           email_type: "booking_confirmed",
         },
       });
@@ -186,6 +189,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ received: true, booking_id: booking.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err) {
     console.error("Webhook unhandled error:", err);
     return new Response(
