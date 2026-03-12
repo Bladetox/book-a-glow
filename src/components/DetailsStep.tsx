@@ -44,7 +44,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const [addressLoading, setAddressLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
-  const suppressBlurRef = useRef(false);
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -74,15 +73,18 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const query = booking.address.trim();
+
     if (justSelectedRef.current) {
       justSelectedRef.current = false;
       return;
     }
+
     if (query.length < 3) {
       setAddressSuggestions([]);
       setShowSuggestions(false);
       return;
     }
+
     debounceRef.current = setTimeout(async () => {
       setAddressLoading(true);
       try {
@@ -100,17 +102,17 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         setAddressLoading(false);
       }
     }, 350);
+
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [booking.address]);
 
   const handleSelectSuggestion = async (description: string) => {
     justSelectedRef.current = true;
-    suppressBlurRef.current = false;
     onUpdate({ address: description, distanceKm: null });
     setShowSuggestions(false);
     setAddressSuggestions([]);
     markTouched("address");
-    // Silently calculate distance in background for ReviewStep fee calc — not shown to client
+    // Silently calculate distance in background for ReviewStep fee calc
     const origin = config.address;
     if (!origin) return;
     try {
@@ -294,58 +296,69 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/* Address — dropdown renders outside normal flow so it's never clipped */}
-        <div className="relative" style={{ zIndex: 40 }}>
-          <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-          {addressLoading && (
-            <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
-          )}
-          <input
-            className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
-            placeholder="Home Address *"
-            value={booking.address}
-            onChange={(e) => {
-              onUpdate({ address: e.target.value, distanceKm: null });
-              if (showSuggestions && e.target.value.length < 3) setShowSuggestions(false);
-            }}
-            onBlur={() => {
-              markTouched("address");
-              setTimeout(() => {
-                if (!suppressBlurRef.current) setShowSuggestions(false);
-                suppressBlurRef.current = false;
-              }, 300);
-            }}
-            onFocus={() => {
-              if (addressSuggestions.length > 0) setShowSuggestions(true);
-            }}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
+        {/*
+          Address field.
+          Suggestions render INLINE (not absolutely positioned) so the parent card
+          grows naturally. This bypasses the overflowX:clip stacking context in Book.tsx
+          that was clipping the overlay dropdown entirely.
+        */}
+        <div>
+          <div className="relative">
+            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
+            {addressLoading && (
+              <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+            )}
+            <input
+              className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
+              placeholder="Home Address *"
+              value={booking.address}
+              onChange={(e) => {
+                onUpdate({ address: e.target.value, distanceKm: null });
+                if (e.target.value.length < 3) setShowSuggestions(false);
+              }}
+              onBlur={() => {
+                markTouched("address");
+                // Delay gives onMouseDown / onTouchEnd on suggestions time to fire first
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              onFocus={() => {
+                if (addressSuggestions.length > 0) setShowSuggestions(true);
+              }}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </div>
 
+          {/* Inline suggestion list — animates open/closed, card grows to fit */}
           <AnimatePresence>
             {showSuggestions && addressSuggestions.length > 0 && (
               <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15 }}
-                onMouseDown={() => { suppressBlurRef.current = true; }}
-                onTouchStart={() => { suppressBlurRef.current = true; }}
-                className="absolute top-full left-0 right-0 z-50 mt-1 glass-card rounded-2xl shadow-xl"
-                style={{ overflow: "visible" }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                className="overflow-hidden"
               >
-                <div className="rounded-2xl overflow-hidden">
-                  {addressSuggestions.map((s) => (
+                <div className="mt-1 rounded-2xl overflow-hidden border border-border/40 bg-background/80 backdrop-blur-sm shadow-sm">
+                  {addressSuggestions.map((s, idx) => (
                     <button
                       key={s.place_id}
                       type="button"
-                      onMouseDown={() => handleSelectSuggestion(s.description)}
-                      onTouchEnd={(e) => { e.preventDefault(); handleSelectSuggestion(s.description); }}
-                      className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors border-b border-border/20 last:border-0 flex items-start gap-2"
+                      onMouseDown={(e) => {
+                        // preventDefault stops onBlur firing before this click resolves
+                        e.preventDefault();
+                        handleSelectSuggestion(s.description);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleSelectSuggestion(s.description);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
+                        ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
                     >
-                      <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{s.description}</span>
+                      <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      <span>{s.description}</span>
                     </button>
                   ))}
                 </div>
@@ -353,7 +366,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             )}
           </AnimatePresence>
 
-          {/* Helper text — no distance shown to client */}
           {!showSuggestions && (
             <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
               Used to calculate your call-out fee
