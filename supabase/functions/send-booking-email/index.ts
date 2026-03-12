@@ -108,13 +108,17 @@ Deno.serve(async (req) => {
     const clientEmail = (booking.client as any)?.email      ?? (booking as any).guest_email ?? null;
     const tenantName  = tenant?.name  ?? "PhenomeBeauty";
     // Hard fallback so admin email always has a valid recipient
-    const tenantEmail = (tenant?.email && tenant.email.trim() !== "") ? tenant.email.trim() : "phenomebeauty@gmail.co.za";
+    const tenantEmail = (tenant?.email && tenant.email.trim() !== "") ? tenant.email.trim() : "phenomebeauty@gmail.com";
     const logoUrl     = (tenant as any)?.logo_url ?? null;
     const formattedDate = formatDate(booking.booking_date);
     const formattedTime = formatTime(booking.start_time);
-    const depositAmount = `R${parseFloat(booking.deposit_amount).toFixed(2)}`;
-    const totalAmount   = `R${parseFloat(booking.total_amount).toFixed(2)}`;
-    const balanceDue    = `R${(parseFloat(booking.total_amount) - parseFloat(booking.deposit_amount)).toFixed(2)}`;
+    // Amounts — Math.round guards against floating-point drift before toFixed
+    const rawTotal   = Math.round(parseFloat(booking.total_amount) * 100) / 100;
+    const rawDeposit = Math.round(parseFloat(booking.deposit_amount) * 100) / 100;
+    const rawBalance = Math.round((rawTotal - rawDeposit) * 100) / 100;
+    const totalAmount   = `R${rawTotal.toFixed(2)}`;
+    const depositAmount = `R${rawDeposit.toFixed(2)}`;
+    const balanceDue    = `R${rawBalance.toFixed(2)}`;
     const location      = booking.is_call_out
       ? `Call-out to ${booking.call_out_address}`
       : tenant?.address ?? "Our Studio";
