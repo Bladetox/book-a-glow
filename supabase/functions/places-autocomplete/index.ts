@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
     }
 
     // --- Autocomplete mode (Legacy Places API) ---
+    // Min 3 chars — consistent with UX debounce threshold
     if (!input || typeof input !== 'string' || input.trim().length < 3) {
       return new Response(
         JSON.stringify({ predictions: [] }),
