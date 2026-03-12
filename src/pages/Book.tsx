@@ -42,7 +42,7 @@ const stepVariants = {
 };
 
 const Index = () => {
-  const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep } = useBooking();
+  const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep, setStep } = useBooking();
   const { data: treatments = [] } = usePublicServices();
   const { tenantId, loading: tenantLoading } = usePublicTenant();
   const config = usePublicBusinessConfig();
