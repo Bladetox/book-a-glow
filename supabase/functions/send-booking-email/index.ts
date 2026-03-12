@@ -20,6 +20,14 @@ function formatTime(timeStr: string): string {
   return `${displayHour}:${m} ${ampm}`;
 }
 
+// Inline-style email rows — no CSS classes, works in all email clients
+function row(label: string, value: string, bold = false): string {
+  return `<tr>
+    <td style="padding:10px 0;font-size:14px;border-bottom:1px solid #cccccc;color:#555555;width:40%;font-family:-apple-system,sans-serif;">${label}</td>
+    <td style="padding:10px 0;font-size:14px;border-bottom:1px solid #cccccc;color:#000000;font-weight:${bold ? "700" : "600"};font-family:-apple-system,sans-serif;">${value}</td>
+  </tr>`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -54,26 +62,25 @@ Deno.serve(async (req) => {
       .single();
 
     if (bookingErr || !booking) {
-      console.error("Booking not found for email:", booking_id, bookingErr);
+      console.error("Booking not found:", booking_id, bookingErr);
       return new Response(JSON.stringify({ error: "Booking not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch tenant (include logo_url)
+    // Fetch tenant
     const { data: tenant } = await supabase
       .from("tenants")
       .select("name, email, phone, address, logo_url")
       .eq("id", booking.tenant_id)
       .single();
 
-    // Fetch app_settings for editable copy
+    // Fetch app_settings
     const { data: settingsRows } = await supabase
       .from("app_settings")
       .select("key, value")
       .eq("tenant_id", booking.tenant_id);
-
     const settings: Record<string, string> = {};
     settingsRows?.forEach((r: any) => { if (r.value) settings[r.key] = r.value; });
 
@@ -92,77 +99,144 @@ Deno.serve(async (req) => {
         }
       }
       if (ids.length > 0) {
-        const { data: services } = await supabase
-          .from("services")
-          .select("name")
-          .in("id", ids);
-        if (services && services.length > 0) {
-          serviceNames = services.map((s: any) => s.name).join(", ");
-        }
+        const { data: services } = await supabase.from("services").select("name").in("id", ids);
+        if (services && services.length > 0) serviceNames = services.map((s: any) => s.name).join(", ");
       }
     }
 
     const clientName  = (booking.client as any)?.full_name ?? (booking as any).guest_name  ?? "Client";
     const clientEmail = (booking.client as any)?.email      ?? (booking as any).guest_email ?? null;
-    const tenantName  = tenant?.name ?? "PhenomeBeauty";
-    const tenantEmail = tenant?.email ?? "phenomebeauty@gmail.co.za";
+    const tenantName  = tenant?.name  ?? "PhenomeBeauty";
+    // Hard fallback so admin email always has a valid recipient
+    const tenantEmail = (tenant?.email && tenant.email.trim() !== "") ? tenant.email.trim() : "phenomebeauty@gmail.co.za";
     const logoUrl     = (tenant as any)?.logo_url ?? null;
-    const formattedDate  = formatDate(booking.booking_date);
-    const formattedTime  = formatTime(booking.start_time);
-    const depositAmount  = `R${parseFloat(booking.deposit_amount).toFixed(2)}`;
-    const totalAmount    = `R${parseFloat(booking.total_amount).toFixed(2)}`;
-    const balanceDue     = `R${(parseFloat(booking.total_amount) - parseFloat(booking.deposit_amount)).toFixed(2)}`;
-    const location       = booking.is_call_out
+    const formattedDate = formatDate(booking.booking_date);
+    const formattedTime = formatTime(booking.start_time);
+    const depositAmount = `R${parseFloat(booking.deposit_amount).toFixed(2)}`;
+    const totalAmount   = `R${parseFloat(booking.total_amount).toFixed(2)}`;
+    const balanceDue    = `R${(parseFloat(booking.total_amount) - parseFloat(booking.deposit_amount)).toFixed(2)}`;
+    const location      = booking.is_call_out
       ? `Call-out to ${booking.call_out_address}`
       : tenant?.address ?? "Our Studio";
 
+    console.log("Admin email recipient:", tenantEmail);
+
     if (email_type === "booking_confirmed") {
-      // ── CLIENT EMAIL ──────────────────────────────────────────────────────────
+
+      // ── CLIENT EMAIL ─────────────────────────────────────────────────────────
+      // Fully inline, B&W, adapts to device colour scheme via color-scheme meta
       if (clientEmail) {
         const logoHtml = logoUrl
-          ? `<img src="${logoUrl}" alt="${tenantName}" style="width:60px;height:60px;object-fit:contain;border-radius:10px;margin-bottom:12px;" /><br/>`
+          ? `<img src="${logoUrl}" alt="${tenantName}" style="width:56px;height:56px;object-fit:contain;border-radius:8px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;" />`
           : "";
 
-        const clientHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f9f9f9; margin: 0; padding: 20px;">
-  <div style="max-width: 560px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 32px; text-align: center;">
-      ${logoHtml}
-      <h1 style="color: #fff; margin: 0; font-size: 24px; font-weight: 700;">${tenantName}</h1>
-      <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;">Booking Confirmed ✨</p>
-    </div>
-    <div style="padding: 32px;">
-      <p style="color: #333; font-size: 16px; margin: 0 0 24px;">Hi <strong>${clientName}</strong>, your booking is confirmed and your deposit has been received!</p>
-      
-      <div style="background: #f8f8f8; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-        <h3 style="margin: 0 0 16px; color: #111; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em;">Booking Details</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 6px 0; color: #666; font-size: 14px; width: 40%;">Service</td><td style="padding: 6px 0; color: #111; font-size: 14px; font-weight: 600;">${serviceNames}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666; font-size: 14px;">Date</td><td style="padding: 6px 0; color: #111; font-size: 14px; font-weight: 600;">${formattedDate}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666; font-size: 14px;">Time</td><td style="padding: 6px 0; color: #111; font-size: 14px; font-weight: 600;">${formattedTime}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666; font-size: 14px;">Location</td><td style="padding: 6px 0; color: #111; font-size: 14px; font-weight: 600;">${location}</td></tr>
-        </table>
-      </div>
+        const clientHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <style>
+    :root { color-scheme: light dark; }
+    @media (prefers-color-scheme: dark) {
+      .email-body  { background-color: #000000 !important; }
+      .email-card  { background-color: #111111 !important; border-color: #333333 !important; }
+      .email-header{ background-color: #111111 !important; border-bottom: 1px solid #333333 !important; }
+      .email-section { background-color: #1a1a1a !important; }
+      .text-main   { color: #ffffff !important; }
+      .text-label  { color: #999999 !important; }
+      .text-value  { color: #ffffff !important; }
+      .text-footer { color: #666666 !important; }
+      .divider     { border-bottom-color: #333333 !important; }
+    }
+  </style>
+</head>
+<body class="email-body" style="margin:0;padding:20px;background-color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    <tr><td align="center">
+      <table class="email-card" width="560" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;border:1px solid #e0e0e0;overflow:hidden;">
 
-      <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-        <h3 style="margin: 0 0 16px; color: #111; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em;">Payment Summary</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 6px 0; color: #666; font-size: 14px;">Total</td><td style="padding: 6px 0; color: #111; font-size: 14px; font-weight: 600;">${totalAmount}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666; font-size: 14px;">Deposit Paid ✅</td><td style="padding: 6px 0; color: #16a34a; font-size: 14px; font-weight: 700;">${depositAmount}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666; font-size: 14px;">Balance Due</td><td style="padding: 6px 0; color: #111; font-size: 14px; font-weight: 600;">${balanceDue}</td></tr>
-        </table>
-        <p style="margin: 12px 0 0; font-size: 12px; color: #666;">Balance is due on the day of your appointment.</p>
-      </div>
+        <!-- Header -->
+        <tr>
+          <td class="email-header" style="padding:28px 32px;text-align:center;background-color:#ffffff;border-bottom:1px solid #e0e0e0;">
+            ${logoHtml}
+            <p class="text-main" style="margin:0;font-size:20px;font-weight:700;color:#000000;">${tenantName}</p>
+            <p class="text-label" style="margin:6px 0 0;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#777777;">Booking Confirmed</p>
+          </td>
+        </tr>
 
-      <p style="color: #666; font-size: 13px; margin: 0;">Questions? Contact us at <a href="tel:${tenant?.phone}" style="color: #1a1a2e;">${tenant?.phone}</a></p>
-    </div>
-    <div style="background: #f0f0f0; padding: 16px 32px; text-align: center;">
-      <p style="color: #999; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot</p>
-    </div>
-  </div>
+        <!-- Greeting -->
+        <tr>
+          <td style="padding:24px 32px 8px;">
+            <p class="text-main" style="margin:0;font-size:15px;color:#000000;">Hi <strong>${clientName}</strong>, your booking is confirmed and your deposit has been received.</p>
+          </td>
+        </tr>
+
+        <!-- Booking Details -->
+        <tr>
+          <td style="padding:16px 32px;">
+            <p class="text-label" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#777777;">Booking Details</p>
+            <table class="email-section" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f7f7f7;border-radius:8px;padding:4px 16px;">
+              <tr>
+                <td class="text-label divider" style="padding:10px 0;font-size:13px;color:#666666;width:42%;border-bottom:1px solid #e0e0e0;">Service</td>
+                <td class="text-value divider" style="padding:10px 0;font-size:13px;font-weight:600;color:#000000;border-bottom:1px solid #e0e0e0;">${serviceNames}</td>
+              </tr>
+              <tr>
+                <td class="text-label divider" style="padding:10px 0;font-size:13px;color:#666666;border-bottom:1px solid #e0e0e0;">Date</td>
+                <td class="text-value divider" style="padding:10px 0;font-size:13px;font-weight:600;color:#000000;border-bottom:1px solid #e0e0e0;">${formattedDate}</td>
+              </tr>
+              <tr>
+                <td class="text-label divider" style="padding:10px 0;font-size:13px;color:#666666;border-bottom:1px solid #e0e0e0;">Time</td>
+                <td class="text-value divider" style="padding:10px 0;font-size:13px;font-weight:600;color:#000000;border-bottom:1px solid #e0e0e0;">${formattedTime}</td>
+              </tr>
+              <tr>
+                <td class="text-label" style="padding:10px 0;font-size:13px;color:#666666;">Location</td>
+                <td class="text-value" style="padding:10px 0;font-size:13px;font-weight:600;color:#000000;">${location}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Payment Summary -->
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <p class="text-label" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#777777;">Payment Summary</p>
+            <table class="email-section" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f7f7f7;border-radius:8px;padding:4px 16px;">
+              <tr>
+                <td class="text-label divider" style="padding:10px 0;font-size:13px;color:#666666;width:42%;border-bottom:1px solid #e0e0e0;">Total</td>
+                <td class="text-value divider" style="padding:10px 0;font-size:13px;font-weight:600;color:#000000;border-bottom:1px solid #e0e0e0;">${totalAmount}</td>
+              </tr>
+              <tr>
+                <td class="text-label divider" style="padding:10px 0;font-size:13px;color:#666666;border-bottom:1px solid #e0e0e0;">Deposit Paid</td>
+                <td class="text-value divider" style="padding:10px 0;font-size:13px;font-weight:700;color:#000000;border-bottom:1px solid #e0e0e0;">${depositAmount} &#10003;</td>
+              </tr>
+              <tr>
+                <td class="text-label" style="padding:10px 0;font-size:13px;color:#666666;">Balance Due</td>
+                <td class="text-value" style="padding:10px 0;font-size:13px;font-weight:600;color:#000000;">${balanceDue}</td>
+              </tr>
+            </table>
+            <p class="text-label" style="margin:8px 0 0;font-size:11px;color:#888888;">Balance is due on the day of your appointment.</p>
+          </td>
+        </tr>
+
+        <!-- Contact -->
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <p class="text-label" style="margin:0;font-size:13px;color:#666666;">Questions? <a href="tel:${tenant?.phone}" style="color:#000000;font-weight:600;">${tenant?.phone}</a></p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td class="email-section" style="padding:14px 32px;text-align:center;background-color:#f0f0f0;">
+            <p class="text-footer" style="margin:0;font-size:11px;color:#999999;">&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 
@@ -176,47 +250,52 @@ Deno.serve(async (req) => {
             html: clientHtml,
           }),
         });
-        const clientResJson = await clientRes.json();
-        console.log("Client email sent:", JSON.stringify(clientResJson));
+        console.log("Client email result:", JSON.stringify(await clientRes.json()));
       }
 
-      // ── ADMIN / OWNER EMAIL ───────────────────────────────────────────────────
-      const ownerHtml = `
-<!DOCTYPE html>
-<html>
+      // ── ADMIN / OWNER EMAIL ──────────────────────────────────────────────────
+      // Plain B&W inline table — no colours at all, adapts to mail client theme
+      const ownerHtml = `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; background-color: #ffffff; color: #000000; }
-    .wrap { max-width: 520px; margin: 0 auto; }
-    h2 { font-size: 18px; font-weight: 700; margin: 0 0 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    td { padding: 10px 0; font-size: 14px; border-bottom: 1px solid #e5e5e5; }
-    td:first-child { color: #555555; width: 38%; }
-    td:last-child { font-weight: 600; color: #000000; }
-    .deposit-val { color: #16a34a !important; }
+    :root { color-scheme: light dark; }
     @media (prefers-color-scheme: dark) {
-      body { background-color: #000000 !important; color: #ffffff !important; }
-      td:first-child { color: #aaaaaa !important; }
-      td:last-child { color: #ffffff !important; }
-      td { border-bottom-color: #333333 !important; }
+      .ow-body  { background-color: #000000 !important; }
+      .ow-wrap  { background-color: #111111 !important; border-color: #333333 !important; }
+      .ow-title { color: #ffffff !important; }
+      .ow-label { color: #aaaaaa !important; }
+      .ow-value { color: #ffffff !important; }
+      .ow-div   { border-bottom-color: #333333 !important; }
     }
   </style>
 </head>
-<body>
-  <div class="wrap">
-    <h2>New booking received</h2>
-    <table>
-      <tr><td>Client</td><td>${clientName}</td></tr>
-      <tr><td>Service</td><td>${serviceNames}</td></tr>
-      <tr><td>Date</td><td>${formattedDate}</td></tr>
-      <tr><td>Time</td><td>${formattedTime}</td></tr>
-      <tr><td>Location</td><td>${location}</td></tr>
-      <tr><td>Deposit received</td><td class="deposit-val">${depositAmount}</td></tr>
-      <tr><td>Balance due</td><td>${balanceDue}</td></tr>
-    </table>
-  </div>
+<body class="ow-body" style="margin:0;padding:24px;background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+  <table class="ow-wrap" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:520px;margin:0 auto;background-color:#ffffff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
+    <tr>
+      <td style="padding:24px 28px 8px;">
+        <p class="ow-title" style="margin:0 0 20px;font-size:18px;font-weight:700;color:#000000;">New booking received</p>
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+          ${row("Client", clientName)}
+          ${row("Service", serviceNames)}
+          ${row("Date", formattedDate)}
+          ${row("Time", formattedTime)}
+          ${row("Location", location)}
+          ${row("Deposit received", depositAmount, true)}
+          ${row("Balance due", balanceDue)}
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 28px;">
+        <p style="margin:0;font-size:11px;color:#999999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 
@@ -226,12 +305,11 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           from: `${tenantName} <bookings@nextslot.co.za>`,
           to: [tenantEmail],
-          subject: `New booking received`,
+          subject: "New booking received",
           html: ownerHtml,
         }),
       });
-      const ownerResJson = await ownerRes.json();
-      console.log("Owner email sent:", JSON.stringify(ownerResJson));
+      console.log("Owner email result:", JSON.stringify(await ownerRes.json()));
     }
 
     return new Response(

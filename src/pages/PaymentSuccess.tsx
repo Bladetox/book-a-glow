@@ -12,7 +12,7 @@ interface BookingSummary {
   deposit_paid?: boolean;
 }
 
-const REDIRECT_SECONDS = 5;
+const REDIRECT_SECONDS = 8;
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -68,7 +68,7 @@ const PaymentSuccess = () => {
     poll();
   }, [bookingId, isSuccess]);
 
-  // 5-second countdown redirect on success
+  // 8-second countdown redirect on success
   useEffect(() => {
     if (!isSuccess || loading) return;
 
