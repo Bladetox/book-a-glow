@@ -4,6 +4,7 @@ import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Sparkles, X, Loader2 } from "lucide-react";
@@ -13,13 +14,16 @@ import { toast } from "sonner";
 
 interface ReviewStepProps {
   booking: BookingState;
+  onUpdate: (updates: Partial<BookingState>) => void;
+  onGoToStep: (step: number) => void;
 }
 
-const ReviewStep = ({ booking }: ReviewStepProps) => {
+const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
+  const queryClient = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -118,7 +122,19 @@ const ReviewStep = ({ booking }: ReviewStepProps) => {
       toast.success("Booking created successfully!");
     } catch (err: any) {
       console.error("Booking error:", err);
-      toast.error(err.message || "Failed to create booking. Please try again.");
+      const msg: string = err.message || "";
+      const slotTaken = /slot|time|already booked|unavailable|available/i.test(msg);
+      if (slotTaken) {
+        // Invalidate availability so the calendar shows fresh data
+        queryClient.invalidateQueries({ queryKey: ["public-date-slots"] });
+        queryClient.invalidateQueries({ queryKey: ["public-month-availability"] });
+        // Clear the stale selection and send the user back to pick a new time
+        onUpdate({ selectedDate: null, selectedTime: null });
+        toast.error("That time slot was just taken. Please pick a new time.");
+        onGoToStep(1);
+      } else {
+        toast.error(msg || "Failed to create booking. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }

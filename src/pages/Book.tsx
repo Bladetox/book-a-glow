@@ -179,7 +179,13 @@ const Index = () => {
               {step === 2 && (
                 <DetailsStep booking={booking} onUpdate={updateBooking} />
               )}
-              {step === 3 && <ReviewStep booking={booking} />}
+              {step === 3 && (
+                <ReviewStep
+                  booking={booking}
+                  onUpdate={updateBooking}
+                  onGoToStep={(s) => { setDirection(-1); setStep(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
