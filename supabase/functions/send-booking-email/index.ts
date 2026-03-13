@@ -105,7 +105,12 @@ Deno.serve(async (req) => {
     const clientName    = (booking.client as any)?.full_name ?? (booking as any).guest_name  ?? "Client";
     const clientEmail   = (booking.client as any)?.email      ?? (booking as any).guest_email ?? null;
     const tenantName    = tenant?.name  ?? "PhenomeBeauty";
-    const tenantEmail   = (tenant?.email && tenant.email.trim() !== "") ? tenant.email.trim() : "phenomebeauty@gmail.com";
+    // Priority: tenant.email from DB → app_settings email → correct hardcoded fallback
+    const tenantEmail   = (tenant?.email && tenant.email.trim() !== "")
+      ? tenant.email.trim()
+      : (settings["email"] && settings["email"].trim() !== "")
+        ? settings["email"].trim()
+        : "phenomebeautys@gmail.com";
     const logoUrl       = (tenant as any)?.logo_url ?? null;
     const formattedDate = formatDate(booking.booking_date);
     const formattedTime = formatTime(booking.start_time);
@@ -200,15 +205,14 @@ Deno.serve(async (req) => {
       }
 
       // ── Owner notification email ─────────────────────────────────────────
-      // Google Calendar quick-add link
-      const gcalStart = booking.booking_date.replace(/-/g, "") + "T" + booking.start_time.replace(/:/g, "").slice(0, 6);
-      const gcalEnd   = booking.end_time
+      const gcalStart   = booking.booking_date.replace(/-/g, "") + "T" + booking.start_time.replace(/:/g, "").slice(0, 6);
+      const gcalEnd     = booking.end_time
         ? booking.booking_date.replace(/-/g, "") + "T" + booking.end_time.replace(/:/g, "").slice(0, 6)
         : gcalStart;
       const gcalTitle   = encodeURIComponent(`${serviceNames} \u2014 ${clientName}`);
       const gcalDetails = encodeURIComponent(`Client: ${clientName} | Phone: ${(booking.client as any)?.phone ?? (booking as any).guest_phone ?? ""} | Deposit: ${depositAmount} | Balance: ${balanceDue}`);
       const gcalLocation = encodeURIComponent(location);
-      const gcalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalStart}/${gcalEnd}&details=${gcalDetails}&location=${gcalLocation}`;
+      const gcalLink    = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalStart}/${gcalEnd}&details=${gcalDetails}&location=${gcalLocation}`;
 
       const ownerHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -230,7 +234,7 @@ Deno.serve(async (req) => {
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">Deposit confirmed \u2014 add to your calendar below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client", clientName)}
-      ${row("Phone", (booking.client as any)?.phone ?? (booking as any).guest_phone ?? "—")}
+      ${row("Phone", (booking.client as any)?.phone ?? (booking as any).guest_phone ?? "\u2014")}
       ${row("Service", serviceNames)}
       ${row("Date", formattedDate)}
       ${row("Time", formattedTime)}
@@ -256,7 +260,6 @@ Deno.serve(async (req) => {
         headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: `${tenantName} <bookings@nextslot.co.za>`,
-          // reply_to ensures Gmail threads correctly and avoids spam
           reply_to: tenantEmail,
           to: [tenantEmail],
           subject: `\uD83C\uDF89 New booking \u2014 ${clientName} on ${formattedDate}`,

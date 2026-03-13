@@ -11,13 +11,13 @@ interface SplashScreenProps {
 const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashScreenProps) => {
   const config = usePublicBusinessConfig();
 
-  // Warm champagne orbs — large, slow, clearly visible
+  // Ice-white orbs — large, slow, luminous
   const orbs = useMemo(
     () => [
-      { id: 0, x: 10,  y: 8,   size: 420, duration: 20, delay: 0,   driftX: 22,  driftY: 30,  color: "rgba(255,235,180,0.13)" },
-      { id: 1, x: 80,  y: 70,  size: 360, duration: 26, delay: 5,   driftX: -26, driftY: -20, color: "rgba(220,200,160,0.10)" },
-      { id: 2, x: 48,  y: 38,  size: 260, duration: 32, delay: 10,  driftX: 14,  driftY: -18, color: "rgba(255,245,200,0.08)" },
-      { id: 3, x: 25,  y: 75,  size: 200, duration: 38, delay: 15,  driftX: -12, driftY: 16,  color: "rgba(200,180,140,0.07)" },
+      { id: 0, x: 10,  y: 8,   size: 420, duration: 20, delay: 0,   driftX: 22,  driftY: 30,  color: "rgba(220,235,255,0.14)" },
+      { id: 1, x: 80,  y: 70,  size: 360, duration: 26, delay: 5,   driftX: -26, driftY: -20, color: "rgba(200,220,255,0.10)" },
+      { id: 2, x: 48,  y: 38,  size: 260, duration: 32, delay: 10,  driftX: 14,  driftY: -18, color: "rgba(235,245,255,0.09)" },
+      { id: 3, x: 25,  y: 75,  size: 200, duration: 38, delay: 15,  driftX: -12, driftY: 16,  color: "rgba(210,228,255,0.07)" },
     ],
     []
   );
@@ -62,16 +62,16 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0" style={{
           background: [
-            "radial-gradient(ellipse 90% 55% at 15% 5%, rgba(255,235,160,0.07) 0%, transparent 60%)",
-            "radial-gradient(ellipse 70% 50% at 85% 90%, rgba(220,195,140,0.05) 0%, transparent 60%)",
+            "radial-gradient(ellipse 90% 55% at 15% 5%, rgba(200,220,255,0.06) 0%, transparent 60%)",
+            "radial-gradient(ellipse 70% 50% at 85% 90%, rgba(215,230,255,0.04) 0%, transparent 60%)",
           ].join(", ")
         }} />
-        {/* Horizontal shimmer scan line — luxury feel */}
+        {/* Ice-white horizontal shimmer scan line */}
         <motion.div
           className="absolute left-0 right-0 h-px pointer-events-none"
           style={{
             top: "38%",
-            background: "linear-gradient(90deg, transparent 5%, rgba(255,240,190,0.12) 30%, rgba(255,245,210,0.22) 50%, rgba(255,240,190,0.12) 70%, transparent 95%)",
+            background: "linear-gradient(90deg, transparent 5%, rgba(220,235,255,0.12) 30%, rgba(235,245,255,0.22) 50%, rgba(220,235,255,0.12) 70%, transparent 95%)",
             filter: "blur(0.5px)",
           }}
           animate={{ opacity: [0, 1, 0.4, 1, 0], top: ["30%", "42%", "38%", "44%", "32%"] }}
@@ -79,7 +79,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         />
       </div>
 
-      {/* ── Warm champagne ambient orbs ── */}
+      {/* ── Ice-white ambient orbs ── */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {orbs.map(o => (
           <motion.div
@@ -111,7 +111,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               height: p.size,
               left: `${p.x}%`,
               top: `${p.y}%`,
-              background: "rgba(255,245,200,0.9)",
+              background: "rgba(230,240,255,0.9)",
             }}
             animate={{ x: [0, p.driftX, 0], y: [0, p.driftY, 0], opacity: [0, p.maxOpacity, 0] }}
             transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: "easeInOut" }}
@@ -137,11 +137,11 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           transition={{ type: "spring", stiffness: 160, damping: 24, delay: 0.18 }}
           className="relative mb-10"
         >
-          {/* Outer breathing glow — warm gold */}
+          {/* Outer breathing glow — ice white */}
           <motion.div
             className="absolute rounded-[32px] inset-[-14px]"
             style={{
-              background: "radial-gradient(circle, rgba(255,235,160,0.18) 0%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(210,228,255,0.18) 0%, transparent 70%)",
               filter: "blur(20px)",
             }}
             animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.08, 1] }}
@@ -154,7 +154,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               background: "rgba(255,255,255,0.055)",
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
-              boxShadow: "0 0 0 0.5px rgba(255,240,180,0.12) inset, 0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(255,235,160,0.06)",
+              boxShadow: "0 0 0 0.5px rgba(220,235,255,0.12) inset, 0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(210,228,255,0.06)",
             }}
           >
             {config.logoUrl ? (
@@ -168,7 +168,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               <span className="font-display text-2xl font-bold text-white tracking-tight">{config.abbreviation}</span>
             )}
             {/* Inner top highlight */}
-            <span className="absolute top-0 left-3 right-3 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,245,190,0.3), transparent)" }} />
+            <span className="absolute top-0 left-3 right-3 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(220,238,255,0.3), transparent)" }} />
           </div>
         </motion.div>
 
@@ -178,7 +178,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.55 }}
           className="text-[9px] font-bold tracking-[0.5em] uppercase mb-3"
-          style={{ color: "rgba(255,230,160,0.35)" }}
+          style={{ color: "rgba(210,228,255,0.38)" }}
         >
           {config.splashWelcomeLabel}
         </motion.p>
@@ -189,7 +189,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.54, duration: 0.55 }}
           className="font-display leading-none font-bold text-white text-center tracking-tight mb-6"
-          style={{ fontSize: "clamp(2rem, 8vw, 2.6rem)", textShadow: "0 2px 32px rgba(255,235,160,0.12)" }}
+          style={{ fontSize: "clamp(2rem, 8vw, 2.6rem)", textShadow: "0 2px 32px rgba(210,228,255,0.1)" }}
         >
           {config.name}
         </motion.h1>
@@ -200,7 +200,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.45 }}
           className="text-[10px] font-semibold tracking-[0.35em] uppercase mb-2"
-          style={{ color: "rgba(255,235,160,0.45)" }}
+          style={{ color: "rgba(215,232,255,0.42)" }}
         >
           {config.splashTagline1}
         </motion.p>
@@ -211,12 +211,12 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.82, duration: 0.45 }}
           className="text-[9px] font-medium tracking-[0.3em] uppercase"
-          style={{ color: "rgba(255,235,160,0.22)" }}
+          style={{ color: "rgba(215,232,255,0.2)" }}
         >
           {config.splashTagline2}
         </motion.p>
 
-        {/* Divider — gold shimmer */}
+        {/* Divider — ice shimmer */}
         <motion.div
           initial={{ scaleX: 0, opacity: 0 }}
           animate={{ scaleX: 1, opacity: 1 }}
@@ -225,7 +225,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           style={{
             width: 48,
             height: 1,
-            background: "linear-gradient(90deg, transparent, rgba(255,235,160,0.35), transparent)",
+            background: "linear-gradient(90deg, transparent, rgba(210,228,255,0.35), transparent)",
           }}
         />
 
@@ -236,7 +236,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           transition={{ delay: 1.08, duration: 0.45 }}
           className="w-full"
         >
-          <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-center mb-1" style={{ color: "rgba(255,230,160,0.3)" }}>
+          <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-center mb-1" style={{ color: "rgba(210,228,255,0.3)" }}>
             Where did you hear about us?
           </p>
           <p className="text-[8px] text-center mb-3 tracking-wide" style={{ color: "rgba(255,255,255,0.15)" }}>
@@ -251,13 +251,13 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
                 className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
                 style={{
                   border: referralSource === opt
-                    ? "1px solid rgba(255,230,150,0.4)"
+                    ? "1px solid rgba(210,228,255,0.4)"
                     : "1px solid rgba(255,255,255,0.08)",
                   background: referralSource === opt
-                    ? "rgba(255,230,140,0.1)"
+                    ? "rgba(210,228,255,0.1)"
                     : "transparent",
                   color: referralSource === opt
-                    ? "rgba(255,240,170,0.95)"
+                    ? "rgba(225,240,255,0.95)"
                     : "rgba(255,255,255,0.32)",
                   backdropFilter: referralSource === opt ? "blur(8px)" : undefined,
                 }}
@@ -278,26 +278,26 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           onClick={onComplete}
           className="mt-10 w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase relative overflow-hidden cursor-pointer transition-all duration-300"
           style={{
-            background: "rgba(255,240,170,0.07)",
+            background: "rgba(210,228,255,0.07)",
             backdropFilter: "blur(28px)",
             WebkitBackdropFilter: "blur(28px)",
-            border: "1px solid rgba(255,235,150,0.18)",
-            boxShadow: "0 0 40px rgba(255,235,150,0.04), 0 1px 0 rgba(255,240,180,0.14) inset",
+            border: "1px solid rgba(210,228,255,0.18)",
+            boxShadow: "0 0 40px rgba(210,228,255,0.04), 0 1px 0 rgba(220,236,255,0.14) inset",
             color: "rgba(255,255,255,0.88)",
           }}
         >
-          {/* Shimmer sweep */}
+          {/* Ice shimmer sweep */}
           <motion.span
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: "linear-gradient(105deg, transparent 30%, rgba(255,240,170,0.1) 50%, transparent 70%)",
+              background: "linear-gradient(105deg, transparent 30%, rgba(210,228,255,0.1) 50%, transparent 70%)",
             }}
             initial={{ x: "-100%" }}
             whileHover={{ x: "200%" }}
             transition={{ duration: 0.7, ease: "easeInOut" }}
           />
           {/* Top highlight */}
-          <span className="absolute top-0 left-6 right-6 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,240,170,0.3), transparent)" }} />
+          <span className="absolute top-0 left-6 right-6 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(220,238,255,0.3), transparent)" }} />
           <span className="relative">{config.splashCtaLabel}</span>
         </motion.button>
 
@@ -314,7 +314,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             href="https://nextslot.co.za"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "rgba(255,235,150,0.35)", textDecoration: "none" }}
+            style={{ color: "rgba(210,228,255,0.35)", textDecoration: "none" }}
           >
             nextslot.co.za
           </a>
