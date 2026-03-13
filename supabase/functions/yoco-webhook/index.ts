@@ -88,8 +88,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const checkoutId = payload?.metadata?.checkoutId ?? payload?.checkoutId;
-    const bookingId  = payload?.metadata?.booking_id;
+    const checkoutId   = payload?.metadata?.checkoutId ?? payload?.checkoutId;
+    const bookingId    = payload?.metadata?.booking_id;
     const transactionId = payload?.id;
 
     console.log("Identifiers — bookingId:", bookingId, "checkoutId:", checkoutId);
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── STEP 1: Fetch booking (read-only, just to get metadata) ─────────────────
+    // ── STEP 1: Fetch booking ───────────────────────────────────────────────
     let bookingQuery = supabase
       .from("bookings")
       .select("id, client_id, tenant_id, deposit_amount, deposit_paid");
@@ -123,9 +123,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── STEP 2: ATOMIC update — only succeeds if deposit_paid is still false ─────
-    // Using .select() + count so we know if THIS request was the one that did it.
-    // If Yoco fires twice simultaneously, only one will get count > 0.
+    // ── STEP 2: Atomic update ───────────────────────────────────────────────
     const { data: updatedRows, error: updateErr } = await supabase
       .from("bookings")
       .update({
@@ -134,8 +132,8 @@ Deno.serve(async (req) => {
         confirmed_at: new Date().toISOString(),
       })
       .eq("id", booking.id)
-      .eq("deposit_paid", false)   // ← atomic guard: only matches unpaid bookings
-      .select("id");              // returns the rows that were actually updated
+      .eq("deposit_paid", false)
+      .select("id");
 
     if (updateErr) {
       console.error("Failed to update booking:", updateErr);
@@ -145,8 +143,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If no rows were updated, this is a duplicate webhook — another request
-    // already processed this payment. Return 200 immediately, no email sent.
     if (!updatedRows || updatedRows.length === 0) {
       console.log("Duplicate webhook — booking already processed:", booking.id);
       return new Response(
@@ -155,14 +151,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── STEP 3: Only ONE request reaches here — safe to insert payment + email ──
+    // ── STEP 3: Insert payment record ──────────────────────────────────────
     console.log("Deposit confirmed for booking:", booking.id);
 
     await supabase.from("payments").insert({
-      booking_id: booking.id,
-      client_id:  booking.client_id,
-      tenant_id:  booking.tenant_id ?? tenantId,
-      amount:     booking.deposit_amount,
+      booking_id:     booking.id,
+      client_id:      booking.client_id,
+      tenant_id:      booking.tenant_id ?? tenantId,
+      amount:         booking.deposit_amount,
       payment_type:   "deposit",
       payment_method: "card",
       gateway:        "yoco",
@@ -171,18 +167,30 @@ Deno.serve(async (req) => {
       completed_at:   new Date().toISOString(),
     });
 
-    // Trigger confirmation email — non-fatal
+    // ── STEP 4: Send confirmation email via direct HTTP fetch ─────────────────
+    // Using fetch instead of supabase.functions.invoke to ensure the call
+    // completes with a real HTTP response and errors are fully visible in logs.
     try {
-      const emailRes = await supabase.functions.invoke("send-booking-email", {
-        body: {
-          booking_id: booking.id,
-          tenant_id:  booking.tenant_id ?? tenantId,
-          email_type: "booking_confirmed",
-        },
+      const emailUrl = `${supabaseUrl}/functions/v1/send-booking-email`;
+      const emailBody = JSON.stringify({
+        booking_id: booking.id,
+        tenant_id:  booking.tenant_id ?? tenantId,
+        email_type: "booking_confirmed",
       });
-      console.log("Email function response:", JSON.stringify(emailRes));
+      console.log("Calling send-booking-email at:", emailUrl);
+      const emailRes = await fetch(emailUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${serviceKey}`,
+          "apikey":        serviceKey,
+        },
+        body: emailBody,
+      });
+      const emailJson = await emailRes.json();
+      console.log("send-booking-email response:", emailRes.status, JSON.stringify(emailJson));
     } catch (emailErr) {
-      console.error("Failed to invoke send-booking-email:", emailErr);
+      console.error("Failed to call send-booking-email:", emailErr);
     }
 
     return new Response(
