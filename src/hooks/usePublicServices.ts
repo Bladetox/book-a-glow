@@ -17,18 +17,44 @@ export interface ServiceCategory {
   label: string;
 }
 
-// Waxing sub-category keywords — matched against service name (lowercase)
-const WAXING_INTIMATE_KEYWORDS = ["brazilian", "bikini", "intimate", "hollywood", "g-string"];
-const WAXING_FACE_KEYWORDS = ["brow", "lip", "chin", "face", "facial", "eyebrow", "upper lip", "sideburn"];
+// ─── Explicit waxing sub-category map ───────────────────────────────────────
+// Keys are lowercase service names (trimmed). Fallback = "waxing-body".
+const WAXING_INTIMATE: string[] = [
+  "hollywood",
+  "brazilia",
+  "brazilian",
+  "areola",
+  "garden path",
+  "underarm waxing",
+  "underarm",
+  "bikini",
+  "g-string",
+  "intimate",
+];
+
+const WAXING_FACE: string[] = [
+  "full face including eyebrow",
+  "full face excluding eyebrow",
+  "upper lip, eyebrow & chin",
+  "upper lip",
+  "eyebrow",
+  "chin",
+  "full face",
+  "facial",
+  "face wax",
+  "brow",
+  "lip wax",
+  "sideburn",
+];
 
 function resolveWaxingSubCategory(name: string): string {
-  const lower = name.toLowerCase();
-  if (WAXING_INTIMATE_KEYWORDS.some((k) => lower.includes(k))) return "waxing-intimate";
-  if (WAXING_FACE_KEYWORDS.some((k) => lower.includes(k))) return "waxing-face";
+  const lower = name.toLowerCase().trim();
+  if (WAXING_INTIMATE.some((k) => lower === k || lower.includes(k))) return "waxing-intimate";
+  if (WAXING_FACE.some((k) => lower === k || lower.includes(k)))    return "waxing-face";
   return "waxing-body";
 }
 
-// Display labels for every category id
+// ─── Display labels ──────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<string, string> = {
   "waxing-intimate": "Waxing — Intimate",
   "waxing-body":     "Waxing — Body",
@@ -40,6 +66,7 @@ function categoryLabel(id: string): string {
   return id.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
+// ─── usePublicServices ───────────────────────────────────────────────────────
 export function usePublicServices() {
   const { tenantId } = usePublicTenant();
 
@@ -76,6 +103,7 @@ export function usePublicServices() {
   });
 }
 
+// ─── usePublicCategories ─────────────────────────────────────────────────────
 export function usePublicCategories() {
   const { tenantId } = usePublicTenant();
 
@@ -91,7 +119,7 @@ export function usePublicCategories() {
         .order("category");
       if (error) throw error;
 
-      // Expand waxing into sub-categories
+      // Expand raw "waxing" category into sub-categories
       const expanded = (data ?? []).map((s) => {
         const raw = s.category ?? "";
         return raw.toLowerCase() === "waxing"
@@ -102,19 +130,15 @@ export function usePublicCategories() {
       const unique = [...new Set(expanded)];
 
       // Waxing sub-cats always appear FIRST (primary offering),
-      // then all other categories alphabetically.
+      // order: Intimate → Body → Face, then all others alphabetically.
       const waxingOrder = ["waxing-intimate", "waxing-body", "waxing-face"];
 
       unique.sort((a, b) => {
         const ai = waxingOrder.indexOf(a);
         const bi = waxingOrder.indexOf(b);
-        // Both are waxing sub-cats — preserve intimate > body > face order
         if (ai !== -1 && bi !== -1) return ai - bi;
-        // Only a is waxing — a comes first
         if (ai !== -1) return -1;
-        // Only b is waxing — b comes first
         if (bi !== -1) return 1;
-        // Neither is waxing — alphabetical
         return a.localeCompare(b);
       });
 
