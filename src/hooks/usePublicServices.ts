@@ -52,13 +52,11 @@ export function usePublicServices() {
         .select("id, name, description, price, duration_minutes, category, is_call_out_available")
         .eq("tenant_id", tenantId)
         .eq("is_active", true)
-        // Sort by price highest first within each category
         .order("category", { ascending: true })
         .order("price", { ascending: false });
       if (error) throw error;
       return (data ?? []).map((s): PublicService => {
         const rawCat = s.category ?? "";
-        // Split waxing into 3 sub-categories based on service name
         const category =
           rawCat.toLowerCase() === "waxing"
             ? resolveWaxingSubCategory(s.name)
@@ -103,14 +101,20 @@ export function usePublicCategories() {
 
       const unique = [...new Set(expanded)];
 
-      // Sort: waxing sub-cats grouped together, others alphabetical
+      // Waxing sub-cats always appear FIRST (primary offering),
+      // then all other categories alphabetically.
       const waxingOrder = ["waxing-intimate", "waxing-body", "waxing-face"];
+
       unique.sort((a, b) => {
         const ai = waxingOrder.indexOf(a);
         const bi = waxingOrder.indexOf(b);
+        // Both are waxing sub-cats — preserve intimate > body > face order
         if (ai !== -1 && bi !== -1) return ai - bi;
-        if (ai !== -1) return 1;   // waxing sub-cats go after non-waxing
-        if (bi !== -1) return -1;
+        // Only a is waxing — a comes first
+        if (ai !== -1) return -1;
+        // Only b is waxing — b comes first
+        if (bi !== -1) return 1;
+        // Neither is waxing — alphabetical
         return a.localeCompare(b);
       });
 
