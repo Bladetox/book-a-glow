@@ -23,8 +23,8 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          supabase functions deploy places-autocomplete --project-ref kjibbbuceipnialfgflt --no-verify-jwt
-          supabase functions deploy send-booking-email --project-ref kjibbbuceipnialfgflt --no-verify-jwt
-          supabase functions deploy yoco-checkout --project-ref kjibbbuceipnialfgflt --no-verify-jwt
-          supabase functions deploy yoco-webhook --project-ref kjibbbuceipnialfgflt --no-verify-jwt
-          supabase functions deploy register-yoco-webhook --project-ref kjibbbuceipnialfgflt
+          supabase functions deploy places-autocomplete --project-ref kjibbbuceipmialfgflt --no-verify-jwt
+          supabase functions deploy send-booking-email --project-ref kjibbbuceipmialfgflt --no-verify-jwt
+          supabase functions deploy yoco-checkout --project-ref kjibbbuceipmialfgflt --no-verify-jwt
+          supabase functions deploy yoco-webhook --project-ref kjibbbuceipmialfgflt --no-verify-jwt
+          supabase functions deploy register-yoco-webhook --project-ref kjibbbuceipmialfgflt
