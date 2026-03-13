@@ -69,31 +69,42 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       // Compose full phone string for storage e.g. "+27 821234567"
       const guestPhone = `${booking.phoneCode} ${booking.phone}`.trim();
 
+      // Embed guest contact into client_notes since the DB function does not
+      // have p_guest_name / p_guest_email / p_guest_phone params.
+      // The send-booking-email function reads these from booking.client_notes as fallback.
+      const guestContactBlock = [
+        booking.fullName  ? `Name: ${booking.fullName}`   : null,
+        booking.email     ? `Email: ${booking.email}`      : null,
+        guestPhone        ? `Phone: ${guestPhone}`         : null,
+        booking.address   ? `Address: ${booking.address}` : null,
+      ].filter(Boolean).join(" | ");
+
+      const combinedNotes = [
+        guestContactBlock,
+        booking.additionalNotes || booking.existingClientNotes || null,
+      ].filter(Boolean).join("\n");
+
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
-        p_client_id: clientId,
-        p_staff_id: staffId,
-        p_booking_date: bookingDate,
-        p_start_time: startTime,
-        p_service_ids: booking.selectedTreatments,
-        p_is_callout: !!booking.address,
-        p_callout_address: booking.address || null,
-        p_callout_distance_km: estimatedDistanceKm,
-        p_client_notes: booking.additionalNotes || booking.existingClientNotes || null,
-        p_client_type: booking.isExistingClient ? "existing" : "new",
-        p_lead_source: booking.referralSource || null,
-        p_skin_conditions: safetyMap[1] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
-        p_medications: safetyMap[2] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
-        p_allergies: safetyMap[3] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
-        p_pregnancy: safetyMap[4] === "Yes" ? "Yes" : (booking.isExistingClient ? "On File" : "No"),
-        p_health_conditions: safetyMap[5] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_client_id:              clientId,
+        p_staff_id:               staffId,
+        p_booking_date:           bookingDate,
+        p_start_time:             startTime,
+        p_service_ids:            booking.selectedTreatments,
+        p_is_callout:             !!booking.address,
+        p_callout_address:        booking.address || null,
+        p_callout_distance_km:    estimatedDistanceKm,
+        p_client_notes:           combinedNotes || null,
+        p_client_type:            booking.isExistingClient ? "existing" : "new",
+        p_lead_source:            booking.referralSource || null,
+        p_skin_conditions:        safetyMap[1] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_medications:            safetyMap[2] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_allergies:              safetyMap[3] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
+        p_pregnancy:              safetyMap[4] === "Yes" ? "Yes" : (booking.isExistingClient ? "On File" : "No"),
+        p_health_conditions:      safetyMap[5] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
         p_environmental_exposure: safetyMap[6] === "Yes" ? "Flagged by client" : null,
-        p_physical_factors: safetyMap[7] === "Yes" ? "Flagged by client" : null,
-        p_hair_length_ok: safetyMap[8] === "No" ? "No - insufficient growth" : "Yes",
-        p_additional_notes: booking.additionalNotes || null,
-        // Guest contact — stored on booking row so emails & admin view work
-        p_guest_name: booking.fullName || null,
-        p_guest_email: booking.email || null,
-        p_guest_phone: guestPhone || null,
+        p_physical_factors:       safetyMap[7] === "Yes" ? "Flagged by client" : null,
+        p_hair_length_ok:         safetyMap[8] === "No"  ? "No - insufficient growth" : "Yes",
+        p_additional_notes:       booking.additionalNotes || null,
       });
 
       if (error) throw error;
@@ -103,10 +114,20 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
 
       const bookingId = result?.booking_id;
       if (bookingId) {
+        // Also update booking row with guest contact fields directly
+        await supabase
+          .from("bookings")
+          .update({
+            guest_name:  booking.fullName  || null,
+            guest_email: booking.email     || null,
+            guest_phone: guestPhone        || null,
+          })
+          .eq("id", bookingId);
+
         const origin = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${deposit}`;
-        const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
+        const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
 
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
           body: { booking_id: bookingId, tenant_slug: tenantId, success_url: successUrl, cancel_url: cancelUrl },
@@ -127,7 +148,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       console.error("Booking error:", err);
       const msg: string = err.message || "";
       const code: string = (err as any)?.code || "";
+      // Only treat as slot conflict if it's genuinely a slot message, NOT a function param error
+      const isParamError = /Could not find the function|function does not exist|unknown param/i.test(msg);
       const slotTaken =
+        !isParamError &&
         code !== "PGRST203" &&
         /time.*already booked|slot.*taken|no longer available|is not available/i.test(msg);
       if (slotTaken) {
