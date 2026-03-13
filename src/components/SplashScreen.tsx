@@ -26,7 +26,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     []
   );
 
-  // Ensure "Returning Client" is first
   const referralOptions = useMemo(() => {
     const opts = [...config.referralOptions];
     const rcIdx = opts.findIndex(
@@ -42,15 +41,12 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   }, [config.referralOptions]);
 
   return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-between px-6 overflow-y-auto"
-      style={{ backgroundColor: "#000", paddingTop: "env(safe-area-inset-top, 0px)" }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
+    <div
+      className="fixed inset-0 z-[100] overflow-y-auto"
+      style={{ backgroundColor: "#000", WebkitOverflowScrolling: "touch" }}
     >
       {/* Ambient particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {particles.map((p) => (
           <motion.div
             key={p.id}
@@ -62,15 +58,23 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         ))}
       </div>
 
-      {/* ── Main content ── */}
-      <div className="relative flex flex-col items-center w-full max-w-xs pt-16 pb-8">
-
-        {/* Logo */}
+      {/* Scroll content */}
+      <motion.div
+        className="relative flex flex-col items-center w-full min-h-screen px-6"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 48px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 32px)",
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      >
+        {/* ── Logo ── */}
         <motion.div
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 180, damping: 22, delay: 0.15 }}
-          className="relative mb-14"
+          className="relative mb-10"
         >
           <motion.div
             className="absolute inset-0 rounded-[22px] bg-white/10 blur-2xl scale-150"
@@ -86,37 +90,37 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           </div>
         </motion.div>
 
-        {/* Welcome label — smallest, most muted */}
+        {/* Welcome label */}
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.38, duration: 0.5 }}
-          className="text-[9px] font-bold tracking-[0.45em] uppercase text-white/30 mb-4"
+          className="text-[9px] font-bold tracking-[0.45em] uppercase text-white/30 mb-3"
         >
           {config.splashWelcomeLabel}
         </motion.p>
 
-        {/* Business name — dominant, the hero element */}
+        {/* Business name */}
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.52, duration: 0.5 }}
-          className="font-display text-[2.4rem] leading-none font-bold text-white text-center tracking-tight mb-8"
+          className="font-display text-[2.4rem] leading-none font-bold text-white text-center tracking-tight mb-6"
         >
           {config.name}
         </motion.h1>
 
-        {/* Tagline 1 — medium weight, wide tracking */}
+        {/* Tagline 1 */}
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.68, duration: 0.45 }}
-          className="text-[10px] font-semibold tracking-[0.32em] uppercase text-white/45 mb-2.5"
+          className="text-[10px] font-semibold tracking-[0.32em] uppercase text-white/45 mb-2"
         >
           {config.splashTagline1}
         </motion.p>
 
-        {/* Tagline 2 — lightest, most elegant */}
+        {/* Tagline 2 */}
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -131,7 +135,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           initial={{ scaleX: 0, opacity: 0 }}
           animate={{ scaleX: 1, opacity: 1 }}
           transition={{ delay: 0.95, duration: 0.5, ease: "easeOut" }}
-          className="w-8 h-px bg-white/15 mt-10 mb-10"
+          className="w-8 h-px bg-white/15 mt-8 mb-8"
         />
 
         {/* Where did you hear about us */}
@@ -141,10 +145,14 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           transition={{ delay: 1.05, duration: 0.45 }}
           className="w-full"
         >
-          <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-white/30 text-center mb-4">
+          <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-white/30 text-center mb-1">
             Where did you hear about us?
           </p>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {/* Scroll hint */}
+          <p className="text-[8px] text-white/20 text-center mb-3 tracking-wide">
+            Scroll to see all options
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-6 px-6">
             {referralOptions.map((opt) => (
               <motion.button
                 key={opt}
@@ -152,9 +160,10 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
                 onClick={() => onReferralChange(referralSource === opt ? "" : opt)}
                 className={`
                   shrink-0 px-4 py-2 rounded-full border text-[11px] font-semibold transition-all duration-200
-                  ${referralSource === opt
-                    ? "border-white/55 bg-white/12 text-white"
-                    : "border-white/10 bg-transparent text-white/38 hover:border-white/22 hover:text-white/58"
+                  ${
+                    referralSource === opt
+                      ? "border-white/55 bg-white/12 text-white"
+                      : "border-white/10 bg-transparent text-white/38 hover:border-white/22 hover:text-white/58"
                   }
                 `}
               >
@@ -172,32 +181,34 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           whileHover={{ scale: 1.015 }}
           whileTap={{ scale: 0.97 }}
           onClick={onComplete}
-          className="mt-12 w-full px-8 py-4 rounded-2xl border border-white/16 bg-white/[0.07] backdrop-blur-xl text-[10px] font-bold tracking-[0.25em] uppercase text-white/85 relative overflow-hidden group cursor-pointer"
+          className="mt-10 w-full px-8 py-4 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl text-[10px] font-bold tracking-[0.25em] uppercase text-white/90 relative overflow-hidden group cursor-pointer shadow-[0_0_32px_rgba(255,255,255,0.04)] hover:bg-white/[0.13] hover:border-white/30 transition-all duration-300"
         >
           {/* shimmer sweep */}
-          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-[200%] transition-transform duration-700" />
+          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-[200%] transition-transform duration-700" />
+          {/* top glass highlight line */}
+          <span className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
           <span className="relative">{config.splashCtaLabel}</span>
         </motion.button>
-      </div>
 
-      {/* Footer */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.55, duration: 0.5 }}
-        className="relative pb-6 text-[8px] text-white/18 tracking-[0.18em]"
-      >
-        Powered by{" "}
-        <a
-          href="https://nextslot.co.za"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-white/30 hover:text-white/50 transition-colors underline underline-offset-2"
+        {/* Footer */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.55, duration: 0.5 }}
+          className="mt-8 text-[8px] text-white/18 tracking-[0.18em]"
         >
-          nextslot.co.za
-        </a>
-      </motion.p>
-    </motion.div>
+          Powered by{" "}
+          <a
+            href="https://nextslot.co.za"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white/30 hover:text-white/50 transition-colors underline underline-offset-2"
+          >
+            nextslot.co.za
+          </a>
+        </motion.p>
+      </motion.div>
+    </div>
   );
 };
 
