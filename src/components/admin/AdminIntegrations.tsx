@@ -2,15 +2,12 @@ import { motion } from "framer-motion";
 import { CreditCard, Calendar, MapPin, Mail, Eye, EyeOff, Save, CheckCircle2, AlertCircle, Loader2, Edit2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
+import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
 const MASK = "••••••••••••••••";
-
-function masked(value: string | undefined) {
-  return value ? MASK : "";
-}
 
 function isConfigured(settings: Record<string, string>, keys: string[]) {
   return keys.some((k) => !!settings[k]);
@@ -32,7 +29,6 @@ interface FieldProps {
 const Field = ({ label, fieldKey, placeholder, type = "text", value, masked: isMasked, editing, onChange }: FieldProps) => {
   const [show, setShow] = useState(false);
   const isSecret = type === "password";
-
   const displayValue = isMasked && !editing ? MASK : value;
   const inputType = isSecret && !show ? "password" : (type === "textarea" ? "text" : type);
 
@@ -99,7 +95,6 @@ const IntegrationCard = ({ icon: Icon, name, desc, configured, saving, editing, 
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-5 flex flex-col gap-4"
     >
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
@@ -122,19 +117,10 @@ const IntegrationCard = ({ icon: Icon, name, desc, configured, saving, editing, 
           )}
         </div>
       </div>
-
-      {/* Fields */}
-      <div className="flex flex-col gap-3">
-        {children}
-      </div>
-
-      {/* Actions */}
+      <div className="flex flex-col gap-3">{children}</div>
       <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/[0.04]">
         {configured && !editing && (
-          <button
-            onClick={onEdit}
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
-          >
+          <button onClick={onEdit} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors">
             <Edit2 className="w-3 h-3" /> Edit
           </button>
         )}
@@ -151,28 +137,131 @@ const IntegrationCard = ({ icon: Icon, name, desc, configured, saving, editing, 
   );
 };
 
+// ── Google Calendar OAuth card ─────────────────────────────────────────────
+
+interface GoogleCalendarCardProps {
+  connected: boolean;
+  tenantId: string;
+}
+
+const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
+  const [connecting, setConnecting] = useState(false);
+  const [isConnected, setIsConnected] = useState(connected);
+
+  const handleConnect = () => {
+    setConnecting(true);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+    const redirectUri = `${supabaseUrl}/functions/v1/google-calendar-callback`;
+    const scope = "https://www.googleapis.com/auth/calendar.events";
+    const params = new URLSearchParams({
+      client_id:     clientId,
+      redirect_uri:  redirectUri,
+      response_type: "code",
+      scope,
+      access_type:   "offline",
+      prompt:        "consent",
+      state:         tenantId,
+    });
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    const popup = window.open(authUrl, "gcal_connect", "width=520,height=620,left=200,top=100");
+
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === "gcal_connected") {
+        popup?.close();
+        setIsConnected(true);
+        setConnecting(false);
+        toast.success("Google Calendar connected!");
+        window.removeEventListener("message", onMessage);
+      }
+    };
+    window.addEventListener("message", onMessage);
+
+    const pollClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(pollClosed);
+        setConnecting(false);
+        window.removeEventListener("message", onMessage);
+      }
+    }, 800);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-5 flex flex-col gap-4"
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
+            <Calendar className="w-4 h-4 text-white/60" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white/90">Google Calendar</h4>
+            <p className="text-xs text-white/35 mt-0.5">Auto-creates events when deposits are confirmed</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          {isConnected ? (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+              <CheckCircle2 className="w-3 h-3" /> Connected
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-white/30">
+              <AlertCircle className="w-3 h-3" /> Not connected
+            </span>
+          )}
+        </div>
+      </div>
+
+      <p className="text-xs text-white/40 leading-relaxed">
+        {isConnected
+          ? "Your Google Calendar is connected. New bookings will be added automatically when a deposit is paid."
+          : "Connect once — new bookings appear in your calendar automatically the moment a deposit is confirmed."}
+      </p>
+
+      <div className="pt-1 border-t border-white/[0.04] flex items-center justify-end">
+        {isConnected ? (
+          <button
+            onClick={handleConnect}
+            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
+          >
+            <Edit2 className="w-3 h-3" /> Reconnect
+          </button>
+        ) : (
+          <button
+            onClick={handleConnect}
+            disabled={connecting}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all disabled:opacity-50"
+          >
+            {connecting
+              ? <><Loader2 className="w-3 h-3 animate-spin" /> Connecting…</>
+              : <><Calendar className="w-3 h-3" /> Connect Google Calendar</>}
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
 // ── main component ─────────────────────────────────────────────────────────
 
 const AdminIntegrations = () => {
+  const { tenantId } = useTenant();
   const { data: settings = {}, isLoading } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
-  // Local draft state for each section
   const [yocoDraft, setYocoDraft] = useState<Record<string, string>>({});
   const [mapsDraft, setMapsDraft] = useState<Record<string, string>>({});
-  const [calDraft, setCalDraft] = useState<Record<string, string>>({});
   const [smtpDraft, setSmtpDraft] = useState<Record<string, string>>({});
 
-  // Editing mode per section (false = masked, true = editable)
   const [yocoEditing, setYocoEditing] = useState(false);
   const [mapsEditing, setMapsEditing] = useState(false);
-  const [calEditing, setCalEditing] = useState(false);
   const [smtpEditing, setSmtpEditing] = useState(false);
 
-  // Saving state per section
   const [savingSection, setSavingSection] = useState<string | null>(null);
 
-  // Seed drafts from DB once loaded
   useEffect(() => {
     if (!isLoading && Object.keys(settings).length > 0) {
       setYocoDraft({
@@ -183,10 +272,6 @@ const AdminIntegrations = () => {
       setMapsDraft({
         google_maps_api_key: settings.google_maps_api_key ?? "",
       });
-      setCalDraft({
-        google_calendar_id: settings.google_calendar_id ?? "",
-        google_service_account_json: settings.google_service_account_json ?? "",
-      });
       setSmtpDraft({
         smtp_host: settings.smtp_host ?? "",
         smtp_port: settings.smtp_port ?? "",
@@ -195,10 +280,8 @@ const AdminIntegrations = () => {
         smtp_from_email: settings.smtp_from_email ?? settings.smtp_user ?? settings.smtp_username ?? "",
       });
 
-      // Auto-lock sections that already have values
       if (settings.yoco_public_key) setYocoEditing(false);
       if (settings.google_maps_api_key) setMapsEditing(false);
-      if (settings.google_calendar_id) setCalEditing(false);
       if (settings.smtp_user || settings.smtp_username) setSmtpEditing(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,17 +294,13 @@ const AdminIntegrations = () => {
   };
 
   const handleSave = async (section: string, draft: Record<string, string>, lockFn: () => void) => {
-    // Filter out empty values
     const toSave = Object.fromEntries(Object.entries(draft).filter(([, v]) => v && v !== MASK));
-    if (Object.keys(toSave).length === 0) {
-      toast.error("No values to save.");
-      return;
-    }
+    if (Object.keys(toSave).length === 0) { toast.error("No values to save."); return; }
     setSavingSection(section);
     try {
       await upsert.mutateAsync(toSave);
       toast.success("Configuration saved.");
-      lockFn(); // mask fields
+      lockFn();
     } catch (err: any) {
       toast.error(err.message ?? "Failed to save.");
     } finally {
@@ -231,7 +310,6 @@ const AdminIntegrations = () => {
 
   const yocoConfigured = isConfigured(settings, ["yoco_public_key", "yoco_secret_key"]);
   const mapsConfigured = isConfigured(settings, ["google_maps_api_key"]);
-  const calConfigured = isConfigured(settings, ["google_calendar_id"]);
   const smtpConfigured = isConfigured(settings, ["smtp_user", "smtp_username", "smtp_password"]);
 
   if (isLoading) {
@@ -293,24 +371,10 @@ const AdminIntegrations = () => {
         </IntegrationCard>
 
         {/* ── Google Calendar ── */}
-        <IntegrationCard
-          icon={Calendar}
-          name="Google Calendar"
-          desc="Auto-creates events when deposits are confirmed"
-          configured={calConfigured}
-          saving={savingSection === "cal"}
-          editing={calEditing}
-          onEdit={() => setCalEditing(true)}
-          onSave={() => handleSave("cal", calDraft, () => setCalEditing(false))}
-        >
-          <Field label="Calendar ID" fieldKey="google_calendar_id" placeholder="your@gmail.com or calendar ID"
-            value={calDraft.google_calendar_id ?? ""} masked={calConfigured} editing={calEditing}
-            onChange={handleChange(setCalDraft)} />
-          <Field label="Service Account JSON" fieldKey="google_service_account_json"
-            placeholder='{"type":"service_account","project_id":"…"}' type="textarea"
-            value={calDraft.google_service_account_json ?? ""} masked={calConfigured} editing={calEditing}
-            onChange={handleChange(setCalDraft)} />
-        </IntegrationCard>
+        <GoogleCalendarCard
+          connected={settings["gcal_connected"] === "true"}
+          tenantId={tenantId}
+        />
 
         {/* ── SMTP / Gmail ── */}
         <IntegrationCard
