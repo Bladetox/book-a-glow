@@ -117,11 +117,6 @@
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  .dark body,
-  body:is(.dark *) {
-    /* Dark mode keeps the rich gradient */
-  }
-
   html.dark body {
     background: hsl(var(--background));
   }
@@ -136,6 +131,28 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+}
+
+/* ===== TENANT LOGO — seamless blend across all pages ===== */
+/* Any logo rendered inside a .tenant-logo wrapper blends into the bg */
+.tenant-logo img,
+.tenant-logo-img {
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+/* On dark surfaces (dark mode) use luminosity instead */
+.dark .tenant-logo img,
+.dark .tenant-logo-img {
+  mix-blend-mode: luminosity;
+  opacity: 0.88;
+}
+
+/* Light page backgrounds — multiply removes white halos cleanly */
+html:not(.dark) .tenant-logo img,
+html:not(.dark) .tenant-logo-img {
+  mix-blend-mode: multiply;
 }
 
 @layer components {
@@ -520,7 +537,6 @@
 }
 
 /* ===== NEXTSLOT SITE THEME ===== */
-/* Scoped theme for the NextSlot marketing / site pages */
 .nextslot-theme {
   --background: 0 0% 100%;
   --foreground: 0 0% 7%;
@@ -558,12 +574,10 @@
   color: hsl(var(--foreground));
 }
 
-/* Keep NextSlot site pages on the original light palette regardless of global dark mode */
 .nextslot-theme {
   color-scheme: light;
 }
 
-/* NextSlot utility classes */
 .nextslot-theme .gradient-hero { background: var(--gradient-hero); }
 .nextslot-theme .gradient-section { background: var(--gradient-section); }
 .nextslot-theme .gradient-card { background: var(--gradient-card); }
