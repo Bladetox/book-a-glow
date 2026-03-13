@@ -4,11 +4,13 @@ import { format } from "date-fns";
 import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Edit3, Save, Trash2, ChevronDown, ChevronUp,
-  CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2
+  CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
+  SendHorizonal
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const filters = ["All", "Today", "Pending", "Confirmed", "Complete", "Cancelled"] as const;
@@ -40,6 +42,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
   const [rescheduleTime, setRescheduleTime] = useState<string | null>(null);
+  const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -135,6 +138,78 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   const cancelEdit = () => { setEditingId(null); setEditDraft({}); };
 
+  // ── Request remaining balance ────────────────────────────────────────────
+  const handleRequestBalance = async (b: BookingRow) => {
+    if (requestingBalanceId === b.id) return;
+    setRequestingBalanceId(b.id);
+    try {
+      // 1. Fetch tenant_id from booking row
+      const { data: raw } = await supabase
+        .from("bookings")
+        .select("tenant_id, guest_email, guest_name, total_amount, deposit_amount, client:profiles!bookings_client_id_fkey(email, full_name)")
+        .eq("id", b.id)
+        .single();
+
+      const tenantId = raw?.tenant_id;
+      const clientEmail = (raw?.client as any)?.email ?? raw?.guest_email;
+      const clientName  = (raw?.client as any)?.full_name ?? raw?.guest_name ?? b.client;
+      const balance     = b.balance;
+
+      if (!clientEmail) throw new Error("No client email on record for this booking");
+      if (!balance || balance <= 0) throw new Error("No outstanding balance");
+
+      // 2. Create a Yoco payment link for the balance via yoco-checkout
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const checkoutRes = await fetch(`${supabaseUrl}/functions/v1/yoco-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseKey}`,
+          "apikey": supabaseKey,
+        },
+        body: JSON.stringify({
+          amount: Math.round(balance * 100), // cents
+          currency: "ZAR",
+          tenant_id: tenantId,
+          booking_id: b.id,
+          payment_type: "balance",
+          success_url: `${window.location.origin}/payment-success?payment=success&booking_id=${b.id}&tenant=${tenantId}&type=final`,
+          cancel_url:  `${window.location.origin}/payment-success?payment=cancelled&tenant=${tenantId}`,
+        }),
+      });
+
+      const checkoutData = await checkoutRes.json();
+      if (!checkoutData?.url && !checkoutData?.redirectUrl) {
+        throw new Error(checkoutData?.error || "Failed to create payment link");
+      }
+      const paymentUrl = checkoutData.url ?? checkoutData.redirectUrl;
+
+      // 3. Send balance request email to client
+      await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseKey}`,
+          "apikey": supabaseKey,
+        },
+        body: JSON.stringify({
+          booking_id: b.id,
+          tenant_id: tenantId,
+          email_type: "balance_request",
+          payment_url: paymentUrl,
+        }),
+      });
+
+      toast.success(`Balance request sent to ${clientEmail}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send balance request");
+    } finally {
+      setRequestingBalanceId(null);
+    }
+  };
+
   // Available time slots for rescheduling
   const timeSlots = Array.from({ length: 19 }, (_, i) => {
     const h = Math.floor(i / 2) + 8;
@@ -211,6 +286,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
             {filtered.map(b => {
               const isExpanded = expandedId === b.id;
               const isEditing = editingId === b.id;
+              const isRequestingBalance = requestingBalanceId === b.id;
 
               return (
                 <motion.div key={b.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} layout className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
@@ -315,6 +391,21 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   <ActionBtn icon={X} label="Cancel" color="text-red-400" onClick={() => handleStatusChange(b.id, "cancelled")} />
                                 )}
                                 <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
+
+                                {/* ── Request Balance ── only show when balance > 0 and booking is confirmed/pending */}
+                                {b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && (
+                                  <button
+                                    disabled={isRequestingBalance}
+                                    onClick={e => { e.stopPropagation(); handleRequestBalance(b); }}
+                                    className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.07] text-xs font-medium text-amber-400 hover:bg-amber-500/[0.15] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    {isRequestingBalance
+                                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                                      : <SendHorizonal className="w-3 h-3" />}
+                                    Request Balance
+                                  </button>
+                                )}
+
                                 <div className="flex-1" />
                                 <ActionBtn icon={Trash2} label="Delete" color="text-red-400/60" onClick={() => handleDelete(b.id)} />
                               </div>
@@ -392,10 +483,10 @@ const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; labe
   </div>
 );
 
-const EditField = ({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) => (
+const EditField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
   <div className="flex flex-col gap-1">
     <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">{label}</label>
-    <input type={type} value={value} onChange={e => onChange(e.target.value)}
+    <input type="text" value={value} onChange={e => onChange(e.target.value)}
       className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
   </div>
 );
