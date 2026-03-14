@@ -49,26 +49,16 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Supabase
+          if (!id.includes("node_modules")) return;
+          // Supabase — standalone, no React deps
           if (id.includes("@supabase")) return "supabase";
-          // React core
-          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) return "react";
-          // Router
-          if (id.includes("react-router") || id.includes("@remix-run")) return "router";
-          // Animation
-          if (id.includes("framer-motion")) return "framer";
-          // Radix UI / shadcn
-          if (id.includes("@radix-ui")) return "radix";
-          // Charts
+          // Charts — large, lazy-loadable
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
           // Date utilities
           if (id.includes("date-fns") || id.includes("dayjs")) return "dates";
-          // Icons
-          if (id.includes("lucide-react")) return "icons";
-          // Query
-          if (id.includes("@tanstack")) return "query";
-          // Everything else in node_modules
-          if (id.includes("node_modules")) return "vendor";
+          // Everything else (React, Radix, framer, router, lucide, tanstack)
+          // stays in one "vendor" chunk so React is never split from its consumers
+          return "vendor";
         },
       },
     },
