@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
 import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantContext";
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
@@ -59,7 +59,8 @@ const MarketingRoutes = () => (
       <Route path="/signup" element={<Signup />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<SiteTerms />} />
-      <Route path="/admin" element={<Admin />} />
+      {/* /admin on the marketing domain has no tenant context — redirect to login */}
+      <Route path="/admin" element={<Navigate to="/login" replace />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
