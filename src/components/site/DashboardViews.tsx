@@ -34,10 +34,10 @@ const mockAppointments = [
 ];
 
 const mockSources = [
-  { source: "Instagram", count: 21, icon: Instagram },
-  { source: "Google", count: 11, icon: SearchIcon },
+  { source: "TikTok", count: 28, icon: Smartphone },
+  { source: "Instagram", count: 17, icon: Instagram },
   { source: "Referral", count: 9, icon: Share2 },
-  { source: "TikTok", count: 5, icon: Smartphone },
+  { source: "Google", count: 6, icon: SearchIcon },
 ];
 
 const mockRevenueTrend = Array.from({ length: 30 }, (_, i) => ({
@@ -45,7 +45,7 @@ const mockRevenueTrend = Array.from({ length: 30 }, (_, i) => ({
   value: Math.round(500 + Math.random() * 1400 + (i > 20 ? 400 : 0)),
 }));
 
-const heatmapSlots = ["08–10", "10–12", "12–14", "14–16", "16–18"];
+const heatmapSlots = ["08-10", "10-12", "12-14", "14-16", "16-18"];
 const heatmapData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => ({
   day,
   slots: heatmapSlots.map(() => Math.round(Math.random() * 5)),
@@ -76,7 +76,7 @@ export const DashboardContent = () => {
           <span className="text-[9px] text-emerald-400/80">{pctChange}% vs last month</span>
         </div>
         <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-white/[0.06]">
-          {[{ l: "Revenue Today", v: `R ${mockRevenue.today.toLocaleString()}` }, { l: "Appointments", v: "6" }, { l: "Remaining", v: "2", color: "text-amber-400" }, { l: "Next Up", v: "14:00 • James" }].map(s => (
+          {[{ l: "Revenue Today", v: `R ${mockRevenue.today.toLocaleString()}` }, { l: "Appointments", v: "6" }, { l: "Remaining", v: "2", color: "text-amber-400" }, { l: "Next Up", v: "14:00 James" }].map(s => (
             <div key={s.l} className="flex flex-col">
               <span className="text-[7px] tracking-[0.1em] uppercase text-white/25">{s.l}</span>
               <span className={`text-[10px] font-semibold ${s.color || "text-white/80"}`}>{s.v}</span>
@@ -101,7 +101,7 @@ export const DashboardContent = () => {
               <div key={s.name} className="flex items-center gap-2">
                 <span className="text-[8px] font-bold text-white/15 w-3">{i + 1}</span>
                 <span className="text-[9px] text-white/70 flex-1 truncate">{s.name}</span>
-                <span className="text-[8px] text-white/30">{s.count}×</span>
+                <span className="text-[8px] text-white/30">{s.count}x</span>
                 <span className="text-[8px] font-semibold text-white/50">R{s.revenue.toLocaleString()}</span>
               </div>
             ))}
@@ -118,7 +118,7 @@ export const DashboardContent = () => {
               </div>
             ))}
           </div>
-          <p className="text-[7px] tracking-[0.1em] uppercase text-white/25 mb-1.5">Sources</p>
+          <p className="text-[7px] tracking-[0.1em] uppercase text-white/25 mb-1.5">Top Sources</p>
           {mockSources.map(s => (
             <div key={s.source} className="flex items-center gap-1.5 py-0.5">
               <s.icon className="w-2.5 h-2.5 text-white/25" />
@@ -187,7 +187,7 @@ export const BookingsContent = () => (
       {allBookings.map(b => (
         <div key={b.ref} className={`${card} p-2.5 flex items-center gap-2.5 hover:bg-white/[0.02] transition-colors cursor-default`}>
           <div className="flex flex-col items-center w-8 shrink-0"><Clock className="w-2.5 h-2.5 text-white/20 mb-0.5" /><span className="text-[9px] font-semibold text-white/60">{b.time}</span><span className="text-[7px] text-white/15">{b.date}</span></div>
-          <div className="flex-1 min-w-0"><p className="text-[9px] font-medium text-white/80 truncate">{b.client}</p><p className="text-[7px] text-white/30 truncate">{b.service} • {b.duration}</p></div>
+          <div className="flex-1 min-w-0"><p className="text-[9px] font-medium text-white/80 truncate">{b.client}</p><p className="text-[7px] text-white/30 truncate">{b.service} {b.duration}</p></div>
           <div className="flex flex-col items-end gap-0.5 shrink-0"><StatusBadge status={b.status} />{b.balance > 0 && b.status !== "cancelled" && (<span className="text-[7px] text-amber-400/70">R {b.balance} due</span>)}</div>
         </div>
       ))}
@@ -202,7 +202,7 @@ export const ConsultationsContent = () => (
     {[{ client: "Luca R.", type: "Hot Towel Shave", date: "12 Mar", notes: "First visit. Prefers light pressure.", status: "complete" }, { client: "Ethan P.", type: "Kids Cut", date: "11 Mar", notes: "Discussed length and style with parent.", status: "complete" }, { client: "New Lead", type: "Beard Sculpt", date: "15 Mar", notes: "Enquiry via Instagram DM.", status: "pending" }].map((c, i) => (
       <div key={i} className={`${card} p-3 space-y-1.5`}>
         <div className="flex items-center justify-between"><span className="text-[9px] font-medium text-white/80">{c.client}</span><StatusBadge status={c.status} /></div>
-        <p className="text-[8px] text-white/40">{c.type} • {c.date}</p>
+        <p className="text-[8px] text-white/40">{c.type} {c.date}</p>
         <p className="text-[8px] text-white/30 leading-relaxed">{c.notes}</p>
       </div>
     ))}
@@ -213,7 +213,7 @@ export const ConsultationsContent = () => (
 export const AvailabilityContent = () => (
   <div className="flex-1 p-4 overflow-y-auto space-y-2 scrollbar-hide">
     <p className="text-[10px] font-semibold text-white/80 mb-2">Weekly Hours</p>
-    {[{ day: "Monday", hours: "08:00 – 17:00", active: true }, { day: "Tuesday", hours: "08:00 – 17:00", active: true }, { day: "Wednesday", hours: "08:00 – 17:00", active: true }, { day: "Thursday", hours: "08:00 – 17:00", active: true }, { day: "Friday", hours: "08:00 – 18:00", active: true }, { day: "Saturday", hours: "08:00 – 14:00", active: true }, { day: "Sunday", hours: "Closed", active: false }].map(d => (
+    {[{ day: "Monday", hours: "08:00 to 17:00", active: true }, { day: "Tuesday", hours: "08:00 to 17:00", active: true }, { day: "Wednesday", hours: "08:00 to 17:00", active: true }, { day: "Thursday", hours: "08:00 to 17:00", active: true }, { day: "Friday", hours: "08:00 to 18:00", active: true }, { day: "Saturday", hours: "08:00 to 14:00", active: true }, { day: "Sunday", hours: "Closed", active: false }].map(d => (
       <div key={d.day} className={`${card} px-3 py-2 flex items-center justify-between`}>
         <span className="text-[9px] font-medium text-white/70">{d.day}</span>
         <span className={`text-[9px] ${d.active ? "text-white/50" : "text-white/20"}`}>{d.hours}</span>
@@ -283,7 +283,7 @@ export const LoyaltyContent = () => (
     {[{ name: "Sipho M.", visits: 22, status: "VIP", lastVisit: "14 Mar" }, { name: "Karabo T.", visits: 11, status: "Regular", lastVisit: "14 Mar" }, { name: "James V.", visits: 8, status: "Regular", lastVisit: "14 Mar" }, { name: "Luca R.", visits: 2, status: "New", lastVisit: "11 Mar" }].map(c => (
       <div key={c.name} className={`${card} px-3 py-2 flex items-center gap-2.5`}>
         <Gem className="w-3 h-3 text-white/20" />
-        <div className="flex-1"><p className="text-[9px] font-medium text-white/70">{c.name}</p><p className="text-[7px] text-white/25">{c.visits} visits • Last: {c.lastVisit}</p></div>
+        <div className="flex-1"><p className="text-[9px] font-medium text-white/70">{c.name}</p><p className="text-[7px] text-white/25">{c.visits} visits Last: {c.lastVisit}</p></div>
         <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${c.status === "VIP" ? "bg-amber-500/10 text-amber-400" : c.status === "Regular" ? "bg-emerald-500/10 text-emerald-400" : "bg-white/[0.06] text-white/40"}`}>{c.status}</span>
       </div>
     ))}
