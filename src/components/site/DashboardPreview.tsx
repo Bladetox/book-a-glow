@@ -5,7 +5,6 @@ import {
   Bell, Search, LogOut, Headphones
 } from "lucide-react";
 import logo from "@/assets/nextslot-logo.png";
-import profileAvatar from "@/assets/profile-avatar.jpg";
 import {
   DashboardContent, BookingsContent, ConsultationsContent,
   AvailabilityContent, StockContent, ReviewsContent,
@@ -23,6 +22,14 @@ const sidebarNav = [
   { icon: Settings, label: "Settings" },
   { icon: Gem, label: "Loyalty" },
 ];
+
+// Inline SVG initials avatar — no real photo used
+const MockAvatar = ({ size = 24 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: "50%", flexShrink: 0 }}>
+    <circle cx="16" cy="16" r="16" fill="#2a2a2a" />
+    <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize="12" fontWeight="600" fontFamily="sans-serif" fill="rgba(255,255,255,0.6)">BC</text>
+  </svg>
+);
 
 const DashboardPreview = () => {
   const [activeItem, setActiveItem] = useState("Dashboard");
@@ -52,7 +59,7 @@ const DashboardPreview = () => {
         </div>
         <div className="flex-1 mx-8">
           <div className="bg-white/[0.06] rounded-md px-3 py-1 text-[9px] text-white/30 text-center font-mono">
-            app.nextslot.co.za/{activeItem.toLowerCase()}
+            demo.nextslot.co.za/{activeItem.toLowerCase()}
           </div>
         </div>
         <div className="w-10" />
@@ -94,7 +101,7 @@ const DashboardPreview = () => {
           <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">
             <div>
               <h2 className="text-[12px] font-semibold text-white/90">{activeItem}</h2>
-              <p className="text-[8px] text-white/25">Blade &amp; Co. · bladeandco.nextslot.app</p>
+              <p className="text-[8px] text-white/25">Blade &amp; Co. · demo.nextslot.co.za</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 bg-white/[0.06] rounded-lg px-2.5 py-1.5">
@@ -105,7 +112,7 @@ const DashboardPreview = () => {
                 <Bell className="h-3.5 w-3.5 text-white/40" strokeWidth={1.5} />
                 <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500" />
               </div>
-              <img src={profileAvatar} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-white/[0.1]" />
+              <MockAvatar size={24} />
             </div>
           </div>
           <div className="flex-1 flex animate-fade-in overflow-hidden" key={activeItem}>

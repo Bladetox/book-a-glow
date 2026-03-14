@@ -1,5 +1,4 @@
 import { useState } from "react";
-import profileAvatar from "@/assets/profile-avatar.jpg";
 import {
   LayoutDashboard, CalendarCheck, Sparkles, Clock,
   Package, Star, Link2, Settings, Gem, Menu, X
@@ -21,6 +20,14 @@ const navItems = [
   { icon: Settings, label: "Settings" },
   { icon: Gem, label: "Loyalty" },
 ];
+
+// Inline SVG initials avatar — no real photo used
+const MockAvatar = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: "50%", flexShrink: 0 }}>
+    <circle cx="16" cy="16" r="16" fill="#2a2a2a" />
+    <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize="12" fontWeight="600" fontFamily="sans-serif" fill="rgba(255,255,255,0.6)">BC</text>
+  </svg>
+);
 
 const MobileDashboardPreview = () => {
   const [activeItem, setActiveItem] = useState("Dashboard");
@@ -47,7 +54,7 @@ const MobileDashboardPreview = () => {
           {menuOpen ? <X className="w-3.5 h-3.5" /> : <Menu className="w-3.5 h-3.5" />}
         </button>
         <span className="text-[10px] font-semibold text-white/80">{activeItem}</span>
-        <img src={profileAvatar} alt="Profile" className="w-5 h-5 rounded-full object-cover border border-white/[0.1]" />
+        <MockAvatar size={20} />
       </div>
       {menuOpen && (
         <div className="absolute inset-0 z-20 bg-[hsl(0,0%,5%)] animate-fade-in">
