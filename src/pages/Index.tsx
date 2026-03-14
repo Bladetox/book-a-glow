@@ -29,27 +29,27 @@ const industries = [
 const problems = [
   { icon: MessageSquare, title: "WhatsApp messages", desc: "Clients message at all hours. You lose track of who wants what and when." },
   { icon: CalendarX, title: "Manual scheduling", desc: "Pen and paper or memory. Neither scales when business picks up." },
-  { icon: AlertTriangle, title: "Double bookings", desc: "Two clients, same slot. Someone's unhappy and you look unprofessional." },
-  { icon: BarChart2, title: "Information overload", desc: "You have the data but you're not sure what to do with it. Numbers without context don't help you grow." },
+  { icon: AlertTriangle, title: "Double bookings", desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
+  { icon: BarChart2, title: "Data without direction", desc: "You have the numbers but you are not sure what to do with them. NextSlot turns your data into decisions." },
 ];
 
 const steps = [
   {
     num: "01",
     title: "Create your booking page",
-    desc: "Set your services, prices, availability, and connect your payment gateway. Your page is live and taking real bookings in minutes — no coding, no tech headaches.",
+    desc: "Set your services, prices, availability, and connect your payment gateway. Your page is live and taking real bookings in minutes. No coding, no tech headaches.",
     highlight: "Live in minutes.",
   },
   {
     num: "02",
     title: "Share your booking link",
-    desc: "Add it to your Instagram bio, WhatsApp status, or business card. Clients book themselves — no back-and-forth messages, no phone calls.",
+    desc: "Add it to your Instagram bio, WhatsApp status, or business card. Clients book themselves. No back-and-forth messages, no phone calls.",
     highlight: "No more scheduling chaos.",
   },
   {
     num: "03",
     title: "Your dashboard does the rest",
-    desc: "Track bookings, revenue, clients, and inventory. Fully customisable — you only see what matters to your business. Your dashboard becomes your business advisor.",
+    desc: "Track bookings, revenue, clients, and inventory. Fully customisable so you only see what matters to your business. Your dashboard becomes your business advisor.",
     highlight: "Insights that actually help.",
   },
 ];
@@ -57,32 +57,32 @@ const steps = [
 const showcaseCards = [
   {
     title: "Smart Scheduling",
-    desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you're confirmed instantly.",
+    desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",
     icon: CalendarCheck,
   },
   {
     title: "Client Source Tracking",
-    desc: "Know exactly where your clients come from — Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",
+    desc: "Know exactly where your clients come from: Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",
     icon: MapPin,
   },
   {
     title: "Fully Customisable Dashboard",
-    desc: "Your business is unique. Your dashboard should be too. Show only what you need — revenue, bookings, stock alerts, or client retention.",
+    desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",
     icon: SlidersHorizontal,
   },
   {
     title: "Google Review Requests",
-    desc: "Asking for reviews feels awkward. We made it easy — one tap sends your client a review request. More reviews means higher Google rankings for your business.",
+    desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",
     icon: Star,
   },
   {
-    title: "Client History & Loyalty",
+    title: "Client History and Loyalty",
     desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",
     icon: Users,
   },
   {
     title: "Business Analytics",
-    desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor — based on your real data.",
+    desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",
     icon: LayoutDashboard,
   },
 ];
@@ -112,7 +112,7 @@ const Index = () => {
               </p>
               <div className="border-l-2 border-accent pl-4 space-y-1">
                 <p className="text-sm font-semibold">A fully customisable dashboard that works like a business advisor.</p>
-                <p className="text-xs text-muted-foreground">Only show what matters to your business. Revenue, bookings, clients, stock — your call.</p>
+                <p className="text-xs text-muted-foreground">Only show what matters to your business. Revenue, bookings, clients, stock. Your call.</p>
               </div>
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
                 <Link
@@ -243,7 +243,7 @@ const Index = () => {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
-            Built lean so you can focus on your craft. And your dashboard? Fully customisable — you only see what matters to <em>your</em> business.
+            Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
           </p>
           <div className="max-w-3xl mx-auto mb-14">
             <img
@@ -284,37 +284,36 @@ const Index = () => {
                 <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-6">Case Study</p>
                 <h2 className="text-3xl md:text-4xl tracking-tight mb-6" style={{ fontFamily: "'Abril Fatface', serif" }}>PhenomeBeauty</h2>
                 <p className="text-primary-foreground/70 leading-relaxed text-lg max-w-2xl mx-auto">
-                  A mobile beauty studio's journey — from WhatsApp chaos to a system that runs the business and advises the owner.
+                  A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business and advises the owner.
                 </p>
               </div>
 
-              {/* Journey timeline */}
               <div className="space-y-6 mb-14">
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Where it started</p>
                   <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    PhenomeBeauty was running entirely on WhatsApp. Every booking was a conversation. Confirmations, reminders, deposits — all manual, all time-consuming, all happening at 10pm when the client finally replied. A Google Sheet tried to bring order, but the more the business grew, the less it helped.
+                    PhenomeBeauty was running entirely on WhatsApp. Every booking was a conversation. Confirmations, reminders, deposits, all manual, all time-consuming, all happening at 10pm when the client finally replied. A Google Sheet tried to bring order, but the more the business grew, the less it helped.
                   </p>
                 </div>
 
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The shift</p>
                   <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    Moving to NextSlot meant clients could book themselves — choosing their service, time slot, and paying a deposit upfront. No more chasing confirmations. No more double bookings. The booking link went into the Instagram bio and the WhatsApp status. Within days, bookings came in without a single message exchanged.
+                    Moving to NextSlot meant clients could book themselves, choosing their service, time slot, and paying a deposit upfront. No more chasing confirmations. No more double bookings. The booking link went into the Instagram bio and the WhatsApp status. Within days, bookings came in without a single message exchanged.
                   </p>
                 </div>
 
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">What the dashboard revealed</p>
                   <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    The real change came when the data started talking. The dashboard showed that the majority of new clients were coming from Instagram — not WhatsApp status posts as assumed. It showed which services generated the most revenue, which time slots filled fastest, and which clients hadn't rebooked in over a month. Decisions that used to be guesses became obvious.
+                    The real change came when the data started talking. The dashboard showed that the majority of new clients were coming from Instagram, not WhatsApp status posts as assumed. It showed which services generated the most revenue, which time slots filled fastest, and which clients had not rebooked in over a month. Decisions that used to be guesses became obvious.
                   </p>
                 </div>
 
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The result</p>
                   <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    PhenomeBeauty didn't just get a booking tool. They got a business advisor that works in the background every day. The dashboard doesn't give generic advice — it reflects exactly what's happening inside the business and surfaces the insights that matter. That's the difference between data you collect and data you can actually use.
+                    PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every day. The dashboard does not give generic advice. It reflects exactly what is happening inside the business and surfaces the insights that matter. That is the difference between data you collect and data you can actually use.
                   </p>
                 </div>
               </div>

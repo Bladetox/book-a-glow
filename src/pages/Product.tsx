@@ -6,27 +6,104 @@ import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import { Link } from "react-router-dom";
 import {
   CalendarDays, Users, LayoutDashboard, Clock, BarChart3, Shield, ArrowRight,
-  Eye, Package, Star, Link2, Gem, CreditCard, Bell, TrendingUp, MapPin
+  Eye, Package, Star, Link2, Gem, CreditCard, Bell, TrendingUp, MapPin,
+  Sparkles, Instagram, SlidersHorizontal, MessageSquare
 } from "lucide-react";
 import barberImg from "@/assets/barber.jpg";
 import beauticianImg from "@/assets/beautician.jpg";
 
 const features = [
-  { icon: Eye, title: "Customisable Dashboard", desc: "Toggle sections on or off. Only see what matters to you: revenue, bookings, heatmaps, alerts, or all of it.", highlight: true },
-  { icon: TrendingUp, title: "Revenue Tracking", desc: "Monthly revenue hero, daily earnings, and 30-day trend charts. Know exactly how your business is performing." },
-  { icon: CalendarDays, title: "Smart Scheduling", desc: "Only available time slots appear to clients. No double bookings, no confusion, no back-and-forth messages." },
-  { icon: Users, title: "Client Insights", desc: "Track new vs returning clients, retention rate, and where they find you: Instagram, Google, referrals or TikTok." },
-  { icon: LayoutDashboard, title: "Booking Management", desc: "View, edit, confirm, cancel, and complete bookings. Full detail view with deposits, balances, and client info." },
-  { icon: Clock, title: "Availability Control", desc: "Set weekly hours, toggle days on/off, and override specific dates. Your schedule, your rules." },
-  { icon: BarChart3, title: "Booking Heatmap", desc: "See which time slots are busiest across the week. Optimise your schedule based on real demand patterns." },
-  { icon: Bell, title: "Smart Alerts", desc: "Pending deposits, overdue rebookings, low stock, new reviews: all surfaced automatically so nothing slips." },
-  { icon: Package, title: "Stock Management", desc: "Track product inventory with quantity levels and alerts when items run low or critical." },
-  { icon: Star, title: "Google Reviews", desc: "Connect your Google Reviews to monitor customer feedback and ratings directly from your dashboard." },
-  { icon: Link2, title: "Integrations", desc: "Connect Yoco payments, Google Calendar, Maps for callout fees, and Gmail for automated emails." },
-  { icon: CreditCard, title: "Payment Gateways", desc: "Support for Yoco, Stripe, PayStack, PayFast, Flutterwave, Square, Razorpay, Mollie, PayPal, and Peach Payments." },
-  { icon: Gem, title: "Loyalty Tracker", desc: "Track client visit frequency and rebooking status. Identify who's on track, who needs a nudge, and who's overdue." },
-  { icon: Shield, title: "Professional Booking Page", desc: "Give clients a clean, branded booking experience. No app download required." },
-  { icon: MapPin, title: "Callout Fee Calculator", desc: "Automatically calculate round-trip distance and travel fees using Google Maps integration." },
+  {
+    icon: SlidersHorizontal,
+    title: "Fully Customisable Dashboard",
+    desc: "Your business is unique. Toggle any section on or off so you only see what matters to you: revenue, heatmaps, alerts, stock, or all of it. Your dashboard, your way.",
+    highlight: true,
+  },
+  {
+    icon: TrendingUp,
+    title: "Revenue Tracking",
+    desc: "Monthly revenue overview, daily earnings, and a 30-day trend chart. Know exactly how your business is performing at a glance.",
+  },
+  {
+    icon: CalendarDays,
+    title: "Smart Scheduling",
+    desc: "Only available time slots are shown to clients. No double bookings, no confusion, no back-and-forth messages.",
+  },
+  {
+    icon: Instagram,
+    title: "Client Source Tracking",
+    desc: "Know exactly where your clients come from: Instagram, Google, referrals, TikTok, or WhatsApp. Spend your energy where it actually converts.",
+  },
+  {
+    icon: Users,
+    title: "Client Insights",
+    desc: "Track new vs returning clients, visit frequency, retention rate, and loyalty tiers. Know who your VIPs are and who needs a nudge to rebook.",
+  },
+  {
+    icon: LayoutDashboard,
+    title: "Booking Management",
+    desc: "View, confirm, cancel, and complete bookings. Full detail view with deposits, outstanding balances, and client info all in one place.",
+  },
+  {
+    icon: Clock,
+    title: "Availability Control",
+    desc: "Set weekly hours, toggle days on or off, and block out specific dates. Your schedule, your rules.",
+  },
+  {
+    icon: BarChart3,
+    title: "Booking Heatmap",
+    desc: "See which time slots fill fastest across the week. Optimise your schedule based on real demand patterns from your own data.",
+  },
+  {
+    icon: Bell,
+    title: "Smart Alerts",
+    desc: "Pending deposits, overdue rebookings, low stock, and new reviews are all surfaced automatically so nothing slips through.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Google Review Requests",
+    desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request after their appointment. More reviews means your business ranks higher in Google searches.",
+  },
+  {
+    icon: Package,
+    title: "Stock Management",
+    desc: "Track product inventory with quantity levels. Get alerts when items are running low or critically short before you run out.",
+  },
+  {
+    icon: Sparkles,
+    title: "Consultations",
+    desc: "Log pre-appointment consultation notes per client and service. Build a detailed history that helps you deliver a better experience every visit.",
+  },
+  {
+    icon: Star,
+    title: "Google Reviews",
+    desc: "Monitor customer feedback and star ratings directly from your dashboard. Respond quickly and stay on top of your reputation.",
+  },
+  {
+    icon: Link2,
+    title: "Integrations",
+    desc: "Connect Yoco payments, Google Calendar, Google Maps for callout fees, and Gmail for automated booking notifications.",
+  },
+  {
+    icon: CreditCard,
+    title: "Payment Gateways",
+    desc: "Yoco, Stripe, PayStack, PayFast, Flutterwave, Square, Razorpay, Mollie, PayPal, and Peach Payments all supported.",
+  },
+  {
+    icon: Gem,
+    title: "Loyalty Tracker",
+    desc: "Track client visit frequency and identify your New, Regular, and VIP clients. Build the relationships that keep people coming back.",
+  },
+  {
+    icon: Shield,
+    title: "Professional Booking Page",
+    desc: "Give clients a clean, branded booking experience. Multiple themes to match your brand. No app download required from your clients.",
+  },
+  {
+    icon: MapPin,
+    title: "Callout Fee Calculator",
+    desc: "Mobile service providers can set a per-km rate. NextSlot automatically calculates round-trip travel fees using Google Maps.",
+  },
 ];
 
 const Product = () => (
@@ -38,8 +115,11 @@ const Product = () => (
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
             One dashboard. Full control.
           </h1>
-          <p className="text-lg text-muted-foreground max-w-lg mx-auto mb-14">
+          <p className="text-lg text-muted-foreground max-w-lg mx-auto mb-4">
             Everything you need to run your appointment-based business, without the complexity.
+          </p>
+          <p className="text-sm text-accent font-medium mb-14">
+            Fully customisable. You only see what matters to your business.
           </p>
           <div className="max-w-5xl mx-auto flex items-end gap-6 justify-center">
             <div className="flex-1 max-w-[680px]">
@@ -68,10 +148,10 @@ const Product = () => (
       <section className="glow-overlay relative">
         <div id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 border-t border-border relative z-10">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
-            Features that matter
+            Every feature you need. Nothing you don't.
           </h2>
           <p className="text-center text-muted-foreground text-sm max-w-lg mx-auto mb-14">
-            Your dashboard is fully customisable. Toggle any section on or off. Only see what's relevant to your business.
+            Your dashboard is fully customisable. Toggle any section on or off. Only show what is relevant to your business.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f) => (

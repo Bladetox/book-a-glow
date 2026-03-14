@@ -1,8 +1,7 @@
 import { MobileFrame } from "@/components/site/DeviceFrames";
 import { ArrowRight, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const DEMO_URL = "https://id-preview--955de3a9-2375-44dc-b62d-4d4687200e08.lovable.app";
+import BookingAppPreview from "@/components/site/BookingAppPreview";
 
 const LiveDemoSection = () => (
   <section className="bg-secondary/40 py-20 md:py-28">
@@ -12,16 +11,17 @@ const LiveDemoSection = () => (
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">Live Demo</p>
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">See what your clients will experience</h2>
           <p className="text-muted-foreground leading-relaxed">
-            This is a real NextSlot booking page — loaded with dummy data so you can experience the full flow. Browse services, pick a time slot, and see exactly how effortless the booking experience feels for your clients. No downloads. No sign-ups required.
+            This is a real NextSlot booking flow, loaded with dummy data. Select a service, pick a time slot, fill in your details, and confirm a booking with a deposit. This is exactly what your clients will see when they visit your booking page.
           </p>
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />Mobile-first design that works beautifully on any device</li>
-            <li className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />Clients book in under 60 seconds — no phone calls, no back-and-forth</li>
+            <li className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />Clients book in under 60 seconds. No phone calls, no back-and-forth</li>
+            <li className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />Deposits collected automatically at the time of booking</li>
             <li className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />Fully branded to match your business identity</li>
             <li className="flex items-start gap-2">
               <Palette className="mt-0.5 w-3.5 h-3.5 text-accent shrink-0" />
               <span>
-                <span className="font-semibold text-foreground">Choose your theme.</span> NextSlot comes with multiple visual themes so your booking page looks and feels like <em>your</em> brand — not a generic tool.
+                <span className="font-semibold text-foreground">Multiple themes available.</span> Choose a look that feels like your brand, not a generic tool.
               </span>
             </li>
           </ul>
@@ -33,13 +33,7 @@ const LiveDemoSection = () => (
         <div className="flex justify-center">
           <div className="w-[280px]">
             <MobileFrame interactive={true}>
-              <iframe
-                src={DEMO_URL}
-                title="NextSlot live booking demo — Blade & Co."
-                className="w-full h-full border-0"
-                loading="lazy"
-                sandbox="allow-scripts allow-same-origin"
-              />
+              <BookingAppPreview />
             </MobileFrame>
           </div>
         </div>
