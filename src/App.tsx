@@ -29,7 +29,7 @@ const queryClient = new QueryClient();
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
   }, [pathname]);
   return null;
 };
@@ -47,7 +47,6 @@ const AuthRecoveryHandler = () => {
 
 const MarketingRoutes = () => (
   <>
-    <ScrollToTop />
     <AuthRecoveryHandler />
     <Routes>
       <Route path="/" element={<Index />} />
@@ -94,6 +93,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             {isSubdomain ? (
               <PublicTenantProvider>
                 <TenantRoutes />
