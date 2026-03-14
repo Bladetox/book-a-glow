@@ -9,6 +9,7 @@ import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantCo
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
+import About from "./pages/About";
 import Book from "./pages/Book";
 import Product from "./pages/Product";
 import Pricing from "./pages/Pricing";
@@ -41,6 +42,7 @@ const MarketingRoutes = () => (
     <AuthRecoveryHandler />
     <Routes>
       <Route path="/" element={<Index />} />
+      <Route path="/about" element={<About />} />
       <Route path="/product" element={<Product />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/login" element={<Login />} />

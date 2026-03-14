@@ -6,7 +6,7 @@ import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import StickyCtaBar from "@/components/site/StickyCtaBar";
 import LiveDemoSection from "@/components/site/LiveDemoSection";
 import TrustBadges from "@/components/site/TrustBadges";
-import { ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle, CalendarCheck, MapPin, Users, LayoutDashboard } from "lucide-react";
+import { ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle, CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 
@@ -26,6 +26,7 @@ const problems = [
   { icon: MessageSquare, title: "WhatsApp messages", desc: "Clients message at all hours. You lose track of who wants what and when." },
   { icon: CalendarX, title: "Manual scheduling", desc: "Pen and paper or memory. Neither scales when business picks up." },
   { icon: AlertTriangle, title: "Double bookings", desc: "Two clients, same slot. Someone's unhappy and you look unprofessional." },
+  { icon: BarChart2, title: "Information overload", desc: "You have the data but you're not sure what to do with it. Numbers without context don't help you grow." },
 ];
 
 const steps = [
@@ -49,6 +50,7 @@ const Index = () => {
       <SiteHeader />
       <StickyCtaBar />
       <main>
+        {/* HERO */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-8 animate-fade-in">
@@ -62,12 +64,10 @@ const Index = () => {
               </h1>
               <p className="text-lg text-muted-foreground max-w-md leading-relaxed">NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artist and mobile service providers.
               </p>
-
               <div className="border-l-2 border-accent pl-4 space-y-1">
                 <p className="text-sm font-semibold">Data-driven insight, to choose your marketing channels.</p>
                 <p className="text-xs text-muted-foreground">"Where did you hear about us?" Tracking is rare in booking systems, invaluable for your growth.</p>
               </div>
-
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
                 <Link to="/onboarding" className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200">
                   Create Your Booking Page
@@ -77,12 +77,10 @@ const Index = () => {
                   See how it works <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
-
               <div className="pt-4 border-t border-border">
                 <TrustBadges />
               </div>
             </div>
-
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-square rounded-full opacity-30 blur-3xl pointer-events-none -z-0" style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, hsl(var(--accent) / 0.3) 50%, transparent 80%)" }} />
               <div className="flex-1 relative z-10">
@@ -95,6 +93,7 @@ const Index = () => {
           </div>
         </section>
 
+        {/* INDUSTRIES */}
         <section className="bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Built for modern service businesses</h2>
@@ -115,13 +114,23 @@ const Index = () => {
           </div>
         </section>
 
+        {/* PAIN POINTS */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Most service businesses manage bookings like this</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">Sound familiar?</p>
-          <div className="grid md:grid-cols-3 gap-6 mb-14">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
             {problems.map((p, i) => (
-              <div key={p.title} className={`relative bg-red-50/60 dark:bg-red-950/20 border border-red-300 dark:border-red-800 rounded-2xl p-7 transition-all duration-300 cursor-default ${hoveredProblem === i ? "scale-[1.03] shadow-lg shadow-red-200/40" : "hover:scale-[1.01]"}`} onMouseEnter={() => setHoveredProblem(i)} onMouseLeave={() => setHoveredProblem(null)}>
-                <p.icon className="h-7 w-7 mb-4 text-red-500 dark:text-red-400" strokeWidth={1.5} />
+              <div
+                key={p.title}
+                className={`relative bg-red-50 dark:bg-red-950/30 border border-red-400 dark:border-red-700 rounded-2xl p-7 transition-all duration-300 cursor-default shadow-md shadow-red-200/50 dark:shadow-red-900/40 ${
+                  hoveredProblem === i
+                    ? "scale-[1.03] shadow-lg shadow-red-300/60 dark:shadow-red-800/50 border-red-500 dark:border-red-600"
+                    : "hover:scale-[1.01] hover:shadow-lg hover:border-red-500/80"
+                }`}
+                onMouseEnter={() => setHoveredProblem(i)}
+                onMouseLeave={() => setHoveredProblem(null)}
+              >
+                <p.icon className="h-7 w-7 mb-4 text-red-600 dark:text-red-400" strokeWidth={1.5} />
                 <h3 className="text-base font-semibold mb-2">{p.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
               </div>
@@ -135,10 +144,15 @@ const Index = () => {
           </div>
         </section>
 
+        {/* HOW IT WORKS */}
         <section className="bg-secondary/40 py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center mb-6">
-              <img src={logoImg} alt="NextSlot" className="h-32 md:h-40 w-auto" />
+              <img
+                src={logoImg}
+                alt="NextSlot"
+                className="h-32 md:h-40 w-auto mix-blend-multiply dark:mix-blend-screen"
+              />
             </div>
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-16">How NextSlot works</h2>
             <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
@@ -155,6 +169,7 @@ const Index = () => {
           </div>
         </section>
 
+        {/* FEATURES */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">Built lean so you can focus on your craft.</p>
@@ -174,6 +189,7 @@ const Index = () => {
 
         <LiveDemoSection />
 
+        {/* CASE STUDY */}
         <section className="bg-primary text-primary-foreground py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
@@ -205,8 +221,17 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 text-center">
-          <div className="max-w-2xl mx-auto space-y-8">
+        {/* FINAL CTA — faded logo watermark in background */}
+        <section className="relative overflow-hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 text-center">
+          {/* Faded logo watermark */}
+          <div className="pointer-events-none select-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            <img
+              src={logoImg}
+              alt=""
+              className="w-[420px] md:w-[560px] max-w-full opacity-[0.05] mix-blend-multiply dark:mix-blend-screen dark:opacity-[0.06] object-contain"
+            />
+          </div>
+          <div className="relative z-10 max-w-2xl mx-auto space-y-8">
             <h2 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">Your next booking should not depend on a message.</h2>
             <p className="text-lg text-muted-foreground">Create your booking page and let clients schedule themselves.</p>
             <Link to="/onboarding" className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-8 py-4 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200">
