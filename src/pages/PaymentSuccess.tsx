@@ -16,21 +16,22 @@ const REDIRECT_SECONDS = 12;
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const config = usePublicBusinessConfig();
-  const payment  = searchParams.get("payment");
+  const navigate       = useNavigate();
+  const config         = usePublicBusinessConfig();
+
+  const payment   = searchParams.get("payment");
   const bookingId = searchParams.get("booking_id");
   const tenant    = searchParams.get("tenant") ?? "";
-  const type      = searchParams.get("type") ?? "deposit"; // "deposit" | "final"
+  const type      = searchParams.get("type") ?? "deposit";
 
-  const urlDate    = searchParams.get("date") ?? "";
-  const urlTime    = searchParams.get("time") ?? "";
+  const urlDate    = searchParams.get("date")    ?? "";
+  const urlTime    = searchParams.get("time")    ?? "";
   const urlDeposit = searchParams.get("deposit") ? Number(searchParams.get("deposit")) : null;
 
-  const [booking, setBooking]     = useState<BookingSummary | null>(null);
+  const [booking,    setBooking]    = useState<BookingSummary | null>(null);
   const [reviewLink, setReviewLink] = useState<string>("");
-  const [loading, setLoading]     = useState(true);
-  const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
+  const [loading,    setLoading]    = useState(true);
+  const [countdown,  setCountdown]  = useState(REDIRECT_SECONDS);
 
   const isSuccess   = payment === "success";
   const isCancelled = payment === "cancelled";
@@ -38,51 +39,51 @@ const PaymentSuccess = () => {
 
   // Fetch booking + review link
   useEffect(() => {
-    if (!bookingId || !isSuccess) { setLoading(false); return; }
+    if (!isSuccess) { setLoading(false); return; }
 
     if (urlDate || urlTime || urlDeposit != null) {
-      setBooking({ booking_date: urlDate || undefined, start_time: urlTime || undefined, deposit_amount: urlDeposit ?? undefined, deposit_paid: true });
-      setLoading(false);
+      setBooking({
+        booking_date:   urlDate    || undefined,
+        start_time:     urlTime    || undefined,
+        deposit_amount: urlDeposit ?? undefined,
+        deposit_paid:   true,
+      });
     }
 
-    const cleanUrl = `${window.location.pathname}?confirmed=1`;
-    window.history.replaceState(null, "", cleanUrl);
+    window.history.replaceState(null, "", `${window.location.pathname}?confirmed=1`);
 
-    // Fetch booking + review link from app_settings concurrently
-    const fetchData = async () => {
-      let attempts = 0;
-      const poll = async () => {
-        attempts++;
-        const { data } = await supabase
-          .from("bookings")
-          .select("id, booking_date, start_time, deposit_amount, deposit_paid, tenant_id")
-          .eq("id", bookingId)
-          .single();
-        if (data) {
-          setBooking(data);
-          setLoading(false);
-          // Fetch review link from app_settings
-          const { data: settings } = await supabase
-            .from("app_settings")
-            .select("value")
-            .eq("tenant_id", data.tenant_id)
-            .eq("key", "google_review_link")
-            .maybeSingle();
-          if (settings?.value) setReviewLink(settings.value);
-        } else if (attempts < 5) {
-          setTimeout(poll, 2000);
-        } else {
-          setLoading(false);
-        }
-      };
-      poll();
+    if (!bookingId) { setLoading(false); return; }
+
+    let attempts = 0;
+    const poll = async () => {
+      attempts++;
+      const { data } = await supabase
+        .from("bookings")
+        .select("id, booking_date, start_time, deposit_amount, deposit_paid, tenant_id")
+        .eq("id", bookingId)
+        .single();
+      if (data) {
+        setBooking(data);
+        setLoading(false);
+        const { data: settings } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("tenant_id", data.tenant_id)
+          .eq("key", "google_review_link")
+          .maybeSingle();
+        if (settings?.value) setReviewLink(settings.value);
+      } else if (attempts < 5) {
+        setTimeout(poll, 2000);
+      } else {
+        setLoading(false);
+      }
     };
-    fetchData();
+    poll();
   }, [bookingId, isSuccess]);
 
-  // Countdown redirect
+  // Countdown redirect — deposit screen only, never final
   useEffect(() => {
-    if (!isSuccess || loading) return;
+    if (!isSuccess || isFinal || loading) return;
     const interval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -94,14 +95,15 @@ const PaymentSuccess = () => {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [isSuccess, loading, navigate, tenant]);
+  }, [isSuccess, isFinal, loading, navigate, tenant]);
 
   const displayDate    = booking?.booking_date
     ? new Date(booking.booking_date).toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "long", year: "numeric" })
     : null;
-  const displayTime    = (booking?.start_time?.slice(0, 5)) || urlTime || null;
+  const displayTime    = booking?.start_time?.slice(0, 5) || urlTime || null;
   const displayDeposit = booking?.deposit_amount ?? urlDeposit;
 
+  // Cancelled
   if (isCancelled) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
@@ -116,7 +118,7 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ── FINAL PAYMENT SUCCESS ────────────────────────────────────────────────
+  // ── SUCCESS SCREEN 2 — Final payment (no countdown, stays open) ────────────
   if (isFinal && isSuccess && !loading) {
     const bookingAppUrl = `${window.location.origin}/?tenant=${tenant}`;
     const reviewHref    = reviewLink || `https://search.google.com/local/writereview?placeid=${tenant}`;
@@ -129,7 +131,6 @@ const PaymentSuccess = () => {
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="flex flex-col items-center gap-6 text-center max-w-sm w-full"
         >
-          {/* Icon */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -138,18 +139,16 @@ const PaymentSuccess = () => {
             <CheckCircle2 className="w-16 h-16 text-primary" />
           </motion.div>
 
-          {/* Headline */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
             className="flex flex-col gap-1"
           >
-            <h2 className="font-display text-2xl font-bold text-foreground">Thank you.</h2>
+            <h2 className="font-display text-2xl font-bold text-foreground">Thank you. 💛</h2>
             <p className="text-sm text-muted-foreground italic">Full payment received. You're all settled.</p>
           </motion.div>
 
-          {/* Personal message */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -167,8 +166,11 @@ const PaymentSuccess = () => {
               By sharing your experience on Google, you help other women remember they matter too.
               Your words might be exactly what they need to hear.
             </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Kindly share your experience so they find their way here:
+            </p>
 
-            {/* Review CTA */}
+            {/* Opens new tab — client app stays in background */}
             <a
               href={reviewHref}
               target="_blank"
@@ -176,7 +178,7 @@ const PaymentSuccess = () => {
               className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-primary/30 bg-primary/[0.06] text-sm font-semibold text-primary hover:bg-primary/[0.12] transition-all duration-200"
             >
               <Star className="w-4 h-4 fill-primary" />
-              Share your experience
+              Share your experience on Google
             </a>
 
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -188,14 +190,13 @@ const PaymentSuccess = () => {
             <p className="text-sm font-semibold text-foreground">Toodles. 🌸</p>
           </motion.div>
 
-          {/* Re-book CTA */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55 }}
             className="w-full"
           >
-            <p className="text-xs text-muted-foreground/60 mb-3">Ready to book your next session?</p>
+            <p className="text-xs text-muted-foreground/60 mb-3">Ready to treat yourself again?</p>
             <a
               href={bookingAppUrl}
               className="btn-next w-full inline-flex items-center justify-center gap-2 text-sm"
@@ -203,16 +204,12 @@ const PaymentSuccess = () => {
               Book Again
             </a>
           </motion.div>
-
-          <p className="text-xs text-muted-foreground/50">
-            Redirecting in <span className="font-semibold text-muted-foreground">{countdown}</span>s…
-          </p>
         </motion.div>
       </div>
     );
   }
 
-  // ── DEPOSIT SUCCESS (default) ────────────────────────────────────────────
+  // ── SUCCESS SCREEN 1 — Deposit confirmation (with countdown) ──────────────
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <motion.div

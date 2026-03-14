@@ -12,8 +12,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const yocoSecret = Deno.env.get("YOCO_SECRET_KEY");
+    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const yocoSecret  = Deno.env.get("YOCO_SECRET_KEY");
 
     if (!yocoSecret) {
       return new Response(
@@ -24,12 +24,9 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // --- Auth resolution ---
-    // Authenticated users: verify JWT and check ownership
-    // Guest users (no auth header): booking_id UUID is unguessable — sufficient as authorization
+    // Auth resolution — guests use unguessable booking UUID as implicit auth
     const authHeader = req.headers.get("Authorization");
     let authedUserId: string | null = null;
-
     if (authHeader) {
       const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
         global: { headers: { Authorization: authHeader } },
@@ -38,7 +35,16 @@ Deno.serve(async (req) => {
       if (user) authedUserId = user.id;
     }
 
-    const { booking_id, tenant_slug, success_url, cancel_url } = await req.json();
+    const body = await req.json();
+    const {
+      booking_id,
+      tenant_slug,
+      success_url,
+      cancel_url,
+      payment_type = "deposit",
+      amount: overrideAmountCents,
+    } = body;
+
     if (!booking_id) {
       return new Response(
         JSON.stringify({ error: "booking_id required" }),
@@ -48,7 +54,7 @@ Deno.serve(async (req) => {
 
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
-      .select("id, deposit_amount, deposit_paid, client_id, tenant_id")
+      .select("id, deposit_amount, deposit_paid, balance_due, total_amount, client_id, tenant_id")
       .eq("id", booking_id)
       .single();
 
@@ -59,7 +65,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // If authenticated: verify ownership
     if (authedUserId && booking.client_id && booking.client_id !== authedUserId) {
       return new Response(
         JSON.stringify({ error: "Not your booking" }),
@@ -67,40 +72,57 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (booking.deposit_paid) {
+    if (payment_type === "deposit" && booking.deposit_paid) {
       return new Response(
         JSON.stringify({ error: "Deposit already paid" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const amountInCents = Math.round(booking.deposit_amount * 100);
+    let amountInCents: number;
+    if (payment_type === "balance") {
+      amountInCents = overrideAmountCents
+        ? Math.round(overrideAmountCents)
+        : Math.round((Number(booking.balance_due) || (Number(booking.total_amount) - Number(booking.deposit_amount))) * 100);
+    } else {
+      amountInCents = Math.round(Number(booking.deposit_amount) * 100);
+    }
+
+    if (amountInCents <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Amount must be greater than zero" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const origin = req.headers.get("origin") || "https://book-a-glow.vercel.app";
-    const slug = tenant_slug || booking.tenant_id;
-    const finalSuccessUrl = success_url || `${origin}/?tenant=${slug}&payment=success&booking_id=${booking_id}`;
-    const finalCancelUrl = cancel_url || `${origin}/?tenant=${slug}&payment=cancelled`;
+    const slug   = tenant_slug || booking.tenant_id;
+
+    const finalSuccessUrl = success_url ||
+      `${origin}/payment-success?payment=success&booking_id=${booking_id}&tenant=${slug}&type=${payment_type === "balance" ? "final" : "deposit"}`;
+    const finalCancelUrl  = cancel_url  ||
+      `${origin}/payment-success?payment=cancelled&tenant=${slug}`;
 
     const yocoRes = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${yocoSecret}`,
+        "Authorization": `Bearer ${yocoSecret}`,
       },
       body: JSON.stringify({
-        amount: amountInCents,
-        currency: "ZAR",
+        amount:     amountInCents,
+        currency:   "ZAR",
         successUrl: finalSuccessUrl,
-        cancelUrl: finalCancelUrl,
+        cancelUrl:  finalCancelUrl,
         metadata: {
-          booking_id: booking.id,
-          tenant_id: booking.tenant_id,
+          booking_id,
+          tenant_id:    booking.tenant_id,
+          payment_type,
         },
       }),
     });
 
     const yocoData = await yocoRes.json();
-
     if (!yocoRes.ok) {
       console.error("Yoco error:", yocoData);
       return new Response(
@@ -109,21 +131,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    await supabase
-      .from("bookings")
-      .update({
+    if (payment_type === "balance") {
+      await supabase.from("bookings").update({
+        yoco_final_checkout_id: yocoData.id,
+        yoco_final_link:        yocoData.redirectUrl,
+      }).eq("id", booking.id);
+    } else {
+      await supabase.from("bookings").update({
         yoco_checkout_id: yocoData.id,
-        yoco_link: yocoData.redirectUrl,
-      })
-      .eq("id", booking.id);
+        yoco_link:        yocoData.redirectUrl,
+      }).eq("id", booking.id);
+    }
 
     return new Response(
       JSON.stringify({
-        checkout_id: yocoData.id,
-        redirect_url: yocoData.redirectUrl,
+        checkoutId:  yocoData.id,
+        url:         yocoData.redirectUrl,
+        redirectUrl: yocoData.redirectUrl,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err) {
     console.error("Checkout error:", err);
     return new Response(
