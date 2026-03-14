@@ -145,8 +145,26 @@ interface GoogleCalendarCardProps {
 }
 
 const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
-  const [connecting, setConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(connected);
+
+  // On mount: check if we just returned from Google OAuth redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gcal") === "connected") {
+      setIsConnected(true);
+      toast.success("Google Calendar connected!");
+      // Clean the URL without reloading
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("gcal");
+      window.history.replaceState({}, "", clean.toString());
+    }
+    if (params.get("gcal") === "error") {
+      toast.error("Google Calendar connection failed. Please try again.");
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("gcal");
+      window.history.replaceState({}, "", clean.toString());
+    }
+  }, []);
 
   const handleConnect = () => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
@@ -161,9 +179,13 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       return;
     }
 
-    setConnecting(true);
     const redirectUri = `${supabaseUrl}/functions/v1/google-calendar-callback`;
     const scope = "https://www.googleapis.com/auth/calendar.events";
+
+    // Encode the app return URL in state so the edge function can redirect back
+    const returnUrl = `${window.location.origin}/admin?gcal=connected`;
+    const state = JSON.stringify({ tenantId, returnUrl });
+
     const params = new URLSearchParams({
       client_id:     clientId,
       redirect_uri:  redirectUri,
@@ -171,35 +193,11 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       scope,
       access_type:   "offline",
       prompt:        "consent",
-      state:         tenantId,
+      state:         btoa(state),
     });
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-    const popup = window.open(authUrl, "gcal_connect", "width=520,height=620,left=200,top=100");
 
-    if (!popup) {
-      toast.error("Popup was blocked. Please allow popups for this site and try again.");
-      setConnecting(false);
-      return;
-    }
-
-    const onMessage = (e: MessageEvent) => {
-      if (e.data?.type === "gcal_connected") {
-        popup?.close();
-        setIsConnected(true);
-        setConnecting(false);
-        toast.success("Google Calendar connected!");
-        window.removeEventListener("message", onMessage);
-      }
-    };
-    window.addEventListener("message", onMessage);
-
-    const pollClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(pollClosed);
-        setConnecting(false);
-        window.removeEventListener("message", onMessage);
-      }
-    }, 800);
+    // Full-page redirect — no popup, no COOP issues
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
   return (
@@ -248,12 +246,9 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
         ) : (
           <button
             onClick={handleConnect}
-            disabled={connecting}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all"
           >
-            {connecting
-              ? <><Loader2 className="w-3 h-3 animate-spin" /> Connecting…</>
-              : <><Calendar className="w-3 h-3" /> Connect Google Calendar</>}
+            <Calendar className="w-3 h-3" /> Connect Google Calendar
           </button>
         )}
       </div>

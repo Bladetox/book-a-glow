@@ -8,20 +8,32 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/google-calendar-callback`;
 
+const redirect = (url: string) =>
+  new Response(null, { status: 302, headers: { Location: url } });
+
 serve(async (req: Request) => {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  const tenantId = url.searchParams.get("state");
+  const stateRaw = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
-  // HTML helper
-  const html = (script: string) =>
-    new Response(`<!DOCTYPE html><html><body><script>${script}</script></body></html>`, {
-      headers: { "Content-Type": "text/html" },
-    });
+  // Parse state: { tenantId, returnUrl }
+  let tenantId = "";
+  let returnUrl = "";
+  try {
+    const parsed = JSON.parse(atob(stateRaw ?? ""));
+    tenantId = parsed.tenantId ?? "";
+    returnUrl = parsed.returnUrl ?? "";
+  } catch {
+    return redirect("https://phenomebeauty.nextslot.co.za/admin?gcal=error");
+  }
+
+  const failUrl = returnUrl
+    ? returnUrl.replace("gcal=connected", "gcal=error")
+    : "https://phenomebeauty.nextslot.co.za/admin?gcal=error";
 
   if (error || !code || !tenantId) {
-    return html(`window.opener?.postMessage({type:'gcal_error',error:'${error ?? "missing_params"}'},'*');window.close();`);
+    return redirect(failUrl);
   }
 
   try {
@@ -42,7 +54,7 @@ serve(async (req: Request) => {
 
     if (!tokenRes.ok || !tokens.access_token) {
       console.error("Token exchange failed:", tokens);
-      return html(`window.opener?.postMessage({type:'gcal_error',error:'token_exchange_failed'},'*');window.close();`);
+      return redirect(failUrl);
     }
 
     // Store tokens in app_settings for this tenant
@@ -62,11 +74,10 @@ serve(async (req: Request) => {
       if (dbErr) console.error("DB upsert error:", dbErr);
     }
 
-    // Tell the opener window connection succeeded, then close
-    return html(`window.opener?.postMessage({type:'gcal_connected'},'*');window.close();`);
+    return redirect(returnUrl || "https://phenomebeauty.nextslot.co.za/admin?gcal=connected");
 
   } catch (err) {
     console.error("Callback error:", err);
-    return html(`window.opener?.postMessage({type:'gcal_error',error:'server_error'},'*');window.close();`);
+    return redirect(failUrl);
   }
 });
