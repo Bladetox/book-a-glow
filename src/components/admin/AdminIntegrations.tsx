@@ -130,7 +130,7 @@ const IntegrationCard = ({ icon: Icon, name, desc, configured, saving, editing, 
           className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-          {saving ? "Saving…" : "Save Configuration"}
+          {saving ? "Saving\u2026" : "Save Configuration"}
         </button>
       </div>
     </motion.div>
@@ -149,9 +149,24 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
   const [isConnected, setIsConnected] = useState(connected);
 
   const handleConnect = () => {
-    setConnecting(true);
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+
+    // DEBUG — remove after confirming values
+    console.log("[GCal] VITE_SUPABASE_URL:", supabaseUrl);
+    console.log("[GCal] VITE_GOOGLE_CLIENT_ID:", clientId);
+    console.log("[GCal] tenantId:", tenantId);
+
+    if (!clientId) {
+      toast.error("Google Client ID is not configured. Contact support.");
+      return;
+    }
+    if (!supabaseUrl) {
+      toast.error("Supabase URL is not configured. Contact support.");
+      return;
+    }
+
+    setConnecting(true);
     const redirectUri = `${supabaseUrl}/functions/v1/google-calendar-callback`;
     const scope = "https://www.googleapis.com/auth/calendar.events";
     const params = new URLSearchParams({
@@ -164,7 +179,17 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       state:         tenantId,
     });
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+
+    console.log("[GCal] authUrl:", authUrl);
+    console.log("[GCal] redirect_uri:", redirectUri);
+
     const popup = window.open(authUrl, "gcal_connect", "width=520,height=620,left=200,top=100");
+
+    if (!popup) {
+      toast.error("Popup was blocked. Please allow popups for this site and try again.");
+      setConnecting(false);
+      return;
+    }
 
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === "gcal_connected") {
@@ -236,7 +261,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all disabled:opacity-50"
           >
             {connecting
-              ? <><Loader2 className="w-3 h-3 animate-spin" /> Connecting…</>
+              ? <><Loader2 className="w-3 h-3 animate-spin" /> Connecting\u2026</>
               : <><Calendar className="w-3 h-3" /> Connect Google Calendar</>}
           </button>
         )}
@@ -343,13 +368,13 @@ const AdminIntegrations = () => {
           onEdit={() => setYocoEditing(true)}
           onSave={() => handleSave("yoco", yocoDraft, () => setYocoEditing(false))}
         >
-          <Field label="Public Key" fieldKey="yoco_public_key" placeholder="pk_live_…" type="text"
+          <Field label="Public Key" fieldKey="yoco_public_key" placeholder="pk_live_\u2026" type="text"
             value={yocoDraft.yoco_public_key ?? ""} masked={yocoConfigured} editing={yocoEditing}
             onChange={handleChange(setYocoDraft)} />
-          <Field label="Secret Key" fieldKey="yoco_secret_key" placeholder="sk_live_…" type="password"
+          <Field label="Secret Key" fieldKey="yoco_secret_key" placeholder="sk_live_\u2026" type="password"
             value={yocoDraft.yoco_secret_key ?? ""} masked={yocoConfigured} editing={yocoEditing}
             onChange={handleChange(setYocoDraft)} />
-          <Field label="Webhook Secret" fieldKey="yoco_webhook_secret" placeholder="whsec_…" type="password"
+          <Field label="Webhook Secret" fieldKey="yoco_webhook_secret" placeholder="whsec_\u2026" type="password"
             value={yocoDraft.yoco_webhook_secret ?? ""} masked={yocoConfigured} editing={yocoEditing}
             onChange={handleChange(setYocoDraft)} />
         </IntegrationCard>
@@ -365,7 +390,7 @@ const AdminIntegrations = () => {
           onEdit={() => setMapsEditing(true)}
           onSave={() => handleSave("maps", mapsDraft, () => setMapsEditing(false))}
         >
-          <Field label="API Key" fieldKey="google_maps_api_key" placeholder="AIzaSy…" type="password"
+          <Field label="API Key" fieldKey="google_maps_api_key" placeholder="AIzaSy\u2026" type="password"
             value={mapsDraft.google_maps_api_key ?? ""} masked={mapsConfigured} editing={mapsEditing}
             onChange={handleChange(setMapsDraft)} />
         </IntegrationCard>
