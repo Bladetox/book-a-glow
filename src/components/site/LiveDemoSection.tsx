@@ -6,7 +6,8 @@ import BookingAppPreview from "@/components/site/BookingAppPreview";
 const LiveDemoSection = () => (
   <section className="bg-secondary/40 py-20 md:py-28">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-start">
+        {/* Copy */}
         <div className="space-y-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">Live Demo</p>
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">See what your clients will experience</h2>
@@ -30,11 +31,20 @@ const LiveDemoSection = () => (
           </Link>
         </div>
 
-        <div className="flex justify-center">
-          <div className="w-[280px]">
-            <MobileFrame interactive={true}>
-              <BookingAppPreview />
-            </MobileFrame>
+        {/* Demo — phone frame on desktop, raw scrollable card on mobile */}
+        <div className="w-full">
+          {/* Desktop: inside phone frame */}
+          <div className="hidden md:flex justify-center">
+            <div className="w-[300px]">
+              <MobileFrame interactive={true}>
+                <BookingAppPreview />
+              </MobileFrame>
+            </div>
+          </div>
+
+          {/* Mobile: clean card, fully readable, no frame */}
+          <div className="md:hidden rounded-3xl border border-border shadow-xl overflow-hidden bg-white">
+            <BookingAppPreview />
           </div>
         </div>
       </div>
