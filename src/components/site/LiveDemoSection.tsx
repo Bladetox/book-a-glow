@@ -11,7 +11,7 @@ const LiveDemoSection = () => (
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">Live Demo</p>
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">See what your clients will experience</h2>
           <p className="text-muted-foreground leading-relaxed">
-            This is a real NextSlot booking flow, loaded with dummy data. Select a service, pick a time slot, fill in your details, and confirm a booking with a deposit. This is exactly what your clients will see when they visit your booking page.
+            This is a real NextSlot booking flow. Select a service, pick a time slot, fill in your details, and confirm a booking with a deposit. This is exactly what your clients will see when they visit your booking page.
           </p>
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />Mobile-first design that works beautifully on any device</li>
