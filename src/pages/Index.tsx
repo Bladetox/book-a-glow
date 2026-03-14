@@ -83,13 +83,13 @@ const steps = [
   {
     num: "01",
     title: "Create your booking page",
-    desc: "Set your services, prices, availability, and connect your payment gateway. Your page is live and taking real bookings in minutes. No coding, no tech headaches.",
+    desc: "Set your services, prices, availability, and connect your payment gateway. Your page is live and taking real bookings in minutes.",
     highlight: "Live in minutes.",
   },
   {
     num: "02",
     title: "Share your booking link",
-    desc: "Add it to your Instagram bio, TikTok bio, or WhatsApp status. Clients book themselves. No back-and-forth messages, no phone calls.",
+    desc: "Add it to your Instagram bio, TikTok bio, or WhatsApp status. Clients book themselves. No back-and-forth messages.",
     highlight: "No more scheduling chaos.",
   },
   {
