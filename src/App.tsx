@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
 import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantContext";
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
@@ -26,6 +26,14 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 
 const queryClient = new QueryClient();
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+  return null;
+};
+
 const AuthRecoveryHandler = () => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -39,6 +47,7 @@ const AuthRecoveryHandler = () => {
 
 const MarketingRoutes = () => (
   <>
+    <ScrollToTop />
     <AuthRecoveryHandler />
     <Routes>
       <Route path="/" element={<Index />} />
