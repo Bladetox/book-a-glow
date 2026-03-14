@@ -2,16 +2,16 @@
  * Resolves the tenant slug from the current hostname.
  *
  * Resolution order:
- *   1. ?tenant=xxx query param (dev override)
- *   2. Lovable preview environment → fallback to demo tenant
- *   3. Custom domain lookup (e.g. bookings.phenomebeauty.co.za → looked up in tenants.custom_domain)
- *   4. Subdomain of known NextSlot domains (phenomebeauty.nextslot.co.za → "phenomebeauty")
- *   5. null → show marketing site
+ *   1. ?tenant=xxx query param (dev/preview ONLY — blocked on production domains)
+ *   2. Bare localhost → marketing site
+ *   3. Lovable preview environment → marketing site
+ *   4. Custom domain lookup (e.g. bookings.phenomebeauty.co.za → looked up in tenants.custom_domain)
+ *   5. Subdomain of known NextSlot domains (phenomebeauty.nextslot.co.za → "phenomebeauty")
+ *   6. null → show marketing site
  */
 
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com"];
-const DEMO_TENANT_SLUG = "phenomebeauty";
 
 // UUID pattern for Lovable preview subdomains
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,12 +28,21 @@ export interface TenantResolution {
 }
 
 export function resolveTenantSync(): TenantResolution {
-  // 1. Query param override (dev convenience)
-  const params = new URLSearchParams(window.location.search);
-  const tenantParam = params.get("tenant");
-  if (tenantParam) return { slug: tenantParam, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
-
   const hostname = window.location.hostname;
+
+  // Determine if we are on a production NextSlot domain — if so, block dev overrides
+  const isProductionDomain = MAIN_DOMAINS.some(
+    (d) => hostname === d || hostname === `www.${d}`
+  );
+
+  // 1. Query param override — dev/preview ONLY, never honoured on production domains
+  if (!isProductionDomain) {
+    const params = new URLSearchParams(window.location.search);
+    const tenantParam = params.get("tenant");
+    if (tenantParam) {
+      return { slug: tenantParam, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
+    }
+  }
 
   // 2. Bare localhost → show marketing site (use ?tenant=xxx to test tenant mode)
   if (hostname === "localhost" || hostname === "127.0.0.1") {
