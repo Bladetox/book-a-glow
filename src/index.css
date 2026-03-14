@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -134,7 +134,6 @@
 }
 
 /* ===== TENANT LOGO — seamless blend across all pages ===== */
-/* Any logo rendered inside a .tenant-logo wrapper blends into the bg */
 .tenant-logo img,
 .tenant-logo-img {
   mix-blend-mode: multiply;
@@ -142,14 +141,12 @@
   transition: opacity 0.3s ease;
 }
 
-/* On dark surfaces (dark mode) use luminosity instead */
 .dark .tenant-logo img,
 .dark .tenant-logo-img {
   mix-blend-mode: luminosity;
   opacity: 0.88;
 }
 
-/* Light page backgrounds — multiply removes white halos cleanly */
 html:not(.dark) .tenant-logo img,
 html:not(.dark) .tenant-logo-img {
   mix-blend-mode: multiply;
