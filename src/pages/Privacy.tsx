@@ -1,4 +1,5 @@
 import SiteHeader from "@/components/site/SiteHeader";
+import SiteFooter from "@/components/site/SiteFooter";
 
 const Privacy = () => (
   <div className="min-h-screen nextslot-theme bg-background animate-fade-in">
@@ -25,6 +26,7 @@ const Privacy = () => (
         <section><h2 className="text-2xl font-bold mb-4">Contact Us</h2><p className="text-muted-foreground">If you have any questions about this Privacy Policy or wish to exercise your rights, please contact us at:</p><p className="text-muted-foreground mt-4">Email: privacy@nextslot.co.za<br />Address: South Africa</p></section>
       </div>
     </main>
+    <SiteFooter />
   </div>
 );
 
