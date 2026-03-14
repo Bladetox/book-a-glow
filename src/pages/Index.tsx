@@ -384,31 +384,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* FINAL CTA */}
-        <section className="relative overflow-hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 text-center">
-          <div className="pointer-events-none select-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
-            <img
-              src={logoImg}
-              alt=""
-              className="w-[420px] md:w-[560px] max-w-full opacity-[0.05] mix-blend-multiply dark:mix-blend-screen dark:opacity-[0.06] object-contain"
-            />
-          </div>
-          <div className="relative z-10 max-w-2xl mx-auto space-y-8">
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">
-              Your next booking should not depend on a message.
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Create your booking page and let clients schedule themselves.
-            </p>
-            <Link
-              to="/onboarding"
-              className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-8 py-4 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200"
-            >
-              Create Your Booking Page
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-        </section>
       </main>
 
       <SiteFooter />
