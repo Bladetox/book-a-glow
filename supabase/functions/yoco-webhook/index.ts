@@ -46,7 +46,6 @@ async function refreshGcalToken(
     console.error("Token refresh failed:", data);
     return null;
   }
-  // Update stored token
   await supabase.from("app_settings").upsert(
     { tenant_id: tenantId, key: "gcal_access_token", value: data.access_token },
     { onConflict: "tenant_id,key" }
@@ -61,12 +60,9 @@ async function refreshGcalToken(
 async function createCalendarEvent(
   supabase: ReturnType<typeof createClient>,
   tenantId: string,
-  booking: Record<string, any>,
-  client: Record<string, any>,
-  service: Record<string, any>
+  booking: Record<string, any>
 ) {
   try {
-    // Fetch all gcal settings for tenant
     const { data: rows } = await supabase
       .from("app_settings")
       .select("key, value")
@@ -84,7 +80,6 @@ async function createCalendarEvent(
     const clientId     = Deno.env.get("GOOGLE_CLIENT_ID")!;
     const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
-    // Refresh token if expired (with 60s buffer)
     let accessToken = settings["gcal_access_token"];
     const expiry = Number(settings["gcal_token_expiry"] ?? 0);
     if (Date.now() > expiry - 60_000) {
@@ -93,42 +88,45 @@ async function createCalendarEvent(
       accessToken = newToken;
     }
 
-    // Build event times
-    const startDate = new Date(booking.scheduled_date);
-    // scheduled_time is e.g. "10:30" or "10:30:00"
-    const [hours, minutes] = (booking.scheduled_time ?? "00:00").split(":").map(Number);
-    startDate.setHours(hours, minutes, 0, 0);
-    const durationMins = service?.duration_minutes ?? 60;
+    // Build start/end times from booking_date + start_time
+    const [year, month, day] = (booking.booking_date as string).split("-").map(Number);
+    const [hours, minutes]   = (booking.start_time as string ?? "00:00").split(":").map(Number);
+    const startDate = new Date(year, month - 1, day, hours, minutes, 0);
+    const durationMins = booking.service_duration_minutes ?? 60;
     const endDate = new Date(startDate.getTime() + durationMins * 60_000);
 
-    const clientName  = `${client?.first_name ?? ""} ${client?.last_name ?? ""}`.trim() || "Client";
-    const clientPhone = client?.phone ?? "";
-    const clientEmail = client?.email ?? "";
-    const address     = booking.address ?? booking.location_address ?? "";
-    const serviceName = service?.name ?? "Appointment";
+    // Client details are stored directly on the booking row
+    const clientName  = booking.client_name  ?? booking.guest_name  ?? "Client";
+    const clientPhone = booking.client_phone ?? booking.guest_phone ?? "";
+    const clientEmail = booking.client_email ?? booking.guest_email ?? "";
+    const address     = booking.is_call_out ? (booking.call_out_address ?? "") : "";
     const price       = booking.total_amount ?? booking.deposit_amount ?? 0;
 
-    // Description with clickable links (Google Calendar renders HTML in description)
-    const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
+    const phoneLink   = clientPhone
+      ? `<a href="tel:${clientPhone}">${clientPhone}</a>`
+      : "";
     const addressLink = address
       ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}">${address}</a>`
       : "";
 
-    const description = [
+    const descLines = [
       `<b>Client:</b> ${clientName}`,
-      clientPhone  ? `<b>Phone:</b> ${phoneLink}`   : "",
-      clientEmail  ? `<b>Email:</b> ${clientEmail}` : "",
-      address      ? `<b>Address:</b> ${addressLink}` : "",
-      `<b>Service:</b> ${serviceName}`,
+      clientPhone ? `<b>Phone:</b> ${phoneLink}`     : "",
+      clientEmail ? `<b>Email:</b> ${clientEmail}`   : "",
+      address     ? `<b>Address:</b> ${addressLink}` : "",
+      booking.is_call_out && booking.call_out_distance_km
+        ? `<b>Distance:</b> ${booking.call_out_distance_km} km`
+        : "",
       `<b>Duration:</b> ${durationMins} min`,
       `<b>Total:</b> R${Number(price).toFixed(2)}`,
+      booking.client_notes ? `<b>Notes:</b> ${booking.client_notes}` : "",
       `<b>Deposit paid ✅</b>`,
     ].filter(Boolean).join("<br>");
 
     const event = {
-      summary: `${serviceName} — ${clientName}`,
-      description,
-      location: address || undefined,
+      summary:     `Booking — ${clientName}`,
+      description: descLines,
+      location:    address || undefined,
       start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
       end:   { dateTime: endDate.toISOString(),   timeZone: "Africa/Johannesburg" },
     };
@@ -139,7 +137,7 @@ async function createCalendarEvent(
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
+          "Content-Type":  "application/json",
         },
         body: JSON.stringify(event),
       }
@@ -150,7 +148,6 @@ async function createCalendarEvent(
       console.error("Google Calendar API error:", JSON.stringify(calData));
     } else {
       console.log("Calendar event created:", calData.id, calData.htmlLink);
-      // Store the event ID on the booking for future updates/deletes
       await supabase
         .from("bookings")
         .update({ gcal_event_id: calData.id })
@@ -174,10 +171,10 @@ Deno.serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
 
-    const rawBody     = await req.arrayBuffer();
+    const rawBody      = await req.arrayBuffer();
     const payloadBytes = new Uint8Array(rawBody);
-    const bodyText    = new TextDecoder().decode(payloadBytes);
-    const body        = JSON.parse(bodyText);
+    const bodyText     = new TextDecoder().decode(payloadBytes);
+    const body         = JSON.parse(bodyText);
 
     const { type, payload } = body;
     console.log("Yoco webhook received:", type);
@@ -237,13 +234,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── STEP 1: Fetch booking with full details for calendar ────────────────
+    // ── STEP 1: Fetch booking with all fields needed for calendar ────────────
     let bookingQuery = supabase
       .from("bookings")
       .select(`
         id, client_id, tenant_id, deposit_amount, deposit_paid, total_amount,
-        scheduled_date, scheduled_time, address, location_address,
-        service_id, gcal_event_id
+        booking_date, start_time, end_time, service_duration_minutes,
+        is_call_out, call_out_address, call_out_distance_km,
+        client_name, client_phone, client_email,
+        guest_name, guest_phone, guest_email,
+        client_notes, gcal_event_id
       `);
 
     if (bookingId) {
@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
       .from("bookings")
       .update({
         deposit_paid: true,
-        status: "confirmed",
+        status:       "confirmed",
         confirmed_at: new Date().toISOString(),
       })
       .eq("id", booking.id)
@@ -306,30 +306,14 @@ Deno.serve(async (req) => {
       completed_at:   new Date().toISOString(),
     });
 
-    // ── STEP 4: Fetch client + service for calendar event ──────────────────
-    const [{ data: client }, { data: service }] = await Promise.all([
-      supabase
-        .from("clients")
-        .select("first_name, last_name, phone, email")
-        .eq("id", booking.client_id)
-        .single(),
-      supabase
-        .from("services")
-        .select("name, duration_minutes")
-        .eq("id", booking.service_id)
-        .single(),
-    ]);
-
-    // ── STEP 5: Create Google Calendar event (non-blocking) ────────────────
+    // ── STEP 4: Create Google Calendar event (non-blocking) ────────────────
     createCalendarEvent(
       supabase,
       booking.tenant_id ?? tenantId,
-      booking,
-      client ?? {},
-      service ?? {}
+      booking
     ).catch((e) => console.error("gcal background error:", e));
 
-    // ── STEP 6: Send confirmation email ───────────────────────────────────
+    // ── STEP 5: Send confirmation email ───────────────────────────────────
     try {
       const emailUrl  = `${supabaseUrl}/functions/v1/send-booking-email`;
       const emailBody = JSON.stringify({
