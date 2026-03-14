@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import DashboardPreview from "@/components/site/DashboardPreview";
@@ -12,7 +13,6 @@ import {
   Star, SlidersHorizontal
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
 
 import serviceProvidersImg from "@/assets/service-providers.png";
 import productFeaturesImg from "@/assets/product-features.png";
@@ -21,10 +21,56 @@ import logoImg from "@/assets/nextslot-logo.png";
 const industries = [
   { label: "Barbers", desc: "Haircuts, fades & grooming" },
   { label: "Beauticians", desc: "Nails, facials & skincare" },
+  { label: "Tattoo Artists", desc: "Studio & custom work" },
+  { label: "Massage Therapists", desc: "Mobile & in-studio" },
   { label: "Makeup Artists", desc: "Bridal, editorial & events" },
   { label: "Photographers", desc: "Portraits, events & products" },
   { label: "Mobile Stylists", desc: "On-location services" },
 ];
+
+const IndustryCard = ({ index, label, desc }: { index: number; label: string; desc: string }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  const fromLeft = index % 2 === 0;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisible(true);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${index * 60}ms` }}
+      className={[
+        "bg-background border border-border rounded-xl p-4 text-center shadow-md cursor-default",
+        "transition-all duration-500 ease-out",
+        visible
+          ? "opacity-100 translate-x-0"
+          : fromLeft
+          ? "opacity-0 -translate-x-8"
+          : "opacity-0 translate-x-8",
+        "hover:border-foreground/20",
+      ].join(" ")}
+    >
+      <p className="text-sm font-semibold mb-0.5">{label}</p>
+      <p className="text-[10px] text-muted-foreground">{desc}</p>
+    </div>
+  );
+};
 
 const problems = [
   { icon: MessageSquare, title: "WhatsApp messages", desc: "Clients message at all hours. You lose track of who wants what and when." },
@@ -43,7 +89,7 @@ const steps = [
   {
     num: "02",
     title: "Share your booking link",
-    desc: "Add it to your Instagram bio, WhatsApp status, or business card. Clients book themselves. No back-and-forth messages, no phone calls.",
+    desc: "Add it to your Instagram bio, TikTok bio, or WhatsApp status. Clients book themselves. No back-and-forth messages, no phone calls.",
     highlight: "No more scheduling chaos.",
   },
   {
@@ -62,7 +108,7 @@ const showcaseCards = [
   },
   {
     title: "Client Source Tracking",
-    desc: "Know exactly where your clients come from: Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",
+    desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",
     icon: MapPin,
   },
   {
@@ -166,15 +212,9 @@ const Index = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-3xl mx-auto">
-              {industries.map((ind) => (
-                <div
-                  key={ind.label}
-                  className="bg-background border border-border rounded-xl p-4 text-center hover:border-foreground/20 transition-all duration-200 cursor-default shadow-md"
-                >
-                  <p className="text-sm font-semibold mb-0.5">{ind.label}</p>
-                  <p className="text-[10px] text-muted-foreground">{ind.desc}</p>
-                </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+              {industries.map((ind, index) => (
+                <IndustryCard key={ind.label} index={index} label={ind.label} desc={ind.desc} />
               ))}
             </div>
           </div>
@@ -284,37 +324,50 @@ const Index = () => {
                 <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-6">Case Study</p>
                 <h2 className="text-3xl md:text-4xl tracking-tight mb-6" style={{ fontFamily: "'Abril Fatface', serif" }}>PhenomeBeauty</h2>
                 <p className="text-primary-foreground/70 leading-relaxed text-lg max-w-2xl mx-auto">
-                  A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business and advises the owner.
+                  A mobile beauty studio's journey from WhatsApp to a system that runs the business and advises the owner.
                 </p>
               </div>
 
               <div className="space-y-6 mb-14">
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Where it started</p>
-                  <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    PhenomeBeauty was running entirely on WhatsApp. Every booking was a conversation. Confirmations, reminders, deposits, all manual, all time-consuming, all happening at 10pm when the client finally replied. A Google Sheet tried to bring order, but the more the business grew, the less it helped.
-                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                    <li>PhenomeBeauty ran all bookings through WhatsApp conversations.</li>
+                    <li>Every confirmation, reminder, and deposit was handled manually.</li>
+                    <li>Messages came in at all hours, often after 10pm when clients finally replied.</li>
+                    <li>A Google Sheet tried to add structure but stopped working as bookings grew.</li>
+                  </ul>
                 </div>
 
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The shift</p>
-                  <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    Moving to NextSlot meant clients could book themselves, choosing their service, time slot, and paying a deposit upfront. No more chasing confirmations. No more double bookings. The booking link went into the Instagram bio and the WhatsApp status. Within days, bookings came in without a single message exchanged.
-                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                    <li>Clients could now book themselves, choosing their service, time slot, and paying a deposit upfront.</li>
+                    <li>No more chasing confirmations or managing double bookings.</li>
+                    <li>The booking link went into the TikTok bio, Instagram bio, and WhatsApp status.</li>
+                    <li>Within days, bookings came in without a single message exchanged.</li>
+                  </ul>
                 </div>
 
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">What the dashboard revealed</p>
-                  <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    The real change came when the data started talking. The dashboard showed that the majority of new clients were coming from Instagram, not WhatsApp status posts as assumed. It showed which services generated the most revenue, which time slots filled fastest, and which clients had not rebooked in over a month. Decisions that used to be guesses became obvious.
-                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                    <li>Most new clients were coming from TikTok, not WhatsApp or Instagram as originally assumed.</li>
+                    <li>Certain services generated far more revenue than others.</li>
+                    <li>Specific time slots filled up fastest, revealing peak demand patterns.</li>
+                    <li>Several clients had not rebooked in over a month, making follow-up obvious.</li>
+                    <li>Decisions that used to be guesses became clear and actionable.</li>
+                  </ul>
                 </div>
 
                 <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
                   <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The result</p>
-                  <p className="text-sm text-primary-foreground/70 leading-relaxed">
-                    PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every day. The dashboard does not give generic advice. It reflects exactly what is happening inside the business and surfaces the insights that matter. That is the difference between data you collect and data you can actually use.
-                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                    <li>PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every day.</li>
+                    <li>The dashboard reflects exactly what is happening inside the business.</li>
+                    <li>It surfaces the insights that matter, not generic advice.</li>
+                    <li>That is the difference between data you collect and data you can actually use.</li>
+                  </ul>
                 </div>
               </div>
 
