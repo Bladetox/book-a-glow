@@ -391,7 +391,7 @@ const AdminIntegrations = () => {
             <Field label="SMTP Host" fieldKey="smtp_host" placeholder="smtp.gmail.com"
               value={smtpDraft.smtp_host ?? ""} masked={smtpConfigured} editing={smtpEditing}
               onChange={handleChange(setSmtpDraft)} />
-            <Field label="Port" fieldKey="smtp_port" placeholder="587" type="number"
+            <Field label="Port" fieldKey="smtp_port" placeholder="587" type="text"
               value={smtpDraft.smtp_port ?? ""} masked={smtpConfigured} editing={smtpEditing}
               onChange={handleChange(setSmtpDraft)} />
           </div>
