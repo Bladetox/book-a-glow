@@ -320,57 +320,123 @@ const Index = () => {
         <section className="bg-primary text-primary-foreground py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
+
+              {/* Header */}
               <div className="text-center mb-14">
                 <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-6">Case Study</p>
                 <h2 className="text-3xl md:text-4xl tracking-tight mb-6" style={{ fontFamily: "'Abril Fatface', serif" }}>PhenomeBeauty</h2>
                 <p className="text-primary-foreground/70 leading-relaxed text-lg max-w-2xl mx-auto">
-                  A mobile beauty studio's journey from WhatsApp to a system that runs the business and advises the owner.
+                  A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
                 </p>
               </div>
 
-              <div className="space-y-6 mb-14">
-                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">Where it started</p>
-                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                    <li>PhenomeBeauty ran all bookings through WhatsApp conversations.</li>
-                    <li>Every confirmation, reminder, and deposit was handled manually.</li>
-                    <li>Messages came in at all hours, often after 10pm when clients finally replied.</li>
-                    <li>A Google Sheet tried to add structure but stopped working as bookings grew.</li>
-                  </ul>
+              {/* Timeline connector */}
+              <div className="relative space-y-4 mb-14">
+
+                {/* Vertical line */}
+                <div className="absolute left-[11px] top-6 bottom-6 w-px bg-accent/20 hidden md:block" aria-hidden="true" />
+
+                {/* V1 — Where it started */}
+                <div className="relative flex gap-5">
+                  <div className="hidden md:flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">1</div>
+                  </div>
+                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">Where it started</p>
+                      <span className="text-[10px] text-primary-foreground/30 font-medium">v1</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                      <li>PhenomeBeauty ran all bookings through WhatsApp conversations.</li>
+                      <li>Every confirmation, reminder, and deposit was handled manually.</li>
+                      <li>Messages came in at all hours, often after 10pm when clients finally replied.</li>
+                      <li>There was no structure, no record, and no way to see the business clearly.</li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The shift</p>
-                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                    <li>Clients could now book themselves, choosing their service, time slot, and paying a deposit upfront.</li>
-                    <li>No more chasing confirmations or managing double bookings.</li>
-                    <li>The booking link went into the TikTok bio, Instagram bio, and WhatsApp status.</li>
-                    <li>Within days, bookings came in without a single message exchanged.</li>
-                  </ul>
+                {/* V2 — First attempt at structure */}
+                <div className="relative flex gap-5">
+                  <div className="hidden md:flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">2</div>
+                  </div>
+                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">First attempt at structure</p>
+                      <span className="text-[10px] text-primary-foreground/30 font-medium">v2</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                      <li>Added a Google Form to capture booking details and client data more consistently.</li>
+                      <li>Linked a Google Sheet to create a more structured overview and a semi-automated workflow.</li>
+                      <li>Connected a Google Calendar to track appointments and added a travel distance calculator for call-out jobs.</li>
+                      <li>There was still no payment gateway. PhenomeBeauty had to send banking details manually and rely on proof of payment as confirmation to secure a booking.</li>
+                      <li>The system worked — until it didn't. As volume grew, the cracks showed. Manual payment chasing, missed confirmations, and a spreadsheet that couldn't keep up.</li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">What the dashboard revealed</p>
-                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                    <li>Most new clients were coming from TikTok, not WhatsApp or Instagram as originally assumed.</li>
-                    <li>Certain services generated far more revenue than others.</li>
-                    <li>Specific time slots filled up fastest, revealing peak demand patterns.</li>
-                    <li>Several clients had not rebooked in over a month, making follow-up obvious.</li>
-                    <li>Decisions that used to be guesses became clear and actionable.</li>
-                  </ul>
+                {/* V3 — The shift */}
+                <div className="relative flex gap-5">
+                  <div className="hidden md:flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">3</div>
+                  </div>
+                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">The shift</p>
+                      <span className="text-[10px] text-primary-foreground/30 font-medium">v3</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                      <li>PhenomeBeauty moved to a professional booking system with a real payment gateway integrated from day one.</li>
+                      <li>Clients could now book themselves: choosing their service, selecting a time slot, and paying a deposit upfront — all without a single message exchanged.</li>
+                      <li>Proof of payment was gone. The deposit was collected automatically. A booking was only confirmed once payment cleared.</li>
+                      <li>The booking link went into the TikTok bio, Instagram bio, and WhatsApp status. Within days, confirmed bookings started arriving on their own.</li>
+                      <li>For the first time, the business felt like it was running itself.</li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The result</p>
-                  <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                    <li>PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every day.</li>
-                    <li>The dashboard reflects exactly what is happening inside the business.</li>
-                    <li>It surfaces the insights that matter, not generic advice.</li>
-                    <li>That is the difference between data you collect and data you can actually use.</li>
-                  </ul>
+                {/* V4 — What the dashboard revealed */}
+                <div className="relative flex gap-5">
+                  <div className="hidden md:flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">4</div>
+                  </div>
+                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">What the dashboard revealed</p>
+                      <span className="text-[10px] text-primary-foreground/30 font-medium">v3 continued</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
+                      <li>Most new clients were coming from TikTok — not WhatsApp or Instagram as originally assumed. Marketing spend shifted immediately.</li>
+                      <li>Certain services generated far more revenue per hour than others. Pricing and promotion changed as a result.</li>
+                      <li>Specific time slots filled fastest, revealing real peak demand patterns the owner had never seen before.</li>
+                      <li>Several clients had not rebooked in over a month. The dashboard surfaced them automatically, making follow-up obvious and timely.</li>
+                      <li>Decisions that used to be guesses — what to promote, when to open slots, who to follow up with — became clear and data-backed.</li>
+                    </ul>
+                  </div>
                 </div>
+
+                {/* V5 — The result */}
+                <div className="relative flex gap-5">
+                  <div className="hidden md:flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full bg-accent/60 ring-1 ring-accent flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-1">5</div>
+                  </div>
+                  <div className="flex-1 bg-accent/10 rounded-2xl p-6 ring-1 ring-accent/40">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">The result</p>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/80 leading-relaxed">
+                      <li>PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every single day.</li>
+                      <li>No more manual payment chasing, no more proof of payments, no more spreadsheet rows that go stale.</li>
+                      <li>The dashboard reflects exactly what is happening inside the business — revenue, clients, services, and patterns — in real time.</li>
+                      <li>It surfaces the insights that matter, not generic advice. That is the difference between data you collect and data you can actually use.</li>
+                      <li>Every iteration taught the business something. NextSlot is what happens when all of those lessons are built into one system.</li>
+                    </ul>
+                  </div>
+                </div>
+
               </div>
 
+              {/* CTA */}
               <div className="text-center">
                 <Link
                   to="/onboarding"
@@ -380,6 +446,7 @@ const Index = () => {
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </div>
+
             </div>
           </div>
         </section>
