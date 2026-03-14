@@ -23,6 +23,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import TenantNotFound from "./pages/TenantNotFound";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import Demo from "./pages/Demo";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const MarketingRoutes = () => (
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<SiteTerms />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/demo" element={<Demo />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
       <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />

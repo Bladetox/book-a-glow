@@ -187,10 +187,10 @@ const Product = () => (
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link
-              to="/admin"
+              to="/demo"
               className="inline-flex items-center justify-center text-primary-foreground/60 hover:text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] border border-primary-foreground/20 hover:border-primary-foreground/40 transition-all duration-200"
             >
-              Try the Dashboard
+              Try the Interactive Demo
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </div>

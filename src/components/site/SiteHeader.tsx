@@ -17,6 +17,7 @@ const SiteHeader = () => {
             <Link to="/product" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Product</Link>
             <Link to="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
             <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">About</Link>
+            <Link to="/demo" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Live Demo</Link>
           </nav>
           <div className="hidden md:flex items-center gap-4">
             <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Login</Link>
@@ -32,6 +33,7 @@ const SiteHeader = () => {
               <Link to="/product" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>Product</Link>
               <Link to="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
               <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>About</Link>
+              <Link to="/demo" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>Live Demo</Link>
               <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>Login</Link>
               <Link to="/onboarding" className="inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity" onClick={() => setIsMenuOpen(false)}>Create Your Booking Page</Link>
             </nav>
