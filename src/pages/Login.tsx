@@ -1,10 +1,33 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
 
 type ViewMode = "login" | "forgot";
+
+/**
+ * Builds the correct admin URL for a tenant after login.
+ * - On production domains (nextslot.co.za / nextslot.app) → hard redirect to subdomain
+ * - On localhost / dev → stay on same origin with ?tenant= param so Admin component loads
+ */
+function buildAdminUrl(tenantId: string): string {
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost");
+
+  if (isLocalhost) {
+    // Dev fallback: use query param so tenant resolver picks it up
+    return `${window.location.origin}/admin?tenant=${tenantId}`;
+  }
+
+  // Production: redirect to tenant's subdomain — works for both nextslot.co.za and nextslot.app
+  const parts = hostname.split(".");
+  // Strip any existing subdomain to get the root domain (e.g. "nextslot.co.za")
+  // nextslot.co.za → ["nextslot", "co", "za"] → keep last 3 parts
+  // nextslot.app   → ["nextslot", "app"]        → keep last 2 parts
+  const rootDomain = parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
+  return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
+}
 
 const Login = () => {
   const [view, setView] = useState<ViewMode>("login");
@@ -13,7 +36,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,25 +52,33 @@ const Login = () => {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError("Authentication failed");
+        setError("Authentication failed. Please try again.");
         return;
       }
 
-      const { data: roles } = await supabase
+      const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, tenant_id")
         .eq("user_id", user.id);
 
-      const isAdmin = roles?.some((r) => r.role === "owner" || r.role === "admin");
-      if (!isAdmin) {
+      if (rolesError || !roles || roles.length === 0) {
         await supabase.auth.signOut();
-        setError("This login is for business dashboard users only. Please use /book to make a booking.");
+        setError("No business account found for this user.");
         return;
       }
 
-      navigate("/admin");
+      const adminRole = roles.find((r) => r.role === "owner" || r.role === "admin");
+      if (!adminRole) {
+        await supabase.auth.signOut();
+        setError("This login is for business dashboard users only. Please use your booking link to make a booking.");
+        return;
+      }
+
+      // Hard redirect to the tenant's subdomain admin panel
+      const adminUrl = buildAdminUrl(adminRole.tenant_id);
+      window.location.href = adminUrl;
     } catch {
-      setError("An unexpected error occurred");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -147,7 +177,8 @@ const Login = () => {
 
         {view === "login" && (
           <p className="text-sm text-muted-foreground text-center mt-6">
-            Don't have an account? <Link to="/signup" className="text-foreground font-medium hover:underline">Create one</Link>
+            Don't have an account?{" "}
+            <Link to="/signup" className="text-foreground font-medium hover:underline">Create one</Link>
           </p>
         )}
       </main>
