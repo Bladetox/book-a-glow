@@ -26,6 +26,8 @@ export interface BookingRow {
   callOutFee: number;
   callOutAddress: string;
   createdAt: string;
+  gcalEventId: string | null;
+  tenantId: string;
 }
 
 function mapBooking(b: any): BookingRow {
@@ -35,22 +37,48 @@ function mapBooking(b: any): BookingRow {
   const dep = Number(b.deposit_amount) || 0;
   const tot = Number(b.total_amount) || 0;
 
+  // Prefer denormalised columns on the booking row first,
+  // fall back to the profiles join (registered users only)
+  const clientName =
+    b.client_name ||
+    b.guest_name ||
+    b.client?.full_name ||
+    "Unknown";
+
+  const clientPhone =
+    b.client_phone ||
+    b.guest_phone ||
+    b.client?.phone ||
+    "";
+
+  const clientEmail =
+    b.client_email ||
+    b.guest_email ||
+    b.client?.email ||
+    "";
+
+  // Use stored balance_due when available, otherwise derive it
+  const balance =
+    b.balance_due !== null && b.balance_due !== undefined
+      ? Math.max(0, Number(b.balance_due))
+      : Math.max(0, tot - dep);
+
   return {
     id: b.id,
     ref: `NS-${(b.id as string).slice(0, 4).toUpperCase()}`,
     date: b.booking_date,
     time: (b.start_time || "").slice(0, 5),
     endTime: (b.end_time || "").slice(0, 5),
-    client: b.client?.full_name || "Unknown",
+    client: clientName,
     clientId: b.client_id,
-    phone: b.client?.phone || "",
-    email: b.client?.email || "",
+    phone: clientPhone,
+    email: clientEmail,
     address: b.call_out_address || b.client?.address || "",
     service: services || "—",
     duration: totalDuration || Number(b.service_duration_minutes) || 0,
     total: tot,
     deposit: dep,
-    balance: Math.max(0, tot - dep),
+    balance,
     status: b.status as BookingRow["status"],
     depositPaid: b.deposit_paid ?? false,
     notes: b.client_notes || "",
@@ -59,6 +87,8 @@ function mapBooking(b: any): BookingRow {
     callOutFee: Number(b.call_out_fee) || 0,
     callOutAddress: b.call_out_address || "",
     createdAt: b.created_at || "",
+    gcalEventId: b.gcal_event_id ?? null,
+    tenantId: b.tenant_id ?? "",
   };
 }
 
@@ -110,7 +140,20 @@ export function useRescheduleBooking() {
   const { tenantId } = useTenant();
 
   return useMutation({
-    mutationFn: async ({ bookingId, newDate, newStartTime }: { bookingId: string; newDate: string; newStartTime: string }) => {
+    mutationFn: async ({
+      bookingId,
+      newDate,
+      newStartTime,
+      gcalEventId,
+      booking,
+    }: {
+      bookingId: string;
+      newDate: string;
+      newStartTime: string;
+      gcalEventId?: string | null;
+      booking?: BookingRow;
+    }) => {
+      // 1. Update in Supabase via RPC
       const { data, error } = await supabase.rpc("reschedule_booking", {
         p_booking_id: bookingId,
         p_new_date: newDate,
@@ -119,6 +162,32 @@ export function useRescheduleBooking() {
       if (error) throw error;
       const result = (data as any)?.[0];
       if (result && !result.success) throw new Error(result.message);
+
+      // 2. Sync to Google Calendar if event exists
+      if (gcalEventId && booking) {
+        try {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+              "apikey": supabaseKey,
+            },
+            body: JSON.stringify({
+              tenant_id: booking.tenantId,
+              gcal_event_id: gcalEventId,
+              new_date: newDate,
+              new_start_time: newStartTime,
+              duration_minutes: booking.duration,
+            }),
+          });
+        } catch (gcalErr) {
+          // Non-fatal: booking is rescheduled in DB, log gcal failure only
+          console.error("GCal reschedule sync failed:", gcalErr);
+        }
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings", tenantId] });

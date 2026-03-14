@@ -83,13 +83,15 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  const handleReschedule = async (bookingId: string) => {
+  const handleReschedule = async (b: BookingRow) => {
     if (!rescheduleDate || !rescheduleTime) return;
     try {
       await reschedule.mutateAsync({
-        bookingId,
+        bookingId: b.id,
         newDate: format(rescheduleDate, "yyyy-MM-dd"),
         newStartTime: rescheduleTime + ":00",
+        gcalEventId: b.gcalEventId,
+        booking: b,
       });
       toast.success("Booking rescheduled");
       setReschedulingId(null);
@@ -143,25 +145,17 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     if (requestingBalanceId === b.id) return;
     setRequestingBalanceId(b.id);
     try {
-      // 1. Fetch tenant_id from booking row
-      const { data: raw } = await supabase
-        .from("bookings")
-        .select("tenant_id, guest_email, guest_name, total_amount, deposit_amount, client:profiles!bookings_client_id_fkey(email, full_name)")
-        .eq("id", b.id)
-        .single();
-
-      const tenantId = raw?.tenant_id;
-      const clientEmail = (raw?.client as any)?.email ?? raw?.guest_email;
-      const clientName  = (raw?.client as any)?.full_name ?? raw?.guest_name ?? b.client;
-      const balance     = b.balance;
+      // client email is already on the BookingRow (denormalised)
+      const clientEmail = b.email;
+      const balance = b.balance;
 
       if (!clientEmail) throw new Error("No client email on record for this booking");
       if (!balance || balance <= 0) throw new Error("No outstanding balance");
 
-      // 2. Create a Yoco payment link for the balance via yoco-checkout
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+      // 1. Create Yoco payment link for balance
       const checkoutRes = await fetch(`${supabaseUrl}/functions/v1/yoco-checkout`, {
         method: "POST",
         headers: {
@@ -170,13 +164,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           "apikey": supabaseKey,
         },
         body: JSON.stringify({
-          amount: Math.round(balance * 100), // cents
+          amount: Math.round(balance * 100),
           currency: "ZAR",
-          tenant_id: tenantId,
+          tenant_id: b.tenantId,
           booking_id: b.id,
           payment_type: "balance",
-          success_url: `${window.location.origin}/payment-success?payment=success&booking_id=${b.id}&tenant=${tenantId}&type=final`,
-          cancel_url:  `${window.location.origin}/payment-success?payment=cancelled&tenant=${tenantId}`,
+          success_url: `${window.location.origin}/payment-success?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
+          cancel_url:  `${window.location.origin}/payment-success?payment=cancelled&tenant=${b.tenantId}`,
         }),
       });
 
@@ -186,7 +180,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       }
       const paymentUrl = checkoutData.url ?? checkoutData.redirectUrl;
 
-      // 3. Send balance request email to client
+      // Store final checkout id on booking row for webhook to pick up
+      await supabase
+        .from("bookings")
+        .update({ yoco_final_checkout_id: checkoutData.checkoutId ?? null, yoco_final_link: paymentUrl })
+        .eq("id", b.id);
+
+      // 2. Send balance request email
       await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
         method: "POST",
         headers: {
@@ -196,7 +196,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         },
         body: JSON.stringify({
           booking_id: b.id,
-          tenant_id: tenantId,
+          tenant_id: b.tenantId,
           email_type: "balance_request",
           payment_url: paymentUrl,
         }),
@@ -392,7 +392,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 )}
                                 <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
 
-                                {/* ── Request Balance ── only show when balance > 0 and booking is confirmed/pending */}
+                                {/* ── Request Balance ── */}
                                 {b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && (
                                   <button
                                     disabled={isRequestingBalance}
@@ -447,7 +447,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                         <div className="flex gap-2">
                                           <button onClick={() => { setReschedulingId(null); setRescheduleDate(undefined); setRescheduleTime(null); }}
                                             className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">Cancel</button>
-                                          <button disabled={!rescheduleDate || !rescheduleTime} onClick={() => handleReschedule(b.id)}
+                                          <button disabled={!rescheduleDate || !rescheduleTime} onClick={() => handleReschedule(b)}
                                             className="px-4 py-1.5 rounded-lg bg-sky-500/20 border border-sky-500/30 text-xs font-semibold text-sky-400 hover:bg-sky-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5">
                                             <CalendarClock className="w-3 h-3" /> Confirm Reschedule
                                           </button>
