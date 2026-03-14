@@ -6,43 +6,43 @@ import {
   Mail, Calendar, Gem
 } from "lucide-react";
 
-const mockRevenue = { month: 24850, today: 3200, lastMonth: 21050 };
-const mockHealth = { fillRate: 72, avgBasket: 1250, totalAppointments: 32, cancellationRate: 6 };
-const mockClients = { newClients: 12, returning: 20, retentionRate: 63 };
+const mockRevenue = { month: 31400, today: 4200, lastMonth: 26800 };
+const mockHealth = { fillRate: 78, avgBasket: 1450, totalAppointments: 38, cancellationRate: 4 };
+const mockClients = { newClients: 9, returning: 26, retentionRate: 74 };
 
 const mockTopServices = [
-  { name: "Hybrid Brows", count: 14, revenue: 9800 },
-  { name: "Lash Lift", count: 10, revenue: 6500 },
-  { name: "Brow Lamination", count: 8, revenue: 4800 },
-  { name: "Facial", count: 6, revenue: 3600 },
-  { name: "Lip Blush", count: 4, revenue: 5200 },
+  { name: "Signature Fade", count: 18, revenue: 9000 },
+  { name: "Hot Towel Shave", count: 12, revenue: 6000 },
+  { name: "Beard Sculpt", count: 10, revenue: 5000 },
+  { name: "Kids Cut", count: 8, revenue: 2800 },
+  { name: "Shape-up", count: 6, revenue: 2400 },
 ];
 
 const mockAlerts: { icon: React.ElementType; text: string; type: "warning" | "info" | "danger" }[] = [
-  { icon: CircleDollarSign, text: "3 deposits still pending", type: "warning" },
-  { icon: CalendarCheck, text: "2 clients overdue for rebooking", type: "info" },
-  { icon: Package, text: "Lash adhesive running low", type: "danger" },
+  { icon: CircleDollarSign, text: "4 deposits still pending", type: "warning" },
+  { icon: CalendarCheck, text: "3 clients overdue for rebooking", type: "info" },
+  { icon: Package, text: "Barber tape running low", type: "danger" },
 ];
 
 const mockAppointments = [
-  { id: "1", time: "09:00", client: "Lerato M.", service: "Hybrid Brows", status: "confirmed" as const },
-  { id: "2", time: "10:30", client: "Thandi K.", service: "Lash Lift", status: "confirmed" as const },
-  { id: "3", time: "12:00", client: "Naledi S.", service: "Brow Lamination", status: "pending" as const },
-  { id: "4", time: "14:00", client: "Sarah V.", service: "Facial", status: "confirmed" as const },
-  { id: "5", time: "15:30", client: "Zinhle D.", service: "Lip Blush", status: "pending" as const },
-  { id: "6", time: "17:00", client: "Mpho N.", service: "Hybrid Brows", status: "confirmed" as const },
+  { id: "1", time: "09:00", client: "Sipho M.", service: "Signature Fade", status: "confirmed" as const },
+  { id: "2", time: "10:00", client: "Karabo T.", service: "Beard Sculpt", status: "confirmed" as const },
+  { id: "3", time: "11:00", client: "Luca R.", service: "Hot Towel Shave", status: "pending" as const },
+  { id: "4", time: "12:30", client: "Ethan P.", service: "Kids Cut", status: "confirmed" as const },
+  { id: "5", time: "14:00", client: "James V.", service: "Signature Fade", status: "confirmed" as const },
+  { id: "6", time: "15:30", client: "Tebogo N.", service: "Shape-up", status: "pending" as const },
 ];
 
 const mockSources = [
-  { source: "Instagram", count: 18, icon: Instagram },
-  { source: "Google", count: 9, icon: SearchIcon },
-  { source: "Referral", count: 7, icon: Share2 },
-  { source: "TikTok", count: 4, icon: Smartphone },
+  { source: "Instagram", count: 21, icon: Instagram },
+  { source: "Google", count: 11, icon: SearchIcon },
+  { source: "Referral", count: 9, icon: Share2 },
+  { source: "TikTok", count: 5, icon: Smartphone },
 ];
 
 const mockRevenueTrend = Array.from({ length: 30 }, (_, i) => ({
   day: i + 1,
-  value: Math.round(400 + Math.random() * 1200 + (i > 20 ? 300 : 0)),
+  value: Math.round(500 + Math.random() * 1400 + (i > 20 ? 400 : 0)),
 }));
 
 const heatmapSlots = ["08–10", "10–12", "12–14", "14–16", "16–18"];
@@ -76,7 +76,7 @@ export const DashboardContent = () => {
           <span className="text-[9px] text-emerald-400/80">{pctChange}% vs last month</span>
         </div>
         <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-white/[0.06]">
-          {[{ l: "Revenue Today", v: `R ${mockRevenue.today.toLocaleString()}` }, { l: "Appointments", v: "6" }, { l: "Remaining", v: "3", color: "text-amber-400" }, { l: "Next Up", v: "14:00 • Sarah" }].map(s => (
+          {[{ l: "Revenue Today", v: `R ${mockRevenue.today.toLocaleString()}` }, { l: "Appointments", v: "6" }, { l: "Remaining", v: "2", color: "text-amber-400" }, { l: "Next Up", v: "14:00 • James" }].map(s => (
             <div key={s.l} className="flex flex-col">
               <span className="text-[7px] tracking-[0.1em] uppercase text-white/25">{s.l}</span>
               <span className={`text-[10px] font-semibold ${s.color || "text-white/80"}`}>{s.v}</span>
@@ -162,13 +162,13 @@ export const DashboardContent = () => {
 
 /* BOOKINGS */
 const allBookings = [
-  { ref: "NS-001", date: "8 Mar", time: "09:00", client: "Lerato M.", service: "Hybrid Brows", duration: "90min", total: 1400, deposit: 700, balance: 700, status: "confirmed" },
-  { ref: "NS-002", date: "8 Mar", time: "10:30", client: "Thandi K.", service: "Lash Lift", duration: "60min", total: 650, deposit: 325, balance: 325, status: "confirmed" },
-  { ref: "NS-003", date: "8 Mar", time: "12:00", client: "Naledi S.", service: "Brow Lamination", duration: "45min", total: 600, deposit: 300, balance: 300, status: "pending" },
-  { ref: "NS-004", date: "8 Mar", time: "14:00", client: "Sarah V.", service: "Facial", duration: "60min", total: 550, deposit: 275, balance: 275, status: "confirmed" },
-  { ref: "NS-005", date: "8 Mar", time: "15:30", client: "Zinhle D.", service: "Lip Blush", duration: "120min", total: 2500, deposit: 1250, balance: 1250, status: "pending" },
-  { ref: "NS-006", date: "7 Mar", time: "09:00", client: "Mpho N.", service: "Hybrid Brows", duration: "90min", total: 1400, deposit: 700, balance: 0, status: "complete" },
-  { ref: "NS-007", date: "7 Mar", time: "11:00", client: "Amahle Z.", service: "Lash Lift", duration: "60min", total: 650, deposit: 325, balance: 325, status: "cancelled" },
+  { ref: "NS-001", date: "14 Mar", time: "09:00", client: "Sipho M.", service: "Signature Fade", duration: "45min", total: 500, deposit: 250, balance: 250, status: "confirmed" },
+  { ref: "NS-002", date: "14 Mar", time: "10:00", client: "Karabo T.", service: "Beard Sculpt", duration: "30min", total: 350, deposit: 175, balance: 175, status: "confirmed" },
+  { ref: "NS-003", date: "14 Mar", time: "11:00", client: "Luca R.", service: "Hot Towel Shave", duration: "45min", total: 450, deposit: 225, balance: 225, status: "pending" },
+  { ref: "NS-004", date: "14 Mar", time: "12:30", client: "Ethan P.", service: "Kids Cut", duration: "30min", total: 280, deposit: 140, balance: 140, status: "confirmed" },
+  { ref: "NS-005", date: "14 Mar", time: "14:00", client: "James V.", service: "Signature Fade", duration: "45min", total: 500, deposit: 250, balance: 0, status: "complete" },
+  { ref: "NS-006", date: "13 Mar", time: "09:00", client: "Tebogo N.", service: "Shape-up", duration: "20min", total: 200, deposit: 100, balance: 0, status: "complete" },
+  { ref: "NS-007", date: "13 Mar", time: "11:00", client: "Dean W.", service: "Signature Fade", duration: "45min", total: 500, deposit: 250, balance: 250, status: "cancelled" },
 ];
 
 export const BookingsContent = () => (
@@ -179,7 +179,7 @@ export const BookingsContent = () => (
       ))}
     </div>
     <div className="grid grid-cols-4 gap-2">
-      {[{ icon: CalendarCheck, l: "Today", v: "5", color: "text-white/80" }, { icon: Clock, l: "Pending", v: "2", color: "text-amber-400" }, { icon: CircleDollarSign, l: "Revenue", v: "R 7,750", color: "text-white/80" }, { icon: CircleDollarSign, l: "Outstanding", v: "R 2,850", color: "text-red-400" }].map(m => (
+      {[{ icon: CalendarCheck, l: "Today", v: "6", color: "text-white/80" }, { icon: Clock, l: "Pending", v: "2", color: "text-amber-400" }, { icon: CircleDollarSign, l: "Revenue", v: "R 9,200", color: "text-white/80" }, { icon: CircleDollarSign, l: "Outstanding", v: "R 3,440", color: "text-red-400" }].map(m => (
         <div key={m.l} className={`${card} p-2 flex items-center gap-2`}><m.icon className="w-3.5 h-3.5 text-white/25" /><div><p className={`text-[10px] font-bold ${m.color}`}>{m.v}</p><p className="text-[7px] text-white/25">{m.l}</p></div></div>
       ))}
     </div>
@@ -199,7 +199,7 @@ export const BookingsContent = () => (
 export const ConsultationsContent = () => (
   <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-hide">
     <p className="text-[10px] font-semibold text-white/80">Consultations (3)</p>
-    {[{ client: "Zinhle D.", type: "Lip Blush", date: "6 Mar", notes: "Patch test done. Skin reaction: none.", status: "complete" }, { client: "Naledi S.", type: "Brow Lamination", date: "5 Mar", notes: "Discussed shape preferences.", status: "complete" }, { client: "New Lead", type: "Hybrid Brows", date: "9 Mar", notes: "Enquiry via Instagram DM.", status: "pending" }].map((c, i) => (
+    {[{ client: "Luca R.", type: "Hot Towel Shave", date: "12 Mar", notes: "First visit. Prefers light pressure.", status: "complete" }, { client: "Ethan P.", type: "Kids Cut", date: "11 Mar", notes: "Discussed length and style with parent.", status: "complete" }, { client: "New Lead", type: "Beard Sculpt", date: "15 Mar", notes: "Enquiry via Instagram DM.", status: "pending" }].map((c, i) => (
       <div key={i} className={`${card} p-3 space-y-1.5`}>
         <div className="flex items-center justify-between"><span className="text-[9px] font-medium text-white/80">{c.client}</span><StatusBadge status={c.status} /></div>
         <p className="text-[8px] text-white/40">{c.type} • {c.date}</p>
@@ -213,7 +213,7 @@ export const ConsultationsContent = () => (
 export const AvailabilityContent = () => (
   <div className="flex-1 p-4 overflow-y-auto space-y-2 scrollbar-hide">
     <p className="text-[10px] font-semibold text-white/80 mb-2">Weekly Hours</p>
-    {[{ day: "Monday", hours: "09:00 – 17:00", active: true }, { day: "Tuesday", hours: "09:00 – 17:00", active: true }, { day: "Wednesday", hours: "09:00 – 17:00", active: true }, { day: "Thursday", hours: "09:00 – 17:00", active: true }, { day: "Friday", hours: "09:00 – 17:00", active: true }, { day: "Saturday", hours: "09:00 – 14:00", active: true }, { day: "Sunday", hours: "Closed", active: false }].map(d => (
+    {[{ day: "Monday", hours: "08:00 – 17:00", active: true }, { day: "Tuesday", hours: "08:00 – 17:00", active: true }, { day: "Wednesday", hours: "08:00 – 17:00", active: true }, { day: "Thursday", hours: "08:00 – 17:00", active: true }, { day: "Friday", hours: "08:00 – 18:00", active: true }, { day: "Saturday", hours: "08:00 – 14:00", active: true }, { day: "Sunday", hours: "Closed", active: false }].map(d => (
       <div key={d.day} className={`${card} px-3 py-2 flex items-center justify-between`}>
         <span className="text-[9px] font-medium text-white/70">{d.day}</span>
         <span className={`text-[9px] ${d.active ? "text-white/50" : "text-white/20"}`}>{d.hours}</span>
@@ -226,7 +226,7 @@ export const AvailabilityContent = () => (
 export const StockContent = () => (
   <div className="flex-1 p-4 overflow-y-auto space-y-2 scrollbar-hide">
     <p className="text-[10px] font-semibold text-white/80 mb-2">Inventory</p>
-    {[{ name: "Lash Adhesive", qty: 2, status: "critical" }, { name: "Brow Tint (Dark Brown)", qty: 8, status: "ok" }, { name: "Wax Strips (Pack)", qty: 3, status: "low" }, { name: "Disposable Brushes", qty: 45, status: "ok" }, { name: "Facial Serum", qty: 5, status: "low" }].map(item => (
+    {[{ name: "Barber Tape", qty: 1, status: "critical" }, { name: "Clipper Oil", qty: 6, status: "ok" }, { name: "Shaving Cream", qty: 3, status: "low" }, { name: "Disposable Razors", qty: 30, status: "ok" }, { name: "Beard Oil", qty: 4, status: "low" }].map(item => (
       <div key={item.name} className={`${card} px-3 py-2 flex items-center justify-between`}>
         <div><p className="text-[9px] font-medium text-white/70">{item.name}</p><p className="text-[7px] text-white/30">Qty: {item.qty}</p></div>
         <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${item.status === "critical" ? "bg-red-500/10 text-red-400" : item.status === "low" ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>{item.status}</span>
@@ -239,7 +239,7 @@ export const StockContent = () => (
 export const ReviewsContent = () => (
   <div className="flex-1 p-4 overflow-y-auto space-y-2 scrollbar-hide">
     <p className="text-[10px] font-semibold text-white/80 mb-2">Google Reviews</p>
-    {[{ name: "Lerato M.", rating: 5, text: "Best brows in Cape Town! Professional and worth every rand.", date: "5 Mar" }, { name: "Thandi K.", rating: 5, text: "My lash lift looks amazing. Clean space, great service.", date: "3 Mar" }, { name: "Sarah V.", rating: 4, text: "Loved the facial. Only wish it was longer!", date: "1 Mar" }].map((r, i) => (
+    {[{ name: "Sipho M.", rating: 5, text: "Best fade in the city. Clean shop, great vibes.", date: "12 Mar" }, { name: "Karabo T.", rating: 5, text: "Beard sculpt was immaculate. Will be back every week.", date: "10 Mar" }, { name: "Luca R.", rating: 4, text: "Really good hot towel shave. Relaxing experience.", date: "8 Mar" }].map((r, i) => (
       <div key={i} className={`${card} p-3 space-y-1`}>
         <div className="flex items-center justify-between"><span className="text-[9px] font-medium text-white/70">{r.name}</span><span className="text-[8px] text-white/25">{r.date}</span></div>
         <div className="flex gap-0.5">{Array.from({ length: 5 }).map((_, j) => (<Star key={j} className={`w-2.5 h-2.5 ${j < r.rating ? "text-amber-400 fill-amber-400" : "text-white/10"}`} />))}</div>
@@ -267,7 +267,7 @@ export const IntegrationsContent = () => (
 export const SettingsContent = () => (
   <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-hide">
     <p className="text-[10px] font-semibold text-white/80 mb-2">Business Settings</p>
-    {[{ label: "Business Name", value: "PhenomeBeauty" }, { label: "Booking URL", value: "phenomebeauty.nextslot.app" }, { label: "Deposit", value: "50%" }, { label: "Currency", value: "ZAR (R)" }, { label: "Callout Rate", value: "R 3.60/km" }].map(s => (
+    {[{ label: "Business Name", value: "Blade & Co." }, { label: "Booking URL", value: "bladeandco.nextslot.app" }, { label: "Deposit", value: "50%" }, { label: "Currency", value: "ZAR (R)" }, { label: "Callout Rate", value: "R 3.60/km" }].map(s => (
       <div key={s.label} className={`${card} px-3 py-2 flex items-center justify-between`}>
         <span className="text-[8px] text-white/40">{s.label}</span>
         <span className="text-[9px] text-white/70 font-medium">{s.value}</span>
@@ -280,7 +280,7 @@ export const SettingsContent = () => (
 export const LoyaltyContent = () => (
   <div className="flex-1 p-4 overflow-y-auto space-y-2 scrollbar-hide">
     <p className="text-[10px] font-semibold text-white/80 mb-2">Client Loyalty</p>
-    {[{ name: "Lerato M.", visits: 14, status: "VIP", lastVisit: "8 Mar" }, { name: "Thandi K.", visits: 8, status: "Regular", lastVisit: "8 Mar" }, { name: "Mpho N.", visits: 6, status: "Regular", lastVisit: "7 Mar" }, { name: "Naledi S.", visits: 3, status: "New", lastVisit: "5 Mar" }].map(c => (
+    {[{ name: "Sipho M.", visits: 22, status: "VIP", lastVisit: "14 Mar" }, { name: "Karabo T.", visits: 11, status: "Regular", lastVisit: "14 Mar" }, { name: "James V.", visits: 8, status: "Regular", lastVisit: "14 Mar" }, { name: "Luca R.", visits: 2, status: "New", lastVisit: "11 Mar" }].map(c => (
       <div key={c.name} className={`${card} px-3 py-2 flex items-center gap-2.5`}>
         <Gem className="w-3 h-3 text-white/20" />
         <div className="flex-1"><p className="text-[9px] font-medium text-white/70">{c.name}</p><p className="text-[7px] text-white/25">{c.visits} visits • Last: {c.lastVisit}</p></div>

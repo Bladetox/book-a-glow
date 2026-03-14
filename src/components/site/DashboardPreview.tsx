@@ -42,36 +42,60 @@ const DashboardPreview = () => {
   };
 
   return (
-    <div className="w-full rounded-2xl border border-white/[0.08] bg-[hsl(0,0%,4%)] overflow-hidden shadow-elevated hover:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)] transition-shadow duration-500">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-[hsl(0,0%,5%)]">
+    <div className="w-full h-full rounded-2xl border border-white/[0.08] bg-[hsl(0,0%,4%)] overflow-hidden shadow-elevated hover:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)] transition-shadow duration-500 flex flex-col">
+      {/* Browser chrome */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-[hsl(0,0%,5%)] shrink-0">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
           <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
         </div>
         <div className="flex-1 mx-8">
-          <div className="bg-white/[0.06] rounded-md px-3 py-1 text-[9px] text-white/30 text-center font-mono">app.nextslot.co.za/{activeItem.toLowerCase()}</div>
+          <div className="bg-white/[0.06] rounded-md px-3 py-1 text-[9px] text-white/30 text-center font-mono">
+            app.nextslot.co.za/{activeItem.toLowerCase()}
+          </div>
         </div>
         <div className="w-10" />
       </div>
-      <div className="flex min-h-[480px] overflow-hidden">
-        <div className="w-14 border-r border-white/[0.06] bg-[hsl(0,0%,5%)] py-4 hidden sm:flex flex-col items-center justify-between">
+      {/* App layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-14 border-r border-white/[0.06] bg-[hsl(0,0%,5%)] py-4 hidden sm:flex flex-col items-center justify-between shrink-0">
           <div className="space-y-1">
-            <div className="mb-4"><img src={logo} alt="NextSlot" className="h-9 w-auto opacity-90" /></div>
+            <div className="mb-4">
+              <img src={logo} alt="NextSlot" className="h-9 w-auto opacity-90 mix-blend-screen" />
+            </div>
             {sidebarNav.map((item) => (
-              <button key={item.label} onClick={() => setActiveItem(item.label)} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 ${activeItem === item.label ? "bg-white/[0.08] text-white" : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"}`} title={item.label}>
+              <button
+                key={item.label}
+                onClick={() => setActiveItem(item.label)}
+                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 ${
+                  activeItem === item.label
+                    ? "bg-white/[0.08] text-white"
+                    : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"
+                }`}
+                title={item.label}
+              >
                 <item.icon className="h-4 w-4" strokeWidth={1.5} />
               </button>
             ))}
           </div>
           <div className="space-y-1">
-            <button className="w-9 h-9 flex items-center justify-center rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all" title="Support"><Headphones className="h-4 w-4" strokeWidth={1.5} /></button>
-            <button className="w-9 h-9 flex items-center justify-center rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all" title="Logout"><LogOut className="h-4 w-4" strokeWidth={1.5} /></button>
+            <button className="w-9 h-9 flex items-center justify-center rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all" title="Support">
+              <Headphones className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+            <button className="w-9 h-9 flex items-center justify-center rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all" title="Logout">
+              <LogOut className="h-4 w-4" strokeWidth={1.5} />
+            </button>
           </div>
         </div>
-        <div className="flex-1 flex flex-col bg-[hsl(0,0%,4%)]">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
-            <h2 className="text-[12px] font-semibold text-white/90">{activeItem}</h2>
+        {/* Main content */}
+        <div className="flex-1 flex flex-col bg-[hsl(0,0%,4%)] overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">
+            <div>
+              <h2 className="text-[12px] font-semibold text-white/90">{activeItem}</h2>
+              <p className="text-[8px] text-white/25">Blade &amp; Co. · bladeandco.nextslot.app</p>
+            </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 bg-white/[0.06] rounded-lg px-2.5 py-1.5">
                 <Search className="h-2.5 w-2.5 text-white/30" />
@@ -84,7 +108,9 @@ const DashboardPreview = () => {
               <img src={profileAvatar} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-white/[0.1]" />
             </div>
           </div>
-          <div className="flex-1 flex animate-fade-in" key={activeItem}>{renderContent()}</div>
+          <div className="flex-1 flex animate-fade-in overflow-hidden" key={activeItem}>
+            {renderContent()}
+          </div>
         </div>
       </div>
     </div>
