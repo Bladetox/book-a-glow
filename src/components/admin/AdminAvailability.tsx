@@ -12,12 +12,18 @@ import {
   type WeekAvailability,
 } from "@/hooks/useSupabaseAvailability";
 
-const ALL_SLOTS = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-  "17:00",
-];
+/* ─── Generate every 30-min slot from 06:00 to 23:00 (inclusive start, 34 slots) ─── */
+function buildAllSlots(): string[] {
+  const slots: string[] = [];
+  for (let h = 6; h <= 22; h++) {
+    slots.push(`${String(h).padStart(2, "0")}:00`);
+    slots.push(`${String(h).padStart(2, "0")}:30`);
+  }
+  slots.push("23:00"); // final slot starts at 23:00, ends 23:30
+  return slots;
+}
+
+const ALL_SLOTS = buildAllSlots(); // 34 slots: 06:00 … 23:00
 
 const AdminAvailability = () => {
   const { userId } = useTenant();
@@ -59,7 +65,9 @@ const AdminAvailability = () => {
   const toggleWeekSlot = (day: string, slot: string) => {
     setWeekAvail((prev) => {
       const current = prev[day].slots;
-      const newSlots = current.includes(slot) ? current.filter((s) => s !== slot) : [...current, slot].sort();
+      const newSlots = current.includes(slot)
+        ? current.filter((s) => s !== slot)
+        : [...current, slot].sort();
       const next = { ...prev, [day]: { ...prev[day], slots: newSlots } };
       persistDay(day, next[day]);
       return next;
@@ -95,9 +103,10 @@ const AdminAvailability = () => {
               key={v}
               onClick={() => setView(v)}
               className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all
-                ${view === v
-                  ? "bg-white/[0.12] text-white border border-white/[0.15]"
-                  : "text-white/35 border border-white/[0.06] hover:text-white/60"
+                ${
+                  view === v
+                    ? "bg-white/[0.12] text-white border border-white/[0.15]"
+                    : "text-white/35 border border-white/[0.06] hover:text-white/60"
                 }`}
             >
               {v}
@@ -127,13 +136,17 @@ const AdminAvailability = () => {
                 <div key={day} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-semibold text-white/80">{day}</span>
-                    <button onClick={() => toggleDayEnabled(day)} className="text-white/60 hover:text-white transition-colors">
+                    <button
+                      onClick={() => toggleDayEnabled(day)}
+                      className="text-white/60 hover:text-white transition-colors"
+                    >
                       {config.enabled
                         ? <ToggleRight className="w-6 h-6 text-emerald-400" />
                         : <ToggleLeft className="w-6 h-6 text-white/20" />
                       }
                     </button>
                   </div>
+
                   {config.enabled ? (
                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
                       {ALL_SLOTS.map((slot) => (
@@ -141,9 +154,10 @@ const AdminAvailability = () => {
                           key={slot}
                           onClick={() => toggleWeekSlot(day, slot)}
                           className={`py-1.5 rounded-lg text-[11px] font-medium transition-all
-                            ${config.slots.includes(slot)
-                              ? "bg-white/[0.12] text-white border border-white/[0.15]"
-                              : "text-white/20 border border-white/[0.04] hover:text-white/40"
+                            ${
+                              config.slots.includes(slot)
+                                ? "bg-white/[0.12] text-white border border-white/[0.15]"
+                                : "text-white/20 border border-white/[0.04] hover:text-white/40"
                             }`}
                         >
                           {slot}
@@ -168,13 +182,19 @@ const AdminAvailability = () => {
             {/* Calendar */}
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="flex items-center justify-between mb-4">
-                <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/[0.06]">
+                <button
+                  onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                  className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/[0.06]"
+                >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="font-display text-base font-semibold text-white/90">
                   {format(currentMonth, "MMMM yyyy")}
                 </span>
-                <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/[0.06]">
+                <button
+                  onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                  className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/[0.06]"
+                >
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
@@ -193,7 +213,6 @@ const AdminAvailability = () => {
                   const dayName = format(day, "EEEE");
                   const config = weekAvail[dayName] || { enabled: false, slots: [] };
                   const isActive = selectedDate && isSameDay(day, selectedDate);
-
                   return (
                     <button
                       key={day.toISOString()}
@@ -210,7 +229,7 @@ const AdminAvailability = () => {
               </div>
             </div>
 
-            {/* Selected date info */}
+            {/* Selected date slot preview */}
             <AnimatePresence>
               {selectedDate && (
                 <motion.div
@@ -232,9 +251,10 @@ const AdminAvailability = () => {
                           <div
                             key={slot}
                             className={`py-1.5 rounded-lg text-[11px] font-medium text-center
-                              ${config.slots.includes(slot)
-                                ? "bg-white/[0.12] text-white border border-white/[0.15]"
-                                : "text-white/20 border border-white/[0.04]"
+                              ${
+                                config.slots.includes(slot)
+                                  ? "bg-white/[0.12] text-white border border-white/[0.15]"
+                                  : "text-white/20 border border-white/[0.04]"
                               }`}
                           >
                             {slot}
