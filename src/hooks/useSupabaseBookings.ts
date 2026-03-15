@@ -95,12 +95,16 @@ export function useSupabaseBookings() {
   const qc = useQueryClient();
 
   useEffect(() => {
+    if (!tenantId) return;
+    // NOTE: row-level filter (tenant_id=eq.x) is a paid Supabase feature.
+    // Instead we subscribe to ALL booking updates and check tenant_id in the callback.
     const channel = supabase
       .channel(`bookings-realtime-${tenantId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "bookings", filter: `tenant_id=eq.${tenantId}` },
-        () => {
+        { event: "UPDATE", schema: "public", table: "bookings" },
+        (payload) => {
+          if (payload.new?.tenant_id !== tenantId) return;
           qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
           qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
         }
