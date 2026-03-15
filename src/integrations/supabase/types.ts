@@ -159,6 +159,7 @@ export type Database = {
           updated_at?: string | null
           yoco_checkout_id?: string | null
           yoco_link?: string | null
+                lead_source?: string | null
         }
         Update: {
           booking_date?: string
@@ -191,6 +192,7 @@ export type Database = {
           updated_at?: string | null
           yoco_checkout_id?: string | null
           yoco_link?: string | null
+                lead_source?: string | null
         }
         Relationships: [
           {
@@ -220,7 +222,6 @@ export type Database = {
           hair_length_ok: string | null
           health_conditions: string | null
           id: string
-          lead_source: string | null
           medications: string | null
           physical_factors: string | null
           pregnancy: string | null
@@ -238,7 +239,6 @@ export type Database = {
           hair_length_ok?: string | null
           health_conditions?: string | null
           id?: string
-          lead_source?: string | null
           medications?: string | null
           physical_factors?: string | null
           pregnancy?: string | null
@@ -256,11 +256,9 @@ export type Database = {
           hair_length_ok?: string | null
           health_conditions?: string | null
           id?: string
-          lead_source?: string | null
           medications?: string | null
           physical_factors?: string | null
           pregnancy?: string | null
-          skin_conditions?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
