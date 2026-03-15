@@ -31,7 +31,7 @@ const LiveDemoSection = () => (
           </Link>
         </div>
 
-        {/* Demo — phone frame on desktop, raw scrollable card on mobile */}
+        {/* Demo: phone frame on desktop, raw scrollable card on mobile */}
         <div className="w-full">
           {/* Desktop: inside phone frame */}
           <div className="hidden md:flex justify-center">
