@@ -251,10 +251,12 @@ Deno.serve(async (req) => {
 
     // ══════════════════════════════════════════════════════════════════════
     // FULL PAYMENT — client paid 100% at booking time
+    // Idempotency: only skip if final_payment_paid is already true.
+    // DO NOT check deposit_paid here — deposit bookings have deposit_paid=true
+    // and we must still allow upgrading them via this path when payment_type=full.
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "full") {
-      // Idempotency: if already processed, skip
-      if (booking.final_payment_paid || booking.deposit_paid) {
+      if (booking.final_payment_paid) {
         console.log("Duplicate full-payment webhook — already processed:", booking.id);
         return new Response(
           JSON.stringify({ received: true, already_paid: true }),
@@ -273,7 +275,7 @@ Deno.serve(async (req) => {
           confirmed_at:          new Date().toISOString(),
         })
         .eq("id", booking.id)
-        .eq("deposit_paid", false);
+        .eq("final_payment_paid", false);   // idempotency guard — final_payment_paid only
 
       if (updateErr) {
         console.error("Failed to update booking for full payment:", updateErr);
@@ -295,7 +297,6 @@ Deno.serve(async (req) => {
         completed_at:   new Date().toISOString(),
       });
 
-      // Fire confirmation email + gcal (same as deposit flow)
       createCalendarEvent(supabase, effectiveTenantId, booking)
         .catch((e) => console.error("gcal background error:", e));
 
@@ -325,7 +326,7 @@ Deno.serve(async (req) => {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // BALANCE PAYMENT — admin requested final payment
+    // BALANCE PAYMENT — admin requested final payment after deposit
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "balance") {
       if (booking.final_payment_paid) {

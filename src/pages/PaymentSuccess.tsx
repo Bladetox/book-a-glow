@@ -9,7 +9,9 @@ interface BookingSummary {
   booking_date?: string;
   start_time?: string;
   deposit_amount?: number;
+  total_amount?: number;
   deposit_paid?: boolean;
+  full_payment_received?: boolean;
 }
 
 const REDIRECT_SECONDS = 12;
@@ -33,9 +35,11 @@ const PaymentSuccess = () => {
   const [loading,    setLoading]    = useState(true);
   const [countdown,  setCountdown]  = useState(REDIRECT_SECONDS);
 
-  const isSuccess   = payment === "success";
+  const isSuccess = payment === "success";
   const isCancelled = payment === "cancelled";
-  const isFinal     = type === "final";
+  // isFinal covers both: admin-sent balance request (type=final) and
+  // client paying full amount at booking time (type=full)
+  const isFinal = type === "final" || type === "full";
 
   // Fetch booking + review link
   useEffect(() => {
@@ -59,7 +63,7 @@ const PaymentSuccess = () => {
       attempts++;
       const { data } = await supabase
         .from("bookings")
-        .select("id, booking_date, start_time, deposit_amount, deposit_paid, tenant_id")
+        .select("id, booking_date, start_time, deposit_amount, total_amount, deposit_paid, full_payment_received, tenant_id")
         .eq("id", bookingId)
         .single();
       if (data) {
@@ -81,7 +85,7 @@ const PaymentSuccess = () => {
     poll();
   }, [bookingId, isSuccess]);
 
-  // Countdown redirect — deposit screen only, never final
+  // Countdown redirect — deposit screen only, never for full/final payment
   useEffect(() => {
     if (!isSuccess || isFinal || loading) return;
     const interval = setInterval(() => {
@@ -102,8 +106,9 @@ const PaymentSuccess = () => {
     : null;
   const displayTime    = booking?.start_time?.slice(0, 5) || urlTime || null;
   const displayDeposit = booking?.deposit_amount ?? urlDeposit;
+  const displayTotal   = booking?.total_amount ?? null;
 
-  // Cancelled
+  // ── CANCELLED ─────────────────────────────────────────────────────────────
   if (isCancelled) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
@@ -118,10 +123,14 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ── SUCCESS SCREEN 2 — Final payment (no countdown, stays open) ────────────
+  // ── FULL / FINAL PAYMENT SUCCESS — no countdown, shows review prompt ──────
   if (isFinal && isSuccess && !loading) {
     const bookingAppUrl = `${window.location.origin}/?tenant=${tenant}`;
     const reviewHref    = reviewLink || `https://search.google.com/local/writereview?placeid=${tenant}`;
+    // For full-payment-at-booking: show total; for balance: show what was due
+    const paidAmount = type === "full"
+      ? (displayTotal ?? displayDeposit)
+      : (displayDeposit ?? displayTotal);
 
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -146,7 +155,11 @@ const PaymentSuccess = () => {
             className="flex flex-col gap-1"
           >
             <h2 className="font-display text-2xl font-bold text-foreground">Thank you. 💛</h2>
-            <p className="text-sm text-muted-foreground italic">Full payment received. You're all settled.</p>
+            <p className="text-sm text-muted-foreground italic">
+              {type === "full"
+                ? "Full payment received — nothing due on the day."
+                : "Full payment received. You're all settled."}
+            </p>
           </motion.div>
 
           <motion.div
@@ -155,6 +168,34 @@ const PaymentSuccess = () => {
             transition={{ delay: 0.38 }}
             className="glass-card-service rounded-2xl p-5 w-full text-left flex flex-col gap-4"
           >
+            {/* Payment summary card for full upfront payment */}
+            {type === "full" && (displayDate || displayTime || paidAmount != null) && (
+              <div className="flex flex-col gap-2 pb-3 border-b border-white/[0.06]">
+                {displayDate && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Date</span>
+                    <span className="text-foreground font-medium">{displayDate}</span>
+                  </div>
+                )}
+                {displayTime && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Time</span>
+                    <span className="text-foreground font-medium">{displayTime}</span>
+                  </div>
+                )}
+                {paidAmount != null && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total paid</span>
+                    <span className="text-primary font-semibold">R{paidAmount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Balance due</span>
+                  <span className="text-emerald-400 font-semibold">R0.00</span>
+                </div>
+              </div>
+            )}
+
             <p className="text-sm text-foreground leading-relaxed">
               Thank you for letting me into your sanctuary today. 💛
             </p>
@@ -170,7 +211,6 @@ const PaymentSuccess = () => {
               Kindly share your experience so they find their way here:
             </p>
 
-            {/* Opens new tab — client app stays in background */}
             <a
               href={reviewHref}
               target="_blank"
@@ -209,7 +249,7 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ── SUCCESS SCREEN 1 — Deposit confirmation (with countdown) ──────────────
+  // ── DEPOSIT SUCCESS — with countdown ──────────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <motion.div
