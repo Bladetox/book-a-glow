@@ -11,7 +11,7 @@ import {
   ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle,
   CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2,
   Star, SlidersHorizontal, ChevronLeft, ChevronRight,
-  Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck
+  Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck, PaintBucket
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -21,13 +21,14 @@ import productFeaturesImg from "@/assets/product-features.png";
 /* ─── DATA ──────────────────────────────────────────────────── */
 
 const industries = [
-  { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles  },
-  { label: "Barbers",            desc: "Haircuts, fades & grooming",         icon: Scissors  },
-  { label: "Massage Therapists", desc: "Mobile & in-studio sessions",        icon: Wind      },
-  { label: "Photographers",      desc: "Portraits, events & products",       icon: Camera    },
-  { label: "Tattoo Artists",     desc: "Studio & custom ink work",           icon: HandMetal },
-  { label: "Hairdressers",       desc: "Cuts, colour & styling",             icon: Zap       },
-  { label: "Image Consultants",  desc: "Styling, wardrobe & personal brand", icon: UserCheck },
+  { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles     },
+  { label: "Barbers",            desc: "Haircuts, fades & grooming",         icon: Scissors     },
+  { label: "Massage Therapists", desc: "Mobile & in-studio sessions",        icon: Wind         },
+  { label: "Photographers",      desc: "Portraits, events & products",       icon: Camera       },
+  { label: "Tattoo Artists",     desc: "Studio & custom ink work",           icon: HandMetal    },
+  { label: "Hairdressers",       desc: "Cuts, colour & styling",             icon: Zap          },
+  { label: "Image Consultants",  desc: "Styling, wardrobe & personal brand", icon: UserCheck    },
+  { label: "Nail Technicians",   desc: "Gel, acrylics & nail art",           icon: PaintBucket  },
 ];
 
 const problems = [
@@ -169,40 +170,27 @@ const IndustryCard = ({
       ref={ref}
       style={{ transitionDelay: `${index * 70}ms` }}
       className={[
-        /* base */
         "group relative overflow-hidden cursor-default",
         "rounded-2xl border border-border/60 bg-background",
         "p-5 flex flex-col items-center text-center gap-3",
-        /* shadow */
         "shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)]",
-        /* border glow on hover */
         "hover:border-accent/50",
-        /* transition */
         "transition-all duration-400 ease-out",
-        /* entrance animation */
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
       ].join(" ")}
     >
-      {/* Subtle radial glow behind icon */}
       <div
         aria-hidden="true"
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
         style={{
-          background:
-            "radial-gradient(ellipse at 50% 0%, hsl(var(--accent)/0.12) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse at 50% 0%, hsl(var(--accent)/0.12) 0%, transparent 70%)",
         }}
       />
-
-      {/* Icon pill */}
       <div className="relative z-10 w-12 h-12 rounded-xl bg-accent/15 border border-accent/25 flex items-center justify-center group-hover:bg-accent/25 group-hover:border-accent/45 transition-all duration-300">
         <Icon className="h-5 w-5 text-accent" strokeWidth={2} />
       </div>
-
-      {/* Text */}
       <div className="relative z-10">
-        <p className="text-sm font-semibold leading-snug group-hover:text-foreground transition-colors">
-          {label}
-        </p>
+        <p className="text-sm font-semibold leading-snug group-hover:text-foreground transition-colors">{label}</p>
         <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{desc}</p>
       </div>
     </div>
@@ -396,8 +384,8 @@ const Index = () => {
                 <img src={serviceProvidersImg} alt="South African service providers" className="w-full h-auto border-solid border-black rounded-lg shadow-lg" />
               </div>
             </div>
-            {/* 7 cards: 2-col mobile → 3-col sm → 4-col md, last row centred via justify-center on the grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            {/* 8 cards: 2-col mobile → 4-col sm → perfect 2×4 grid at all sizes */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
               {industries.map((ind, index) => (
                 <IndustryCard key={ind.label} index={index} label={ind.label} desc={ind.desc} icon={ind.icon} />
               ))}
@@ -407,7 +395,6 @@ const Index = () => {
 
         {/* PAIN POINTS */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          {/* COPY FIX: exact wording requested */}
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
             Most service-based businesses manage bookings like this when starting.
           </h2>
