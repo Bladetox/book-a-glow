@@ -31,9 +31,9 @@ const industries = [
 ];
 
 const problems = [
-  { icon: MessageSquare, title: "WhatsApp messages",    desc: "Clients message at all hours. You lose track of who wants what and when." },
-  { icon: CalendarX,     title: "Manual scheduling",    desc: "Pen and paper or memory. Neither scales when business picks up." },
-  { icon: AlertTriangle, title: "Double bookings",      desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
+  { icon: MessageSquare, title: "WhatsApp messages",     desc: "Clients message at all hours. You lose track of who wants what and when." },
+  { icon: CalendarX,     title: "Manual scheduling",     desc: "Pen and paper or memory. Neither scales when business picks up." },
+  { icon: AlertTriangle, title: "Double bookings",       desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
   { icon: BarChart2,     title: "Data without direction", desc: "You have the numbers but you are not sure what to do with them. NextSlot turns your data into decisions." },
 ];
 
@@ -59,12 +59,12 @@ const steps = [
 ];
 
 const showcaseCards = [
-  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                                                      icon: CalendarCheck },
-  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                                                    icon: MapPin },
-  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                                                                       icon: SlidersHorizontal },
-  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",                                                   icon: Star },
-  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                                                                 icon: Users },
-  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                                                            icon: LayoutDashboard },
+  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                                icon: CalendarCheck },
+  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                          icon: MapPin },
+  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                                             icon: SlidersHorizontal },
+  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",                        icon: Star },
+  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                                      icon: Users },
+  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                               icon: LayoutDashboard },
 ];
 
 const caseStudyCards = [
@@ -133,7 +133,7 @@ const caseStudyCards = [
   },
 ];
 
-/* ─── INDUSTRY CARD (animated) ──────────────────────────────── */
+/* ─── INDUSTRY CARD ──────────────────────────────────────── */
 
 const IndustryCard = ({ index, label, desc }: { index: number; label: string; desc: string }) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -170,22 +170,31 @@ const IndustryCard = ({ index, label, desc }: { index: number; label: string; de
 
 /* ─── CASE STUDY CAROUSEL ───────────────────────────────────── */
 
-const CaseStudyCarousel = () => {
-  const [active, setActive] = useState(0);
+type CarouselProps = {
+  active: number;
+  setActive: (i: number) => void;
+};
+
+const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
   const touchStartX = useRef<number>(0);
-  const touchEndX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
   const total = caseStudyCards.length;
 
-  const prev = () => setActive((a) => (a - 1 + total) % total);
-  const next = () => setActive((a) => (a + 1) % total);
+  const prev = () => setActive((active - 1 + total) % total);
+  const next = () => setActive((active + 1) % total);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.changedTouches[0].clientX;
+    touchStartY.current = e.changedTouches[0].clientY;
   };
+
   const handleTouchEnd = (e: React.TouchEvent) => {
-    touchEndX.current = e.changedTouches[0].clientX;
-    const delta = touchStartX.current - touchEndX.current;
-    if (Math.abs(delta) > 40) delta > 0 ? next() : prev();
+    const dx = touchStartX.current - e.changedTouches[0].clientX;
+    const dy = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
+    // Only fire if horizontal swipe dominates (avoids fighting page scroll)
+    if (Math.abs(dx) > 40 && Math.abs(dx) > dy) {
+      dx > 0 ? next() : prev();
+    }
   };
 
   useEffect(() => {
@@ -195,53 +204,73 @@ const CaseStudyCarousel = () => {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [active]);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full select-none">
 
-      {/* ── Track ── */}
+      {/* ── Viewport ──
+          overflow-hidden clips the sliding track.
+          No explicit height here — height is driven by the
+          tallest card via the stretch flex layout below.       */}
       <div
-        className="relative overflow-hidden"
+        className="overflow-hidden rounded-3xl"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Peek gradient masks */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-r from-primary to-transparent" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-primary to-transparent" />
-
-        {/* Slides */}
+        {/*
+          KEY FIX:
+          • `flex items-stretch` → every slide cell stretches to
+            the height of the tallest sibling.
+          • Each slide is `w-full shrink-0` → exactly one card
+            visible at a time.
+          • The inner card is `h-full` → fills its cell, so all
+            rendered cards occupy identical pixel dimensions.
+          • translateX moves by exactly 100% per step because
+            every cell is the same width as the viewport.
+        */}
         <div
-          className="flex transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
-          style={{ transform: `translateX(calc(-${active * 100}% - ${active * 0}px))` }}
+          className="flex items-stretch transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          style={{ transform: `translateX(-${active * 100}%)` }}
         >
           {caseStudyCards.map((card, i) => {
             const isActive = i === active;
             return (
               <div
                 key={card.step}
-                className="w-full shrink-0 px-3 md:px-6"
+                className="w-full shrink-0"
                 aria-hidden={!isActive}
               >
+                {/*
+                  `h-full` ensures this card fills its flex cell
+                  (which is already normalised to max-content height).
+                  `flex flex-col` lets the bullet list grow to fill.
+                */}
                 <div
-                  className={`relative overflow-hidden rounded-3xl p-7 md:p-10 transition-all duration-500 select-none ${
+                  className={[
+                    "relative h-full overflow-hidden rounded-3xl p-7 md:p-10",
+                    "flex flex-col",
+                    "transition-all duration-500",
                     card.isFinal
                       ? "bg-accent/15 ring-2 ring-accent/50"
-                      : "bg-primary-foreground/5 ring-1 ring-primary-foreground/10"
-                  } ${
-                    isActive ? "opacity-100 scale-100" : "opacity-40 scale-[0.97]"
-                  }`}
+                      : "bg-primary-foreground/5 ring-1 ring-primary-foreground/10",
+                    isActive ? "opacity-100 scale-100" : "opacity-30 scale-[0.98]",
+                  ].join(" ")}
                 >
-                  {/* Large ghost step number */}
+                  {/* Ghost step number */}
                   <span
                     aria-hidden="true"
-                    className="absolute -right-3 -bottom-5 text-[9rem] md:text-[12rem] font-black leading-none select-none pointer-events-none"
-                    style={{ color: card.isFinal ? "hsl(var(--accent)/0.12)" : "hsl(var(--primary-foreground)/0.06)" }}
+                    className="absolute -right-3 -bottom-5 text-[9rem] md:text-[12rem] font-black leading-none pointer-events-none"
+                    style={{
+                      color: card.isFinal
+                        ? "hsl(var(--accent)/0.10)"
+                        : "hsl(var(--primary-foreground)/0.05)",
+                    }}
                   >
                     {card.step}
                   </span>
 
-                  {/* Header row */}
+                  {/* Header */}
                   <div className="flex items-start justify-between gap-4 mb-6 relative z-10">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-1">
@@ -251,26 +280,38 @@ const CaseStudyCarousel = () => {
                         {card.version}
                       </p>
                     </div>
-                    {/* Step pill */}
-                    <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                      card.isFinal
-                        ? "bg-accent text-primary ring-1 ring-accent"
-                        : "bg-primary-foreground/10 text-accent ring-1 ring-accent/30"
-                    }`}>
+                    <span
+                      className={[
+                        "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold",
+                        card.isFinal
+                          ? "bg-accent text-primary ring-1 ring-accent"
+                          : "bg-primary-foreground/10 text-accent ring-1 ring-accent/30",
+                      ].join(" ")}
+                    >
                       {parseInt(card.step)}
                     </span>
                   </div>
 
-                  {/* Points */}
-                  <ul className="relative z-10 space-y-3">
+                  {/* Bullet points — flex-1 so they fill remaining card height */}
+                  <ul className="relative z-10 flex-1 flex flex-col justify-start space-y-3">
                     {card.points.map((pt, pi) => (
                       <li key={pi} className="flex items-start gap-3">
-                        <span className={`mt-[5px] w-1.5 h-1.5 rounded-full shrink-0 ${
-                          card.isFinal ? "bg-accent" : "bg-primary-foreground/30"
-                        }`} />
-                        <span className={`text-sm leading-relaxed ${
-                          card.isFinal ? "text-primary-foreground/90" : "text-primary-foreground/65"
-                        }`}>{pt}</span>
+                        <span
+                          className={[
+                            "mt-[6px] w-1.5 h-1.5 rounded-full shrink-0",
+                            card.isFinal ? "bg-accent" : "bg-primary-foreground/30",
+                          ].join(" ")}
+                        />
+                        <span
+                          className={[
+                            "text-sm leading-relaxed",
+                            card.isFinal
+                              ? "text-primary-foreground/90"
+                              : "text-primary-foreground/65",
+                          ].join(" ")}
+                        >
+                          {pt}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -281,45 +322,43 @@ const CaseStudyCarousel = () => {
         </div>
       </div>
 
-      {/* ── Controls row ── */}
+      {/* ── Controls ── */}
       <div className="mt-8 flex items-center justify-center gap-6">
-
-        {/* Prev */}
         <button
           onClick={prev}
-          aria-label="Previous"
+          aria-label="Previous slide"
           className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <ChevronLeft className="h-4 w-4 text-primary-foreground/70" />
         </button>
 
-        {/* Dot indicators */}
+        {/* Pill dots */}
         <div className="flex items-center gap-2">
           {caseStudyCards.map((_, i) => (
             <button
               key={i}
               onClick={() => setActive(i)}
               aria-label={`Go to slide ${i + 1}`}
-              className={`rounded-full transition-all duration-300 ${
+              className={[
+                "rounded-full transition-all duration-300",
                 i === active
                   ? "w-6 h-2 bg-accent shadow-[0_0_8px_2px_hsl(var(--accent)/0.5)]"
-                  : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50"
-              }`}
+                  : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50",
+              ].join(" ")}
             />
           ))}
         </div>
 
-        {/* Next */}
         <button
           onClick={next}
-          aria-label="Next"
+          aria-label="Next slide"
           className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <ChevronRight className="h-4 w-4 text-primary-foreground/70" />
         </button>
       </div>
 
-      {/* ── Swipe hint (mobile only, fades after first interaction) ── */}
+      {/* Swipe hint — mobile only */}
       <p className="mt-4 text-center text-[10px] text-primary-foreground/25 tracking-wider uppercase md:hidden">
         Swipe to continue
       </p>
@@ -331,6 +370,9 @@ const CaseStudyCarousel = () => {
 
 const Index = () => {
   const [hoveredProblem, setHoveredProblem] = useState<number | null>(null);
+  // active lives here so the progress bar and carousel share one source of truth
+  const [caseActive, setCaseActive] = useState(0);
+  const total = caseStudyCards.length;
 
   return (
     <div className="min-h-screen nextslot-theme bg-background">
@@ -376,6 +418,7 @@ const Index = () => {
                 <TrustBadges />
               </div>
             </div>
+
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-square rounded-full opacity-30 blur-3xl pointer-events-none -z-0"
@@ -421,11 +464,14 @@ const Index = () => {
             {problems.map((p, i) => (
               <div
                 key={p.title}
-                className={`relative bg-red-50 dark:bg-red-950/30 border border-red-400 dark:border-red-700 rounded-2xl p-7 transition-all duration-300 cursor-default shadow-md shadow-red-200/50 dark:shadow-red-900/40 ${
+                className={[
+                  "relative bg-red-50 dark:bg-red-950/30 border border-red-400 dark:border-red-700",
+                  "rounded-2xl p-7 transition-all duration-300 cursor-default",
+                  "shadow-md shadow-red-200/50 dark:shadow-red-900/40",
                   hoveredProblem === i
                     ? "scale-[1.03] shadow-lg shadow-red-300/60 dark:shadow-red-800/50 border-red-500 dark:border-red-600"
-                    : "hover:scale-[1.01] hover:shadow-lg hover:border-red-500/80"
-                }`}
+                    : "hover:scale-[1.01] hover:shadow-lg hover:border-red-500/80",
+                ].join(" ")}
                 onMouseEnter={() => setHoveredProblem(i)}
                 onMouseLeave={() => setHoveredProblem(null)}
               >
@@ -507,7 +553,7 @@ const Index = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             {/* Header */}
-            <div className="text-center mb-12">
+            <div className="text-center mb-10">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Case Study</p>
               <h2
                 className="text-3xl md:text-4xl tracking-tight mb-4"
@@ -520,19 +566,27 @@ const Index = () => {
               </p>
             </div>
 
-            {/* Progress bar */}
+            {/* Progress bar — now correctly wired to caseActive */}
             <div className="max-w-lg mx-auto mb-10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">
+                  {caseStudyCards[caseActive].label}
+                </span>
+                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">
+                  {caseActive + 1} / {total}
+                </span>
+              </div>
               <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-accent rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
-                  style={{ width: `${((caseStudyCards.length > 0 ? 0 : 0) / (caseStudyCards.length - 1)) * 100}%` }}
+                  style={{ width: `${(caseActive / (total - 1)) * 100}%` }}
                 />
               </div>
             </div>
 
             {/* Carousel */}
             <div className="max-w-2xl mx-auto">
-              <CaseStudyCarousel />
+              <CaseStudyCarousel active={caseActive} setActive={setCaseActive} />
             </div>
 
             {/* CTA */}
