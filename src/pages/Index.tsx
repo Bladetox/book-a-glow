@@ -10,7 +10,7 @@ import TrustBadges from "@/components/site/TrustBadges";
 import {
   ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle,
   CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2,
-  Star, SlidersHorizontal
+  Star, SlidersHorizontal, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -18,65 +18,23 @@ import serviceProvidersImg from "@/assets/service-providers.png";
 import productFeaturesImg from "@/assets/product-features.png";
 import logoImg from "@/assets/nextslot-logo.png";
 
+/* ─── DATA ──────────────────────────────────────────────────── */
+
 const industries = [
-  { label: "Barbers", desc: "Haircuts, fades & grooming" },
-  { label: "Beauticians", desc: "Nails, facials & skincare" },
-  { label: "Tattoo Artists", desc: "Studio & custom work" },
+  { label: "Barbers",            desc: "Haircuts, fades & grooming" },
+  { label: "Beauticians",        desc: "Nails, facials & skincare" },
+  { label: "Tattoo Artists",     desc: "Studio & custom work" },
   { label: "Massage Therapists", desc: "Mobile & in-studio" },
-  { label: "Makeup Artists", desc: "Bridal, editorial & events" },
-  { label: "Photographers", desc: "Portraits, events & products" },
-  { label: "Mobile Stylists", desc: "On-location services" },
+  { label: "Makeup Artists",     desc: "Bridal, editorial & events" },
+  { label: "Photographers",      desc: "Portraits, events & products" },
+  { label: "Mobile Stylists",    desc: "On-location services" },
 ];
 
-const IndustryCard = ({ index, label, desc }: { index: number; label: string; desc: string }) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(false);
-  const fromLeft = index % 2 === 0;
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisible(true);
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${index * 60}ms` }}
-      className={[
-        "bg-background border border-border rounded-xl p-4 text-center shadow-md cursor-default",
-        "transition-all duration-500 ease-out",
-        visible
-          ? "opacity-100 translate-x-0"
-          : fromLeft
-          ? "opacity-0 -translate-x-8"
-          : "opacity-0 translate-x-8",
-        "hover:border-foreground/20",
-      ].join(" ")}
-    >
-      <p className="text-sm font-semibold mb-0.5">{label}</p>
-      <p className="text-[10px] text-muted-foreground">{desc}</p>
-    </div>
-  );
-};
-
 const problems = [
-  { icon: MessageSquare, title: "WhatsApp messages", desc: "Clients message at all hours. You lose track of who wants what and when." },
-  { icon: CalendarX, title: "Manual scheduling", desc: "Pen and paper or memory. Neither scales when business picks up." },
-  { icon: AlertTriangle, title: "Double bookings", desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
-  { icon: BarChart2, title: "Data without direction", desc: "You have the numbers but you are not sure what to do with them. NextSlot turns your data into decisions." },
+  { icon: MessageSquare, title: "WhatsApp messages",    desc: "Clients message at all hours. You lose track of who wants what and when." },
+  { icon: CalendarX,     title: "Manual scheduling",    desc: "Pen and paper or memory. Neither scales when business picks up." },
+  { icon: AlertTriangle, title: "Double bookings",      desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
+  { icon: BarChart2,     title: "Data without direction", desc: "You have the numbers but you are not sure what to do with them. NextSlot turns your data into decisions." },
 ];
 
 const steps = [
@@ -101,37 +59,275 @@ const steps = [
 ];
 
 const showcaseCards = [
+  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                                                      icon: CalendarCheck },
+  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                                                    icon: MapPin },
+  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                                                                       icon: SlidersHorizontal },
+  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",                                                   icon: Star },
+  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                                                                 icon: Users },
+  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                                                            icon: LayoutDashboard },
+];
+
+const caseStudyCards = [
   {
-    title: "Smart Scheduling",
-    desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",
-    icon: CalendarCheck,
+    step: "01",
+    label: "Where it started",
+    version: "v1",
+    isFinal: false,
+    points: [
+      "PhenomeBeauty ran all bookings through WhatsApp conversations.",
+      "Every confirmation, reminder, and deposit was handled manually.",
+      "Messages came in at all hours, often after 10pm when clients finally replied.",
+      "There was no structure, no record, and no way to see the business clearly.",
+    ],
   },
   {
-    title: "Client Source Tracking",
-    desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",
-    icon: MapPin,
+    step: "02",
+    label: "First attempt at structure",
+    version: "v2",
+    isFinal: false,
+    points: [
+      "Added a Google Form to capture booking details and client data more consistently.",
+      "Added a Google Sheet to have more structured data and create a more autonomous workflow.",
+      "Linked a Google Calendar and added a travel distance calculator for call-out jobs.",
+      "There was still no payment gateway. PhenomeBeauty had to send banking details manually and rely on proof of payment as confirmation to secure a booking.",
+    ],
   },
   {
-    title: "Fully Customisable Dashboard",
-    desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",
-    icon: SlidersHorizontal,
+    step: "03",
+    label: "The shift",
+    version: "v3",
+    isFinal: false,
+    points: [
+      "PhenomeBeauty moved to a professional booking system with a real payment gateway integrated from day one.",
+      "Clients could now book themselves: choosing their service, selecting a time slot, and paying a deposit upfront without a single message exchanged.",
+      "Proof of payment was gone. The deposit was collected automatically. A booking was only confirmed once payment cleared.",
+      "The booking link went into the TikTok bio, Instagram bio, and WhatsApp status. Within days, confirmed bookings started arriving on their own.",
+      "For the first time, the business felt like it was running itself.",
+    ],
   },
   {
-    title: "Google Review Requests",
-    desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",
-    icon: Star,
+    step: "04",
+    label: "What the dashboard revealed",
+    version: "v3 insight",
+    isFinal: false,
+    points: [
+      "Most new clients were coming from TikTok, not WhatsApp or Instagram as originally assumed. Marketing spend shifted immediately.",
+      "Certain services generated far more revenue per hour than others. Pricing and promotion changed as a result.",
+      "Specific time slots filled fastest, revealing real peak demand patterns the owner had never seen before.",
+      "Several clients had not rebooked in over a month. The dashboard surfaced them automatically, making follow-up obvious and timely.",
+      "Decisions that used to be guesses became clear and data-backed.",
+    ],
   },
   {
-    title: "Client History and Loyalty",
-    desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",
-    icon: Users,
-  },
-  {
-    title: "Business Analytics",
-    desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",
-    icon: LayoutDashboard,
+    step: "05",
+    label: "The result",
+    version: "today",
+    isFinal: true,
+    points: [
+      "PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every single day.",
+      "No more manual payment chasing, no more proof of payments, no more spreadsheet rows that go stale.",
+      "The dashboard reflects exactly what is happening inside the business in real time.",
+      "It surfaces the insights that matter, not generic advice. That is the difference between data you collect and data you can actually use.",
+      "Every iteration taught the business something. NextSlot is what happens when all of those lessons are built into one system.",
+    ],
   },
 ];
+
+/* ─── INDUSTRY CARD (animated) ──────────────────────────────── */
+
+const IndustryCard = ({ index, label, desc }: { index: number; label: string; desc: string }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  const fromLeft = index % 2 === 0;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { entries.forEach((e) => { if (e.isIntersecting) { setVisible(true); observer.unobserve(e.target); } }); },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${index * 60}ms` }}
+      className={[
+        "bg-background border border-border rounded-xl p-4 text-center shadow-md cursor-default",
+        "transition-all duration-500 ease-out",
+        visible ? "opacity-100 translate-x-0" : fromLeft ? "opacity-0 -translate-x-8" : "opacity-0 translate-x-8",
+        "hover:border-foreground/20",
+      ].join(" ")}
+    >
+      <p className="text-sm font-semibold mb-0.5">{label}</p>
+      <p className="text-[10px] text-muted-foreground">{desc}</p>
+    </div>
+  );
+};
+
+/* ─── CASE STUDY CAROUSEL ───────────────────────────────────── */
+
+const CaseStudyCarousel = () => {
+  const [active, setActive] = useState(0);
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+  const total = caseStudyCards.length;
+
+  const prev = () => setActive((a) => (a - 1 + total) % total);
+  const next = () => setActive((a) => (a + 1) % total);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.changedTouches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const delta = touchStartX.current - touchEndX.current;
+    if (Math.abs(delta) > 40) delta > 0 ? next() : prev();
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") next();
+      if (e.key === "ArrowLeft") prev();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  return (
+    <div className="relative w-full">
+
+      {/* ── Track ── */}
+      <div
+        className="relative overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Peek gradient masks */}
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-r from-primary to-transparent" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-primary to-transparent" />
+
+        {/* Slides */}
+        <div
+          className="flex transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          style={{ transform: `translateX(calc(-${active * 100}% - ${active * 0}px))` }}
+        >
+          {caseStudyCards.map((card, i) => {
+            const isActive = i === active;
+            return (
+              <div
+                key={card.step}
+                className="w-full shrink-0 px-3 md:px-6"
+                aria-hidden={!isActive}
+              >
+                <div
+                  className={`relative overflow-hidden rounded-3xl p-7 md:p-10 transition-all duration-500 select-none ${
+                    card.isFinal
+                      ? "bg-accent/15 ring-2 ring-accent/50"
+                      : "bg-primary-foreground/5 ring-1 ring-primary-foreground/10"
+                  } ${
+                    isActive ? "opacity-100 scale-100" : "opacity-40 scale-[0.97]"
+                  }`}
+                >
+                  {/* Large ghost step number */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-3 -bottom-5 text-[9rem] md:text-[12rem] font-black leading-none select-none pointer-events-none"
+                    style={{ color: card.isFinal ? "hsl(var(--accent)/0.12)" : "hsl(var(--primary-foreground)/0.06)" }}
+                  >
+                    {card.step}
+                  </span>
+
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-4 mb-6 relative z-10">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-1">
+                        {card.label}
+                      </p>
+                      <p className="text-[10px] text-primary-foreground/30 font-medium uppercase tracking-wider">
+                        {card.version}
+                      </p>
+                    </div>
+                    {/* Step pill */}
+                    <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                      card.isFinal
+                        ? "bg-accent text-primary ring-1 ring-accent"
+                        : "bg-primary-foreground/10 text-accent ring-1 ring-accent/30"
+                    }`}>
+                      {parseInt(card.step)}
+                    </span>
+                  </div>
+
+                  {/* Points */}
+                  <ul className="relative z-10 space-y-3">
+                    {card.points.map((pt, pi) => (
+                      <li key={pi} className="flex items-start gap-3">
+                        <span className={`mt-[5px] w-1.5 h-1.5 rounded-full shrink-0 ${
+                          card.isFinal ? "bg-accent" : "bg-primary-foreground/30"
+                        }`} />
+                        <span className={`text-sm leading-relaxed ${
+                          card.isFinal ? "text-primary-foreground/90" : "text-primary-foreground/65"
+                        }`}>{pt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Controls row ── */}
+      <div className="mt-8 flex items-center justify-center gap-6">
+
+        {/* Prev */}
+        <button
+          onClick={prev}
+          aria-label="Previous"
+          className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+        >
+          <ChevronLeft className="h-4 w-4 text-primary-foreground/70" />
+        </button>
+
+        {/* Dot indicators */}
+        <div className="flex items-center gap-2">
+          {caseStudyCards.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`Go to slide ${i + 1}`}
+              className={`rounded-full transition-all duration-300 ${
+                i === active
+                  ? "w-6 h-2 bg-accent shadow-[0_0_8px_2px_hsl(var(--accent)/0.5)]"
+                  : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50"
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Next */}
+        <button
+          onClick={next}
+          aria-label="Next"
+          className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+        >
+          <ChevronRight className="h-4 w-4 text-primary-foreground/70" />
+        </button>
+      </div>
+
+      {/* ── Swipe hint (mobile only, fades after first interaction) ── */}
+      <p className="mt-4 text-center text-[10px] text-primary-foreground/25 tracking-wider uppercase md:hidden">
+        Swipe to continue
+      </p>
+    </div>
+  );
+};
+
+/* ─── PAGE ──────────────────────────────────────────────────── */
 
 const Index = () => {
   const [hoveredProblem, setHoveredProblem] = useState<number | null>(null);
@@ -141,6 +337,7 @@ const Index = () => {
       <SiteHeader />
       <StickyCtaBar />
       <main>
+
         {/* HERO */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -185,14 +382,10 @@ const Index = () => {
                 style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, hsl(var(--accent) / 0.3) 50%, transparent 80%)" }}
               />
               <div className="flex-1 relative z-10">
-                <LaptopFrame interactive={false}>
-                  <DashboardPreview />
-                </LaptopFrame>
+                <LaptopFrame interactive={false}><DashboardPreview /></LaptopFrame>
               </div>
               <div className="hidden md:block w-[120px] shrink-0 -mb-1 relative z-10">
-                <MobileFrame interactive={false}>
-                  <MobileDashboardPreview />
-                </MobileFrame>
+                <MobileFrame interactive={false}><MobileDashboardPreview /></MobileFrame>
               </div>
             </div>
           </div>
@@ -254,11 +447,7 @@ const Index = () => {
         <section className="bg-secondary/40 py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center mb-6">
-              <img
-                src={logoImg}
-                alt="NextSlot"
-                className="h-32 md:h-40 w-auto mix-blend-multiply dark:mix-blend-screen"
-              />
+              <img src={logoImg} alt="NextSlot" className="h-32 md:h-40 w-auto mix-blend-multiply dark:mix-blend-screen" />
             </div>
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">How NextSlot works</h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-16">Three steps. Real results.</p>
@@ -305,10 +494,7 @@ const Index = () => {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link
-              to="/product"
-              className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-foreground transition-colors"
-            >
+            <Link to="/product" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-foreground transition-colors">
               See the full feature list <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -317,142 +503,53 @@ const Index = () => {
         <LiveDemoSection />
 
         {/* CASE STUDY */}
-        <section className="bg-primary text-primary-foreground py-20 md:py-28">
+        <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
 
-              {/* Header */}
-              <div className="text-center mb-14">
-                <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-6">Case Study</p>
-                <h2 className="text-3xl md:text-4xl tracking-tight mb-6" style={{ fontFamily: "'Abril Fatface', serif" }}>PhenomeBeauty</h2>
-                <p className="text-primary-foreground/70 leading-relaxed text-lg max-w-2xl mx-auto">
-                  A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
-                </p>
-              </div>
-
-              {/* Timeline connector */}
-              <div className="relative space-y-4 mb-14">
-
-                {/* Vertical line */}
-                <div className="absolute left-[11px] top-6 bottom-6 w-px bg-accent/20 hidden md:block" aria-hidden="true" />
-
-                {/* V1 — Where it started */}
-                <div className="relative flex gap-5">
-                  <div className="hidden md:flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">1</div>
-                  </div>
-                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">Where it started</p>
-                      <span className="text-[10px] text-primary-foreground/30 font-medium">v1</span>
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                      <li>PhenomeBeauty ran all bookings through WhatsApp conversations.</li>
-                      <li>Every confirmation, reminder, and deposit was handled manually.</li>
-                      <li>Messages came in at all hours, often after 10pm when clients finally replied.</li>
-                      <li>There was no structure, no record, and no way to see the business clearly.</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* V2 — First attempt at structure */}
-                <div className="relative flex gap-5">
-                  <div className="hidden md:flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">2</div>
-                  </div>
-                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">First attempt at structure</p>
-                      <span className="text-[10px] text-primary-foreground/30 font-medium">v2</span>
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                      <li>Added a Google Form to capture booking details and client data more consistently.</li>
-                      <li>Linked a Google Sheet to create a more structured overview and a semi-automated workflow.</li>
-                      <li>Connected a Google Calendar to track appointments and added a travel distance calculator for call-out jobs.</li>
-                      <li>There was still no payment gateway. PhenomeBeauty had to send banking details manually and rely on proof of payment as confirmation to secure a booking.</li>
-                      <li>The system worked — until it didn't. As volume grew, the cracks showed. Manual payment chasing, missed confirmations, and a spreadsheet that couldn't keep up.</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* V3 — The shift */}
-                <div className="relative flex gap-5">
-                  <div className="hidden md:flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">3</div>
-                  </div>
-                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">The shift</p>
-                      <span className="text-[10px] text-primary-foreground/30 font-medium">v3</span>
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                      <li>PhenomeBeauty moved to a professional booking system with a real payment gateway integrated from day one.</li>
-                      <li>Clients could now book themselves: choosing their service, selecting a time slot, and paying a deposit upfront — all without a single message exchanged.</li>
-                      <li>Proof of payment was gone. The deposit was collected automatically. A booking was only confirmed once payment cleared.</li>
-                      <li>The booking link went into the TikTok bio, Instagram bio, and WhatsApp status. Within days, confirmed bookings started arriving on their own.</li>
-                      <li>For the first time, the business felt like it was running itself.</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* V4 — What the dashboard revealed */}
-                <div className="relative flex gap-5">
-                  <div className="hidden md:flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-full bg-primary-foreground/10 ring-1 ring-accent/40 flex items-center justify-center text-[10px] font-bold text-accent shrink-0 mt-1">4</div>
-                  </div>
-                  <div className="flex-1 bg-primary-foreground/5 rounded-2xl p-6 ring-1 ring-accent/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">What the dashboard revealed</p>
-                      <span className="text-[10px] text-primary-foreground/30 font-medium">v3 continued</span>
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/70 leading-relaxed">
-                      <li>Most new clients were coming from TikTok — not WhatsApp or Instagram as originally assumed. Marketing spend shifted immediately.</li>
-                      <li>Certain services generated far more revenue per hour than others. Pricing and promotion changed as a result.</li>
-                      <li>Specific time slots filled fastest, revealing real peak demand patterns the owner had never seen before.</li>
-                      <li>Several clients had not rebooked in over a month. The dashboard surfaced them automatically, making follow-up obvious and timely.</li>
-                      <li>Decisions that used to be guesses — what to promote, when to open slots, who to follow up with — became clear and data-backed.</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* V5 — The result */}
-                <div className="relative flex gap-5">
-                  <div className="hidden md:flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-full bg-accent/60 ring-1 ring-accent flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-1">5</div>
-                  </div>
-                  <div className="flex-1 bg-accent/10 rounded-2xl p-6 ring-1 ring-accent/40">
-                    <div className="flex items-center gap-2 mb-3">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">The result</p>
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1.5 text-sm text-primary-foreground/80 leading-relaxed">
-                      <li>PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every single day.</li>
-                      <li>No more manual payment chasing, no more proof of payments, no more spreadsheet rows that go stale.</li>
-                      <li>The dashboard reflects exactly what is happening inside the business — revenue, clients, services, and patterns — in real time.</li>
-                      <li>It surfaces the insights that matter, not generic advice. That is the difference between data you collect and data you can actually use.</li>
-                      <li>Every iteration taught the business something. NextSlot is what happens when all of those lessons are built into one system.</li>
-                    </ul>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* CTA */}
-              <div className="text-center">
-                <Link
-                  to="/onboarding"
-                  className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
-                >
-                  Start your own story
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-              </div>
-
+            {/* Header */}
+            <div className="text-center mb-12">
+              <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Case Study</p>
+              <h2
+                className="text-3xl md:text-4xl tracking-tight mb-4"
+                style={{ fontFamily: "'Abril Fatface', serif" }}
+              >
+                PhenomeBeauty
+              </h2>
+              <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
+                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
+              </p>
             </div>
+
+            {/* Progress bar */}
+            <div className="max-w-lg mx-auto mb-10">
+              <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-accent rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                  style={{ width: `${((caseStudyCards.length > 0 ? 0 : 0) / (caseStudyCards.length - 1)) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Carousel */}
+            <div className="max-w-2xl mx-auto">
+              <CaseStudyCarousel />
+            </div>
+
+            {/* CTA */}
+            <div className="text-center mt-14">
+              <Link
+                to="/onboarding"
+                className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
+              >
+                Start your own story
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+
           </div>
         </section>
 
       </main>
-
       <SiteFooter />
     </div>
   );
