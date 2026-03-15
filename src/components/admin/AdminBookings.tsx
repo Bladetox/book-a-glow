@@ -204,10 +204,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
    * Show "Request Balance" when:
    *   - booking has an outstanding balance > 0
    *   - booking is NOT cancelled
+   *   - booking is NOT complete
    *   - full payment has NOT been received
    */
   const showRequestBalance = (b: BookingRow) =>
-    b.balance > 0 && b.status !== "cancelled" && !b.fullPaymentReceived;
+    b.balance > 0 &&
+    b.status !== "cancelled" &&
+    b.status !== "complete" &&
+    !b.fullPaymentReceived;
 
   // Available time slots for rescheduling
   const timeSlots = Array.from({ length: 19 }, (_, i) => {
@@ -317,7 +321,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[b.status]}`}>
                         {b.status}
                       </span>
-                      {b.balance > 0 && b.status !== "cancelled" && !b.fullPaymentReceived && (
+                      {b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived && (
                         <span className="text-[10px] text-amber-400/80">R {b.balance} due</span>
                       )}
                     </div>
