@@ -4,17 +4,12 @@
 --
 -- When the frontend passes these values (already computed using
 -- the correct deposit_percent from app_settings), the RPC uses
--- them directly instead of re-running calculate_booking_price,
--- which relies on current_setting('app.tenant_id') being set —
--- which is NOT set in the public (anon) booking flow.
+-- them directly instead of re-running calculate_booking_price.
 --
--- Backwards-compatible: both params DEFAULT NULL so existing
--- callers continue to work unchanged.
---
--- Also adds p_guest_name / p_guest_email / p_guest_phone so the
--- booking row captures contact details for guest (unauthenticated)
--- clients. These columns are added with ADD COLUMN IF NOT EXISTS
--- so re-running this migration is safe.
+-- Root cause of 55000 error: v_pricing RECORD was never assigned
+-- when p_total_amount was provided, but the callout_fee CASE
+-- still referenced v_pricing.callout_fee — fixed by initialising
+-- v_callout_fee as a separate NUMERIC variable.
 -- ============================================================
 
 -- Add guest contact columns to bookings if they don't exist yet
@@ -23,9 +18,25 @@ ALTER TABLE public.bookings
   ADD COLUMN IF NOT EXISTS guest_email text,
   ADD COLUMN IF NOT EXISTS guest_phone text;
 
--- ============================================================
--- Replace the RPC
--- ============================================================
+-- Drop all existing overloads cleanly before replacing
+DROP FUNCTION IF EXISTS public.create_booking_with_consultation(
+  uuid, uuid, date, time without time zone, uuid[],
+  boolean, text, numeric, text, text, text, text, text,
+  text, text, text, text, text, text, text
+);
+DROP FUNCTION IF EXISTS public.create_booking_with_consultation(
+  uuid, uuid, date, time without time zone, uuid[],
+  boolean, text, numeric, text, text, text, text, text,
+  text, text, text, text, text, text, text,
+  text, text, text
+);
+DROP FUNCTION IF EXISTS public.create_booking_with_consultation(
+  uuid, uuid, date, time without time zone, uuid[],
+  boolean, text, numeric, text, text, text, text, text,
+  text, text, text, text, text, text, text,
+  text, text, text, numeric, numeric
+);
+
 CREATE OR REPLACE FUNCTION public.create_booking_with_consultation(
   p_client_id uuid,
   p_staff_id uuid,
@@ -47,12 +58,9 @@ CREATE OR REPLACE FUNCTION public.create_booking_with_consultation(
   p_environmental_exposure text DEFAULT NULL,
   p_physical_factors text DEFAULT NULL,
   p_hair_length_ok text DEFAULT NULL,
-  -- NEW: guest contact details (stored on the booking row)
   p_guest_name text DEFAULT NULL,
   p_guest_email text DEFAULT NULL,
   p_guest_phone text DEFAULT NULL,
-  -- NEW: optional frontend-computed amounts — bypasses
-  -- calculate_booking_price when tenant context is not set
   p_total_amount numeric DEFAULT NULL,
   p_deposit_amount numeric DEFAULT NULL
 )
@@ -73,14 +81,14 @@ DECLARE
   v_tenant_id        TEXT;
   v_total            NUMERIC;
   v_deposit          NUMERIC;
+  v_callout_fee      NUMERIC := 0;   -- ← separate var, never reads v_pricing
 BEGIN
-  -- Resolve tenant_id from first service (most reliable in anon context)
+  -- Resolve tenant_id from first service
   SELECT tenant_id INTO v_tenant_id
   FROM services
   WHERE id = ANY(p_service_ids)
   LIMIT 1;
 
-  -- Fallback: try staff profile
   IF v_tenant_id IS NULL AND p_staff_id IS NOT NULL THEN
     SELECT tenant_id INTO v_tenant_id
     FROM profiles
@@ -106,20 +114,25 @@ BEGIN
     RETURN;
   END IF;
 
-  -- ── Pricing ────────────────────────────────────────────────
-  -- Use frontend-supplied values when provided (computed with the
-  -- correct deposit_percent from app_settings on the client side).
-  -- Fall back to calculate_booking_price only when not supplied,
-  -- setting tenant context first so it can read app_settings.
+  -- ── Pricing ─────────────────────────────────────────────────
+  -- Use frontend-supplied values when provided.
+  -- Fall back to calculate_booking_price only when not supplied.
   IF p_total_amount IS NOT NULL AND p_deposit_amount IS NOT NULL THEN
-    v_total   := p_total_amount;
-    v_deposit := p_deposit_amount;
+    v_total       := p_total_amount;
+    v_deposit     := p_deposit_amount;
+    -- Derive callout fee from the difference between total and services sum
+    SELECT p_total_amount - COALESCE(SUM(price), 0)
+      INTO v_callout_fee
+      FROM services
+      WHERE id = ANY(p_service_ids);
+    v_callout_fee := GREATEST(v_callout_fee, 0);
   ELSE
     PERFORM set_config('app.tenant_id', v_tenant_id, true);
     SELECT * INTO v_pricing
     FROM calculate_booking_price(p_service_ids, p_is_callout, p_callout_distance_km);
-    v_total   := v_pricing.total_amount;
-    v_deposit := v_pricing.deposit_amount;
+    v_total       := v_pricing.total_amount;
+    v_deposit     := v_pricing.deposit_amount;
+    v_callout_fee := COALESCE(v_pricing.callout_fee, 0);
   END IF;
 
   SELECT string_agg(id::TEXT, ', ') INTO v_service_ids_text
@@ -158,13 +171,7 @@ BEGIN
     p_is_callout,
     p_callout_address,
     p_callout_distance_km,
-    CASE
-      WHEN p_total_amount IS NOT NULL AND p_deposit_amount IS NOT NULL
-        THEN p_total_amount - (
-          SELECT COALESCE(SUM(price), 0) FROM services WHERE id = ANY(p_service_ids)
-        )
-      ELSE COALESCE(v_pricing.callout_fee, 0)
-    END,
+    v_callout_fee,        -- ← always safe, initialised to 0
     p_client_notes,
     v_service_ids_text,
     v_total_duration,
