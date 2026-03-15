@@ -16,7 +16,7 @@ import { Link } from "react-router-dom";
 
 import serviceProvidersImg from "@/assets/service-providers.png";
 import productFeaturesImg from "@/assets/product-features.png";
-import logoImg from "@/assets/nextslot-logo.png";
+// logoImg removed — now served from public/
 
 /* ─── DATA ──────────────────────────────────────────────────── */
 
@@ -191,7 +191,6 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
   const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = touchStartX.current - e.changedTouches[0].clientX;
     const dy = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
-    // Only fire if horizontal swipe dominates (avoids fighting page scroll)
     if (Math.abs(dx) > 40 && Math.abs(dx) > dy) {
       dx > 0 ? next() : prev();
     }
@@ -208,27 +207,11 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
 
   return (
     <div className="relative w-full select-none">
-
-      {/* ── Viewport ──
-          overflow-hidden clips the sliding track.
-          No explicit height here — height is driven by the
-          tallest card via the stretch flex layout below.       */}
       <div
         className="overflow-hidden rounded-3xl"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/*
-          KEY FIX:
-          • `flex items-stretch` → every slide cell stretches to
-            the height of the tallest sibling.
-          • Each slide is `w-full shrink-0` → exactly one card
-            visible at a time.
-          • The inner card is `h-full` → fills its cell, so all
-            rendered cards occupy identical pixel dimensions.
-          • translateX moves by exactly 100% per step because
-            every cell is the same width as the viewport.
-        */}
         <div
           className="flex items-stretch transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
           style={{ transform: `translateX(-${active * 100}%)` }}
@@ -236,82 +219,41 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
           {caseStudyCards.map((card, i) => {
             const isActive = i === active;
             return (
-              <div
-                key={card.step}
-                className="w-full shrink-0"
-                aria-hidden={!isActive}
-              >
-                {/*
-                  `h-full` ensures this card fills its flex cell
-                  (which is already normalised to max-content height).
-                  `flex flex-col` lets the bullet list grow to fill.
-                */}
+              <div key={card.step} className="w-full shrink-0" aria-hidden={!isActive}>
                 <div
                   className={[
                     "relative h-full overflow-hidden rounded-3xl p-7 md:p-10",
-                    "flex flex-col",
-                    "transition-all duration-500",
+                    "flex flex-col transition-all duration-500",
                     card.isFinal
                       ? "bg-accent/15 ring-2 ring-accent/50"
                       : "bg-primary-foreground/5 ring-1 ring-primary-foreground/10",
                     isActive ? "opacity-100 scale-100" : "opacity-30 scale-[0.98]",
                   ].join(" ")}
                 >
-                  {/* Ghost step number */}
                   <span
                     aria-hidden="true"
                     className="absolute -right-3 -bottom-5 text-[9rem] md:text-[12rem] font-black leading-none pointer-events-none"
-                    style={{
-                      color: card.isFinal
-                        ? "hsl(var(--accent)/0.10)"
-                        : "hsl(var(--primary-foreground)/0.05)",
-                    }}
+                    style={{ color: card.isFinal ? "hsl(var(--accent)/0.10)" : "hsl(var(--primary-foreground)/0.05)" }}
                   >
                     {card.step}
                   </span>
-
-                  {/* Header */}
                   <div className="flex items-start justify-between gap-4 mb-6 relative z-10">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-1">
-                        {card.label}
-                      </p>
-                      <p className="text-[10px] text-primary-foreground/30 font-medium uppercase tracking-wider">
-                        {card.version}
-                      </p>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-1">{card.label}</p>
+                      <p className="text-[10px] text-primary-foreground/30 font-medium uppercase tracking-wider">{card.version}</p>
                     </div>
-                    <span
-                      className={[
-                        "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold",
-                        card.isFinal
-                          ? "bg-accent text-primary ring-1 ring-accent"
-                          : "bg-primary-foreground/10 text-accent ring-1 ring-accent/30",
-                      ].join(" ")}
-                    >
+                    <span className={[
+                      "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold",
+                      card.isFinal ? "bg-accent text-primary ring-1 ring-accent" : "bg-primary-foreground/10 text-accent ring-1 ring-accent/30",
+                    ].join(" ")}>
                       {parseInt(card.step)}
                     </span>
                   </div>
-
-                  {/* Bullet points — flex-1 so they fill remaining card height */}
                   <ul className="relative z-10 flex-1 flex flex-col justify-start space-y-3">
                     {card.points.map((pt, pi) => (
                       <li key={pi} className="flex items-start gap-3">
-                        <span
-                          className={[
-                            "mt-[6px] w-1.5 h-1.5 rounded-full shrink-0",
-                            card.isFinal ? "bg-accent" : "bg-primary-foreground/30",
-                          ].join(" ")}
-                        />
-                        <span
-                          className={[
-                            "text-sm leading-relaxed",
-                            card.isFinal
-                              ? "text-primary-foreground/90"
-                              : "text-primary-foreground/65",
-                          ].join(" ")}
-                        >
-                          {pt}
-                        </span>
+                        <span className={["mt-[6px] w-1.5 h-1.5 rounded-full shrink-0", card.isFinal ? "bg-accent" : "bg-primary-foreground/30"].join(" ")} />
+                        <span className={["text-sm leading-relaxed", card.isFinal ? "text-primary-foreground/90" : "text-primary-foreground/65"].join(" ")}>{pt}</span>
                       </li>
                     ))}
                   </ul>
@@ -322,46 +264,23 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
         </div>
       </div>
 
-      {/* ── Controls ── */}
       <div className="mt-8 flex items-center justify-center gap-6">
-        <button
-          onClick={prev}
-          aria-label="Previous slide"
-          className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-        >
+        <button onClick={prev} aria-label="Previous slide" className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
           <ChevronLeft className="h-4 w-4 text-primary-foreground/70" />
         </button>
-
-        {/* Pill dots */}
         <div className="flex items-center gap-2">
           {caseStudyCards.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setActive(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className={[
-                "rounded-full transition-all duration-300",
-                i === active
-                  ? "w-6 h-2 bg-accent shadow-[0_0_8px_2px_hsl(var(--accent)/0.5)]"
-                  : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50",
-              ].join(" ")}
+            <button key={i} onClick={() => setActive(i)} aria-label={`Go to slide ${i + 1}`}
+              className={["rounded-full transition-all duration-300", i === active ? "w-6 h-2 bg-accent shadow-[0_0_8px_2px_hsl(var(--accent)/0.5)]" : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50"].join(" ")}
             />
           ))}
         </div>
-
-        <button
-          onClick={next}
-          aria-label="Next slide"
-          className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-        >
+        <button onClick={next} aria-label="Next slide" className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
           <ChevronRight className="h-4 w-4 text-primary-foreground/70" />
         </button>
       </div>
 
-      {/* Swipe hint — mobile only */}
-      <p className="mt-4 text-center text-[10px] text-primary-foreground/25 tracking-wider uppercase md:hidden">
-        Swipe to continue
-      </p>
+      <p className="mt-4 text-center text-[10px] text-primary-foreground/25 tracking-wider uppercase md:hidden">Swipe to continue</p>
     </div>
   );
 };
@@ -370,7 +289,6 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
 
 const Index = () => {
   const [hoveredProblem, setHoveredProblem] = useState<number | null>(null);
-  // active lives here so the progress bar and carousel share one source of truth
   const [caseActive, setCaseActive] = useState(0);
   const total = caseStudyCards.length;
 
@@ -400,17 +318,11 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground">Only show what matters to your business. Revenue, bookings, clients, stock. Your call.</p>
               </div>
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
-                <Link
-                  to="/onboarding"
-                  className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200"
-                >
+                <Link to="/onboarding" className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200">
                   Create Your Booking Page
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
-                <Link
-                  to="/product"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-3.5"
-                >
+                <Link to="/product" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-3.5">
                   See how it works <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -418,7 +330,6 @@ const Index = () => {
                 <TrustBadges />
               </div>
             </div>
-
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-square rounded-full opacity-30 blur-3xl pointer-events-none -z-0"
@@ -441,11 +352,7 @@ const Index = () => {
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">If your business runs on appointments, NextSlot runs your schedule.</p>
             <div className="max-w-4xl mx-auto mb-14">
               <div className="rounded-2xl overflow-hidden shadow-lg">
-                <img
-                  src={serviceProvidersImg}
-                  alt="South African service providers: barber, nail technician, lash technician and tattoo artist at work"
-                  className="w-full h-auto border-solid border-black rounded-lg shadow-lg"
-                />
+                <img src={serviceProvidersImg} alt="South African service providers" className="w-full h-auto border-solid border-black rounded-lg shadow-lg" />
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
@@ -492,9 +399,22 @@ const Index = () => {
         {/* HOW IT WORKS */}
         <section className="bg-secondary/40 py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center mb-6">
-              <img src={logoImg} alt="NextSlot" className="h-32 md:h-40 w-auto mix-blend-multiply dark:mix-blend-screen" />
+
+            {/*
+              FIX 2: new logo from public/ + wordmark below it,
+              replacing the old @/assets/nextslot-logo.png import.
+            */}
+            <div className="flex flex-col items-center gap-3 mb-8">
+              <img
+                src="/web-app-manifest-192x192.png"
+                alt="NextSlot"
+                className="h-20 w-20 md:h-24 md:w-24 object-contain rounded-2xl shadow-md"
+              />
+              <span className="text-xl font-bold tracking-tight">
+                Next<span className="text-accent">Slot</span>
+              </span>
             </div>
+
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">How NextSlot works</h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-16">Three steps. Real results.</p>
             <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
@@ -514,26 +434,29 @@ const Index = () => {
           </div>
         </section>
 
-        {/* FEATURES */}
+        {/* FEATURES — Everything you need */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don’t.</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
             Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
           </p>
           <div className="max-w-3xl mx-auto mb-14">
-            <img
-              src={productFeaturesImg}
-              alt="Scheduling, tracking, clients, and dashboard features"
-              className="w-full h-auto opacity-70 mix-blend-multiply dark:mix-blend-screen"
-            />
+            <img src={productFeaturesImg} alt="Scheduling, tracking, clients, and dashboard features" className="w-full h-auto opacity-70 mix-blend-multiply dark:mix-blend-screen" />
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {showcaseCards.map((card) => (
               <div
                 key={card.title}
-                className="group border border-border rounded-2xl p-8 hover:border-foreground/20 transition-all duration-300 shadow-lg"
+                className="group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
               >
-                <card.icon className="h-7 w-7 mb-5 text-accent group-hover:scale-110 transition-transform duration-300" strokeWidth={1.5} />
+                {/*
+                  FIX 3: icon sits inside a solid accent-tinted pill.
+                  strokeWidth 2 (up from 1.5) + solid bg makes it
+                  read as professional and intentional, not washed out.
+                */}
+                <div className="w-11 h-11 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center mb-5 group-hover:bg-accent/30 group-hover:border-accent/50 transition-all duration-300">
+                  <card.icon className="h-5 w-5 text-accent" strokeWidth={2} />
+                </div>
                 <h3 className="text-lg font-semibold mb-3">{card.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{card.desc}</p>
               </div>
@@ -551,30 +474,20 @@ const Index = () => {
         {/* CASE STUDY */}
         <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            {/* Header */}
             <div className="text-center mb-10">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Case Study</p>
-              <h2
-                className="text-3xl md:text-4xl tracking-tight mb-4"
-                style={{ fontFamily: "'Abril Fatface', serif" }}
-              >
+              <h2 className="text-3xl md:text-4xl tracking-tight mb-4" style={{ fontFamily: "'Abril Fatface', serif" }}>
                 PhenomeBeauty
               </h2>
               <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
-                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
+                A mobile beauty studio’s journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
               </p>
             </div>
 
-            {/* Progress bar — now correctly wired to caseActive */}
             <div className="max-w-lg mx-auto mb-10">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">
-                  {caseStudyCards[caseActive].label}
-                </span>
-                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">
-                  {caseActive + 1} / {total}
-                </span>
+                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseStudyCards[caseActive].label}</span>
+                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseActive + 1} / {total}</span>
               </div>
               <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
                 <div
@@ -584,12 +497,10 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Carousel */}
             <div className="max-w-2xl mx-auto">
               <CaseStudyCarousel active={caseActive} setActive={setCaseActive} />
             </div>
 
-            {/* CTA */}
             <div className="text-center mt-14">
               <Link
                 to="/onboarding"
@@ -599,7 +510,6 @@ const Index = () => {
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
-
           </div>
         </section>
 
