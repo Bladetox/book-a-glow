@@ -251,12 +251,10 @@ Deno.serve(async (req) => {
 
     // ══════════════════════════════════════════════════════════════════════
     // FULL PAYMENT — client paid 100% at booking time
-    // Idempotency: only skip if final_payment_paid is already true.
-    // DO NOT check deposit_paid here — deposit bookings have deposit_paid=true
-    // and we must still allow upgrading them via this path when payment_type=full.
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "full") {
-      if (booking.final_payment_paid) {
+      // Idempotency guard — checked before UPDATE, no NULL-unsafe filter needed
+      if (booking.final_payment_paid === true) {
         console.log("Duplicate full-payment webhook — already processed:", booking.id);
         return new Response(
           JSON.stringify({ received: true, already_paid: true }),
@@ -274,8 +272,7 @@ Deno.serve(async (req) => {
           status:                "confirmed",
           confirmed_at:          new Date().toISOString(),
         })
-        .eq("id", booking.id)
-        .eq("final_payment_paid", false);   // idempotency guard — final_payment_paid only
+        .eq("id", booking.id);
 
       if (updateErr) {
         console.error("Failed to update booking for full payment:", updateErr);
@@ -284,11 +281,12 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Derive amount from source-of-truth columns — total_amount is correct for full payment
       await supabase.from("payments").insert({
         booking_id:     booking.id,
         client_id:      booking.client_id,
         tenant_id:      effectiveTenantId,
-        amount:         booking.total_amount,
+        amount:         Number(booking.total_amount),
         payment_type:   "full",
         payment_method: "card",
         gateway:        "yoco",
@@ -329,7 +327,12 @@ Deno.serve(async (req) => {
     // BALANCE PAYMENT — admin requested final payment after deposit
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "balance") {
-      if (booking.final_payment_paid) {
+      // Idempotency guard — strict true check, safe against NULL
+      // NOTE: DO NOT add .eq("final_payment_paid", false) to the UPDATE below —
+      // that filter uses SQL equality which treats NULL != false and silently
+      // matches zero rows when the column is NULL, causing the booking to never
+      // be marked complete. The guard above is sufficient.
+      if (booking.final_payment_paid === true) {
         console.log("Duplicate balance webhook — already processed:", booking.id);
         return new Response(
           JSON.stringify({ received: true, already_paid: true }),
@@ -346,8 +349,7 @@ Deno.serve(async (req) => {
           status:                "complete",
           completed_at:          new Date().toISOString(),
         })
-        .eq("id", booking.id)
-        .eq("final_payment_paid", false);
+        .eq("id", booking.id);  // ← filter on PK only — idempotency handled by the guard above
 
       if (updateErr) {
         console.error("Failed to update booking for balance payment:", updateErr);
@@ -356,11 +358,19 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Derive balance from source-of-truth columns.
+      // balance_due has DEFAULT 0 and is NEVER written by the booking RPC,
+      // so booking.balance_due is always 0 — do NOT use it here.
+      const balanceAmount = Math.max(
+        0,
+        Number(booking.total_amount) - Number(booking.deposit_amount)
+      );
+
       await supabase.from("payments").insert({
         booking_id:     booking.id,
         client_id:      booking.client_id,
         tenant_id:      effectiveTenantId,
-        amount:         booking.balance_due ?? (Number(booking.total_amount) - Number(booking.deposit_amount)),
+        amount:         balanceAmount,
         payment_type:   "balance",
         payment_method: "card",
         gateway:        "yoco",
@@ -369,7 +379,7 @@ Deno.serve(async (req) => {
         completed_at:   new Date().toISOString(),
       });
 
-      console.log("Balance payment confirmed for booking:", booking.id);
+      console.log("Balance payment confirmed for booking:", booking.id, "| amount:", balanceAmount);
       return new Response(
         JSON.stringify({ received: true, booking_id: booking.id, type: "balance" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -387,7 +397,7 @@ Deno.serve(async (req) => {
         confirmed_at: new Date().toISOString(),
       })
       .eq("id", booking.id)
-      .eq("deposit_paid", false)
+      .eq("deposit_paid", false)   // boolean false is safe here — deposit_paid is NOT NULL DEFAULT false
       .select("id");
 
     if (updateErr) {
@@ -409,7 +419,7 @@ Deno.serve(async (req) => {
       booking_id:     booking.id,
       client_id:      booking.client_id,
       tenant_id:      effectiveTenantId,
-      amount:         booking.deposit_amount,
+      amount:         Number(booking.deposit_amount),
       payment_type:   "deposit",
       payment_method: "card",
       gateway:        "yoco",
