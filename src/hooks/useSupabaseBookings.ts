@@ -57,11 +57,10 @@ function mapBooking(b: any): BookingRow {
     b.client?.email ||
     "";
 
-  // Use stored balance_due when available, otherwise derive it
-  const balance =
-    b.balance_due !== null && b.balance_due !== undefined
-      ? Math.max(0, Number(b.balance_due))
-      : Math.max(0, tot - dep);
+  // Always derive balance from source-of-truth columns.
+  // balance_due column has DEFAULT 0 and is never written by the booking
+  // RPC, so trusting it produces a stale zero for all unpaid balances.
+  const balance = Math.max(0, tot - dep);
 
   return {
     id: b.id,
