@@ -66,8 +66,8 @@ const About = () => (
             <p className="text-sm font-medium text-foreground">Real insights based on your business' real data.</p>
           </div>
           <p className="text-base text-foreground/80 leading-relaxed">
-            In a market like South Africa — where raising prices, losing clients, or making the wrong
-            decision can have real consequences — businesses need tools that are street smart as well as
+            In a market like South Africa, where raising prices, losing clients, or making the wrong
+            decision can have real consequences, businesses need tools that are street smart as well as
             professional. NextSlot was designed with that reality in mind.
           </p>
         </div>
@@ -125,7 +125,7 @@ const About = () => (
             <ExternalLink className="h-4 w-4 opacity-60 group-hover:opacity-100 transition-opacity" />
           </a>
           <p className="text-base text-foreground/80 leading-relaxed">
-            NextSlot is a practical extension of that mindset — a tool created to help everyday business
+            NextSlot is a practical extension of that mindset, a tool created to help everyday business
             owners take the next step, make better decisions, and grow with confidence.
           </p>
         </div>
