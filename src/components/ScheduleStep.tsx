@@ -17,23 +17,36 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
-  // Pass duration so month view only highlights days that can actually fit the booking
   const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(year, month, totalDuration);
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
-  // Pass duration so only slots with enough consecutive free time are shown
-  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr, totalDuration);
-
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const startDayOfWeek = getDay(monthStart);
+  const { data: rawDateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr, totalDuration);
 
   const today = useMemo(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
     return t;
   }, []);
+
+  /**
+   * Filter out slots whose start time has already passed when the selected
+   * date is today. Slots are "HH:MM" strings. We add a 0-minute buffer so
+   * a slot at exactly the current minute is also removed.
+   */
+  const dateSlots = useMemo(() => {
+    if (!selectedDate || !isToday(selectedDate)) return rawDateSlots;
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return rawDateSlots.filter((slot) => {
+      const [h, m] = slot.split(":").map(Number);
+      return h * 60 + m > nowMinutes;
+    });
+  }, [rawDateSlots, selectedDate]);
+
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const startDayOfWeek = getDay(monthStart);
 
   const isCurrentMonth =
     currentMonth.getFullYear() === today.getFullYear() &&
@@ -48,20 +61,35 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
   return (
     <div className="flex flex-col gap-5">
       <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-        Choose date & time
+        Choose date &amp; time
       </h3>
 
       {/* Calendar */}
       <div className="glass-card-service rounded-2xl p-4">
         <div className="flex items-center justify-between mb-4">
-          <motion.button whileTap={!isCurrentMonth ? { scale: 0.85 } : undefined} disabled={isCurrentMonth} onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))} className={`transition-colors p-1.5 rounded-full ${isCurrentMonth ? "text-muted-foreground/20 cursor-not-allowed" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}>
+          <motion.button
+            whileTap={!isCurrentMonth ? { scale: 0.85 } : undefined}
+            disabled={isCurrentMonth}
+            onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))}
+            className={`transition-colors p-1.5 rounded-full ${
+              isCurrentMonth
+                ? "text-muted-foreground/20 cursor-not-allowed"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
             <ChevronLeft className="w-5 h-5" />
           </motion.button>
+
           <span className="font-display text-base font-semibold text-foreground flex items-center gap-2">
             {format(currentMonth, "MMMM yyyy")}
             {loadingMonth && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
           </span>
-          <motion.button whileTap={{ scale: 0.85 }} onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50">
+
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50"
+          >
             <ChevronRight className="w-5 h-5" />
           </motion.button>
         </div>
@@ -131,9 +159,10 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
                     whileTap={{ scale: 0.9 }}
                     onClick={() => onSelectTime(time)}
                     className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                      ${selectedTime === time
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                        : "glass-card-service text-foreground"
+                      ${
+                        selectedTime === time
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                          : "glass-card-service text-foreground"
                       }`}
                   >
                     {time}
