@@ -167,36 +167,64 @@ Deno.serve(async (req) => {
     console.log("Yoco webhook received:", type);
     console.log("Payload metadata:", JSON.stringify(payload?.metadata));
 
-    const tenantId        = payload?.metadata?.tenant_id;
-    const signatureHeader = req.headers.get("X-Yoco-Signature");
+    // ── Resolve tenant_id from booking — Yoco does NOT echo back metadata ──
+    // We must look up the booking by checkoutId or booking_id first,
+    // then use the booking's tenant_id for signature verification.
+    const checkoutId      = payload?.id ?? payload?.checkoutId ?? payload?.metadata?.checkoutId;
+    const metaBookingId   = payload?.metadata?.booking_id;
+    const metaPaymentType = payload?.metadata?.payment_type ?? "deposit";
 
-    if (tenantId && signatureHeader) {
+    console.log("checkoutId:", checkoutId, "| metaBookingId:", metaBookingId, "| metaPaymentType:", metaPaymentType);
+
+    let tenantId: string | null = null;
+    if (metaBookingId) {
+      const { data: bRow } = await supabase
+        .from("bookings")
+        .select("tenant_id")
+        .eq("id", metaBookingId)
+        .single();
+      tenantId = bRow?.tenant_id ?? null;
+    } else if (checkoutId) {
+      const { data: bRow } = await supabase
+        .from("bookings")
+        .select("tenant_id")
+        .or(`yoco_checkout_id.eq.${checkoutId},yoco_final_checkout_id.eq.${checkoutId}`)
+        .single();
+      tenantId = bRow?.tenant_id ?? null;
+    }
+
+    if (!tenantId) {
+      console.error("Rejecting webhook — could not resolve tenant_id from booking");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("Resolved tenant_id:", tenantId);
+
+    // ── Signature verification (optional per-tenant) ──────────────────────
+    const signatureHeader = req.headers.get("X-Yoco-Signature");
+    if (signatureHeader) {
       const { data: tenant, error: tenantErr } = await supabase
         .from("tenants")
         .select("yoco_webhook_secret")
         .eq("id", tenantId)
         .single();
 
-      if (tenantErr || !tenant?.yoco_webhook_secret) {
-        console.error("Could not find webhook secret for tenant:", tenantId, tenantErr);
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (!tenantErr && tenant?.yoco_webhook_secret) {
+        const valid = await verifyYocoSignature(payloadBytes, signatureHeader, tenant.yoco_webhook_secret);
+        if (!valid) {
+          console.error("Invalid Yoco webhook signature for tenant:", tenantId);
+          return new Response(JSON.stringify({ error: "Invalid signature" }), {
+            status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        console.log("Signature verified for tenant:", tenantId);
+      } else {
+        console.warn("No webhook secret configured — skipping signature check for tenant:", tenantId);
       }
-
-      const valid = await verifyYocoSignature(payloadBytes, signatureHeader, tenant.yoco_webhook_secret);
-      if (!valid) {
-        console.error("Invalid Yoco webhook signature for tenant:", tenantId);
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      console.log("Signature verified for tenant:", tenantId);
     } else {
-      console.error("Rejecting webhook — missing tenant_id or X-Yoco-Signature header");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.warn("No X-Yoco-Signature header — skipping signature check for tenant:", tenantId);
     }
 
     if (type !== "payment.succeeded") {
@@ -206,9 +234,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const paymentType   = payload?.metadata?.payment_type ?? "deposit";
-    const checkoutId    = payload?.metadata?.checkoutId ?? payload?.checkoutId;
-    const bookingId     = payload?.metadata?.booking_id;
+    const paymentType   = metaPaymentType;
+    const bookingId     = metaBookingId;
     const transactionId = payload?.id;
 
     console.log("payment_type:", paymentType, "| bookingId:", bookingId, "| checkoutId:", checkoutId);
@@ -328,11 +355,6 @@ Deno.serve(async (req) => {
     // BALANCE PAYMENT — admin requested final payment after deposit
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "balance") {
-      // Idempotency guard — strict true check, safe against NULL
-      // NOTE: DO NOT add .eq("final_payment_paid", false) to the UPDATE below —
-      // that filter uses SQL equality which treats NULL != false and silently
-      // matches zero rows when the column is NULL, causing the booking to never
-      // be marked complete. The guard above is sufficient.
       if (booking.final_payment_paid === true) {
         console.log("Duplicate balance webhook — already processed:", booking.id);
         return new Response(
@@ -350,7 +372,7 @@ Deno.serve(async (req) => {
           status:                "complete",
           completed_at:          new Date().toISOString(),
         })
-        .eq("id", booking.id);  // ← filter on PK only — idempotency handled by the guard above
+        .eq("id", booking.id);
 
       if (updateErr) {
         console.error("Failed to update booking for balance payment:", updateErr);
@@ -359,9 +381,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Derive balance from source-of-truth columns.
-      // balance_due has DEFAULT 0 and is NEVER written by the booking RPC,
-      // so booking.balance_due is always 0 — do NOT use it here.
       const balanceAmount = Math.max(
         0,
         Number(booking.total_amount) - Number(booking.deposit_amount)
@@ -398,7 +417,7 @@ Deno.serve(async (req) => {
         confirmed_at: new Date().toISOString(),
       })
       .eq("id", booking.id)
-      .eq("deposit_paid", false)   // boolean false is safe here — deposit_paid is NOT NULL DEFAULT false
+      .eq("deposit_paid", false)
       .select("id");
 
     if (updateErr) {
