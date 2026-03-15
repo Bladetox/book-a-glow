@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState } from "react";
-import { Sparkles, X, Loader2 } from "lucide-react";
+import { Sparkles, X, Loader2, CreditCard, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
 import { toast } from "sonner";
@@ -18,6 +18,8 @@ interface ReviewStepProps {
   onGoToStep: (step: number) => void;
 }
 
+type PaymentChoice = "deposit" | "full";
+
 const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
@@ -27,6 +29,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
 
   const selected = allServices.filter((t) => booking.selectedTreatments.includes(t.id));
   const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
@@ -40,12 +43,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const balance = total - deposit;
   const cur = config.currency;
 
+  const amountDueNow = paymentChoice === "full" ? total : deposit;
+  const balanceAfterPay = paymentChoice === "full" ? 0 : balance;
+
   const handleConfirm = async () => {
     if (submitting) return;
     setSubmitting(true);
 
     try {
-      const clientId = null; // always guest — no auth required
+      const clientId = null;
 
       const { data: tenantRow } = await supabase
         .from("tenants")
@@ -66,7 +72,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         }
       });
 
-      // Full phone string e.g. "+27 821234567"
       const guestPhone = `${booking.phoneCode} ${booking.phone}`.trim();
 
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
@@ -90,7 +95,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         p_physical_factors:       safetyMap[7] === "Yes" ? "Flagged by client" : null,
         p_hair_length_ok:         safetyMap[8] === "No"  ? "No - insufficient growth" : "Yes",
         p_additional_notes:       booking.additionalNotes || null,
-        // Guest contact fields — required by the DB function to avoid overload ambiguity (PGRST203)
         p_guest_name:             booking.fullName  || null,
         p_guest_email:            booking.email     || null,
         p_guest_phone:            guestPhone        || null,
@@ -105,16 +109,24 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       if (bookingId) {
         const origin = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${deposit}`;
+        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}`;
         const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
 
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-          body: { booking_id: bookingId, tenant_slug: tenantId, success_url: successUrl, cancel_url: cancelUrl },
+          body: {
+            booking_id:   bookingId,
+            tenant_slug:  tenantId,
+            success_url:  successUrl,
+            cancel_url:   cancelUrl,
+            payment_type: paymentChoice,
+            // For full payment, pass total in cents so yoco-checkout uses exact amount
+            ...(paymentChoice === "full" && { amount: Math.round(total * 100) }),
+          },
         });
 
         if (checkoutErr) throw checkoutErr;
-        if (checkoutData?.redirect_url) {
-          window.location.href = checkoutData.redirect_url;
+        if (checkoutData?.redirect_url || checkoutData?.redirectUrl || checkoutData?.url) {
+          window.location.href = checkoutData.redirect_url ?? checkoutData.redirectUrl ?? checkoutData.url;
           return;
         } else {
           throw new Error("Payment gateway did not return a redirect URL. Please try again.");
@@ -196,14 +208,59 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
           <span className="text-base font-bold text-foreground">Total</span>
           <span className="text-base font-bold text-foreground">{cur}{total}</span>
         </div>
-        <div className="flex justify-between items-baseline py-1">
-          <span className="text-sm text-muted-foreground">Deposit due now ({depositPercent}%)</span>
-          <span className="text-sm font-semibold text-primary">{cur}{deposit}</span>
+
+        <div className="h-px bg-border/30 my-3" />
+
+        {/* ── Payment choice ───────────────────────────────────────────── */}
+        <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2">How would you like to pay?</p>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setPaymentChoice("deposit")}
+            className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+              paymentChoice === "deposit"
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
+            }`}
+          >
+            {paymentChoice === "deposit" && (
+              <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />
+            )}
+            <CreditCard className="w-4 h-4 mb-1.5 opacity-70" />
+            <span className="text-xs font-semibold">Deposit only</span>
+            <span className="text-sm font-bold mt-0.5">{cur}{deposit}</span>
+            <span className="text-[10px] opacity-60 mt-0.5">{cur}{balance} due on the day</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPaymentChoice("full")}
+            className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+              paymentChoice === "full"
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
+            }`}
+          >
+            {paymentChoice === "full" && (
+              <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />
+            )}
+            <Sparkles className="w-4 h-4 mb-1.5 opacity-70" />
+            <span className="text-xs font-semibold">Pay in full</span>
+            <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
+            <span className="text-[10px] opacity-60 mt-0.5">Nothing due on the day</span>
+          </button>
         </div>
-        <div className="flex justify-between items-baseline py-1">
-          <span className="text-sm text-muted-foreground">Balance remaining</span>
-          <span className="text-sm font-semibold text-foreground">{cur}{balance}</span>
+
+        <div className="flex justify-between items-baseline py-1 text-sm">
+          <span className="text-muted-foreground">Due now</span>
+          <span className="font-bold text-primary">{cur}{amountDueNow}</span>
         </div>
+        {balanceAfterPay > 0 && (
+          <div className="flex justify-between items-baseline py-0.5 text-sm">
+            <span className="text-muted-foreground">Remaining on the day</span>
+            <span className="font-semibold text-foreground">{cur}{balanceAfterPay}</span>
+          </div>
+        )}
 
         <div className="h-px bg-border/30 my-3" />
 
@@ -221,7 +278,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
           className="btn-next flex items-center justify-center gap-2 disabled:opacity-50 w-full"
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          {submitting ? "Creating Booking…" : "Confirm & Pay Deposit"}
+          {submitting
+            ? "Creating Booking…"
+            : paymentChoice === "full"
+              ? `Confirm & Pay ${cur}${total}`
+              : `Confirm & Pay Deposit ${cur}${deposit}`
+          }
         </motion.button>
       </motion.div>
 

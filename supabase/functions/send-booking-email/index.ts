@@ -117,9 +117,10 @@ Deno.serve(async (req) => {
     const formattedTime = formatTime(booking.start_time);
     const rawTotal   = Math.round(parseFloat(booking.total_amount)   * 100) / 100;
     const rawDeposit = Math.round(parseFloat(booking.deposit_amount) * 100) / 100;
-    const rawBalance = booking.balance_due !== null && booking.balance_due !== undefined
-      ? Math.round(parseFloat(booking.balance_due) * 100) / 100
-      : Math.round((rawTotal - rawDeposit) * 100) / 100;
+    // Always derive balance from source-of-truth columns — balance_due column
+    // has DEFAULT 0 and is never written by the booking RPC, so trusting it
+    // produces a stale R0.00 in emails for all unpaid balances.
+    const rawBalance = Math.round((rawTotal - rawDeposit) * 100) / 100;
     const totalAmount   = `R${rawTotal.toFixed(2)}`;
     const depositAmount = `R${rawDeposit.toFixed(2)}`;
     const balanceDue    = `R${rawBalance.toFixed(2)}`;

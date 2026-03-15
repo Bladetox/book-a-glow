@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (authedUserId && booking.client_id && booking.client_id !== authedUserId) {
+    // Ownership check — skip for admin-initiated balance payment requests
+    if (payment_type !== "balance" && authedUserId && booking.client_id && booking.client_id !== authedUserId) {
       return new Response(
         JSON.stringify({ error: "Not your booking" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -81,9 +82,14 @@ Deno.serve(async (req) => {
 
     let amountInCents: number;
     if (payment_type === "balance") {
+      // Use override amount (sent by admin as remaining balance in cents)
+      // Fall back to deriving from source-of-truth columns — never trust balance_due DEFAULT 0
       amountInCents = overrideAmountCents
         ? Math.round(overrideAmountCents)
-        : Math.round((Number(booking.balance_due) || (Number(booking.total_amount) - Number(booking.deposit_amount))) * 100);
+        : Math.round((Number(booking.total_amount) - Number(booking.deposit_amount)) * 100);
+    } else if (payment_type === "full") {
+      // Client chose to pay the full amount upfront
+      amountInCents = Math.round(Number(booking.total_amount) * 100);
     } else {
       amountInCents = Math.round(Number(booking.deposit_amount) * 100);
     }
@@ -99,7 +105,9 @@ Deno.serve(async (req) => {
     const slug   = tenant_slug || booking.tenant_id;
 
     const finalSuccessUrl = success_url ||
-      `${origin}/payment-success?payment=success&booking_id=${booking_id}&tenant=${slug}&type=${payment_type === "balance" ? "final" : "deposit"}`;
+      `${origin}/payment-success?payment=success&booking_id=${booking_id}&tenant=${slug}&type=${
+        payment_type === "balance" ? "final" : payment_type === "full" ? "full" : "deposit"
+      }`;
     const finalCancelUrl  = cancel_url  ||
       `${origin}/payment-success?payment=cancelled&tenant=${slug}`;
 
@@ -131,7 +139,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (payment_type === "balance") {
+    if (payment_type === "balance" || payment_type === "full") {
       await supabase.from("bookings").update({
         yoco_final_checkout_id: yocoData.id,
         yoco_final_link:        yocoData.redirectUrl,

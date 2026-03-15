@@ -20,6 +20,7 @@ export interface BookingRow {
   balance: number;
   status: "pending" | "confirmed" | "complete" | "cancelled";
   depositPaid: boolean;
+  fullPaymentReceived: boolean;
   notes: string;
   staffNotes: string;
   isCallOut: boolean;
@@ -37,8 +38,6 @@ function mapBooking(b: any): BookingRow {
   const dep = Number(b.deposit_amount) || 0;
   const tot = Number(b.total_amount) || 0;
 
-  // Prefer denormalised columns on the booking row first,
-  // fall back to the profiles join (registered users only)
   const clientName =
     b.client_name ||
     b.guest_name ||
@@ -60,7 +59,9 @@ function mapBooking(b: any): BookingRow {
   // Always derive balance from source-of-truth columns.
   // balance_due column has DEFAULT 0 and is never written by the booking
   // RPC, so trusting it produces a stale zero for all unpaid balances.
-  const balance = Math.max(0, tot - dep);
+  // Exception: if full payment was received, balance is 0.
+  const fullPaid = b.full_payment_received ?? false;
+  const balance = fullPaid ? 0 : Math.max(0, tot - dep);
 
   return {
     id: b.id,
@@ -80,6 +81,7 @@ function mapBooking(b: any): BookingRow {
     balance,
     status: b.status as BookingRow["status"],
     depositPaid: b.deposit_paid ?? false,
+    fullPaymentReceived: fullPaid,
     notes: b.client_notes || "",
     staffNotes: b.staff_notes || "",
     isCallOut: b.is_call_out ?? false,
@@ -152,7 +154,6 @@ export function useRescheduleBooking() {
       gcalEventId?: string | null;
       booking?: BookingRow;
     }) => {
-      // 1. Update in Supabase via RPC
       const { data, error } = await supabase.rpc("reschedule_booking", {
         p_booking_id: bookingId,
         p_new_date: newDate,
@@ -162,7 +163,6 @@ export function useRescheduleBooking() {
       const result = (data as any)?.[0];
       if (result && !result.success) throw new Error(result.message);
 
-      // 2. Sync to Google Calendar if event exists
       if (gcalEventId && booking) {
         try {
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -183,7 +183,6 @@ export function useRescheduleBooking() {
             }),
           });
         } catch (gcalErr) {
-          // Non-fatal: booking is rescheduled in DB, log gcal failure only
           console.error("GCal reschedule sync failed:", gcalErr);
         }
       }
