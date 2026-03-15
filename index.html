@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+    <!-- VIEWPORT: removed maximum-scale=1 / user-scalable=no — blocks pinch-zoom, hurts Google mobile score -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- Favicon & App Icons -->
     <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
@@ -17,21 +18,64 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    <!-- Primary Meta -->
-    <title>NextSlot | Booking for SA Service Businesses</title>
-    <meta name="description" content="NextSlot — smart online booking for South African service businesses. Accept appointments, manage availability, and get paid deposits instantly." />
+    <!-- Canonical -->
+    <link rel="canonical" href="https://www.nextslot.co.za/" />
+
+    <!-- Primary SEO -->
+    <title>NextSlot | Online Booking System for Beauticians, Barbers & Service Businesses in South Africa</title>
+    <meta name="description" content="NextSlot is South Africa's smart online booking system built for beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants. Accept bookings 24/7, collect deposit payments instantly, and manage your business from one dashboard." />
+    <meta name="keywords" content="online booking system South Africa, beautician booking app, barber appointment software, hairdresser booking, massage therapist scheduling, tattoo artist booking, photographer appointment, nail technician booking, image consultant scheduling, SA booking platform, POPIA compliant booking, NextSlot" />
+    <meta name="author" content="NextSlot" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="NextSlot | Booking for SA Service Businesses" />
-    <meta property="og:description" content="NextSlot — smart online booking for South African service businesses. Accept appointments, manage availability, and get paid deposits instantly." />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/01a7e441-71cb-4dc2-b077-83eb52a2c7de/id-preview-6a87e117--955de3a9-2375-44dc-b62d-4d4687200e08.lovable.app-1772985414119.png" />
+    <meta property="og:site_name" content="NextSlot" />
+    <meta property="og:url" content="https://www.nextslot.co.za/" />
+    <meta property="og:title" content="NextSlot | Online Booking System for Beauticians, Barbers & Service Businesses in South Africa" />
+    <meta property="og:description" content="South Africa's smart booking platform for beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants. Accept bookings 24/7 and get paid deposits instantly." />
+    <meta property="og:image" content="https://www.nextslot.co.za/web-app-manifest-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="NextSlot — Online Booking System for South African Service Businesses" />
+    <meta property="og:locale" content="en_ZA" />
 
-    <!-- Twitter Card -->
+    <!-- Twitter / X Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="NextSlot | Booking for SA Service Businesses" />
-    <meta name="twitter:description" content="NextSlot — smart online booking for South African service businesses. Accept appointments, manage availability, and get paid deposits instantly." />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/01a7e441-71cb-4dc2-b077-83eb52a2c7de/id-preview-6a87e117--955de3a9-2375-44dc-b62d-4d4687200e08.lovable.app-1772985414119.png" />
+    <meta name="twitter:site" content="@nextslot_za" />
+    <meta name="twitter:url" content="https://www.nextslot.co.za/" />
+    <meta name="twitter:title" content="NextSlot | Online Booking System for Beauticians, Barbers & Service Businesses in South Africa" />
+    <meta name="twitter:description" content="South Africa's smart booking platform for beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants. Accept bookings 24/7." />
+    <meta name="twitter:image" content="https://www.nextslot.co.za/web-app-manifest-512x512.png" />
+    <meta name="twitter:image:alt" content="NextSlot — Online Booking System for South African Service Businesses" />
+
+    <!-- Structured Data: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "NextSlot",
+      "url": "https://www.nextslot.co.za/",
+      "logo": "https://www.nextslot.co.za/web-app-manifest-512x512.png",
+      "description": "Smart online booking system for South African beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "ZAR",
+        "availability": "https://schema.org/InStock"
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "South Africa"
+      },
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "Beauticians, Barbers, Hairdressers, Massage Therapists, Tattoo Artists, Photographers, Nail Technicians, Image Consultants"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
