@@ -29,7 +29,7 @@ const tiers = [
       "Full business dashboard & analytics",
       "Client source tracking (Instagram, Google, Referral)",
       "Google review request system",
-      "Loyalty tiers — New, Regular & VIP clients",
+      "Loyalty tiers: New, Regular & VIP clients",
     ],
     cta: "Get Started",
     featured: true,
