@@ -4,7 +4,6 @@ import {
   Package, Star, Link2, Settings, Gem,
   Bell, Search, LogOut, Headphones
 } from "lucide-react";
-import logo from "@/assets/nextslot-logo.png";
 import {
   DashboardContent, BookingsContent, ConsultationsContent,
   AvailabilityContent, StockContent, ReviewsContent,
@@ -13,17 +12,16 @@ import {
 
 const sidebarNav = [
   { icon: LayoutDashboard, label: "Dashboard" },
-  { icon: CalendarCheck, label: "Bookings" },
-  { icon: Sparkles, label: "Consultations" },
-  { icon: Clock, label: "Availability" },
-  { icon: Package, label: "Stock" },
-  { icon: Star, label: "Reviews" },
-  { icon: Link2, label: "Integrations" },
-  { icon: Settings, label: "Settings" },
-  { icon: Gem, label: "Loyalty" },
+  { icon: CalendarCheck,   label: "Bookings" },
+  { icon: Sparkles,        label: "Consultations" },
+  { icon: Clock,           label: "Availability" },
+  { icon: Package,         label: "Stock" },
+  { icon: Star,            label: "Reviews" },
+  { icon: Link2,           label: "Integrations" },
+  { icon: Settings,        label: "Settings" },
+  { icon: Gem,             label: "Loyalty" },
 ];
 
-// Inline SVG initials avatar — no real photo used
 const MockAvatar = ({ size = 24 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: "50%", flexShrink: 0 }}>
     <circle cx="16" cy="16" r="16" fill="#2a2a2a" />
@@ -36,15 +34,15 @@ const DashboardPreview = () => {
 
   const renderContent = () => {
     switch (activeItem) {
-      case "Bookings": return <BookingsContent />;
+      case "Bookings":      return <BookingsContent />;
       case "Consultations": return <ConsultationsContent />;
-      case "Availability": return <AvailabilityContent />;
-      case "Stock": return <StockContent />;
-      case "Reviews": return <ReviewsContent />;
-      case "Integrations": return <IntegrationsContent />;
-      case "Settings": return <SettingsContent />;
-      case "Loyalty": return <LoyaltyContent />;
-      default: return <DashboardContent />;
+      case "Availability":  return <AvailabilityContent />;
+      case "Stock":         return <StockContent />;
+      case "Reviews":       return <ReviewsContent />;
+      case "Integrations":  return <IntegrationsContent />;
+      case "Settings":      return <SettingsContent />;
+      case "Loyalty":       return <LoyaltyContent />;
+      default:              return <DashboardContent />;
     }
   };
 
@@ -64,13 +62,19 @@ const DashboardPreview = () => {
         </div>
         <div className="w-10" />
       </div>
+
       {/* App layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <div className="w-14 border-r border-white/[0.06] bg-[hsl(0,0%,5%)] py-4 hidden sm:flex flex-col items-center justify-between shrink-0">
           <div className="space-y-1">
             <div className="mb-4">
-              <img src={logo} alt="NextSlot" className="h-9 w-auto opacity-90 mix-blend-screen" />
+              {/* New logo — served from public/, no Vite asset import needed */}
+              <img
+                src="/web-app-manifest-192x192.png"
+                alt="NextSlot"
+                className="h-9 w-9 object-contain opacity-90 rounded-lg"
+              />
             </div>
             {sidebarNav.map((item) => (
               <button
@@ -96,6 +100,7 @@ const DashboardPreview = () => {
             </button>
           </div>
         </div>
+
         {/* Main content */}
         <div className="flex-1 flex flex-col bg-[hsl(0,0%,4%)] overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">

@@ -47,13 +47,6 @@ const MobileDashboardPreview = () => {
   };
 
   return (
-    /*
-      KEY FIX: `relative overflow-hidden` on the root.
-      - `relative` creates a new stacking/positioning context so
-        any `absolute` child is clamped to THIS element, not the
-        viewport or the phone-frame ancestor.
-      - `overflow-hidden` ensures nothing bleeds outside the frame.
-    */
     <div
       className="relative overflow-hidden w-full h-full bg-[hsl(0,0%,4%)] text-white flex flex-col"
       style={{ minHeight: 520 }}
@@ -67,21 +60,23 @@ const MobileDashboardPreview = () => {
         >
           {menuOpen ? <X className="w-3.5 h-3.5" /> : <Menu className="w-3.5 h-3.5" />}
         </button>
-        <span className="text-[10px] font-semibold text-white/80">{activeItem}</span>
+        <img
+          src="/web-app-manifest-192x192.png"
+          alt="NextSlot"
+          className="h-5 w-5 object-contain opacity-90 rounded"
+        />
         <MockAvatar size={20} />
       </div>
 
-      {/*
-        Menu overlay.
-        `absolute inset-0` now correctly fills only the component
-        bounds because the parent is `relative`. z-20 sits above
-        the content scroll area (z-0) but below nothing external.
-      */}
+      {/* Menu overlay — scoped to component via relative parent */}
       {menuOpen && (
         <div className="absolute inset-0 z-20 bg-[hsl(0,0%,5%)] flex flex-col animate-fade-in">
-          {/* Overlay header */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06] shrink-0">
-            <span className="text-[10px] font-semibold text-white/60">Menu</span>
+            <img
+              src="/web-app-manifest-192x192.png"
+              alt="NextSlot"
+              className="h-5 w-5 object-contain opacity-90 rounded"
+            />
             <button
               onClick={() => setMenuOpen(false)}
               className="text-white/40 hover:text-white transition-colors"
@@ -90,8 +85,6 @@ const MobileDashboardPreview = () => {
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {/* Nav items */}
           <div className="flex-1 overflow-y-auto p-2 space-y-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {navItems.map((item) => (
               <button
@@ -112,10 +105,8 @@ const MobileDashboardPreview = () => {
         </div>
       )}
 
-      {/* Content scroll area — flex-1 fills remaining height after top bar */}
-      <div
-        className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-      >
+      {/* Content scroll area */}
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="animate-fade-in" key={activeItem}>
           {renderContent()}
         </div>
