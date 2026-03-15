@@ -10,30 +10,30 @@ import TrustBadges from "@/components/site/TrustBadges";
 import {
   ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle,
   CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2,
-  Star, SlidersHorizontal, ChevronLeft, ChevronRight
+  Star, SlidersHorizontal, ChevronLeft, ChevronRight,
+  Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import serviceProvidersImg from "@/assets/service-providers.png";
 import productFeaturesImg from "@/assets/product-features.png";
-// logoImg removed — now served from public/
 
 /* ─── DATA ──────────────────────────────────────────────────── */
 
 const industries = [
-  { label: "Barbers",            desc: "Haircuts, fades & grooming" },
-  { label: "Beauticians",        desc: "Nails, facials & skincare" },
-  { label: "Tattoo Artists",     desc: "Studio & custom work" },
-  { label: "Massage Therapists", desc: "Mobile & in-studio" },
-  { label: "Makeup Artists",     desc: "Bridal, editorial & events" },
-  { label: "Photographers",      desc: "Portraits, events & products" },
-  { label: "Mobile Stylists",    desc: "On-location services" },
+  { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles  },
+  { label: "Barbers",            desc: "Haircuts, fades & grooming",         icon: Scissors  },
+  { label: "Massage Therapists", desc: "Mobile & in-studio sessions",        icon: Wind      },
+  { label: "Photographers",      desc: "Portraits, events & products",       icon: Camera    },
+  { label: "Tattoo Artists",     desc: "Studio & custom ink work",           icon: HandMetal },
+  { label: "Hairdressers",       desc: "Cuts, colour & styling",             icon: Zap       },
+  { label: "Image Consultants",  desc: "Styling, wardrobe & personal brand", icon: UserCheck },
 ];
 
 const problems = [
-  { icon: MessageSquare, title: "WhatsApp messages",     desc: "Clients message at all hours. You lose track of who wants what and when." },
-  { icon: CalendarX,     title: "Manual scheduling",     desc: "Pen and paper or memory. Neither scales when business picks up." },
-  { icon: AlertTriangle, title: "Double bookings",       desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
+  { icon: MessageSquare, title: "WhatsApp messages",      desc: "Clients message at all hours. You lose track of who wants what and when." },
+  { icon: CalendarX,     title: "Manual scheduling",      desc: "Pen and paper or memory. Neither scales when business picks up." },
+  { icon: AlertTriangle, title: "Double bookings",        desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
   { icon: BarChart2,     title: "Data without direction", desc: "You have the numbers but you are not sure what to do with them. NextSlot turns your data into decisions." },
 ];
 
@@ -133,19 +133,32 @@ const caseStudyCards = [
   },
 ];
 
-/* ─── INDUSTRY CARD ──────────────────────────────────────── */
+/* ─── INDUSTRY CARD ─────────────────────────────────────────── */
 
-const IndustryCard = ({ index, label, desc }: { index: number; label: string; desc: string }) => {
+const IndustryCard = ({
+  index,
+  label,
+  desc,
+  icon: Icon,
+}: {
+  index: number;
+  label: string;
+  desc: string;
+  icon: React.ElementType;
+}) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
-  const fromLeft = index % 2 === 0;
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      (entries) => { entries.forEach((e) => { if (e.isIntersecting) { setVisible(true); observer.unobserve(e.target); } }); },
-      { threshold: 0.15 }
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) { setVisible(true); observer.unobserve(e.target); }
+        });
+      },
+      { threshold: 0.12 }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -154,16 +167,44 @@ const IndustryCard = ({ index, label, desc }: { index: number; label: string; de
   return (
     <div
       ref={ref}
-      style={{ transitionDelay: `${index * 60}ms` }}
+      style={{ transitionDelay: `${index * 70}ms` }}
       className={[
-        "bg-background border border-border rounded-xl p-4 text-center shadow-md cursor-default",
-        "transition-all duration-500 ease-out",
-        visible ? "opacity-100 translate-x-0" : fromLeft ? "opacity-0 -translate-x-8" : "opacity-0 translate-x-8",
-        "hover:border-foreground/20",
+        /* base */
+        "group relative overflow-hidden cursor-default",
+        "rounded-2xl border border-border/60 bg-background",
+        "p-5 flex flex-col items-center text-center gap-3",
+        /* shadow */
+        "shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)]",
+        /* border glow on hover */
+        "hover:border-accent/50",
+        /* transition */
+        "transition-all duration-400 ease-out",
+        /* entrance animation */
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
       ].join(" ")}
     >
-      <p className="text-sm font-semibold mb-0.5">{label}</p>
-      <p className="text-[10px] text-muted-foreground">{desc}</p>
+      {/* Subtle radial glow behind icon */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 0%, hsl(var(--accent)/0.12) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Icon pill */}
+      <div className="relative z-10 w-12 h-12 rounded-xl bg-accent/15 border border-accent/25 flex items-center justify-center group-hover:bg-accent/25 group-hover:border-accent/45 transition-all duration-300">
+        <Icon className="h-5 w-5 text-accent" strokeWidth={2} />
+      </div>
+
+      {/* Text */}
+      <div className="relative z-10">
+        <p className="text-sm font-semibold leading-snug group-hover:text-foreground transition-colors">
+          {label}
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{desc}</p>
+      </div>
     </div>
   );
 };
@@ -355,9 +396,10 @@ const Index = () => {
                 <img src={serviceProvidersImg} alt="South African service providers" className="w-full h-auto border-solid border-black rounded-lg shadow-lg" />
               </div>
             </div>
+            {/* 7 cards: 2-col mobile → 3-col sm → 4-col md, last row centred via justify-center on the grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
               {industries.map((ind, index) => (
-                <IndustryCard key={ind.label} index={index} label={ind.label} desc={ind.desc} />
+                <IndustryCard key={ind.label} index={index} label={ind.label} desc={ind.desc} icon={ind.icon} />
               ))}
             </div>
           </div>
@@ -365,7 +407,10 @@ const Index = () => {
 
         {/* PAIN POINTS */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Most service businesses manage bookings like this</h2>
+          {/* COPY FIX: exact wording requested */}
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+            Most service-based businesses manage bookings like this when starting.
+          </h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">Sound familiar?</p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
             {problems.map((p, i) => (
@@ -399,11 +444,6 @@ const Index = () => {
         {/* HOW IT WORKS */}
         <section className="bg-secondary/40 py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            {/*
-              FIX 2: new logo from public/ + wordmark below it,
-              replacing the old @/assets/nextslot-logo.png import.
-            */}
             <div className="flex flex-col items-center gap-3 mb-8">
               <img
                 src="/web-app-manifest-192x192.png"
@@ -414,7 +454,6 @@ const Index = () => {
                 Next<span className="text-accent">Slot</span>
               </span>
             </div>
-
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">How NextSlot works</h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-16">Three steps. Real results.</p>
             <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
@@ -436,7 +475,7 @@ const Index = () => {
 
         {/* FEATURES — Everything you need */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don’t.</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
             Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
           </p>
@@ -449,11 +488,6 @@ const Index = () => {
                 key={card.title}
                 className="group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
               >
-                {/*
-                  FIX 3: icon sits inside a solid accent-tinted pill.
-                  strokeWidth 2 (up from 1.5) + solid bg makes it
-                  read as professional and intentional, not washed out.
-                */}
                 <div className="w-11 h-11 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center mb-5 group-hover:bg-accent/30 group-hover:border-accent/50 transition-all duration-300">
                   <card.icon className="h-5 w-5 text-accent" strokeWidth={2} />
                 </div>
@@ -480,7 +514,7 @@ const Index = () => {
                 PhenomeBeauty
               </h2>
               <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
-                A mobile beauty studio’s journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
+                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
               </p>
             </div>
 
