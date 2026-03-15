@@ -59,11 +59,11 @@ const MarketingRoutes = () => (
       <Route path="/signup" element={<Signup />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<SiteTerms />} />
-      {/* /admin on the marketing domain has no tenant context — redirect to login */}
       <Route path="/admin" element={<Navigate to="/login" replace />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
+      <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
       <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -78,6 +78,7 @@ const TenantRoutes = () => {
       <Route path="/" element={<Book />} />
       <Route path="/book" element={<Book />} />
       <Route path="/payment" element={<PaymentSuccess />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

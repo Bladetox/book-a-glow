@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -56,10 +57,6 @@ function mapBooking(b: any): BookingRow {
     b.client?.email ||
     "";
 
-  // Always derive balance from source-of-truth columns.
-  // balance_due column has DEFAULT 0 and is never written by the booking
-  // RPC, so trusting it produces a stale zero for all unpaid balances.
-  // Exception: if full payment was received, balance is 0.
   const fullPaid = b.full_payment_received ?? false;
   const balance = fullPaid ? 0 : Math.max(0, tot - dep);
 
@@ -95,6 +92,22 @@ function mapBooking(b: any): BookingRow {
 
 export function useSupabaseBookings() {
   const { tenantId } = useTenant();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`bookings-realtime-${tenantId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "bookings", filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
+          qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tenantId, qc]);
 
   return useQuery({
     queryKey: ["bookings", tenantId],

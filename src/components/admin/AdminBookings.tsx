@@ -151,32 +151,24 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       if (!clientEmail) throw new Error("No client email on record for this booking");
       if (!balance || balance <= 0) throw new Error("No outstanding balance");
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
       // 1. Create Yoco payment link for the outstanding balance
-      const checkoutRes = await fetch(`${supabaseUrl}/functions/v1/yoco-checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${supabaseKey}`,
-          "apikey":        supabaseKey,
-        },
-        body: JSON.stringify({
+      const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
+        body: {
           amount:       Math.round(balance * 100),
           currency:     "ZAR",
           tenant_id:    b.tenantId,
           booking_id:   b.id,
           payment_type: "balance",
-          success_url:  `${window.location.origin}/payment-success?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
-          cancel_url:   `${window.location.origin}/payment-success?payment=cancelled&tenant=${b.tenantId}`,
-        }),
+          success_url:  `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
+          cancel_url:   `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
+        },
       });
 
-      const checkoutData = await checkoutRes.json();
+      if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
       if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
         throw new Error(checkoutData?.error || "Failed to create payment link");
       }
+
       const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
 
       // Store final checkout id on the booking row for the webhook
@@ -189,20 +181,16 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         .eq("id", b.id);
 
       // 2. Send balance-request email with payment link
-      await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${supabaseKey}`,
-          "apikey":        supabaseKey,
-        },
-        body: JSON.stringify({
+      const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
+        body: {
           booking_id:  b.id,
           tenant_id:   b.tenantId,
           email_type:  "balance_request",
           payment_url: paymentUrl,
-        }),
+        },
       });
+
+      if (emailErr) console.warn("Email send warning:", emailErr.message);
 
       toast.success(`Balance request sent to ${clientEmail}`);
     } catch (e: any) {
@@ -216,12 +204,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
    * Show "Request Balance" when:
    *   - booking has an outstanding balance > 0
    *   - booking is NOT cancelled
-   * We intentionally show it for ALL non-cancelled statuses
-   * (pending / confirmed / complete) so the tenant can always
-   * chase an unpaid balance regardless of where the booking sits.
+   *   - full payment has NOT been received
    */
   const showRequestBalance = (b: BookingRow) =>
-    b.balance > 0 && b.status !== "cancelled";
+    b.balance > 0 && b.status !== "cancelled" && !b.fullPaymentReceived;
 
   // Available time slots for rescheduling
   const timeSlots = Array.from({ length: 19 }, (_, i) => {
@@ -331,7 +317,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[b.status]}`}>
                         {b.status}
                       </span>
-                      {b.balance > 0 && b.status !== "cancelled" && (
+                      {b.balance > 0 && b.status !== "cancelled" && !b.fullPaymentReceived && (
                         <span className="text-[10px] text-amber-400/80">R {b.balance} due</span>
                       )}
                     </div>
@@ -393,8 +379,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 </div>
                                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
                                   <p className="text-[10px] text-white/30">Balance</p>
-                                  <p className={`text-sm font-bold ${b.balance > 0 ? "text-amber-400" : "text-white/50"}`}>
-                                    R {b.balance.toLocaleString()}
+                                  <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
+                                    {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
                                   </p>
                                 </div>
                               </div>
@@ -426,7 +412,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     onClick={() => handleStatusChange(b.id, "confirmed")} />
                                 )}
 
-                                {/* FIX: was "completed" — must match DB enum value "complete" */}
                                 {(b.status === "confirmed" || b.status === "pending") && (
                                   <ActionBtn icon={Check} label="Complete" color="text-white/60"
                                     onClick={() => handleStatusChange(b.id, "complete")} />
@@ -439,11 +424,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                 <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
 
-                                {/* ── Request Final Payment ─────────────────────────────────────
-                                     Visible for ANY non-cancelled booking with an outstanding
-                                     balance. Removed the old "!= complete" gate that was hiding
-                                     it for completed bookings that still owed money.
-                                ──────────────────────────────────────────────────────────── */}
                                 {showRequestBalance(b) && (
                                   <button
                                     disabled={isRequestingBalance}
