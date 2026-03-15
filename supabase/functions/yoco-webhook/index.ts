@@ -193,7 +193,10 @@ Deno.serve(async (req) => {
       }
       console.log("Signature verified for tenant:", tenantId);
     } else {
-      console.warn("Skipping signature verification — missing tenant_id or signature header");
+      console.error("Rejecting webhook — missing tenant_id or X-Yoco-Signature header");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (type !== "payment.succeeded") {
@@ -253,7 +256,6 @@ Deno.serve(async (req) => {
     // FULL PAYMENT — client paid 100% at booking time
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "full") {
-      // Idempotency guard — checked before UPDATE, no NULL-unsafe filter needed
       if (booking.final_payment_paid === true) {
         console.log("Duplicate full-payment webhook — already processed:", booking.id);
         return new Response(
@@ -281,7 +283,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Derive amount from source-of-truth columns — total_amount is correct for full payment
       await supabase.from("payments").insert({
         booking_id:     booking.id,
         client_id:      booking.client_id,
