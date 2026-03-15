@@ -10,15 +10,15 @@ async function verifyYocoSignature(
   signatureHeader: string,
   secret: string
 ): Promise<boolean> {
-  const encoder  = new TextEncoder();
-  const keyBytes = encoder.encode(secret);
+  const encoder   = new TextEncoder();
+  const keyBytes  = encoder.encode(secret);
   const cryptoKey = await crypto.subtle.importKey(
     "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const signature   = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
   const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
   console.log("Computed signature (b64):", computedB64);
-  console.log("Received signature:", signatureHeader);
+  console.log("Received signature:",       signatureHeader);
   return computedB64 === signatureHeader;
 }
 
@@ -45,7 +45,7 @@ async function refreshGcalToken(
     return null;
   }
   await supabase.from("app_settings").upsert(
-    { tenant_id: tenantId, key: "gcal_access_token", value: data.access_token },
+    { tenant_id: tenantId, key: "gcal_access_token",  value: data.access_token },
     { onConflict: "tenant_id,key" }
   );
   await supabase.from("app_settings").upsert(
@@ -78,8 +78,8 @@ async function createCalendarEvent(
     const clientId     = Deno.env.get("GOOGLE_CLIENT_ID")!;
     const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
-    let accessToken = settings["gcal_access_token"];
-    const expiry    = Number(settings["gcal_token_expiry"] ?? 0);
+    let accessToken  = settings["gcal_access_token"];
+    const expiry     = Number(settings["gcal_token_expiry"] ?? 0);
     if (Date.now() > expiry - 60_000) {
       const newToken = await refreshGcalToken(supabase, tenantId, settings["gcal_refresh_token"], clientId, clientSecret);
       if (!newToken) { console.error("Could not refresh gcal token"); return; }
@@ -96,23 +96,23 @@ async function createCalendarEvent(
     const clientPhone = booking.client_phone ?? booking.guest_phone ?? "";
     const clientEmail = booking.client_email ?? booking.guest_email ?? "";
     const address     = booking.is_call_out ? (booking.call_out_address ?? "") : "";
-    const price       = booking.total_amount ?? booking.deposit_amount ?? 0;
-    const dep         = Number(booking.deposit_amount ?? 0).toFixed(2);
-    const bal         = Math.max(0, Number(booking.total_amount ?? 0) - Number(booking.deposit_amount ?? 0)).toFixed(2);
+    const tot         = Number(booking.total_amount   ?? 0);
+    const dep         = Number(booking.deposit_amount ?? 0);
+    const bal         = Math.max(0, tot - dep).toFixed(2);
 
     const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
     const addressLink = address     ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}">${address}</a>` : "";
 
     const descLines = [
       `<b>Client:</b> ${clientName}`,
-      clientPhone ? `<b>Phone:</b> ${phoneLink}`     : "",
-      clientEmail ? `<b>Email:</b> ${clientEmail}`   : "",
-      address     ? `<b>Address:</b> ${addressLink}` : "",
+      clientPhone ? `<b>Phone:</b>   ${phoneLink}`    : "",
+      clientEmail ? `<b>Email:</b>   ${clientEmail}`  : "",
+      address     ? `<b>Address:</b> ${addressLink}`  : "",
       booking.is_call_out && booking.call_out_distance_km
         ? `<b>Distance:</b> ${booking.call_out_distance_km} km` : "",
       `<b>Duration:</b> ${durationMins} min`,
-      `<b>Total:</b> R${Number(price).toFixed(2)}`,
-      `<b>Deposit paid ✅</b> R${dep}`,
+      `<b>Total:</b> R${tot.toFixed(2)}`,
+      `<b>Deposit paid ✅</b> R${dep.toFixed(2)}`,
       `<b>Balance due:</b> R${bal}`,
       booking.client_notes ? `<b>Notes:</b> ${booking.client_notes}` : "",
     ].filter(Boolean).join("<br>");
@@ -249,9 +249,84 @@ Deno.serve(async (req) => {
 
     const effectiveTenantId = booking.tenant_id ?? tenantId;
 
-    // ══════════════════════════════════════════════════════════════
-    // BALANCE PAYMENT
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    // FULL PAYMENT — client paid 100% at booking time
+    // ══════════════════════════════════════════════════════════════════════
+    if (paymentType === "full") {
+      // Idempotency: if already processed, skip
+      if (booking.final_payment_paid || booking.deposit_paid) {
+        console.log("Duplicate full-payment webhook — already processed:", booking.id);
+        return new Response(
+          JSON.stringify({ received: true, already_paid: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error: updateErr } = await supabase
+        .from("bookings")
+        .update({
+          deposit_paid:          true,
+          final_payment_paid:    true,
+          full_payment_received: true,
+          balance_due:           0,
+          status:                "confirmed",
+          confirmed_at:          new Date().toISOString(),
+        })
+        .eq("id", booking.id)
+        .eq("deposit_paid", false);
+
+      if (updateErr) {
+        console.error("Failed to update booking for full payment:", updateErr);
+        return new Response(JSON.stringify({ error: "Update failed" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      await supabase.from("payments").insert({
+        booking_id:     booking.id,
+        client_id:      booking.client_id,
+        tenant_id:      effectiveTenantId,
+        amount:         booking.total_amount,
+        payment_type:   "full",
+        payment_method: "card",
+        gateway:        "yoco",
+        status:         "completed",
+        transaction_id: transactionId,
+        completed_at:   new Date().toISOString(),
+      });
+
+      // Fire confirmation email + gcal (same as deposit flow)
+      createCalendarEvent(supabase, effectiveTenantId, booking)
+        .catch((e) => console.error("gcal background error:", e));
+
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+            "apikey":        serviceKey,
+          },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            tenant_id:  effectiveTenantId,
+            email_type: "booking_confirmed",
+          }),
+        });
+      } catch (emailErr) {
+        console.error("Failed to call send-booking-email:", emailErr);
+      }
+
+      console.log("Full payment confirmed for booking:", booking.id);
+      return new Response(
+        JSON.stringify({ received: true, booking_id: booking.id, type: "full" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // BALANCE PAYMENT — admin requested final payment
+    // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "balance") {
       if (booking.final_payment_paid) {
         console.log("Duplicate balance webhook — already processed:", booking.id);
@@ -265,10 +340,10 @@ Deno.serve(async (req) => {
         .from("bookings")
         .update({
           final_payment_paid:    true,
+          full_payment_received: true,
           balance_due:           0,
           status:                "complete",
           completed_at:          new Date().toISOString(),
-          full_payment_received: true,
         })
         .eq("id", booking.id)
         .eq("final_payment_paid", false);
@@ -300,9 +375,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // DEPOSIT PAYMENT
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    // DEPOSIT PAYMENT — standard flow
+    // ══════════════════════════════════════════════════════════════════════
     const { data: updatedRows, error: updateErr } = await supabase
       .from("bookings")
       .update({

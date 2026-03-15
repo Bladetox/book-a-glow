@@ -41,16 +41,24 @@ const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; la
   </button>
 );
 
+// Deposit preset options shown as quick-select buttons
+const DEPOSIT_PRESETS = [
+  { label: "30%",  value: "30"  },
+  { label: "50%",  value: "50"  },
+  { label: "70%",  value: "70"  },
+  { label: "Full", value: "100" },
+];
+
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
-  const updateTenant = useUpdateTenant();
+  const updateTenant  = useUpdateTenant();
   const upsertSetting = useUpsertAppSetting();
   const { setThemeById } = useBusinessTheme();
   const { tenantId } = useTenant();
 
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const [saved, setSaved] = useState<string | null>(null);
+  const [draft, setDraft]           = useState<Record<string, string>>({});
+  const [saved, setSaved]           = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,14 +66,14 @@ const AdminSettings = () => {
     if (tenant) {
       setDraft((prev) => ({
         ...prev,
-        name: tenant.name ?? "",
-        email: tenant.email ?? "",
-        phone: tenant.phone ?? "",
-        address: tenant.address ?? "",
-        currency: tenant.currency ?? "R",
-        themeId: tenant.theme_id ?? "standard",
+        name:          tenant.name          ?? "",
+        email:         tenant.email         ?? "",
+        phone:         tenant.phone         ?? "",
+        address:       tenant.address       ?? "",
+        currency:      tenant.currency      ?? "R",
+        themeId:       tenant.theme_id      ?? "standard",
         custom_domain: tenant.custom_domain ?? "",
-        logo_url: (tenant as any).logo_url ?? "",
+        logo_url:      (tenant as any).logo_url ?? "",
       }));
     }
   }, [tenant]);
@@ -76,9 +84,9 @@ const AdminSettings = () => {
     }
   }, [appSettings]);
 
-  const [newPw, setNewPw] = useState("");
+  const [newPw, setNewPw]         = useState("");
   const [confirmPw, setConfirmPw] = useState("");
-  const [pwError, setPwError] = useState("");
+  const [pwError, setPwError]     = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
 
   const flash = (section: string) => {
@@ -92,8 +100,8 @@ const AdminSettings = () => {
 
   const saveTenantFields = (section: string, fields: string[]) => {
     const tenantFields = ["name", "email", "phone", "address", "currency", "theme_id", "custom_domain", "logo_url"];
-    const tenantUpdates: Record<string, unknown> = {};
-    const settingUpdates: Record<string, string> = {};
+    const tenantUpdates: Record<string, unknown>  = {};
+    const settingUpdates: Record<string, string>  = {};
 
     fields.forEach((f) => {
       const key = f === "themeId" ? "theme_id" : f;
@@ -104,16 +112,16 @@ const AdminSettings = () => {
       }
     });
 
-    if (Object.keys(tenantUpdates).length > 0) {
-      updateTenant.mutate(tenantUpdates);
-    }
-    if (Object.keys(settingUpdates).length > 0) {
-      upsertSetting.mutate(settingUpdates);
+    // currency must also live in app_settings so the public booking app
+    // (which reads app_settings, not the tenants row) picks it up
+    if (fields.includes("currency")) {
+      settingUpdates["currency"] = draft["currency"] ?? "R";
     }
 
-    if (fields.includes("themeId")) {
-      setThemeById(draft.themeId || "standard");
-    }
+    if (Object.keys(tenantUpdates).length  > 0) updateTenant.mutate(tenantUpdates);
+    if (Object.keys(settingUpdates).length > 0) upsertSetting.mutate(settingUpdates);
+
+    if (fields.includes("themeId")) setThemeById(draft.themeId || "standard");
     flash(section);
   };
 
@@ -122,15 +130,13 @@ const AdminSettings = () => {
     if (!file) return;
     setLogoUploading(true);
     try {
-      const ext = file.name.split(".").pop();
+      const ext  = file.name.split(".").pop();
       const path = `${tenantId}/logo.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("business-logos")
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage
-        .from("business-logos")
-        .getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("business-logos").getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
       update("logo_url", publicUrl);
       await updateTenant.mutateAsync({ logo_url: publicUrl });
@@ -144,9 +150,8 @@ const AdminSettings = () => {
   };
 
   const handlePasswordChange = async () => {
-    setPwError("");
-    setPwSuccess("");
-    if (newPw.length < 6) { setPwError("New password must be at least 6 characters"); return; }
+    setPwError(""); setPwSuccess("");
+    if (newPw.length < 6)    { setPwError("New password must be at least 6 characters"); return; }
     if (newPw !== confirmPw) { setPwError("Passwords do not match"); return; }
     const { error } = await supabase.auth.updateUser({ password: newPw });
     if (error) { setPwError(error.message); return; }
@@ -169,11 +174,12 @@ const AdminSettings = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
       {/* Business Info */}
       <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.06] to-white/[0.02]">
-        <SettingRow label="Business Name" placeholder="Your Business Name" value={draft.name} onChange={v => update("name", v)} />
-        <SettingRow label="Email" placeholder="your@email.com" type="email" value={draft.email} onChange={v => update("email", v)} />
-        <SettingRow label="Phone" placeholder="074 511 5725" value={draft.phone} onChange={v => update("phone", v)} />
+        <SettingRow label="Business Name" placeholder="Your Business Name" value={draft.name}  onChange={v => update("name",  v)} />
+        <SettingRow label="Email"         placeholder="your@email.com"       type="email" value={draft.email} onChange={v => update("email", v)} />
+        <SettingRow label="Phone"         placeholder="074 511 5725"         value={draft.phone} onChange={v => update("phone", v)} />
         <div className="flex items-center gap-3">
           <SaveBtn onClick={() => saveTenantFields("info", ["name", "email", "phone"])} loading={updateTenant.isPending} />
           <SavedBadge section="info" />
@@ -189,7 +195,7 @@ const AdminSettings = () => {
           </div>
         )}
         <SettingRow label="Logo URL" placeholder="https://your-logo-url.com/logo.png" value={draft.logo_url} onChange={v => update("logo_url", v)} />
-        <p className="text-[9px] text-white/25 -mt-2">Or upload directly below. Recommended: square, min 200\u00d7200px.</p>
+        <p className="text-[9px] text-white/25 -mt-2">Or upload directly below. Recommended: square, min 200×200px.</p>
         <div className="flex items-center gap-3">
           <button
             onClick={() => logoInputRef.current?.click()}
@@ -197,26 +203,20 @@ const AdminSettings = () => {
             className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
           >
             {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
-            {logoUploading ? "Uploading\u2026" : "Upload File"}
+            {logoUploading ? "Uploading…" : "Upload File"}
           </button>
           <SaveBtn onClick={() => saveTenantFields("logo", ["logo_url"])} loading={updateTenant.isPending} />
           <SavedBadge section="logo" />
         </div>
-        <input
-          ref={logoInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/svg+xml"
-          className="hidden"
-          onChange={handleLogoUpload}
-        />
+        <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" className="hidden" onChange={handleLogoUpload} />
       </SettingsCard>
 
       {/* Welcome Splash Copy */}
       <SettingsCard title="Welcome Splash" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]">
-        <SettingRow label="Welcome Label" placeholder="Welcome to" value={draft.splash_welcome_label} onChange={v => update("splash_welcome_label", v)} />
-        <SettingRow label="Tagline Line 1" placeholder="Mobile Beauty Services" value={draft.splash_tagline1} onChange={v => update("splash_tagline1", v)} />
-        <SettingRow label="Tagline Line 2" placeholder="Premium At-Home Treatments" value={draft.splash_tagline2} onChange={v => update("splash_tagline2", v)} />
-        <SettingRow label="CTA Button Label" placeholder="Select Your Treatment" value={draft.splash_cta_label} onChange={v => update("splash_cta_label", v)} />
+        <SettingRow label="Welcome Label"   placeholder="Welcome to"                  value={draft.splash_welcome_label} onChange={v => update("splash_welcome_label", v)} />
+        <SettingRow label="Tagline Line 1"  placeholder="Mobile Beauty Services"     value={draft.splash_tagline1}      onChange={v => update("splash_tagline1",      v)} />
+        <SettingRow label="Tagline Line 2"  placeholder="Premium At-Home Treatments" value={draft.splash_tagline2}      onChange={v => update("splash_tagline2",      v)} />
+        <SettingRow label="CTA Button Label" placeholder="Select Your Treatment"     value={draft.splash_cta_label}     onChange={v => update("splash_cta_label",     v)} />
         <p className="text-[9px] text-white/25 -mt-2">These fields control the text shown on the welcome splash screen clients see first.</p>
         <div className="flex items-center gap-3">
           <SaveBtn onClick={() => saveTenantFields("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])} loading={upsertSetting.isPending} />
@@ -246,15 +246,12 @@ const AdminSettings = () => {
       <SettingsCard title="Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]">
         <div className="grid grid-cols-2 gap-2">
           {businessThemes.map(t => (
-            <button
-              key={t.id}
-              onClick={() => update("themeId", t.id)}
+            <button key={t.id} onClick={() => update("themeId", t.id)}
               className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
                 draft.themeId === t.id
                   ? "border-white/30 bg-white/[0.1]"
                   : "border-white/[0.06] hover:border-white/[0.12]"
-              }`}
-            >
+              }`}>
               <div className="flex gap-1.5">
                 <div className="w-5 h-5 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.background})` }} />
                 <div className="w-5 h-5 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.primary})` }} />
@@ -274,9 +271,10 @@ const AdminSettings = () => {
       {/* Travel & Call-out */}
       <SettingsCard title="Travel & Call-out Fee" icon={MapPin} gradient="from-white/[0.05] to-white/[0.02]">
         <SettingRow label="Origin Address" placeholder="Your Business Address" value={draft.fixed_origin_address} onChange={v => update("fixed_origin_address", v)} />
-        <SettingRow label="Rate per km" placeholder="3.60" type="number" value={draft.rate_per_km} onChange={v => update("rate_per_km", v)} />
-        <SettingRow label="Currency Symbol" placeholder="R" value={draft.currency} onChange={v => update("currency", v)} />
+        <SettingRow label="Rate per km"    placeholder="3.60" type="number"     value={draft.rate_per_km}          onChange={v => update("rate_per_km",          v)} />
+        <SettingRow label="Currency Symbol" placeholder="R"                    value={draft.currency}             onChange={v => update("currency",             v)} />
         <div className="flex items-center gap-3">
+          {/* currency saved to BOTH tenants table and app_settings via saveTenantFields */}
           <SaveBtn onClick={() => saveTenantFields("travel", ["fixed_origin_address", "rate_per_km", "currency"])} loading={updateTenant.isPending || upsertSetting.isPending} />
           <SavedBadge section="travel" />
         </div>
@@ -284,12 +282,53 @@ const AdminSettings = () => {
 
       {/* Booking Rules */}
       <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.04] to-white/[0.01]">
-        <SettingRow label="Deposit Percent (%)" placeholder="50" type="number" value={draft.deposit_percent} onChange={v => update("deposit_percent", v)} />
-        <SettingRow label="Min Notice (hours)" placeholder="24" type="number" value={draft.min_notice_hours} onChange={v => update("min_notice_hours", v)} />
-        <SettingRow label="Max Advance Booking (days)" placeholder="60" type="number" value={draft.max_advance_days} onChange={v => update("max_advance_days", v)} />
-        <SettingRow label="Booking Ref Prefix" placeholder="PB-" value={draft.booking_ref_prefix} onChange={v => update("booking_ref_prefix", v)} />
+
+        {/* Deposit percent — preset buttons */}
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+            Deposit Required
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {DEPOSIT_PRESETS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => update("deposit_percent", p.value)}
+                className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
+                  draft.deposit_percent === p.value
+                    ? "border-white/40 bg-white/[0.12] text-white"
+                    : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20 hover:text-white/70"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {/* Manual override input still available */}
+          <input
+            type="number"
+            placeholder="Custom %"
+            value={draft.deposit_percent ?? ""}
+            onChange={(e) => update("deposit_percent", e.target.value)}
+            min={1} max={100}
+            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+          />
+          <p className="text-[9px] text-white/25">
+            {draft.deposit_percent === "100"
+              ? "Clients will be required to pay in full at booking."
+              : `Clients pay ${draft.deposit_percent ?? 50}% now, the rest on the day.`
+            }
+          </p>
+        </div>
+
+        <SettingRow label="Min Notice (hours)"        placeholder="24" type="number" value={draft.min_notice_hours}   onChange={v => update("min_notice_hours",   v)} />
+        <SettingRow label="Max Advance Booking (days)" placeholder="60" type="number" value={draft.max_advance_days}   onChange={v => update("max_advance_days",   v)} />
+        <SettingRow label="Booking Ref Prefix"         placeholder="PB-"             value={draft.booking_ref_prefix} onChange={v => update("booking_ref_prefix", v)} />
         <div className="flex items-center gap-3">
-          <SaveBtn onClick={() => saveTenantFields("rules", ["deposit_percent", "min_notice_hours", "max_advance_days", "booking_ref_prefix"])} loading={upsertSetting.isPending} />
+          <SaveBtn
+            onClick={() => saveTenantFields("rules", ["deposit_percent", "min_notice_hours", "max_advance_days", "booking_ref_prefix"])}
+            loading={upsertSetting.isPending}
+          />
           <SavedBadge section="rules" />
         </div>
       </SettingsCard>
@@ -297,29 +336,21 @@ const AdminSettings = () => {
       {/* Confirmation Page Copy */}
       <SettingsCard title="Confirmation Page" icon={FileText} gradient="from-white/[0.05] to-white/[0.02]">
         <SettingRow label="Email Subject" placeholder="Your booking is confirmed" value={draft.confirmation_subject} onChange={v => update("confirmation_subject", v)} />
-        <SettingRow label="Page Title" placeholder="Deposit Paid" value={draft.confirmation_title} onChange={v => update("confirmation_title", v)} />
+        <SettingRow label="Page Title"    placeholder="Deposit Paid"              value={draft.confirmation_title}   onChange={v => update("confirmation_title",   v)} />
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Intro Message</label>
-          <textarea
-            placeholder="I see you choosing you..."
-            value={draft.confirmation_intro ?? ""}
-            onChange={(e) => update("confirmation_intro", e.target.value)}
-            rows={3}
-            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
-          />
+          <textarea placeholder="I see you choosing you..."
+            value={draft.confirmation_intro ?? ""} onChange={(e) => update("confirmation_intro", e.target.value)}
+            rows={3} className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none" />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Outro / Closing Message</label>
-          <textarea
-            placeholder="We look forward to seeing you."
-            value={draft.confirmation_outro ?? ""}
-            onChange={(e) => update("confirmation_outro", e.target.value)}
-            rows={4}
-            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
-          />
+          <textarea placeholder="We look forward to seeing you."
+            value={draft.confirmation_outro ?? ""} onChange={(e) => update("confirmation_outro", e.target.value)}
+            rows={4} className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none" />
         </div>
         <SettingRow label="Sign-off" placeholder="Toodles" value={draft.sign_off} onChange={v => update("sign_off", v)} />
-        <p className="text-[9px] text-white/25 -mt-2">Text shown on the success page after payment. Client auto-redirects to booking page after 5 seconds.</p>
+        <p className="text-[9px] text-white/25 -mt-2">Text shown on the success page after payment.</p>
         <div className="flex items-center gap-3">
           <SaveBtn onClick={() => saveTenantFields("confirmation", ["confirmation_subject", "confirmation_title", "confirmation_intro", "confirmation_outro", "sign_off"])} loading={upsertSetting.isPending} />
           <SavedBadge section="confirmation" />
@@ -328,15 +359,16 @@ const AdminSettings = () => {
 
       {/* Password Change */}
       <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]">
-        <SettingRow label="New Password" placeholder="Min 6 characters" type="password" value={newPw} onChange={setNewPw} />
-        <SettingRow label="Confirm New Password" placeholder="Confirm new password" type="password" value={confirmPw} onChange={setConfirmPw} />
-        {pwError && <p className="text-xs text-red-400">{pwError}</p>}
+        <SettingRow label="New Password"     placeholder="Min 6 characters"    type="password" value={newPw}     onChange={setNewPw}     />
+        <SettingRow label="Confirm Password" placeholder="Confirm new password" type="password" value={confirmPw} onChange={setConfirmPw} />
+        {pwError   && <p className="text-xs text-red-400">{pwError}</p>}
         {pwSuccess && <p className="text-xs text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" />{pwSuccess}</p>}
-        <button onClick={handlePasswordChange} className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5">
-          <KeyRound className="w-3 h-3" />
-          Update Password
+        <button onClick={handlePasswordChange}
+          className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5">
+          <KeyRound className="w-3 h-3" /> Update Password
         </button>
       </SettingsCard>
+
     </div>
   );
 };

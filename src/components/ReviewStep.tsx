@@ -38,13 +38,16 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
 
   const total = servicesTotal + callOutFee;
-  const depositPercent = config.depositPercent;
+  const depositPercent = config.depositPercent;   // sourced from app_settings.deposit_percent
   const deposit = Math.ceil(total * (depositPercent / 100));
   const balance = total - deposit;
   const cur = config.currency;
 
-  const amountDueNow = paymentChoice === "full" ? total : deposit;
-  const balanceAfterPay = paymentChoice === "full" ? 0 : balance;
+  const amountDueNow   = paymentChoice === "full" ? total   : deposit;
+  const balanceAfterPay = paymentChoice === "full" ? 0       : balance;
+
+  // When paying full, we tell the DB deposit = total so balance_due = 0
+  const dbDepositAmount = paymentChoice === "full" ? total : deposit;
 
   const handleConfirm = async () => {
     if (submitting) return;
@@ -62,7 +65,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
 
       const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-      const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
+      const startTime   = booking.selectedTime ? `${booking.selectedTime}:00` : "";
 
       const safetyMap: Record<number, string> = {};
       safetyQuestions.forEach((q) => {
@@ -98,6 +101,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         p_guest_name:             booking.fullName  || null,
         p_guest_email:            booking.email     || null,
         p_guest_phone:            guestPhone        || null,
+        // ── Pass frontend-computed amounts so the RPC never re-derives
+        // from app_settings with a potentially-null tenant context ──
+        p_total_amount:           total,
+        p_deposit_amount:         dbDepositAmount,
       });
 
       if (error) throw error;
@@ -107,10 +114,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
 
       const bookingId = result?.booking_id;
       if (bookingId) {
-        const origin = window.location.origin;
+        const origin         = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}`;
-        const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
+        const successUrl     = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
+        const cancelUrl      = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
 
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
           body: {
@@ -119,7 +126,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
             success_url:  successUrl,
             cancel_url:   cancelUrl,
             payment_type: paymentChoice,
-            // For full payment, pass total in cents so yoco-checkout uses exact amount
             ...(paymentChoice === "full" && { amount: Math.round(total * 100) }),
           },
         });
@@ -137,7 +143,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       toast.success("Booking created successfully!");
     } catch (err: any) {
       console.error("Booking error:", err);
-      const msg: string = err.message || "";
+      const msg: string  = err.message || "";
       const code: string = (err as any)?.code || "";
       const isParamError = /Could not find the function|function does not exist|unknown param|Could not choose/i.test(msg);
       const slotTaken =
@@ -168,17 +174,17 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Schedule</h4>
-        <span className="text-sm text-foreground">{booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—"}</span>
-        <span className="text-sm text-muted-foreground">{booking.selectedTime || "—"}</span>
+        <span className="text-sm text-foreground">{booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "\u2014"}</span>
+        <span className="text-sm text-muted-foreground">{booking.selectedTime || "\u2014"}</span>
       </motion.div>
 
       {/* Contact */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Contact</h4>
-        <span className="text-sm text-foreground">{booking.fullName || "—"}</span>
+        <span className="text-sm text-foreground">{booking.fullName || "\u2014"}</span>
         <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
-        <span className="text-sm text-muted-foreground">{booking.email || "—"}</span>
+        <span className="text-sm text-muted-foreground">{booking.email || "\u2014"}</span>
         {booking.address && (
           <span className="text-sm text-muted-foreground">{booking.address}</span>
         )}
@@ -211,31 +217,38 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
 
         <div className="h-px bg-border/30 my-3" />
 
-        {/* ── Payment choice ───────────────────────────────────────────── */}
+        {/* Payment choice */}
         <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2">How would you like to pay?</p>
         <div className="grid grid-cols-2 gap-2 mb-3">
-          <button
-            type="button"
-            onClick={() => setPaymentChoice("deposit")}
-            className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
-              paymentChoice === "deposit"
-                ? "border-primary bg-primary/10 text-foreground"
-                : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
-            }`}
-          >
-            {paymentChoice === "deposit" && (
-              <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />
-            )}
-            <CreditCard className="w-4 h-4 mb-1.5 opacity-70" />
-            <span className="text-xs font-semibold">Deposit only</span>
-            <span className="text-sm font-bold mt-0.5">{cur}{deposit}</span>
-            <span className="text-[10px] opacity-60 mt-0.5">{cur}{balance} due on the day</span>
-          </button>
 
+          {/* Deposit option — shown when depositPercent < 100 */}
+          {depositPercent < 100 && (
+            <button
+              type="button"
+              onClick={() => setPaymentChoice("deposit")}
+              className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                paymentChoice === "deposit"
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
+              }`}
+            >
+              {paymentChoice === "deposit" && (
+                <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />
+              )}
+              <CreditCard className="w-4 h-4 mb-1.5 opacity-70" />
+              <span className="text-xs font-semibold">Deposit only</span>
+              <span className="text-sm font-bold mt-0.5">{cur}{deposit}</span>
+              <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now &bull; {cur}{balance} on the day</span>
+            </button>
+          )}
+
+          {/* Full payment */}
           <button
             type="button"
             onClick={() => setPaymentChoice("full")}
             className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+              depositPercent >= 100 ? "col-span-2" : ""
+            } ${
               paymentChoice === "full"
                 ? "border-primary bg-primary/10 text-foreground"
                 : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
@@ -251,6 +264,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
           </button>
         </div>
 
+        {/* If tenant requires 100% upfront, auto-select full and hide toggle */}
         <div className="flex justify-between items-baseline py-1 text-sm">
           <span className="text-muted-foreground">Due now</span>
           <span className="font-bold text-primary">{cur}{amountDueNow}</span>
@@ -279,7 +293,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           {submitting
-            ? "Creating Booking…"
+            ? "Creating Booking\u2026"
             : paymentChoice === "full"
               ? `Confirm & Pay ${cur}${total}`
               : `Confirm & Pay Deposit ${cur}${deposit}`
