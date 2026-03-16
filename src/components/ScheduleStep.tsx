@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isBefore, isToday, isSameDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useMonthAvailability, useDateSlots } from "@/hooks/usePublicAvailability";
@@ -9,11 +9,12 @@ interface ScheduleStepProps {
   selectedTime: string | null;
   onSelectDate: (date: Date) => void;
   onSelectTime: (time: string) => void;
-  totalDuration: number; // minutes — used to filter slots
+  totalDuration: number;
 }
 
 const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, totalDuration }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const timeSlotsRef = useRef<HTMLDivElement>(null);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
@@ -28,11 +29,6 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
     return t;
   }, []);
 
-  /**
-   * Filter out slots whose start time has already passed when the selected
-   * date is today. Slots are "HH:MM" strings. We add a 0-minute buffer so
-   * a slot at exactly the current minute is also removed.
-   */
   const dateSlots = useMemo(() => {
     if (!selectedDate || !isToday(selectedDate)) return rawDateSlots;
     const now = new Date();
@@ -57,6 +53,18 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
     const ds = format(day, "yyyy-MM-dd");
     return (monthAvailability[ds]?.length ?? 0) > 0;
   };
+
+  // After picking a date, wait for the time-slot section to animate in
+  // then scroll it into view so the user doesn't have to hunt for it.
+  const handleSelectDate = useCallback(
+    (day: Date) => {
+      onSelectDate(day);
+      setTimeout(() => {
+        timeSlotsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 320); // slightly after the 300ms AnimatePresence entrance
+    },
+    [onSelectDate]
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -117,7 +125,7 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
                 key={day.toISOString()}
                 whileTap={!isDisabled ? { scale: 0.85 } : undefined}
                 disabled={isDisabled}
-                onClick={() => onSelectDate(day)}
+                onClick={() => handleSelectDate(day)}
                 className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
                   ${isDisabled ? "text-muted-foreground/25 cursor-not-allowed" : "hover:bg-muted/50 cursor-pointer active:bg-muted"}
                   ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-foreground"}
@@ -130,49 +138,51 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
         </div>
       </div>
 
-      {/* Time slots */}
-      <AnimatePresence>
-        {selectedDate && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          >
-            <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-3">
-              Available times
-            </h4>
-            {loadingSlots ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : dateSlots.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No slots available for this date</p>
-            ) : (
-              <div className="grid grid-cols-4 gap-2">
-                {dateSlots.map((time, i) => (
-                  <motion.button
-                    key={time}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.02 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => onSelectTime(time)}
-                    className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                      ${
-                        selectedTime === time
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                          : "glass-card-service text-foreground"
-                      }`}
-                  >
-                    {time}
-                  </motion.button>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Time slots — ref used to auto-scroll here after a date is picked */}
+      <div ref={timeSlotsRef}>
+        <AnimatePresence>
+          {selectedDate && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            >
+              <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-3">
+                {format(selectedDate, "EEEE, d MMMM")} — available times
+              </h4>
+              {loadingSlots ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : dateSlots.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No slots available for this date</p>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {dateSlots.map((time, i) => (
+                    <motion.button
+                      key={time}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.02 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => onSelectTime(time)}
+                      className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                        ${
+                          selectedTime === time
+                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                            : "glass-card-service text-foreground"
+                        }`}
+                    >
+                      {time}
+                    </motion.button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
