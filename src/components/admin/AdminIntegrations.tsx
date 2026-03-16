@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { CreditCard, Calendar, MapPin, Mail, Eye, EyeOff, Save, CheckCircle2, AlertCircle, Loader2, Edit2 } from "lucide-react";
+import { CreditCard, Calendar, MapPin, Mail, Eye, EyeOff, Save, CheckCircle2, AlertCircle, Loader2, Edit2, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -86,9 +87,10 @@ interface IntegrationCardProps {
   onEdit: () => void;
   onSave: () => void;
   children: React.ReactNode;
+  extraActions?: React.ReactNode;
 }
 
-const IntegrationCard = ({ icon: Icon, name, desc, configured, saving, editing, onEdit, onSave, children }: IntegrationCardProps) => {
+const IntegrationCard = ({ icon: Icon, name, desc, configured, saving, editing, onEdit, onSave, children, extraActions }: IntegrationCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -119,6 +121,7 @@ const IntegrationCard = ({ icon: Icon, name, desc, configured, saving, editing, 
       </div>
       <div className="flex flex-col gap-3">{children}</div>
       <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/[0.04]">
+        {extraActions}
         {configured && !editing && (
           <button onClick={onEdit} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors">
             <Edit2 className="w-3 h-3" /> Edit
@@ -147,13 +150,11 @@ interface GoogleCalendarCardProps {
 const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
   const [isConnected, setIsConnected] = useState(connected);
 
-  // On mount: check if we just returned from Google OAuth redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("gcal") === "connected") {
       setIsConnected(true);
       toast.success("Google Calendar connected!");
-      // Clean the URL without reloading
       const clean = new URL(window.location.href);
       clean.searchParams.delete("gcal");
       window.history.replaceState({}, "", clean.toString());
@@ -170,33 +171,24 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
 
-    if (!clientId) {
-      toast.error("Google Client ID is not configured. Contact support.");
-      return;
-    }
-    if (!supabaseUrl) {
-      toast.error("Supabase URL is not configured. Contact support.");
-      return;
-    }
+    if (!clientId) { toast.error("Google Client ID is not configured. Contact support."); return; }
+    if (!supabaseUrl) { toast.error("Supabase URL is not configured. Contact support."); return; }
 
     const redirectUri = `${supabaseUrl}/functions/v1/google-calendar-callback`;
     const scope = "https://www.googleapis.com/auth/calendar.events";
-
-    // Encode the app return URL in state so the edge function can redirect back
     const returnUrl = `${window.location.origin}/admin?gcal=connected`;
     const state = JSON.stringify({ tenantId, returnUrl });
 
     const params = new URLSearchParams({
-      client_id:     clientId,
-      redirect_uri:  redirectUri,
+      client_id: clientId,
+      redirect_uri: redirectUri,
       response_type: "code",
       scope,
-      access_type:   "offline",
-      prompt:        "consent",
-      state:         btoa(state),
+      access_type: "offline",
+      prompt: "consent",
+      state: btoa(state),
     });
 
-    // Full-page redirect — no popup, no COOP issues
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
@@ -237,17 +229,11 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
 
       <div className="pt-1 border-t border-white/[0.04] flex items-center justify-end">
         {isConnected ? (
-          <button
-            onClick={handleConnect}
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
-          >
+          <button onClick={handleConnect} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors">
             <Edit2 className="w-3 h-3" /> Reconnect
           </button>
         ) : (
-          <button
-            onClick={handleConnect}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all"
-          >
+          <button onClick={handleConnect} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all">
             <Calendar className="w-3 h-3" /> Connect Google Calendar
           </button>
         )}
@@ -260,7 +246,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
 
 const AdminIntegrations = () => {
   const { tenantId } = useTenant();
-  const { data: settings = {}, isLoading } = useAppSettings();
+  const { data: settings = {}, isLoading, refetch } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
   const [yocoDraft, setYocoDraft] = useState<Record<string, string>>({});
@@ -272,6 +258,7 @@ const AdminIntegrations = () => {
   const [smtpEditing, setSmtpEditing] = useState(false);
 
   const [savingSection, setSavingSection] = useState<string | null>(null);
+  const [webhookStatus, setWebhookStatus] = useState<"idle" | "registering" | "ok" | "error">("idle");
 
   useEffect(() => {
     if (!isLoading && Object.keys(settings).length > 0) {
@@ -280,9 +267,7 @@ const AdminIntegrations = () => {
         yoco_secret_key: settings.yoco_secret_key ?? "",
         yoco_webhook_secret: settings.yoco_webhook_secret ?? "",
       });
-      setMapsDraft({
-        google_maps_api_key: settings.google_maps_api_key ?? "",
-      });
+      setMapsDraft({ google_maps_api_key: settings.google_maps_api_key ?? "" });
       setSmtpDraft({
         smtp_host: settings.smtp_host ?? "",
         smtp_port: settings.smtp_port ?? "",
@@ -298,10 +283,60 @@ const AdminIntegrations = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
 
-  const handleChange = (
-    setter: React.Dispatch<React.SetStateAction<Record<string, string>>>
-  ) => (key: string, value: string) => {
-    setter((prev) => ({ ...prev, [key]: value }));
+  const handleChange = (setter: React.Dispatch<React.SetStateAction<Record<string, string>>>) =>
+    (key: string, value: string) => setter((prev) => ({ ...prev, [key]: value }));
+
+  // ── Yoco save: saves keys to app_settings, then registers webhook ──────────
+  const handleYocoSave = async () => {
+    const toSave = Object.fromEntries(
+      Object.entries(yocoDraft).filter(([, v]) => v && v !== MASK)
+    );
+
+    if (!toSave.yoco_secret_key) {
+      toast.error("Secret key is required to configure Yoco payments.");
+      return;
+    }
+
+    setSavingSection("yoco");
+    try {
+      // 1. Save public key and secret key to app_settings
+      await upsert.mutateAsync(toSave);
+
+      // 2. Register webhook with Yoco — this also writes secret key to tenants table
+      setWebhookStatus("registering");
+      toast.info("Registering webhook with Yoco…");
+
+      const { data: webhookData, error: webhookErr } = await supabase.functions.invoke(
+        "register-yoco-webhook",
+        {
+          body: {
+            tenant_id: tenantId,
+            yoco_secret_key: toSave.yoco_secret_key,
+            yoco_public_key: toSave.yoco_public_key || undefined,
+          },
+        }
+      );
+
+      if (webhookErr || !webhookData?.success) {
+        const msg = webhookErr?.message || webhookData?.error || "Webhook registration failed";
+        setWebhookStatus("error");
+        // Keys were saved but webhook failed — still partially useful
+        toast.warning(`Keys saved, but webhook registration failed: ${msg}. Payments may not confirm automatically.`);
+        setYocoEditing(false);
+        return;
+      }
+
+      setWebhookStatus("ok");
+      // 3. Refresh settings so webhook secret shows as configured
+      await refetch();
+      toast.success("Yoco configured and webhook registered successfully.");
+      setYocoEditing(false);
+    } catch (err: any) {
+      setWebhookStatus("error");
+      toast.error(err.message ?? "Failed to save Yoco configuration.");
+    } finally {
+      setSavingSection(null);
+    }
   };
 
   const handleSave = async (section: string, draft: Record<string, string>, lockFn: () => void) => {
@@ -320,6 +355,7 @@ const AdminIntegrations = () => {
   };
 
   const yocoConfigured = isConfigured(settings, ["yoco_public_key", "yoco_secret_key"]);
+  const webhookConfigured = !!settings.yoco_webhook_secret;
   const mapsConfigured = isConfigured(settings, ["google_maps_api_key"]);
   const smtpConfigured = isConfigured(settings, ["smtp_user", "smtp_username", "smtp_password"]);
 
@@ -352,17 +388,52 @@ const AdminIntegrations = () => {
           saving={savingSection === "yoco"}
           editing={yocoEditing}
           onEdit={() => setYocoEditing(true)}
-          onSave={() => handleSave("yoco", yocoDraft, () => setYocoEditing(false))}
+          onSave={handleYocoSave}
+          extraActions={
+            yocoConfigured && !yocoEditing ? (
+              <div className="flex items-center gap-2 mr-auto">
+                {webhookConfigured ? (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-400/80">
+                    <CheckCircle2 className="w-3 h-3" /> Webhook active
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] text-amber-400/80">
+                    <AlertCircle className="w-3 h-3" /> Webhook not registered
+                  </span>
+                )}
+              </div>
+            ) : undefined
+          }
         >
-          <Field label="Public Key" fieldKey="yoco_public_key" placeholder="pk_live_…" type="text"
+          <Field label="Public Key" fieldKey="yoco_public_key" placeholder="pk_live_… or pk_test_…" type="text"
             value={yocoDraft.yoco_public_key ?? ""} masked={yocoConfigured} editing={yocoEditing}
             onChange={handleChange(setYocoDraft)} />
-          <Field label="Secret Key" fieldKey="yoco_secret_key" placeholder="sk_live_…" type="password"
+          <Field label="Secret Key" fieldKey="yoco_secret_key" placeholder="sk_live_… or sk_test_…" type="password"
             value={yocoDraft.yoco_secret_key ?? ""} masked={yocoConfigured} editing={yocoEditing}
             onChange={handleChange(setYocoDraft)} />
-          <Field label="Webhook Secret" fieldKey="yoco_webhook_secret" placeholder="whsec_…" type="password"
-            value={yocoDraft.yoco_webhook_secret ?? ""} masked={yocoConfigured} editing={yocoEditing}
-            onChange={handleChange(setYocoDraft)} />
+
+          {/* Webhook status info panel */}
+          {(yocoEditing || !yocoConfigured) && (
+            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 text-xs text-white/40 leading-relaxed">
+              Saving will automatically register a webhook with Yoco and store the signing secret — no manual steps needed. Works with both test and live keys.
+            </div>
+          )}
+
+          {webhookStatus === "registering" && (
+            <div className="flex items-center gap-2 text-xs text-amber-400/80">
+              <Loader2 className="w-3 h-3 animate-spin" /> Registering webhook with Yoco…
+            </div>
+          )}
+          {webhookStatus === "ok" && (
+            <div className="flex items-center gap-2 text-xs text-emerald-400/80">
+              <CheckCircle2 className="w-3 h-3" /> Webhook registered successfully
+            </div>
+          )}
+          {webhookStatus === "error" && (
+            <div className="flex items-center gap-2 text-xs text-red-400/80">
+              <AlertCircle className="w-3 h-3" /> Webhook registration failed — check your secret key
+            </div>
+          )}
         </IntegrationCard>
 
         {/* ── Google Maps ── */}
