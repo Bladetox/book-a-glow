@@ -1,6 +1,17 @@
 import { useState, useMemo, useRef, useCallback } from "react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isBefore, isToday, isSameDay } from "date-fns";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  format,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getDay,
+  isBefore,
+  isToday,
+  isSameDay,
+} from "date-fns";
+import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ChevronDown } from "lucide-react";
 import { useMonthAvailability, useDateSlots } from "@/hooks/usePublicAvailability";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -12,8 +23,16 @@ interface ScheduleStepProps {
   totalDuration: number;
 }
 
-const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, totalDuration }: ScheduleStepProps) => {
+const ScheduleStep = ({
+  selectedDate,
+  selectedTime,
+  onSelectDate,
+  onSelectTime,
+  totalDuration,
+}: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  // calendarOpen: true = full calendar visible, false = collapsed to date strip
+  const [calendarOpen, setCalendarOpen] = useState(true);
   const timeSlotsRef = useRef<HTMLDivElement>(null);
 
   const year = currentMonth.getFullYear();
@@ -54,17 +73,27 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
     return (monthAvailability[ds]?.length ?? 0) > 0;
   };
 
-  // After picking a date, wait for the time-slot section to animate in
-  // then scroll it into view so the user doesn't have to hunt for it.
+  // Picking a date: close the calendar, scroll time slots into view
   const handleSelectDate = useCallback(
     (day: Date) => {
       onSelectDate(day);
+      onSelectTime(""); // reset time when date changes
+      setCalendarOpen(false);
       setTimeout(() => {
         timeSlotsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 320); // slightly after the 300ms AnimatePresence entrance
+      }, 320);
     },
-    [onSelectDate]
+    [onSelectDate, onSelectTime]
   );
+
+  // Tapping the collapsed date strip re-opens the calendar
+  const handleChangeDate = useCallback(() => {
+    setCalendarOpen(true);
+    // Small delay so the calendar starts animating before we scroll to it
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 50);
+  }, []);
 
   return (
     <div className="flex flex-col gap-5">
@@ -72,76 +101,115 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
         Choose date &amp; time
       </h3>
 
-      {/* Calendar */}
-      <div className="glass-card-service rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-4">
+      {/* Collapsed date strip — visible only after a date is chosen */}
+      <AnimatePresence>
+        {selectedDate && !calendarOpen && (
           <motion.button
-            whileTap={!isCurrentMonth ? { scale: 0.85 } : undefined}
-            disabled={isCurrentMonth}
-            onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))}
-            className={`transition-colors p-1.5 rounded-full ${
-              isCurrentMonth
-                ? "text-muted-foreground/20 cursor-not-allowed"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+            key="date-strip"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+            onClick={handleChangeDate}
+            className="glass-card-service rounded-2xl px-4 py-3 flex items-center justify-between w-full text-left"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <div className="flex items-center gap-3">
+              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {format(selectedDate, "EEEE, d MMMM yyyy")}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Tap to change date</p>
+              </div>
+            </div>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </motion.button>
+        )}
+      </AnimatePresence>
 
-          <span className="font-display text-base font-semibold text-foreground flex items-center gap-2">
-            {format(currentMonth, "MMMM yyyy")}
-            {loadingMonth && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
-          </span>
-
-          <motion.button
-            whileTap={{ scale: 0.85 }}
-            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50"
+      {/* Full calendar — collapses after a date is picked */}
+      <AnimatePresence>
+        {calendarOpen && (
+          <motion.div
+            key="calendar"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
           >
-            <ChevronRight className="w-5 h-5" />
-          </motion.button>
-        </div>
+            <div className="glass-card-service rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <motion.button
+                  whileTap={!isCurrentMonth ? { scale: 0.85 } : undefined}
+                  disabled={isCurrentMonth}
+                  onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))}
+                  className={`transition-colors p-1.5 rounded-full ${
+                    isCurrentMonth
+                      ? "text-muted-foreground/20 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </motion.button>
 
-        <div className="grid grid-cols-7 gap-1 text-center mb-2">
-          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-            <span key={d} className="text-[10px] font-semibold text-muted-foreground uppercase">
-              {d}
-            </span>
-          ))}
-        </div>
+                <span className="font-display text-base font-semibold text-foreground flex items-center gap-2">
+                  {format(currentMonth, "MMMM yyyy")}
+                  {loadingMonth && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                </span>
 
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: startDayOfWeek }).map((_, i) => (
-            <div key={`empty-${i}`} />
-          ))}
-          {days.map((day) => {
-            const isPast = isBefore(day, today) && !isToday(day);
-            const isAvailable = isDayAvailable(day);
-            const isDisabled = isPast || !isAvailable;
-            const isActive = selectedDate && isSameDay(day, selectedDate);
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
+                  onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </motion.button>
+              </div>
 
-            return (
-              <motion.button
-                key={day.toISOString()}
-                whileTap={!isDisabled ? { scale: 0.85 } : undefined}
-                disabled={isDisabled}
-                onClick={() => handleSelectDate(day)}
-                className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
-                  ${isDisabled ? "text-muted-foreground/25 cursor-not-allowed" : "hover:bg-muted/50 cursor-pointer active:bg-muted"}
-                  ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-foreground"}
-                `}
-              >
-                {format(day, "d")}
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
+              <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+                  <span key={d} className="text-[10px] font-semibold text-muted-foreground uppercase">
+                    {d}
+                  </span>
+                ))}
+              </div>
 
-      {/* Time slots — ref used to auto-scroll here after a date is picked */}
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: startDayOfWeek }).map((_, i) => (
+                  <div key={`empty-${i}`} />
+                ))}
+                {days.map((day) => {
+                  const isPast = isBefore(day, today) && !isToday(day);
+                  const isAvailable = isDayAvailable(day);
+                  const isDisabled = isPast || !isAvailable;
+                  const isActive = selectedDate && isSameDay(day, selectedDate);
+
+                  return (
+                    <motion.button
+                      key={day.toISOString()}
+                      whileTap={!isDisabled ? { scale: 0.85 } : undefined}
+                      disabled={isDisabled}
+                      onClick={() => handleSelectDate(day)}
+                      className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
+                        ${isDisabled ? "text-muted-foreground/25 cursor-not-allowed" : "hover:bg-muted/50 cursor-pointer active:bg-muted"}
+                        ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-foreground"}
+                      `}
+                    >
+                      {format(day, "d")}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Time slots */}
       <div ref={timeSlotsRef}>
         <AnimatePresence>
-          {selectedDate && (
+          {selectedDate && !calendarOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -149,14 +217,16 @@ const ScheduleStep = ({ selectedDate, selectedTime, onSelectDate, onSelectTime, 
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             >
               <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-3">
-                {format(selectedDate, "EEEE, d MMMM")} — available times
+                Available times
               </h4>
               {loadingSlots ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                 </div>
               ) : dateSlots.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No slots available for this date</p>
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  No slots available — tap the date above to pick another
+                </p>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
                   {dateSlots.map((time, i) => (
