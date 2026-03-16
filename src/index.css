@@ -49,6 +49,10 @@
     --sidebar-accent-foreground: 0 0% 25%;
     --sidebar-border: 0 0% 85%;
     --sidebar-ring: 0 0% 9%;
+
+    /* ── Keyboard / viewport CSS vars (set by useViewportFix.ts on iOS) ── */
+    --keyboard-height: 0px;
+    --visual-viewport-height: 100dvh;
   }
 
   .dark {
@@ -103,6 +107,22 @@
     -webkit-touch-callout: none;
   }
 
+  /*
+  FOCUS STYLES
+  ─────────────────────────────────────────────────────────────────────────
+  Native apps show no focus ring on tap — only keyboard navigation gets one.
+  :focus-visible is the correct modern approach. This replaces the old
+  "outline: none on everything" anti-pattern that breaks accessibility.
+  */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -131,25 +151,46 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
-}
 
-/* ===== TENANT LOGO — seamless blend across all pages ===== */
-.tenant-logo img,
-.tenant-logo-img {
-  mix-blend-mode: multiply;
-  opacity: 0.9;
-  transition: opacity 0.3s ease;
-}
+  /*
+  INPUT FONT SIZE FLOOR — prevents iOS Safari auto-zoom
+  ─────────────────────────────────────────────────────────────────────────
+  iOS Safari zooms the entire viewport when a focused input's font-size
+  is below 16px. Tailwind's text-sm = 14px — every input tap zooms the page.
+  This is the primary "screen resizes" complaint from clients.
 
-.dark .tenant-logo img,
-.dark .tenant-logo-img {
-  mix-blend-mode: luminosity;
-  opacity: 0.88;
-}
+  We set a floor of 16px using max() so inputs are never below 16px
+  regardless of whatever Tailwind class is applied.
+  The visual design is preserved — only the computed size is clamped.
+  */
+  input,
+  select,
+  textarea,
+  [contenteditable] {
+    font-size: max(16px, 1em);
+    /* Remove iOS default inner shadow / rounded appearance */
+    -webkit-appearance: none;
+    appearance: none;
+  }
 
-html:not(.dark) .tenant-logo img,
-html:not(.dark) .tenant-logo-img {
-  mix-blend-mode: multiply;
+  /* ===== TENANT LOGO — seamless blend across all pages ===== */
+  .tenant-logo img,
+  .tenant-logo-img {
+    mix-blend-mode: multiply;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+  }
+
+  .dark .tenant-logo img,
+  .dark .tenant-logo-img {
+    mix-blend-mode: luminosity;
+    opacity: 0.88;
+  }
+
+  html:not(.dark) .tenant-logo img,
+  html:not(.dark) .tenant-logo-img {
+    mix-blend-mode: multiply;
+  }
 }
 
 @layer components {
@@ -297,6 +338,13 @@ html:not(.dark) .tenant-logo-img {
       0 1px 0 hsl(var(--glass-highlight) / 0.08) inset,
       0 0 0 0.5px hsl(var(--glass-highlight) / 0.04) inset;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /*
+    Explicit font-size on .glass-input as a second line of defence.
+    The @layer base rule above catches all inputs globally, but this
+    ensures the class itself also enforces the 16px floor in case of
+    specificity edge cases with Tailwind utilities.
+    */
+    font-size: max(16px, 0.875rem); /* 0.875rem = text-sm, floored at 16px */
   }
 
   .glass-input:focus,
@@ -521,6 +569,13 @@ html:not(.dark) .tenant-logo-img {
     padding-bottom: env(safe-area-inset-bottom);
     background: hsl(var(--background));
     border-top: 1px solid hsl(var(--border) / 0.5);
+    /*
+    iOS keyboard fix: on Android, interactive-widget=resizes-content moves
+    the bar up automatically. On iOS, useViewportFix.ts sets --keyboard-height
+    and StickyBottomBar.tsx applies translateY(-var(--keyboard-height)) via
+    inline style. The transition here makes the lift smooth.
+    */
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Hide scrollbar utility */
@@ -528,66 +583,67 @@ html:not(.dark) .tenant-logo-img {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-}
 
-/* ===== NEXTSLOT SITE THEME ===== */
-.nextslot-theme {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 7%;
-  --card: 0 0% 96%;
-  --card-foreground: 0 0% 7%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 7%;
-  --primary: 0 0% 7%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 7%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 38 33% 74%;
-  --accent-foreground: 0 0% 7%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 0 0% 7%;
-  --radius: 0.625rem;
+  /* ===== NEXTSLOT SITE THEME ===== */
+  .nextslot-theme {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
+    --card: 0 0% 96%;
+    --card-foreground: 0 0% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 0 0% 7%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 38 33% 74%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 7%;
+    --radius: 0.625rem;
 
-  --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(38 30% 97%) 100%);
-  --gradient-section: linear-gradient(180deg, hsl(0 0% 98%) 0%, hsl(0 0% 100%) 100%);
-  --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(38 20% 98%) 100%);
-  --gradient-dark-section: linear-gradient(180deg, hsl(0 0% 7%) 0%, hsl(0 0% 12%) 100%);
-  --gradient-glow: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(38 33% 74% / 0.15), transparent);
-  --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
-  --shadow-soft: 0 1px 3px hsl(0 0% 0% / 0.04), 0 4px 12px hsl(0 0% 0% / 0.03);
-  --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.06), 0 12px 40px hsl(0 0% 0% / 0.04);
-  --shadow-glow: 0 0 40px hsl(38 33% 74% / 0.12);
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(38 30% 97%) 100%);
+    --gradient-section: linear-gradient(180deg, hsl(0 0% 98%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(38 20% 98%) 100%);
+    --gradient-dark-section: linear-gradient(180deg, hsl(0 0% 7%) 0%, hsl(0 0% 12%) 100%);
+    --gradient-glow: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(38 33% 74% / 0.15), transparent);
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
+    --shadow-soft: 0 1px 3px hsl(0 0% 0% / 0.04), 0 4px 12px hsl(0 0% 0% / 0.03);
+    --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.06), 0 12px 40px hsl(0 0% 0% / 0.04);
+    --shadow-glow: 0 0 40px hsl(38 33% 74% / 0.12);
 
-  font-family: 'Inter', system-ui, sans-serif;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
+    font-family: 'Inter', system-ui, sans-serif;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
 
-.nextslot-theme {
-  color-scheme: light;
-}
+  .nextslot-theme {
+    color-scheme: light;
+  }
 
-.nextslot-theme .gradient-hero { background: var(--gradient-hero); }
-.nextslot-theme .gradient-section { background: var(--gradient-section); }
-.nextslot-theme .gradient-card { background: var(--gradient-card); }
-.nextslot-theme .gradient-dark { background: var(--gradient-dark-section); }
-.nextslot-theme .gradient-surface { background: var(--gradient-surface); }
-.nextslot-theme .shadow-soft { box-shadow: var(--shadow-soft); }
-.nextslot-theme .shadow-elevated { box-shadow: var(--shadow-elevated); }
-.nextslot-theme .shadow-glow { box-shadow: var(--shadow-glow); }
-.nextslot-theme .glow-overlay { position: relative; }
-.nextslot-theme .glow-overlay::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--gradient-glow);
-  pointer-events: none;
+  .nextslot-theme .gradient-hero { background: var(--gradient-hero); }
+  .nextslot-theme .gradient-section { background: var(--gradient-section); }
+  .nextslot-theme .gradient-card { background: var(--gradient-card); }
+  .nextslot-theme .gradient-dark { background: var(--gradient-dark-section); }
+  .nextslot-theme .gradient-surface { background: var(--gradient-surface); }
+  .nextslot-theme .shadow-soft { box-shadow: var(--shadow-soft); }
+  .nextslot-theme .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .nextslot-theme .shadow-glow { box-shadow: var(--shadow-glow); }
+  .nextslot-theme .glow-overlay { position: relative; }
+  .nextslot-theme .glow-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-glow);
+    pointer-events: none;
+  }
 }
