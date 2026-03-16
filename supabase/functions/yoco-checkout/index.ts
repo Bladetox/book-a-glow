@@ -58,8 +58,6 @@ Deno.serve(async (req) => {
     }
 
     // Resolve Yoco secret key per-tenant from tenants table.
-    // AdminIntegrations.handleYocoSave() writes to tenants.yoco_secret_key —
-    // that is the source of truth, not a global Deno env secret.
     const { data: tenantRow } = await supabase
       .from("tenants")
       .select("yoco_secret_key")
@@ -92,11 +90,18 @@ Deno.serve(async (req) => {
 
     let amountInCents: number;
     if (payment_type === "balance") {
-      // Use override amount (sent by admin as remaining balance in cents)
-      // Fall back to deriving from source-of-truth columns — never trust balance_due DEFAULT 0
-      amountInCents = overrideAmountCents
-        ? Math.round(overrideAmountCents)
-        : Math.round((Number(booking.total_amount) - Number(booking.deposit_amount)) * 100);
+      // FIX: prefer explicit override, then stored balance_due (source of truth),
+      // only fall back to total-deposit if balance_due is zero/null (legacy rows).
+      if (overrideAmountCents) {
+        amountInCents = Math.round(overrideAmountCents);
+      } else if (Number(booking.balance_due) > 0) {
+        amountInCents = Math.round(Number(booking.balance_due) * 100);
+      } else {
+        // Legacy fallback: balance_due not yet written by webhook
+        amountInCents = Math.round(
+          (Number(booking.total_amount) - Number(booking.deposit_amount)) * 100
+        );
+      }
     } else if (payment_type === "full") {
       // Client chose to pay the full amount upfront
       amountInCents = Math.round(Number(booking.total_amount) * 100);
