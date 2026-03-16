@@ -13,14 +13,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const yocoSecret  = Deno.env.get("YOCO_SECRET_KEY");
-
-    if (!yocoSecret) {
-      return new Response(
-        JSON.stringify({ error: "Yoco not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
@@ -62,6 +54,24 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Booking not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Resolve Yoco secret key per-tenant from tenants table.
+    // AdminIntegrations.handleYocoSave() writes to tenants.yoco_secret_key —
+    // that is the source of truth, not a global Deno env secret.
+    const { data: tenantRow } = await supabase
+      .from("tenants")
+      .select("yoco_secret_key")
+      .eq("id", booking.tenant_id)
+      .single();
+
+    const yocoSecret = tenantRow?.yoco_secret_key;
+
+    if (!yocoSecret) {
+      return new Response(
+        JSON.stringify({ error: "Yoco not configured for this tenant" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
