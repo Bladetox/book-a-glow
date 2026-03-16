@@ -5,6 +5,7 @@ import {
   Loader2, Edit2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import type { ReactNode, ElementType, Dispatch, SetStateAction } from "react";
 import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,7 +76,7 @@ const Field = ({
 // ─── IntegrationCard ──────────────────────────────────────────────────────────
 
 interface IntegrationCardProps {
-  icon: React.ElementType;
+  icon: ElementType;
   name: string;
   desc: string;
   configured: boolean;
@@ -83,8 +84,8 @@ interface IntegrationCardProps {
   editing: boolean;
   onEdit: () => void;
   onSave: () => void;
-  children: React.ReactNode;
-  statusBadge?: React.ReactNode;
+  children: ReactNode;
+  statusBadge?: ReactNode;
 }
 
 const IntegrationCard = ({
@@ -123,12 +124,12 @@ const IntegrationCard = ({
     {/* Fields */}
     <div className="flex flex-col gap-3">{children}</div>
 
-    {/* Extra status */}
+    {/* Optional status badge */}
     {statusBadge && (
       <div className="flex items-center gap-2">{statusBadge}</div>
     )}
 
-    {/* Footer actions */}
+    {/* Footer */}
     <div className="flex items-center justify-end gap-3 pt-1 border-t border-white/[0.04]">
       {configured && !editing && (
         <button
@@ -144,21 +145,20 @@ const IntegrationCard = ({
         className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all disabled:opacity-50"
       >
         {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-        {saving ? "Saving…" : "Save Configuration"}
+        {saving ? "Saving..." : "Save Configuration"}
       </button>
     </div>
   </motion.div>
 );
 
-// ─── Google Calendar card (OAuth flow, separate from generic card) ─────────────
+// ─── Google Calendar card ─────────────────────────────────────────────────────
 
-const GoogleCalendarCard = ({
-  connected,
-  tenantId,
-}: {
+interface GoogleCalendarCardProps {
   connected: boolean;
   tenantId: string;
-}) => {
+}
+
+const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
   const [isConnected, setIsConnected] = useState(connected);
 
   useEffect(() => {
@@ -191,7 +191,7 @@ const GoogleCalendarCard = ({
     const returnUrl   = `${window.location.origin}/admin?gcal=connected`;
     const state       = JSON.stringify({ tenantId, returnUrl });
 
-    const params = new URLSearchParams({
+    const oauthParams = new URLSearchParams({
       client_id:     clientId,
       redirect_uri:  redirectUri,
       response_type: "code",
@@ -201,7 +201,7 @@ const GoogleCalendarCard = ({
       state:         btoa(state),
     });
 
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${oauthParams}`;
   };
 
   return (
@@ -262,19 +262,17 @@ const GoogleCalendarCard = ({
   );
 };
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 
 const AdminIntegrations = () => {
   const { tenantId } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
-  // Drafts — keyed by app_settings key names
   const [yocoDraft, setYocoDraft] = useState<Record<string, string>>({});
   const [mapsDraft, setMapsDraft] = useState<Record<string, string>>({});
   const [smtpDraft, setSmtpDraft] = useState<Record<string, string>>({});
 
-  // Edit mode per section (locked after first save, unlocked via Edit button)
   const [yocoEditing, setYocoEditing] = useState(false);
   const [mapsEditing, setMapsEditing] = useState(false);
   const [smtpEditing, setSmtpEditing] = useState(false);
@@ -300,7 +298,7 @@ const AdminIntegrations = () => {
       smtp_from_email: settings.smtp_from_email ?? settings.smtp_user ?? settings.smtp_username ?? "",
     });
 
-    // Lock sections that are already configured
+    // Lock sections already configured
     if (settings.yoco_public_key || settings.yoco_secret_key) setYocoEditing(false);
     if (settings.google_maps_api_key)                         setMapsEditing(false);
     if (settings.smtp_user || settings.smtp_username)         setSmtpEditing(false);
@@ -308,16 +306,16 @@ const AdminIntegrations = () => {
   }, [isLoading]);
 
   const handleChange =
-    (setter: React.Dispatch<React.SetStateAction<Record<string, string>>>) =>
+    (setter: Dispatch<SetStateAction<Record<string, string>>>) =>
     (key: string, value: string) =>
       setter((prev) => ({ ...prev, [key]: value }));
 
-  // ── Yoco save ────────────────────────────────────────────────────────────────
+  // ── Yoco save ───────────────────────────────────────────────────────────────
   // Architecture:
-  //   1. Save public + secret keys to app_settings (UI reads from here)
-  //   2. Write secret key to tenants.yoco_secret_key (yoco-checkout reads from here)
-  //   3. DB trigger on app_settings automatically fires register-yoco-webhook
-  //      in the background — webhook registration requires no frontend involvement
+  //   1. Saves public + secret keys to app_settings (UI reads from here)
+  //   2. Writes secret key to tenants.yoco_secret_key (yoco-checkout reads here)
+  //   3. DB trigger on app_settings fires register-yoco-webhook automatically
+  //      in the background — webhook setup requires zero additional steps
   const handleYocoSave = async () => {
     const toSave = Object.fromEntries(
       Object.entries(yocoDraft).filter(([, v]) => v && v !== MASK)
@@ -333,8 +331,7 @@ const AdminIntegrations = () => {
       // Step 1 — persist to app_settings
       await upsert.mutateAsync(toSave);
 
-      // Step 2 — write secret key directly to tenants row so yoco-checkout
-      // can read it without needing app_settings (avoids RLS edge cases)
+      // Step 2 — write secret key to tenants row for yoco-checkout
       const { error: tenantErr } = await supabase
         .from("tenants")
         .update({ yoco_secret_key: toSave.yoco_secret_key })
@@ -343,15 +340,13 @@ const AdminIntegrations = () => {
       if (tenantErr) throw tenantErr;
 
       // Step 3 — DB trigger fires automatically in the background:
-      //   app_settings INSERT/UPDATE with key='yoco_secret_key'
-      //   → calls register-yoco-webhook edge function
-      //   → lists/deletes existing Yoco webhooks
-      //   → registers fresh webhook
-      //   → stores yoco_webhook_id + yoco_webhook_secret on tenants row
-      // No frontend action needed. This is intentionally fire-and-forget.
+      //   app_settings upsert with key='yoco_secret_key'
+      //   triggers register-yoco-webhook edge function
+      //   which registers webhook with Yoco and stores webhook_id + webhook_secret
+      //   No frontend action needed for webhook setup.
 
       await refetch();
-      toast.success("Yoco configuration saved. Webhook registration is processing in the background.");
+      toast.success("Yoco configuration saved. Webhook is being registered automatically.");
       setYocoEditing(false);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to save Yoco configuration.");
@@ -360,7 +355,7 @@ const AdminIntegrations = () => {
     }
   };
 
-  // ── Generic save (Maps, SMTP) ─────────────────────────────────────────────
+  // ── Generic save ────────────────────────────────────────────────────────────
   const handleGenericSave = async (
     section: string,
     draft: Record<string, string>,
@@ -385,11 +380,10 @@ const AdminIntegrations = () => {
     }
   };
 
-  // ── Derived state ─────────────────────────────────────────────────────────
-  const yocoConfigured   = isConfigured(settings, ["yoco_public_key", "yoco_secret_key"]);
-  const webhookActive    = !!settings.yoco_webhook_secret;
-  const mapsConfigured   = isConfigured(settings, ["google_maps_api_key"]);
-  const smtpConfigured   = isConfigured(settings, ["smtp_user", "smtp_username", "smtp_password"]);
+  const yocoConfigured = isConfigured(settings, ["yoco_public_key", "yoco_secret_key"]);
+  const webhookActive  = !!settings.yoco_webhook_secret;
+  const mapsConfigured = isConfigured(settings, ["google_maps_api_key"]);
+  const smtpConfigured = isConfigured(settings, ["smtp_user", "smtp_username", "smtp_password"]);
 
   if (isLoading) {
     return (
@@ -401,6 +395,7 @@ const AdminIntegrations = () => {
 
   return (
     <div className="flex flex-col gap-6">
+
       {/* Section header */}
       <div>
         <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">
@@ -427,33 +422,35 @@ const AdminIntegrations = () => {
           onEdit={() => setYocoEditing(true)}
           onSave={handleYocoSave}
           statusBadge={
-            yocoConfigured && !yocoEditing ? (
-              webhookActive ? (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-400/80">
-                  <CheckCircle2 className="w-3 h-3" /> Webhook active
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-[10px] text-amber-400/70">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Webhook registering…
-                </span>
-              )
-            ) : undefined
+            yocoConfigured && !yocoEditing
+              ? webhookActive
+                ? (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-400/80">
+                      <CheckCircle2 className="w-3 h-3" /> Webhook active
+                    </span>
+                  )
+                : (
+                    <span className="flex items-center gap-1 text-[10px] text-amber-400/70">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Webhook registering...
+                    </span>
+                  )
+              : undefined
           }
         >
           <Field
             label="Public Key"
             fieldKey="yoco_public_key"
-            placeholder="pk_live_… or pk_test_…"
+            placeholder="pk_live_... or pk_test_..."
             value={yocoDraft.yoco_public_key ?? ""}
             masked={yocoConfigured}
             editing={yocoEditing}
             onChange={handleChange(setYocoDraft)}
-            hint="Used by the Yoco JS SDK to initialise the payment form"
+            hint="From Yoco Business Portal: Selling Online > Payment Gateway"
           />
           <Field
             label="Secret Key"
             fieldKey="yoco_secret_key"
-            placeholder="sk_live_… or sk_test_…"
+            placeholder="sk_live_... or sk_test_..."
             type="password"
             value={yocoDraft.yoco_secret_key ?? ""}
             masked={yocoConfigured}
@@ -463,17 +460,8 @@ const AdminIntegrations = () => {
           />
           {(!yocoConfigured || yocoEditing) && (
             <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 text-[11px] text-white/35 leading-relaxed">
-              Get these from your{" "}
-              
-                href="https://dashboard.yoco.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white/55 underline hover:text-white/75"
-              >
-                Yoco Business Portal
-              </a>{" "}
-              under <span className="text-white/55">Selling Online → Payment Gateway</span>.
-              Save once — webhook registration happens automatically.
+              Save once — webhook registration happens automatically in the background.
+              No additional steps required.
             </div>
           )}
         </IntegrationCard>
@@ -487,14 +475,12 @@ const AdminIntegrations = () => {
           saving={savingSection === "maps"}
           editing={mapsEditing}
           onEdit={() => setMapsEditing(true)}
-          onSave={() =>
-            handleGenericSave("maps", mapsDraft, () => setMapsEditing(false))
-          }
+          onSave={() => handleGenericSave("maps", mapsDraft, () => setMapsEditing(false))}
         >
           <Field
             label="API Key"
             fieldKey="google_maps_api_key"
-            placeholder="AIzaSy…"
+            placeholder="AIzaSy..."
             type="password"
             value={mapsDraft.google_maps_api_key ?? ""}
             masked={mapsConfigured}
@@ -518,9 +504,7 @@ const AdminIntegrations = () => {
           saving={savingSection === "smtp"}
           editing={smtpEditing}
           onEdit={() => setSmtpEditing(true)}
-          onSave={() =>
-            handleGenericSave("smtp", smtpDraft, () => setSmtpEditing(false))
-          }
+          onSave={() => handleGenericSave("smtp", smtpDraft, () => setSmtpEditing(false))}
         >
           <div className="grid grid-cols-2 gap-3">
             <Field
