@@ -10,6 +10,7 @@ import { useBooking } from "@/hooks/useBooking";
 import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { useMonthAvailability } from "@/hooks/usePublicAvailability";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useCallback } from "react";
 
@@ -41,8 +42,20 @@ const stepVariants = {
   }),
 };
 
+// Tiny component whose only job is to warm the month-availability cache
+// while the user is still on the splash screen.
+const PrefetchAvailability = ({ durationMinutes }: { durationMinutes: number }) => {
+  const now = new Date();
+  // Prefetch current month and next month so navigating forward is instant
+  useMonthAvailability(now.getFullYear(), now.getMonth() + 1, durationMinutes);
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  useMonthAvailability(next.getFullYear(), next.getMonth() + 1, durationMinutes);
+  return null;
+};
+
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep, setStep } = useBooking();
+  // usePublicServices fires immediately — data is cached before user leaves splash
   const { data: treatments = [] } = usePublicServices();
   const { tenantId, loading: tenantLoading } = usePublicTenant();
   const config = usePublicBusinessConfig();
@@ -91,137 +104,158 @@ const Index = () => {
     );
   }
 
-  if (showSplash) {
-    return (
-      <SplashScreen
-        onComplete={handleSplashComplete}
-        referralSource={booking.referralSource}
-        onReferralChange={(source) => updateBooking({ referralSource: source })}
-      />
-    );
-  }
-
   const businessName = config.name || tenantId;
   const abbreviation = config.abbreviation || businessName.slice(0, 2).toUpperCase();
 
   const selectedServices = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
   const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
-  // Minimum 30 min so the slot query always has a valid range
   const durationForSlots = Math.max(totalDuration, 30);
 
   return (
-    <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-36">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-          className="text-center mb-6 relative"
-        >
-          <div className="absolute right-0 top-0">
-            <ThemeToggle />
-          </div>
+    <>
+      {/*
+        The booking UI is ALWAYS mounted (never conditionally removed).
+        This means usePublicServices and PrefetchAvailability fire their
+        React Query requests in the background while the user is still on
+        the splash screen. By the time they tap through, data is cached.
+      */}
+      <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-36">
+        {/* Warm month-availability cache immediately, invisibly */}
+        <PrefetchAvailability durationMinutes={durationForSlots} />
+
+        <div className="w-full max-w-md">
+          {/* Header */}
           <motion.div
-            whileTap={{ scale: 0.95 }}
-            className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center overflow-hidden"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            className="text-center mb-6 relative"
           >
-            {config.logoUrl ? (
-              <img src={config.logoUrl} alt={businessName} className="w-full h-full object-contain p-1" />
-            ) : (
-              <span className="font-display text-xl font-bold text-foreground">{abbreviation}</span>
-            )}
-          </motion.div>
-          <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
-            {config.tagline}
-          </p>
-          <h1 className="font-display text-2xl font-bold text-foreground mt-1">
-            {businessName}
-          </h1>
-          <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground mt-0.5">
-            {config.subtitle}
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-6"
-        >
-          <StepIndicator currentStep={step} />
-        </motion.div>
-
-        {/* overflow-x-clip: clips horizontal slide animation without hiding vertical content */}
-        <div
-          className="glass-card rounded-3xl p-5 mb-4"
-          style={{ overflowX: "clip" }}
-        >
-          <AnimatePresence mode="wait" custom={direction}>
+            <div className="absolute right-0 top-0">
+              <ThemeToggle />
+            </div>
             <motion.div
-              key={step}
-              custom={direction}
-              variants={stepVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
+              whileTap={{ scale: 0.95 }}
+              className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center overflow-hidden"
             >
-              {step === 0 && (
-                <ServicesStep
-                  selectedTreatments={booking.selectedTreatments}
-                  onToggle={toggleTreatment}
-                />
-              )}
-              {step === 1 && (
-                <ScheduleStep
-                  selectedDate={booking.selectedDate}
-                  selectedTime={booking.selectedTime}
-                  onSelectDate={(d) => updateBooking({ selectedDate: d })}
-                  onSelectTime={(t) => updateBooking({ selectedTime: t })}
-                  totalDuration={durationForSlots}
-                />
-              )}
-              {step === 2 && (
-                <DetailsStep booking={booking} onUpdate={updateBooking} />
-              )}
-              {step === 3 && (
-                <ReviewStep
-                  booking={booking}
-                  onUpdate={updateBooking}
-                  onGoToStep={(s) => { setDirection(-1); setStep(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                />
+              {config.logoUrl ? (
+                <img src={config.logoUrl} alt={businessName} className="w-full h-full object-contain p-1" />
+              ) : (
+                <span className="font-display text-xl font-bold text-foreground">{abbreviation}</span>
               )}
             </motion.div>
-          </AnimatePresence>
+            <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
+              {config.tagline}
+            </p>
+            <h1 className="font-display text-2xl font-bold text-foreground mt-1">
+              {businessName}
+            </h1>
+            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground mt-0.5">
+              {config.subtitle}
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6"
+          >
+            <StepIndicator currentStep={step} />
+          </motion.div>
+
+          <div
+            className="glass-card rounded-3xl p-5 mb-4"
+            style={{ overflowX: "clip" }}
+          >
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={step}
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
+                {step === 0 && (
+                  <ServicesStep
+                    selectedTreatments={booking.selectedTreatments}
+                    onToggle={toggleTreatment}
+                  />
+                )}
+                {step === 1 && (
+                  <ScheduleStep
+                    selectedDate={booking.selectedDate}
+                    selectedTime={booking.selectedTime}
+                    onSelectDate={(d) => updateBooking({ selectedDate: d })}
+                    onSelectTime={(t) => updateBooking({ selectedTime: t })}
+                    totalDuration={durationForSlots}
+                  />
+                )}
+                {step === 2 && (
+                  <DetailsStep booking={booking} onUpdate={updateBooking} />
+                )}
+                {step === 3 && (
+                  <ReviewStep
+                    booking={booking}
+                    onUpdate={updateBooking}
+                    onGoToStep={(s) => { setDirection(-1); setStep(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
+
+        {step < 3 && (
+          <StickyBottomBar
+            step={step}
+            totalPrice={totalPrice}
+            totalDuration={totalDuration}
+            selectedCount={booking.selectedTreatments.length}
+            canProceed={canProceed()}
+            onNext={handleNext}
+            onPrev={handlePrev}
+          />
+        )}
+
+        <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] mt-4 pb-4">
+          Powered by{" "}
+          <a
+            href="https://nextslot.co.za"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-muted-foreground transition-colors underline underline-offset-2"
+          >
+            nextslot.co.za
+          </a>
+        </p>
       </div>
 
-      {step < 3 && (
-        <StickyBottomBar
-          step={step}
-          totalPrice={totalPrice}
-          totalDuration={totalDuration}
-          selectedCount={booking.selectedTreatments.length}
-          canProceed={canProceed()}
-          onNext={handleNext}
-          onPrev={handlePrev}
-        />
-      )}
-
-      {/* Footer */}
-      <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] mt-4 pb-4">
-        Powered by{" "}
-        <a
-          href="https://nextslot.co.za"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-muted-foreground transition-colors underline underline-offset-2"
-        >
-          nextslot.co.za
-        </a>
-      </p>
-    </div>
+      {/*
+        Splash is an overlay rendered ON TOP of the booking UI.
+        AnimatePresence fades it out on dismiss; the booking UI underneath
+        has already been loading data the whole time.
+      */}
+      <AnimatePresence>
+        {showSplash && (
+          <motion.div
+            key="splash"
+            className="fixed inset-0 z-[100]"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <SplashScreen
+              onComplete={handleSplashComplete}
+              referralSource={booking.referralSource}
+              onReferralChange={(source) => updateBooking({ referralSource: source })}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
