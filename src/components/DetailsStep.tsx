@@ -1,299 +1,378 @@
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronUp, AlertCircle, MapPin } from "lucide-react";
 import { BookingState, safetyQuestions } from "@/data/bookingData";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
+
+const SUPABASE_URL = "https://kjibbbuceipnialfgflt.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE";
 
 interface DetailsStepProps {
   booking: BookingState;
   onUpdate: (updates: Partial<BookingState>) => void;
 }
 
-// Validation helpers
-const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-const isValidPhone = (v: string) => /^[\d\s\+\-\(\)]{7,15}$/.test(v.trim());
+const phoneCodes = [
+  { label: "ZA", code: "+27" },
+  { label: "US", code: "+1" },
+  { label: "UK", code: "+44" },
+  { label: "AU", code: "+61" },
+  { label: "NZ", code: "+64" },
+  { label: "DE", code: "+49" },
+  { label: "FR", code: "+33" },
+];
+
+const validators = {
+  fullName: (v: string) => v.trim().length >= 2,
+  phone: (v: string) => /^\d{7,15}$/.test(v.replace(/\s/g, "")),
+  email: (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+  address: (v: string) => v.trim().length >= 5,
+};
+
+interface PlaceSuggestion {
+  place_id: string;
+  description: string;
+}
 
 const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
+  const config = usePublicBusinessConfig();
+  const { tenantId } = usePublicTenant();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const justSelectedRef = useRef(false);
 
-  const markTouched = (field: string) =>
+  const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
+  }, []);
 
-  const toggleNote = (id: number) =>
-    setExpandedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
+  const getValidationClass = (field: keyof typeof validators, value: string) => {
+    if (!touched[field]) return "";
+    return validators[field](value) ? "valid" : "invalid";
+  };
 
-  // Destructure from booking using correct BookingState field names
-  const {
-    fullName,
-    email,
-    phone,
-    address,
-    isExistingClient,
-    existingClientNotes,
-    safetyAnswers,
-    additionalNotes,
-  } = booking;
+  const inputClass =
+    "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
-  // Validation states
-  const nameValid = fullName.trim().length >= 2;
-  const emailValid = isValidEmail(email);
-  const phoneValid = isValidPhone(phone);
+  const callPlacesFunction = async (body: object) => {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  };
 
-  const inputClass = (valid: boolean, isTouched: boolean) =>
-    `glass-input w-full rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none transition-all ${
-      isTouched ? (valid ? "valid" : "invalid") : ""
-    }`;
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const query = booking.address.trim();
+
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
+
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setAddressLoading(true);
+      try {
+        const data = await callPlacesFunction({ input: query, tenant_id: tenantId });
+        if (data?.predictions?.length > 0) {
+          setAddressSuggestions(data.predictions.slice(0, 5));
+          setShowSuggestions(true);
+        } else {
+          setAddressSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch {
+        setAddressSuggestions([]);
+      } finally {
+        setAddressLoading(false);
+      }
+    }, 350);
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [booking.address]);
+
+  const handleSelectSuggestion = async (description: string) => {
+    justSelectedRef.current = true;
+    onUpdate({ address: description, distanceKm: null });
+    setShowSuggestions(false);
+    setAddressSuggestions([]);
+    markTouched("address");
+    // Silently calculate distance in background for ReviewStep fee calc
+    const origin = config.address;
+    if (!origin) return;
+    try {
+      const data = await callPlacesFunction({ input: description, origin, tenant_id: tenantId });
+      if (data?.distanceKm != null) onUpdate({ distanceKm: data.distanceKm });
+    } catch { /* fallback to defaultDistanceKm in ReviewStep */ }
+  };
 
   return (
-    <div ref={scrollRef} className="px-4 pb-6 space-y-6">
+    <div className="flex flex-col gap-5">
+      <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
+        Your details
+      </h3>
 
-      {/* ── Personal Info ── */}
-      <div className="glass-card rounded-2xl p-5 space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-          Personal Info
-        </h3>
-
-        {/* Full Name */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Full Name <span className="text-destructive">*</span>
-          </label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => onUpdate({ fullName: e.target.value })}
-            onBlur={() => markTouched("fullName")}
-            placeholder="Jane Smith"
-            autoComplete="name"
-            className={inputClass(nameValid, !!touched.fullName)}
-          />
-          {touched.fullName && !nameValid && (
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> Please enter your full name
-            </p>
-          )}
-        </div>
-
-        {/* Email */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Email <span className="text-destructive">*</span>
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => onUpdate({ email: e.target.value })}
-            onBlur={() => markTouched("email")}
-            placeholder="jane@example.com"
-            autoComplete="email"
-            inputMode="email"
-            className={inputClass(emailValid, !!touched.email)}
-          />
-          {touched.email && !emailValid && (
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> Please enter a valid email
-            </p>
-          )}
-        </div>
-
-        {/* Phone */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Phone <span className="text-destructive">*</span>
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => onUpdate({ phone: e.target.value })}
-            onBlur={() => markTouched("phone")}
-            placeholder="+27 82 000 0000"
-            autoComplete="tel"
-            inputMode="tel"
-            className={inputClass(phoneValid, !!touched.phone)}
-          />
-          {touched.phone && !phoneValid && (
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> Please enter a valid phone number
-            </p>
-          )}
-        </div>
-
-        {/* Address */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <MapPin className="w-3 h-3" /> Address
-            <span className="text-muted-foreground/60 font-normal normal-case tracking-normal">
-               — Used to calculate your call-out fee
-            </span>
-          </label>
-          <input
-            type="text"
-            value={address}
-            onChange={(e) => onUpdate({ address: e.target.value })}
-            placeholder="123 Main Rd, Cape Town"
-            autoComplete="street-address"
-            className="glass-input w-full rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none"
-          />
-        </div>
-      </div>
-
-      {/* ── Returning Client ── */}
-      <div className="glass-card rounded-2xl p-5 space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-          Have you booked with us before?
-        </h3>
-        {isExistingClient === null && (
-          <p className="text-xs text-muted-foreground">Please select one to continue</p>
-        )}
+      {/* Existing / New client */}
+      <div>
+        <p className="text-sm text-foreground mb-3">Have you booked with us before?</p>
         <div className="flex gap-3">
-          {([true, false] as const).map((val) => (
-            <button
-              key={String(val)}
-              onClick={() => onUpdate({ isExistingClient: val })}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all ${
-                isExistingClient === val
-                  ? "border-primary/40 bg-primary/10 text-foreground"
-                  : "glass-card-service text-muted-foreground"
-              }`}
+          {[
+            { label: "Existing Diva", value: true, icon: Star },
+            { label: "New Diva", value: false, icon: Sparkles },
+          ].map((opt) => (
+            <motion.button
+              key={String(opt.value)}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onUpdate({ isExistingClient: opt.value })}
+              className={`flex-1 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2
+                ${booking.isExistingClient === opt.value
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                  : "glass-card-service text-foreground"
+                }`}
             >
-              {isExistingClient === val && (
-                <Check className="w-4 h-4 text-primary" />
-              )}
-              {val ? "Yes, I have" : "No, first time"}
-            </button>
+              <opt.icon className="w-4 h-4" />
+              {opt.label}
+            </motion.button>
           ))}
         </div>
-
-        {/* Changes note for returning clients */}
-        <AnimatePresence>
-          {isExistingClient === true && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden"
-            >
-              <div className="pt-2 space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Have there been any changes since your last appointment?
-                </p>
-                <textarea
-                  value={existingClientNotes}
-                  onChange={(e) => onUpdate({ existingClientNotes: e.target.value })}
-                  placeholder="e.g. new medication, skin sensitivity, recent procedure…"
-                  rows={3}
-                  className="glass-input w-full rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none resize-none"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {booking.isExistingClient === null && Object.keys(touched).length > 0 && (
+          <p className="text-[11px] text-destructive mt-2">Please select one to continue</p>
+        )}
       </div>
 
-      {/* ── Safety Consultation ── */}
-      <div className="glass-card rounded-2xl p-5 space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Health &amp; Safety Consultation
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Answer all questions honestly. Your information is strictly confidential.
-          </p>
+      {/* Existing client follow-up */}
+      <AnimatePresence>
+        {booking.isExistingClient === true && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="glass-card-service rounded-2xl p-4 flex flex-col gap-2">
+              <p className="text-sm text-foreground">Have there been any changes since your last appointment?</p>
+              <textarea
+                className={`${inputClass} min-h-[70px]`}
+                placeholder="e.g. skin sensitivity changes, new medications, preferences…"
+                value={booking.existingClientNotes}
+                onChange={(e) => onUpdate({ existingClientNotes: e.target.value })}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* New client consultation form */}
+      <AnimatePresence>
+        {booking.isExistingClient === false && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+            className="glass-card-service rounded-2xl p-4 flex flex-col gap-4 overflow-hidden"
+          >
+            <div>
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4" />
+                New Client Safety Check
+              </h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                Answer all questions honestly. Your information is strictly confidential.
+              </p>
+            </div>
+            {safetyQuestions.map((q, i) => (
+              <motion.div
+                key={q.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex flex-col gap-2"
+              >
+                <div>
+                  <p className="text-sm text-foreground">{q.id}. {q.question}</p>
+                  {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
+                </div>
+                <div className="flex gap-2">
+                  {[
+                    { label: "No", value: false },
+                    { label: "Yes", value: true },
+                  ].map((opt) => (
+                    <motion.button
+                      key={String(opt.value)}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() =>
+                        onUpdate({ safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value } })
+                      }
+                      className={`px-5 py-1.5 rounded-xl text-xs font-medium transition-all duration-200
+                        ${booking.safetyAnswers[q.id] === opt.value
+                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                          : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                      {opt.label}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+            <textarea
+              className={`${inputClass} min-h-[60px]`}
+              placeholder="Anything else we should know? (optional)"
+              value={booking.additionalNotes}
+              onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Form fields */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col gap-3"
+      >
+        <div className="relative">
+          <User className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+          <input
+            className={`${inputClass} pl-10 ${getValidationClass("fullName", booking.fullName)}`}
+            placeholder="Full Name *"
+            value={booking.fullName}
+            onChange={(e) => onUpdate({ fullName: e.target.value })}
+            onBlur={() => markTouched("fullName")}
+          />
         </div>
 
-        {safetyQuestions.map((q) => (
-          <div key={q.id} className="space-y-2">
-            <div className="flex items-start gap-2">
-              <span className="text-xs font-semibold text-muted-foreground mt-0.5 shrink-0">
-                {q.id}.
-              </span>
-              <div className="flex-1">
-                <p className="text-sm text-foreground leading-snug">{q.question}</p>
-                {q.detail && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{q.detail}</p>
-                )}
-              </div>
-            </div>
+        <div className="relative">
+          <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+          <select
+            className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10 [&>option]:bg-background [&>option]:text-foreground"
+            value={booking.phoneCode}
+            onChange={(e) => onUpdate({ phoneCode: e.target.value })}
+          >
+            {phoneCodes.map((pc) => (
+              <option key={pc.code} value={pc.code}>
+                {pc.label} {pc.code}
+              </option>
+            ))}
+          </select>
+          <input
+            className={`${inputClass} pl-[7.5rem] ${getValidationClass("phone", booking.phone)}`}
+            placeholder="e.g. 82 123 4567 *"
+            type="tel"
+            inputMode="tel"
+            value={booking.phone}
+            onChange={(e) => onUpdate({ phone: e.target.value })}
+            onBlur={() => markTouched("phone")}
+          />
+        </div>
 
-            {/* Yes / No — stored as boolean in safetyAnswers */}
-            <div className="flex gap-2 ml-5">
-              {([true, false] as const).map((ans) => (
-                <button
-                  key={String(ans)}
-                  onClick={() =>
-                    onUpdate({
-                      safetyAnswers: { ...safetyAnswers, [q.id]: ans },
-                    })
-                  }
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-sm font-medium transition-all ${
-                    safetyAnswers[q.id] === ans
-                      ? ans === true
-                        ? "border-destructive/40 bg-destructive/10 text-destructive"
-                        : "border-primary/40 bg-primary/10 text-foreground"
-                      : "glass-card-service text-muted-foreground"
-                  }`}
-                >
-                  {safetyAnswers[q.id] === ans && (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                  {ans ? "Yes" : "No"}
-                </button>
-              ))}
-            </div>
+        <div className="relative">
+          <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+          <input
+            className={`${inputClass} pl-10 ${getValidationClass("email", booking.email)}`}
+            type="email"
+            placeholder="Email Address *"
+            value={booking.email}
+            onChange={(e) => onUpdate({ email: e.target.value })}
+            onBlur={() => markTouched("email")}
+          />
+        </div>
 
-            {/* Additional notes if "Yes" answered */}
-            <AnimatePresence>
-              {safetyAnswers[q.id] === true && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.22 }}
-                  className="overflow-hidden ml-5"
-                >
-                  <div className="pt-1 space-y-1">
-                    <button
-                      onClick={() => toggleNote(q.id)}
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {expandedNotes[q.id] ? (
-                        <ChevronUp className="w-3 h-3" />
-                      ) : (
-                        <ChevronDown className="w-3 h-3" />
-                      )}
-                      {expandedNotes[q.id] ? "Hide details" : "Add details (optional)"}
-                    </button>
-                    <AnimatePresence>
-                      {expandedNotes[q.id] && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <textarea
-                            value={additionalNotes}
-                            onChange={(e) =>
-                              onUpdate({ additionalNotes: e.target.value })
-                            }
-                            placeholder="Please provide details…"
-                            rows={2}
-                            className="glass-input w-full rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none mt-1"
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+        {/*
+          Address field.
+          Suggestions render INLINE (not absolutely positioned) so the parent card
+          grows naturally. This bypasses the overflowX:clip stacking context in Book.tsx
+          that was clipping the overlay dropdown entirely.
+        */}
+        <div>
+          <div className="relative">
+            <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
+            {addressLoading && (
+              <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+            )}
+            <input
+              className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
+              placeholder="Home Address *"
+              value={booking.address}
+              onChange={(e) => {
+                onUpdate({ address: e.target.value, distanceKm: null });
+                if (e.target.value.length < 3) setShowSuggestions(false);
+              }}
+              onBlur={() => {
+                markTouched("address");
+                // Delay gives onMouseDown / onTouchEnd on suggestions time to fire first
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              onFocus={() => {
+                if (addressSuggestions.length > 0) setShowSuggestions(true);
+              }}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
           </div>
-        ))}
-      </div>
 
+          {/* Inline suggestion list — animates open/closed, card grows to fit */}
+          <AnimatePresence>
+            {showSuggestions && addressSuggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="mt-1 rounded-2xl overflow-hidden border border-border/40 bg-background/80 backdrop-blur-sm shadow-sm">
+                  {addressSuggestions.map((s, idx) => (
+                    <button
+                      key={s.place_id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        // preventDefault stops onBlur firing before this click resolves
+                        e.preventDefault();
+                        handleSelectSuggestion(s.description);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleSelectSuggestion(s.description);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
+                        ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      <span>{s.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!showSuggestions && (
+            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
+              Used to calculate your call-out fee
+            </p>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
