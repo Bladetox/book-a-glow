@@ -42,20 +42,25 @@ const stepVariants = {
   }),
 };
 
-// Tiny component whose only job is to warm the month-availability cache
-// while the user is still on the splash screen.
 const PrefetchAvailability = ({ durationMinutes }: { durationMinutes: number }) => {
   const now = new Date();
-  // Prefetch current month and next month so navigating forward is instant
   useMonthAvailability(now.getFullYear(), now.getMonth() + 1, durationMinutes);
   const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   useMonthAvailability(next.getFullYear(), next.getMonth() + 1, durationMinutes);
   return null;
 };
 
+/** Scroll to top instantly BEFORE a step transition so the incoming step
+ *  always paints at y=0. Using 'instant' avoids a smooth-scroll racing
+ *  against the Framer Motion spring animation on mobile. */
+const resetScroll = () => {
+  // Covers both document scroll and any potential scrollable parent
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+};
+
 const Index = () => {
   const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep, setStep } = useBooking();
-  // usePublicServices fires immediately — data is cached before user leaves splash
   const { data: treatments = [] } = usePublicServices();
   const { tenantId, loading: tenantLoading } = usePublicTenant();
   const config = usePublicBusinessConfig();
@@ -80,16 +85,16 @@ const Index = () => {
 
   const handleNext = useCallback(() => {
     if (!canProceed()) return;
+    resetScroll();          // instant — before React re-renders
     setDirection(1);
     nextStep();
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [canProceed, nextStep]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
+    resetScroll();          // instant — before React re-renders
     setDirection(-1);
     prevStep();
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step, prevStep]);
 
   const handleSplashComplete = useCallback(() => {
@@ -114,14 +119,7 @@ const Index = () => {
 
   return (
     <>
-      {/*
-        The booking UI is ALWAYS mounted (never conditionally removed).
-        This means usePublicServices and PrefetchAvailability fire their
-        React Query requests in the background while the user is still on
-        the splash screen. By the time they tap through, data is cached.
-      */}
       <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-36">
-        {/* Warm month-availability cache immediately, invisibly */}
         <PrefetchAvailability durationMinutes={durationForSlots} />
 
         <div className="w-full max-w-md">
@@ -200,7 +198,11 @@ const Index = () => {
                   <ReviewStep
                     booking={booking}
                     onUpdate={updateBooking}
-                    onGoToStep={(s) => { setDirection(-1); setStep(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    onGoToStep={(s) => {
+                      resetScroll();
+                      setDirection(-1);
+                      setStep(s);
+                    }}
                   />
                 )}
               </motion.div>
@@ -233,11 +235,6 @@ const Index = () => {
         </p>
       </div>
 
-      {/*
-        Splash is an overlay rendered ON TOP of the booking UI.
-        AnimatePresence fades it out on dismiss; the booking UI underneath
-        has already been loading data the whole time.
-      */}
       <AnimatePresence>
         {showSplash && (
           <motion.div
