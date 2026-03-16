@@ -6,16 +6,28 @@ export interface AvailabilitySlot {
   id: string;
   staff_id: string;
   day_of_week: number;
+  day_enabled: boolean;
   slot_start_time: string;
   slot_end_time: string;
   is_available: boolean;
-  day_enabled: boolean;
+  requires_travel_buffer: boolean;
+  buffer_minutes: number;
   specific_date: string | null;
   override_reason: string | null;
   tenant_id: string;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 export function useStaffAvailability(staffId: string | undefined) {
   const { tenantId } = useTenant();
@@ -26,25 +38,37 @@ export function useStaffAvailability(staffId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_availability")
-        .select("*")
+        .select(
+          "id, staff_id, day_of_week, day_enabled, " +
+          "slot_start_time, slot_end_time, is_available, " +
+          "requires_travel_buffer, buffer_minutes, " +
+          "specific_date, override_reason, " +
+          "tenant_id, created_at, updated_at"
+        )
         .eq("tenant_id", tenantId)
         .eq("staff_id", staffId!)
         .order("day_of_week")
         .order("slot_start_time");
       if (error) throw error;
-      return data as AvailabilitySlot[];
+      return (data ?? []) as AvailabilitySlot[];
     },
   });
 }
 
-export type WeekAvailability = Record<string, { enabled: boolean; slots: string[] }>;
+export type WeekAvailability = Record<
+  string,
+  { enabled: boolean; slots: string[] }
+>;
 
 /** Transform DB rows into the WeekAvailability shape the UI expects */
 export function toWeekAvailability(rows: AvailabilitySlot[]): WeekAvailability {
   const week: WeekAvailability = {};
   DAY_NAMES.forEach((name, i) => {
-    const daySlots = rows.filter((r) => r.day_of_week === i && !r.specific_date);
-    const enabled = daySlots.length > 0 ? daySlots[0].day_enabled ?? true : false;
+    const daySlots = rows.filter(
+      (r) => r.day_of_week === i && !r.specific_date
+    );
+    const enabled =
+      daySlots.length > 0 ? daySlots[0].day_enabled ?? true : false;
     const slots = daySlots
       .filter((s) => s.is_available)
       .map((s) => s.slot_start_time.slice(0, 5))
@@ -72,7 +96,7 @@ export function useSaveAvailability() {
       slots: string[];
       allSlots: string[];
     }) => {
-      // Delete existing weekly slots for this day
+      // Delete existing weekly slots for this day (tenant-guarded)
       const { error: delErr } = await supabase
         .from("staff_availability")
         .delete()
@@ -89,7 +113,6 @@ export function useSaveAvailability() {
         const endMin = startMin + 30;
         const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
         const endM = String(endMin % 60).padStart(2, "0");
-
         return {
           staff_id: staffId,
           tenant_id: tenantId,
@@ -102,7 +125,9 @@ export function useSaveAvailability() {
       });
 
       if (rows.length > 0) {
-        const { error: insErr } = await supabase.from("staff_availability").insert(rows);
+        const { error: insErr } = await supabase
+          .from("staff_availability")
+          .insert(rows);
         if (insErr) throw insErr;
       }
     },
