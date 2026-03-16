@@ -156,7 +156,7 @@ const Index = () => {
         {/* overflow-x-clip: clips horizontal slide animation without hiding vertical content */}
         <div
           className="glass-card rounded-3xl p-5 mb-4"
-          style={{ overflowX: "clip", maxHeight: "calc(100dvh - 220px)", overflowY: "auto" }}
+          style={{ overflowX: "clip" }}
         >
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div

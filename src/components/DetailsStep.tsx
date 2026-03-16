@@ -69,7 +69,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         } catch {
           // ignore
         }
-      }, 50);
+      }, 200);
     },
     []
   );

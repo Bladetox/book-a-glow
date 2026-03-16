@@ -35,7 +35,13 @@ const StickyBottomBar = ({
    *
    * The smooth transition is defined on .sticky-bottom-bar in index.css.
    */
-  useViewportFix();
+  const { keyboardOpen } = useViewportFix();
+
+  // On Step 3 (details), hide the sticky bar while the keyboard is open so it
+  // never floats in the middle of the screen over form fields.
+  if (keyboardOpen && step === 2) {
+    return null;
+  }
 
   return (
     <div
