@@ -53,8 +53,11 @@ function mapBooking(b: any): BookingRow {
   const clientEmail =
     b.client_email || b.guest_email || b.client?.email || "";
 
-  // Use stored balance_due — do NOT recompute from total - deposit
-  const balance = Number(b.balance_due ?? 0);
+  // Prefer stored balance_due (written by webhook on payment).
+  // Fall back to total - deposit for legacy rows where balance_due is null.
+  const balance = b.balance_due != null
+    ? Number(b.balance_due)
+    : Math.max(Number(b.total_amount ?? 0) - Number(b.deposit_amount ?? 0), 0);
 
   // Ref: use 8 chars for lower collision probability
   const ref = `PB-${(b.id as string).slice(0, 8).toUpperCase()}`;
