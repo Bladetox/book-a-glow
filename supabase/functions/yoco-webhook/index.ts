@@ -98,7 +98,8 @@ async function createCalendarEvent(
     const address     = booking.is_call_out ? (booking.call_out_address ?? "") : "";
     const tot         = Number(booking.total_amount   ?? 0);
     const dep         = Number(booking.deposit_amount ?? 0);
-    const bal         = Math.max(0, tot - dep).toFixed(2);
+    // FIX: use stored balance_due — not recomputed from total - deposit
+    const bal         = Number(booking.balance_due ?? Math.max(0, tot - dep)).toFixed(2);
 
     const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
     const addressLink = address     ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}">${address}</a>` : "";
@@ -167,9 +168,6 @@ Deno.serve(async (req) => {
     console.log("Yoco webhook received:", type);
     console.log("Payload metadata:", JSON.stringify(payload?.metadata));
 
-    // ── Resolve tenant_id from booking — Yoco does NOT echo back metadata ──
-    // We must look up the booking by checkoutId or booking_id first,
-    // then use the booking's tenant_id for signature verification.
     const checkoutId      = payload?.id ?? payload?.checkoutId ?? payload?.metadata?.checkoutId;
     const metaBookingId   = payload?.metadata?.booking_id;
     const metaPaymentType = payload?.metadata?.payment_type ?? "deposit";
@@ -202,7 +200,6 @@ Deno.serve(async (req) => {
 
     console.log("Resolved tenant_id:", tenantId);
 
-    // ── Signature verification (optional per-tenant) ──────────────────────
     const signatureHeader = req.headers.get("X-Yoco-Signature");
     if (signatureHeader) {
       const { data: tenant, error: tenantErr } = await supabase
@@ -323,7 +320,7 @@ Deno.serve(async (req) => {
         completed_at:   new Date().toISOString(),
       });
 
-      createCalendarEvent(supabase, effectiveTenantId, booking)
+      createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: 0 })
         .catch((e) => console.error("gcal background error:", e));
 
       try {
@@ -363,6 +360,9 @@ Deno.serve(async (req) => {
         );
       }
 
+      // FIX: use stored balance_due as source of truth — not recomputed
+      const balanceAmount = Number(booking.balance_due ?? 0);
+
       const { error: updateErr } = await supabase
         .from("bookings")
         .update({
@@ -380,11 +380,6 @@ Deno.serve(async (req) => {
           status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      const balanceAmount = Math.max(
-        0,
-        Number(booking.total_amount) - Number(booking.deposit_amount)
-      );
 
       await supabase.from("payments").insert({
         booking_id:     booking.id,
@@ -409,10 +404,16 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════════════
     // DEPOSIT PAYMENT — standard flow
     // ══════════════════════════════════════════════════════════════════════
+    const depositAmount  = Number(booking.deposit_amount ?? 0);
+    const totalAmount    = Number(booking.total_amount   ?? 0);
+    // FIX: set balance_due to what remains after deposit is paid
+    const remainingBalance = Math.max(0, totalAmount - depositAmount);
+
     const { data: updatedRows, error: updateErr } = await supabase
       .from("bookings")
       .update({
         deposit_paid: true,
+        balance_due:  remainingBalance,
         status:       "confirmed",
         confirmed_at: new Date().toISOString(),
       })
@@ -439,7 +440,7 @@ Deno.serve(async (req) => {
       booking_id:     booking.id,
       client_id:      booking.client_id,
       tenant_id:      effectiveTenantId,
-      amount:         Number(booking.deposit_amount),
+      amount:         depositAmount,
       payment_type:   "deposit",
       payment_method: "card",
       gateway:        "yoco",
@@ -448,7 +449,8 @@ Deno.serve(async (req) => {
       completed_at:   new Date().toISOString(),
     });
 
-    createCalendarEvent(supabase, effectiveTenantId, booking)
+    // Pass updated balance_due into GCal description
+    createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: remainingBalance })
       .catch((e) => console.error("gcal background error:", e));
 
     try {
