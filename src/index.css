@@ -49,6 +49,10 @@
     --sidebar-accent-foreground: 0 0% 25%;
     --sidebar-border: 0 0% 85%;
     --sidebar-ring: 0 0% 9%;
+
+    /* ── Keyboard / viewport CSS vars (set by useViewportFix.ts on iOS) ── */
+    --keyboard-height: 0px;
+    --visual-viewport-height: 100dvh;
   }
 
   .dark {
@@ -103,10 +107,33 @@
     -webkit-touch-callout: none;
   }
 
+  /*
+  FOCUS STYLES
+  ─────────────────────────────────────────────────────────────────────────
+  Native apps show no focus ring on tap — only keyboard navigation gets one.
+  :focus-visible is the correct modern approach. This replaces the old
+  "outline: none on everything" anti-pattern that breaks accessibility.
+  */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
+    /*
+    scroll-padding-bottom: keeps focused inputs visible above the sticky
+    bottom bar when the browser auto-scrolls to a focused field.
+    Without this the input snaps under the bar and the user can't see it.
+    110px = bar height (~72px) + safe-area buffer (~38px).
+    */
+    scroll-padding-bottom: 110px;
   }
 
   body {
@@ -130,6 +157,27 @@
     padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+  }
+
+  /*
+  INPUT FONT SIZE FLOOR — prevents iOS Safari auto-zoom
+  ─────────────────────────────────────────────────────────────────────────
+  iOS Safari zooms the entire viewport when a focused input's font-size
+  is below 16px. Tailwind's text-sm = 14px — every input tap zooms the page.
+  This is the primary "screen resizes" complaint from clients.
+
+  We set a floor of 16px using max() so inputs are never below 16px
+  regardless of whatever Tailwind class is applied.
+  The visual design is preserved — only the computed size is clamped.
+  */
+  input,
+  select,
+  textarea,
+  [contenteditable] {
+    font-size: max(16px, 1em);
+    /* Remove iOS default inner shadow / rounded appearance */
+    -webkit-appearance: none;
+    appearance: none;
   }
 }
 
@@ -297,6 +345,13 @@ html:not(.dark) .tenant-logo-img {
       0 1px 0 hsl(var(--glass-highlight) / 0.08) inset,
       0 0 0 0.5px hsl(var(--glass-highlight) / 0.04) inset;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /*
+    Explicit font-size on .glass-input as a second line of defence.
+    The @layer base rule above catches all inputs globally, but this
+    ensures the class itself also enforces the 16px floor in case of
+    specificity edge cases with Tailwind utilities.
+    */
+    font-size: max(16px, 0.875rem); /* 0.875rem = text-sm, floored at 16px */
   }
 
   .glass-input:focus,
@@ -521,6 +576,13 @@ html:not(.dark) .tenant-logo-img {
     padding-bottom: env(safe-area-inset-bottom);
     background: hsl(var(--background));
     border-top: 1px solid hsl(var(--border) / 0.5);
+    /*
+    iOS keyboard fix: on Android, interactive-widget=resizes-content moves
+    the bar up automatically. On iOS, useViewportFix.ts sets --keyboard-height
+    and StickyBottomBar.tsx applies translateY(-var(--keyboard-height)) via
+    inline style. The transition here makes the lift smooth.
+    */
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Hide scrollbar utility */

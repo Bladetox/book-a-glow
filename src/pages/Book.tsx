@@ -54,7 +54,6 @@ const PrefetchAvailability = ({ durationMinutes }: { durationMinutes: number }) 
  *  always paints at y=0. Using 'instant' avoids a smooth-scroll racing
  *  against the Framer Motion spring animation on mobile. */
 const resetScroll = () => {
-  // Covers both document scroll and any potential scrollable parent
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
 };
@@ -85,14 +84,14 @@ const Index = () => {
 
   const handleNext = useCallback(() => {
     if (!canProceed()) return;
-    resetScroll();          // instant — before React re-renders
+    resetScroll();
     setDirection(1);
     nextStep();
   }, [canProceed, nextStep]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
-    resetScroll();          // instant — before React re-renders
+    resetScroll();
     setDirection(-1);
     prevStep();
   }, [step, prevStep]);
@@ -119,7 +118,7 @@ const Index = () => {
 
   return (
     <>
-      <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-36">
+      <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-32">
         <PrefetchAvailability durationMinutes={durationForSlots} />
 
         <div className="w-full max-w-md">

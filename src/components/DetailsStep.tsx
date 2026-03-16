@@ -45,6 +45,30 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
 
+  // Ref attached to whichever conditional section is visible.
+  // We scroll it into view ONCE when it first mounts — not on every field focus.
+  const conditionalSectionRef = useRef<HTMLDivElement | null>(null);
+  const prevClientType = useRef<boolean | null>(booking.isExistingClient);
+
+  useEffect(() => {
+    // Only act when the client type actually changed
+    if (booking.isExistingClient === prevClientType.current) return;
+    prevClientType.current = booking.isExistingClient;
+    if (booking.isExistingClient === null) return;
+
+    // Wait for the height animation (350ms) to finish, then scroll the
+    // newly-revealed section into view — but ONLY if it's actually off-screen.
+    // block:"nearest" is key: it does nothing if already visible.
+    const t = setTimeout(() => {
+      conditionalSectionRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    }, 360);
+
+    return () => clearTimeout(t);
+  }, [booking.isExistingClient]);
+
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
@@ -56,23 +80,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
-
-  const scrollFieldIntoView = useCallback(
-    (el: HTMLElement | null) => {
-      if (!el) return;
-      setTimeout(() => {
-        try {
-          el.scrollIntoView({
-            block: "center",
-            behavior: "smooth",
-          });
-        } catch {
-          // ignore
-        }
-      }, 200);
-    },
-    []
-  );
 
   const callPlacesFunction = async (body: object) => {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
@@ -129,7 +136,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     setShowSuggestions(false);
     setAddressSuggestions([]);
     markTouched("address");
-    // Silently calculate distance in background for ReviewStep fee calc
     const origin = config.address;
     if (!origin) return;
     try {
@@ -176,6 +182,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       <AnimatePresence>
         {booking.isExistingClient === true && (
           <motion.div
+            ref={conditionalSectionRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -189,7 +196,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 placeholder="e.g. skin sensitivity changes, new medications, preferences…"
                 value={booking.existingClientNotes}
                 onChange={(e) => onUpdate({ existingClientNotes: e.target.value })}
-                onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
               />
             </div>
           </motion.div>
@@ -200,6 +206,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       <AnimatePresence>
         {booking.isExistingClient === false && (
           <motion.div
+            ref={conditionalSectionRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -255,7 +262,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               placeholder="Anything else we should know? (optional)"
               value={booking.additionalNotes}
               onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
-              onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
             />
           </motion.div>
         )}
@@ -276,7 +282,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             value={booking.fullName}
             onChange={(e) => onUpdate({ fullName: e.target.value })}
             onBlur={() => markTouched("fullName")}
-            onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
           />
         </div>
 
@@ -301,7 +306,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             value={booking.phone}
             onChange={(e) => onUpdate({ phone: e.target.value })}
             onBlur={() => markTouched("phone")}
-            onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
           />
         </div>
 
@@ -314,16 +318,9 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             value={booking.email}
             onChange={(e) => onUpdate({ email: e.target.value })}
             onBlur={() => markTouched("email")}
-            onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
           />
         </div>
 
-        {/*
-          Address field.
-          Suggestions render INLINE (not absolutely positioned) so the parent card
-          grows naturally. This bypasses the overflowX:clip stacking context in Book.tsx
-          that was clipping the overlay dropdown entirely.
-        */}
         <div>
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
@@ -340,11 +337,9 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               }}
               onBlur={() => {
                 markTouched("address");
-                // Delay gives onMouseDown / onTouchEnd on suggestions time to fire first
                 setTimeout(() => setShowSuggestions(false), 200);
               }}
-              onFocus={(e) => {
-                scrollFieldIntoView(e.currentTarget);
+              onFocus={() => {
                 if (addressSuggestions.length > 0) setShowSuggestions(true);
               }}
               autoComplete="off"
@@ -353,7 +348,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             />
           </div>
 
-          {/* Inline suggestion list — animates open/closed, card grows to fit */}
           <AnimatePresence>
             {showSuggestions && addressSuggestions.length > 0 && (
               <motion.div
@@ -369,7 +363,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                       key={s.place_id}
                       type="button"
                       onMouseDown={(e) => {
-                        // preventDefault stops onBlur firing before this click resolves
                         e.preventDefault();
                         handleSelectSuggestion(s.description);
                       }}
