@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useViewportFix } from "@/hooks/useViewportFix";
 
 interface StickyBottomBarProps {
   step: number;
@@ -19,64 +20,68 @@ const StickyBottomBar = ({
   onNext,
   onPrev,
 }: StickyBottomBarProps) => {
+  /*
+   * iOS keyboard fix
+   * ────────────────────────────────────────────────────────────────────────────
+   * On Android, interactive-widget=resizes-content in index.html makes the
+   * layout viewport shrink when the keyboard opens. position:fixed elements
+   * move up automatically — no JS needed.
+   *
+   * On iOS, the layout viewport never shrinks. This bar stays stuck at the
+   * original screen bottom, now hidden behind the keyboard. useViewportFix
+   * sets --keyboard-height on :root via the VisualViewport API. We read it
+   * here and translateY the bar upward by exactly that amount, so it sits
+   * flush above the keyboard — matching Android's automatic behaviour.
+   *
+   * The smooth transition is defined on .sticky-bottom-bar in index.css.
+   */
+  useViewportFix();
+
   return (
-    <motion.div
-      initial={{ y: 100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.3 }}
+    <div
       className="sticky-bottom-bar"
+      style={{
+        transform: `translateY(calc(-1 * var(--keyboard-height, 0px)))`,
+      }}
     >
-      <div className="max-w-md mx-auto px-4 pt-4 pb-4">
-        {/* Summary pill */}
+      {/* Summary pill */}
+      <div className="px-4 pt-3 pb-1">
         <AnimatePresence>
           {step === 0 && selectedCount > 0 && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              key="summary"
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="glass-card-service rounded-2xl px-4 py-3 mb-3 flex items-center justify-between"
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center justify-between text-xs text-muted-foreground mb-2 px-1"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {selectedCount} treatment{selectedCount !== 1 ? "s" : ""}
-                </span>
-                <span className="text-[10px] text-muted-foreground/50">•</span>
-                <span className="text-xs text-muted-foreground">{totalDuration} min</span>
-              </div>
-              <motion.span
-                key={totalPrice}
-                initial={{ scale: 1.2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="font-display text-lg font-bold text-foreground"
-              >
-                R{totalPrice}
-              </motion.span>
+              <span>
+                {selectedCount} treatment{selectedCount !== 1 ? "s" : ""}
+              </span>
+              <span>{totalDuration} min</span>
+              <span className="font-semibold text-foreground">R{totalPrice}</span>
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Buttons */}
-        <div className="flex gap-3">
-          {step > 0 && (
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={onPrev}
-              className="btn-back flex-1"
-            >
-              Back
-            </motion.button>
-          )}
-          <motion.button
-            whileTap={{ scale: canProceed ? 0.96 : 1 }}
-            onClick={onNext}
-            disabled={!canProceed}
-            className="btn-next flex-1"
-          >
-            {step === 2 ? "Review" : "Next"}
-          </motion.button>
-        </div>
       </div>
-    </motion.div>
+
+      {/* Buttons */}
+      <div className="px-4 pb-4 flex gap-3">
+        {step > 0 && (
+          <button className="btn-back flex-1" onClick={onPrev}>
+            Back
+          </button>
+        )}
+        <button
+          className="btn-next flex-1"
+          onClick={onNext}
+          disabled={!canProceed}
+        >
+          {step === 2 ? "Review" : "Next"}
+        </button>
+      </div>
+    </div>
   );
 };
 
