@@ -57,6 +57,23 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
+  const scrollFieldIntoView = useCallback(
+    (el: HTMLElement | null) => {
+      if (!el) return;
+      setTimeout(() => {
+        try {
+          el.scrollIntoView({
+            block: "center",
+            behavior: "smooth",
+          });
+        } catch {
+          // ignore
+        }
+      }, 50);
+    },
+    []
+  );
+
   const callPlacesFunction = async (body: object) => {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
       method: "POST",
@@ -172,6 +189,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 placeholder="e.g. skin sensitivity changes, new medications, preferences…"
                 value={booking.existingClientNotes}
                 onChange={(e) => onUpdate({ existingClientNotes: e.target.value })}
+                onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
               />
             </div>
           </motion.div>
@@ -237,6 +255,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               placeholder="Anything else we should know? (optional)"
               value={booking.additionalNotes}
               onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
+              onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
             />
           </motion.div>
         )}
@@ -257,6 +276,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             value={booking.fullName}
             onChange={(e) => onUpdate({ fullName: e.target.value })}
             onBlur={() => markTouched("fullName")}
+            onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
           />
         </div>
 
@@ -281,6 +301,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             value={booking.phone}
             onChange={(e) => onUpdate({ phone: e.target.value })}
             onBlur={() => markTouched("phone")}
+            onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
           />
         </div>
 
@@ -293,6 +314,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             value={booking.email}
             onChange={(e) => onUpdate({ email: e.target.value })}
             onBlur={() => markTouched("email")}
+            onFocus={(e) => scrollFieldIntoView(e.currentTarget)}
           />
         </div>
 
@@ -321,7 +343,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                 // Delay gives onMouseDown / onTouchEnd on suggestions time to fire first
                 setTimeout(() => setShowSuggestions(false), 200);
               }}
-              onFocus={() => {
+              onFocus={(e) => {
+                scrollFieldIntoView(e.currentTarget);
                 if (addressSuggestions.length > 0) setShowSuggestions(true);
               }}
               autoComplete="off"
