@@ -43,6 +43,10 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const [addressLoading, setAddressLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
+  // True while the user's finger/pointer is down on a suggestion row.
+  // onBlur checks this flag and bails out early so the list never collapses
+  // before the selection handler fires — eliminates the visible jump on iOS.
+  const selectingRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -153,6 +157,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
   const handleSelectSuggestion = async (description: string) => {
     justSelectedRef.current = true;
+    selectingRef.current = false; // selection complete, reset flag
     // Mark as verified immediately on selection from Google Places
     onUpdate({ address: description, addressVerified: true, distanceKm: null });
     setShowSuggestions(false);
@@ -390,7 +395,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               <button
                 type="button"
                 onPointerDown={(e) => {
-                  e.preventDefault(); // prevent input blur before clear fires
+                  e.preventDefault();
                   handleClearAddress();
                 }}
                 className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors z-10"
@@ -406,7 +411,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               value={booking.address}
               inputMode="search"
               onChange={(e) => {
-                // Any manual edit invalidates verification
                 onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
                 if (e.target.value.trim().length >= 2) {
                   setTouched((prev) => ({ ...prev, address: true }));
@@ -415,15 +419,17 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               }}
               onBlur={() => {
                 markTouched("address");
-                // Only hide if pointer is NOT inside the suggestions list.
-                // We rely on onPointerDown(preventDefault) on suggestion buttons
-                // to keep the input focused — this timeout is a last-resort fallback
-                // for edge cases (e.g. focus moves to an unrelated element).
+                // If the user's finger/pointer is still down on a suggestion row,
+                // bail out immediately — do NOT collapse the list. The selection
+                // handler will dismiss it cleanly once the tap completes.
+                if (selectingRef.current) return;
+                // Belt-and-suspenders fallback: wait 300ms (covers the full iOS
+                // touch cycle) then hide only if focus truly left the list.
                 setTimeout(() => {
-                  if (!suggestionsRef.current?.matches(":focus-within")) {
+                  if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
                     setShowSuggestions(false);
                   }
-                }, 150);
+                }, 300);
               }}
               onFocus={() => {
                 if (addressSuggestions.length > 0 && !booking.addressVerified) {
@@ -452,10 +458,12 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                     <button
                       key={s.place_id}
                       type="button"
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        handleSelectSuggestion(s.description);
-                      }}
+                      // onMouseDown + onTouchStart both set selectingRef=true.
+                      // This fires BEFORE the input's onBlur so the blur handler
+                      // sees the flag and skips collapsing the list.
+                      onMouseDown={() => { selectingRef.current = true; }}
+                      onTouchStart={() => { selectingRef.current = true; }}
+                      onClick={() => handleSelectSuggestion(s.description)}
                       className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
                         ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
                     >
