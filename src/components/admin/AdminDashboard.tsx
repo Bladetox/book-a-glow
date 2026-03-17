@@ -59,9 +59,10 @@ interface HeatmapRow { day: string; slots: HeatmapCell[]; }
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
 const StatPill = ({ label, value, color }: { label: string; value: string; color?: string }) => (
-  <div className="flex flex-col gap-0.5">
-    <span className="text-[10px] tracking-[0.12em] uppercase text-white/30">{label}</span>
-    <span className={`text-sm sm:text-base font-semibold ${color || "text-white/90"}`}>{value}</span>
+  <div className="flex flex-col gap-0.5 min-w-0">
+    {/* FIX 3: text-[9px] on mobile so labels don't clip on 360px phones */}
+    <span className="text-[9px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.12em] uppercase text-white/30 truncate">{label}</span>
+    <span className={`text-xs sm:text-base font-semibold truncate ${color || "text-white/90"}`}>{value}</span>
   </div>
 );
 
@@ -239,7 +240,8 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
   const pctUp = pctChange >= 0;
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-5 max-w-5xl">
+    {/* FIX 4: added w-full so the container never collapses on narrow screens */}
+    <div className="flex flex-col gap-4 sm:gap-5 w-full max-w-5xl">
       {/* Customize toggle */}
       <div className="flex justify-end">
         <button onClick={() => setShowCustomize(!showCustomize)} className="text-[10px] tracking-[0.12em] uppercase text-white/30 hover:text-white/60 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]">
@@ -273,7 +275,8 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
             {pctUp ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400/80" /> : <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />}
             <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>{pctChange}% vs last month</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-white/[0.06]">
+          {/* FIX 3: gap-2 on mobile (was gap-4), items are min-w-0 via StatPill update above */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-6 pt-5 border-t border-white/[0.06]">
             <StatPill label="Revenue Today" value={`R ${data.revenue.today.toLocaleString()}`} />
             <StatPill label="Appointments" value={String(data.today.appointments)} />
             <StatPill label="Remaining" value={String(data.today.remaining)} color="text-amber-400" />
