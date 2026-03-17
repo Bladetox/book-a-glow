@@ -187,28 +187,13 @@ export function useSaveDailyOverride() {
       allSlots: string[];
       deleteOnly?: boolean;
     }) => {
-      // ── DEBUG: log exactly what we're about to write ──
-      console.log("[saveDailyOverride] payload:", {
-        staffId,
-        tenantId,
-        date,
-        dayOfWeek,
-        enabled,
-        slotsCount: slots.length,
-        allSlotsCount: allSlots.length,
-        deleteOnly,
-      });
-
       const { error: delErr } = await supabase
         .from("staff_availability")
         .delete()
         .eq("staff_id", staffId)
         .eq("tenant_id", tenantId)
         .eq("specific_date", date);
-      if (delErr) {
-        console.error("[saveDailyOverride] DELETE failed:", delErr);
-        throw delErr;
-      }
+      if (delErr) throw delErr;
 
       if (deleteOnly) return;
 
@@ -230,46 +215,34 @@ export function useSaveDailyOverride() {
         };
       });
 
-      console.log("[saveDailyOverride] inserting", rows.length, "rows, first row:", rows[0]);
-
       if (rows.length > 0) {
         const { error: insErr } = await supabase
           .from("staff_availability")
           .insert(rows);
-        if (insErr) {
-          console.error("[saveDailyOverride] INSERT failed:", insErr);
-          throw insErr;
-        }
-        console.log("[saveDailyOverride] INSERT succeeded");
+        if (insErr) throw insErr;
         return;
       }
 
-      // Sentinel row for closed day with no slots
-      const sentinel = {
-        staff_id: staffId,
-        tenant_id: tenantId,
-        day_of_week: dayOfWeek,
-        specific_date: date,
-        slot_start_time: "00:00:00",
-        slot_end_time: "00:30:00",
-        is_available: false,
-        day_enabled: false,
-      };
-      console.log("[saveDailyOverride] inserting sentinel row:", sentinel);
+      // Sentinel row for closed day with empty allSlots
       const { error: sentErr } = await supabase
         .from("staff_availability")
-        .insert(sentinel);
-      if (sentErr) {
-        console.error("[saveDailyOverride] SENTINEL INSERT failed:", sentErr);
-        throw sentErr;
-      }
+        .insert({
+          staff_id: staffId,
+          tenant_id: tenantId,
+          day_of_week: dayOfWeek,
+          specific_date: date,
+          slot_start_time: "00:00:00",
+          slot_end_time: "00:30:00",
+          is_available: false,
+          day_enabled: false,
+        });
+      if (sentErr) throw sentErr;
     },
     onSuccess: () => {
-      console.log("[saveDailyOverride] onSuccess — invalidating queries");
       qc.invalidateQueries({ queryKey: ["availability", tenantId] });
     },
     onError: (err) => {
-      console.error("[saveDailyOverride] mutation onError:", err);
+      console.error("[useSaveDailyOverride] failed:", err);
     },
   });
 }
