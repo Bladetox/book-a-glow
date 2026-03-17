@@ -373,8 +373,10 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/* Address — floating dropdown, verified flag, clear button */}
-        <div className="relative">
+        {/* Address field. Suggestions render INLINE not absolutely positioned so the parent
+            card grows naturally. This bypasses the overflow:clip stacking context in Book.tsx
+            that was clipping the overlay dropdown entirely. */}
+        <div>
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
 
@@ -434,45 +436,46 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             />
           </div>
 
-          {/* Floating suggestions dropdown — position:absolute so it overlays content below */}
+          {/* Inline suggestion list — animates open/closed, card grows to fit */}
           <AnimatePresence>
             {showSuggestions && addressSuggestions.length > 0 && (
               <motion.div
                 ref={suggestionsRef}
-                initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-lg"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                className="overflow-hidden"
               >
-                {addressSuggestions.map((s, idx) => (
-                  <button
-                    key={s.place_id}
-                    type="button"
-                    onPointerDown={(e) => {
-                      // preventDefault stops the input's onBlur from firing
-                      // before this handler completes — fixes the tap/blur race
-                      // on all pointer types (mouse, touch, stylus)
-                      e.preventDefault();
-                      handleSelectSuggestion(s.description);
-                    }}
-                    className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
-                      ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                    <span>{s.description}</span>
-                  </button>
-                ))}
+                <div className="mt-1 rounded-2xl overflow-hidden border border-border/40 bg-background/80 backdrop-blur-sm shadow-sm">
+                  {addressSuggestions.map((s, idx) => (
+                    <button
+                      key={s.place_id}
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSuggestion(s.description);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
+                        ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      <span>{s.description}</span>
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Helper text — show verified state or prompt */}
-          <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
-            {booking.addressVerified
-              ? "✓ Address confirmed — used to calculate your call-out fee"
-              : "Select your address from the list to confirm"}
-          </p>
+          {/* Helper text — hidden while suggestions are open to avoid clutter */}
+          {!showSuggestions && (
+            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
+              {booking.addressVerified
+                ? "✓ Address confirmed — used to calculate your call-out fee"
+                : "Used to calculate your call-out fee"}
+            </p>
+          )}
         </div>
       </motion.div>
     </div>
