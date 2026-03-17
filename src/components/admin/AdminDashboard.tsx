@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Loader2
+  XCircle, Package, Bell, Clock, Loader2, Info
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 
@@ -55,27 +55,138 @@ interface Appointment {
 interface HeatmapCell { slot: string; intensity: number; }
 interface HeatmapRow { day: string; slots: HeatmapCell[]; }
 
+// ─── FlipCard ───────────────────────────────────────────────────────────────
+// A reusable 3-D flip card. Tap anywhere to toggle front ↔ back.
+// Uses Framer Motion rotateY + perspective so the CSS stays simple.
+// The height is fixed so layout doesn't jump during the flip.
+interface FlipCardProps {
+  front: React.ReactNode;
+  back: React.ReactNode;
+  className?: string;
+  height?: string; // e.g. "h-[88px]"
+}
+
+const FlipCard = ({ front, back, className = "", height = "h-[88px]" }: FlipCardProps) => {
+  const [flipped, setFlipped] = useState(false);
+  return (
+    <div
+      className={`relative cursor-pointer select-none ${height} ${className}`}
+      style={{ perspective: "800px" }}
+      onClick={() => setFlipped(f => !f)}
+      role="button"
+      aria-label="Tap to learn more"
+    >
+      {/* FRONT */}
+      <motion.div
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+        style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+        className="absolute inset-0 rounded-xl border border-white/[0.06] bg-white/[0.03]"
+      >
+        {front}
+      </motion.div>
+
+      {/* BACK */}
+      <motion.div
+        animate={{ rotateY: flipped ? 0 : -180 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+        style={{
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+          rotateY: -180,
+        }}
+        className="absolute inset-0 rounded-xl border border-white/[0.08] bg-white/[0.06] flex flex-col items-start justify-center p-3 gap-1"
+      >
+        {back}
+        <span className="text-[9px] tracking-[0.12em] uppercase text-white/20 mt-1">Tap to go back</span>
+      </motion.div>
+    </div>
+  );
+};
+
 // ─── Reusable components ───
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
-const StatPill = ({ label, value, color }: { label: string; value: string; color?: string }) => (
-  <div className="flex flex-col gap-0.5 min-w-0">
-    <span className="text-[9px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.12em] uppercase text-white/30 truncate">{label}</span>
-    <span className={`text-xs sm:text-base font-semibold truncate ${color || "text-white/90"}`}>{value}</span>
-  </div>
+// StatPill with flip — used inside the Hero card
+interface FlipStatPillProps {
+  label: string;
+  value: string;
+  color?: string;
+  explain: string;
+}
+const FlipStatPill = ({ label, value, color, explain }: FlipStatPillProps) => (
+  <FlipCard
+    height="h-[56px] sm:h-[64px]"
+    front={
+      <div className="flex flex-col gap-0.5 min-w-0 justify-center h-full px-2 sm:px-3">
+        <span className="text-[9px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.12em] uppercase text-white/30 truncate">{label}</span>
+        <span className={`text-xs sm:text-base font-semibold truncate ${color || "text-white/90"}`}>{value}</span>
+      </div>
+    }
+    back={
+      <p className="text-[11px] leading-snug text-white/70">{explain}</p>
+    }
+    className="rounded-lg border border-white/[0.06] bg-white/[0.03]"
+  />
 );
 
-const MetricCard = ({ icon: Icon, label, value, color, sub }: { icon: React.ElementType; label: string; value: string; color?: string; sub?: string }) => (
-  <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 sm:p-4 flex items-start gap-3">
-    <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
-      <Icon className="w-4 h-4 text-white/50" />
-    </div>
-    <div className="flex flex-col gap-0.5 min-w-0">
-      <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">{label}</span>
-      <span className={`text-base sm:text-lg font-bold ${color || "text-white/90"}`}>{value}</span>
-      {sub && <span className="text-[10px] text-white/25">{sub}</span>}
-    </div>
-  </div>
+// MetricCard with flip — used in Business Health row
+interface FlipMetricCardProps {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  color?: string;
+  sub?: string;
+  explain: string;
+}
+const FlipMetricCard = ({ icon: Icon, label, value, color, sub, explain }: FlipMetricCardProps) => (
+  <FlipCard
+    height="h-[88px]"
+    front={
+      <div className="flex items-start gap-3 h-full p-3 sm:p-4">
+        <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
+          <Icon className="w-4 h-4 text-white/50" />
+        </div>
+        <div className="flex flex-col gap-0.5 min-w-0 justify-center">
+          <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">{label}</span>
+          <span className={`text-base sm:text-lg font-bold ${color || "text-white/90"}`}>{value}</span>
+          {sub && <span className="text-[10px] text-white/25">{sub}</span>}
+        </div>
+        <Info className="w-3 h-3 text-white/15 ml-auto shrink-0 mt-1" />
+      </div>
+    }
+    back={
+      <>
+        <p className="text-[11px] leading-snug text-white/70">{explain}</p>
+      </>
+    }
+  />
+);
+
+// ClientMiniCard with flip — used inside Client Insights
+interface ClientMiniCardProps {
+  icon: React.ElementType;
+  iconColor?: string;
+  value: string;
+  valueColor?: string;
+  label: string;
+  explain: string;
+}
+const ClientMiniCard = ({ icon: Icon, iconColor, value, valueColor, label, explain }: ClientMiniCardProps) => (
+  <FlipCard
+    height="h-[90px]"
+    front={
+      <div className="flex flex-col items-center justify-center h-full gap-1">
+        <Icon className={`w-4 h-4 ${iconColor || "text-white/30"}`} />
+        <p className={`text-lg font-bold ${valueColor || "text-white/90"}`}>{value}</p>
+        <p className="text-[10px] text-white/30">{label}</p>
+      </div>
+    }
+    back={
+      <p className="text-[11px] leading-snug text-white/70 text-center w-full">{explain}</p>
+    }
+    className="rounded-xl border border-white/[0.06] bg-white/[0.03]"
+  />
 );
 
 const heatmapSlots = ["08–10", "10–12", "12–14", "14–16", "16–18"];
@@ -273,23 +384,65 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
             {pctUp ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400/80" /> : <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />}
             <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>{pctChange}% vs last month</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-6 pt-5 border-t border-white/[0.06]">
-            <StatPill label="Revenue Today" value={`R ${data.revenue.today.toLocaleString()}`} />
-            <StatPill label="Appointments" value={String(data.today.appointments)} />
-            <StatPill label="Remaining" value={String(data.today.remaining)} color="text-amber-400" />
-            <StatPill label="Next Up" value={data.today.nextAppointment || "—"} />
+          {/* Hero StatPills — all flippable */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-6 pt-5 border-t border-white/[0.06]">
+            <FlipStatPill
+              label="Revenue Today"
+              value={`R ${data.revenue.today.toLocaleString()}`}
+              explain="Total payments received today across all appointments."
+            />
+            <FlipStatPill
+              label="Appointments"
+              value={String(data.today.appointments)}
+              explain="Number of confirmed bookings scheduled for today."
+            />
+            <FlipStatPill
+              label="Remaining"
+              value={String(data.today.remaining)}
+              color="text-amber-400"
+              explain="Appointments still to happen today. Keep an eye on no-shows."
+            />
+            <FlipStatPill
+              label="Next Up"
+              value={data.today.nextAppointment || "—"}
+              explain="Your next upcoming client today. Time • Client name."
+            />
           </div>
         </motion.div>
       )}
 
-      {/* 2. BUSINESS HEALTH */}
+      {/* 2. BUSINESS HEALTH — all 4 cards flippable */}
       {visibility.health && (
         <motion.div {...fadeUp} transition={{ delay: 0.05 }}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <MetricCard icon={BarChart3} label="Fill Rate" value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "—"} color="text-emerald-400" />
-            <MetricCard icon={ShoppingBag} label="Avg Basket" value={`R ${data.health.avgBasket.toLocaleString()}`} />
-            <MetricCard icon={CalendarCheck} label="Appointments" value={String(data.health.totalAppointments)} sub="This month" />
-            <MetricCard icon={XCircle} label="Cancellations" value={`${data.health.cancellationRate}%`} color="text-red-400" sub={`R ${data.health.revenueLost.toLocaleString()} lost`} />
+            <FlipMetricCard
+              icon={BarChart3}
+              label="Fill Rate"
+              value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "—"}
+              color="text-emerald-400"
+              explain="How full your diary is. 70%+ is great. Below 50% means you have room to grow bookings."
+            />
+            <FlipMetricCard
+              icon={ShoppingBag}
+              label="Avg Basket"
+              value={`R ${data.health.avgBasket.toLocaleString()}`}
+              explain="Average spend per appointment. Upselling add-ons is the fastest way to lift this."
+            />
+            <FlipMetricCard
+              icon={CalendarCheck}
+              label="Appointments"
+              value={String(data.health.totalAppointments)}
+              sub="This month"
+              explain="Total confirmed bookings this month, not counting cancellations."
+            />
+            <FlipMetricCard
+              icon={XCircle}
+              label="Cancellations"
+              value={`${data.health.cancellationRate}%`}
+              color="text-red-400"
+              sub={`R ${data.health.revenueLost.toLocaleString()} lost`}
+              explain="% of bookings cancelled. Below 10% is healthy. A deposit policy helps reduce this."
+            />
           </div>
         </motion.div>
       )}
@@ -313,29 +466,31 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           </motion.div>
         )}
 
+        {/* CLIENT INSIGHTS — 3 mini flip cards */}
         {visibility.clientInsights && (
           <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-4">Client Insights</h4>
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              <div className="text-center">
-                <UserPlus className="w-4 h-4 text-white/30 mx-auto mb-1" />
-                <p className="text-lg font-bold text-white/90">{data.clients.total}</p>
-                <p className="text-[10px] text-white/30">Unique</p>
-              </div>
-              <div className="text-center">
-                <UserCheck className="w-4 h-4 text-white/30 mx-auto mb-1" />
-                <p className="text-lg font-bold text-white/90">
-                  {data.clients.returning > 0 ? data.clients.returning : "—"}
-                </p>
-                <p className="text-[10px] text-white/30">Returning</p>
-              </div>
-              <div className="text-center">
-                <Percent className="w-4 h-4 text-emerald-400/50 mx-auto mb-1" />
-                <p className="text-lg font-bold text-emerald-400">
-                  {data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "—"}
-                </p>
-                <p className="text-[10px] text-white/30">Retention</p>
-              </div>
+            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Client Insights</h4>
+            <div className="grid grid-cols-3 gap-2">
+              <ClientMiniCard
+                icon={UserPlus}
+                value={String(data.clients.total)}
+                label="Clients"
+                explain="All distinct people who booked with you this month, registered or guest."
+              />
+              <ClientMiniCard
+                icon={UserCheck}
+                value={data.clients.returning > 0 ? String(data.clients.returning) : "—"}
+                label="Returning"
+                explain="Clients who booked more than once this month — loyalty in action."
+              />
+              <ClientMiniCard
+                icon={Percent}
+                iconColor="text-emerald-400/50"
+                value={data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "—"}
+                valueColor="text-emerald-400"
+                label="Retention"
+                explain="What % of your clients came back this month. Above 40% is healthy for beauty."
+              />
             </div>
           </motion.div>
         )}
