@@ -12,6 +12,28 @@ const ALLOWED_APP_SETTING_KEYS = [
   "smtp_host",
   "smtp_port",
   "smtp_from",
+  // Google Reviews — place_id and review_link are safe to expose (not secret)
+  // google_maps_api_key intentionally excluded — backend only
+  "google_place_id",
+  "google_review_link",
+  // Splash / confirmation copy
+  "splash_welcome_label",
+  "splash_tagline1",
+  "splash_tagline2",
+  "splash_cta_label",
+  "confirmation_subject",
+  "confirmation_title",
+  "confirmation_intro",
+  "confirmation_outro",
+  "sign_off",
+  // Travel
+  "fixed_origin_address",
+  "rate_per_km",
+  "default_distance_km",
+  // Booking rules
+  "deposit_percent",
+  "min_notice_hours",
+  "max_advance_days",
 ] as const;
 
 // Tenant fields safe to expose to the client

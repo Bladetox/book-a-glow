@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RefreshCw, Star, ExternalLink, MessageSquare,
-  Copy, Check, Loader2, AlertTriangle, Settings2
+  Copy, Check, Loader2, AlertTriangle
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,14 +42,15 @@ const AdminReviews = () => {
   const qc = useQueryClient();
   const { data: appSettings = {} } = useAppSettings();
 
-  const [respondTo, setRespondTo]   = useState<Review | null>(null);
-  const [replyText, setReplyText]   = useState("");
-  const [copied, setCopied]         = useState(false);
+  const [respondTo, setRespondTo] = useState<Review | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [copied, setCopied]       = useState(false);
 
-  const placeId        = appSettings["google_place_id"]  as string | undefined;
-  const reviewLink     = appSettings["google_review_link"] as string | undefined;
-  const mapsApiKey     = appSettings["google_maps_api_key"] as string | undefined;
-  const isConfigured   = !!(placeId && mapsApiKey);
+  const placeId    = appSettings["google_place_id"]   as string | undefined;
+  const reviewLink = appSettings["google_review_link"] as string | undefined;
+
+  // isConfigured only needs placeId — API key is backend-only and never exposed to frontend
+  const isConfigured = !!placeId;
 
   // ── Fetch reviews from cache ──────────────────────────────────────────────
   const { data: reviews = [], isLoading } = useQuery({
@@ -84,7 +85,7 @@ const AdminReviews = () => {
   });
 
   // ── Stats ─────────────────────────────────────────────────────────────────
-  const rated    = reviews.filter(r => r.rating !== null);
+  const rated = reviews.filter(r => r.rating !== null);
   const avgRating = rated.length
     ? rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length
     : null;
@@ -100,7 +101,7 @@ const AdminReviews = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
       toast.success("Reply copied — opening Google Business");
-      const target = reviewLink || `https://business.google.com/reviews`;
+      const target = reviewLink || "https://business.google.com/reviews";
       window.open(target, "_blank", "noopener,noreferrer");
     });
   };
@@ -142,11 +143,7 @@ const AdminReviews = () => {
           <div>
             <p className="text-xs font-semibold text-amber-400">Google Reviews not configured</p>
             <p className="text-[11px] text-amber-300/50 mt-0.5">
-              Add your Google Maps API Key and Place ID in
-              <span className="text-amber-400/80 inline-flex items-center gap-1 mx-1">
-                <Settings2 className="w-3 h-3" /> Settings → Google Reviews
-              </span>
-              to start syncing.
+              Contact NextSlot support to enable Google Reviews for your account.
             </p>
           </div>
         </motion.div>
@@ -161,7 +158,9 @@ const AdminReviews = () => {
           className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center flex flex-col items-center gap-3">
           <Star className="w-8 h-8 text-white/10" />
           <p className="text-sm text-white/30">
-            {isConfigured ? "No reviews yet — click Sync Reviews to fetch from Google." : "Configure your Google settings to see reviews here."}
+            {isConfigured
+              ? "No reviews yet — click Sync Reviews to fetch from Google."
+              : "Contact NextSlot support to enable Google Reviews."}
           </p>
         </motion.div>
       ) : (
@@ -196,7 +195,7 @@ const AdminReviews = () => {
               ))}
             </div>
 
-            {/* Action */}
+            {/* Get More Reviews link */}
             {reviewLink && (
               <div className="flex items-center sm:pl-5 sm:border-l border-white/[0.06]">
                 <a href={reviewLink} target="_blank" rel="noopener noreferrer"
@@ -264,7 +263,7 @@ const AdminReviews = () => {
                   <p className="text-xs font-bold text-white/80">Respond to Review</p>
                   <p className="text-[11px] text-white/40 mt-0.5">{respondTo.author_name}</p>
                 </div>
-                <button onClick={() => setRespondTo(null)} className="text-white/30 hover:text-white/60">
+                <button onClick={() => setRespondTo(null)} className="text-white/30 hover:text-white/60 text-lg leading-none">
                   ✕
                 </button>
               </div>
