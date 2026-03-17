@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
@@ -15,7 +15,13 @@ async function getStaffId(tenantId: string): Promise<string> {
 
 /**
  * Fetch a full month of availability (dates with open slots).
- * Duration-aware: only marks a day available if it has slots that fit the full service duration.
+ *
+ * staleTime: 0  — always re-fetch from Supabase when this query mounts or
+ * the window regains focus. This ensures admin-side closes/overrides are
+ * reflected immediately for the booking user without a hard refresh.
+ *
+ * gcTime (formerly cacheTime) left at default (5 min) so the cached value
+ * is shown instantly while a background re-fetch runs — no flicker.
  */
 export function useMonthAvailability(year: number, month: number, durationMinutes: number = 60) {
   const { tenantId } = usePublicTenant();
@@ -23,6 +29,8 @@ export function useMonthAvailability(year: number, month: number, durationMinute
   return useQuery({
     queryKey: ["public-month-availability", tenantId, year, month, durationMinutes],
     enabled: !!tenantId,
+    staleTime: 0,          // always consider data stale — re-fetch on every mount/focus
+    refetchOnWindowFocus: true,  // re-fetch when user switches back to the tab
     queryFn: async () => {
       const staffId = await getStaffId(tenantId);
       const { data, error } = await supabase.rpc("get_month_availability", {
@@ -37,13 +45,12 @@ export function useMonthAvailability(year: number, month: number, durationMinute
       });
       return map;
     },
-    staleTime: 60 * 1000,
   });
 }
 
 /**
  * Fetch available time slots for a specific date.
- * Passes durationMinutes to DB so only slots with enough consecutive free time are returned.
+ * staleTime: 0 for same reason — slot list must always be fresh.
  */
 export function useDateSlots(date: string | null, durationMinutes: number = 60) {
   const { tenantId } = usePublicTenant();
@@ -51,6 +58,8 @@ export function useDateSlots(date: string | null, durationMinutes: number = 60) 
   return useQuery({
     queryKey: ["public-date-slots", tenantId, date, durationMinutes],
     enabled: !!date && !!tenantId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!date) return [];
       const staffId = await getStaffId(tenantId);
@@ -64,7 +73,6 @@ export function useDateSlots(date: string | null, durationMinutes: number = 60) 
         .filter((s: any) => s.is_available)
         .map((s: any) => (s.slot_start as string).slice(0, 5));
     },
-    staleTime: 30 * 1000,
   });
 }
 
