@@ -19,8 +19,35 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       workbox: {
+        // New service worker takes control of ALL open tabs immediately
+        // after installation — no need for users to close/reopen the app.
+        skipWaiting: true,
+        clientsClaim: true,
+
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+
+        // Runtime caching: serve Supabase API calls network-first so
+        // availability data is always fresh, falling back to cache only
+        // if the network is unreachable.
+        runtimeCaching: [
+          {
+            // Supabase REST + RPC endpoints
+            urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\/(rest|rpc)\//,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "supabase-api",
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60,   // 1-minute fallback cache only
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       manifest: {
         name: "NextSlot - Smart Booking for Service Businesses",
@@ -50,14 +77,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           if (!id.includes("node_modules")) return;
-          // Supabase — standalone, no React deps
           if (id.includes("@supabase")) return "supabase";
-          // Charts — large, lazy-loadable
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
-          // Date utilities
           if (id.includes("date-fns") || id.includes("dayjs")) return "dates";
-          // Everything else (React, Radix, framer, router, lucide, tanstack)
-          // stays in one "vendor" chunk so React is never split from its consumers
           return "vendor";
         },
       },
