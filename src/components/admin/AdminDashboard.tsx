@@ -324,12 +324,16 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
               </div>
               <div className="text-center">
                 <UserCheck className="w-4 h-4 text-white/30 mx-auto mb-1" />
-                <p className="text-lg font-bold text-white/90">—</p>
+                <p className="text-lg font-bold text-white/90">
+                  {data.clients.returning > 0 ? data.clients.returning : "—"}
+                </p>
                 <p className="text-[10px] text-white/30">Returning</p>
               </div>
               <div className="text-center">
                 <Percent className="w-4 h-4 text-emerald-400/50 mx-auto mb-1" />
-                <p className="text-lg font-bold text-emerald-400">—</p>
+                <p className="text-lg font-bold text-emerald-400">
+                  {data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "—"}
+                </p>
                 <p className="text-[10px] text-white/30">Retention</p>
               </div>
             </div>

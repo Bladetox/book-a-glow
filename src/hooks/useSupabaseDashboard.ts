@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, getDaysInMonth } from "date-fns";
 
 // ─── Identity resolution priority (schema-verified) ──────────────────────────
 // bookings.client_name (snapshot) → bookings.guest_name → profile.full_name → 'Unknown'
@@ -12,6 +12,12 @@ function resolveClientName(b: any): string {
 // Unique key per person: registered client_id → guest_email → guest_phone → booking id
 function resolveClientKey(b: any): string {
   return b.client_id || b.guest_email || b.guest_phone || b.id;
+}
+
+// Convert "HH:MM:SS" time string to total minutes from midnight
+function timeToMins(t: string): number {
+  const [h, m] = (t || "00:00").split(":").map(Number);
+  return h * 60 + m;
 }
 
 export function useDashboardData() {
@@ -68,7 +74,7 @@ export function useDashboardData() {
 
   // ── Payments: this + prev month — tenant_id nullable so use .eq safely ───
   const { data: payments = [], isLoading: l2 } = useQuery({
-    queryKey: ["dash-payments", tenantId, prevStart, monthEnd],
+    queryKey: ["dash-payments", tenantId, prevStart, prevEnd],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payments")
@@ -78,7 +84,6 @@ export function useDashboardData() {
         .gte("created_at", prevStart)
         .lte("created_at", prevEnd + "T23:59:59");
       if (error) throw error;
-      // Also fetch this month separately to avoid date overlap issues
       return data ?? [];
     },
   });
@@ -108,6 +113,33 @@ export function useDashboardData() {
         .eq("tenant_id", tenantId)
         .lte("stock_on_hand", 5)
         .order("stock_on_hand");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // ── Staff availability — for fill rate calculation ────────────────────────
+  // Fetches all recurring (specific_date IS NULL) and override slots.
+  // We need: staff_id, day_of_week, specific_date, slot_start_time, slot_end_time,
+  //          is_available, day_enabled for the tenant.
+  const { data: staffSlots = [], isLoading: l4 } = useQuery({
+    queryKey: ["dash-staff-availability", tenantId],
+    queryFn: async () => {
+      // Get staff IDs for this tenant first
+      const { data: staff, error: se } = await supabase
+        .from("staff")
+        .select("id")
+        .eq("tenant_id", tenantId);
+      if (se) throw se;
+      if (!staff || staff.length === 0) return [];
+
+      const staffIds = staff.map((s: any) => s.id);
+      const { data, error } = await supabase
+        .from("staff_availability")
+        .select("staff_id, day_of_week, specific_date, slot_start_time, slot_end_time, is_available, day_enabled")
+        .in("staff_id", staffIds)
+        .eq("is_available", true)
+        .eq("day_enabled", true);
       if (error) throw error;
       return data ?? [];
     },
@@ -165,7 +197,7 @@ export function useDashboardData() {
     const d = parseInt((p.created_at ?? "").slice(8, 10));
     if (d) trendMap[d] = (trendMap[d] || 0) + Number(p.amount);
   });
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysInMonth = getDaysInMonth(now);
   const revenueTrend = Array.from({ length: daysInMonth }, (_, i) => ({
     day: i + 1,
     value: trendMap[i + 1] || 0,
@@ -204,9 +236,64 @@ export function useDashboardData() {
       ? Math.round((returningCount / clientKeySet.size) * 100)
       : 0;
 
+  // ── Fill Rate ─────────────────────────────────────────────────────────────
+  // Total available minutes = sum of all enabled slot durations across every
+  // working day in the current month.
+  // Total booked minutes   = sum of (end_time - start_time) for active bookings.
+  // fillRate = Math.round((bookedMins / availableMins) * 100), capped at 100.
+  //
+  // Override dates: if a staff_availability row has specific_date set, it
+  // takes precedence over the recurring day_of_week row for that date.
+  const fillRate = (() => {
+    if (staffSlots.length === 0) return 0;
+
+    // Build a set of override dates per staff member
+    const overrideDates = new Set<string>();
+    staffSlots.forEach((s: any) => {
+      if (s.specific_date) overrideDates.add(`${s.staff_id}__${s.specific_date}`);
+    });
+
+    let totalAvailableMins = 0;
+
+    // Walk every day of the current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(now.getFullYear(), now.getMonth(), d);
+      const dateStr = format(date, "yyyy-MM-dd");
+      const dow = date.getDay(); // 0=Sun … 6=Sat
+
+      // Collect unique staff IDs from slots
+      const staffIds = [...new Set(staffSlots.map((s: any) => s.staff_id as string))];
+
+      staffIds.forEach((staffId) => {
+        const overrideKey = `${staffId}__${dateStr}`;
+        const hasOverride = overrideDates.has(overrideKey);
+
+        const relevantSlots = staffSlots.filter((s: any) => {
+          if (s.staff_id !== staffId) return false;
+          if (hasOverride) return s.specific_date === dateStr;
+          return s.specific_date === null && s.day_of_week === dow;
+        });
+
+        relevantSlots.forEach((s: any) => {
+          const slotMins = timeToMins(s.slot_end_time) - timeToMins(s.slot_start_time);
+          if (slotMins > 0) totalAvailableMins += slotMins;
+        });
+      });
+    }
+
+    if (totalAvailableMins === 0) return 0;
+
+    // Total booked minutes from active bookings this month
+    const bookedMins = active.reduce((sum: number, b: any) => {
+      const start = timeToMins(b.start_time);
+      const end = timeToMins(b.end_time);
+      return sum + Math.max(end - start, 0);
+    }, 0);
+
+    return Math.min(Math.round((bookedMins / totalAvailableMins) * 100), 100);
+  })();
+
   // ── Alerts ────────────────────────────────────────────────────────────────
-  // deposit_paid is nullable boolean (default false) — use IS NOT TRUE to
-  // catch both explicit false AND null (unset) rows
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts: Alert[] = [];
 
@@ -234,7 +321,7 @@ export function useDashboardData() {
 
   // ── Return ────────────────────────────────────────────────────────────────
   return {
-    isLoading: l1 || l2 || l3,
+    isLoading: l1 || l2 || l3 || l4,
     revenue: {
       month: monthRevenue,
       today: todayRevenue,
@@ -248,7 +335,7 @@ export function useDashboardData() {
         : null,
     },
     health: {
-      fillRate: 0,
+      fillRate,
       avgBasket:
         active.length > 0
           ? Math.round(
@@ -261,7 +348,6 @@ export function useDashboardData() {
         bookings.length > 0
           ? Math.round((cancelled.length / bookings.length) * 100)
           : 0,
-      // Use stored balance_due column directly — do NOT recompute
       revenueLost: cancelled.reduce(
         (s: number, b: any) => s + Number(b.total_amount), 0
       ),
@@ -287,7 +373,6 @@ export function useDashboardData() {
             .map((i: any) => i.service_name)
             .join(", ") || "—",
         status: b.status as "confirmed" | "pending" | "complete" | "cancelled",
-        // Use stored balance_due directly — schema-verified stored column
         balance: Number(b.balance_due ?? 0),
       })),
     stockAlerts: stockAlerts.map((s: any) => ({
