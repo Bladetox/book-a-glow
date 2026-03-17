@@ -35,7 +35,6 @@ const AdminAvailability = () => {
   const saveDailyMutation = useSaveDailyOverride();
 
   const [weekAvail, setWeekAvail] = useState<WeekAvailability>({});
-  // dailyOverrides: per-date overrides set by the tenant
   const [dailyOverrides, setDailyOverrides] = useState<DailyOverrides>({});
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -49,7 +48,7 @@ const AdminAvailability = () => {
     }
   }, [rawSlots]);
 
-  // ─── Weekly handlers (unchanged) ───
+  // ─── Weekly handlers ───
   const persistDay = useCallback(
     (dayName: string, config: { enabled: boolean; slots: string[] }) => {
       const dayIndex = DAY_NAMES.indexOf(dayName);
@@ -84,13 +83,8 @@ const AdminAvailability = () => {
     });
   };
 
-  // ─── Daily override handlers ───
+  // ─── Daily override helpers ───
 
-  /**
-   * Resolve what to display for a given date:
-   * 1. If a dailyOverride exists for this ISO date, use it.
-   * 2. Otherwise fall back to the weekly recurring config for that day name.
-   */
   const getDayConfig = (date: Date): { enabled: boolean; slots: string[]; isOverride: boolean } => {
     const iso = format(date, "yyyy-MM-dd");
     if (dailyOverrides[iso]) {
@@ -117,7 +111,6 @@ const AdminAvailability = () => {
     [userId, saveDailyMutation]
   );
 
-  /** Toggle the enabled state for a specific date */
   const toggleDailyEnabled = (date: Date) => {
     const iso = format(date, "yyyy-MM-dd");
     const current = getDayConfig(date);
@@ -126,7 +119,6 @@ const AdminAvailability = () => {
     persistDailyOverride(date, next);
   };
 
-  /** Toggle a single slot for a specific date */
   const toggleDailySlot = (date: Date, slot: string) => {
     const iso = format(date, "yyyy-MM-dd");
     const current = getDayConfig(date);
@@ -138,23 +130,36 @@ const AdminAvailability = () => {
     persistDailyOverride(date, next);
   };
 
-  /** Remove the override for a date, reverting to the weekly schedule */
+  /**
+   * Revert a date back to its weekly schedule.
+   * FIX: was passing allSlots:[] which deleted rows and inserted nothing,
+   * so the override was lost on next load. Now we write the weekly config
+   * as a regular (non-override) state by simply deleting the specific_date rows.
+   * useSaveDailyOverride handles the delete; passing allSlots:ALL_SLOTS with
+   * enabled:false and slots:[] writes closed sentinel rows so the DB always
+   * has a record — but actually for "revert to weekly" we want NO override rows.
+   * We achieve that by calling the delete path directly via a dedicated flag.
+   */
   const clearDailyOverride = (date: Date) => {
     const iso = format(date, "yyyy-MM-dd");
+    // 1. Remove from local state immediately
     setDailyOverrides((prev) => {
       const next = { ...prev };
       delete next[iso];
       return next;
     });
-    // Delete override rows from DB by saving with the weekly config
-    // (persistDailyOverride would re-insert; instead we call the delete path directly)
+    // 2. Delete override rows from DB.
+    // Pass allSlots:[] with the deleteOnly flag so useSaveDailyOverride
+    // skips the insert step entirely — leaving NO specific_date rows,
+    // which correctly means "use weekly schedule" for this date.
     saveDailyMutation.mutate({
       staffId: userId,
       date: iso,
       dayOfWeek: getDay(date),
       enabled: false,
       slots: [],
-      allSlots: [],  // empty allSlots = delete only, no re-insert
+      allSlots: [],   // empty = delete-only, no sentinel rows
+      deleteOnly: true,
     });
   };
 
@@ -297,19 +302,24 @@ const AdminAvailability = () => {
                   const config = getDayConfig(day);
                   const isActive = selectedDate && isSameDay(day, selectedDate);
                   const hasOverride = !!dailyOverrides[iso];
+                  const isClosed = hasOverride && !config.enabled;
                   return (
                     <button
                       key={iso}
                       onClick={() => setSelectedDate(day)}
                       className={`relative w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
                         ${isActive ? "bg-white/[0.15] text-white ring-1 ring-white/20" : "hover:bg-white/[0.06]"}
-                        ${config.enabled ? "text-white/80" : "text-white/20"}
+                        ${isClosed ? "text-red-400/60" : config.enabled ? "text-white/80" : "text-white/20"}
                       `}
                     >
                       {format(day, "d")}
-                      {/* Override indicator dot */}
-                      {hasOverride && (
+                      {/* Amber dot = has override (open with custom hours) */}
+                      {hasOverride && config.enabled && (
                         <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-400" />
+                      )}
+                      {/* Red dot = explicitly closed override */}
+                      {isClosed && (
+                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-400/80" />
                       )}
                     </button>
                   );
@@ -333,21 +343,23 @@ const AdminAvailability = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 overflow-hidden"
                   >
-                    {/* Header row */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-semibold text-white/80">
                           {format(selectedDate, "EEEE, d MMMM yyyy")}
                         </h4>
                         {hasOverride && (
-                          <span className="text-[9px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/20">
-                            Override
+                          <span className={`text-[9px] tracking-wider uppercase px-2 py-0.5 rounded-full border ${
+                            config.enabled
+                              ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
+                              : "bg-red-400/10 text-red-400 border-red-400/20"
+                          }`}>
+                            {config.enabled ? "Override" : "Closed"}
                           </span>
                         )}
                         {isSaving && <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />}
                       </div>
                       <div className="flex items-center gap-3">
-                        {/* Revert to weekly schedule if an override exists */}
                         {hasOverride && (
                           <button
                             onClick={() => clearDailyOverride(selectedDate)}
@@ -356,7 +368,6 @@ const AdminAvailability = () => {
                             Reset
                           </button>
                         )}
-                        {/* Toggle open / closed for this specific date */}
                         <button
                           onClick={() => toggleDailyEnabled(selectedDate)}
                           className="text-white/60 hover:text-white transition-colors"
@@ -369,7 +380,6 @@ const AdminAvailability = () => {
                       </div>
                     </div>
 
-                    {/* Slot grid — interactive buttons */}
                     {config.enabled ? (
                       <>
                         <p className="text-[10px] text-white/30 mb-3">
