@@ -71,7 +71,7 @@ const Index = () => {
           booking.fullName.trim().length >= 2 &&
           /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) &&
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) &&
-          booking.address.trim().length >= 5 &&
+          booking.addressVerified === true &&
           booking.isExistingClient !== null
         );
       default: return true;
@@ -118,7 +118,6 @@ const Index = () => {
         <PrefetchAvailability durationMinutes={durationForSlots} />
 
         <div className="w-full max-w-md">
-          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -158,26 +157,6 @@ const Index = () => {
             <StepIndicator currentStep={step} />
           </motion.div>
 
-          {/*
-            overflow: clip (not hidden) on the step card wrapper.
-
-            ROOT CAUSE OF "Existing Diva / New Diva" BEING CLIPPED:
-            The .glass-card CSS class sets `overflow: hidden`. On a tall step
-            like DetailsStep, the AnimatePresence exit animation briefly shrinks
-            the card's rendered height while the leaving step fades out. Because
-            `overflow: hidden` establishes a new block formatting context AND
-            clips all axes, the incoming step's content that extends above the
-            card's momentarily-reduced height is clipped — permanently, because
-            the browser never re-renders the top edge after the animation settles.
-
-            `overflow: clip` is the correct fix:
-            - It clips paint (so glassmorphism ::before/::after pseudo-elements
-              don't bleed outside the card) ← same visual result as hidden
-            - It does NOT establish a scroll container, so no scroll origin drift
-            - It does NOT clip absolutely-positioned children (address dropdown)
-            - Combined with overflowX: clip already present for the x-axis slide
-              animation, this gives us full clip control with no side effects.
-          */}
           <div
             className="glass-card rounded-3xl p-5 mb-4"
             style={{ overflow: "clip" }}
@@ -191,9 +170,7 @@ const Index = () => {
                 animate="center"
                 exit="exit"
                 onAnimationComplete={(definition) => {
-                  if (definition === "center") {
-                    resetScroll();
-                  }
+                  if (definition === "center") resetScroll();
                 }}
               >
                 {step === 0 && (

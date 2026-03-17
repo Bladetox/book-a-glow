@@ -1,7 +1,7 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles } from "lucide-react";
+import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, X } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
@@ -27,7 +27,6 @@ const validators = {
   fullName: (v: string) => v.trim().length >= 2,
   phone: (v: string) => /^\d{7,15}$/.test(v.replace(/\s/g, "")),
   email: (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-  address: (v: string) => v.trim().length >= 5,
 };
 
 interface PlaceSuggestion {
@@ -44,25 +43,10 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const [addressLoading, setAddressLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
-
-  // Ref for the Full Name input — used for deferred programmatic focus.
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  /*
-  autoFocus REPLACEMENT — deferred programmatic focus.
-  ─────────────────────────────────────────────────────────────────────────────
-  The HTML `autoFocus` attribute fires synchronously on mount, BEFORE the
-  Framer Motion step-entry spring animation (~300ms) and BEFORE Book.tsx's
-  resetScroll() has settled. On mobile WebView this causes the browser to
-  immediately scroll the focused input into view above the keyboard, which
-  races against resetScroll() and clips the header + step indicator off screen.
-
-  Solution: wait for the step animation to fully settle (350ms matches the
-  spring stiffness:350/damping:35 in Book.tsx), yield one rAF so the browser
-  has completed its layout pass, then call .focus() programmatically.
-  This gives the user the same native-feel keyboard-up behaviour without the
-  scroll-fight.
-  */
+  // Deferred focus on Full Name after step animation settles
   useEffect(() => {
     const t = setTimeout(() => {
       requestAnimationFrame(() => {
@@ -70,9 +54,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       });
     }, 350);
     return () => clearTimeout(t);
-  }, []); // [] = fires once when Step 3 mounts, never again.
+  }, []);
 
-  // FIX 1 — callback ref to avoid the shared-ref bug between AnimatePresence children.
   const prevClientType = useRef<boolean | null>(booking.isExistingClient);
   const conditionalSectionRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -91,7 +74,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
 
-  // FIX 3 — live validation: mark touched (green) as soon as a field is valid.
   const markTouchedOnChange = useCallback((field: string, value: string) => {
     const key = field as keyof typeof validators;
     if (validators[key]?.(value)) {
@@ -102,6 +84,12 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const getValidationClass = (field: keyof typeof validators, value: string) => {
     if (!touched[field]) return "";
     return validators[field](value) ? "valid" : "invalid";
+  };
+
+  // Address validation is separate — driven by addressVerified flag, not string length
+  const getAddressValidationClass = () => {
+    if (!touched["address"]) return "";
+    return booking.addressVerified ? "valid" : "invalid";
   };
 
   const inputClass =
@@ -120,12 +108,19 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     return res.json();
   };
 
+  // Autocomplete effect — skip if address is already verified (user hasn't edited since selection)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const query = booking.address.trim();
 
     if (justSelectedRef.current) {
       justSelectedRef.current = false;
+      return;
+    }
+
+    // Don't re-query if address is already verified and unchanged
+    if (booking.addressVerified) {
+      setShowSuggestions(false);
       return;
     }
 
@@ -154,20 +149,30 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     }, 350);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [booking.address]);
+  }, [booking.address, booking.addressVerified]);
 
   const handleSelectSuggestion = async (description: string) => {
     justSelectedRef.current = true;
-    onUpdate({ address: description, distanceKm: null });
+    // Mark as verified immediately on selection from Google Places
+    onUpdate({ address: description, addressVerified: true, distanceKm: null });
     setShowSuggestions(false);
     setAddressSuggestions([]);
-    markTouched("address");
+    // Mark address as touched so green border appears immediately
+    setTouched((prev) => ({ ...prev, address: true }));
+    // Fire distance matrix call in background
     const origin = config.address;
     if (!origin) return;
     try {
       const data = await callPlacesFunction({ input: description, origin, tenant_id: tenantId });
       if (data?.distanceKm != null) onUpdate({ distanceKm: data.distanceKm });
     } catch { /* fallback to defaultDistanceKm in ReviewStep */ }
+  };
+
+  const handleClearAddress = () => {
+    onUpdate({ address: "", addressVerified: false, distanceKm: null });
+    setAddressSuggestions([]);
+    setShowSuggestions(false);
+    setTouched((prev) => ({ ...prev, address: false }));
   };
 
   return (
@@ -228,7 +233,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         )}
       </AnimatePresence>
 
-      {/* New client consultation form — FIX 7: overflow-hidden on outer wrapper only */}
+      {/* New client consultation form */}
       <AnimatePresence>
         {booking.isExistingClient === false && (
           <motion.div
@@ -263,7 +268,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                     <p className="text-sm text-foreground">{q.id}. {q.question}</p>
                     {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
                   </div>
-                  {/* FIX 4 — touch targets raised to 44px (py-3) */}
                   <div className="flex gap-2">
                     {[
                       { label: "No", value: false },
@@ -305,8 +309,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         transition={{ delay: 0.1 }}
         className="flex flex-col gap-3"
       >
-        {/* FIX 2 — deferred focus via nameInputRef (see useEffect above). NO autoFocus attr. */}
-        {/* FIX 6 — autoComplete="name" for iOS/Android Contacts prefill */}
+        {/* Full Name */}
         <div className="relative">
           <User className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
@@ -323,7 +326,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/* FIX 6 — autoComplete="tel" */}
+        {/* Phone */}
         <div className="relative">
           <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <select
@@ -352,8 +355,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/* FIX 5 — inputMode="email" forces @ key on Android Chrome WebView */}
-        {/* FIX 6 — autoComplete="email" */}
+        {/* Email */}
         <div className="relative">
           <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
@@ -371,27 +373,60 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        <div>
+        {/* Address — floating dropdown, verified flag, clear button */}
+        <div className="relative">
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-            {addressLoading && (
-              <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+
+            {/* Spinner while loading suggestions */}
+            {addressLoading && !booking.addressVerified && (
+              <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
             )}
+
+            {/* Clear button — only shown when there is content and not loading */}
+            {booking.address.length > 0 && !addressLoading && (
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault(); // prevent input blur before clear fires
+                  handleClearAddress();
+                }}
+                className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors z-10"
+                aria-label="Clear address"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             <input
-              className={`${inputClass} pl-10 ${getValidationClass("address", booking.address)}`}
+              className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
               placeholder="Home Address *"
               value={booking.address}
+              inputMode="search"
               onChange={(e) => {
-                onUpdate({ address: e.target.value, distanceKm: null });
-                markTouchedOnChange("address", e.target.value);
+                // Any manual edit invalidates verification
+                onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
+                if (e.target.value.trim().length >= 2) {
+                  setTouched((prev) => ({ ...prev, address: true }));
+                }
                 if (e.target.value.length < 3) setShowSuggestions(false);
               }}
               onBlur={() => {
                 markTouched("address");
-                setTimeout(() => setShowSuggestions(false), 200);
+                // Only hide if pointer is NOT inside the suggestions list.
+                // We rely on onPointerDown(preventDefault) on suggestion buttons
+                // to keep the input focused — this timeout is a last-resort fallback
+                // for edge cases (e.g. focus moves to an unrelated element).
+                setTimeout(() => {
+                  if (!suggestionsRef.current?.matches(":focus-within")) {
+                    setShowSuggestions(false);
+                  }
+                }, 150);
               }}
               onFocus={() => {
-                if (addressSuggestions.length > 0) setShowSuggestions(true);
+                if (addressSuggestions.length > 0 && !booking.addressVerified) {
+                  setShowSuggestions(true);
+                }
               }}
               autoComplete="off"
               autoCorrect="off"
@@ -399,45 +434,45 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             />
           </div>
 
+          {/* Floating suggestions dropdown — position:absolute so it overlays content below */}
           <AnimatePresence>
             {showSuggestions && addressSuggestions.length > 0 && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-                className="overflow-hidden"
+                ref={suggestionsRef}
+                initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-lg"
               >
-                <div className="mt-1 rounded-2xl overflow-hidden border border-border/40 bg-background/80 backdrop-blur-sm shadow-sm">
-                  {addressSuggestions.map((s, idx) => (
-                    <button
-                      key={s.place_id}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleSelectSuggestion(s.description);
-                      }}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        handleSelectSuggestion(s.description);
-                      }}
-                      className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
-                        ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
-                    >
-                      <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                      <span>{s.description}</span>
-                    </button>
-                  ))}
-                </div>
+                {addressSuggestions.map((s, idx) => (
+                  <button
+                    key={s.place_id}
+                    type="button"
+                    onPointerDown={(e) => {
+                      // preventDefault stops the input's onBlur from firing
+                      // before this handler completes — fixes the tap/blur race
+                      // on all pointer types (mouse, touch, stylus)
+                      e.preventDefault();
+                      handleSelectSuggestion(s.description);
+                    }}
+                    className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
+                      ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                    <span>{s.description}</span>
+                  </button>
+                ))}
               </motion.div>
             )}
           </AnimatePresence>
 
-          {!showSuggestions && (
-            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
-              Used to calculate your call-out fee
-            </p>
-          )}
+          {/* Helper text — show verified state or prompt */}
+          <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
+            {booking.addressVerified
+              ? "✓ Address confirmed — used to calculate your call-out fee"
+              : "Select your address from the list to confirm"}
+          </p>
         </div>
       </motion.div>
     </div>

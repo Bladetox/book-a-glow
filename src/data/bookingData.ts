@@ -22,6 +22,7 @@ export type BookingState = {
   phoneCode: string;
   email: string;
   address: string;
+  addressVerified: boolean;  // true only when address was selected from Google Places
   distanceKm: number | null;
   referralSource: string;
   safetyAnswers: Record<number, boolean | null>;
@@ -39,6 +40,7 @@ export const initialBookingState: BookingState = {
   phoneCode: "+27",
   email: "",
   address: "",
+  addressVerified: false,
   distanceKm: null,
   referralSource: "",
   safetyAnswers: {},
