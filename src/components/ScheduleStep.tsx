@@ -11,7 +11,7 @@ import {
   isToday,
   isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ChevronDown, X } from "lucide-react";
 import { useMonthAvailability, useDateSlots } from "@/hooks/usePublicAvailability";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -31,9 +31,10 @@ const ScheduleStep = ({
   totalDuration,
 }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  // calendarOpen: true = full calendar visible, false = collapsed to date strip
   const [calendarOpen, setCalendarOpen] = useState(true);
+  const [bookedPopup, setBookedPopup] = useState(false);
   const timeSlotsRef = useRef<HTMLDivElement>(null);
+  const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
@@ -73,11 +74,17 @@ const ScheduleStep = ({
     return (monthAvailability[ds]?.length ?? 0) > 0;
   };
 
-  // Picking a date: close the calendar, scroll time slots into view
+  /** Show the booked popup and auto-dismiss after 3 s */
+  const showBookedPopup = useCallback(() => {
+    if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+    setBookedPopup(true);
+    popupTimerRef.current = setTimeout(() => setBookedPopup(false), 3000);
+  }, []);
+
   const handleSelectDate = useCallback(
     (day: Date) => {
       onSelectDate(day);
-      onSelectTime(""); // reset time when date changes
+      onSelectTime("");
       setCalendarOpen(false);
       setTimeout(() => {
         timeSlotsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -86,10 +93,29 @@ const ScheduleStep = ({
     [onSelectDate, onSelectTime]
   );
 
-  // Tapping the collapsed date strip re-opens the calendar
+  /**
+   * Called for EVERY day tap — available or not.
+   * Past dates remain silently blocked.
+   * Future dates with no slots show the popup.
+   */
+  const handleDayTap = useCallback(
+    (day: Date) => {
+      const isPast = isBefore(day, today) && !isToday(day);
+      if (isPast) return;
+      const isAvailable = isDayAvailable(day);
+      // Only show popup once monthAvailability has loaded (avoid false positives)
+      if (!isAvailable && monthAvailability !== undefined) {
+        showBookedPopup();
+        return;
+      }
+      if (isAvailable) handleSelectDate(day);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [today, monthAvailability, handleSelectDate, showBookedPopup]
+  );
+
   const handleChangeDate = useCallback(() => {
     setCalendarOpen(true);
-    // Small delay so the calendar starts animating before we scroll to it
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 50);
@@ -101,7 +127,34 @@ const ScheduleStep = ({
         Choose date &amp; time
       </h3>
 
-      {/* Collapsed date strip — visible only after a date is chosen */}
+      {/* ── Fully-booked popup ── */}
+      <AnimatePresence>
+        {bookedPopup && (
+          <motion.div
+            key="booked-popup"
+            initial={{ opacity: 0, y: -10, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-lg leading-none">📅</span>
+              <p className="text-sm font-medium text-foreground">
+                This day is fully booked — please try another date.
+              </p>
+            </div>
+            <button
+              onClick={() => setBookedPopup(false)}
+              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Collapsed date strip */}
       <AnimatePresence>
         {selectedDate && !calendarOpen && (
           <motion.button
@@ -127,7 +180,7 @@ const ScheduleStep = ({
         )}
       </AnimatePresence>
 
-      {/* Full calendar — collapses after a date is picked */}
+      {/* Full calendar */}
       <AnimatePresence>
         {calendarOpen && (
           <motion.div
@@ -182,17 +235,24 @@ const ScheduleStep = ({
                 {days.map((day) => {
                   const isPast = isBefore(day, today) && !isToday(day);
                   const isAvailable = isDayAvailable(day);
-                  const isDisabled = isPast || !isAvailable;
                   const isActive = selectedDate && isSameDay(day, selectedDate);
+                  // Past = hard disabled. Future-unavailable = tappable for popup.
+                  const isHardDisabled = isPast;
 
                   return (
                     <motion.button
                       key={day.toISOString()}
-                      whileTap={!isDisabled ? { scale: 0.85 } : undefined}
-                      disabled={isDisabled}
-                      onClick={() => handleSelectDate(day)}
+                      whileTap={!isHardDisabled ? { scale: 0.85 } : undefined}
+                      disabled={isHardDisabled}
+                      onClick={() => handleDayTap(day)}
                       className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
-                        ${isDisabled ? "text-muted-foreground/25 cursor-not-allowed" : "hover:bg-muted/50 cursor-pointer active:bg-muted"}
+                        ${
+                          isHardDisabled
+                            ? "text-muted-foreground/20 cursor-not-allowed"
+                            : isAvailable
+                            ? "hover:bg-muted/50 cursor-pointer active:bg-muted"
+                            : "text-muted-foreground/30 cursor-pointer"
+                        }
                         ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-foreground"}
                       `}
                     >
