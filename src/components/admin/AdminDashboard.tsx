@@ -54,21 +54,114 @@ interface Appointment {
 interface HeatmapCell { slot: string; intensity: number; }
 interface HeatmapRow  { day: string; slots: HeatmapCell[]; }
 
-// ─── FlipCard ──────────────────────────────────────────────────────────
-// FIX: The back face no longer uses a fixed height — it sizes to its content
-// via minHeight matching the front. This prevents text overflow/overlap.
-// Both faces are positioned absolute within a container whose height is
-// driven by the FRONT face sitting in normal flow (invisible but present).
+// ─── Metric copy type ───
+// Explicit interface — NO "as const" — so benchmark can be string | undefined
+// without becoming the literal type "undefined" which breaks prop spreading.
+interface MetricEntry {
+  title: string;
+  explain: string;
+  benchmark?: string;
+}
+interface InfoLine {
+  term: string;
+  def: string;
+}
+interface MetricCopyShape {
+  revenueToday:      MetricEntry;
+  appointmentsToday: MetricEntry;
+  remaining:         MetricEntry;
+  nextUp:            MetricEntry;
+  fillRate:          MetricEntry;
+  avgBasket:         MetricEntry;
+  appointments:      MetricEntry;
+  cancellations:     MetricEntry;
+  clients:           MetricEntry;
+  returning:         MetricEntry;
+  retention:         MetricEntry;
+  revenueTrend:      InfoLine[];
+  heatmap:           InfoLine[];
+}
+
+// ─── Corporate-grade metric copy (plain-English backs) ───
+const METRIC_COPY: MetricCopyShape = {
+  revenueToday: {
+    title: "Daily Revenue",
+    explain: "Total money received today. Big brands track this hourly to spot slow periods and push promotions.",
+    benchmark: "Aim: consistent with your weekday average.",
+  },
+  appointmentsToday: {
+    title: "Today\u2019s Bookings",
+    explain: "How many clients are booked in today. Used alongside Fill Rate to measure daily capacity.",
+  },
+  remaining: {
+    title: "Remaining Appointments",
+    explain: "Appointments still ahead today. Watch this \u2014 if it drops suddenly, a no-show may have occurred.",
+  },
+  nextUp: {
+    title: "Next Appointment",
+    explain: "Your next client. Knowing their service in advance lets you prep and deliver a peak experience.",
+  },
+  fillRate: {
+    title: "Fill Rate (Capacity Utilisation)",
+    explain: "The % of your available time that was actually booked. Airlines, hotels, and salons all track this. A high fill rate = low wasted capacity.",
+    benchmark: "Target: 70%+. Below 50% means you\u2019re losing revenue to empty slots.",
+  },
+  avgBasket: {
+    title: "Average Transaction Value (ATV)",
+    explain: "Average revenue per appointment. Retailers and luxury brands obsess over ATV because lifting it by even 10% compounds fast.",
+    benchmark: "Tip: add one upsell per appointment to grow this.",
+  },
+  appointments: {
+    title: "Monthly Appointment Volume",
+    explain: "Total confirmed bookings this month. Brands use this as a leading indicator \u2014 more bookings now = more revenue later.",
+  },
+  cancellations: {
+    title: "Cancellation Rate",
+    explain: "% of bookings cancelled. High cancellation rates destroy revenue predictability. Top spas keep this below 8% using deposits.",
+    benchmark: "Target: below 10%. Above 20% = take action.",
+  },
+  clients: {
+    title: "Unique Clients (Reach)",
+    explain: "Total distinct people who booked with you this month \u2014 registered clients and walk-in guests.",
+  },
+  returning: {
+    title: "Repeat Clients",
+    explain: "Clients who booked more than once this month. Loyalty is cheaper than acquisition \u2014 retaining one client costs 5x less than finding a new one.",
+    benchmark: "Aim: at least 30\u201340% of your client base returning monthly.",
+  },
+  retention: {
+    title: "Retention Rate",
+    explain: "The % of your clients who came back. Starbucks, Netflix, and Apple track this obsessively \u2014 it\u2019s one of the most powerful metrics in any service business.",
+    benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
+  },
+  revenueTrend: [
+    { term: "Revenue Trend",       def: "Daily revenue plotted across the month. Corporations use this to spot peaks, dips, and seasonal patterns before they become problems." },
+    { term: "Peak Days",           def: "The tallest bars are your best earning days. Align promotions and staff around these." },
+    { term: "Flat / Zero Bars",    def: "Days with no revenue. Were you closed, or did clients just not book? Quiet days may need a targeted push." },
+    { term: "Month-on-Month",      def: "Compare this to last month to see if revenue is growing, stable, or declining." },
+  ],
+  heatmap: [
+    { term: "Booking Heatmap",     def: "Shows which days and time slots get the most bookings. Dark green = peak demand, faint = quiet. Airlines use this logic to set dynamic pricing." },
+    { term: "Dark Green Cells",    def: "Your peak demand slots. Protect these \u2014 never discount them. Consider charging a premium." },
+    { term: "Light / Empty Cells", def: "Quiet slots. Run targeted offers, loyalty specials, or social media fills here." },
+    { term: "Day Patterns",        def: "Weekend-heavy? Build weekday traffic to smooth revenue and reduce burnout." },
+  ],
+};
+
+// ─── Animation preset (hoisted above all JSX components) ───
+const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
+
+// ─── FlipCard ───
+// Container height is driven by an invisible front clone in normal flow.
+// Both front + back are absolute inset-0 on top of it — no fixed height needed.
 interface FlipCardProps {
   front: React.ReactNode;
   back:  React.ReactNode;
   className?: string;
 }
-
 const FlipCard = ({ front, back, className = "" }: FlipCardProps) => {
   const [flipped, setFlipped] = useState(false);
   return (
-    // outer: relative, no fixed height — grows with front content
     <div
       className={`relative cursor-pointer select-none ${className}`}
       style={{ perspective: "900px" }}
@@ -76,12 +169,12 @@ const FlipCard = ({ front, back, className = "" }: FlipCardProps) => {
       role="button"
       aria-label="Tap to learn more"
     >
-      {/* Invisible front clone keeps the container height stable */}
+      {/* invisible spacer — gives the container its natural height */}
       <div className="invisible pointer-events-none" aria-hidden="true">
         {front}
       </div>
 
-      {/* FRONT — absolute, fills container */}
+      {/* FRONT */}
       <motion.div
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
@@ -91,7 +184,7 @@ const FlipCard = ({ front, back, className = "" }: FlipCardProps) => {
         {front}
       </motion.div>
 
-      {/* BACK — absolute, fills same container, text scrolls if needed */}
+      {/* BACK */}
       <motion.div
         animate={{ rotateY: flipped ? 0 : -180 }}
         transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
@@ -103,9 +196,7 @@ const FlipCard = ({ front, back, className = "" }: FlipCardProps) => {
         className="absolute inset-0 rounded-xl border border-white/[0.10] bg-white/[0.07] overflow-hidden"
       >
         <div className="flex flex-col justify-between h-full p-3 gap-1">
-          <div className="overflow-y-auto flex-1">
-            {back}
-          </div>
+          <div className="overflow-y-auto flex-1">{back}</div>
           <span className="text-[9px] tracking-[0.12em] uppercase text-white/20 shrink-0 pt-1">Tap to go back</span>
         </div>
       </motion.div>
@@ -113,11 +204,9 @@ const FlipCard = ({ front, back, className = "" }: FlipCardProps) => {
   );
 };
 
-// ─── SectionInfoPanel ───────────────────────────────────────────────────
-// Used for section-level cards (Revenue Trend, Heatmap) that can’t flip
-// because they contain charts. A small ⓘ button in the header toggles
-// an animated info panel that slides in below the title.
-const SectionInfoPanel = ({ lines }: { lines: { term: string; def: string }[] }) => (
+// ─── SectionInfoPanel ───
+// Slide-in panel for chart sections that can’t flip.
+const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   <div className="mt-3 mb-1 rounded-lg border border-white/[0.06] bg-white/[0.04] p-3 flex flex-col gap-2">
     {lines.map(l => (
       <div key={l.term} className="flex gap-2">
@@ -128,22 +217,16 @@ const SectionInfoPanel = ({ lines }: { lines: { term: string; def: string }[] })
   </div>
 );
 
-// ─── Flip wrappers ────────────────────────────────────────────────────────
-
-interface FlipStatPillProps {
-  label:   string;
-  value:   string;
-  color?:  string;
-  title:   string;   // bold metric name shown on back
-  explain: string;   // plain-english definition
-  benchmark?: string; // "Target: X" guidance
-}
-const FlipStatPill = ({ label, value, color, title, explain, benchmark }: FlipStatPillProps) => (
+// ─── FlipStatPill ───
+const FlipStatPill = ({
+  label, value, color, title, explain, benchmark
+}: { label: string; value: string; color?: string } & MetricEntry) => (
   <FlipCard
+    className="rounded-lg border border-white/[0.06] bg-white/[0.03]"
     front={
       <div className="flex flex-col gap-0.5 min-w-0 justify-center h-full px-2 sm:px-3 py-3">
         <span className="text-[9px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.12em] uppercase text-white/30 truncate">{label}</span>
-        <span className={`text-xs sm:text-sm font-semibold truncate ${color || "text-white/90"}`}>{value}</span>
+        <span className={`text-xs sm:text-sm font-semibold truncate ${color ?? "text-white/90"}`}>{value}</span>
       </div>
     }
     back={
@@ -153,21 +236,13 @@ const FlipStatPill = ({ label, value, color, title, explain, benchmark }: FlipSt
         {benchmark && <span className="text-[10px] text-emerald-400/70 mt-0.5">{benchmark}</span>}
       </div>
     }
-    className="rounded-lg border border-white/[0.06] bg-white/[0.03]"
   />
 );
 
-interface FlipMetricCardProps {
-  icon:     React.ElementType;
-  label:    string;
-  value:    string;
-  color?:   string;
-  sub?:     string;
-  title:    string;
-  explain:  string;
-  benchmark?: string;
-}
-const FlipMetricCard = ({ icon: Icon, label, value, color, sub, title, explain, benchmark }: FlipMetricCardProps) => (
+// ─── FlipMetricCard ───
+const FlipMetricCard = ({
+  icon: Icon, label, value, color, sub, title, explain, benchmark
+}: { icon: React.ElementType; label: string; value: string; color?: string; sub?: string } & MetricEntry) => (
   <FlipCard
     front={
       <div className="flex items-start gap-3 p-3 sm:p-4">
@@ -176,7 +251,7 @@ const FlipMetricCard = ({ icon: Icon, label, value, color, sub, title, explain, 
         </div>
         <div className="flex flex-col gap-0.5 min-w-0 justify-center">
           <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">{label}</span>
-          <span className={`text-base sm:text-lg font-bold ${color || "text-white/90"}`}>{value}</span>
+          <span className={`text-base sm:text-lg font-bold ${color ?? "text-white/90"}`}>{value}</span>
           {sub && <span className="text-[10px] text-white/25">{sub}</span>}
         </div>
         <Info className="w-3 h-3 text-white/15 ml-auto shrink-0 mt-1" />
@@ -192,22 +267,16 @@ const FlipMetricCard = ({ icon: Icon, label, value, color, sub, title, explain, 
   />
 );
 
-interface ClientMiniCardProps {
-  icon:        React.ElementType;
-  iconColor?:  string;
-  value:       string;
-  valueColor?: string;
-  label:       string;
-  title:       string;
-  explain:     string;
-  benchmark?:  string;
-}
-const ClientMiniCard = ({ icon: Icon, iconColor, value, valueColor, label, title, explain, benchmark }: ClientMiniCardProps) => (
+// ─── ClientMiniCard ───
+const ClientMiniCard = ({
+  icon: Icon, iconColor, value, valueColor, label, title, explain, benchmark
+}: { icon: React.ElementType; iconColor?: string; value: string; valueColor?: string; label: string } & MetricEntry) => (
   <FlipCard
+    className="rounded-xl border border-white/[0.06] bg-white/[0.03]"
     front={
       <div className="flex flex-col items-center justify-center gap-1 py-4 px-2">
-        <Icon className={`w-4 h-4 ${iconColor || "text-white/30"}`} />
-        <p className={`text-lg font-bold ${valueColor || "text-white/90"}`}>{value}</p>
+        <Icon className={`w-4 h-4 ${iconColor ?? "text-white/30"}`} />
+        <p className={`text-lg font-bold ${valueColor ?? "text-white/90"}`}>{value}</p>
         <p className="text-[10px] text-white/30">{label}</p>
       </div>
     }
@@ -218,12 +287,11 @@ const ClientMiniCard = ({ icon: Icon, iconColor, value, valueColor, label, title
         {benchmark && <span className="text-[10px] text-emerald-400/70 mt-0.5">{benchmark}</span>}
       </div>
     }
-    className="rounded-xl border border-white/[0.06] bg-white/[0.03]"
   />
 );
 
-// ─── Heatmap & Appointments (unchanged logic) ───
-const heatmapSlots = ["08–10", "10–12", "12–14", "14–16", "16–18"];
+// ─── BookingHeatmap ───
+const heatmapSlots = ["08\u201310", "10\u201312", "12\u201314", "14\u201316", "16\u201318"];
 
 const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
   const maxIntensity = Math.max(...data.flatMap(r => r.slots.map(s => s.intensity)), 1);
@@ -276,9 +344,14 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
                 {row.slots.map(cell => {
                   const opacity = Math.min(cell.intensity / maxIntensity, 1);
                   return (
-                    <div key={cell.slot} className="flex-1 h-8 rounded-md flex items-center justify-center"
-                      style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.8, 0.06)})` }}>
-                      {cell.intensity > 0 && <span className="text-[9px] font-bold text-white/70">{cell.intensity}</span>}
+                    <div
+                      key={cell.slot}
+                      className="flex-1 h-8 rounded-md flex items-center justify-center"
+                      style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.8, 0.06)})` }}
+                    >
+                      {cell.intensity > 0 && (
+                        <span className="text-[9px] font-bold text-white/70">{cell.intensity}</span>
+                      )}
                     </div>
                   );
                 })}
@@ -287,14 +360,19 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
           );
         })}
         <div className="flex gap-1 px-8">
-          {heatmapSlots.map(s => <span key={s} className="flex-1 text-[8px] text-white/20 text-center">{s}</span>)}
+          {heatmapSlots.map(s => (
+            <span key={s} className="flex-1 text-[8px] text-white/20 text-center">{s}</span>
+          ))}
         </div>
       </div>
     </>
   );
 };
 
-const AppointmentsList = ({ appointments, onSelect }: { appointments: Appointment[]; onSelect?: (client: string) => void }) => (
+// ─── AppointmentsList ───
+const AppointmentsList = ({
+  appointments, onSelect
+}: { appointments: Appointment[]; onSelect?: (client: string) => void }) => (
   <>
     <div className="hidden sm:block overflow-x-auto -mx-1">
       <table className="w-full text-xs">
@@ -309,12 +387,16 @@ const AppointmentsList = ({ appointments, onSelect }: { appointments: Appointmen
         </thead>
         <tbody>
           {appointments.map(a => (
-            <tr key={a.id} className="border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => onSelect?.(a.client)}>
+            <tr
+              key={a.id}
+              className="border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.04] transition-colors"
+              onClick={() => onSelect?.(a.client)}
+            >
               <td className="py-2.5 text-white/60">{a.time}</td>
               <td className="py-2.5 text-white/80 font-medium">{a.client}</td>
               <td className="py-2.5 text-white/50">{a.service}</td>
               <td className="py-2.5"><StatusBadge status={a.status} /></td>
-              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "—"}</td>
+              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "\u2014"}</td>
             </tr>
           ))}
         </tbody>
@@ -322,7 +404,11 @@ const AppointmentsList = ({ appointments, onSelect }: { appointments: Appointmen
     </div>
     <div className="sm:hidden flex flex-col gap-2">
       {appointments.map(a => (
-        <div key={a.id} className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => onSelect?.(a.client)}>
+        <div
+          key={a.id}
+          className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
+          onClick={() => onSelect?.(a.client)}
+        >
           <div className="flex flex-col items-center shrink-0 w-12">
             <Clock className="w-3 h-3 text-white/30 mb-0.5" />
             <span className="text-xs font-semibold text-white/70">{a.time}</span>
@@ -341,6 +427,7 @@ const AppointmentsList = ({ appointments, onSelect }: { appointments: Appointmen
   </>
 );
 
+// ─── StatusBadge ───
 const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
     status === "confirmed" ? "bg-emerald-500/10 text-emerald-400" :
@@ -357,77 +444,6 @@ const alertIcons: Record<string, React.ElementType> = {
   info:    CalendarCheck,
   danger:  Package,
 };
-
-// ─── Metric copy — corporate-grade, plain-English backs ───────────────────────────
-const METRIC_COPY = {
-  revenueToday: {
-    title: "Daily Revenue",
-    explain: "Total money received today. Big brands track this hourly to spot slow periods and push promotions.",
-    benchmark: "Aim: consistent with your weekday average.",
-  },
-  appointmentsToday: {
-    title: "Today’s Bookings",
-    explain: "How many clients are booked in today. Used alongside Fill Rate to measure daily capacity.",
-    benchmark: undefined,
-  },
-  remaining: {
-    title: "Remaining Appointments",
-    explain: "Appointments still ahead today. Watch this number — if it drops suddenly, a no-show may have occurred.",
-    benchmark: undefined,
-  },
-  nextUp: {
-    title: "Next Appointment",
-    explain: "Your next client. Knowing their service in advance lets you prep and deliver a peak experience.",
-    benchmark: undefined,
-  },
-  fillRate: {
-    title: "Fill Rate (Capacity Utilisation)",
-    explain: "The % of your available time that was actually booked. Airlines, hotels, and salons all track this. A high fill rate = low wasted capacity.",
-    benchmark: "Target: 70%+. Below 50% means you’re losing revenue to empty slots.",
-  },
-  avgBasket: {
-    title: "Average Transaction Value (ATV)",
-    explain: "Average revenue per appointment. Retailers and luxury brands obsess over ATV because lifting it by even 10% compounds fast.",
-    benchmark: "Tip: add one upsell per appointment to grow this.",
-  },
-  appointments: {
-    title: "Monthly Appointment Volume",
-    explain: "Total confirmed bookings this month. Brands use this as a leading indicator — more bookings now = more revenue later.",
-    benchmark: undefined,
-  },
-  cancellations: {
-    title: "Cancellation Rate",
-    explain: "% of bookings that were cancelled. High cancellation rates destroy revenue predictability. Top spas keep this below 8% using deposits.",
-    benchmark: "Target: below 10%. Above 20% = take action.",
-  },
-  clients: {
-    title: "Unique Clients (Reach)",
-    explain: "Total distinct people who booked with you this month — registered clients and walk-in guests.",
-    benchmark: undefined,
-  },
-  returning: {
-    title: "Repeat Clients",
-    explain: "Clients who booked more than once this month. Loyalty is cheaper than acquisition — retaining one client costs 5x less than finding a new one.",
-    benchmark: "Aim: at least 30–40% of your client base returning monthly.",
-  },
-  retention: {
-    title: "Retention Rate",
-    explain: "The % of your clients who came back. This is one of the most powerful metrics in any service business — Starbucks, Netflix, and Apple track it obsessively.",
-    benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
-  },
-  revenueTrend: [
-    { term: "Revenue Trend",     def: "Daily revenue plotted across the month. Corporations use this to spot peaks, dips, and seasonal patterns before they become problems." },
-    { term: "Peak Days",         def: "The tallest bars show your busiest earning days. Align promotions and extra staff around these." },
-    { term: "Flat / Zero Bars",  def: "Days with no revenue. Investigate — were you closed, or did clients just not book? Quiet Tuesdays may need a promo push." },
-    { term: "Month-on-Month",    def: "Compare this chart to last month to see if your revenue is growing, stable, or declining." },
-  ],
-  heatmap: [
-    { term: "Booking Heatmap",   def: "Shows which days and time slots get the most bookings. Green = busy, faint = quiet. Airlines use this to adjust pricing by demand." },
-    { term: "Dark Green Cells",  def: "Your peak demand slots. Protect these — never discount them. Consider charging a premium." },
-    { term: "Light / Empty Cells", def: "Quiet slots. These are where you run targeted offers, loyalty specials, or fill via social media." },
-    { term: "Day Patterns",      def: "If Saturdays are always dark, you’re weekend-heavy. Build weekday traffic to smooth revenue and reduce fatigue." },
-  ],
-} as const;
 
 // ─── Main Dashboard ───
 const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client: string) => void }) => {
@@ -459,10 +475,10 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
   return (
     <div className="flex flex-col gap-4 sm:gap-5 w-full max-w-5xl">
 
-      {/* Customize toggle */}
+      {/* Customize */}
       <div className="flex justify-end">
         <button
-          onClick={() => setShowCustomize(!showCustomize)}
+          onClick={() => setShowCustomize(v => !v)}
           className="text-[10px] tracking-[0.12em] uppercase text-white/30 hover:text-white/60 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
         >
           <Eye className="w-3 h-3" /> Customize
@@ -472,16 +488,21 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
       <AnimatePresence>
         {showCustomize && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
             className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 overflow-hidden"
           >
             <p className="text-[10px] tracking-[0.12em] uppercase text-white/40 mb-3">Toggle dashboard sections</p>
             <div className="flex flex-wrap gap-2">
               {ALL_SECTIONS.map(key => (
                 <button
-                  key={key} onClick={() => toggle(key)}
+                  key={key}
+                  onClick={() => toggle(key)}
                   className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                    visibility[key] ? "border-white/20 text-white/80 bg-white/[0.08]" : "border-white/[0.06] text-white/25 bg-transparent"
+                    visibility[key]
+                      ? "border-white/20 text-white/80 bg-white/[0.08]"
+                      : "border-white/[0.06] text-white/25 bg-transparent"
                   }`}
                 >
                   {sectionLabels[key]}
@@ -501,18 +522,18 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           </p>
           <div className="flex items-center gap-1.5 mt-1.5">
             {pctUp
-              ? <TrendingUp  className="w-3.5 h-3.5 text-emerald-400/80" />
+              ? <TrendingUp   className="w-3.5 h-3.5 text-emerald-400/80" />
               : <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />
             }
-            <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>{pctChange}% vs last month</p>
+            <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>
+              {pctChange}% vs last month
+            </p>
           </div>
-
-          {/* Hero StatPills — all flippable, auto-height */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-6 pt-5 border-t border-white/[0.06]">
-            <FlipStatPill label="Revenue Today"  value={`R ${data.revenue.today.toLocaleString()}`} {...METRIC_COPY.revenueToday} />
-            <FlipStatPill label="Appointments"   value={String(data.today.appointments)}             {...METRIC_COPY.appointmentsToday} />
-            <FlipStatPill label="Remaining"      value={String(data.today.remaining)} color="text-amber-400" {...METRIC_COPY.remaining} />
-            <FlipStatPill label="Next Up"        value={data.today.nextAppointment || "—"}           {...METRIC_COPY.nextUp} />
+            <FlipStatPill label="Revenue Today" value={`R ${data.revenue.today.toLocaleString()}`} {...METRIC_COPY.revenueToday} />
+            <FlipStatPill label="Appointments"  value={String(data.today.appointments)}            {...METRIC_COPY.appointmentsToday} />
+            <FlipStatPill label="Remaining"     value={String(data.today.remaining)} color="text-amber-400" {...METRIC_COPY.remaining} />
+            <FlipStatPill label="Next Up"       value={data.today.nextAppointment ?? "\u2014"}       {...METRIC_COPY.nextUp} />
           </div>
         </motion.div>
       )}
@@ -521,10 +542,28 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
       {visibility.health && (
         <motion.div {...fadeUp} transition={{ delay: 0.05 }}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <FlipMetricCard icon={BarChart3}        label="Fill Rate"     value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "—"} color="text-emerald-400" {...METRIC_COPY.fillRate} />
-            <FlipMetricCard icon={ShoppingBag}      label="Avg Basket"    value={`R ${data.health.avgBasket.toLocaleString()}`}               {...METRIC_COPY.avgBasket} />
-            <FlipMetricCard icon={CalendarCheck}    label="Appointments"  value={String(data.health.totalAppointments)} sub="This month"       {...METRIC_COPY.appointments} />
-            <FlipMetricCard icon={XCircle}          label="Cancellations" value={`${data.health.cancellationRate}%`} color="text-red-400" sub={`R ${data.health.revenueLost.toLocaleString()} lost`} {...METRIC_COPY.cancellations} />
+            <FlipMetricCard
+              icon={BarChart3} label="Fill Rate"
+              value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "\u2014"}
+              color="text-emerald-400"
+              {...METRIC_COPY.fillRate}
+            />
+            <FlipMetricCard
+              icon={ShoppingBag} label="Avg Basket"
+              value={`R ${data.health.avgBasket.toLocaleString()}`}
+              {...METRIC_COPY.avgBasket}
+            />
+            <FlipMetricCard
+              icon={CalendarCheck} label="Appointments"
+              value={String(data.health.totalAppointments)} sub="This month"
+              {...METRIC_COPY.appointments}
+            />
+            <FlipMetricCard
+              icon={XCircle} label="Cancellations"
+              value={`${data.health.cancellationRate}%`} color="text-red-400"
+              sub={`R ${data.health.revenueLost.toLocaleString()} lost`}
+              {...METRIC_COPY.cancellations}
+            />
           </div>
         </motion.div>
       )}
@@ -535,12 +574,16 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           <motion.div {...fadeUp} transition={{ delay: 0.08 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
             <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-4">Top Services</h4>
             <div className="flex flex-col gap-2.5">
-              {data.topServices.length === 0 && <p className="text-xs text-white/25">No booking data yet</p>}
+              {data.topServices.length === 0 && (
+                <p className="text-xs text-white/25">No booking data yet</p>
+              )}
               {data.topServices.map((s, i) => (
                 <div key={s.name} className="flex items-center gap-3">
                   <span className="text-[10px] font-bold text-white/20 w-4">{i + 1}</span>
-                  <div className="flex-1 min-w-0"><p className="text-sm text-white/80 truncate">{s.name}</p></div>
-                  <span className="text-xs text-white/40">{s.count}×</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/80 truncate">{s.name}</p>
+                  </div>
+                  <span className="text-xs text-white/40">{s.count}\u00d7</span>
                   <span className="text-xs font-semibold text-white/60">R {s.revenue.toLocaleString()}</span>
                 </div>
               ))}
@@ -552,11 +595,22 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
             <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Client Insights</h4>
             <div className="grid grid-cols-3 gap-2">
-              <ClientMiniCard icon={UserPlus}  value={String(data.clients.total)} label="Clients"   {...METRIC_COPY.clients} />
-              <ClientMiniCard icon={UserCheck} value={data.clients.returning > 0 ? String(data.clients.returning) : "—"} label="Returning" {...METRIC_COPY.returning} />
               <ClientMiniCard
-                icon={Percent} iconColor="text-emerald-400/50"
-                value={data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "—"}
+                icon={UserPlus}
+                value={String(data.clients.total)}
+                label="Clients"
+                {...METRIC_COPY.clients}
+              />
+              <ClientMiniCard
+                icon={UserCheck}
+                value={data.clients.returning > 0 ? String(data.clients.returning) : "\u2014"}
+                label="Returning"
+                {...METRIC_COPY.returning}
+              />
+              <ClientMiniCard
+                icon={Percent}
+                iconColor="text-emerald-400/50"
+                value={data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "\u2014"}
                 valueColor="text-emerald-400"
                 label="Retention"
                 {...METRIC_COPY.retention}
@@ -575,13 +629,16 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           <div className="flex flex-col gap-2">
             {data.alerts.length === 0 && <p className="text-xs text-white/25">No alerts</p>}
             {data.alerts.map((a, i) => {
-              const Icon = alertIcons[a.type] || AlertTriangle;
+              const Icon = alertIcons[a.type] ?? AlertTriangle;
               return (
-                <div key={i} className={`flex items-start gap-2.5 text-xs p-2.5 rounded-lg ${
-                  a.type === "danger"  ? "bg-red-500/[0.08] text-red-400" :
-                  a.type === "warning" ? "bg-amber-500/[0.08] text-amber-400" :
-                  "bg-white/[0.04] text-white/60"
-                }`}>
+                <div
+                  key={i}
+                  className={`flex items-start gap-2.5 text-xs p-2.5 rounded-lg ${
+                    a.type === "danger"  ? "bg-red-500/[0.08] text-red-400" :
+                    a.type === "warning" ? "bg-amber-500/[0.08] text-amber-400" :
+                    "bg-white/[0.04] text-white/60"
+                  }`}
+                >
                   <Icon className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>{a.text}</span>
                 </div>
@@ -591,7 +648,7 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
         </motion.div>
       )}
 
-      {/* ── 5. REVENUE TREND — with ⓘ info panel ── */}
+      {/* ── 5. REVENUE TREND ── */}
       {visibility.revenueGraph && (
         <motion.div {...fadeUp} transition={{ delay: 0.14 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
           <div className="flex items-center justify-between">
@@ -601,7 +658,9 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
               <button
                 onClick={() => setShowTrendInfo(v => !v)}
                 className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                  showTrendInfo ? "bg-emerald-400/20 text-emerald-400" : "bg-white/[0.06] text-white/30 hover:text-white/60"
+                  showTrendInfo
+                    ? "bg-emerald-400/20 text-emerald-400"
+                    : "bg-white/[0.06] text-white/30 hover:text-white/60"
                 }`}
                 aria-label="What does this chart mean?"
               >
@@ -613,16 +672,18 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           <AnimatePresence>
             {showTrendInfo && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <SectionInfoPanel lines={[...METRIC_COPY.revenueTrend]} />
+                <SectionInfoPanel lines={METRIC_COPY.revenueTrend} />
               </motion.div>
             )}
           </AnimatePresence>
 
           <div className="h-32 sm:h-40 flex items-end gap-[2px] sm:gap-1 mt-4">
-            {data.revenueTrend.map((d) => {
+            {data.revenueTrend.map(d => {
               const maxVal = Math.max(...data.revenueTrend.map(x => x.value), 1);
               const h = Math.max((d.value / maxVal) * 100, 4);
               return (
@@ -638,7 +699,7 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
         </motion.div>
       )}
 
-      {/* ── 6. BOOKING HEATMAP — with ⓘ info panel ── */}
+      {/* ── 6. BOOKING HEATMAP ── */}
       {visibility.heatmap && (
         <motion.div {...fadeUp} transition={{ delay: 0.16 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
           <div className="flex items-center justify-between mb-1">
@@ -646,7 +707,9 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
             <button
               onClick={() => setShowHeatInfo(v => !v)}
               className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                showHeatInfo ? "bg-emerald-400/20 text-emerald-400" : "bg-white/[0.06] text-white/30 hover:text-white/60"
+                showHeatInfo
+                  ? "bg-emerald-400/20 text-emerald-400"
+                  : "bg-white/[0.06] text-white/30 hover:text-white/60"
               }`}
               aria-label="What does this chart mean?"
             >
@@ -657,10 +720,12 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           <AnimatePresence>
             {showHeatInfo && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <SectionInfoPanel lines={[...METRIC_COPY.heatmap]} />
+                <SectionInfoPanel lines={METRIC_COPY.heatmap} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -671,10 +736,10 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
         </motion.div>
       )}
 
-      {/* ── 7. TODAY'S APPOINTMENTS ── */}
+      {/* ── 7. TODAY’S APPOINTMENTS ── */}
       {visibility.todayAppointments && (
         <motion.div {...fadeUp} transition={{ delay: 0.18 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-          <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today’s Appointments</h4>
+          <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today\u2019s Appointments</h4>
           {data.todayAppointments.length === 0
             ? <p className="text-xs text-white/25">No appointments today</p>
             : <AppointmentsList appointments={data.todayAppointments} onSelect={onSelectAppointment} />
@@ -689,13 +754,20 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
             <Package className="w-3.5 h-3.5" /> Stock Alerts
           </h4>
           <div className="flex flex-col gap-2">
-            {data.stockAlerts.length === 0 && <p className="text-xs text-white/25">All stock levels OK</p>}
+            {data.stockAlerts.length === 0 && (
+              <p className="text-xs text-white/25">All stock levels OK</p>
+            )}
             {data.stockAlerts.map((s, i) => (
-              <div key={i} className={`flex items-center gap-2.5 text-xs p-2.5 rounded-lg ${
-                s.level === "critical" ? "bg-red-500/[0.08] text-red-400" : "bg-amber-500/[0.08] text-amber-400"
-              }`}>
+              <div
+                key={i}
+                className={`flex items-center gap-2.5 text-xs p-2.5 rounded-lg ${
+                  s.level === "critical"
+                    ? "bg-red-500/[0.08] text-red-400"
+                    : "bg-amber-500/[0.08] text-amber-400"
+                }`}
+              >
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>{s.item} — {s.level}</span>
+                <span>{s.item} \u2014 {s.level}</span>
               </div>
             ))}
           </div>
@@ -707,10 +779,10 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
         <motion.div {...fadeUp} transition={{ delay: 0.22 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
           <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Business Status</h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
+            {([
               { label: "Deposits",       active: true,  icon: CircleDollarSign },
               { label: "Google Reviews", active: false, icon: Star },
-            ].map(s => (
+            ] as const).map(s => (
               <div key={s.label} className="flex items-center gap-2">
                 <div className={`w-1.5 h-1.5 rounded-full ${s.active ? "bg-emerald-400" : "bg-white/10"}`} />
                 <s.icon className="w-3.5 h-3.5 text-white/30" />
