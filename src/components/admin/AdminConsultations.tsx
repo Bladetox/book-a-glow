@@ -21,7 +21,8 @@ const AdminConsultations = () => {
           *,
           booking:bookings!consultations_booking_id_fkey(
             booking_date, start_time, guest_name, guest_email, guest_phone,
-            client:profiles!bookings_client_id_fkey(full_name, email, phone)
+            client:profiles!bookings_client_id_fkey(full_name, email, phone),
+            items:booking_items(service_name, price, sort_order)
           )
         `)
         .eq("tenant_id", tenantId)
@@ -65,10 +66,12 @@ const AdminConsultations = () => {
             const booking = c.booking;
             const client = booking?.client;
 
-            // Prefer linked profile, fall back to guest fields on booking
             const displayName  = client?.full_name  || booking?.guest_name  || "Unknown";
             const displayEmail = client?.email       || booking?.guest_email || null;
             const displayPhone = client?.phone       || booking?.guest_phone || null;
+
+            const services: { service_name: string; price: number; sort_order: number }[] =
+              (booking?.items ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order);
 
             return (
               <motion.div key={c.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -88,7 +91,8 @@ const AdminConsultations = () => {
                 {isExpanded && (
                   <div className="px-3 sm:px-4 pb-4 pt-1 border-t border-white/[0.06]">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                      {/* Contact details */}
+
+                      {/* Contact */}
                       {displayEmail && (
                         <div>
                           <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-0.5">Email</p>
@@ -101,24 +105,40 @@ const AdminConsultations = () => {
                           <p className="text-xs text-white/70">{displayPhone}</p>
                         </div>
                       )}
-                      {/* Consultation fields */}
+
+                      {/* Services booked — full width */}
+                      {services.length > 0 && (
+                        <div className="col-span-1 sm:col-span-2">
+                          <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-1">Services Booked</p>
+                          <div className="flex flex-col gap-0.5">
+                            {services.map((s) => (
+                              <div key={s.sort_order} className="flex justify-between items-baseline">
+                                <p className="text-xs text-white/70">{s.service_name}</p>
+                                <p className="text-xs text-white/40 ml-4">R{s.price}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Consultation fields — no lead_source, no call_out_address */}
                       {[
-                        { label: "Skin Conditions", value: c.skin_conditions },
-                        { label: "Medications", value: c.medications },
-                        { label: "Allergies", value: c.allergies },
-                        { label: "Health Conditions", value: c.health_conditions },
-                        { label: "Pregnancy", value: c.pregnancy },
-                        { label: "Environmental", value: c.environmental_exposure },
-                        { label: "Physical Factors", value: c.physical_factors },
-                        { label: "Hair Length OK", value: c.hair_length_ok },
-                        { label: "Lead Source", value: c.lead_source },
-                        { label: "Additional Notes", value: c.additional_notes },
-                      ].filter(f => f.value && f.value !== "On File").map(f => (
+                        { label: "Skin Conditions",   value: c.skin_conditions },
+                        { label: "Medications",        value: c.medications },
+                        { label: "Allergies",           value: c.allergies },
+                        { label: "Health Conditions",  value: c.health_conditions },
+                        { label: "Pregnancy",           value: c.pregnancy },
+                        { label: "Environmental",       value: c.environmental_exposure },
+                        { label: "Physical Factors",    value: c.physical_factors },
+                        { label: "Hair Length OK",      value: c.hair_length_ok },
+                        { label: "Additional Notes",   value: c.additional_notes },
+                      ].filter(f => f.value && f.value !== "On File" && f.value !== "None reported").map(f => (
                         <div key={f.label}>
                           <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-0.5">{f.label}</p>
                           <p className="text-xs text-white/70">{f.value}</p>
                         </div>
                       ))}
+
                     </div>
                   </div>
                 )}
