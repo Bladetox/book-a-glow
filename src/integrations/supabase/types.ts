@@ -895,7 +895,11 @@ export type Database = {
       }
       get_app_setting: { Args: { p_key: string }; Returns: string }
       get_available_slots: {
-        Args: { p_date: string; p_staff_id: string }
+        Args: {
+          p_date: string
+          p_staff_id: string
+          p_duration_minutes?: number
+        }
         Returns: {
           is_available: boolean
           slot_end: string
