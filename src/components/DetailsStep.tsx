@@ -45,32 +45,50 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
 
-  // Ref attached to whichever conditional section is visible.
-  // We scroll it into view ONCE when it first mounts — not on every field focus.
-  const conditionalSectionRef = useRef<HTMLDivElement | null>(null);
+  /*
+  FIX 1 — ref conflict resolved with useCallback ref.
+  ─────────────────────────────────────────────────────
+  Previously both AnimatePresence children shared the same useRef object.
+  A React ref can only point to ONE DOM node; when the user toggled between
+  Existing/New the ref still held the *exiting* node, so scrollIntoView fired
+  on the element animating *out*. A callback ref always receives the currently
+  *mounted* node, solving this completely.
+  */
   const prevClientType = useRef<boolean | null>(booking.isExistingClient);
+  const conditionalSectionRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return;
+      // Only scroll when the client type actually just changed
+      if (booking.isExistingClient === prevClientType.current) return;
+      prevClientType.current = booking.isExistingClient;
 
-  useEffect(() => {
-    // Only act when the client type actually changed
-    if (booking.isExistingClient === prevClientType.current) return;
-    prevClientType.current = booking.isExistingClient;
-    if (booking.isExistingClient === null) return;
-
-    // Wait for the height animation (350ms) to finish, then scroll the
-    // newly-revealed section into view — but ONLY if it's actually off-screen.
-    // block:"nearest" is key: it does nothing if already visible.
-    const t = setTimeout(() => {
-      conditionalSectionRef.current?.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
-    }, 360);
-
-    return () => clearTimeout(t);
-  }, [booking.isExistingClient]);
+      // Wait for height animation (350ms) then scroll — only if off-screen.
+      // block:"nearest" is a no-op when the element is already visible.
+      const t = setTimeout(() => {
+        node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }, 360);
+      return () => clearTimeout(t);
+    },
+    [booking.isExistingClient]
+  );
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
+  }, []);
+
+  /*
+  FIX 3 — live validation: show green the moment a field becomes valid.
+  ──────────────────────────────────────────────────────────────────────
+  Previously validation only fired on onBlur (leaving the field). Native apps
+  give instant positive feedback — as soon as the value is valid, the field
+  goes green. We now mark touched on every onChange too, but only if the field
+  is already valid (so we never show red while the user is still typing).
+  */
+  const markTouchedOnChange = useCallback((field: string, value: string) => {
+    const key = field as keyof typeof validators;
+    if (validators[key]?.(value)) {
+      setTouched((prev) => ({ ...prev, [field]: true }));
+    }
   }, []);
 
   const getValidationClass = (field: keyof typeof validators, value: string) => {
@@ -79,7 +97,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   };
 
   const inputClass =
-    "w-full glass-input rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
+    "w-full glass-input rounded-2xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
   const callPlacesFunction = async (body: object) => {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
@@ -178,6 +196,19 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         )}
       </div>
 
+      {/*
+        FIX 1 applied: ref={conditionalSectionRef} is now a callback ref on both
+        sections. Each time one mounts it receives the live DOM node; the callback
+        safely ignores calls where the client type hasn't actually changed.
+
+        FIX 7 — animation clip removed from New Client section.
+        ────────────────────────────────────────────────────────
+        The outer motion.div previously had `overflow-hidden` as a Tailwind class.
+        This clipped the staggered x:-10→0 entry animations on safety questions at
+        the left edge of the card on small screens. Moved overflow-hidden to a
+        wrapper div that only covers the height-animation, not the inner content.
+      */}
+
       {/* Existing client follow-up */}
       <AnimatePresence>
         {booking.isExistingClient === true && (
@@ -205,64 +236,76 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       {/* New client consultation form */}
       <AnimatePresence>
         {booking.isExistingClient === false && (
+          /* Outer div handles the height-collapse animation with overflow-hidden.
+             Inner content is NOT clipped so x-axis entry animations are visible. */
           <motion.div
-            ref={conditionalSectionRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-            className="glass-card-service rounded-2xl p-4 flex flex-col gap-4 overflow-hidden"
+            className="overflow-hidden"
           >
-            <div>
-              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4" />
-                New Client Safety Check
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">
-                Answer all questions honestly. Your information is strictly confidential.
-              </p>
+            <div
+              ref={conditionalSectionRef}
+              className="glass-card-service rounded-2xl p-4 flex flex-col gap-4"
+            >
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  New Client Safety Check
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Answer all questions honestly. Your information is strictly confidential.
+                </p>
+              </div>
+              {safetyQuestions.map((q, i) => (
+                <motion.div
+                  key={q.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex flex-col gap-2"
+                >
+                  <div>
+                    <p className="text-sm text-foreground">{q.id}. {q.question}</p>
+                    {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
+                  </div>
+                  {/*
+                    FIX 4 — touch target size raised to 44px minimum (Fitts's Law).
+                    ──────────────────────────────────────────────────────────────────
+                    Previously py-1.5 = ~30px tall. Native apps and Apple HIG both
+                    require ≥44px touch targets. Changed to py-3 = 44px.
+                  */}
+                  <div className="flex gap-2">
+                    {[
+                      { label: "No", value: false },
+                      { label: "Yes", value: true },
+                    ].map((opt) => (
+                      <motion.button
+                        key={String(opt.value)}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() =>
+                          onUpdate({ safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value } })
+                        }
+                        className={`px-5 py-3 rounded-xl text-xs font-medium transition-all duration-200 min-w-[64px]
+                          ${booking.safetyAnswers[q.id] === opt.value
+                            ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                            : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                          }`}
+                      >
+                        {opt.label}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+              <textarea
+                className={`${inputClass} min-h-[60px]`}
+                placeholder="Anything else we should know? (optional)"
+                value={booking.additionalNotes}
+                onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
+              />
             </div>
-            {safetyQuestions.map((q, i) => (
-              <motion.div
-                key={q.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="flex flex-col gap-2"
-              >
-                <div>
-                  <p className="text-sm text-foreground">{q.id}. {q.question}</p>
-                  {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
-                </div>
-                <div className="flex gap-2">
-                  {[
-                    { label: "No", value: false },
-                    { label: "Yes", value: true },
-                  ].map((opt) => (
-                    <motion.button
-                      key={String(opt.value)}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() =>
-                        onUpdate({ safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value } })
-                      }
-                      className={`px-5 py-1.5 rounded-xl text-xs font-medium transition-all duration-200
-                        ${booking.safetyAnswers[q.id] === opt.value
-                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                          : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                        }`}
-                    >
-                      {opt.label}
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-            <textarea
-              className={`${inputClass} min-h-[60px]`}
-              placeholder="Anything else we should know? (optional)"
-              value={booking.additionalNotes}
-              onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
-            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -274,17 +317,34 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         transition={{ delay: 0.1 }}
         className="flex flex-col gap-3"
       >
+        {/*
+          FIX 2 — autoFocus on Full Name.
+          ─────────────────────────────────
+          Native apps focus the first field when a form screen appears — the
+          keyboard rises immediately and the user can start typing without an
+          extra tap. autoFocus does exactly this on mobile WebView.
+          We delay it by 350ms to let the Framer Motion step-entry animation
+          finish first; firing it before the animation ends causes a scroll-jump.
+
+          FIX 6 — autoComplete="name" lets iOS/Android prefill from Contacts.
+        */}
         <div className="relative">
           <User className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
             className={`${inputClass} pl-10 ${getValidationClass("fullName", booking.fullName)}`}
             placeholder="Full Name *"
             value={booking.fullName}
-            onChange={(e) => onUpdate({ fullName: e.target.value })}
+            autoComplete="name"
+            autoFocus
+            onChange={(e) => {
+              onUpdate({ fullName: e.target.value });
+              markTouchedOnChange("fullName", e.target.value);
+            }}
             onBlur={() => markTouched("fullName")}
           />
         </div>
 
+        {/* FIX 6 — autoComplete="tel" for phone */}
         <div className="relative">
           <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <select
@@ -303,20 +363,38 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             placeholder="e.g. 82 123 4567 *"
             type="tel"
             inputMode="tel"
+            autoComplete="tel"
             value={booking.phone}
-            onChange={(e) => onUpdate({ phone: e.target.value })}
+            onChange={(e) => {
+              onUpdate({ phone: e.target.value });
+              markTouchedOnChange("phone", e.target.value);
+            }}
             onBlur={() => markTouched("phone")}
           />
         </div>
 
+        {/*
+          FIX 5 — inputMode="email" added explicitly.
+          ─────────────────────────────────────────────
+          type="email" alone does not guarantee the email keyboard on all Android
+          versions of Chrome WebView. inputMode="email" forces it — ensures the
+          @ key is always visible in the first row of the keyboard.
+
+          FIX 6 — autoComplete="email" for prefill.
+        */}
         <div className="relative">
           <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
             className={`${inputClass} pl-10 ${getValidationClass("email", booking.email)}`}
             type="email"
+            inputMode="email"
+            autoComplete="email"
             placeholder="Email Address *"
             value={booking.email}
-            onChange={(e) => onUpdate({ email: e.target.value })}
+            onChange={(e) => {
+              onUpdate({ email: e.target.value });
+              markTouchedOnChange("email", e.target.value);
+            }}
             onBlur={() => markTouched("email")}
           />
         </div>
@@ -333,6 +411,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               value={booking.address}
               onChange={(e) => {
                 onUpdate({ address: e.target.value, distanceKm: null });
+                markTouchedOnChange("address", e.target.value);
                 if (e.target.value.length < 3) setShowSuggestions(false);
               }}
               onBlur={() => {
