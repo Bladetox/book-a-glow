@@ -41,23 +41,15 @@ const ScheduleStep = ({
   const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(year, month, totalDuration);
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
-  const { data: rawDateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr, totalDuration);
+  // DB (get_available_slots) already filters past slots using Africa/Johannesburg TZ.
+  // No client-side time filter needed — avoids device clock mismatch.
+  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr, totalDuration);
 
   const today = useMemo(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
     return t;
   }, []);
-
-  const dateSlots = useMemo(() => {
-    if (!selectedDate || !isToday(selectedDate)) return rawDateSlots;
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    return rawDateSlots.filter((slot) => {
-      const [h, m] = slot.split(":").map(Number);
-      return h * 60 + m > nowMinutes;
-    });
-  }, [rawDateSlots, selectedDate]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -236,7 +228,6 @@ const ScheduleStep = ({
                   const isPast = isBefore(day, today) && !isToday(day);
                   const isAvailable = isDayAvailable(day);
                   const isActive = selectedDate && isSameDay(day, selectedDate);
-                  // Past = hard disabled. Future-unavailable = tappable for popup.
                   const isHardDisabled = isPast;
 
                   return (
