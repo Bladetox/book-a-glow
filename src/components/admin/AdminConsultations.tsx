@@ -20,7 +20,7 @@ const AdminConsultations = () => {
         .select(`
           *,
           booking:bookings!consultations_booking_id_fkey(
-            booking_date, start_time,
+            booking_date, start_time, guest_name, guest_email, guest_phone,
             client:profiles!bookings_client_id_fkey(full_name, email, phone)
           )
         `)
@@ -65,13 +65,18 @@ const AdminConsultations = () => {
             const booking = c.booking;
             const client = booking?.client;
 
+            // Prefer linked profile, fall back to guest fields on booking
+            const displayName  = client?.full_name  || booking?.guest_name  || "Unknown";
+            const displayEmail = client?.email       || booking?.guest_email || null;
+            const displayPhone = client?.phone       || booking?.guest_phone || null;
+
             return (
               <motion.div key={c.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
                 <div className="p-3 sm:p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : c.id)}>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white/85 truncate">{client?.full_name || "Unknown"}</p>
+                    <p className="text-sm font-medium text-white/85 truncate">{displayName}</p>
                     <p className="text-[11px] text-white/40">{booking?.booking_date} • {c.client_type === "new" ? "New Client" : "Existing"}</p>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${c.client_type === "new" ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>
@@ -83,6 +88,20 @@ const AdminConsultations = () => {
                 {isExpanded && (
                   <div className="px-3 sm:px-4 pb-4 pt-1 border-t border-white/[0.06]">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                      {/* Contact details */}
+                      {displayEmail && (
+                        <div>
+                          <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-0.5">Email</p>
+                          <p className="text-xs text-white/70">{displayEmail}</p>
+                        </div>
+                      )}
+                      {displayPhone && (
+                        <div>
+                          <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-0.5">Phone</p>
+                          <p className="text-xs text-white/70">{displayPhone}</p>
+                        </div>
+                      )}
+                      {/* Consultation fields */}
                       {[
                         { label: "Skin Conditions", value: c.skin_conditions },
                         { label: "Medications", value: c.medications },
