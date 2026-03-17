@@ -20,6 +20,23 @@ interface ReviewStepProps {
 
 type PaymentChoice = "deposit" | "full";
 
+function friendlyBookingError(err: any): string {
+  const raw: string = err?.message ?? "";
+  if (/time.*already booked|slot.*taken|no longer available|is not available/i.test(raw))
+    return "That time slot is no longer available. Please choose a different time.";
+  if (/not available|availability/i.test(raw))
+    return "The stylist is not available at that time. Please select a different slot.";
+  if (/Could not find the function|function does not exist|unknown param|Could not choose|PGRST/i.test(raw))
+    return "We had a temporary issue processing your booking. Please try again.";
+  if (/duplicate|unique/i.test(raw))
+    return "It looks like this booking already exists. Please contact us if you need help.";
+  if (/Could not resolve staff/i.test(raw))
+    return "We couldn't load the booking details. Please refresh and try again.";
+  if (/Payment gateway/i.test(raw))
+    return "We couldn't connect to the payment gateway. Please try again in a moment.";
+  return "Something went wrong while placing your booking. Please try again or contact us directly.";
+}
+
 const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
@@ -144,12 +161,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
     } catch (err: any) {
       console.error("Booking error:", err);
       const msg: string  = err.message || "";
-      const code: string = (err as any)?.code || "";
-      const isParamError = /Could not find the function|function does not exist|unknown param|Could not choose/i.test(msg);
       const slotTaken =
-        !isParamError &&
-        code !== "PGRST203" &&
-        /time.*already booked|slot.*taken|no longer available|is not available/i.test(msg);
+        /time.*already booked|slot.*taken|no longer available|is not available/i.test(msg) &&
+        !/Could not find the function|function does not exist|PGRST/i.test(msg);
+
       if (slotTaken) {
         queryClient.invalidateQueries({ queryKey: ["public-date-slots"] });
         queryClient.invalidateQueries({ queryKey: ["public-month-availability"] });
@@ -157,7 +172,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         toast.error("That time slot was just taken. Please pick a new time.");
         onGoToStep(1);
       } else {
-        toast.error(msg || "Failed to create booking. Please try again.");
+        toast.error(friendlyBookingError(err));
       }
     } finally {
       setSubmitting(false);
