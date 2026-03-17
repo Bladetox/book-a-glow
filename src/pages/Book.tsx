@@ -50,12 +50,23 @@ const PrefetchAvailability = ({ durationMinutes }: { durationMinutes: number }) 
   return null;
 };
 
-/** Scroll to top instantly BEFORE a step transition so the incoming step
- *  always paints at y=0. Using 'instant' avoids a smooth-scroll racing
- *  against the Framer Motion spring animation on mobile. */
+/**
+ * Reset scroll INSTANTLY to the top.
+ *
+ * Called in two places:
+ *  1. BEFORE the step transition (handleNext / handlePrev) — sets a good
+ *     starting position so the exit animation doesn't begin mid-scroll.
+ *  2. AFTER the incoming step's entry animation completes (onAnimationComplete
+ *     on the motion.div) — this is the critical one. The Framer Motion exit
+ *     animation of the LEAVING step runs for ~200-300 ms; during that window
+ *     the browser can drift the scroll position because the DOM height changes
+ *     as one card unmounts and another mounts. The result without this second
+ *     call is the incoming step painting with the top ~80px scrolled off screen
+ *     ("Existing Diva / New Diva" clipped), even though no keyboard is open.
+ *     Firing resetScroll once "center" animation is done guarantees y=0.
+ */
 const resetScroll = () => {
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
+  window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
 };
 
 const Index = () => {
@@ -174,6 +185,14 @@ const Index = () => {
                 initial="enter"
                 animate="center"
                 exit="exit"
+                onAnimationComplete={(definition) => {
+                  // Only fire on the "center" (entry-complete) variant, not on "exit".
+                  // This is the reliable moment to snap back to top: the leaving step
+                  // has fully unmounted and the entering step is at its final position.
+                  if (definition === "center") {
+                    resetScroll();
+                  }
+                }}
               >
                 {step === 0 && (
                   <ServicesStep
