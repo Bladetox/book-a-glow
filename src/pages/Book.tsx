@@ -50,21 +50,6 @@ const PrefetchAvailability = ({ durationMinutes }: { durationMinutes: number }) 
   return null;
 };
 
-/**
- * Reset scroll INSTANTLY to the top.
- *
- * Called in two places:
- *  1. BEFORE the step transition (handleNext / handlePrev) — sets a good
- *     starting position so the exit animation doesn't begin mid-scroll.
- *  2. AFTER the incoming step's entry animation completes (onAnimationComplete
- *     on the motion.div) — this is the critical one. The Framer Motion exit
- *     animation of the LEAVING step runs for ~200-300 ms; during that window
- *     the browser can drift the scroll position because the DOM height changes
- *     as one card unmounts and another mounts. The result without this second
- *     call is the incoming step painting with the top ~80px scrolled off screen
- *     ("Existing Diva / New Diva" clipped), even though no keyboard is open.
- *     Firing resetScroll once "center" animation is done guarantees y=0.
- */
 const resetScroll = () => {
   window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
 };
@@ -173,9 +158,29 @@ const Index = () => {
             <StepIndicator currentStep={step} />
           </motion.div>
 
+          {/*
+            overflow: clip (not hidden) on the step card wrapper.
+
+            ROOT CAUSE OF "Existing Diva / New Diva" BEING CLIPPED:
+            The .glass-card CSS class sets `overflow: hidden`. On a tall step
+            like DetailsStep, the AnimatePresence exit animation briefly shrinks
+            the card's rendered height while the leaving step fades out. Because
+            `overflow: hidden` establishes a new block formatting context AND
+            clips all axes, the incoming step's content that extends above the
+            card's momentarily-reduced height is clipped — permanently, because
+            the browser never re-renders the top edge after the animation settles.
+
+            `overflow: clip` is the correct fix:
+            - It clips paint (so glassmorphism ::before/::after pseudo-elements
+              don't bleed outside the card) ← same visual result as hidden
+            - It does NOT establish a scroll container, so no scroll origin drift
+            - It does NOT clip absolutely-positioned children (address dropdown)
+            - Combined with overflowX: clip already present for the x-axis slide
+              animation, this gives us full clip control with no side effects.
+          */}
           <div
             className="glass-card rounded-3xl p-5 mb-4"
-            style={{ overflowX: "clip" }}
+            style={{ overflow: "clip" }}
           >
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
@@ -186,9 +191,6 @@ const Index = () => {
                 animate="center"
                 exit="exit"
                 onAnimationComplete={(definition) => {
-                  // Only fire on the "center" (entry-complete) variant, not on "exit".
-                  // This is the reliable moment to snap back to top: the leaving step
-                  // has fully unmounted and the entering step is at its final position.
                   if (definition === "center") {
                     resetScroll();
                   }
