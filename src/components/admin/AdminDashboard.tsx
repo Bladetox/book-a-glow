@@ -24,7 +24,7 @@ const sectionLabels: Record<SectionKey, string> = {
   alerts: "Alerts",
   revenueGraph: "Revenue Trend",
   heatmap: "Booking Heatmap",
-  todayAppointments: "Today\u2019s Appointments",
+  todayAppointments: "Today’s Appointments",
   clientInsights: "Client Insights",
   stockAlerts: "Stock Alerts",
   settingsSnapshot: "Settings Snapshot",
@@ -78,12 +78,10 @@ interface MetricCopyShape {
   heatmap:           InfoLine[];
 }
 
-// ─── Expanded overlay state type ───
-// Carries everything the overlay needs to render the explainer panel.
 interface ExpandedCard extends MetricEntry {
-  id: string;       // unique layoutId — must match the card's layoutId
-  label: string;    // e.g. "Revenue Today"
-  value: string;    // e.g. "R 4 200"
+  id: string;
+  label: string;
+  value: string;
   valueColor?: string;
 }
 
@@ -95,12 +93,12 @@ const METRIC_COPY: MetricCopyShape = {
     benchmark: "Aim: consistent with your weekday average.",
   },
   appointmentsToday: {
-    title: "Today\u2019s Bookings",
+    title: "Today’s Bookings",
     explain: "How many clients are booked in today. Used alongside Fill Rate to measure daily capacity.",
   },
   remaining: {
     title: "Remaining Appointments",
-    explain: "Appointments still ahead today. Watch this \u2014 if it drops suddenly, a no-show may have occurred.",
+    explain: "Appointments still ahead today. Watch this — if it drops suddenly, a no-show may have occurred.",
   },
   nextUp: {
     title: "Next Appointment",
@@ -109,7 +107,7 @@ const METRIC_COPY: MetricCopyShape = {
   fillRate: {
     title: "Fill Rate (Capacity Utilisation)",
     explain: "The % of your available time that was actually booked. Airlines, hotels, and salons all track this. A high fill rate = low wasted capacity.",
-    benchmark: "Target: 70%+. Below 50% means you\u2019re losing revenue to empty slots.",
+    benchmark: "Target: 70%+. Below 50% means you’re losing revenue to empty slots.",
   },
   avgBasket: {
     title: "Average Transaction Value (ATV)",
@@ -118,7 +116,7 @@ const METRIC_COPY: MetricCopyShape = {
   },
   appointments: {
     title: "Monthly Appointment Volume",
-    explain: "Total confirmed bookings this month. Brands use this as a leading indicator \u2014 more bookings now = more revenue later.",
+    explain: "Total confirmed bookings this month. Brands use this as a leading indicator — more bookings now = more revenue later.",
   },
   cancellations: {
     title: "Cancellation Rate",
@@ -127,12 +125,12 @@ const METRIC_COPY: MetricCopyShape = {
   },
   clients: {
     title: "Unique Clients (Reach)",
-    explain: "Total distinct people who booked with you this month \u2014 registered clients and walk-in guests.",
+    explain: "Total distinct people who booked with you this month — registered clients and walk-in guests.",
   },
   returning: {
     title: "Repeat Clients",
-    explain: "Clients who booked more than once this month. Loyalty is cheaper than acquisition \u2014 retaining one client costs 5x less than finding a new one.",
-    benchmark: "Aim: at least 30\u201340% of your client base returning monthly.",
+    explain: "Clients who booked more than once this month. Loyalty is cheaper than acquisition — retaining one client costs 5x less than finding a new one.",
+    benchmark: "Aim: at least 30–40% of your client base returning monthly.",
   },
   retention: {
     title: "Retention Rate",
@@ -147,7 +145,7 @@ const METRIC_COPY: MetricCopyShape = {
   ],
   heatmap: [
     { term: "Booking Heatmap",     def: "Shows which days and time slots get the most bookings. Dark green = peak demand, faint = quiet. Airlines use this logic to set dynamic pricing." },
-    { term: "Dark Green Cells",    def: "Your peak demand slots. Protect these \u2014 never discount them. Consider charging a premium." },
+    { term: "Dark Green Cells",    def: "Your peak demand slots. Protect these — never discount them. Consider charging a premium." },
     { term: "Light / Empty Cells", def: "Quiet slots. Run targeted offers, loyalty specials, or social media fills here." },
     { term: "Day Patterns",        def: "Weekend-heavy? Build weekday traffic to smooth revenue and reduce burnout." },
   ],
@@ -156,11 +154,7 @@ const METRIC_COPY: MetricCopyShape = {
 // ─── Animation preset ───
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
-// ─── MetricExpandOverlay ─────────────────────────────────────────────────────
-// Renders the expanded card as a shared-element transition using layoutId.
-// The small card in the dashboard and this overlay share the SAME layoutId,
-// so Framer Motion smoothly morphs one into the other (~300 ms).
-// Backdrop fades in separately. Tap backdrop or ✕ to dismiss.
+// ─── MetricExpandOverlay ───
 const MetricExpandOverlay = ({
   card,
   onClose,
@@ -171,7 +165,6 @@ const MetricExpandOverlay = ({
   <AnimatePresence>
     {card && (
       <>
-        {/* Backdrop */}
         <motion.div
           key="backdrop"
           initial={{ opacity: 0 }}
@@ -182,8 +175,6 @@ const MetricExpandOverlay = ({
           onClick={onClose}
           aria-hidden="true"
         />
-
-        {/* Expanded card — shares layoutId with the source card */}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
           <motion.div
             key={card.id}
@@ -193,7 +184,6 @@ const MetricExpandOverlay = ({
             className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
             style={{ willChange: "transform" }}
           >
-            {/* Header row */}
             <div className="flex items-start justify-between px-5 pt-5 pb-3">
               <div className="flex flex-col gap-0.5">
                 <span className="text-[10px] tracking-[0.14em] uppercase text-white/30">{card.label}</span>
@@ -207,11 +197,7 @@ const MetricExpandOverlay = ({
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            {/* Divider */}
             <div className="mx-5 border-t border-white/[0.06]" />
-
-            {/* Body */}
             <div className="px-5 py-4 flex flex-col gap-3">
               <p className="text-sm font-semibold text-white/85 leading-snug">{card.title}</p>
               <p className="text-[13px] text-white/55 leading-relaxed">{card.explain}</p>
@@ -221,8 +207,6 @@ const MetricExpandOverlay = ({
                 </div>
               )}
             </div>
-
-            {/* Footer hint */}
             <div className="px-5 pb-4">
               <p className="text-[10px] tracking-[0.1em] uppercase text-white/15">Tap outside to close</p>
             </div>
@@ -233,8 +217,7 @@ const MetricExpandOverlay = ({
   </AnimatePresence>
 );
 
-// ─── StatPill ────────────────────────────────────────────────────────────────
-// Small pill card in the Hero section. Tapping expands to the overlay.
+// ─── StatPill ───
 const StatPill = ({
   id, label, value, color, title, explain, benchmark, onExpand,
 }: { id: string; label: string; value: string; color?: string; onExpand: (c: ExpandedCard) => void } & MetricEntry) => (
@@ -254,8 +237,9 @@ const StatPill = ({
   </motion.div>
 );
 
-// ─── MetricCard ──────────────────────────────────────────────────────────────
-// Standard metric tile in the Business Health grid.
+// ─── MetricCard ───
+// FIX: text column now has flex-1 so it always fills available space,
+// preventing the Info icon from ever overlapping the label or value.
 const MetricCard = ({
   id, icon: Icon, label, value, color, sub, title, explain, benchmark, onExpand,
 }: {
@@ -276,21 +260,24 @@ const MetricCard = ({
     role="button"
     aria-label={`Learn more about ${label}`}
   >
-    <div className="flex items-start gap-3 p-3 sm:p-4">
+    <div className="flex items-start gap-2 p-3 sm:p-4">
       <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
         <Icon className="w-4 h-4 text-white/50" />
       </div>
-      <div className="flex flex-col gap-0.5 min-w-0 justify-center">
-        <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">{label}</span>
-        <span className={`text-base sm:text-lg font-bold ${color ?? "text-white/90"}`}>{value}</span>
-        {sub && <span className="text-[10px] text-white/25">{sub}</span>}
+      {/* flex-1 + min-w-0 ensures text never bleeds into the Info icon */}
+      <div className="flex flex-col gap-0.5 flex-1 min-w-0 justify-center">
+        <span className="text-[10px] tracking-[0.1em] uppercase text-white/30 truncate">{label}</span>
+        <span className={`text-base sm:text-lg font-bold truncate ${color ?? "text-white/90"}`}>{value}</span>
+        {sub && <span className="text-[10px] text-white/25 truncate">{sub}</span>}
       </div>
-      <Info className="w-3 h-3 text-white/15 ml-auto shrink-0 mt-1" />
+      <div className="shrink-0 mt-1 ml-1">
+        <Info className="w-3 h-3 text-white/15" />
+      </div>
     </div>
   </motion.div>
 );
 
-// ─── ClientMiniCard ──────────────────────────────────────────────────────────
+// ─── ClientMiniCard ───
 const ClientMiniCard = ({
   id, icon: Icon, iconColor, value, valueColor, label, title, explain, benchmark, onExpand,
 }: {
@@ -319,7 +306,7 @@ const ClientMiniCard = ({
   </motion.div>
 );
 
-// ─── SectionInfoPanel (unchanged) ────────────────────────────────────────────
+// ─── SectionInfoPanel (unchanged) ───
 const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   <div className="mt-3 mb-1 rounded-lg border border-white/[0.06] bg-white/[0.04] p-3 flex flex-col gap-2">
     {lines.map(l => (
@@ -331,8 +318,8 @@ const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   </div>
 );
 
-// ─── BookingHeatmap (unchanged) ───────────────────────────────────────────────
-const heatmapSlots = ["08\u201310", "10\u201312", "12\u201314", "14\u201316", "16\u201318"];
+// ─── BookingHeatmap (unchanged) ───
+const heatmapSlots = ["08–10", "10–12", "12–14", "14–16", "16–18"];
 
 const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
   const maxIntensity = Math.max(...data.flatMap(r => r.slots.map(s => s.intensity)), 1);
@@ -410,7 +397,7 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
   );
 };
 
-// ─── AppointmentsList (unchanged) ────────────────────────────────────────────
+// ─── AppointmentsList (unchanged) ───
 const AppointmentsList = ({
   appointments, onSelect,
 }: { appointments: Appointment[]; onSelect?: (client: string) => void }) => (
@@ -437,7 +424,7 @@ const AppointmentsList = ({
               <td className="py-2.5 text-white/80 font-medium">{a.client}</td>
               <td className="py-2.5 text-white/50">{a.service}</td>
               <td className="py-2.5"><StatusBadge status={a.status} /></td>
-              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "\u2014"}</td>
+              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "—"}</td>
             </tr>
           ))}
         </tbody>
@@ -468,7 +455,7 @@ const AppointmentsList = ({
   </>
 );
 
-// ─── StatusBadge (unchanged) ──────────────────────────────────────────────────
+// ─── StatusBadge (unchanged) ───
 const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
     status === "confirmed" ? "bg-emerald-500/10 text-emerald-400" :
@@ -486,14 +473,13 @@ const alertIcons: Record<string, React.ElementType> = {
   danger:  Package,
 };
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ─── Main Dashboard ───
 const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client: string) => void }) => {
-  const [visibility, setVisibility]         = useState(getVisibility);
-  const [showCustomize, setShowCustomize]   = useState(false);
-  const [showTrendInfo, setShowTrendInfo]   = useState(false);
-  const [showHeatInfo, setShowHeatInfo]     = useState(false);
-  // Single expanded-card state — null means overlay is closed
-  const [expandedCard, setExpandedCard]     = useState<ExpandedCard | null>(null);
+  const [visibility, setVisibility]       = useState(getVisibility);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [showTrendInfo, setShowTrendInfo] = useState(false);
+  const [showHeatInfo, setShowHeatInfo]   = useState(false);
+  const [expandedCard, setExpandedCard]   = useState<ExpandedCard | null>(null);
   const data = useDashboardData();
 
   const toggle = (key: SectionKey) => {
@@ -577,7 +563,7 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
               <StatPill id="mc-revenue-today" label="Revenue Today" value={`R ${data.revenue.today.toLocaleString()}`}          {...METRIC_COPY.revenueToday}      onExpand={setExpandedCard} />
               <StatPill id="mc-appts-today"   label="Appointments"  value={String(data.today.appointments)}                      {...METRIC_COPY.appointmentsToday} onExpand={setExpandedCard} />
               <StatPill id="mc-remaining"     label="Remaining"     value={String(data.today.remaining)} color="text-amber-400" {...METRIC_COPY.remaining}          onExpand={setExpandedCard} />
-              <StatPill id="mc-next-up"       label="Next Up"       value={data.today.nextAppointment ?? "\u2014"}               {...METRIC_COPY.nextUp}            onExpand={setExpandedCard} />
+              <StatPill id="mc-next-up"       label="Next Up"       value={data.today.nextAppointment ?? "—"}                   {...METRIC_COPY.nextUp}            onExpand={setExpandedCard} />
             </div>
           </motion.div>
         )}
@@ -586,10 +572,10 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
         {visibility.health && (
           <motion.div {...fadeUp} transition={{ delay: 0.05 }}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <MetricCard id="mc-fill-rate"      icon={BarChart3}     label="Fill Rate"     value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "\u2014"} color="text-emerald-400"                                             {...METRIC_COPY.fillRate}      onExpand={setExpandedCard} />
-              <MetricCard id="mc-avg-basket"     icon={ShoppingBag}   label="Avg Basket"    value={`R ${data.health.avgBasket.toLocaleString()}`}                                                                                          {...METRIC_COPY.avgBasket}     onExpand={setExpandedCard} />
-              <MetricCard id="mc-monthly-appts"  icon={CalendarCheck} label="Appointments"  value={String(data.health.totalAppointments)} sub="This month"                                                                               {...METRIC_COPY.appointments}  onExpand={setExpandedCard} />
-              <MetricCard id="mc-cancellations"  icon={XCircle}       label="Cancellations" value={`${data.health.cancellationRate}%`} color="text-red-400" sub={`R ${data.health.revenueLost.toLocaleString()} lost`}                    {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
+              <MetricCard id="mc-fill-rate"     icon={BarChart3}     label="Fill Rate"     value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "—"} color="text-emerald-400"                                          {...METRIC_COPY.fillRate}      onExpand={setExpandedCard} />
+              <MetricCard id="mc-avg-basket"    icon={ShoppingBag}   label="Avg Basket"    value={`R ${data.health.avgBasket.toLocaleString()}`}                                                                                     {...METRIC_COPY.avgBasket}     onExpand={setExpandedCard} />
+              <MetricCard id="mc-monthly-appts" icon={CalendarCheck} label="Appointments"  value={String(data.health.totalAppointments)} sub="This month"                                                                          {...METRIC_COPY.appointments}  onExpand={setExpandedCard} />
+              <MetricCard id="mc-cancellations" icon={XCircle}       label="Cancellations" value={`${data.health.cancellationRate}%`} color="text-red-400" sub={`R ${data.health.revenueLost.toLocaleString()} lost`}               {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
             </div>
           </motion.div>
         )}
@@ -609,7 +595,8 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white/80 truncate">{s.name}</p>
                     </div>
-                    <span className="text-xs text-white/40">{s.count}\u00d7</span>
+                    {/* × rendered as a real character, not a unicode escape */}
+                    <span className="text-xs text-white/40">{s.count}×</span>
                     <span className="text-xs font-semibold text-white/60">R {s.revenue.toLocaleString()}</span>
                   </div>
                 ))}
@@ -621,12 +608,12 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
             <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
               <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Client Insights</h4>
               <div className="grid grid-cols-3 gap-2">
-                <ClientMiniCard id="mc-clients"   icon={UserPlus}  value={String(data.clients.total)}                                                        label="Clients"   {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
-                <ClientMiniCard id="mc-returning" icon={UserCheck} value={data.clients.returning > 0 ? String(data.clients.returning) : "\u2014"}            label="Returning" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
+                <ClientMiniCard id="mc-clients"   icon={UserPlus}  value={String(data.clients.total)}                                                     label="Clients"   {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
+                <ClientMiniCard id="mc-returning" icon={UserCheck} value={data.clients.returning > 0 ? String(data.clients.returning) : "—"}             label="Returning" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
                 <ClientMiniCard
                   id="mc-retention"
                   icon={Percent} iconColor="text-emerald-400/50"
-                  value={data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "\u2014"}
+                  value={data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "—"}
                   valueColor="text-emerald-400"
                   label="Retention"
                   {...METRIC_COPY.retention}
@@ -749,10 +736,10 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           </motion.div>
         )}
 
-        {/* ── 7. TODAY\u2019S APPOINTMENTS ── */}
+        {/* ── 7. TODAY’S APPOINTMENTS ── */}
         {visibility.todayAppointments && (
           <motion.div {...fadeUp} transition={{ delay: 0.18 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today\u2019s Appointments</h4>
+            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today’s Appointments</h4>
             {data.todayAppointments.length === 0
               ? <p className="text-xs text-white/25">No appointments today</p>
               : <AppointmentsList appointments={data.todayAppointments} onSelect={onSelectAppointment} />
@@ -780,7 +767,7 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
                   }`}
                 >
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  <span>{s.item} \u2014 {s.level}</span>
+                  <span>{s.item} — {s.level}</span>
                 </div>
               ))}
             </div>
@@ -808,7 +795,7 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
 
       </div>
 
-      {/* ── EXPAND OVERLAY — single instance, always at root of return ── */}
+      {/* ── EXPAND OVERLAY ── */}
       <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
     </>
   );
