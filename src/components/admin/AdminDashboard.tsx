@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Loader2, Info
+  XCircle, Package, Bell, Clock, Loader2, Info, X
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 
@@ -24,7 +24,7 @@ const sectionLabels: Record<SectionKey, string> = {
   alerts: "Alerts",
   revenueGraph: "Revenue Trend",
   heatmap: "Booking Heatmap",
-  todayAppointments: "Today's Appointments",
+  todayAppointments: "Today\u2019s Appointments",
   clientInsights: "Client Insights",
   stockAlerts: "Stock Alerts",
   settingsSnapshot: "Settings Snapshot",
@@ -37,7 +37,6 @@ function getVisibility(): Record<SectionKey, boolean> {
   } catch {}
   return Object.fromEntries(ALL_SECTIONS.map(s => [s, true])) as Record<SectionKey, boolean>;
 }
-
 function saveVisibility(v: Record<SectionKey, boolean>) {
   localStorage.setItem(DASHBOARD_VIS_KEY, JSON.stringify(v));
 }
@@ -54,9 +53,6 @@ interface Appointment {
 interface HeatmapCell { slot: string; intensity: number; }
 interface HeatmapRow  { day: string; slots: HeatmapCell[]; }
 
-// ─── Metric copy type ───
-// Explicit interface — NO "as const" — so benchmark can be string | undefined
-// without becoming the literal type "undefined" which breaks prop spreading.
 interface MetricEntry {
   title: string;
   explain: string;
@@ -82,7 +78,16 @@ interface MetricCopyShape {
   heatmap:           InfoLine[];
 }
 
-// ─── Corporate-grade metric copy (plain-English backs) ───
+// ─── Expanded overlay state type ───
+// Carries everything the overlay needs to render the explainer panel.
+interface ExpandedCard extends MetricEntry {
+  id: string;       // unique layoutId — must match the card's layoutId
+  label: string;    // e.g. "Revenue Today"
+  value: string;    // e.g. "R 4 200"
+  valueColor?: string;
+}
+
+// ─── Metric copy ───
 const METRIC_COPY: MetricCopyShape = {
   revenueToday: {
     title: "Daily Revenue",
@@ -131,7 +136,7 @@ const METRIC_COPY: MetricCopyShape = {
   },
   retention: {
     title: "Retention Rate",
-    explain: "The % of your clients who came back. Starbucks, Netflix, and Apple track this obsessively \u2014 it\u2019s one of the most powerful metrics in any service business.",
+    explain: "The % of your clients who came back. Starbucks, Netflix, and Apple track this obsessively.",
     benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
   },
   revenueTrend: [
@@ -148,64 +153,173 @@ const METRIC_COPY: MetricCopyShape = {
   ],
 };
 
-// ─── Animation preset (hoisted above all JSX components) ───
+// ─── Animation preset ───
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
-// ─── FlipCard ───
-// Container height is driven by an invisible front clone in normal flow.
-// Both front + back are absolute inset-0 on top of it — no fixed height needed.
-interface FlipCardProps {
-  front: React.ReactNode;
-  back:  React.ReactNode;
-  className?: string;
-}
-const FlipCard = ({ front, back, className = "" }: FlipCardProps) => {
-  const [flipped, setFlipped] = useState(false);
-  return (
-    <div
-      className={`relative cursor-pointer select-none ${className}`}
-      style={{ perspective: "900px" }}
-      onClick={() => setFlipped(f => !f)}
-      role="button"
-      aria-label="Tap to learn more"
-    >
-      {/* invisible spacer — gives the container its natural height */}
-      <div className="invisible pointer-events-none" aria-hidden="true">
-        {front}
-      </div>
+// ─── MetricExpandOverlay ─────────────────────────────────────────────────────
+// Renders the expanded card as a shared-element transition using layoutId.
+// The small card in the dashboard and this overlay share the SAME layoutId,
+// so Framer Motion smoothly morphs one into the other (~300 ms).
+// Backdrop fades in separately. Tap backdrop or ✕ to dismiss.
+const MetricExpandOverlay = ({
+  card,
+  onClose,
+}: {
+  card: ExpandedCard | null;
+  onClose: () => void;
+}) => (
+  <AnimatePresence>
+    {card && (
+      <>
+        {/* Backdrop */}
+        <motion.div
+          key="backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+          aria-hidden="true"
+        />
 
-      {/* FRONT */}
-      <motion.div
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
-        style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
-        className="absolute inset-0 rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden"
-      >
-        {front}
-      </motion.div>
+        {/* Expanded card — shares layoutId with the source card */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
+          <motion.div
+            key={card.id}
+            layoutId={card.id}
+            layout
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
+            style={{ willChange: "transform" }}
+          >
+            {/* Header row */}
+            <div className="flex items-start justify-between px-5 pt-5 pb-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] tracking-[0.14em] uppercase text-white/30">{card.label}</span>
+                <span className={`text-2xl font-bold ${card.valueColor ?? "text-white/90"}`}>{card.value}</span>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.12] transition-colors shrink-0 mt-0.5"
+                aria-label="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-      {/* BACK */}
-      <motion.div
-        animate={{ rotateY: flipped ? 0 : -180 }}
-        transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
-        style={{
-          backfaceVisibility: "hidden",
-          WebkitBackfaceVisibility: "hidden",
-          rotateY: -180,
-        }}
-        className="absolute inset-0 rounded-xl border border-white/[0.10] bg-white/[0.07] overflow-hidden"
-      >
-        <div className="flex flex-col justify-between h-full p-3 gap-1">
-          <div className="overflow-y-auto flex-1">{back}</div>
-          <span className="text-[9px] tracking-[0.12em] uppercase text-white/20 shrink-0 pt-1">Tap to go back</span>
+            {/* Divider */}
+            <div className="mx-5 border-t border-white/[0.06]" />
+
+            {/* Body */}
+            <div className="px-5 py-4 flex flex-col gap-3">
+              <p className="text-sm font-semibold text-white/85 leading-snug">{card.title}</p>
+              <p className="text-[13px] text-white/55 leading-relaxed">{card.explain}</p>
+              {card.benchmark && (
+                <div className="mt-1 rounded-lg bg-emerald-400/[0.07] border border-emerald-400/[0.15] px-3 py-2.5">
+                  <p className="text-[12px] text-emerald-400/80 leading-snug">{card.benchmark}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer hint */}
+            <div className="px-5 pb-4">
+              <p className="text-[10px] tracking-[0.1em] uppercase text-white/15">Tap outside to close</p>
+            </div>
+          </motion.div>
         </div>
-      </motion.div>
-    </div>
-  );
-};
+      </>
+    )}
+  </AnimatePresence>
+);
 
-// ─── SectionInfoPanel ───
-// Slide-in panel for chart sections that can’t flip.
+// ─── StatPill ────────────────────────────────────────────────────────────────
+// Small pill card in the Hero section. Tapping expands to the overlay.
+const StatPill = ({
+  id, label, value, color, title, explain, benchmark, onExpand,
+}: { id: string; label: string; value: string; color?: string; onExpand: (c: ExpandedCard) => void } & MetricEntry) => (
+  <motion.div
+    layoutId={id}
+    onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark })}
+    className="rounded-lg border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
+    whileTap={{ scale: 0.97 }}
+    transition={{ type: "spring", stiffness: 340, damping: 30 }}
+    role="button"
+    aria-label={`Learn more about ${label}`}
+  >
+    <div className="flex flex-col gap-0.5 min-w-0 justify-center px-2 sm:px-3 py-3">
+      <span className="text-[9px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.12em] uppercase text-white/30 truncate">{label}</span>
+      <span className={`text-xs sm:text-sm font-semibold truncate ${color ?? "text-white/90"}`}>{value}</span>
+    </div>
+  </motion.div>
+);
+
+// ─── MetricCard ──────────────────────────────────────────────────────────────
+// Standard metric tile in the Business Health grid.
+const MetricCard = ({
+  id, icon: Icon, label, value, color, sub, title, explain, benchmark, onExpand,
+}: {
+  id: string;
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  color?: string;
+  sub?: string;
+  onExpand: (c: ExpandedCard) => void;
+} & MetricEntry) => (
+  <motion.div
+    layoutId={id}
+    onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark })}
+    className="rounded-xl border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
+    whileTap={{ scale: 0.97 }}
+    transition={{ type: "spring", stiffness: 340, damping: 30 }}
+    role="button"
+    aria-label={`Learn more about ${label}`}
+  >
+    <div className="flex items-start gap-3 p-3 sm:p-4">
+      <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
+        <Icon className="w-4 h-4 text-white/50" />
+      </div>
+      <div className="flex flex-col gap-0.5 min-w-0 justify-center">
+        <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">{label}</span>
+        <span className={`text-base sm:text-lg font-bold ${color ?? "text-white/90"}`}>{value}</span>
+        {sub && <span className="text-[10px] text-white/25">{sub}</span>}
+      </div>
+      <Info className="w-3 h-3 text-white/15 ml-auto shrink-0 mt-1" />
+    </div>
+  </motion.div>
+);
+
+// ─── ClientMiniCard ──────────────────────────────────────────────────────────
+const ClientMiniCard = ({
+  id, icon: Icon, iconColor, value, valueColor, label, title, explain, benchmark, onExpand,
+}: {
+  id: string;
+  icon: React.ElementType;
+  iconColor?: string;
+  value: string;
+  valueColor?: string;
+  label: string;
+  onExpand: (c: ExpandedCard) => void;
+} & MetricEntry) => (
+  <motion.div
+    layoutId={id}
+    onClick={() => onExpand({ id, label, value, valueColor, title, explain, benchmark })}
+    className="rounded-xl border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
+    whileTap={{ scale: 0.97 }}
+    transition={{ type: "spring", stiffness: 340, damping: 30 }}
+    role="button"
+    aria-label={`Learn more about ${label}`}
+  >
+    <div className="flex flex-col items-center justify-center gap-1 py-4 px-2">
+      <Icon className={`w-4 h-4 ${iconColor ?? "text-white/30"}`} />
+      <p className={`text-lg font-bold ${valueColor ?? "text-white/90"}`}>{value}</p>
+      <p className="text-[10px] text-white/30">{label}</p>
+    </div>
+  </motion.div>
+);
+
+// ─── SectionInfoPanel (unchanged) ────────────────────────────────────────────
 const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   <div className="mt-3 mb-1 rounded-lg border border-white/[0.06] bg-white/[0.04] p-3 flex flex-col gap-2">
     {lines.map(l => (
@@ -217,80 +331,7 @@ const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   </div>
 );
 
-// ─── FlipStatPill ───
-const FlipStatPill = ({
-  label, value, color, title, explain, benchmark
-}: { label: string; value: string; color?: string } & MetricEntry) => (
-  <FlipCard
-    className="rounded-lg border border-white/[0.06] bg-white/[0.03]"
-    front={
-      <div className="flex flex-col gap-0.5 min-w-0 justify-center h-full px-2 sm:px-3 py-3">
-        <span className="text-[9px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.12em] uppercase text-white/30 truncate">{label}</span>
-        <span className={`text-xs sm:text-sm font-semibold truncate ${color ?? "text-white/90"}`}>{value}</span>
-      </div>
-    }
-    back={
-      <div className="flex flex-col gap-1">
-        <span className="text-[10px] font-bold text-white/80 leading-tight">{title}</span>
-        <span className="text-[11px] text-white/60 leading-snug">{explain}</span>
-        {benchmark && <span className="text-[10px] text-emerald-400/70 mt-0.5">{benchmark}</span>}
-      </div>
-    }
-  />
-);
-
-// ─── FlipMetricCard ───
-const FlipMetricCard = ({
-  icon: Icon, label, value, color, sub, title, explain, benchmark
-}: { icon: React.ElementType; label: string; value: string; color?: string; sub?: string } & MetricEntry) => (
-  <FlipCard
-    front={
-      <div className="flex items-start gap-3 p-3 sm:p-4">
-        <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
-          <Icon className="w-4 h-4 text-white/50" />
-        </div>
-        <div className="flex flex-col gap-0.5 min-w-0 justify-center">
-          <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">{label}</span>
-          <span className={`text-base sm:text-lg font-bold ${color ?? "text-white/90"}`}>{value}</span>
-          {sub && <span className="text-[10px] text-white/25">{sub}</span>}
-        </div>
-        <Info className="w-3 h-3 text-white/15 ml-auto shrink-0 mt-1" />
-      </div>
-    }
-    back={
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[10px] font-bold text-white/85 leading-tight">{title}</span>
-        <span className="text-[11px] text-white/60 leading-snug">{explain}</span>
-        {benchmark && <span className="text-[10px] text-emerald-400/70">{benchmark}</span>}
-      </div>
-    }
-  />
-);
-
-// ─── ClientMiniCard ───
-const ClientMiniCard = ({
-  icon: Icon, iconColor, value, valueColor, label, title, explain, benchmark
-}: { icon: React.ElementType; iconColor?: string; value: string; valueColor?: string; label: string } & MetricEntry) => (
-  <FlipCard
-    className="rounded-xl border border-white/[0.06] bg-white/[0.03]"
-    front={
-      <div className="flex flex-col items-center justify-center gap-1 py-4 px-2">
-        <Icon className={`w-4 h-4 ${iconColor ?? "text-white/30"}`} />
-        <p className={`text-lg font-bold ${valueColor ?? "text-white/90"}`}>{value}</p>
-        <p className="text-[10px] text-white/30">{label}</p>
-      </div>
-    }
-    back={
-      <div className="flex flex-col gap-1 text-center">
-        <span className="text-[10px] font-bold text-white/85 leading-tight">{title}</span>
-        <span className="text-[11px] text-white/60 leading-snug">{explain}</span>
-        {benchmark && <span className="text-[10px] text-emerald-400/70 mt-0.5">{benchmark}</span>}
-      </div>
-    }
-  />
-);
-
-// ─── BookingHeatmap ───
+// ─── BookingHeatmap (unchanged) ───────────────────────────────────────────────
 const heatmapSlots = ["08\u201310", "10\u201312", "12\u201314", "14\u201316", "16\u201318"];
 
 const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
@@ -369,9 +410,9 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
   );
 };
 
-// ─── AppointmentsList ───
+// ─── AppointmentsList (unchanged) ────────────────────────────────────────────
 const AppointmentsList = ({
-  appointments, onSelect
+  appointments, onSelect,
 }: { appointments: Appointment[]; onSelect?: (client: string) => void }) => (
   <>
     <div className="hidden sm:block overflow-x-auto -mx-1">
@@ -427,7 +468,7 @@ const AppointmentsList = ({
   </>
 );
 
-// ─── StatusBadge ───
+// ─── StatusBadge (unchanged) ──────────────────────────────────────────────────
 const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
     status === "confirmed" ? "bg-emerald-500/10 text-emerald-400" :
@@ -445,12 +486,14 @@ const alertIcons: Record<string, React.ElementType> = {
   danger:  Package,
 };
 
-// ─── Main Dashboard ───
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
 const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client: string) => void }) => {
-  const [visibility, setVisibility]       = useState(getVisibility);
-  const [showCustomize, setShowCustomize] = useState(false);
-  const [showTrendInfo, setShowTrendInfo] = useState(false);
-  const [showHeatInfo, setShowHeatInfo]   = useState(false);
+  const [visibility, setVisibility]         = useState(getVisibility);
+  const [showCustomize, setShowCustomize]   = useState(false);
+  const [showTrendInfo, setShowTrendInfo]   = useState(false);
+  const [showHeatInfo, setShowHeatInfo]     = useState(false);
+  // Single expanded-card state — null means overlay is closed
+  const [expandedCard, setExpandedCard]     = useState<ExpandedCard | null>(null);
   const data = useDashboardData();
 
   const toggle = (key: SectionKey) => {
@@ -473,192 +516,213 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
   const pctUp = pctChange >= 0;
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-5 w-full max-w-5xl">
+    <>
+      <div className="flex flex-col gap-4 sm:gap-5 w-full max-w-5xl">
 
-      {/* Customize */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => setShowCustomize(v => !v)}
-          className="text-[10px] tracking-[0.12em] uppercase text-white/30 hover:text-white/60 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
-        >
-          <Eye className="w-3 h-3" /> Customize
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {showCustomize && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 overflow-hidden"
+        {/* Customize */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowCustomize(v => !v)}
+            className="text-[10px] tracking-[0.12em] uppercase text-white/30 hover:text-white/60 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
           >
-            <p className="text-[10px] tracking-[0.12em] uppercase text-white/40 mb-3">Toggle dashboard sections</p>
-            <div className="flex flex-wrap gap-2">
-              {ALL_SECTIONS.map(key => (
-                <button
-                  key={key}
-                  onClick={() => toggle(key)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                    visibility[key]
-                      ? "border-white/20 text-white/80 bg-white/[0.08]"
-                      : "border-white/[0.06] text-white/25 bg-transparent"
-                  }`}
-                >
-                  {sectionLabels[key]}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Eye className="w-3 h-3" /> Customize
+          </button>
+        </div>
 
-      {/* ── 1. HERO REVENUE ── */}
-      {visibility.hero && (
-        <motion.div {...fadeUp} className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 sm:p-7">
-          <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/35 mb-1">Monthly Revenue</p>
-          <p className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight">
-            R {data.revenue.month.toLocaleString()}
-          </p>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            {pctUp
-              ? <TrendingUp   className="w-3.5 h-3.5 text-emerald-400/80" />
-              : <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />
-            }
-            <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>
-              {pctChange}% vs last month
+        <AnimatePresence>
+          {showCustomize && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 overflow-hidden"
+            >
+              <p className="text-[10px] tracking-[0.12em] uppercase text-white/40 mb-3">Toggle dashboard sections</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_SECTIONS.map(key => (
+                  <button
+                    key={key}
+                    onClick={() => toggle(key)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      visibility[key]
+                        ? "border-white/20 text-white/80 bg-white/[0.08]"
+                        : "border-white/[0.06] text-white/25 bg-transparent"
+                    }`}
+                  >
+                    {sectionLabels[key]}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── 1. HERO REVENUE ── */}
+        {visibility.hero && (
+          <motion.div {...fadeUp} className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 sm:p-7">
+            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/35 mb-1">Monthly Revenue</p>
+            <p className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight">
+              R {data.revenue.month.toLocaleString()}
             </p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-6 pt-5 border-t border-white/[0.06]">
-            <FlipStatPill label="Revenue Today" value={`R ${data.revenue.today.toLocaleString()}`} {...METRIC_COPY.revenueToday} />
-            <FlipStatPill label="Appointments"  value={String(data.today.appointments)}            {...METRIC_COPY.appointmentsToday} />
-            <FlipStatPill label="Remaining"     value={String(data.today.remaining)} color="text-amber-400" {...METRIC_COPY.remaining} />
-            <FlipStatPill label="Next Up"       value={data.today.nextAppointment ?? "\u2014"}       {...METRIC_COPY.nextUp} />
-          </div>
-        </motion.div>
-      )}
+            <div className="flex items-center gap-1.5 mt-1.5">
+              {pctUp
+                ? <TrendingUp   className="w-3.5 h-3.5 text-emerald-400/80" />
+                : <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />
+              }
+              <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>
+                {pctChange}% vs last month
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-6 pt-5 border-t border-white/[0.06]">
+              <StatPill id="mc-revenue-today" label="Revenue Today" value={`R ${data.revenue.today.toLocaleString()}`}          {...METRIC_COPY.revenueToday}      onExpand={setExpandedCard} />
+              <StatPill id="mc-appts-today"   label="Appointments"  value={String(data.today.appointments)}                      {...METRIC_COPY.appointmentsToday} onExpand={setExpandedCard} />
+              <StatPill id="mc-remaining"     label="Remaining"     value={String(data.today.remaining)} color="text-amber-400" {...METRIC_COPY.remaining}          onExpand={setExpandedCard} />
+              <StatPill id="mc-next-up"       label="Next Up"       value={data.today.nextAppointment ?? "\u2014"}               {...METRIC_COPY.nextUp}            onExpand={setExpandedCard} />
+            </div>
+          </motion.div>
+        )}
 
-      {/* ── 2. BUSINESS HEALTH ── */}
-      {visibility.health && (
-        <motion.div {...fadeUp} transition={{ delay: 0.05 }}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <FlipMetricCard
-              icon={BarChart3} label="Fill Rate"
-              value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "\u2014"}
-              color="text-emerald-400"
-              {...METRIC_COPY.fillRate}
-            />
-            <FlipMetricCard
-              icon={ShoppingBag} label="Avg Basket"
-              value={`R ${data.health.avgBasket.toLocaleString()}`}
-              {...METRIC_COPY.avgBasket}
-            />
-            <FlipMetricCard
-              icon={CalendarCheck} label="Appointments"
-              value={String(data.health.totalAppointments)} sub="This month"
-              {...METRIC_COPY.appointments}
-            />
-            <FlipMetricCard
-              icon={XCircle} label="Cancellations"
-              value={`${data.health.cancellationRate}%`} color="text-red-400"
-              sub={`R ${data.health.revenueLost.toLocaleString()} lost`}
-              {...METRIC_COPY.cancellations}
-            />
-          </div>
-        </motion.div>
-      )}
+        {/* ── 2. BUSINESS HEALTH ── */}
+        {visibility.health && (
+          <motion.div {...fadeUp} transition={{ delay: 0.05 }}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <MetricCard id="mc-fill-rate"      icon={BarChart3}     label="Fill Rate"     value={data.health.fillRate > 0 ? `${data.health.fillRate}%` : "\u2014"} color="text-emerald-400"                                             {...METRIC_COPY.fillRate}      onExpand={setExpandedCard} />
+              <MetricCard id="mc-avg-basket"     icon={ShoppingBag}   label="Avg Basket"    value={`R ${data.health.avgBasket.toLocaleString()}`}                                                                                          {...METRIC_COPY.avgBasket}     onExpand={setExpandedCard} />
+              <MetricCard id="mc-monthly-appts"  icon={CalendarCheck} label="Appointments"  value={String(data.health.totalAppointments)} sub="This month"                                                                               {...METRIC_COPY.appointments}  onExpand={setExpandedCard} />
+              <MetricCard id="mc-cancellations"  icon={XCircle}       label="Cancellations" value={`${data.health.cancellationRate}%`} color="text-red-400" sub={`R ${data.health.revenueLost.toLocaleString()} lost`}                    {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
+            </div>
+          </motion.div>
+        )}
 
-      {/* ── 3. TOP SERVICES + CLIENT INSIGHTS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {visibility.topServices && (
-          <motion.div {...fadeUp} transition={{ delay: 0.08 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-4">Top Services</h4>
-            <div className="flex flex-col gap-2.5">
-              {data.topServices.length === 0 && (
-                <p className="text-xs text-white/25">No booking data yet</p>
-              )}
-              {data.topServices.map((s, i) => (
-                <div key={s.name} className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold text-white/20 w-4">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/80 truncate">{s.name}</p>
+        {/* ── 3. TOP SERVICES + CLIENT INSIGHTS ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {visibility.topServices && (
+            <motion.div {...fadeUp} transition={{ delay: 0.08 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+              <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-4">Top Services</h4>
+              <div className="flex flex-col gap-2.5">
+                {data.topServices.length === 0 && (
+                  <p className="text-xs text-white/25">No booking data yet</p>
+                )}
+                {data.topServices.map((s, i) => (
+                  <div key={s.name} className="flex items-center gap-3">
+                    <span className="text-[10px] font-bold text-white/20 w-4">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white/80 truncate">{s.name}</p>
+                    </div>
+                    <span className="text-xs text-white/40">{s.count}\u00d7</span>
+                    <span className="text-xs font-semibold text-white/60">R {s.revenue.toLocaleString()}</span>
                   </div>
-                  <span className="text-xs text-white/40">{s.count}\u00d7</span>
-                  <span className="text-xs font-semibold text-white/60">R {s.revenue.toLocaleString()}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {visibility.clientInsights && (
+            <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+              <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Client Insights</h4>
+              <div className="grid grid-cols-3 gap-2">
+                <ClientMiniCard id="mc-clients"   icon={UserPlus}  value={String(data.clients.total)}                                                        label="Clients"   {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
+                <ClientMiniCard id="mc-returning" icon={UserCheck} value={data.clients.returning > 0 ? String(data.clients.returning) : "\u2014"}            label="Returning" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
+                <ClientMiniCard
+                  id="mc-retention"
+                  icon={Percent} iconColor="text-emerald-400/50"
+                  value={data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "\u2014"}
+                  valueColor="text-emerald-400"
+                  label="Retention"
+                  {...METRIC_COPY.retention}
+                  onExpand={setExpandedCard}
+                />
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* ── 4. ALERTS ── */}
+        {visibility.alerts && (
+          <motion.div {...fadeUp} transition={{ delay: 0.12 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3 flex items-center gap-2">
+              <Bell className="w-3.5 h-3.5" /> Alerts
+            </h4>
+            <div className="flex flex-col gap-2">
+              {data.alerts.length === 0 && <p className="text-xs text-white/25">No alerts</p>}
+              {data.alerts.map((a, i) => {
+                const Icon = alertIcons[a.type] ?? AlertTriangle;
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-2.5 text-xs p-2.5 rounded-lg ${
+                      a.type === "danger"  ? "bg-red-500/[0.08] text-red-400" :
+                      a.type === "warning" ? "bg-amber-500/[0.08] text-amber-400" :
+                      "bg-white/[0.04] text-white/60"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>{a.text}</span>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         )}
 
-        {visibility.clientInsights && (
-          <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Client Insights</h4>
-            <div className="grid grid-cols-3 gap-2">
-              <ClientMiniCard
-                icon={UserPlus}
-                value={String(data.clients.total)}
-                label="Clients"
-                {...METRIC_COPY.clients}
-              />
-              <ClientMiniCard
-                icon={UserCheck}
-                value={data.clients.returning > 0 ? String(data.clients.returning) : "\u2014"}
-                label="Returning"
-                {...METRIC_COPY.returning}
-              />
-              <ClientMiniCard
-                icon={Percent}
-                iconColor="text-emerald-400/50"
-                value={data.clients.retentionRate > 0 ? `${data.clients.retentionRate}%` : "\u2014"}
-                valueColor="text-emerald-400"
-                label="Retention"
-                {...METRIC_COPY.retention}
-              />
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* ── 4. ALERTS ── */}
-      {visibility.alerts && (
-        <motion.div {...fadeUp} transition={{ delay: 0.12 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-          <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3 flex items-center gap-2">
-            <Bell className="w-3.5 h-3.5" /> Alerts
-          </h4>
-          <div className="flex flex-col gap-2">
-            {data.alerts.length === 0 && <p className="text-xs text-white/25">No alerts</p>}
-            {data.alerts.map((a, i) => {
-              const Icon = alertIcons[a.type] ?? AlertTriangle;
-              return (
-                <div
-                  key={i}
-                  className={`flex items-start gap-2.5 text-xs p-2.5 rounded-lg ${
-                    a.type === "danger"  ? "bg-red-500/[0.08] text-red-400" :
-                    a.type === "warning" ? "bg-amber-500/[0.08] text-amber-400" :
-                    "bg-white/[0.04] text-white/60"
+        {/* ── 5. REVENUE TREND ── */}
+        {visibility.revenueGraph && (
+          <motion.div {...fadeUp} transition={{ delay: 0.14 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">Revenue Trend</h4>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] tracking-[0.12em] uppercase text-white/20">This month</span>
+                <button
+                  onClick={() => setShowTrendInfo(v => !v)}
+                  className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                    showTrendInfo
+                      ? "bg-emerald-400/20 text-emerald-400"
+                      : "bg-white/[0.06] text-white/30 hover:text-white/60"
                   }`}
+                  aria-label="What does this chart mean?"
                 >
-                  <Icon className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                  <span>{a.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
+                  <Info className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            <AnimatePresence>
+              {showTrendInfo && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <SectionInfoPanel lines={METRIC_COPY.revenueTrend} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="h-32 sm:h-40 flex items-end gap-[2px] sm:gap-1 mt-4">
+              {data.revenueTrend.map(d => {
+                const maxVal = Math.max(...data.revenueTrend.map(x => x.value), 1);
+                const h = Math.max((d.value / maxVal) * 100, 4);
+                return (
+                  <div
+                    key={d.day}
+                    className="flex-1 bg-emerald-400/20 hover:bg-emerald-400/40 rounded-t transition-colors cursor-default"
+                    style={{ height: `${h}%` }}
+                    title={`Day ${d.day}: R ${d.value}`}
+                  />
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
 
-      {/* ── 5. REVENUE TREND ── */}
-      {visibility.revenueGraph && (
-        <motion.div {...fadeUp} transition={{ delay: 0.14 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">Revenue Trend</h4>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] tracking-[0.12em] uppercase text-white/20">This month</span>
+        {/* ── 6. BOOKING HEATMAP ── */}
+        {visibility.heatmap && (
+          <motion.div {...fadeUp} transition={{ delay: 0.16 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-1">
+              <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">Booking Heatmap</h4>
               <button
-                onClick={() => setShowTrendInfo(v => !v)}
+                onClick={() => setShowHeatInfo(v => !v)}
                 className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                  showTrendInfo
+                  showHeatInfo
                     ? "bg-emerald-400/20 text-emerald-400"
                     : "bg-white/[0.06] text-white/30 hover:text-white/60"
                 }`}
@@ -667,133 +731,86 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
                 <Info className="w-3 h-3" />
               </button>
             </div>
-          </div>
+            <AnimatePresence>
+              {showHeatInfo && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <SectionInfoPanel lines={METRIC_COPY.heatmap} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="mt-3">
+              <BookingHeatmap data={data.heatmap} />
+            </div>
+          </motion.div>
+        )}
 
-          <AnimatePresence>
-            {showTrendInfo && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <SectionInfoPanel lines={METRIC_COPY.revenueTrend} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+        {/* ── 7. TODAY\u2019S APPOINTMENTS ── */}
+        {visibility.todayAppointments && (
+          <motion.div {...fadeUp} transition={{ delay: 0.18 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today\u2019s Appointments</h4>
+            {data.todayAppointments.length === 0
+              ? <p className="text-xs text-white/25">No appointments today</p>
+              : <AppointmentsList appointments={data.todayAppointments} onSelect={onSelectAppointment} />
+            }
+          </motion.div>
+        )}
 
-          <div className="h-32 sm:h-40 flex items-end gap-[2px] sm:gap-1 mt-4">
-            {data.revenueTrend.map(d => {
-              const maxVal = Math.max(...data.revenueTrend.map(x => x.value), 1);
-              const h = Math.max((d.value / maxVal) * 100, 4);
-              return (
+        {/* ── 8. STOCK ALERTS ── */}
+        {visibility.stockAlerts && (
+          <motion.div {...fadeUp} transition={{ delay: 0.2 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3 flex items-center gap-2">
+              <Package className="w-3.5 h-3.5" /> Stock Alerts
+            </h4>
+            <div className="flex flex-col gap-2">
+              {data.stockAlerts.length === 0 && (
+                <p className="text-xs text-white/25">All stock levels OK</p>
+              )}
+              {data.stockAlerts.map((s, i) => (
                 <div
-                  key={d.day}
-                  className="flex-1 bg-emerald-400/20 hover:bg-emerald-400/40 rounded-t transition-colors cursor-default"
-                  style={{ height: `${h}%` }}
-                  title={`Day ${d.day}: R ${d.value}`}
-                />
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
+                  key={i}
+                  className={`flex items-center gap-2.5 text-xs p-2.5 rounded-lg ${
+                    s.level === "critical"
+                      ? "bg-red-500/[0.08] text-red-400"
+                      : "bg-amber-500/[0.08] text-amber-400"
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{s.item} \u2014 {s.level}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-      {/* ── 6. BOOKING HEATMAP ── */}
-      {visibility.heatmap && (
-        <motion.div {...fadeUp} transition={{ delay: 0.16 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-1">
-            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">Booking Heatmap</h4>
-            <button
-              onClick={() => setShowHeatInfo(v => !v)}
-              className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                showHeatInfo
-                  ? "bg-emerald-400/20 text-emerald-400"
-                  : "bg-white/[0.06] text-white/30 hover:text-white/60"
-              }`}
-              aria-label="What does this chart mean?"
-            >
-              <Info className="w-3 h-3" />
-            </button>
-          </div>
+        {/* ── 9. SETTINGS SNAPSHOT ── */}
+        {visibility.settingsSnapshot && (
+          <motion.div {...fadeUp} transition={{ delay: 0.22 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
+            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Business Status</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {([
+                { label: "Deposits",       active: true,  icon: CircleDollarSign },
+                { label: "Google Reviews", active: false, icon: Star },
+              ] as const).map(s => (
+                <div key={s.label} className="flex items-center gap-2">
+                  <div className={`w-1.5 h-1.5 rounded-full ${s.active ? "bg-emerald-400" : "bg-white/10"}`} />
+                  <s.icon className="w-3.5 h-3.5 text-white/30" />
+                  <span className="text-xs text-white/50">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-          <AnimatePresence>
-            {showHeatInfo && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <SectionInfoPanel lines={METRIC_COPY.heatmap} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+      </div>
 
-          <div className="mt-3">
-            <BookingHeatmap data={data.heatmap} />
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── 7. TODAY’S APPOINTMENTS ── */}
-      {visibility.todayAppointments && (
-        <motion.div {...fadeUp} transition={{ delay: 0.18 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-          <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today\u2019s Appointments</h4>
-          {data.todayAppointments.length === 0
-            ? <p className="text-xs text-white/25">No appointments today</p>
-            : <AppointmentsList appointments={data.todayAppointments} onSelect={onSelectAppointment} />
-          }
-        </motion.div>
-      )}
-
-      {/* ── 8. STOCK ALERTS ── */}
-      {visibility.stockAlerts && (
-        <motion.div {...fadeUp} transition={{ delay: 0.2 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-          <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3 flex items-center gap-2">
-            <Package className="w-3.5 h-3.5" /> Stock Alerts
-          </h4>
-          <div className="flex flex-col gap-2">
-            {data.stockAlerts.length === 0 && (
-              <p className="text-xs text-white/25">All stock levels OK</p>
-            )}
-            {data.stockAlerts.map((s, i) => (
-              <div
-                key={i}
-                className={`flex items-center gap-2.5 text-xs p-2.5 rounded-lg ${
-                  s.level === "critical"
-                    ? "bg-red-500/[0.08] text-red-400"
-                    : "bg-amber-500/[0.08] text-amber-400"
-                }`}
-              >
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>{s.item} \u2014 {s.level}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── 9. SETTINGS SNAPSHOT ── */}
-      {visibility.settingsSnapshot && (
-        <motion.div {...fadeUp} transition={{ delay: 0.22 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-          <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Business Status</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {([
-              { label: "Deposits",       active: true,  icon: CircleDollarSign },
-              { label: "Google Reviews", active: false, icon: Star },
-            ] as const).map(s => (
-              <div key={s.label} className="flex items-center gap-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${s.active ? "bg-emerald-400" : "bg-white/10"}`} />
-                <s.icon className="w-3.5 h-3.5 text-white/30" />
-                <span className="text-xs text-white/50">{s.label}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-    </div>
+      {/* ── EXPAND OVERLAY — single instance, always at root of return ── */}
+      <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
+    </>
   );
 };
 
