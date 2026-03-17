@@ -45,25 +45,40 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
 
+  // Ref for the Full Name input — used for deferred programmatic focus.
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   /*
-  FIX 1 — ref conflict resolved with useCallback ref.
-  ─────────────────────────────────────────────────────
-  Previously both AnimatePresence children shared the same useRef object.
-  A React ref can only point to ONE DOM node; when the user toggled between
-  Existing/New the ref still held the *exiting* node, so scrollIntoView fired
-  on the element animating *out*. A callback ref always receives the currently
-  *mounted* node, solving this completely.
+  autoFocus REPLACEMENT — deferred programmatic focus.
+  ─────────────────────────────────────────────────────────────────────────────
+  The HTML `autoFocus` attribute fires synchronously on mount, BEFORE the
+  Framer Motion step-entry spring animation (~300ms) and BEFORE Book.tsx's
+  resetScroll() has settled. On mobile WebView this causes the browser to
+  immediately scroll the focused input into view above the keyboard, which
+  races against resetScroll() and clips the header + step indicator off screen.
+
+  Solution: wait for the step animation to fully settle (350ms matches the
+  spring stiffness:350/damping:35 in Book.tsx), yield one rAF so the browser
+  has completed its layout pass, then call .focus() programmatically.
+  This gives the user the same native-feel keyboard-up behaviour without the
+  scroll-fight.
   */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      requestAnimationFrame(() => {
+        nameInputRef.current?.focus({ preventScroll: true });
+      });
+    }, 350);
+    return () => clearTimeout(t);
+  }, []); // [] = fires once when Step 3 mounts, never again.
+
+  // FIX 1 — callback ref to avoid the shared-ref bug between AnimatePresence children.
   const prevClientType = useRef<boolean | null>(booking.isExistingClient);
   const conditionalSectionRef = useCallback(
     (node: HTMLDivElement | null) => {
       if (!node) return;
-      // Only scroll when the client type actually just changed
       if (booking.isExistingClient === prevClientType.current) return;
       prevClientType.current = booking.isExistingClient;
-
-      // Wait for height animation (350ms) then scroll — only if off-screen.
-      // block:"nearest" is a no-op when the element is already visible.
       const t = setTimeout(() => {
         node.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }, 360);
@@ -76,14 +91,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
 
-  /*
-  FIX 3 — live validation: show green the moment a field becomes valid.
-  ──────────────────────────────────────────────────────────────────────
-  Previously validation only fired on onBlur (leaving the field). Native apps
-  give instant positive feedback — as soon as the value is valid, the field
-  goes green. We now mark touched on every onChange too, but only if the field
-  is already valid (so we never show red while the user is still typing).
-  */
+  // FIX 3 — live validation: mark touched (green) as soon as a field is valid.
   const markTouchedOnChange = useCallback((field: string, value: string) => {
     const key = field as keyof typeof validators;
     if (validators[key]?.(value)) {
@@ -196,19 +204,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         )}
       </div>
 
-      {/*
-        FIX 1 applied: ref={conditionalSectionRef} is now a callback ref on both
-        sections. Each time one mounts it receives the live DOM node; the callback
-        safely ignores calls where the client type hasn't actually changed.
-
-        FIX 7 — animation clip removed from New Client section.
-        ────────────────────────────────────────────────────────
-        The outer motion.div previously had `overflow-hidden` as a Tailwind class.
-        This clipped the staggered x:-10→0 entry animations on safety questions at
-        the left edge of the card on small screens. Moved overflow-hidden to a
-        wrapper div that only covers the height-animation, not the inner content.
-      */}
-
       {/* Existing client follow-up */}
       <AnimatePresence>
         {booking.isExistingClient === true && (
@@ -233,11 +228,9 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         )}
       </AnimatePresence>
 
-      {/* New client consultation form */}
+      {/* New client consultation form — FIX 7: overflow-hidden on outer wrapper only */}
       <AnimatePresence>
         {booking.isExistingClient === false && (
-          /* Outer div handles the height-collapse animation with overflow-hidden.
-             Inner content is NOT clipped so x-axis entry animations are visible. */
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -270,12 +263,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                     <p className="text-sm text-foreground">{q.id}. {q.question}</p>
                     {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
                   </div>
-                  {/*
-                    FIX 4 — touch target size raised to 44px minimum (Fitts's Law).
-                    ──────────────────────────────────────────────────────────────────
-                    Previously py-1.5 = ~30px tall. Native apps and Apple HIG both
-                    require ≥44px touch targets. Changed to py-3 = 44px.
-                  */}
+                  {/* FIX 4 — touch targets raised to 44px (py-3) */}
                   <div className="flex gap-2">
                     {[
                       { label: "No", value: false },
@@ -317,25 +305,16 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
         transition={{ delay: 0.1 }}
         className="flex flex-col gap-3"
       >
-        {/*
-          FIX 2 — autoFocus on Full Name.
-          ─────────────────────────────────
-          Native apps focus the first field when a form screen appears — the
-          keyboard rises immediately and the user can start typing without an
-          extra tap. autoFocus does exactly this on mobile WebView.
-          We delay it by 350ms to let the Framer Motion step-entry animation
-          finish first; firing it before the animation ends causes a scroll-jump.
-
-          FIX 6 — autoComplete="name" lets iOS/Android prefill from Contacts.
-        */}
+        {/* FIX 2 — deferred focus via nameInputRef (see useEffect above). NO autoFocus attr. */}
+        {/* FIX 6 — autoComplete="name" for iOS/Android Contacts prefill */}
         <div className="relative">
           <User className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
+            ref={nameInputRef}
             className={`${inputClass} pl-10 ${getValidationClass("fullName", booking.fullName)}`}
             placeholder="Full Name *"
             value={booking.fullName}
             autoComplete="name"
-            autoFocus
             onChange={(e) => {
               onUpdate({ fullName: e.target.value });
               markTouchedOnChange("fullName", e.target.value);
@@ -344,7 +323,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/* FIX 6 — autoComplete="tel" for phone */}
+        {/* FIX 6 — autoComplete="tel" */}
         <div className="relative">
           <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <select
@@ -373,15 +352,8 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
           />
         </div>
 
-        {/*
-          FIX 5 — inputMode="email" added explicitly.
-          ─────────────────────────────────────────────
-          type="email" alone does not guarantee the email keyboard on all Android
-          versions of Chrome WebView. inputMode="email" forces it — ensures the
-          @ key is always visible in the first row of the keyboard.
-
-          FIX 6 — autoComplete="email" for prefill.
-        */}
+        {/* FIX 5 — inputMode="email" forces @ key on Android Chrome WebView */}
+        {/* FIX 6 — autoComplete="email" */}
         <div className="relative">
           <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
