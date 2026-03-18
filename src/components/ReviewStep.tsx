@@ -113,7 +113,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         p_health_conditions:      safetyMap[5] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
         p_environmental_exposure: safetyMap[6] === "Yes" ? "Flagged by client" : null,
         p_physical_factors:       safetyMap[7] === "Yes" ? "Flagged by client" : null,
-        p_hair_length_ok:         safetyMap[8] === "No"  ? "No - insufficient growth" : "Yes",
+        p_hair_length_ok: safetyMap[8] === "No" ? "No" : "Yes",
         p_additional_notes:       booking.additionalNotes || null,
         p_guest_name:             booking.fullName  || null,
         p_guest_email:            booking.email     || null,
