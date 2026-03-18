@@ -35,7 +35,6 @@ export interface BookingRow {
 }
 
 function mapBooking(b: any): BookingRow {
-  // Sort items by sort_order before use
   const items = [...(b.items ?? [])].sort(
     (a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0)
   );
@@ -45,7 +44,6 @@ function mapBooking(b: any): BookingRow {
     (s: number, i: any) => s + (i.duration_minutes || 0), 0
   );
 
-  // Identity resolution — schema-verified priority order
   const clientName =
     b.client_name || b.guest_name || b.client?.full_name || "Unknown";
   const clientPhone =
@@ -53,13 +51,10 @@ function mapBooking(b: any): BookingRow {
   const clientEmail =
     b.client_email || b.guest_email || b.client?.email || "";
 
-  // Prefer stored balance_due (written by webhook on payment).
-  // Fall back to total - deposit for legacy rows where balance_due is null.
   const balance = b.balance_due != null
     ? Number(b.balance_due)
     : Math.max(Number(b.total_amount ?? 0) - Number(b.deposit_amount ?? 0), 0);
 
-  // Ref: use 8 chars for lower collision probability
   const ref = `PB-${(b.id as string).slice(0, 8).toUpperCase()}`;
 
   return {
@@ -79,7 +74,6 @@ function mapBooking(b: any): BookingRow {
     deposit: Number(b.deposit_amount) || 0,
     balance,
     status: b.status as BookingRow["status"],
-    // deposit_paid is nullable bool — treat null as false
     depositPaid: b.deposit_paid === true,
     fullPaymentReceived: b.full_payment_received === true,
     finalPaymentPaid: b.final_payment_paid === true,
@@ -99,7 +93,6 @@ export function useSupabaseBookings() {
   const { tenantId } = useTenant();
   const qc = useQueryClient();
 
-  // Realtime subscription — tenant-checked in callback
   useEffect(() => {
     if (!tenantId) return;
     const channel = supabase
@@ -223,8 +216,11 @@ export function useRescheduleBooking() {
         p_new_start_time: newStartTime,
       });
       if (error) throw error;
-      const result = (data as any)?.[0];
-      if (result && !result.success) throw new Error(result.message);
+
+      // Harden result check — treat null/empty/missing success as failure
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result) throw new Error("Reschedule failed: no response from server");
+      if (!result.success) throw new Error(result.message || "Reschedule failed");
 
       if (gcalEventId && booking) {
         try {
@@ -254,6 +250,10 @@ export function useRescheduleBooking() {
       qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
+      // Broad invalidation so any calendar view re-fetches immediately
+      qc.invalidateQueries({ queryKey: ["dash-"] });
+      qc.invalidateQueries({ queryKey: ["public-month-availability"] });
+      qc.invalidateQueries({ queryKey: ["public-date-slots"] });
     },
   });
 }
@@ -270,7 +270,6 @@ export function useUpdateBookingFields() {
       bookingId: string;
       updates: Record<string, unknown>;
     }) => {
-      // Tenant guard on update — belt AND suspenders alongside RLS
       const { error } = await supabase
         .from("bookings")
         .update(updates)
@@ -292,7 +291,6 @@ export function useDeleteBooking() {
 
   return useMutation({
     mutationFn: async (bookingId: string) => {
-      // Tenant guard on delete — belt AND suspenders alongside RLS
       const { error } = await supabase
         .from("bookings")
         .delete()
