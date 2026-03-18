@@ -4,9 +4,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, X } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
-
-const SUPABASE_URL = "https://kjibbbuceipnialfgflt.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -99,17 +97,11 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
+  // Uses the shared supabase client — no hardcoded keys
   const callPlacesFunction = async (body: object) => {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/places-autocomplete`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
-    return res.json();
+    const { data, error } = await supabase.functions.invoke("places-autocomplete", { body });
+    if (error) throw error;
+    return data;
   };
 
   // Autocomplete effect — skip if address is already verified (user hasn't edited since selection)
