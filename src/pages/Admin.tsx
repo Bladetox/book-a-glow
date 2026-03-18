@@ -1,21 +1,31 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TenantProvider } from "@/contexts/TenantContext";
-import AdminLogin from "@/components/admin/AdminLogin";
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminLogin    from "@/components/admin/AdminLogin";
+import AdminSidebar  from "@/components/admin/AdminSidebar";
+
+// ── Eagerly loaded (always needed on first paint) ─────────────────────────────
 import AdminDashboard from "@/components/admin/AdminDashboard";
-import AdminBookings from "@/components/admin/AdminBookings";
-import AdminConsultations from "@/components/admin/AdminConsultations";
-import AdminAvailability from "@/components/admin/AdminAvailability";
-import AdminStock from "@/components/admin/AdminStock";
-import AdminReviews from "@/components/admin/AdminReviews";
-import AdminIntegrations from "@/components/admin/AdminIntegrations";
-import AdminSettings from "@/components/admin/AdminSettings";
-import AdminLoyalty from "@/components/admin/AdminLoyalty";
-import AdminServices from "@/components/admin/AdminServices";
-import AdminTerms from "@/components/admin/AdminTerms";
+
+// ── Lazily loaded (only when the user switches to that tab) ───────────────────
+const AdminBookings      = lazy(() => import("@/components/admin/AdminBookings"));
+const AdminServices      = lazy(() => import("@/components/admin/AdminServices"));
+const AdminConsultations = lazy(() => import("@/components/admin/AdminConsultations"));
+const AdminAvailability  = lazy(() => import("@/components/admin/AdminAvailability"));
+const AdminStock         = lazy(() => import("@/components/admin/AdminStock"));
+const AdminReviews       = lazy(() => import("@/components/admin/AdminReviews"));
+const AdminIntegrations  = lazy(() => import("@/components/admin/AdminIntegrations"));
+const AdminSettings      = lazy(() => import("@/components/admin/AdminSettings"));
+const AdminLoyalty       = lazy(() => import("@/components/admin/AdminLoyalty"));
+const AdminTerms         = lazy(() => import("@/components/admin/AdminTerms"));
+
+const TabLoader = () => (
+  <div className="flex items-center justify-center py-20">
+    <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+  </div>
+);
 
 const views = [
   "Dashboard", "Bookings", "Services", "Consultations", "Availability",
@@ -25,26 +35,21 @@ const views = [
 type ViewName = typeof views[number];
 
 const Admin = () => {
-  const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
-  const [tenantId, setTenantId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<ViewName>("Dashboard");
+  const [authState, setAuthState]     = useState<"loading" | "unauthenticated" | "authenticated">("loading");
+  const [tenantId, setTenantId]       = useState<string | null>(null);
+  const [userId, setUserId]           = useState<string | null>(null);
+  const [activeView, setActiveView]   = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
   const checkAdminSession = async () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (!user || error) {
-        setAuthState("unauthenticated");
-        return;
-      }
-
+      if (!user || error) { setAuthState("unauthenticated"); return; }
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role, tenant_id")
         .eq("user_id", user.id);
-
       const adminRole = roles?.find(r => r.role === "owner" || r.role === "admin");
       if (adminRole) {
         setTenantId(adminRole.tenant_id);
@@ -69,7 +74,6 @@ const Admin = () => {
         checkAdminSession();
       }
     });
-
     checkAdminSession();
     return () => subscription.unsubscribe();
   }, []);
@@ -103,18 +107,18 @@ const Admin = () => {
 
   const renderView = () => {
     switch (activeView) {
-      case "Dashboard": return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
-      case "Bookings": return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
-      case "Services": return <AdminServices />;
-      case "Consultations": return <AdminConsultations />;
-      case "Availability": return <AdminAvailability />;
-      case "Stock": return <AdminStock />;
-      case "Reviews": return <AdminReviews />;
-      case "Integrations": return <AdminIntegrations />;
-      case "Settings": return <AdminSettings />;
-      case "Loyalty Tracker": return <AdminLoyalty />;
+      case "Dashboard":         return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
+      case "Bookings":          return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
+      case "Services":          return <AdminServices />;
+      case "Consultations":     return <AdminConsultations />;
+      case "Availability":      return <AdminAvailability />;
+      case "Stock":             return <AdminStock />;
+      case "Reviews":           return <AdminReviews />;
+      case "Integrations":      return <AdminIntegrations />;
+      case "Settings":          return <AdminSettings />;
+      case "Loyalty Tracker":   return <AdminLoyalty />;
       case "Terms & Conditions": return <AdminTerms />;
-      default: return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
+      default:                  return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
     }
   };
 
@@ -124,9 +128,7 @@ const Admin = () => {
         <AnimatePresence>
           {sidebarOpen && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 z-40 lg:hidden"
               onClick={() => setSidebarOpen(false)}
             />
@@ -159,7 +161,9 @@ const Admin = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            {renderView()}
+            <Suspense fallback={<TabLoader />}>
+              {renderView()}
+            </Suspense>
           </div>
         </div>
       </div>
