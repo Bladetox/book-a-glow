@@ -10,23 +10,44 @@ const ResetPassword = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [validSession, setValidSession] = useState(false);
+  const [validSession, setValidSession] = useState<boolean | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for recovery token in URL hash
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setValidSession(true);
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    // Give the Supabase PKCE exchange a moment to complete,
+    // then check the current session state.
+    // We rely on onAuthStateChange rather than the URL hash
+    // because Supabase strips the hash before React can read it.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         setValidSession(true);
+      } else if (event === "SIGNED_IN" && session) {
+        // Already exchanged — check if this came from a recovery flow
+        // by looking at the AMR (authentication method reference)
+        const amr = (session.user?.amr as any) ?? [];
+        const isRecovery = Array.isArray(amr)
+          ? amr.some((a: any) => a.method === "recovery")
+          : false;
+        if (isRecovery) {
+          setValidSession(true);
+        } else if (validSession === null) {
+          // SIGNED_IN from something else (e.g. normal login) — invalid page
+          setValidSession(false);
+        }
+      } else if (event === "SIGNED_OUT") {
+        setValidSession(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Fallback: if no auth event fires within 3 seconds, mark as invalid
+    const fallbackTimer = setTimeout(() => {
+      setValidSession((prev) => (prev === null ? false : prev));
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
@@ -79,11 +100,21 @@ const ResetPassword = () => {
               <h1 className="font-display text-xl font-bold text-white">Password Updated</h1>
               <p className="text-xs text-white/40">Redirecting to admin...</p>
             </div>
+          ) : validSession === null ? (
+            <div className="text-center flex flex-col items-center gap-3">
+              <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+              <p className="text-xs text-white/40">Verifying reset link...</p>
+            </div>
           ) : !validSession ? (
             <div className="text-center">
               <h1 className="font-display text-xl font-bold text-white">Invalid Reset Link</h1>
-              <p className="text-xs text-white/40 mt-2">This link has expired or is invalid. Please request a new password reset.</p>
-              <button onClick={() => navigate("/admin")} className="mt-4 text-xs text-white/50 hover:text-white/80 transition-colors underline">
+              <p className="text-xs text-white/40 mt-2">
+                This link has expired or is invalid. Please request a new password reset.
+              </p>
+              <button
+                onClick={() => navigate("/admin")}
+                className="mt-4 text-xs text-white/50 hover:text-white/80 transition-colors underline"
+              >
                 Go to Admin Login
               </button>
             </div>
@@ -96,14 +127,32 @@ const ResetPassword = () => {
               <form onSubmit={handleReset} className="w-full flex flex-col gap-4">
                 <div>
                   <label className={labelClass}>New Password</label>
-                  <input type="password" value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} placeholder="Min 6 characters" className={inputClass} required />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                    placeholder="Min 6 characters"
+                    className={inputClass}
+                    required
+                  />
                 </div>
                 <div>
                   <label className={labelClass}>Confirm Password</label>
-                  <input type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }} placeholder="Confirm new password" className={inputClass} required />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
+                    placeholder="Confirm new password"
+                    className={inputClass}
+                    required
+                  />
                 </div>
                 {error && <p className="text-xs text-red-400 text-center">{error}</p>}
-                <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-white text-black text-sm font-semibold tracking-wider uppercase hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-white text-black text-sm font-semibold tracking-wider uppercase hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                   Update Password
                 </button>
