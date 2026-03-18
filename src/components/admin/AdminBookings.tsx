@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 
 const filters = ["All", "Today", "Pending", "Confirmed", "Complete", "Cancelled"] as const;
@@ -30,22 +31,26 @@ interface AdminBookingsProps {
 
 const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const { data: bookings = [], isLoading } = useSupabaseBookings();
-  const updateStatus    = useUpdateBookingStatus();
-  const reschedule      = useRescheduleBooking();
-  const updateFields    = useUpdateBookingFields();
-  const deleteBooking   = useDeleteBooking();
+  const { tenantId } = useTenant();
+  const updateStatus  = useUpdateBookingStatus();
+  const reschedule    = useRescheduleBooking();
+  const updateFields  = useUpdateBookingFields();
+  const deleteBooking = useDeleteBooking();
 
-  const [activeFilter, setActiveFilter]           = useState<FilterType>("All");
-  const [expandedId, setExpandedId]               = useState<string | null>(null);
-  const [editingId, setEditingId]                 = useState<string | null>(null);
-  const [editDraft, setEditDraft]                 = useState<Partial<BookingRow>>({});
-  const [reschedulingId, setReschedulingId]       = useState<string | null>(null);
-  const [rescheduleDate, setRescheduleDate]       = useState<Date | undefined>();
-  const [rescheduleTime, setRescheduleTime]       = useState<string | null>(null);
+  const [activeFilter, setActiveFilter]             = useState<FilterType>("All");
+  const [expandedId, setExpandedId]                 = useState<string | null>(null);
+  const [editingId, setEditingId]                   = useState<string | null>(null);
+  const [editDraft, setEditDraft]                   = useState<Partial<BookingRow>>({});
+  const [reschedulingId, setReschedulingId]         = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate]         = useState<Date | undefined>();
+  const [rescheduleTime, setRescheduleTime]         = useState<string | null>(null);
   const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
+  const [availableSlots, setAvailableSlots]         = useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading]             = useState(false);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
+  // ── Auto-expand booking when navigated from client search ────────────────
   useEffect(() => {
     if (initialClient && bookings.length > 0) {
       const match = bookings.find(b =>
@@ -59,9 +64,61 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   }, [initialClient, bookings.length]);
 
+  // ── Fetch real available slots when reschedule date changes ──────────────
+  useEffect(() => {
+    if (!rescheduleDate || !reschedulingId || !tenantId) {
+      setAvailableSlots([]);
+      setRescheduleTime(null);
+      return;
+    }
+
+    const booking = bookings.find(b => b.id === reschedulingId);
+    const duration = booking?.duration || 60;
+    const dateStr = format(rescheduleDate, "yyyy-MM-dd");
+
+    let cancelled = false;
+    setSlotsLoading(true);
+    setAvailableSlots([]);
+    setRescheduleTime(null);
+
+    supabase
+      .from("tenants")
+      .select("owner_id")
+      .eq("id", tenantId)
+      .single()
+      .then(({ data: tenantData, error: tenantErr }) => {
+        if (cancelled) return;
+        if (tenantErr || !tenantData?.owner_id) {
+          setSlotsLoading(false);
+          return;
+        }
+        return supabase.rpc("get_available_slots", {
+          p_staff_id: tenantData.owner_id,
+          p_date: dateStr,
+          p_duration_minutes: duration,
+        });
+      })
+      .then((res: any) => {
+        if (cancelled || !res) return;
+        const { data, error } = res;
+        if (error) {
+          setSlotsLoading(false);
+          return;
+        }
+        setAvailableSlots(
+          (data ?? [])
+            .filter((s: any) => s.is_available)
+            .map((s: any) => (s.slot_start as string).slice(0, 5))
+        );
+        setSlotsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [rescheduleDate, reschedulingId, tenantId, bookings]);
+
   const filtered = bookings.filter(b => {
-    if (activeFilter === "All")     return true;
-    if (activeFilter === "Today")   return b.date === todayStr;
+    if (activeFilter === "All")    return true;
+    if (activeFilter === "Today")  return b.date === todayStr;
     return b.status === activeFilter.toLowerCase();
   });
 
@@ -151,7 +208,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       if (!clientEmail) throw new Error("No client email on record for this booking");
       if (!balance || balance <= 0) throw new Error("No outstanding balance");
 
-      // 1. Create Yoco payment link for the outstanding balance
       const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
         body: {
           amount:       Math.round(balance * 100),
@@ -171,7 +227,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
       const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
 
-      // Store final checkout id on the booking row for the webhook
       await supabase
         .from("bookings")
         .update({
@@ -180,7 +235,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         })
         .eq("id", b.id);
 
-      // 2. Send balance-request email with payment link
       const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
         body: {
           booking_id:  b.id,
@@ -191,7 +245,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       });
 
       if (emailErr) console.warn("Email send warning:", emailErr.message);
-
       toast.success(`Balance request sent to ${clientEmail}`);
     } catch (e: any) {
       toast.error(e.message || "Failed to send balance request");
@@ -200,25 +253,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  /**
-   * Show "Request Balance" when:
-   *   - booking has an outstanding balance > 0
-   *   - booking is NOT cancelled
-   *   - booking is NOT complete
-   *   - full payment has NOT been received
-   */
   const showRequestBalance = (b: BookingRow) =>
     b.balance > 0 &&
     b.status !== "cancelled" &&
     b.status !== "complete" &&
     !b.fullPaymentReceived;
-
-  // Available time slots for rescheduling
-  const timeSlots = Array.from({ length: 19 }, (_, i) => {
-    const h = Math.floor(i / 2) + 8;
-    const m = (i % 2) * 30;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  });
 
   if (isLoading) {
     return (
@@ -293,8 +332,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         <div className="flex flex-col gap-2">
           <AnimatePresence>
             {filtered.map(b => {
-              const isExpanded         = expandedId === b.id;
-              const isEditing          = editingId === b.id;
+              const isExpanded          = expandedId === b.id;
+              const isEditing           = editingId === b.id;
               const isRequestingBalance = requestingBalanceId === b.id;
 
               return (
@@ -364,12 +403,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                           ) : (
                             <div className="flex flex-col gap-3 mt-3">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                <DetailRow icon={User}    label="Client"  value={b.client} />
-                                <DetailRow icon={Phone}   label="Phone"   value={b.phone} />
-                                <DetailRow icon={Mail}    label="Email"   value={b.email} />
-                                <DetailRow icon={MapPin}  label="Address" value={b.address} />
+                                <DetailRow icon={User}     label="Client"  value={b.client} />
+                                <DetailRow icon={Phone}    label="Phone"   value={b.phone} />
+                                <DetailRow icon={Mail}     label="Email"   value={b.email} />
+                                <DetailRow icon={MapPin}   label="Address" value={b.address} />
                                 <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} />
-                                <DetailRow icon={Clock}   label="Ref"     value={b.ref} />
+                                <DetailRow icon={Clock}    label="Ref"     value={b.ref} />
                               </div>
 
                               <div className="grid grid-cols-3 gap-2 mt-1">
@@ -403,11 +442,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                               {/* Action buttons */}
                               <div className="flex items-center gap-2 pt-1 flex-wrap">
 
-                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                {b.status !== "cancelled" && (
                                   <ActionBtn icon={CalendarClock} label="Reschedule" color="text-sky-400" onClick={() => {
                                     setReschedulingId(reschedulingId === b.id ? null : b.id);
                                     setRescheduleDate(undefined);
                                     setRescheduleTime(null);
+                                    setAvailableSlots([]);
                                   }} />
                                 )}
 
@@ -471,16 +511,26 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                         <div className="flex-1">
                                           <p className="text-[10px] text-white/30 mb-1.5">New Time</p>
                                           <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
-                                            {timeSlots.map(t => (
-                                              <button key={t} onClick={() => setRescheduleTime(t)}
-                                                className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
-                                                  rescheduleTime === t
-                                                    ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
-                                                    : "bg-white/[0.04] text-white/50 border border-white/[0.06] hover:text-white/70"
-                                                }`}>
-                                                {t}
-                                              </button>
-                                            ))}
+                                            {slotsLoading ? (
+                                              <div className="col-span-3 flex justify-center py-6">
+                                                <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+                                              </div>
+                                            ) : !rescheduleDate ? (
+                                              <p className="col-span-3 text-[11px] text-white/30 text-center py-4">Select a date first</p>
+                                            ) : availableSlots.length === 0 ? (
+                                              <p className="col-span-3 text-[11px] text-white/30 text-center py-4">No available slots</p>
+                                            ) : (
+                                              availableSlots.map(t => (
+                                                <button key={t} onClick={() => setRescheduleTime(t)}
+                                                  className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                                                    rescheduleTime === t
+                                                      ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                                                      : "bg-white/[0.04] text-white/50 border border-white/[0.06] hover:text-white/70"
+                                                  }`}>
+                                                  {t}
+                                                </button>
+                                              ))
+                                            )}
                                           </div>
                                         </div>
                                       </div>
@@ -493,7 +543,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                         </div>
                                         <div className="flex gap-2">
                                           <button
-                                            onClick={() => { setReschedulingId(null); setRescheduleDate(undefined); setRescheduleTime(null); }}
+                                            onClick={() => { setReschedulingId(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
                                             className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors"
                                           >
                                             Cancel
