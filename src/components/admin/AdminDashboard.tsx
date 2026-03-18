@@ -24,7 +24,7 @@ const sectionLabels: Record<SectionKey, string> = {
   alerts: "Alerts",
   revenueGraph: "Revenue Trend",
   heatmap: "Booking Heatmap",
-  todayAppointments: "Today’s Appointments",
+  todayAppointments: "Today's Appointments",
   clientInsights: "Client Insights",
   stockAlerts: "Stock Alerts",
   settingsSnapshot: "Settings Snapshot",
@@ -93,7 +93,7 @@ const METRIC_COPY: MetricCopyShape = {
     benchmark: "Aim: consistent with your weekday average.",
   },
   appointmentsToday: {
-    title: "Today’s Bookings",
+    title: "Today's Bookings",
     explain: "How many clients are booked in today. Used alongside Fill Rate to measure daily capacity.",
   },
   remaining: {
@@ -107,7 +107,7 @@ const METRIC_COPY: MetricCopyShape = {
   fillRate: {
     title: "Fill Rate (Capacity Utilisation)",
     explain: "The % of your available time that was actually booked. Airlines, hotels, and salons all track this. A high fill rate = low wasted capacity.",
-    benchmark: "Target: 70%+. Below 50% means you’re losing revenue to empty slots.",
+    benchmark: "Target: 70%+. Below 50% means you're losing revenue to empty slots.",
   },
   avgBasket: {
     title: "Average Transaction Value (ATV)",
@@ -238,8 +238,6 @@ const StatPill = ({
 );
 
 // ─── MetricCard ───
-// FIX: text column now has flex-1 so it always fills available space,
-// preventing the Info icon from ever overlapping the label or value.
 const MetricCard = ({
   id, icon: Icon, label, value, color, sub, title, explain, benchmark, onExpand,
 }: {
@@ -264,7 +262,6 @@ const MetricCard = ({
       <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
         <Icon className="w-4 h-4 text-white/50" />
       </div>
-      {/* flex-1 + min-w-0 ensures text never bleeds into the Info icon */}
       <div className="flex flex-col gap-0.5 flex-1 min-w-0 justify-center">
         <span className="text-[10px] tracking-[0.1em] uppercase text-white/30 truncate">{label}</span>
         <span className={`text-base sm:text-lg font-bold truncate ${color ?? "text-white/90"}`}>{value}</span>
@@ -306,7 +303,7 @@ const ClientMiniCard = ({
   </motion.div>
 );
 
-// ─── SectionInfoPanel (unchanged) ───
+// ─── SectionInfoPanel ───
 const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   <div className="mt-3 mb-1 rounded-lg border border-white/[0.06] bg-white/[0.04] p-3 flex flex-col gap-2">
     {lines.map(l => (
@@ -318,7 +315,7 @@ const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   </div>
 );
 
-// ─── BookingHeatmap (unchanged) ───
+// ─── BookingHeatmap ───
 const heatmapSlots = ["08–10", "10–12", "12–14", "14–16", "16–18"];
 
 const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
@@ -397,7 +394,7 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
   );
 };
 
-// ─── AppointmentsList (unchanged) ───
+// ─── AppointmentsList ───
 const AppointmentsList = ({
   appointments, onSelect,
 }: { appointments: Appointment[]; onSelect?: (client: string) => void }) => (
@@ -455,7 +452,7 @@ const AppointmentsList = ({
   </>
 );
 
-// ─── StatusBadge (unchanged) ───
+// ─── StatusBadge ───
 const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
     status === "confirmed" ? "bg-emerald-500/10 text-emerald-400" :
@@ -496,10 +493,12 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
     );
   }
 
-  const pctChange = data.revenue.lastMonth > 0
+  // FIX: null when no prior month data exists — prevents misleading +0% display
+  const hasLastMonth = data.revenue.lastMonth > 0;
+  const pctChange = hasLastMonth
     ? Math.round(((data.revenue.month - data.revenue.lastMonth) / data.revenue.lastMonth) * 100)
-    : 0;
-  const pctUp = pctChange >= 0;
+    : null;
+  const pctUp = pctChange !== null ? pctChange >= 0 : true;
 
   return (
     <>
@@ -551,13 +550,19 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
               R {data.revenue.month.toLocaleString()}
             </p>
             <div className="flex items-center gap-1.5 mt-1.5">
-              {pctUp
-                ? <TrendingUp   className="w-3.5 h-3.5 text-emerald-400/80" />
-                : <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />
-              }
-              <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>
-                {pctChange}% vs last month
-              </p>
+              {pctChange !== null ? (
+                <>
+                  {pctUp
+                    ? <TrendingUp   className="w-3.5 h-3.5 text-emerald-400/80" />
+                    : <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />
+                  }
+                  <p className={`text-sm ${pctUp ? "text-emerald-400/80" : "text-red-400/80"}`}>
+                    {pctChange >= 0 ? "+" : ""}{pctChange}% vs last month
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-white/25">No prior month data</p>
+              )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-6 pt-5 border-t border-white/[0.06]">
               <StatPill id="mc-revenue-today" label="Revenue Today" value={`R ${data.revenue.today.toLocaleString()}`}          {...METRIC_COPY.revenueToday}      onExpand={setExpandedCard} />
@@ -595,7 +600,6 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white/80 truncate">{s.name}</p>
                     </div>
-                    {/* × rendered as a real character, not a unicode escape */}
                     <span className="text-xs text-white/40">{s.count}×</span>
                     <span className="text-xs font-semibold text-white/60">R {s.revenue.toLocaleString()}</span>
                   </div>
@@ -736,10 +740,10 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
           </motion.div>
         )}
 
-        {/* ── 7. TODAY’S APPOINTMENTS ── */}
+        {/* ── 7. TODAY'S APPOINTMENTS ── */}
         {visibility.todayAppointments && (
           <motion.div {...fadeUp} transition={{ delay: 0.18 }} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 sm:p-5">
-            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today’s Appointments</h4>
+            <h4 className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40 mb-3">Today's Appointments</h4>
             {data.todayAppointments.length === 0
               ? <p className="text-xs text-white/25">No appointments today</p>
               : <AppointmentsList appointments={data.todayAppointments} onSelect={onSelectAppointment} />

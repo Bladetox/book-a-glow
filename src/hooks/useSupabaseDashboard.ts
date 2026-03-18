@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useMemo } from "react";
@@ -23,17 +23,18 @@ const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5,
 
 export function useDashboardData() {
   const { tenantId } = useTenant();
-  const now        = new Date();
-  const todayStr   = format(now, "yyyy-MM-dd");
-  const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
-  const monthEnd   = format(endOfMonth(now),   "yyyy-MM-dd");
-  const prevStart  = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
+  const now         = new Date();
+  const todayStr    = format(now, "yyyy-MM-dd");
+  const monthStart  = format(startOfMonth(now), "yyyy-MM-dd");
+  const monthEnd    = format(endOfMonth(now),   "yyyy-MM-dd");
+  const prevStart   = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
+  const prevEnd     = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
   const daysInMonth = getDaysInMonth(now);
 
-  // ── 1. Bookings — trimmed column list, no unused fields ──────────────────
+  // ── 1. Bookings ───────────────────────────────────────────────────────────
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
-    staleTime: 3 * 60 * 1000, // 3 min
+    staleTime: 3 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
@@ -64,8 +65,7 @@ export function useDashboardData() {
     },
   });
 
-  // ── 2. Payments — SINGLE query covering prev + current month ─────────────
-  //    Split in JS — eliminates one full round-trip vs the old 2-query pattern
+  // ── 2. Payments — single query covering prev + current month ─────────────
   const { data: allPayments = [], isLoading: l2 } = useQuery({
     queryKey:  ["dash-payments", tenantId, prevStart, monthEnd],
     staleTime: 3 * 60 * 1000,
@@ -82,14 +82,22 @@ export function useDashboardData() {
     },
   });
 
-  // JS split — no extra network call
+  // FIX: slice to date-only ("yyyy-MM-dd") before comparing — strips UTC time
+  // component so timezone offsets (SAST = UTC+2) never bleed a payment into
+  // the wrong month.
   const thisMonthPayments = useMemo(
-    () => allPayments.filter((p: any) => (p.created_at ?? "") >= monthStart),
-    [allPayments, monthStart]
+    () => allPayments.filter((p: any) => {
+      const d = (p.created_at ?? "").slice(0, 10);
+      return d >= monthStart && d <= monthEnd;
+    }),
+    [allPayments, monthStart, monthEnd]
   );
   const prevMonthPayments = useMemo(
-    () => allPayments.filter((p: any) => (p.created_at ?? "") < monthStart),
-    [allPayments, monthStart]
+    () => allPayments.filter((p: any) => {
+      const d = (p.created_at ?? "").slice(0, 10);
+      return d >= prevStart && d <= prevEnd;
+    }),
+    [allPayments, prevStart, prevEnd]
   );
 
   // ── 3. Stock alerts ───────────────────────────────────────────────────────
@@ -111,7 +119,7 @@ export function useDashboardData() {
   // ── 4. Staff IDs ──────────────────────────────────────────────────────────
   const { data: staff = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-staff-ids", tenantId],
-    staleTime: 10 * 60 * 1000, // staff rarely changes
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff")
@@ -122,7 +130,7 @@ export function useDashboardData() {
     },
   });
 
-  // ── 5. Staff availability — enabled once staff IDs resolve ────────────────
+  // ── 5. Staff availability ─────────────────────────────────────────────────
   const staffIds = useMemo(() => staff.map((s: any) => s.id as string), [staff]);
   const { data: staffSlots = [], isLoading: l4 } = useQuery({
     queryKey:  ["dash-staff-avail", tenantId, staffIds],
@@ -165,7 +173,7 @@ export function useDashboardData() {
   );
   const todayRevenue = useMemo(
     () => thisMonthPayments
-      .filter((p: any) => (p.created_at ?? "").startsWith(todayStr))
+      .filter((p: any) => (p.created_at ?? "").slice(0, 10) === todayStr)
       .reduce((s: number, p: any) => s + Number(p.amount), 0),
     [thisMonthPayments, todayStr]
   );
@@ -216,9 +224,8 @@ export function useDashboardData() {
     }));
   }, [thisMonthPayments, daysInMonth]);
 
-  // ── Heatmap — pre-indexed, O(N) build then O(1) lookup ───────────────────
+  // ── Heatmap — O(N) index build, O(1) lookup ───────────────────────────────
   const heatmap = useMemo(() => {
-    // Build index: "dowIdx__slotIdx" → count
     const idx: Record<string, number> = {};
     active.forEach((b: any) => {
       const dow  = DOW_TO_IDX[new Date(b.booking_date + "T00:00:00").getDay()];
@@ -244,7 +251,7 @@ export function useDashboardData() {
       const key = resolveClientKey(b);
       clientBookingCount.set(key, (clientBookingCount.get(key) || 0) + 1);
     });
-    const keySet  = new Set(active.map((b: any) => resolveClientKey(b)));
+    const keySet    = new Set(active.map((b: any) => resolveClientKey(b)));
     const returning = [...clientBookingCount.values()].filter(c => c > 1).length;
     return {
       clientKeySet:   keySet,
@@ -253,7 +260,7 @@ export function useDashboardData() {
     };
   }, [active]);
 
-  // ── Fill Rate — cached in useMemo, not recomputed on every render ─────────
+  // ── Fill Rate ─────────────────────────────────────────────────────────────
   const fillRate = useMemo(() => {
     if (staffSlots.length === 0) return 0;
     const overrideDates = new Set<string>();
@@ -272,7 +279,9 @@ export function useDashboardData() {
         staffSlots
           .filter((s: any) => {
             if (s.staff_id !== staffId) return false;
-            return hasOverride ? s.specific_date === dateStr : s.specific_date === null && s.day_of_week === dow;
+            return hasOverride
+              ? s.specific_date === dateStr
+              : s.specific_date === null && s.day_of_week === dow;
           })
           .forEach((s: any) => {
             const mins = timeToMins(s.slot_end_time) - timeToMins(s.slot_start_time);
@@ -281,9 +290,9 @@ export function useDashboardData() {
       });
     }
     if (totalAvailableMins === 0) return 0;
-    const bookedMins = active.reduce((sum: number, b: any) => {
-      return sum + Math.max(timeToMins(b.end_time) - timeToMins(b.start_time), 0);
-    }, 0);
+    const bookedMins = active.reduce((sum: number, b: any) =>
+      sum + Math.max(timeToMins(b.end_time) - timeToMins(b.start_time), 0), 0
+    );
     return Math.min(Math.round((bookedMins / totalAvailableMins) * 100), 100);
   }, [staffSlots, active, daysInMonth]);
 
