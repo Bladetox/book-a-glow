@@ -222,29 +222,36 @@ export function useRescheduleBooking() {
       if (!result) throw new Error("Reschedule failed: no response from server");
       if (!result.success) throw new Error(result.message || "Reschedule failed");
 
-      if (gcalEventId && booking) {
-        try {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-          await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${supabaseKey}`,
-              apikey: supabaseKey,
-            },
-            body: JSON.stringify({
-              tenant_id: booking.tenantId,
-              gcal_event_id: gcalEventId,
-              new_date: newDate,
-              new_start_time: newStartTime,
-              duration_minutes: booking.duration,
-            }),
-          });
-        } catch (gcalErr) {
-          console.error("GCal reschedule sync failed:", gcalErr);
-        }
-      }
+      // Always call update-gcal-event — it creates a new event if gcal_event_id is null
+if (booking) {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${supabaseKey}`,
+        apikey: supabaseKey,
+      },
+      body: JSON.stringify({
+        tenant_id:        booking.tenantId,
+        gcal_event_id:    gcalEventId ?? null,  // null triggers CREATE path
+        booking_id:       bookingId,            // so new event id gets saved back
+        new_date:         newDate,
+        new_start_time:   newStartTime,
+        duration_minutes: booking.duration,
+        client_name:      booking.client,
+        service_name:     booking.service,
+        client_phone:     booking.phone,
+        location:         booking.address || null,
+      }),
+    });
+  } catch (gcalErr) {
+    console.error("GCal reschedule sync failed:", gcalErr);
+  }
+}
+
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
