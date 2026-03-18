@@ -4,7 +4,6 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useMemo } from "react";
 import { format, startOfMonth, endOfMonth, subMonths, getDaysInMonth } from "date-fns";
 
-// ─── Identity resolution ──────────────────────────────────────────────────────
 function resolveClientName(b: any): string {
   return b.client_name || b.guest_name || b.client?.full_name || "Unknown";
 }
@@ -16,9 +15,8 @@ function timeToMins(t: string): number {
   return h * 60 + m;
 }
 
-// Heatmap constants
 const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HEAT_SLOTS = ["08–10", "10–12", "12–14", "14–16", "16–18"];
+const HEAT_SLOTS = ["08-10", "10-12", "12-14", "14-16", "16-18"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
 
 export function useDashboardData() {
@@ -31,7 +29,7 @@ export function useDashboardData() {
   const prevEnd     = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
   const daysInMonth = getDaysInMonth(now);
 
-  // ── 1. Bookings ───────────────────────────────────────────────────────────
+  // 1. Bookings - current month
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
@@ -65,8 +63,25 @@ export function useDashboardData() {
     },
   });
 
-  // ── 2. Payments — single query covering prev + current month ─────────────
-  const { data: allPayments = [], isLoading: l2 } = useQuery({
+  // 2. Previous month bookings - for lastMonth revenue fallback
+  const { data: prevBookings = [], isLoading: l2 } = useQuery({
+    queryKey:  ["dash-bookings-prev", tenantId, prevStart],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("total_amount, status")
+        .eq("tenant_id", tenantId)
+        .gte("booking_date", prevStart)
+        .lte("booking_date", prevEnd)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // 3. Payments - single query covering prev + current month
+  const { data: allPayments = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-payments", tenantId, prevStart, monthEnd],
     staleTime: 3 * 60 * 1000,
     queryFn: async () => {
@@ -82,9 +97,7 @@ export function useDashboardData() {
     },
   });
 
-  // FIX: slice to date-only ("yyyy-MM-dd") before comparing — strips UTC time
-  // component so timezone offsets (SAST = UTC+2) never bleed a payment into
-  // the wrong month.
+  // date-only slice strips UTC time so SAST offset never bleeds payments across months
   const thisMonthPayments = useMemo(
     () => allPayments.filter((p: any) => {
       const d = (p.created_at ?? "").slice(0, 10);
@@ -100,7 +113,7 @@ export function useDashboardData() {
     [allPayments, prevStart, prevEnd]
   );
 
-  // ── 3. Stock alerts ───────────────────────────────────────────────────────
+  // 4. Stock alerts
   const { data: stockItems = [] } = useQuery({
     queryKey:  ["dash-stock", tenantId],
     staleTime: 5 * 60 * 1000,
@@ -116,8 +129,8 @@ export function useDashboardData() {
     },
   });
 
-  // ── 4. Staff IDs ──────────────────────────────────────────────────────────
-  const { data: staff = [], isLoading: l3 } = useQuery({
+  // 5. Staff IDs
+  const { data: staff = [], isLoading: l4 } = useQuery({
     queryKey:  ["dash-staff-ids", tenantId],
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
@@ -130,9 +143,10 @@ export function useDashboardData() {
     },
   });
 
-  // ── 5. Staff availability ─────────────────────────────────────────────────
+  // 6. Staff availability - no day_enabled filter in DB (unreliable null column)
+  //    Filter is applied safely in JS below
   const staffIds = useMemo(() => staff.map((s: any) => s.id as string), [staff]);
-  const { data: staffSlots = [], isLoading: l4 } = useQuery({
+  const { data: staffSlots = [], isLoading: l5 } = useQuery({
     queryKey:  ["dash-staff-avail", tenantId, staffIds],
     staleTime: 10 * 60 * 1000,
     enabled:   staffIds.length > 0,
@@ -141,14 +155,19 @@ export function useDashboardData() {
         .from("staff_availability")
         .select("staff_id, day_of_week, specific_date, slot_start_time, slot_end_time, is_available, day_enabled")
         .in("staff_id", staffIds)
-        .eq("is_available", true)
-        .eq("day_enabled", true);
+        .eq("is_available", true);
       if (error) throw error;
-      return data ?? [];
+      // Filter day_enabled in JS: treat null as true (not explicitly disabled)
+      return (data ?? []).filter((s: any) => s.day_enabled !== false);
     },
   });
 
-  // ── Derived: split bookings ───────────────────────────────────────────────
+  // Core loading: bookings + payments only - enough to render the whole dashboard
+  // Staff loading only blocks the fill rate card
+  const coreLoading = l1 || l2 || l3;
+  const staffLoading = l4 || l5;
+
+  // Derived: split bookings
   const todayBookings = useMemo(
     () => bookings.filter((b: any) => b.booking_date === todayStr),
     [bookings, todayStr]
@@ -162,15 +181,25 @@ export function useDashboardData() {
     [bookings]
   );
 
-  // ── Revenue ───────────────────────────────────────────────────────────────
+  // Revenue - payments table is source of truth
+  // If payments table returns 0 for prev month, fall back to bookings total_amount
   const monthRevenue = useMemo(
     () => thisMonthPayments.reduce((s: number, p: any) => s + Number(p.amount), 0),
     [thisMonthPayments]
   );
-  const prevMonthRevenue = useMemo(
+  const prevMonthRevenueFromPayments = useMemo(
     () => prevMonthPayments.reduce((s: number, p: any) => s + Number(p.amount), 0),
     [prevMonthPayments]
   );
+  const prevMonthRevenueFromBookings = useMemo(
+    () => prevBookings.reduce((s: number, b: any) => s + Number(b.total_amount ?? 0), 0),
+    [prevBookings]
+  );
+  // Use payments if available, otherwise fall back to bookings total_amount
+  const prevMonthRevenue = prevMonthRevenueFromPayments > 0
+    ? prevMonthRevenueFromPayments
+    : prevMonthRevenueFromBookings;
+
   const todayRevenue = useMemo(
     () => thisMonthPayments
       .filter((p: any) => (p.created_at ?? "").slice(0, 10) === todayStr)
@@ -178,7 +207,7 @@ export function useDashboardData() {
     [thisMonthPayments, todayStr]
   );
 
-  // ── Next appointment today ────────────────────────────────────────────────
+  // Next appointment today
   const nowMins = now.getHours() * 60 + now.getMinutes();
   const upcoming = useMemo(() =>
     todayBookings
@@ -191,7 +220,7 @@ export function useDashboardData() {
   [todayBookings, nowMins]);
   const nextAppt = upcoming[0] as any;
 
-  // ── Top services ──────────────────────────────────────────────────────────
+  // Top services
   const topServices = useMemo(() => {
     const svcMap = new Map<string, { count: number; revenue: number }>();
     active.forEach((b: any) => {
@@ -211,7 +240,7 @@ export function useDashboardData() {
       .slice(0, 5);
   }, [active]);
 
-  // ── Revenue trend ─────────────────────────────────────────────────────────
+  // Revenue trend
   const revenueTrend = useMemo(() => {
     const trendMap: Record<number, number> = {};
     thisMonthPayments.forEach((p: any) => {
@@ -224,7 +253,7 @@ export function useDashboardData() {
     }));
   }, [thisMonthPayments, daysInMonth]);
 
-  // ── Heatmap — O(N) index build, O(1) lookup ───────────────────────────────
+  // Heatmap - O(N) index, O(1) lookup
   const heatmap = useMemo(() => {
     const idx: Record<string, number> = {};
     active.forEach((b: any) => {
@@ -244,7 +273,7 @@ export function useDashboardData() {
     }));
   }, [active]);
 
-  // ── Unique + returning clients ────────────────────────────────────────────
+  // Unique + returning clients
   const { clientKeySet, returningCount, retentionRate } = useMemo(() => {
     const clientBookingCount = new Map<string, number>();
     active.forEach((b: any) => {
@@ -260,9 +289,9 @@ export function useDashboardData() {
     };
   }, [active]);
 
-  // ── Fill Rate ─────────────────────────────────────────────────────────────
+  // Fill Rate - day_enabled filtered in JS (null treated as enabled)
   const fillRate = useMemo(() => {
-    if (staffSlots.length === 0) return 0;
+    if (staffSlots.length === 0) return null; // null = still loading or no staff configured
     const overrideDates = new Set<string>();
     staffSlots.forEach((s: any) => {
       if (s.specific_date) overrideDates.add(`${s.staff_id}__${s.specific_date}`);
@@ -279,9 +308,8 @@ export function useDashboardData() {
         staffSlots
           .filter((s: any) => {
             if (s.staff_id !== staffId) return false;
-            return hasOverride
-              ? s.specific_date === dateStr
-              : s.specific_date === null && s.day_of_week === dow;
+            if (hasOverride) return s.specific_date === dateStr;
+            return (s.specific_date === null || s.specific_date === undefined) && s.day_of_week === dow;
           })
           .forEach((s: any) => {
             const mins = timeToMins(s.slot_end_time) - timeToMins(s.slot_start_time);
@@ -296,7 +324,7 @@ export function useDashboardData() {
     return Math.min(Math.round((bookedMins / totalAvailableMins) * 100), 100);
   }, [staffSlots, active, daysInMonth]);
 
-  // ── Alerts ────────────────────────────────────────────────────────────────
+  // Alerts
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts = useMemo(() => {
     const list: Alert[] = [];
@@ -309,16 +337,16 @@ export function useDashboardData() {
       list.push({ text: `${cancelled.length} cancellation${cancelled.length > 1 ? "s" : ""} this month`, type: "info" });
     stockItems.forEach((s: any) => {
       list.push({
-        text: `${s.item_name} — ${s.stock_on_hand <= 2 ? "critical" : "low"} stock (${s.stock_on_hand})`,
+        text: `${s.item_name} - ${s.stock_on_hand <= 2 ? "critical" : "low"} stock (${s.stock_on_hand})`,
         type: s.stock_on_hand <= 2 ? "danger" : "warning",
       });
     });
     return list;
   }, [bookings, cancelled, stockItems]);
 
-  // ── Return ────────────────────────────────────────────────────────────────
   return {
-    isLoading: l1 || l2 || l3 || l4,
+    coreLoading,
+    staffLoading,
     revenue: {
       month:     monthRevenue,
       today:     todayRevenue,
@@ -328,11 +356,12 @@ export function useDashboardData() {
       appointments: todayBookings.filter((b: any) => b.status !== "cancelled").length,
       remaining:    upcoming.length,
       nextAppointment: nextAppt
-        ? `${(nextAppt.start_time || "").slice(0, 5)} • ${resolveClientName(nextAppt)}`
+        ? `${(nextAppt.start_time || "").slice(0, 5)} - ${resolveClientName(nextAppt)}`
         : null,
     },
     health: {
-      fillRate,
+      fillRate,       // null = staff still loading, 0 = no availability configured
+      staffLoading,
       avgBasket:
         active.length > 0
           ? Math.round(active.reduce((s: number, b: any) => s + Number(b.total_amount), 0) / active.length)
@@ -360,7 +389,7 @@ export function useDashboardData() {
         service: [...(b.items ?? [])]
           .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
           .map((i: any) => i.service_name)
-          .join(", ") || "—",
+          .join(", ") || "none",
         status:  b.status as "confirmed" | "pending" | "complete" | "cancelled",
         balance: Number(b.balance_due ?? 0),
       })),
