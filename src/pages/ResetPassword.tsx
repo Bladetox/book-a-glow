@@ -14,39 +14,47 @@ const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Give the Supabase PKCE exchange a moment to complete,
-    // then check the current session state.
-    // We rely on onAuthStateChange rather than the URL hash
-    // because Supabase strips the hash before React can read it.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    let settled = false;
+
+    const settle = (valid: boolean) => {
+      if (settled) return;
+      settled = true;
+      setValidSession(valid);
+    };
+
+    // Method 1: Listen for Supabase auth state events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        setValidSession(true);
-      } else if (event === "SIGNED_IN" && session) {
-        // Already exchanged — check if this came from a recovery flow
-        // by looking at the AMR (authentication method reference)
-        const amr = (session.user?.amr as any) ?? [];
-        const isRecovery = Array.isArray(amr)
-          ? amr.some((a: any) => a.method === "recovery")
-          : false;
-        if (isRecovery) {
-          setValidSession(true);
-        } else if (validSession === null) {
-          // SIGNED_IN from something else (e.g. normal login) — invalid page
-          setValidSession(false);
-        }
+        settle(true);
+      } else if (event === "SIGNED_IN") {
+        // Came from a recovery link — valid
+        settle(true);
       } else if (event === "SIGNED_OUT") {
-        setValidSession(false);
+        settle(false);
       }
     });
 
-    // Fallback: if no auth event fires within 3 seconds, mark as invalid
-    const fallbackTimer = setTimeout(() => {
-      setValidSession((prev) => (prev === null ? false : prev));
-    }, 3000);
+    // Method 2: Check existing session immediately
+    // (sometimes the exchange happens before the listener is registered)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        settle(true);
+      }
+    });
+
+    // Method 3: Parse hash directly as last resort
+    // Supabase sometimes leaves the hash intact on first render
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery") || hash.includes("access_token")) {
+      settle(true);
+    }
+
+    // Fallback timeout — if nothing fired after 4 seconds, mark invalid
+    const timer = setTimeout(() => settle(false), 4000);
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(fallbackTimer);
+      clearTimeout(timer);
     };
   }, []);
 
@@ -109,7 +117,7 @@ const ResetPassword = () => {
             <div className="text-center">
               <h1 className="font-display text-xl font-bold text-white">Invalid Reset Link</h1>
               <p className="text-xs text-white/40 mt-2">
-                This link has expired or is invalid. Please request a new password reset.
+                This link has expired or is invalid. Please request a new one.
               </p>
               <button
                 onClick={() => navigate("/admin")}
