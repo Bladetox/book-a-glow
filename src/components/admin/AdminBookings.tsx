@@ -347,11 +347,18 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                     className="p-3 sm:p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                     onClick={() => !isEditing && setExpandedId(isExpanded ? null : b.id)}
                   >
-                    <div className="flex flex-col items-center shrink-0 w-12">
-                      <Clock className="w-3 h-3 text-white/25 mb-0.5" />
-                      <span className="text-xs font-semibold text-white/70">{b.time}</span>
-                      <span className="text-[9px] text-white/20">{b.date === todayStr ? "Today" : b.date.slice(5)}</span>
-                    </div>
+                  <div className="flex flex-col items-center shrink-0 w-16">
+                    <Clock className="w-3 h-3 text-white/25 mb-0.5" />
+                    <span className="text-xs font-semibold text-white/70">{b.time}</span>
+                    <span className="text-[10px] text-white/50 font-medium">
+                      {b.date === todayStr ? "Today" : format(new Date(b.date + "T00:00:00"), "d MMM")}
+                    </span>
+                      {b.date !== todayStr && (
+                    <span className="text-[9px] text-white/25">
+                    {format(new Date(b.date + "T00:00:00"), "yyyy")}
+                    </span>
+                    )}
+                  </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white/85 truncate">{b.client}</p>
                       <p className="text-[11px] text-white/40 truncate">{b.service} • {b.duration}min</p>
