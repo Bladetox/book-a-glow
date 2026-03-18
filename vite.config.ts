@@ -19,20 +19,12 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       workbox: {
-        // New service worker takes control of ALL open tabs immediately
-        // after installation — no need for users to close/reopen the app.
         skipWaiting: true,
         clientsClaim: true,
-
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-
-        // Runtime caching: serve Supabase API calls network-first so
-        // availability data is always fresh, falling back to cache only
-        // if the network is unreachable.
         runtimeCaching: [
           {
-            // Supabase REST + RPC endpoints
             urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\/(rest|rpc)\//,
             handler: "NetworkFirst",
             options: {
@@ -40,7 +32,7 @@ export default defineConfig(({ mode }) => ({
               networkTimeoutSeconds: 5,
               expiration: {
                 maxEntries: 60,
-                maxAgeSeconds: 60,   // 1-minute fallback cache only
+                maxAgeSeconds: 60,
               },
               cacheableResponse: {
                 statuses: [0, 200],
@@ -73,6 +65,22 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     chunkSizeWarningLimit: 600,
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ["console.log", "console.info", "console.debug"],
+        passes: 2,
+      },
+      mangle: {
+        toplevel: false,
+        safari10: true,
+      },
+      format: {
+        comments: false,
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: (id) => {
