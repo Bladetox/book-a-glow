@@ -274,23 +274,35 @@ const AdminSettings = () => {
 
   // ── GCal backfill ──────────────────────────────────────────────────────────
   const handleGcalBackfill = async () => {
-    if (gcalSyncing) return;
-    setGcalSyncing(true);
-    setGcalSyncResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("gcal-backfill", {
-        body: { tenant_id: tenantId },
-      });
-      if (error) throw new Error(error.message);
-      const result = `${data.created} created, ${data.skipped} skipped`;
-      setGcalSyncResult(result);
-      toast.success(`Calendar sync complete — ${data.created} events created`);
-    } catch (e: any) {
-      toast.error(e.message || "Sync failed");
-    } finally {
-      setGcalSyncing(false);
-    }
-  };
+  if (gcalSyncing) return;
+  setGcalSyncing(true);
+  setGcalSyncResult(null);
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Not authenticated");
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const res = await fetch(`${supabaseUrl}/functions/v1/gcal-backfill`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ tenant_id: tenantId }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Sync failed");
+
+    const result = `${data.created} created, ${data.skipped} skipped`;
+    setGcalSyncResult(result);
+    toast.success(`Calendar sync complete — ${data.created} events created`);
+  } catch (e: any) {
+    toast.error(e.message || "Sync failed");
+  } finally {
+    setGcalSyncing(false);
+  }
+};
 
   const SavedBadge = ({ section }: { section: string }) =>
     saved === section ? (
