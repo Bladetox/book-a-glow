@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
@@ -115,11 +115,21 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     return () => { cancelled = true; };
   }, [rescheduleDate, reschedulingId, tenantId, bookings]);
 
-  const filtered = bookings.filter(b => {
-    if (activeFilter === "All")   return true;
-    if (activeFilter === "Today") return b.date === todayStr;
-    return b.status === activeFilter.toLowerCase();
-  });
+  const filtered = useMemo(() => {
+    const base = bookings.filter(b => {
+      if (activeFilter === "All")   return true;
+      if (activeFilter === "Today") return b.date === todayStr;
+      return b.status === activeFilter.toLowerCase();
+    });
+
+    return [...base].sort((a, b) => {
+      const aToday = a.date === todayStr ? 0 : 1;
+      const bToday = b.date === todayStr ? 0 : 1;
+      if (aToday !== bToday) return aToday - bToday;
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.time.localeCompare(b.time);
+    });
+  }, [bookings, activeFilter, todayStr]);
 
   const counts: Record<FilterType, number> = {
     All:       bookings.length,
