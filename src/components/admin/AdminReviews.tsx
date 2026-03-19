@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RefreshCw, Star, ExternalLink, MessageSquare,
-  Copy, Check, Loader2, AlertTriangle
+  Copy, Check, Loader2, AlertTriangle, Sparkles, Filter
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,22 +37,40 @@ const StarRow = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }
   );
 };
 
+// C4: max reply length
+const MAX_REPLY = 1000;
+
+// C1: simple AI-reply starters keyed on rating bracket
+function generateReplyDraft(review: Review): string {
+  const name  = review.author_name ?? "there";
+  const stars = review.rating ?? 0;
+  const text  = (review.review_text ?? "").toLowerCase();
+
+  if (stars >= 4) {
+    return `Hi ${name}, thank you so much for your wonderful review! ✨ We're so glad you had a great experience at PhenomeBeauty and we look forward to seeing you again soon. 💖`;
+  } else if (stars === 3) {
+    return `Hi ${name}, thank you for taking the time to share your feedback. We're pleased you had an overall positive experience and we'll use your comments to keep improving. We hope to welcome you back soon!`;
+  } else {
+    return `Hi ${name}, thank you for your honest feedback. We're sorry to hear your experience didn't fully meet expectations. Please reach out to us directly so we can make this right. We truly value every client.`;
+  }
+}
+
 const AdminReviews = () => {
   const { tenantId } = useTenant();
   const qc = useQueryClient();
   const { data: appSettings = {} } = useAppSettings();
 
-  const [respondTo, setRespondTo] = useState<Review | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [copied, setCopied]       = useState(false);
+  const [respondTo, setRespondTo]   = useState<Review | null>(null);
+  const [replyText, setReplyText]   = useState("");
+  const [copied, setCopied]         = useState(false);
+  // C2: filter by star rating
+  const [ratingFilter, setRatingFilter] = useState<number | null>(null);
 
   const placeId    = appSettings["google_place_id"]   as string | undefined;
   const reviewLink = appSettings["google_review_link"] as string | undefined;
-
-  // isConfigured only needs placeId — API key is backend-only and never exposed to frontend
   const isConfigured = !!placeId;
 
-  // ── Fetch reviews from cache ──────────────────────────────────────────────
+  // ── Fetch reviews from cache ──
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ["reviews-cache", tenantId],
     queryFn: async () => {
@@ -67,7 +85,7 @@ const AdminReviews = () => {
     enabled: !!tenantId,
   });
 
-  // ── Refresh — calls Edge Function ─────────────────────────────────────────
+  // ── Refresh ──
   const refresh = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("fetch-google-reviews", {
@@ -84,7 +102,7 @@ const AdminReviews = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
+  // ── Stats ──
   const rated = reviews.filter(r => r.rating !== null);
   const avgRating = rated.length
     ? rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length
@@ -95,7 +113,15 @@ const AdminReviews = () => {
       })
     : null;
 
-  // ── Respond: copy + open Google Business ──────────────────────────────────
+  // C2: filtered reviews list
+  const filteredReviews = useMemo(() =>
+    ratingFilter !== null
+      ? reviews.filter(r => r.rating === ratingFilter)
+      : reviews,
+    [reviews, ratingFilter]
+  );
+
+  // ── Copy + open ──
   const handleCopyAndOpen = () => {
     navigator.clipboard.writeText(replyText).then(() => {
       setCopied(true);
@@ -169,7 +195,6 @@ const AdminReviews = () => {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 flex flex-col sm:flex-row gap-5">
 
-            {/* Average */}
             <div className="flex flex-col items-center justify-center gap-1 sm:pr-5 sm:border-r border-white/[0.06]">
               <p className="text-4xl font-bold text-white/90">
                 {avgRating ? avgRating.toFixed(1) : "—"}
@@ -178,10 +203,16 @@ const AdminReviews = () => {
               <p className="text-[10px] text-white/30">{rated.length} review{rated.length !== 1 ? "s" : ""}</p>
             </div>
 
-            {/* Distribution */}
+            {/* C2: clickable star bars for filtering */}
             <div className="flex-1 flex flex-col gap-1.5 justify-center">
               {distByRating.map(({ star, count }) => (
-                <div key={star} className="flex items-center gap-2">
+                <button
+                  key={star}
+                  onClick={() => setRatingFilter(ratingFilter === star ? null : star)}
+                  className={`flex items-center gap-2 rounded-lg px-1 py-0.5 transition-colors ${
+                    ratingFilter === star ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+                  }`}
+                >
                   <span className="text-[10px] text-white/40 w-3 text-right">{star}</span>
                   <Star className="w-3 h-3 text-amber-400/60 fill-amber-400/60 shrink-0" />
                   <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
@@ -191,11 +222,18 @@ const AdminReviews = () => {
                     />
                   </div>
                   <span className="text-[10px] text-white/30 w-3">{count}</span>
-                </div>
+                </button>
               ))}
+              {ratingFilter !== null && (
+                <button
+                  onClick={() => setRatingFilter(null)}
+                  className="text-[10px] text-amber-400/70 hover:text-amber-400 mt-1 text-left px-1"
+                >
+                  × Clear filter
+                </button>
+              )}
             </div>
 
-            {/* Get More Reviews link */}
             {reviewLink && (
               <div className="flex items-center sm:pl-5 sm:border-l border-white/[0.06]">
                 <a href={reviewLink} target="_blank" rel="noopener noreferrer"
@@ -206,27 +244,41 @@ const AdminReviews = () => {
             )}
           </motion.div>
 
+          {/* C2: filter indicator */}
+          {ratingFilter !== null && (
+            <div className="flex items-center gap-2 text-[11px] text-amber-400/80">
+              <Filter className="w-3 h-3" />
+              Showing {filteredReviews.length} review{filteredReviews.length !== 1 ? "s" : ""} for {ratingFilter}★
+            </div>
+          )}
+
           {/* Review cards */}
           <div className="flex flex-col gap-3">
-            {reviews.map((review, i) => (
+            {filteredReviews.map((review, i) => (
               <motion.div key={review.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
+                transition={{ delay: Math.min(i * 0.04, 0.4) }}
                 className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col gap-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
+                    {/* C3: graceful photo fallback */}
                     {review.author_photo_url ? (
-                      <img src={review.author_photo_url} alt={review.author_name ?? ""}
-                        className="w-9 h-9 rounded-full object-cover bg-white/10 shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-white/40">
-                          {(review.author_name ?? "?")[0].toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                      <img
+                        src={review.author_photo_url}
+                        alt={review.author_name ?? ""}
+                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement)?.style.setProperty("display", "flex"); }}
+                        className="w-9 h-9 rounded-full object-cover bg-white/10 shrink-0"
+                      />
+                    ) : null}
+                    <div className={`w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] items-center justify-center shrink-0 ${
+                      review.author_photo_url ? "hidden" : "flex"
+                    }`}>
+                      <span className="text-sm font-bold text-white/40">
+                        {(review.author_name ?? "?")[0].toUpperCase()}
+                      </span>
+                    </div>
                     <div>
                       <p className="text-xs font-semibold text-white/80">{review.author_name ?? "Anonymous"}</p>
                       <p className="text-[10px] text-white/30">{review.relative_time ?? ""}</p>
@@ -235,7 +287,7 @@ const AdminReviews = () => {
                   <div className="flex items-center gap-2">
                     {review.rating && <StarRow rating={review.rating} />}
                     <button
-                      onClick={() => { setRespondTo(review); setReplyText(""); }}
+                      onClick={() => { setRespondTo(review); setReplyText(generateReplyDraft(review)); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[10px] font-semibold text-white/50 hover:text-white/80 hover:bg-white/[0.09] transition-colors">
                       <MessageSquare className="w-3 h-3" /> Respond
                     </button>
@@ -256,6 +308,7 @@ const AdminReviews = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
               className="rounded-2xl border border-white/[0.08] bg-[#1a1a1a] p-6 max-w-lg w-full flex flex-col gap-4">
 
               <div className="flex items-start justify-between gap-3">
@@ -276,16 +329,32 @@ const AdminReviews = () => {
                 )}
               </div>
 
-              {/* Reply textarea */}
-              <div className="flex flex-col gap-1.5">
+              {/* C1: AI-draft hint row */}
+              <div className="flex items-center justify-between gap-2">
                 <label className="text-[10px] font-semibold tracking-wider uppercase text-white/30">Your Reply</label>
+                <button
+                  onClick={() => setReplyText(generateReplyDraft(respondTo))}
+                  className="flex items-center gap-1 text-[10px] text-emerald-400/80 hover:text-emerald-400 transition-colors"
+                >
+                  <Sparkles className="w-3 h-3" /> Re-generate draft
+                </button>
+              </div>
+
+              {/* C4: textarea with char count */}
+              <div className="flex flex-col gap-1">
                 <textarea
                   rows={5}
+                  maxLength={MAX_REPLY}
                   value={replyText}
                   onChange={e => setReplyText(e.target.value)}
                   placeholder="Thank you for your kind words..."
                   className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none leading-relaxed"
                 />
+                <p className={`text-right text-[10px] ${
+                  replyText.length > MAX_REPLY * 0.9 ? "text-amber-400" : "text-white/25"
+                }`}>
+                  {replyText.length}/{MAX_REPLY}
+                </p>
               </div>
 
               <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/15 px-3 py-2">
