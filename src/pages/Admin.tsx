@@ -1,17 +1,14 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Menu, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TenantProvider } from "@/contexts/TenantContext";
-import AdminLogin    from "@/components/admin/AdminLogin";
-import AdminSidebar  from "@/components/admin/AdminSidebar";
+import AdminLogin     from "@/components/admin/AdminLogin";
+import AdminSidebar   from "@/components/admin/AdminSidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
+import AdminDashboard from "@/components/admin/AdminDashboard";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
-// ── Eagerly loaded ─────────────────────────────────────────────────────────────
-import AdminDashboard from "@/components/admin/AdminDashboard";
-
-// ── Lazily loaded ───────────────────────────────────────────────────────────────
+// ── Lazily loaded ──────────────────────────────────────────────────────────────
 const AdminBookings      = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminServices      = lazy(() => import("@/components/admin/AdminServices"));
 const AdminConsultations = lazy(() => import("@/components/admin/AdminConsultations"));
@@ -36,13 +33,12 @@ const views = [
 
 type ViewName = typeof views[number];
 
-// ── Inner authenticated shell (needs hooks) ───────────────────────────────────
+// ── Inner authenticated shell ─────────────────────────────────────────────────
 const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
-  const [activeView, setActiveView]   = useState<ViewName>("Dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeView, setActiveView]         = useState<ViewName>("Dashboard");
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
-  // B2 + C7: live pending count for badges
   const { data: bookings = [] } = useSupabaseBookings();
   const pendingCount = bookings.filter(b => b.status === "pending").length;
 
@@ -51,8 +47,7 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
     setActiveView("Bookings");
   };
 
-  // B2: navigate from dashboard hero shortcuts
-  const handleDashboardNav = (view: ViewName) => setActiveView(view);
+  const handleDashboardNav = (view: string) => setActiveView(view as ViewName);
 
   const renderView = () => {
     switch (activeView) {
@@ -81,7 +76,6 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main content — extra bottom padding on mobile for nav bar */}
       <div className="flex-1 flex flex-col min-h-dvh min-w-0 pb-14 lg:pb-0">
         <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06]">
           <button
@@ -107,7 +101,6 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
         </div>
       </div>
 
-      {/* C7 — Mobile bottom nav */}
       <AdminMobileNav
         activeView={activeView}
         onSelect={(v) => setActiveView(v as ViewName)}
