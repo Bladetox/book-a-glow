@@ -604,13 +604,15 @@ const AdminDashboard = ({ onSelectAppointment }: { onSelectAppointment?: (client
                   <p className="text-xs text-white/25">No booking data yet</p>
                 )}
                 {data.topServices.map((s, i) => (
-                  <div key={s.name} className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-white/20 w-4">{i + 1}</span>
+                  <div key={s.name} className="flex items-center gap-3 min-w-0">
+                    <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 text-right">{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white/80 truncate">{s.name}</p>
                     </div>
-                    <span className="text-xs text-white/40">{s.count}x</span>
-                    <span className="text-xs font-semibold text-white/60">R {s.revenue.toLocaleString()}</span>
+                    <span className="text-xs text-white/40 shrink-0 w-8 text-right">{s.count}×</span>
+                    <span className="text-xs font-semibold text-white/60 shrink-0 w-20 text-right">
+                      R {s.revenue.toLocaleString()}
+                    </span>
                   </div>
                 ))}
               </div>
