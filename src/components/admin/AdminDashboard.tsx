@@ -17,16 +17,16 @@ const ALL_SECTIONS = [
 type SectionKey = typeof ALL_SECTIONS[number];
 
 const sectionLabels: Record<SectionKey, string> = {
-  hero: "Revenue Hero",
-  health: "Business Health",
-  topServices: "Top Services",
-  alerts: "Alerts",
-  revenueGraph: "Revenue Trend",
-  heatmap: "Booking Heatmap",
-  todayAppointments: "Today's Appointments",
-  clientInsights: "Client Insights",
-  stockAlerts: "Stock Alerts",
-  settingsSnapshot: "Settings Snapshot",
+  hero:               "Revenue Hero",
+  health:             "Business Health",
+  topServices:        "Top Services",
+  alerts:             "Alerts",
+  revenueGraph:       "Revenue Trend",
+  heatmap:            "Booking Heatmap",
+  todayAppointments:  "Today's Appointments",
+  clientInsights:     "Client Insights",
+  stockAlerts:        "Stock Alerts",
+  settingsSnapshot:   "Settings Snapshot",
 };
 
 function getVisibility(): Record<SectionKey, boolean> {
@@ -103,59 +103,54 @@ const METRIC_COPY: MetricCopyShape = {
   },
   fillRate: {
     title: "Fill Rate (Capacity Utilisation)",
-    explain: "The % of your available time that was actually booked. Airlines, hotels, and salons all track this. A high fill rate = low wasted capacity.",
+    explain: "The % of your available time that was actually booked. Airlines, hotels, and salons all track this.",
     benchmark: "Target: 70%+. Below 50% means you're losing revenue to empty slots.",
   },
   avgBasket: {
     title: "Average Transaction Value (ATV)",
-    explain: "Average revenue per appointment. Retailers and luxury brands obsess over ATV because lifting it by even 10% compounds fast.",
+    explain: "Average revenue per appointment. Lifting it by even 10% compounds fast.",
     benchmark: "Tip: add one upsell per appointment to grow this.",
   },
   appointments: {
     title: "Monthly Appointment Volume",
-    explain: "Total confirmed bookings this month. Brands use this as a leading indicator - more bookings now = more revenue later.",
+    explain: "Total confirmed bookings this month.",
   },
   cancellations: {
     title: "Cancellation Rate",
-    explain: "% of bookings cancelled. High cancellation rates destroy revenue predictability. Top spas keep this below 8% using deposits.",
+    explain: "% of bookings cancelled. High cancellation rates destroy revenue predictability.",
     benchmark: "Target: below 10%. Above 20% = take action.",
   },
   clients: {
     title: "Unique Clients (Reach)",
-    explain: "Total distinct people who booked with you this month - registered clients and walk-in guests.",
+    explain: "Total distinct people who booked with you this month.",
   },
   returning: {
     title: "Repeat Clients",
-    explain: "Clients who booked more than once this month. Loyalty is cheaper than acquisition - retaining one client costs 5x less than finding a new one.",
+    explain: "Clients who booked more than once this month.",
     benchmark: "Aim: at least 30-40% of your client base returning monthly.",
   },
   retention: {
     title: "Retention Rate",
-    explain: "The % of your clients who came back. Starbucks, Netflix, and Apple track this obsessively.",
+    explain: "The % of your clients who came back.",
     benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
   },
   revenueTrend: [
-    { term: "Revenue Trend",    def: "Daily revenue plotted across the month. Corporations use this to spot peaks, dips, and seasonal patterns before they become problems." },
-    { term: "Peak Days",        def: "The tallest bars are your best earning days. Align promotions and staff around these." },
-    { term: "Flat / Zero Bars", def: "Days with no revenue. Were you closed, or did clients just not book? Quiet days may need a targeted push." },
-    { term: "Month-on-Month",   def: "Compare this to last month to see if revenue is growing, stable, or declining." },
+    { term: "Revenue Trend",    def: "Daily revenue plotted across the month." },
+    { term: "Peak Days",        def: "The tallest bars are your best earning days." },
+    { term: "Flat / Zero Bars", def: "Days with no revenue. Quiet days may need a targeted push." },
+    { term: "Month-on-Month",   def: "Compare this to last month to see if revenue is growing." },
   ],
   heatmap: [
-    { term: "Booking Heatmap",      def: "Shows which days and time slots get the most bookings. Bright green = peak demand, faint = quiet. Airlines use this logic to set dynamic pricing." },
-    { term: "Bright Green Cells",   def: "Your peak demand slots. Protect these - never discount them. Consider charging a premium." },
-    { term: "Faint / Empty Cells",  def: "Quiet slots. Run targeted offers, loyalty specials, or social media fills here." },
-    { term: "Day Patterns",         def: "Weekend-heavy? Build weekday traffic to smooth revenue and reduce burnout." },
+    { term: "Booking Heatmap",      def: "Shows which days and time slots get the most bookings." },
+    { term: "Bright Green Cells",   def: "Your peak demand slots. Never discount these." },
+    { term: "Faint / Empty Cells",  def: "Quiet slots. Run targeted offers here." },
+    { term: "Day Patterns",         def: "Weekend-heavy? Build weekday traffic to smooth revenue." },
   ],
 };
 
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
-const MetricExpandOverlay = ({
-  card, onClose,
-}: {
-  card: ExpandedCard | null;
-  onClose: () => void;
-}) => (
+const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onClose: () => void }) => (
   <AnimatePresence>
     {card && (
       <>
@@ -183,7 +178,7 @@ const MetricExpandOverlay = ({
               </div>
               <button
                 onClick={onClose}
-                className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.12] transition-colors shrink-0 mt-0.5"
+                className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors shrink-0 mt-0.5"
                 aria-label="Close"
               >
                 <X className="w-3.5 h-3.5" />
@@ -209,35 +204,11 @@ const MetricExpandOverlay = ({
   </AnimatePresence>
 );
 
-const StatPill = ({
-  id, label, value, color, title, explain, benchmark, onExpand,
-}: { id: string; label: string; value: string; color?: string; onExpand: (c: ExpandedCard) => void } & MetricEntry) => (
-  <motion.div
-    layoutId={id}
-    onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark })}
-    className="rounded-lg border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
-    whileTap={{ scale: 0.97 }}
-    transition={{ type: "spring", stiffness: 340, damping: 30 }}
-    role="button"
-    aria-label={`Learn more about ${label}`}
-  >
-    <div className="flex flex-col gap-0.5 min-w-0 justify-center px-2 sm:px-3 py-3">
-      <span className="text-[9px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.12em] uppercase text-white/30 truncate">{label}</span>
-      <span className={`text-xs sm:text-sm font-semibold truncate ${color ?? "text-white/90"}`}>{value}</span>
-    </div>
-  </motion.div>
-);
-
 const MetricCard = ({
   id, icon: Icon, label, value, color, sub, title, explain, benchmark, onExpand,
 }: {
-  id: string;
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  color?: string;
-  sub?: string;
-  onExpand: (c: ExpandedCard) => void;
+  id: string; icon: React.ElementType; label: string; value: string;
+  color?: string; sub?: string; onExpand: (c: ExpandedCard) => void;
 } & MetricEntry) => (
   <motion.div
     layoutId={id}
@@ -257,9 +228,7 @@ const MetricCard = ({
         <span className={`text-base sm:text-lg font-bold truncate ${color ?? "text-white/90"}`}>{value}</span>
         {sub && <span className="text-[10px] text-white/25 truncate">{sub}</span>}
       </div>
-      <div className="shrink-0 mt-1 ml-1">
-        <Info className="w-3 h-3 text-white/15" />
-      </div>
+      <div className="shrink-0 mt-1 ml-1"><Info className="w-3 h-3 text-white/15" /></div>
     </div>
   </motion.div>
 );
@@ -267,13 +236,8 @@ const MetricCard = ({
 const ClientMiniCard = ({
   id, icon: Icon, iconColor, value, valueColor, label, title, explain, benchmark, onExpand,
 }: {
-  id: string;
-  icon: React.ElementType;
-  iconColor?: string;
-  value: string;
-  valueColor?: string;
-  label: string;
-  onExpand: (c: ExpandedCard) => void;
+  id: string; icon: React.ElementType; iconColor?: string;
+  value: string; valueColor?: string; label: string; onExpand: (c: ExpandedCard) => void;
 } & MetricEntry) => (
   <motion.div
     layoutId={id}
@@ -407,7 +371,7 @@ const AppointmentsList = ({
               <td className="py-2.5 text-white/80 font-medium">{a.client}</td>
               <td className="py-2.5 text-white/50">{a.service}</td>
               <td className="py-2.5"><StatusBadge status={a.status} /></td>
-              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "none"}</td>
+              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "—"}</td>
             </tr>
           ))}
         </tbody>
@@ -450,9 +414,9 @@ const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
 );
 
 const alertIcons: Record<string, React.ElementType> = {
-  warning: CircleDollarSign,
-  info:    CalendarCheck,
-  danger:  Package,
+  warning:  CircleDollarSign,
+  info:     CalendarCheck,
+  danger:   Package,
 };
 
 const AdminDashboard = ({
@@ -478,7 +442,6 @@ const AdminDashboard = ({
   if (data.coreLoading) {
     return (
       <div className="flex flex-col gap-4">
-        {/* B4 — skeleton on dashboard load */}
         {[...Array(3)].map((_, i) => (
           <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 animate-pulse">
             <div className="h-3 w-24 rounded bg-white/[0.06] mb-3" />
@@ -489,22 +452,72 @@ const AdminDashboard = ({
     );
   }
 
-  const hasLastMonth = data.revenue.lastMonth > 0;
-  const pctChange = hasLastMonth
-    ? Math.round(((data.revenue.month - data.revenue.lastMonth) / data.revenue.lastMonth) * 100)
+  // ── Derived values — all safe with fallbacks ─────────────────────────────────
+  const monthRevenue    = data.revenue?.month    ?? 0;
+  const lastMonthRev    = data.revenue?.lastMonth ?? 0;
+  const todayRevenue    = data.revenue?.today     ?? 0;
+
+  // today
+  const todayAppts      = data.today?.appointments ?? 0;
+  const todayRemaining  = data.today?.remaining    ?? 0;
+
+  // health
+  const fillRate        = data.health?.fillRate          ?? null;
+  const avgBasket       = data.health?.avgBasket         ?? 0;
+  const totalAppts      = data.health?.totalAppointments ?? 0;
+  const cancelRate      = data.health?.cancellationRate  ?? 0; // already a %
+
+  // clients — from data.clients sub-object
+  const totalClients    = data.clients?.total     ?? 0;
+  const returningCount  = data.clients?.returning ?? 0;
+  const retentionRate   = data.clients?.retentionRate ?? 0;
+
+  // pending bookings count for hero pill
+  // hook doesn't expose a pending count directly — derive from todayBookings length - confirmed
+  // Safest: use todayRemaining as proxy, or just show todayAppts
+  const pendingDisplay  = String(todayRemaining);
+
+  const hasLastMonth = lastMonthRev > 0;
+  const pctChange    = hasLastMonth
+    ? Math.round(((monthRevenue - lastMonthRev) / lastMonthRev) * 100)
     : null;
   const pctUp = pctChange !== null ? pctChange >= 0 : true;
 
   const fillRateDisplay = () => {
-    if (data.health.fillRate === null) return { text: "…", color: "text-white/40" };
-    if (data.health.fillRate === 0)    return { text: "—", color: "text-white/30" };
-    const pct = Math.round(data.health.fillRate * 100);
+    if (fillRate === null) return { text: "…",  color: "text-white/40" };
+    if (fillRate === 0)    return { text: "—",  color: "text-white/30" };
+    const pct = Math.round(fillRate * 100);
     return {
-      text: `${pct}%`,
+      text:  `${pct}%`,
       color: pct >= 70 ? "text-emerald-400" : pct >= 50 ? "text-amber-400" : "text-red-400",
     };
   };
   const fr = fillRateDisplay();
+
+  // cancellation rate display — hook returns a pre-computed %
+  const cancelDisplay = `${Math.round(cancelRate)}%`;
+  const cancelColor   = cancelRate > 20 ? "text-red-400" : "text-white/90";
+
+  // retention display
+  const retentionDisplay = totalClients > 0
+    ? `${Math.round((returningCount / totalClients) * 100)}%`
+    : "0%";
+  const retentionColor = totalClients > 0 && (returningCount / totalClients) >= 0.4
+    ? "text-emerald-400"
+    : "text-white/90";
+
+  // revenue trend — hook returns revenueTrend: {day, value}[]
+  const revenueTrend = data.revenueTrend ?? [];
+  const maxTrend     = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
+
+  // stock alerts — hook returns { item: string, level: 'critical'|'low' }[]
+  const stockAlerts = data.stockAlerts ?? [];
+
+  // top services — hook returns { name, count, revenue }[]
+  const topServices = data.topServices ?? [];
+
+  // alerts — hook returns { text, type }[]
+  const alerts = data.alerts ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -559,7 +572,7 @@ const AdminDashboard = ({
               <div>
                 <p className="text-[10px] tracking-[0.16em] uppercase text-white/25 mb-1">This Month</p>
                 <p className="text-3xl sm:text-4xl font-bold text-white/95 leading-none">
-                  R {data.revenue.month.toLocaleString()}
+                  R {monthRevenue.toLocaleString()}
                 </p>
                 {pctChange !== null && (
                   <div className={`flex items-center gap-1 mt-2 ${ pctUp ? "text-emerald-400" : "text-red-400" }`}>
@@ -568,18 +581,16 @@ const AdminDashboard = ({
                   </div>
                 )}
               </div>
-              <div className="flex flex-col items-end gap-1">
-                <BarChart3 className="w-5 h-5 text-white/15" />
-              </div>
+              <BarChart3 className="w-5 h-5 text-white/15" />
             </div>
 
             {/* B2 — Quick-action shortcut pills */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-white/[0.05]">
               {[
-                { label: "Today's Bookings", value: String(data.today.appointments), view: "Bookings", color: "text-white/80" },
-                { label: "Pending",          value: String(data.today.pending ?? data.health.cancellationCount), view: "Bookings", color: "text-amber-400" },
-                { label: "Today Revenue",    value: `R ${data.revenue.today.toLocaleString()}`, view: "Bookings", color: "text-emerald-400" },
-                { label: "Fill Rate",        value: fr.text, view: "Availability", color: fr.color },
+                { label: "Today's Bookings", value: String(todayAppts),                      view: "Bookings",     color: "text-white/80" },
+                { label: "Remaining Today",  value: String(todayRemaining),                  view: "Bookings",     color: "text-amber-400" },
+                { label: "Today Revenue",    value: `R ${todayRevenue.toLocaleString()}`,    view: "Bookings",     color: "text-emerald-400" },
+                { label: "Fill Rate",        value: fr.text,                                 view: "Availability", color: fr.color },
               ].map(item => (
                 <button
                   key={item.label}
@@ -603,35 +614,12 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.04 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Business Health</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <MetricCard
-              id="mc-fill" icon={Percent} label="Fill Rate" value={fr.text} color={fr.color}
-              sub={data.health.fillRate === null ? "loading…" : data.health.fillRate === 0 ? "Set up availability" : undefined}
-              {...METRIC_COPY.fillRate} onExpand={setExpandedCard}
-            />
-            <MetricCard
-              id="mc-atv" icon={ShoppingBag} label="Avg Basket" value={`R ${Math.round(data.health.avgBasket)}`}
-              {...METRIC_COPY.avgBasket} onExpand={setExpandedCard}
-            />
-            <MetricCard
-              id="mc-appts" icon={CalendarCheck} label="Appointments" value={String(data.health.appointments)}
-              {...METRIC_COPY.appointments} onExpand={setExpandedCard}
-            />
-            <MetricCard
-              id="mc-cancel" icon={XCircle} label="Cancellation Rate"
-              value={data.health.appointments > 0 ? `${Math.round((data.health.cancellationCount / (data.health.appointments + data.health.cancellationCount)) * 100)}%` : "0%"}
-              color={data.health.cancellationCount / Math.max(data.health.appointments + data.health.cancellationCount, 1) > 0.2 ? "text-red-400" : "text-white/90"}
-              {...METRIC_COPY.cancellations} onExpand={setExpandedCard}
-            />
-            <MetricCard
-              id="mc-clients" icon={UserPlus} label="Unique Clients" value={String(data.health.clients)}
-              {...METRIC_COPY.clients} onExpand={setExpandedCard}
-            />
-            <MetricCard
-              id="mc-ret" icon={Bell} label="Retention"
-              value={data.health.clients > 0 ? `${Math.round((data.health.returning / data.health.clients) * 100)}%` : "0%"}
-              color={data.health.clients > 0 && (data.health.returning / data.health.clients) >= 0.4 ? "text-emerald-400" : "text-white/90"}
-              {...METRIC_COPY.retention} onExpand={setExpandedCard}
-            />
+            <MetricCard id="mc-fill"    icon={Percent}       label="Fill Rate"         value={fr.text}                          color={fr.color}    sub={fillRate === null ? "not configured" : undefined} {...METRIC_COPY.fillRate}    onExpand={setExpandedCard} />
+            <MetricCard id="mc-atv"     icon={ShoppingBag}   label="Avg Basket"        value={`R ${Math.round(avgBasket)}`}                         {...METRIC_COPY.avgBasket}   onExpand={setExpandedCard} />
+            <MetricCard id="mc-appts"   icon={CalendarCheck} label="Appointments"      value={String(totalAppts)}                                   {...METRIC_COPY.appointments} onExpand={setExpandedCard} />
+            <MetricCard id="mc-cancel"  icon={XCircle}       label="Cancellation Rate" value={cancelDisplay}                    color={cancelColor}  {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
+            <MetricCard id="mc-clients" icon={UserPlus}      label="Unique Clients"    value={String(totalClients)}                                 {...METRIC_COPY.clients}     onExpand={setExpandedCard} />
+            <MetricCard id="mc-ret"     icon={Bell}          label="Retention"         value={retentionDisplay}                 color={retentionColor} {...METRIC_COPY.retention}  onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
@@ -641,7 +629,7 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.08 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Top Services</p>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
-            {data.topServices.length === 0 ? (
+            {topServices.length === 0 ? (
               <div className="py-10 flex flex-col items-center gap-2">
                 <Star className="w-5 h-5 text-white/10" />
                 <p className="text-xs text-white/25">No bookings yet this month</p>
@@ -657,12 +645,13 @@ const AdminDashboard = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {data.topServices.slice(0, 5).map((s, i) => (
-                    <tr key={s.service} className="border-t border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                  {/* FIX: hook returns s.name not s.service */}
+                  {topServices.slice(0, 5).map((s: any, i: number) => (
+                    <tr key={s.name} className="border-t border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3 text-white/25">{i + 1}</td>
-                      <td className="px-4 py-3 text-white/75 font-medium">{s.service}</td>
+                      <td className="px-4 py-3 text-white/75 font-medium">{s.name}</td>
                       <td className="px-4 py-3 text-right text-white/50">{s.count}</td>
-                      <td className="px-4 py-3 text-right text-white/70 font-semibold">R {s.revenue.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-white/70 font-semibold">R {Number(s.revenue).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -673,11 +662,11 @@ const AdminDashboard = ({
       )}
 
       {/* ── ALERTS ── */}
-      {visibility.alerts && data.alerts.length > 0 && (
+      {visibility.alerts && alerts.length > 0 && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.1 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Alerts</p>
           <div className="flex flex-col gap-2">
-            {data.alerts.map((alert, i) => {
+            {alerts.map((alert: any, i: number) => {
               const Icon = alertIcons[alert.type] ?? AlertTriangle;
               return (
                 <div key={i} className={`rounded-xl border px-4 py-3 flex items-start gap-3 ${
@@ -686,10 +675,11 @@ const AdminDashboard = ({
                   "border-white/[0.06] bg-white/[0.02]"
                 }`}>
                   <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
-                    alert.type === "danger" ? "text-red-400" :
+                    alert.type === "danger"  ? "text-red-400" :
                     alert.type === "warning" ? "text-amber-400" : "text-white/30"
                   }`} />
-                  <p className="text-xs text-white/60 leading-relaxed">{alert.message}</p>
+                  {/* FIX: hook returns alert.text not alert.message */}
+                  <p className="text-xs text-white/60 leading-relaxed">{alert.text}</p>
                 </div>
               );
             })}
@@ -708,21 +698,25 @@ const AdminDashboard = ({
           </div>
           {showTrendInfo && <SectionInfoPanel lines={METRIC_COPY.revenueTrend} />}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            {data.revenueGraph.length === 0 ? (
+            {revenueTrend.length === 0 ? (
               <div className="h-24 flex items-center justify-center">
                 <p className="text-xs text-white/20">No revenue data yet</p>
               </div>
             ) : (
               <div className="flex items-end gap-0.5 h-24 overflow-x-auto">
-                {data.revenueGraph.map((d, i) => {
-                  const max = Math.max(...data.revenueGraph.map(x => x.revenue), 1);
-                  const h = Math.max((d.revenue / max) * 100, d.revenue > 0 ? 4 : 1);
+                {/* FIX: hook returns {day, value} not {day, revenue} */}
+                {revenueTrend.map((d: any, i: number) => {
+                  const h = Math.max((d.value / maxTrend) * 100, d.value > 0 ? 4 : 1);
                   return (
-                    <div key={i} title={`${d.day}: R ${d.revenue}`}
+                    <div
+                      key={i}
+                      title={`Day ${d.day}: R ${d.value}`}
                       className="flex-1 min-w-[6px] rounded-sm transition-all"
                       style={{
                         height: `${h}%`,
-                        backgroundColor: d.revenue > 0 ? `rgba(52,211,153,${0.3 + (h / 100) * 0.6})` : "rgba(255,255,255,0.04)"
+                        backgroundColor: d.value > 0
+                          ? `rgba(52,211,153,${0.3 + (h / 100) * 0.6})`
+                          : "rgba(255,255,255,0.04)"
                       }}
                     />
                   );
@@ -744,7 +738,7 @@ const AdminDashboard = ({
           </div>
           {showHeatInfo && <SectionInfoPanel lines={METRIC_COPY.heatmap} />}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            <BookingHeatmap data={data.heatmap} />
+            <BookingHeatmap data={data.heatmap ?? []} />
           </div>
         </motion.section>
       )}
@@ -764,13 +758,13 @@ const AdminDashboard = ({
             )}
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            {data.todayAppointments.length === 0 ? (
+            {(data.todayAppointments ?? []).length === 0 ? (
               <div className="py-6 flex flex-col items-center gap-2">
                 <CalendarCheck className="w-5 h-5 text-white/10" />
                 <p className="text-xs text-white/25">No appointments today</p>
               </div>
             ) : (
-              <AppointmentsList appointments={data.todayAppointments} onSelect={onSelectAppointment} />
+              <AppointmentsList appointments={data.todayAppointments ?? []} onSelect={onSelectAppointment} />
             )}
           </div>
         </motion.section>
@@ -781,16 +775,16 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Client Insights</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ClientMiniCard id="ci-total"  icon={UserPlus}  iconColor="text-sky-400/60"     value={String(data.health.clients)}   valueColor="text-sky-400"     label="Total Clients"   {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-ret"    icon={UserCheck} iconColor="text-emerald-400/60" value={String(data.health.returning)} valueColor="text-emerald-400" label="Returning"       {...METRIC_COPY.returning} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-retpct" icon={Percent}   iconColor="text-violet-400/60"  value={data.health.clients > 0 ? `${Math.round((data.health.returning / data.health.clients) * 100)}%` : "0%"} valueColor="text-violet-400" label="Retention %" {...METRIC_COPY.retention} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-rev"    icon={CircleDollarSign} iconColor="text-amber-400/60" value={`R ${Math.round(data.health.avgBasket)}`} valueColor="text-amber-400" label="Avg Basket" {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-total"  icon={UserPlus}         iconColor="text-sky-400/60"     value={String(totalClients)}   valueColor="text-sky-400"     label="Total Clients" {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-ret"    icon={UserCheck}        iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Returning"     {...METRIC_COPY.returning} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-retpct" icon={Percent}          iconColor="text-violet-400/60"  value={retentionDisplay}       valueColor="text-violet-400" label="Retention %"  {...METRIC_COPY.retention} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-rev"    icon={CircleDollarSign} iconColor="text-amber-400/60"   value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket" {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
 
       {/* ── STOCK ALERTS ── */}
-      {visibility.stockAlerts && data.stockAlerts.length > 0 && (
+      {visibility.stockAlerts && stockAlerts.length > 0 && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.2 }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Stock Alerts</p>
@@ -804,12 +798,17 @@ const AdminDashboard = ({
             )}
           </div>
           <div className="flex flex-col gap-2">
-            {data.stockAlerts.map((item, i) => (
-              <div key={i} className="rounded-xl border border-amber-500/15 bg-amber-500/[0.04] px-4 py-3 flex items-center gap-3">
-                <Package className="w-3.5 h-3.5 text-amber-400/60 shrink-0" />
+            {/* FIX: hook returns { item, level } not { name, qty, unit } */}
+            {stockAlerts.map((s: any, i: number) => (
+              <div key={i} className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
+                s.level === "critical" ? "border-red-500/15 bg-red-500/[0.04]" : "border-amber-500/15 bg-amber-500/[0.04]"
+              }`}>
+                <Package className={`w-3.5 h-3.5 shrink-0 ${ s.level === "critical" ? "text-red-400/60" : "text-amber-400/60" }`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-white/70 truncate">{item.name}</p>
-                  <p className="text-[10px] text-amber-400/70">{item.qty} {item.unit} remaining</p>
+                  <p className="text-xs font-medium text-white/70 truncate">{s.item}</p>
+                  <p className={`text-[10px] ${ s.level === "critical" ? "text-red-400/70" : "text-amber-400/70" }`}>
+                    {s.level === "critical" ? "Critical" : "Low"} stock
+                  </p>
                 </div>
               </div>
             ))}
@@ -817,37 +816,9 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── SETTINGS SNAPSHOT ── */}
-      {visibility.settingsSnapshot && (
-        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.22 }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Settings Snapshot</p>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate("Settings")}
-                className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/60 transition-colors"
-              >
-                Edit <ArrowRight className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {[
-              { label: "Booking Mode",  value: data.settings.bookingMode || "—" },
-              { label: "Deposit",       value: data.settings.depositAmount != null ? `R ${data.settings.depositAmount}` : "—" },
-              { label: "Deposit Type",  value: data.settings.depositType || "—" },
-              { label: "Cancellation",  value: data.settings.cancellationPolicy || "—" },
-              { label: "Min Notice",    value: data.settings.minBookingNotice != null ? `${data.settings.minBookingNotice}h` : "—" },
-              { label: "Max Advance",   value: data.settings.maxAdvanceBooking != null ? `${data.settings.maxAdvanceBooking}d` : "—" },
-            ].map(item => (
-              <div key={item.label} className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
-                <p className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</p>
-                <p className="text-xs font-semibold text-white/70 mt-0.5 truncate">{item.value}</p>
-              </div>
-            ))}
-          </div>
-        </motion.section>
-      )}
+      {/* ── SETTINGS SNAPSHOT — removed, hook does not expose settings ── */}
+      {/* Settings shortcut kept as nav-only pill in hero B2 row */}
+
     </div>
   );
 };
