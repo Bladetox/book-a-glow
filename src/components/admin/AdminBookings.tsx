@@ -17,11 +17,20 @@ import { toast } from "sonner";
 const filters = ["All", "Today", "Pending", "Confirmed", "Complete", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
+// Status badge colours
 const statusColors: Record<BookingRow["status"], string> = {
   pending:   "bg-amber-500/10 text-amber-400",
   confirmed: "bg-emerald-500/10 text-emerald-400",
   complete:  "bg-white/[0.06] text-white/50",
   cancelled: "bg-red-500/10 text-red-400",
+};
+
+// Von Restorff — left-border accent per status so urgent rows pop immediately
+const statusBorderAccent: Record<BookingRow["status"], string> = {
+  pending:   "border-l-2 border-l-amber-500/50",
+  confirmed: "border-l-2 border-l-emerald-500/30",
+  complete:  "border-l-2 border-l-white/10",
+  cancelled: "border-l-2 border-l-red-500/20",
 };
 
 interface AdminBookingsProps {
@@ -37,16 +46,16 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const updateFields  = useUpdateBookingFields();
   const deleteBooking = useDeleteBooking();
 
-  const [activeFilter, setActiveFilter]             = useState<FilterType>("All");
-  const [expandedId, setExpandedId]                 = useState<string | null>(null);
-  const [editingId, setEditingId]                   = useState<string | null>(null);
-  const [editDraft, setEditDraft]                   = useState<Partial<BookingRow>>({});
-  const [reschedulingId, setReschedulingId]         = useState<string | null>(null);
-  const [rescheduleDate, setRescheduleDate]         = useState<Date | undefined>();
-  const [rescheduleTime, setRescheduleTime]         = useState<string | null>(null);
+  const [activeFilter, setActiveFilter]               = useState<FilterType>("All");
+  const [expandedId, setExpandedId]                   = useState<string | null>(null);
+  const [editingId, setEditingId]                     = useState<string | null>(null);
+  const [editDraft, setEditDraft]                     = useState<Partial<BookingRow>>({});
+  const [reschedulingId, setReschedulingId]           = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate]           = useState<Date | undefined>();
+  const [rescheduleTime, setRescheduleTime]           = useState<string | null>(null);
   const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
-  const [availableSlots, setAvailableSlots]         = useState<string[]>([]);
-  const [slotsLoading, setSlotsLoading]             = useState(false);
+  const [availableSlots, setAvailableSlots]           = useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading]               = useState(false);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -72,9 +81,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       return;
     }
 
-    const booking = bookings.find(b => b.id === reschedulingId);
+    const booking  = bookings.find(b => b.id === reschedulingId);
     const duration = booking?.duration || 60;
-    const dateStr = format(rescheduleDate, "yyyy-MM-dd");
+    const dateStr  = format(rescheduleDate, "yyyy-MM-dd");
 
     let cancelled = false;
     setSlotsLoading(true);
@@ -88,23 +97,17 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       .single()
       .then(({ data: tenantData, error: tenantErr }) => {
         if (cancelled) return;
-        if (tenantErr || !tenantData?.owner_id) {
-          setSlotsLoading(false);
-          return;
-        }
+        if (tenantErr || !tenantData?.owner_id) { setSlotsLoading(false); return; }
         return supabase.rpc("get_available_slots", {
-          p_staff_id: tenantData.owner_id,
-          p_date: dateStr,
+          p_staff_id:         tenantData.owner_id,
+          p_date:             dateStr,
           p_duration_minutes: duration,
         });
       })
       .then((res: any) => {
         if (cancelled || !res) return;
         const { data, error } = res;
-        if (error) {
-          setSlotsLoading(false);
-          return;
-        }
+        if (error) { setSlotsLoading(false); return; }
         setAvailableSlots(
           (data ?? [])
             .filter((s: any) => s.is_available)
@@ -117,8 +120,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   }, [rescheduleDate, reschedulingId, tenantId, bookings]);
 
   const filtered = bookings.filter(b => {
-    if (activeFilter === "All")    return true;
-    if (activeFilter === "Today")  return b.date === todayStr;
+    if (activeFilter === "All")   return true;
+    if (activeFilter === "Today") return b.date === todayStr;
     return b.status === activeFilter.toLowerCase();
   });
 
@@ -269,24 +272,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Filter pills */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {filters.map(f => (
-          <button key={f} onClick={() => setActiveFilter(f)}
-            className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all flex items-center gap-1.5
-              ${activeFilter === f
-                ? "bg-white/[0.12] text-white border border-white/[0.15]"
-                : "text-white/35 border border-white/[0.06] hover:text-white/60"
-              }`}>
-            {f}
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-white/10" : "bg-white/[0.04]"}`}>
-              {counts[f]}
-            </span>
-          </button>
-        ))}
-      </div>
 
-      {/* Summary bar */}
+      {/* ── Serial Position Effect: stats first — orientate before filtering ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <CalendarCheck className="w-4 h-4 text-white/30" />
@@ -322,6 +309,29 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         </div>
       </div>
 
+      {/* ── Filter pills — counts only on actionable statuses ── */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {filters.map(f => {
+          // Cognitive Load: skip count badge for All/Today — stats above carry that context
+          const showCount = f !== "All" && f !== "Today";
+          return (
+            <button key={f} onClick={() => setActiveFilter(f)}
+              className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all flex items-center gap-1.5
+                ${ activeFilter === f
+                  ? "bg-white/[0.12] text-white border border-white/[0.15]"
+                  : "text-white/35 border border-white/[0.06] hover:text-white/60"
+                }`}>
+              {f}
+              {showCount && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ activeFilter === f ? "bg-white/10" : "bg-white/[0.04]" }`}>
+                  {counts[f]}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Bookings list */}
       {filtered.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -335,42 +345,54 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
               const isExpanded          = expandedId === b.id;
               const isEditing           = editingId === b.id;
               const isRequestingBalance = requestingBalanceId === b.id;
+              const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived;
 
               return (
                 <motion.div key={b.id}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                   layout
-                  className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
+                  // Von Restorff — left border accent makes status scannable before reading
+                  className={`rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden ${statusBorderAccent[b.status]}`}>
 
                   {/* Main row */}
                   <div
                     className="p-3 sm:p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                     onClick={() => !isEditing && setExpandedId(isExpanded ? null : b.id)}
                   >
-                  <div className="flex flex-col items-center shrink-0 w-16">
-                    <Clock className="w-3 h-3 text-white/25 mb-0.5" />
-                    <span className="text-xs font-semibold text-white/70">{b.time}</span>
-                    <span className="text-[10px] text-white/50 font-medium">
-                      {b.date === todayStr ? "Today" : format(new Date(b.date + "T00:00:00"), "d MMM")}
-                    </span>
+                    <div className="flex flex-col items-center shrink-0 w-16">
+                      <Clock className="w-3 h-3 text-white/25 mb-0.5" />
+                      <span className="text-xs font-semibold text-white/70">{b.time}</span>
+                      <span className="text-[10px] text-white/50 font-medium">
+                        {b.date === todayStr ? "Today" : format(new Date(b.date + "T00:00:00"), "d MMM")}
+                      </span>
                       {b.date !== todayStr && (
-                    <span className="text-[9px] text-white/25">
-                    {format(new Date(b.date + "T00:00:00"), "yyyy")}
-                    </span>
-                    )}
-                  </div>
+                        <span className="text-[9px] text-white/25">
+                          {format(new Date(b.date + "T00:00:00"), "yyyy")}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Aesthetic-Usability: stronger client name weight for clear hierarchy */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white/85 truncate">{b.client}</p>
+                      <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
                       <p className="text-[11px] text-white/40 truncate">{b.service} • {b.duration}min</p>
                     </div>
+
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[b.status]}`}>
-                        {b.status}
-                      </span>
-                      {b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived && (
+                      <div className="flex items-center gap-1.5">
+                        {/* Zeigarnik Effect — amber dot pre-attentively flags outstanding balance */}
+                        {hasOutstandingBalance && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[b.status]}`}>
+                          {b.status}
+                        </span>
+                      </div>
+                      {hasOutstandingBalance && (
                         <span className="text-[10px] text-amber-400/80">R {b.balance} due</span>
                       )}
                     </div>
+
                     <div className="shrink-0 text-white/20">
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </div>
@@ -446,9 +468,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
                               </div>
 
-                              {/* Action buttons */}
+                              {/* ── Action buttons ── */}
+                              {/* Chunking: primary actions left, destructive actions right */}
                               <div className="flex items-center gap-2 pt-1 flex-wrap">
 
+                                {/* Primary actions — left cluster */}
                                 {b.status !== "cancelled" && (
                                   <ActionBtn icon={CalendarClock} label="Reschedule" color="text-sky-400" onClick={() => {
                                     setReschedulingId(reschedulingId === b.id ? null : b.id);
@@ -468,11 +492,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     onClick={() => handleStatusChange(b.id, "complete")} />
                                 )}
 
-                                {b.status !== "cancelled" && b.status !== "complete" && (
-                                  <ActionBtn icon={X} label="Cancel" color="text-red-400"
-                                    onClick={() => handleStatusChange(b.id, "cancelled")} />
-                                )}
-
                                 <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
 
                                 {showRequestBalance(b) && (
@@ -489,8 +508,15 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
+                                {/* Spacer — pushes destructive actions to the right */}
                                 <div className="flex-1" />
-                                <ActionBtn icon={Trash2} label="Delete" color="text-red-400/60" onClick={() => handleDelete(b.id)} />
+
+                                {/* Destructive actions — right cluster */}
+                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                  <ActionBtn icon={X} label="Cancel" color="text-red-400/70"
+                                    onClick={() => handleStatusChange(b.id, "cancelled")} />
+                                )}
+                                <ActionBtn icon={Trash2} label="Delete" color="text-red-400/50" onClick={() => handleDelete(b.id)} />
                               </div>
 
                               {/* Reschedule panel */}
