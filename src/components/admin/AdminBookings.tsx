@@ -60,7 +60,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   useEffect(() => {
     if (initialClient && bookings.length > 0) {
       const match = bookings.find(b =>
-        b.client.toLowerCase().includes(initialClient.toLowerCase().split(" ")[0].replace(".", ""))
+        b.client.toLowerCase().includes(initialClient.toLowerCase().split(" ")[0].replace(/\./g, ""))
       );
       if (match) {
         setExpandedId(match.id);
@@ -116,18 +116,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   }, [rescheduleDate, reschedulingId, tenantId, bookings]);
 
   const filtered = useMemo(() => {
-    const base = bookings.filter(b => {
+    return bookings.filter(b => {
       if (activeFilter === "All")   return true;
       if (activeFilter === "Today") return b.date === todayStr;
       return b.status === activeFilter.toLowerCase();
-    });
-
-    return [...base].sort((a, b) => {
-      const aToday = a.date === todayStr ? 0 : 1;
-      const bToday = b.date === todayStr ? 0 : 1;
-      if (aToday !== bToday) return aToday - bToday;
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return a.time.localeCompare(b.time);
     });
   }, [bookings, activeFilter, todayStr]);
 
@@ -187,11 +179,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     if (!editingId || !editDraft) return;
     try {
       const updates: Record<string, unknown> = {
-        client_notes:  editDraft.notes,
-        staff_notes:   editDraft.staffNotes,
-        client_name:   editDraft.client,
-        client_phone:  editDraft.phone,
-        client_email:  editDraft.email,
+        client_notes:     editDraft.notes,
+        staff_notes:      editDraft.staffNotes,
+        client_name:      editDraft.client,
+        client_phone:     editDraft.phone,
+        client_email:     editDraft.email,
         call_out_address: editDraft.address,
       };
 
@@ -283,7 +275,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Stats first — Serial Position Effect */}
+      {/* Stats — Serial Position Effect: most important context first */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <CalendarCheck className="w-4 h-4 text-white/30" />
@@ -350,10 +342,22 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       ) : (
         <div className="flex flex-col gap-2">
           <AnimatePresence>
-            {/* Group bookings: today pinned first with a visual label */}
             {(() => {
-              const todayItems = filtered.filter(b => b.date === todayStr);
-              const otherItems = filtered.filter(b => b.date !== todayStr);
+              const todayItems = filtered
+                .filter(b => b.date === todayStr)
+                .sort((a, b) => a.time.localeCompare(b.time));
+
+              const upcoming = filtered
+                .filter(b => b.date > todayStr)
+                .sort((a, b) =>
+                  a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time)
+                );
+
+              const past = filtered
+                .filter(b => b.date < todayStr)
+                .sort((a, b) =>
+                  a.date !== b.date ? b.date.localeCompare(a.date) : b.time.localeCompare(a.time)
+                );
 
               const renderCard = (b: BookingRow) => {
                 const isExpanded            = expandedId === b.id;
@@ -420,7 +424,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                             {isEditing ? (
                               <div className="flex flex-col gap-3 mt-3">
-                                {/* ── Contact fields ── */}
                                 <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">Contact Details</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                   <EditField
@@ -445,7 +448,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   />
                                 </div>
 
-                                {/* ── Service — read-only (lives in booking_items, not bookings) ── */}
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
                                     Service <span className="normal-case text-white/20">(read-only — edit via booking items)</span>
@@ -455,12 +457,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </p>
                                 </div>
 
-                                {/* ── Notes ── */}
                                 <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mt-1">Notes</p>
                                 <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
                                 <EditField label="Client Notes" value={editDraft.notes || ""}      onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
 
-                                {/* ── Status + actions ── */}
                                 <div className="flex items-center gap-2 pt-1">
                                   <select
                                     value={editDraft.status || "pending"}
@@ -652,20 +652,36 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
               return (
                 <>
+                  {/* ── Today (pinned) ── */}
                   {activeFilter !== "Today" && todayItems.length > 0 && (
                     <div className="flex items-center gap-3 px-1 pt-1">
                       <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400/70">Today</span>
                       <div className="flex-1 h-px bg-emerald-500/15" />
                     </div>
                   )}
-                  {(activeFilter !== "Today" ? todayItems : filtered).map(b => renderCard(b))}
-                  {activeFilter !== "Today" && otherItems.length > 0 && (
-                    <div className="flex items-center gap-3 px-1 pt-2">
-                      <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/20">Upcoming & Past</span>
-                      <div className="flex-1 h-px bg-white/[0.05]" />
-                    </div>
+                  {(activeFilter === "Today" ? filtered.sort((a, b) => a.time.localeCompare(b.time)) : todayItems).map(b => renderCard(b))}
+
+                  {/* ── Upcoming (soonest first) ── */}
+                  {activeFilter !== "Today" && upcoming.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-3 px-1 pt-2">
+                        <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-sky-400/70">Upcoming</span>
+                        <div className="flex-1 h-px bg-sky-500/15" />
+                      </div>
+                      {upcoming.map(b => renderCard(b))}
+                    </>
                   )}
-                  {activeFilter !== "Today" && otherItems.map(b => renderCard(b))}
+
+                  {/* ── Past (most recent first) ── */}
+                  {activeFilter !== "Today" && past.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-3 px-1 pt-2">
+                        <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/20">Past</span>
+                        <div className="flex-1 h-px bg-white/[0.05]" />
+                      </div>
+                      {past.map(b => renderCard(b))}
+                    </>
+                  )}
                 </>
               );
             })()}

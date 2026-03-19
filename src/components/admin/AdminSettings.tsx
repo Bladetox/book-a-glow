@@ -36,6 +36,12 @@ const SENSITIVE_KEYS = new Set([
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+const SectionLabel = ({ label }: { label: string }) => (
+  <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-white/25 px-1 pt-2">
+    {label}
+  </p>
+);
+
 const SettingsCard = ({
   title,
   icon: Icon,
@@ -187,9 +193,10 @@ const AdminSettings = () => {
   const update = (field: string, value: string) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
 
+  // Extended to 3500ms for stronger Peak-End closure signal (Laws of UX)
   const flash = (section: string) => {
     setSaved(section);
-    setTimeout(() => setSaved(null), 2000);
+    setTimeout(() => setSaved(null), 3500);
   };
 
   const unmask = (key: string) =>
@@ -274,35 +281,35 @@ const AdminSettings = () => {
 
   // ── GCal backfill ──────────────────────────────────────────────────────────
   const handleGcalBackfill = async () => {
-  if (gcalSyncing) return;
-  setGcalSyncing(true);
-  setGcalSyncResult(null);
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Not authenticated");
+    if (gcalSyncing) return;
+    setGcalSyncing(true);
+    setGcalSyncResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-    const res = await fetch(`${supabaseUrl}/functions/v1/gcal-backfill`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ tenant_id: tenantId }),
-    });
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/gcal-backfill`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ tenant_id: tenantId }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Sync failed");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync failed");
 
-    const result = `${data.created} created, ${data.skipped} skipped`;
-    setGcalSyncResult(result);
-    toast.success(`Calendar sync complete — ${data.created} events created`);
-  } catch (e: any) {
-    toast.error(e.message || "Sync failed");
-  } finally {
-    setGcalSyncing(false);
-  }
-};
+      const result = `${data.created} created, ${data.skipped} skipped`;
+      setGcalSyncResult(result);
+      toast.success(`Calendar sync complete — ${data.created} events created`);
+    } catch (e: any) {
+      toast.error(e.message || "Sync failed");
+    } finally {
+      setGcalSyncing(false);
+    }
+  };
 
   const SavedBadge = ({ section }: { section: string }) =>
     saved === section ? (
@@ -320,9 +327,9 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-3xl">
+    <div className="flex flex-col gap-6 max-w-3xl">
 
-      {/* ── Booking URL — Top of page, always visible ── */}
+      {/* ── BOOKING PAGE — Serial Position: primary CTA always first ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -376,372 +383,422 @@ const AdminSettings = () => {
         </p>
       </motion.div>
 
-      {/* ── Settings grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 1 — BUSINESS IDENTITY
+          Law of Common Region + Proximity: related fields grouped visually
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Business Identity" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* Business Info */}
-        <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.06] to-white/[0.02]">
-          <SettingRow label="Business Name" placeholder="Your Business Name"
-            value={draft.name} onChange={(v) => update("name", v)} />
-          <SettingRow label="Email" placeholder="your@email.com" type="email"
-            value={draft.email} onChange={(v) => update("email", v)} />
-          <SettingRow label="Phone" placeholder="074 511 5725"
-            value={draft.phone} onChange={(v) => update("phone", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveTenantFields("info", ["name", "email", "phone"])}
-              loading={updateTenant.isPending}
-            />
-            <SavedBadge section="info" />
-          </div>
-        </SettingsCard>
-
-        {/* Logo */}
-        <SettingsCard title="Business Logo" icon={Image} gradient="from-white/[0.06] to-white/[0.02]">
-          {draft.logo_url && (
+          {/* Business Info */}
+          <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.06] to-white/[0.02]">
+            <SettingRow label="Business Name" placeholder="Your Business Name"
+              value={draft.name} onChange={(v) => update("name", v)} />
+            <SettingRow label="Email" placeholder="your@email.com" type="email"
+              value={draft.email} onChange={(v) => update("email", v)} />
+            <SettingRow label="Phone" placeholder="074 511 5725"
+              value={draft.phone} onChange={(v) => update("phone", v)} />
             <div className="flex items-center gap-3">
-              <img
-                src={draft.logo_url}
-                alt="Logo preview"
-                className="w-14 h-14 rounded-xl object-contain bg-white/5 border border-white/10 p-1"
+              <SaveBtn
+                onClick={() => saveTenantFields("info", ["name", "email", "phone"])}
+                loading={updateTenant.isPending}
               />
-              <span className="text-xs text-white/40 flex-1 truncate">{draft.logo_url}</span>
+              <SavedBadge section="info" />
             </div>
-          )}
-          <SettingRow label="Logo URL" placeholder="https://your-logo-url.com/logo.png"
-            value={draft.logo_url} onChange={(v) => update("logo_url", v)} />
-          <p className="text-[9px] text-white/25 -mt-2">
-            Or upload directly below. Recommended: square, min 200x200px.
-          </p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => logoInputRef.current?.click()}
-              disabled={logoUploading}
-              className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
-              {logoUploading ? "Uploading..." : "Upload File"}
-            </button>
-            <SaveBtn
-              onClick={() => saveTenantFields("logo", ["logo_url"])}
-              loading={updateTenant.isPending}
-            />
-            <SavedBadge section="logo" />
-          </div>
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/svg+xml"
-            className="hidden"
-            onChange={handleLogoUpload}
-          />
-        </SettingsCard>
+          </SettingsCard>
 
-        {/* Welcome Splash */}
-        <SettingsCard title="Welcome Splash" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]">
-          <SettingRow label="Welcome Label" placeholder="Welcome to"
-            value={draft.splash_welcome_label} onChange={(v) => update("splash_welcome_label", v)} />
-          <SettingRow label="Tagline Line 1" placeholder="Mobile Beauty Services"
-            value={draft.splash_tagline1} onChange={(v) => update("splash_tagline1", v)} />
-          <SettingRow label="Tagline Line 2" placeholder="Premium At-Home Treatments"
-            value={draft.splash_tagline2} onChange={(v) => update("splash_tagline2", v)} />
-          <SettingRow label="CTA Button Label" placeholder="Select Your Treatment"
-            value={draft.splash_cta_label} onChange={(v) => update("splash_cta_label", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveSettings("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])}
-              loading={upsertSetting.isPending}
-            />
-            <SavedBadge section="splash" />
-          </div>
-        </SettingsCard>
-
-        {/* Custom Domain */}
-        <SettingsCard title="Custom Domain" icon={Link} gradient="from-white/[0.06] to-white/[0.02]">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-              Default URL
-            </label>
-            <div className="flex items-center gap-2">
-              <p className="flex-1 text-xs text-white/50 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] font-mono truncate">
-                {defaultBookingUrl}
-              </p>
+          {/* Logo */}
+          <SettingsCard title="Business Logo" icon={Image} gradient="from-white/[0.06] to-white/[0.02]">
+            {draft.logo_url && (
+              <div className="flex items-center gap-3">
+                <img
+                  src={draft.logo_url}
+                  alt="Logo preview"
+                  className="w-14 h-14 rounded-xl object-contain bg-white/5 border border-white/10 p-1"
+                />
+                <span className="text-xs text-white/40 flex-1 truncate">{draft.logo_url}</span>
+              </div>
+            )}
+            <SettingRow label="Logo URL" placeholder="https://your-logo-url.com/logo.png"
+              value={draft.logo_url} onChange={(v) => update("logo_url", v)} />
+            <p className="text-[9px] text-white/25 -mt-2">
+              Or upload directly below. Recommended: square, min 200×200px.
+            </p>
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => copyUrl(defaultBookingUrl)}
-                className="shrink-0 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={logoUploading}
+                className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
               >
-                <Copy className="w-3.5 h-3.5" />
+                {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
+                {logoUploading ? "Uploading..." : "Upload File"}
               </button>
+              <SaveBtn
+                onClick={() => saveTenantFields("logo", ["logo_url"])}
+                loading={updateTenant.isPending}
+              />
+              <SavedBadge section="logo" />
             </div>
-          </div>
-          <SettingRow
-            label="Custom Domain (optional)"
-            placeholder="book.yourdomain.co.za"
-            value={draft.custom_domain}
-            onChange={(v) => update("custom_domain", v)}
-            hint="Point a CNAME from your domain to cname.vercel-dns.com, then enter the domain here."
-          />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveTenantFields("domain", ["custom_domain"])}
-              loading={updateTenant.isPending}
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={handleLogoUpload}
             />
-            <SavedBadge section="domain" />
-          </div>
-        </SettingsCard>
+          </SettingsCard>
 
-        {/* Theme */}
-        <SettingsCard title="Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]">
-          <div className="grid grid-cols-2 gap-2">
-            {businessThemes.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => update("theme_id", t.id)}
-                className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
-                  draft.theme_id === t.id
-                    ? "border-white/30 bg-white/[0.1]"
-                    : "border-white/[0.06] hover:border-white/[0.12]"
-                }`}
-              >
-                <div className="flex gap-1.5">
-                  <div className="w-4 h-4 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.background})` }} />
-                  <div className="w-4 h-4 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.primary})` }} />
-                  <div className="w-4 h-4 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.accent})` }} />
-                </div>
-                <span className="text-xs font-semibold text-white/80">{t.label}</span>
-                <span className="text-[9px] text-white/30">{t.vibe}</span>
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveTenantFields("theme", ["theme_id"])}
-              loading={updateTenant.isPending}
-            />
-            <SavedBadge section="theme" />
-          </div>
-        </SettingsCard>
+        </div>
+      </section>
 
-        {/* Travel & Call-out */}
-        <SettingsCard title="Travel & Call-out Fee" icon={MapPin} gradient="from-white/[0.05] to-white/[0.02]">
-          <SettingRow label="Origin Address" placeholder="Your Business / Home Address"
-            value={draft.fixed_origin_address} onChange={(v) => update("fixed_origin_address", v)} />
-          <SettingRow label="Rate per km" placeholder="3.60" type="number"
-            value={draft.rate_per_km} onChange={(v) => update("rate_per_km", v)} />
-          <SettingRow label="Currency Symbol" placeholder="R"
-            value={draft.currency} onChange={(v) => update("currency", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => {
-                upsertSetting.mutate({
-                  fixed_origin_address: draft.fixed_origin_address ?? "",
-                  rate_per_km:          draft.rate_per_km          ?? "",
-                });
-                saveTenantFields("travel", ["currency"]);
-              }}
-              loading={updateTenant.isPending || upsertSetting.isPending}
-            />
-            <SavedBadge section="travel" />
-          </div>
-        </SettingsCard>
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 2 — APPEARANCE & BRANDING
+          Grouped by visual concern — Chunking / Miller's Law
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Appearance & Branding" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* Booking Rules */}
-        <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.04] to-white/[0.01]">
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-              Deposit Percentage
-            </label>
-            <div className="grid grid-cols-4 gap-2">
-              {DEPOSIT_PRESETS.map((p) => (
+          {/* Theme */}
+          <SettingsCard title="Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]">
+            <div className="grid grid-cols-2 gap-2">
+              {businessThemes.map((t) => (
                 <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => update("deposit_percent", p.value)}
-                  className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
-                    draft.deposit_percent === p.value
-                      ? "border-white/40 bg-white/[0.12] text-white"
-                      : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20 hover:text-white/70"
+                  key={t.id}
+                  onClick={() => update("theme_id", t.id)}
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
+                    draft.theme_id === t.id
+                      ? "border-white/30 bg-white/[0.1]"
+                      : "border-white/[0.06] hover:border-white/[0.12]"
                   }`}
                 >
-                  {p.label}
+                  <div className="flex gap-1.5">
+                    <div className="w-4 h-4 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.background})` }} />
+                    <div className="w-4 h-4 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.primary})` }} />
+                    <div className="w-4 h-4 rounded-full border border-white/10" style={{ background: `hsl(${t.colors.accent})` }} />
+                  </div>
+                  <span className="text-xs font-semibold text-white/80">{t.label}</span>
+                  <span className="text-[9px] text-white/30">{t.vibe}</span>
                 </button>
               ))}
             </div>
-            <input
-              type="number"
-              placeholder="Custom %"
-              value={draft.deposit_percent ?? ""}
-              onChange={(e) => update("deposit_percent", e.target.value)}
-              min={1}
-              max={100}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
-            />
-            <p className="text-[9px] text-white/25">
-              {draft.deposit_percent === "100"
-                ? "Clients pay in full at booking."
-                : `Clients pay ${draft.deposit_percent ?? 50}% now, the rest on the day.`}
-            </p>
-          </div>
-          <SettingRow label="Min Notice (hours)" placeholder="24" type="number"
-            value={draft.min_notice_hours} onChange={(v) => update("min_notice_hours", v)} />
-          <SettingRow label="Max Advance Booking (days)" placeholder="60" type="number"
-            value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
-          <SettingRow label="Booking Ref Prefix" placeholder="PB-"
-            value={draft.booking_ref_prefix} onChange={(v) => update("booking_ref_prefix", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_hours", "max_advance_days", "booking_ref_prefix"])}
-              loading={upsertSetting.isPending}
-            />
-            <SavedBadge section="rules" />
-          </div>
-        </SettingsCard>
-
-        {/* Confirmation Page Copy */}
-        <SettingsCard title="Confirmation Page" icon={FileText} gradient="from-white/[0.05] to-white/[0.02]">
-          <SettingRow label="Email Subject" placeholder="Your booking is confirmed"
-            value={draft.confirmation_subject} onChange={(v) => update("confirmation_subject", v)} />
-          <SettingRow label="Page Title" placeholder="A date with yourself"
-            value={draft.confirmation_title} onChange={(v) => update("confirmation_title", v)} />
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-              Intro Message
-            </label>
-            <textarea
-              placeholder="Your booking is confirmed..."
-              value={draft.confirmation_intro ?? ""}
-              onChange={(e) => update("confirmation_intro", e.target.value)}
-              rows={3}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-              Outro Message
-            </label>
-            <textarea
-              placeholder="We look forward to seeing you."
-              value={draft.confirmation_outro ?? ""}
-              onChange={(e) => update("confirmation_outro", e.target.value)}
-              rows={4}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
-            />
-          </div>
-          <SettingRow label="Sign-off" placeholder="Toodles"
-            value={draft.sign_off} onChange={(v) => update("sign_off", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveSettings("confirmation", ["confirmation_subject", "confirmation_title", "confirmation_intro", "confirmation_outro", "sign_off"])}
-              loading={upsertSetting.isPending}
-            />
-            <SavedBadge section="confirmation" />
-          </div>
-        </SettingsCard>
-
-        {/* Email (SMTP) — sensitive fields masked */}
-        <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]">
-          <SettingRow label="SMTP Host" placeholder="smtp.gmail.com"
-            value={draft.smtp_host} onChange={(v) => update("smtp_host", v)} />
-          <SettingRow label="SMTP Port" placeholder="587" type="number"
-            value={draft.smtp_port} onChange={(v) => update("smtp_port", v)} />
-          <SettingRow label="SMTP User (email)" placeholder="your@gmail.com"
-            value={draft.smtp_user} onChange={(v) => update("smtp_user", v)} />
-          <SettingRow
-            label="SMTP Password / App Password"
-            placeholder="App password from Google"
-            type="password"
-            masked={isMasked("smtp_password")}
-            onUnmask={() => unmask("smtp_password")}
-            value={draft.smtp_password}
-            onChange={(v) => update("smtp_password", v)}
-            hint={!isMasked("smtp_password") ? "Use a Google App Password, not your account password." : undefined}
-          />
-          <SettingRow label="From Email" placeholder="noreply@yourdomain.co.za"
-            value={draft.smtp_from_email} onChange={(v) => update("smtp_from_email", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveSettings("smtp", ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from_email"])}
-              loading={upsertSetting.isPending}
-            />
-            <SavedBadge section="smtp" />
-          </div>
-        </SettingsCard>
-
-        {/* Google Maps — sensitive key masked */}
-        <SettingsCard title="Google Maps" icon={MapPin} gradient="from-white/[0.04] to-white/[0.01]">
-          <SettingRow
-            label="Google Maps API Key"
-            placeholder="AIza..."
-            masked={isMasked("google_maps_api_key")}
-            onUnmask={() => unmask("google_maps_api_key")}
-            value={draft.google_maps_api_key}
-            onChange={(v) => update("google_maps_api_key", v)}
-            hint={!isMasked("google_maps_api_key") ? "Restrict this key to your domain in Google Cloud Console." : undefined}
-          />
-          <SettingRow label="Default Distance (km)" placeholder="10" type="number"
-            value={draft.default_distance_km} onChange={(v) => update("default_distance_km", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveSettings("maps", ["google_maps_api_key", "default_distance_km"])}
-              loading={upsertSetting.isPending}
-            />
-            <SavedBadge section="maps" />
-          </div>
-        </SettingsCard>
-
-        {/* Google Reviews */}
-        <SettingsCard title="Google Reviews" icon={Globe} gradient="from-white/[0.04] to-white/[0.01]">
-          <SettingRow label="Google Review Link" placeholder="https://g.page/r/..."
-            value={draft.google_review_link} onChange={(v) => update("google_review_link", v)} />
-          <SettingRow label="Google Place ID" placeholder="ChIJ..."
-            value={draft.google_place_id} onChange={(v) => update("google_place_id", v)} />
-          <div className="flex items-center gap-3">
-            <SaveBtn
-              onClick={() => saveSettings("reviews", ["google_review_link", "google_place_id"])}
-              loading={upsertSetting.isPending}
-            />
-            <SavedBadge section="reviews" />
-          </div>
-        </SettingsCard>
-
-        {/* Google Calendar Sync */}
-        {appSettings["gcal_connected"] === "true" && (
-          <SettingsCard title="Google Calendar" icon={CalendarCheck} gradient="from-emerald-500/[0.05] to-white/[0.02]">
-            <p className="text-xs text-white/40 leading-relaxed">
-              Create calendar events for all existing bookings that are missing one.
-              Safe to run multiple times — only processes bookings without an existing event.
-            </p>
             <div className="flex items-center gap-3">
               <SaveBtn
-                label={gcalSyncing ? "Syncing..." : gcalSyncResult ? `✓ ${gcalSyncResult}` : "Sync All Bookings"}
-                loading={gcalSyncing}
-                onClick={handleGcalBackfill}
+                onClick={() => saveTenantFields("theme", ["theme_id"])}
+                loading={updateTenant.isPending}
               />
+              <SavedBadge section="theme" />
             </div>
           </SettingsCard>
-        )}
 
-        {/* Change Password */}
-        <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]">
-          <SettingRow label="New Password" placeholder="Min 6 characters" type="password"
-            value={newPw} onChange={setNewPw} />
-          <SettingRow label="Confirm Password" placeholder="Confirm new password" type="password"
-            value={confirmPw} onChange={setConfirmPw} />
-          {pwError   && <p className="text-xs text-red-400">{pwError}</p>}
-          {pwSuccess && (
-            <p className="text-xs text-emerald-400 flex items-center gap-1">
-              <Check className="w-3 h-3" /> {pwSuccess}
-            </p>
+          {/* Welcome Splash */}
+          <SettingsCard title="Welcome Splash" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]">
+            <SettingRow label="Welcome Label" placeholder="Welcome to"
+              value={draft.splash_welcome_label} onChange={(v) => update("splash_welcome_label", v)} />
+            <SettingRow label="Tagline Line 1" placeholder="Mobile Beauty Services"
+              value={draft.splash_tagline1} onChange={(v) => update("splash_tagline1", v)} />
+            <SettingRow label="Tagline Line 2" placeholder="Premium At-Home Treatments"
+              value={draft.splash_tagline2} onChange={(v) => update("splash_tagline2", v)} />
+            <SettingRow label="CTA Button Label" placeholder="Select Your Treatment"
+              value={draft.splash_cta_label} onChange={(v) => update("splash_cta_label", v)} />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => saveSettings("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])}
+                loading={upsertSetting.isPending}
+              />
+              <SavedBadge section="splash" />
+            </div>
+          </SettingsCard>
+
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 3 — OPERATIONS
+          Booking rules, confirmation copy, travel — operational concerns
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Operations" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Booking Rules */}
+          <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.04] to-white/[0.01]">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                Deposit Percentage
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {DEPOSIT_PRESETS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => update("deposit_percent", p.value)}
+                    className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
+                      draft.deposit_percent === p.value
+                        ? "border-white/40 bg-white/[0.12] text-white"
+                        : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20 hover:text-white/70"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                placeholder="Custom %"
+                value={draft.deposit_percent ?? ""}
+                onChange={(e) => update("deposit_percent", e.target.value)}
+                min={1}
+                max={100}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+              />
+              <p className="text-[9px] text-white/25">
+                {draft.deposit_percent === "100"
+                  ? "Clients pay in full at booking."
+                  : `Clients pay ${draft.deposit_percent ?? 50}% now, the rest on the day.`}
+              </p>
+            </div>
+            <SettingRow label="Min Notice (hours)" placeholder="24" type="number"
+              value={draft.min_notice_hours} onChange={(v) => update("min_notice_hours", v)} />
+            <SettingRow label="Max Advance Booking (days)" placeholder="60" type="number"
+              value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
+            <SettingRow label="Booking Ref Prefix" placeholder="PB-"
+              value={draft.booking_ref_prefix} onChange={(v) => update("booking_ref_prefix", v)} />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_hours", "max_advance_days", "booking_ref_prefix"])}
+                loading={upsertSetting.isPending}
+              />
+              <SavedBadge section="rules" />
+            </div>
+          </SettingsCard>
+
+          {/* Travel & Call-out */}
+          <SettingsCard title="Travel & Call-out Fee" icon={MapPin} gradient="from-white/[0.05] to-white/[0.02]">
+            <SettingRow label="Origin Address" placeholder="Your Business / Home Address"
+              value={draft.fixed_origin_address} onChange={(v) => update("fixed_origin_address", v)} />
+            <SettingRow label="Rate per km" placeholder="3.60" type="number"
+              value={draft.rate_per_km} onChange={(v) => update("rate_per_km", v)} />
+            <SettingRow label="Currency Symbol" placeholder="R"
+              value={draft.currency} onChange={(v) => update("currency", v)} />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => {
+                  upsertSetting.mutate({
+                    fixed_origin_address: draft.fixed_origin_address ?? "",
+                    rate_per_km:          draft.rate_per_km          ?? "",
+                  });
+                  saveTenantFields("travel", ["currency"]);
+                }}
+                loading={updateTenant.isPending || upsertSetting.isPending}
+              />
+              <SavedBadge section="travel" />
+            </div>
+          </SettingsCard>
+
+          {/* Confirmation Page Copy */}
+          <SettingsCard title="Confirmation Page" icon={FileText} gradient="from-white/[0.05] to-white/[0.02]">
+            <SettingRow label="Email Subject" placeholder="Your booking is confirmed"
+              value={draft.confirmation_subject} onChange={(v) => update("confirmation_subject", v)} />
+            <SettingRow label="Page Title" placeholder="A date with yourself"
+              value={draft.confirmation_title} onChange={(v) => update("confirmation_title", v)} />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                Intro Message
+              </label>
+              <textarea
+                placeholder="Your booking is confirmed..."
+                value={draft.confirmation_intro ?? ""}
+                onChange={(e) => update("confirmation_intro", e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                Outro Message
+              </label>
+              <textarea
+                placeholder="We look forward to seeing you."
+                value={draft.confirmation_outro ?? ""}
+                onChange={(e) => update("confirmation_outro", e.target.value)}
+                rows={4}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
+              />
+            </div>
+            <SettingRow label="Sign-off" placeholder="Toodles"
+              value={draft.sign_off} onChange={(v) => update("sign_off", v)} />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => saveSettings("confirmation", ["confirmation_subject", "confirmation_title", "confirmation_intro", "confirmation_outro", "sign_off"])}
+                loading={upsertSetting.isPending}
+              />
+              <SavedBadge section="confirmation" />
+            </div>
+          </SettingsCard>
+
+          {/* Custom Domain */}
+          <SettingsCard title="Custom Domain" icon={Link} gradient="from-white/[0.06] to-white/[0.02]">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                Default URL
+              </label>
+              <div className="flex items-center gap-2">
+                <p className="flex-1 text-xs text-white/50 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] font-mono truncate">
+                  {defaultBookingUrl}
+                </p>
+                <button
+                  onClick={() => copyUrl(defaultBookingUrl)}
+                  className="shrink-0 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <SettingRow
+              label="Custom Domain (optional)"
+              placeholder="book.yourdomain.co.za"
+              value={draft.custom_domain}
+              onChange={(v) => update("custom_domain", v)}
+              hint="Point a CNAME from your domain to cname.vercel-dns.com, then enter the domain here."
+            />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => saveTenantFields("domain", ["custom_domain"])}
+                loading={updateTenant.isPending}
+              />
+              <SavedBadge section="domain" />
+            </div>
+          </SettingsCard>
+
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 4 — INTEGRATIONS
+          External services: Email, Maps, Reviews, Calendar
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Integrations" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Email (SMTP) */}
+          <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]">
+            <SettingRow label="SMTP Host" placeholder="smtp.gmail.com"
+              value={draft.smtp_host} onChange={(v) => update("smtp_host", v)} />
+            <SettingRow label="SMTP Port" placeholder="587" type="number"
+              value={draft.smtp_port} onChange={(v) => update("smtp_port", v)} />
+            <SettingRow label="SMTP User (email)" placeholder="your@gmail.com"
+              value={draft.smtp_user} onChange={(v) => update("smtp_user", v)} />
+            <SettingRow
+              label="SMTP Password / App Password"
+              placeholder="App password from Google"
+              type="password"
+              masked={isMasked("smtp_password")}
+              onUnmask={() => unmask("smtp_password")}
+              value={draft.smtp_password}
+              onChange={(v) => update("smtp_password", v)}
+              hint={!isMasked("smtp_password") ? "Use a Google App Password, not your account password." : undefined}
+            />
+            <SettingRow label="From Email" placeholder="noreply@yourdomain.co.za"
+              value={draft.smtp_from_email} onChange={(v) => update("smtp_from_email", v)} />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => saveSettings("smtp", ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from_email"])}
+                loading={upsertSetting.isPending}
+              />
+              <SavedBadge section="smtp" />
+            </div>
+          </SettingsCard>
+
+          {/* Google Maps */}
+          <SettingsCard title="Google Maps" icon={MapPin} gradient="from-white/[0.04] to-white/[0.01]">
+            <SettingRow
+              label="Google Maps API Key"
+              placeholder="AIza..."
+              masked={isMasked("google_maps_api_key")}
+              onUnmask={() => unmask("google_maps_api_key")}
+              value={draft.google_maps_api_key}
+              onChange={(v) => update("google_maps_api_key", v)}
+              hint={!isMasked("google_maps_api_key") ? "Restrict this key to your domain in Google Cloud Console." : undefined}
+            />
+            <SettingRow label="Default Distance (km)" placeholder="10" type="number"
+              value={draft.default_distance_km} onChange={(v) => update("default_distance_km", v)} />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => saveSettings("maps", ["google_maps_api_key", "default_distance_km"])}
+                loading={upsertSetting.isPending}
+              />
+              <SavedBadge section="maps" />
+            </div>
+          </SettingsCard>
+
+          {/* Google Reviews */}
+          <SettingsCard title="Google Reviews" icon={Globe} gradient="from-white/[0.04] to-white/[0.01]">
+            <SettingRow label="Google Review Link" placeholder="https://g.page/r/..."
+              value={draft.google_review_link} onChange={(v) => update("google_review_link", v)} />
+            <SettingRow label="Google Place ID" placeholder="ChIJ..."
+              value={draft.google_place_id} onChange={(v) => update("google_place_id", v)} />
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                onClick={() => saveSettings("reviews", ["google_review_link", "google_place_id"])}
+                loading={upsertSetting.isPending}
+              />
+              <SavedBadge section="reviews" />
+            </div>
+          </SettingsCard>
+
+          {/* Google Calendar Sync — conditionally rendered */}
+          {appSettings["gcal_connected"] === "true" && (
+            <SettingsCard title="Google Calendar" icon={CalendarCheck} gradient="from-emerald-500/[0.05] to-white/[0.02]">
+              <p className="text-xs text-white/40 leading-relaxed">
+                Create calendar events for all existing bookings that are missing one.
+                Safe to run multiple times — only processes bookings without an existing event.
+              </p>
+              <div className="flex items-center gap-3">
+                <SaveBtn
+                  label={gcalSyncing ? "Syncing..." : gcalSyncResult ? `✓ ${gcalSyncResult}` : "Sync All Bookings"}
+                  loading={gcalSyncing}
+                  onClick={handleGcalBackfill}
+                />
+              </div>
+            </SettingsCard>
           )}
-          <button
-            onClick={handlePasswordChange}
-            className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5"
-          >
-            <KeyRound className="w-3 h-3" /> Update Password
-          </button>
-        </SettingsCard>
 
-      </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 5 — SECURITY
+          Rare, high-risk action last — Peak-End Rule + Serial Position
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Security" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]">
+            <SettingRow label="New Password" placeholder="Min 6 characters" type="password"
+              value={newPw} onChange={setNewPw} />
+            <SettingRow label="Confirm Password" placeholder="Confirm new password" type="password"
+              value={confirmPw} onChange={setConfirmPw} />
+            {pwError   && <p className="text-xs text-red-400">{pwError}</p>}
+            {pwSuccess && (
+              <p className="text-xs text-emerald-400 flex items-center gap-1">
+                <Check className="w-3 h-3" /> {pwSuccess}
+              </p>
+            )}
+            <button
+              onClick={handlePasswordChange}
+              className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5"
+            >
+              <KeyRound className="w-3 h-3" /> Update Password
+            </button>
+          </SettingsCard>
+
+        </div>
+      </section>
+
     </div>
   );
 };
