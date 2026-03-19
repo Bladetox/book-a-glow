@@ -17,7 +17,6 @@ import { toast } from "sonner";
 const filters = ["All", "Today", "Pending", "Confirmed", "Complete", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
-// Status badge colours
 const statusColors: Record<BookingRow["status"], string> = {
   pending:   "bg-amber-500/10 text-amber-400",
   confirmed: "bg-emerald-500/10 text-emerald-400",
@@ -25,7 +24,6 @@ const statusColors: Record<BookingRow["status"], string> = {
   cancelled: "bg-red-500/10 text-red-400",
 };
 
-// Von Restorff — left-border accent per status so urgent rows pop immediately
 const statusBorderAccent: Record<BookingRow["status"], string> = {
   pending:   "border-l-2 border-l-amber-500/50",
   confirmed: "border-l-2 border-l-emerald-500/30",
@@ -59,7 +57,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  // ── Auto-expand booking when navigated from client search ────────────────
   useEffect(() => {
     if (initialClient && bookings.length > 0) {
       const match = bookings.find(b =>
@@ -73,7 +70,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   }, [initialClient, bookings.length]);
 
-  // ── Fetch real available slots when reschedule date changes ──────────────
   useEffect(() => {
     if (!rescheduleDate || !reschedulingId || !tenantId) {
       setAvailableSlots([]);
@@ -180,16 +176,23 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const saveEdit = async () => {
     if (!editingId || !editDraft) return;
     try {
-      await updateFields.mutateAsync({
-        bookingId: editingId,
-        updates: {
-          client_notes: editDraft.notes,
-          staff_notes:  editDraft.staffNotes,
-        },
-      });
+      // Build the update payload — only include fields that have changed
+      const updates: Record<string, unknown> = {
+        client_notes:  editDraft.notes,
+        staff_notes:   editDraft.staffNotes,
+        client_name:   editDraft.client,
+        client_phone:  editDraft.phone,
+        client_email:  editDraft.email,
+        // address lives in call_out_address on the bookings table
+        call_out_address: editDraft.address,
+      };
+
+      await updateFields.mutateAsync({ bookingId: editingId, updates });
+
       if (editDraft.status) {
         await updateStatus.mutateAsync({ bookingId: editingId, status: editDraft.status });
       }
+
       toast.success("Booking updated");
       setEditingId(null);
       setEditDraft({});
@@ -200,7 +203,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   const cancelEdit = () => { setEditingId(null); setEditDraft({}); };
 
-  // ── Request remaining balance ─────────────────────────────────────────────
   const handleRequestBalance = async (b: BookingRow) => {
     if (requestingBalanceId === b.id) return;
     setRequestingBalanceId(b.id);
@@ -273,7 +275,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   return (
     <div className="flex flex-col gap-4">
 
-      {/* ── Serial Position Effect: stats first — orientate before filtering ── */}
+      {/* Stats first — Serial Position Effect */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <CalendarCheck className="w-4 h-4 text-white/30" />
@@ -309,10 +311,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         </div>
       </div>
 
-      {/* ── Filter pills — counts only on actionable statuses ── */}
+      {/* Filter pills */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {filters.map(f => {
-          // Cognitive Load: skip count badge for All/Today — stats above carry that context
           const showCount = f !== "All" && f !== "Today";
           return (
             <button key={f} onClick={() => setActiveFilter(f)}
@@ -342,16 +343,15 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         <div className="flex flex-col gap-2">
           <AnimatePresence>
             {filtered.map(b => {
-              const isExpanded          = expandedId === b.id;
-              const isEditing           = editingId === b.id;
-              const isRequestingBalance = requestingBalanceId === b.id;
+              const isExpanded            = expandedId === b.id;
+              const isEditing             = editingId === b.id;
+              const isRequestingBalance   = requestingBalanceId === b.id;
               const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived;
 
               return (
                 <motion.div key={b.id}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                   layout
-                  // Von Restorff — left border accent makes status scannable before reading
                   className={`rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden ${statusBorderAccent[b.status]}`}>
 
                   {/* Main row */}
@@ -372,7 +372,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       )}
                     </div>
 
-                    {/* Aesthetic-Usability: stronger client name weight for clear hierarchy */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
                       <p className="text-[11px] text-white/40 truncate">{b.service} • {b.duration}min</p>
@@ -380,7 +379,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <div className="flex items-center gap-1.5">
-                        {/* Zeigarnik Effect — amber dot pre-attentively flags outstanding balance */}
                         {hasOutstandingBalance && (
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                         )}
@@ -409,8 +407,47 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                           {isEditing ? (
                             <div className="flex flex-col gap-3 mt-3">
-                              <EditField label="Staff Notes" value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
-                              <EditField label="Client Notes" value={editDraft.notes || ""} onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
+                              {/* ── Contact fields ── */}
+                              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">Contact Details</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <EditField
+                                  label="Client Name"
+                                  value={editDraft.client || ""}
+                                  onChange={v => setEditDraft(d => ({ ...d, client: v }))}
+                                />
+                                <EditField
+                                  label="Phone"
+                                  value={editDraft.phone || ""}
+                                  onChange={v => setEditDraft(d => ({ ...d, phone: v }))}
+                                />
+                                <EditField
+                                  label="Email"
+                                  value={editDraft.email || ""}
+                                  onChange={v => setEditDraft(d => ({ ...d, email: v }))}
+                                />
+                                <EditField
+                                  label="Address"
+                                  value={editDraft.address || ""}
+                                  onChange={v => setEditDraft(d => ({ ...d, address: v }))}
+                                />
+                              </div>
+
+                              {/* ── Service — read-only (lives in booking_items, not bookings) ── */}
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
+                                  Service <span className="normal-case text-white/20">(read-only — edit via booking items)</span>
+                                </label>
+                                <p className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs text-white/30">
+                                  {editDraft.service || "—"}
+                                </p>
+                              </div>
+
+                              {/* ── Notes ── */}
+                              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mt-1">Notes</p>
+                              <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
+                              <EditField label="Client Notes" value={editDraft.notes || ""}      onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
+
+                              {/* ── Status + actions ── */}
                               <div className="flex items-center gap-2 pt-1">
                                 <select
                                   value={editDraft.status || "pending"}
@@ -468,11 +505,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
                               </div>
 
-                              {/* ── Action buttons ── */}
-                              {/* Chunking: primary actions left, destructive actions right */}
+                              {/* Action buttons */}
                               <div className="flex items-center gap-2 pt-1 flex-wrap">
 
-                                {/* Primary actions — left cluster */}
                                 {b.status !== "cancelled" && (
                                   <ActionBtn icon={CalendarClock} label="Reschedule" color="text-sky-400" onClick={() => {
                                     setReschedulingId(reschedulingId === b.id ? null : b.id);
@@ -508,10 +543,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
-                                {/* Spacer — pushes destructive actions to the right */}
                                 <div className="flex-1" />
 
-                                {/* Destructive actions — right cluster */}
                                 {b.status !== "cancelled" && b.status !== "complete" && (
                                   <ActionBtn icon={X} label="Cancel" color="text-red-400/70"
                                     onClick={() => handleStatusChange(b.id, "cancelled")} />
