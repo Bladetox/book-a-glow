@@ -195,14 +195,19 @@ export function useDashboardData() {
   const nextAppt = upcoming[0] as any;
 
   // Top services
+  // Top services — count = unique bookings containing that service (not item rows)
   const topServices = useMemo(() => {
     const svcMap = new Map<string, { count: number; revenue: number }>();
     active.forEach((b: any) => {
+      const seenInThisBooking = new Set<string>();
       [...(b.items ?? [])]
         .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
         .forEach((i: any) => {
-          const prev = svcMap.get(i.service_name) || { count: 0, revenue: 0 };
-          svcMap.set(i.service_name, {
+          const name = i.service_name;
+          if (!name || seenInThisBooking.has(name)) return;
+          seenInThisBooking.add(name);
+          const prev = svcMap.get(name) || { count: 0, revenue: 0 };
+          svcMap.set(name, {
             count:   prev.count + 1,
             revenue: prev.revenue + Number(i.price),
           });
@@ -210,7 +215,7 @@ export function useDashboardData() {
     });
     return [...svcMap.entries()]
       .map(([name, d]) => ({ name, ...d }))
-      .sort((a, b) => b.revenue - a.revenue)
+      .sort((a, b) => b.count - a.count || b.revenue - a.revenue)
       .slice(0, 5);
   }, [active]);
 
