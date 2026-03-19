@@ -64,19 +64,30 @@ const Index = () => {
 
   const canProceed = useCallback(() => {
     switch (step) {
-      case 0: return booking.selectedTreatments.length > 0;
-      case 1: return booking.selectedDate !== null && booking.selectedTime !== null;
-      case 2:
-        return (
+      case 0:
+        return booking.selectedTreatments.length > 0;
+
+      case 1:
+        return booking.selectedDate !== null && booking.selectedTime !== null;
+
+      case 2: {
+        // Base contact fields always required
+        const contactValid =
           booking.fullName.trim().length >= 2 &&
           /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) &&
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) &&
-          booking.addressVerified === true &&
-          booking.isExistingClient !== null
-        );
-      default: return true;
+          booking.isExistingClient !== null;
+
+        // Address is only required when the tenant offers mobile/call-out service
+        // If mobileServiceEnabled is false (or still loading), skip the address check
+        if (!config.mobileServiceEnabled) return contactValid;
+        return contactValid && booking.addressVerified === true;
+      }
+
+      default:
+        return true;
     }
-  }, [step, booking]);
+  }, [step, booking, config.mobileServiceEnabled]);
 
   const handleNext = useCallback(() => {
     if (!canProceed()) return;
@@ -96,7 +107,9 @@ const Index = () => {
     setShowSplash(false);
   }, []);
 
-  if (tenantLoading || !tenantId) {
+  // Wait for both tenant and config to resolve before rendering
+  // This prevents a flash where canProceed incorrectly passes without address
+  if (tenantLoading || !tenantId || config.loading) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -221,7 +234,7 @@ const Index = () => {
 
         <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] mt-4 pb-4">
           Powered by{" "}
-          <a
+          
             href="https://nextslot.co.za"
             target="_blank"
             rel="noopener noreferrer"
