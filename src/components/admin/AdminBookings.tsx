@@ -186,14 +186,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const saveEdit = async () => {
     if (!editingId || !editDraft) return;
     try {
-      // Build the update payload — only include fields that have changed
       const updates: Record<string, unknown> = {
         client_notes:  editDraft.notes,
         staff_notes:   editDraft.staffNotes,
         client_name:   editDraft.client,
         client_phone:  editDraft.phone,
         client_email:  editDraft.email,
-        // address lives in call_out_address on the bookings table
         call_out_address: editDraft.address,
       };
 
@@ -352,300 +350,325 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       ) : (
         <div className="flex flex-col gap-2">
           <AnimatePresence>
-            {filtered.map(b => {
-              const isExpanded            = expandedId === b.id;
-              const isEditing             = editingId === b.id;
-              const isRequestingBalance   = requestingBalanceId === b.id;
-              const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived;
+            {/* Group bookings: today pinned first with a visual label */}
+            {(() => {
+              const todayItems = filtered.filter(b => b.date === todayStr);
+              const otherItems = filtered.filter(b => b.date !== todayStr);
 
-              return (
-                <motion.div key={b.id}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  layout
-                  className={`rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden ${statusBorderAccent[b.status]}`}>
+              const renderCard = (b: BookingRow) => {
+                const isExpanded            = expandedId === b.id;
+                const isEditing             = editingId === b.id;
+                const isRequestingBalance   = requestingBalanceId === b.id;
+                const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived;
 
-                  {/* Main row */}
-                  <div
-                    className="p-3 sm:p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                    onClick={() => !isEditing && setExpandedId(isExpanded ? null : b.id)}
-                  >
-                    <div className="flex flex-col items-center shrink-0 w-16">
-                      <Clock className="w-3 h-3 text-white/25 mb-0.5" />
-                      <span className="text-xs font-semibold text-white/70">{b.time}</span>
-                      <span className="text-[10px] text-white/50 font-medium">
-                        {b.date === todayStr ? "Today" : format(new Date(b.date + "T00:00:00"), "d MMM")}
-                      </span>
-                      {b.date !== todayStr && (
-                        <span className="text-[9px] text-white/25">
-                          {format(new Date(b.date + "T00:00:00"), "yyyy")}
+                return (
+                  <motion.div key={b.id}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                    layout
+                    className={`rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden ${statusBorderAccent[b.status]}`}>
+
+                    {/* Main row */}
+                    <div
+                      className="p-3 sm:p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      onClick={() => !isEditing && setExpandedId(isExpanded ? null : b.id)}
+                    >
+                      <div className="flex flex-col items-center shrink-0 w-16">
+                        <Clock className="w-3 h-3 text-white/25 mb-0.5" />
+                        <span className="text-xs font-semibold text-white/70">{b.time}</span>
+                        <span className="text-[10px] text-white/50 font-medium">
+                          {b.date === todayStr ? "Today" : format(new Date(b.date + "T00:00:00"), "d MMM")}
                         </span>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
-                      <p className="text-[11px] text-white/40 truncate">{b.service} • {b.duration}min</p>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        {hasOutstandingBalance && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        {b.date !== todayStr && (
+                          <span className="text-[9px] text-white/25">
+                            {format(new Date(b.date + "T00:00:00"), "yyyy")}
+                          </span>
                         )}
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[b.status]}`}>
-                          {b.status}
-                        </span>
                       </div>
-                      {hasOutstandingBalance && (
-                        <span className="text-[10px] text-amber-400/80">R {b.balance} due</span>
-                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
+                        <p className="text-[11px] text-white/40 truncate">{b.service} • {b.duration}min</p>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          {hasOutstandingBalance && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                          )}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[b.status]}`}>
+                            {b.status}
+                          </span>
+                        </div>
+                        {hasOutstandingBalance && (
+                          <span className="text-[10px] text-amber-400/80">R {b.balance} due</span>
+                        )}
+                      </div>
+
+                      <div className="shrink-0 text-white/20">
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
                     </div>
 
-                    <div className="shrink-0 text-white/20">
-                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </div>
-                  </div>
+                    {/* Expanded details */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-3 sm:px-4 pb-4 pt-1 border-t border-white/[0.06]">
 
-                  {/* Expanded details */}
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-3 sm:px-4 pb-4 pt-1 border-t border-white/[0.06]">
-
-                          {isEditing ? (
-                            <div className="flex flex-col gap-3 mt-3">
-                              {/* ── Contact fields ── */}
-                              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">Contact Details</p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                <EditField
-                                  label="Client Name"
-                                  value={editDraft.client || ""}
-                                  onChange={v => setEditDraft(d => ({ ...d, client: v }))}
-                                />
-                                <EditField
-                                  label="Phone"
-                                  value={editDraft.phone || ""}
-                                  onChange={v => setEditDraft(d => ({ ...d, phone: v }))}
-                                />
-                                <EditField
-                                  label="Email"
-                                  value={editDraft.email || ""}
-                                  onChange={v => setEditDraft(d => ({ ...d, email: v }))}
-                                />
-                                <EditField
-                                  label="Address"
-                                  value={editDraft.address || ""}
-                                  onChange={v => setEditDraft(d => ({ ...d, address: v }))}
-                                />
-                              </div>
-
-                              {/* ── Service — read-only (lives in booking_items, not bookings) ── */}
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
-                                  Service <span className="normal-case text-white/20">(read-only — edit via booking items)</span>
-                                </label>
-                                <p className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs text-white/30">
-                                  {editDraft.service || "—"}
-                                </p>
-                              </div>
-
-                              {/* ── Notes ── */}
-                              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mt-1">Notes</p>
-                              <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
-                              <EditField label="Client Notes" value={editDraft.notes || ""}      onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
-
-                              {/* ── Status + actions ── */}
-                              <div className="flex items-center gap-2 pt-1">
-                                <select
-                                  value={editDraft.status || "pending"}
-                                  onChange={e => setEditDraft(d => ({ ...d, status: e.target.value as BookingRow["status"] }))}
-                                  className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 focus:outline-none"
-                                >
-                                  <option value="pending">Pending</option>
-                                  <option value="confirmed">Confirmed</option>
-                                  <option value="complete">Complete</option>
-                                  <option value="cancelled">Cancelled</option>
-                                </select>
-                                <div className="flex-1" />
-                                <button onClick={cancelEdit} className="px-3 py-2 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">Cancel</button>
-                                <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-white/[0.1] border border-white/[0.15] text-xs font-semibold text-white/80 hover:bg-white/[0.15] transition-colors flex items-center gap-1.5">
-                                  <Save className="w-3 h-3" /> Save
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col gap-3 mt-3">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                <DetailRow icon={User}     label="Client"  value={b.client} />
-                                <DetailRow icon={Phone}    label="Phone"   value={b.phone} />
-                                <DetailRow icon={Mail}     label="Email"   value={b.email} />
-                                <DetailRow icon={MapPin}   label="Address" value={b.address} />
-                                <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} />
-                                <DetailRow icon={Clock}    label="Ref"     value={b.ref} />
-                              </div>
-
-                              <div className="grid grid-cols-3 gap-2 mt-1">
-                                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                  <p className="text-[10px] text-white/30">Total</p>
-                                  <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
+                            {isEditing ? (
+                              <div className="flex flex-col gap-3 mt-3">
+                                {/* ── Contact fields ── */}
+                                <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">Contact Details</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                  <EditField
+                                    label="Client Name"
+                                    value={editDraft.client || ""}
+                                    onChange={v => setEditDraft(d => ({ ...d, client: v }))}
+                                  />
+                                  <EditField
+                                    label="Phone"
+                                    value={editDraft.phone || ""}
+                                    onChange={v => setEditDraft(d => ({ ...d, phone: v }))}
+                                  />
+                                  <EditField
+                                    label="Email"
+                                    value={editDraft.email || ""}
+                                    onChange={v => setEditDraft(d => ({ ...d, email: v }))}
+                                  />
+                                  <EditField
+                                    label="Address"
+                                    value={editDraft.address || ""}
+                                    onChange={v => setEditDraft(d => ({ ...d, address: v }))}
+                                  />
                                 </div>
-                                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                  <p className="text-[10px] text-white/30">Deposit</p>
-                                  <p className="text-sm font-bold text-emerald-400">R {b.deposit.toLocaleString()}</p>
-                                </div>
-                                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                  <p className="text-[10px] text-white/30">Balance</p>
-                                  <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
-                                    {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
+
+                                {/* ── Service — read-only (lives in booking_items, not bookings) ── */}
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
+                                    Service <span className="normal-case text-white/20">(read-only — edit via booking items)</span>
+                                  </label>
+                                  <p className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs text-white/30">
+                                    {editDraft.service || "—"}
                                   </p>
                                 </div>
-                              </div>
 
-                              {(b.notes || b.staffNotes) && (
-                                <div className="flex items-start gap-2 text-xs text-white/40 mt-1">
-                                  <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                                  <span>{b.staffNotes || b.notes}</span>
-                                </div>
-                              )}
+                                {/* ── Notes ── */}
+                                <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mt-1">Notes</p>
+                                <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
+                                <EditField label="Client Notes" value={editDraft.notes || ""}      onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
 
-                              <div className="text-[10px] text-white/20">
-                                Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
-                              </div>
-
-                              {/* Action buttons */}
-                              <div className="flex items-center gap-2 pt-1 flex-wrap">
-
-                                {b.status !== "cancelled" && (
-                                  <ActionBtn icon={CalendarClock} label="Reschedule" color="text-sky-400" onClick={() => {
-                                    setReschedulingId(reschedulingId === b.id ? null : b.id);
-                                    setRescheduleDate(undefined);
-                                    setRescheduleTime(null);
-                                    setAvailableSlots([]);
-                                  }} />
-                                )}
-
-                                {b.status === "pending" && (
-                                  <ActionBtn icon={Check} label="Confirm" color="text-emerald-400"
-                                    onClick={() => handleStatusChange(b.id, "confirmed")} />
-                                )}
-
-                                {(b.status === "confirmed" || b.status === "pending") && (
-                                  <ActionBtn icon={Check} label="Complete" color="text-white/60"
-                                    onClick={() => handleStatusChange(b.id, "complete")} />
-                                )}
-
-                                <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
-
-                                {showRequestBalance(b) && (
-                                  <button
-                                    disabled={isRequestingBalance}
-                                    onClick={e => { e.stopPropagation(); handleRequestBalance(b); }}
-                                    className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.07] text-xs font-medium text-amber-400 hover:bg-amber-500/[0.15] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                {/* ── Status + actions ── */}
+                                <div className="flex items-center gap-2 pt-1">
+                                  <select
+                                    value={editDraft.status || "pending"}
+                                    onChange={e => setEditDraft(d => ({ ...d, status: e.target.value as BookingRow["status"] }))}
+                                    className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 focus:outline-none"
                                   >
-                                    {isRequestingBalance
-                                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                                      : <SendHorizonal className="w-3 h-3" />
-                                    }
-                                    Request Final Payment
+                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="complete">Complete</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                  <div className="flex-1" />
+                                  <button onClick={cancelEdit} className="px-3 py-2 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">Cancel</button>
+                                  <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-white/[0.1] border border-white/[0.15] text-xs font-semibold text-white/80 hover:bg-white/[0.15] transition-colors flex items-center gap-1.5">
+                                    <Save className="w-3 h-3" /> Save
                                   </button>
-                                )}
-
-                                <div className="flex-1" />
-
-                                {b.status !== "cancelled" && b.status !== "complete" && (
-                                  <ActionBtn icon={X} label="Cancel" color="text-red-400/70"
-                                    onClick={() => handleStatusChange(b.id, "cancelled")} />
-                                )}
-                                <ActionBtn icon={Trash2} label="Delete" color="text-red-400/50" onClick={() => handleDelete(b.id)} />
+                                </div>
                               </div>
+                            ) : (
+                              <div className="flex flex-col gap-3 mt-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                  <DetailRow icon={User}     label="Client"  value={b.client} />
+                                  <DetailRow icon={Phone}    label="Phone"   value={b.phone} />
+                                  <DetailRow icon={Mail}     label="Email"   value={b.email} />
+                                  <DetailRow icon={MapPin}   label="Address" value={b.address} />
+                                  <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} />
+                                  <DetailRow icon={Clock}    label="Ref"     value={b.ref} />
+                                </div>
 
-                              {/* Reschedule panel */}
-                              <AnimatePresence>
-                                {reschedulingId === b.id && (
-                                  <motion.div
-                                    initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden"
-                                  >
-                                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
-                                      <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/40 mb-3">Reschedule Booking</p>
-                                      <div className="flex flex-col sm:flex-row gap-3">
-                                        <div className="flex-1">
-                                          <p className="text-[10px] text-white/30 mb-1.5">New Date</p>
-                                          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
-                                            <Calendar
-                                              mode="single"
-                                              selected={rescheduleDate}
-                                              onSelect={setRescheduleDate}
-                                              disabled={(date) => date < new Date()}
-                                              className={cn("p-3 pointer-events-auto [&_.rdp-day_focus]:bg-white/10 [&_.rdp-day]:text-white/70")}
-                                            />
-                                          </div>
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="text-[10px] text-white/30 mb-1.5">New Time</p>
-                                          <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
-                                            {slotsLoading ? (
-                                              <div className="col-span-3 flex justify-center py-6">
-                                                <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
-                                              </div>
-                                            ) : !rescheduleDate ? (
-                                              <p className="col-span-3 text-[11px] text-white/30 text-center py-4">Select a date first</p>
-                                            ) : availableSlots.length === 0 ? (
-                                              <p className="col-span-3 text-[11px] text-white/30 text-center py-4">No available slots</p>
-                                            ) : (
-                                              availableSlots.map(t => (
-                                                <button key={t} onClick={() => setRescheduleTime(t)}
-                                                  className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
-                                                    rescheduleTime === t
-                                                      ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
-                                                      : "bg-white/[0.04] text-white/50 border border-white/[0.06] hover:text-white/70"
-                                                  }`}>
-                                                  {t}
-                                                </button>
-                                              ))
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center justify-between mt-4">
-                                        <div className="text-xs text-white/40">
-                                          {rescheduleDate && rescheduleTime
-                                            ? <span>New: <span className="text-white/70 font-medium">{format(rescheduleDate, "d MMM yyyy")} at {rescheduleTime}</span></span>
-                                            : <span>Select a date and time</span>
-                                          }
-                                        </div>
-                                        <div className="flex gap-2">
-                                          <button
-                                            onClick={() => { setReschedulingId(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
-                                            className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors"
-                                          >
-                                            Cancel
-                                          </button>
-                                          <button
-                                            disabled={!rescheduleDate || !rescheduleTime}
-                                            onClick={() => handleReschedule(b)}
-                                            className="px-4 py-1.5 rounded-lg bg-sky-500/20 border border-sky-500/30 text-xs font-semibold text-sky-400 hover:bg-sky-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
-                                          >
-                                            <CalendarClock className="w-3 h-3" /> Confirm Reschedule
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </motion.div>
+                                <div className="grid grid-cols-3 gap-2 mt-1">
+                                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                    <p className="text-[10px] text-white/30">Total</p>
+                                    <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
+                                  </div>
+                                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                    <p className="text-[10px] text-white/30">Deposit</p>
+                                    <p className="text-sm font-bold text-emerald-400">R {b.deposit.toLocaleString()}</p>
+                                  </div>
+                                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                    <p className="text-[10px] text-white/30">Balance</p>
+                                    <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
+                                      {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {(b.notes || b.staffNotes) && (
+                                  <div className="flex items-start gap-2 text-xs text-white/40 mt-1">
+                                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                                    <span>{b.staffNotes || b.notes}</span>
+                                  </div>
                                 )}
-                              </AnimatePresence>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
+
+                                <div className="text-[10px] text-white/20">
+                                  Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="flex items-center gap-2 pt-1 flex-wrap">
+
+                                  {b.status !== "cancelled" && (
+                                    <ActionBtn icon={CalendarClock} label="Reschedule" color="text-sky-400" onClick={() => {
+                                      setReschedulingId(reschedulingId === b.id ? null : b.id);
+                                      setRescheduleDate(undefined);
+                                      setRescheduleTime(null);
+                                      setAvailableSlots([]);
+                                    }} />
+                                  )}
+
+                                  {b.status === "pending" && (
+                                    <ActionBtn icon={Check} label="Confirm" color="text-emerald-400"
+                                      onClick={() => handleStatusChange(b.id, "confirmed")} />
+                                  )}
+
+                                  {(b.status === "confirmed" || b.status === "pending") && (
+                                    <ActionBtn icon={Check} label="Complete" color="text-white/60"
+                                      onClick={() => handleStatusChange(b.id, "complete")} />
+                                  )}
+
+                                  <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
+
+                                  {showRequestBalance(b) && (
+                                    <button
+                                      disabled={isRequestingBalance}
+                                      onClick={e => { e.stopPropagation(); handleRequestBalance(b); }}
+                                      className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.07] text-xs font-medium text-amber-400 hover:bg-amber-500/[0.15] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      {isRequestingBalance
+                                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                                        : <SendHorizonal className="w-3 h-3" />
+                                      }
+                                      Request Final Payment
+                                    </button>
+                                  )}
+
+                                  <div className="flex-1" />
+
+                                  {b.status !== "cancelled" && b.status !== "complete" && (
+                                    <ActionBtn icon={X} label="Cancel" color="text-red-400/70"
+                                      onClick={() => handleStatusChange(b.id, "cancelled")} />
+                                  )}
+                                  <ActionBtn icon={Trash2} label="Delete" color="text-red-400/50" onClick={() => handleDelete(b.id)} />
+                                </div>
+
+                                {/* Reschedule panel */}
+                                <AnimatePresence>
+                                  {reschedulingId === b.id && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                                        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/40 mb-3">Reschedule Booking</p>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                          <div className="flex-1">
+                                            <p className="text-[10px] text-white/30 mb-1.5">New Date</p>
+                                            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+                                              <Calendar
+                                                mode="single"
+                                                selected={rescheduleDate}
+                                                onSelect={setRescheduleDate}
+                                                disabled={(date) => date < new Date()}
+                                                className={cn("p-3 pointer-events-auto [&_.rdp-day_focus]:bg-white/10 [&_.rdp-day]:text-white/70")}
+                                              />
+                                            </div>
+                                          </div>
+                                          <div className="flex-1">
+                                            <p className="text-[10px] text-white/30 mb-1.5">New Time</p>
+                                            <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
+                                              {slotsLoading ? (
+                                                <div className="col-span-3 flex justify-center py-6">
+                                                  <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+                                                </div>
+                                              ) : !rescheduleDate ? (
+                                                <p className="col-span-3 text-[11px] text-white/30 text-center py-4">Select a date first</p>
+                                              ) : availableSlots.length === 0 ? (
+                                                <p className="col-span-3 text-[11px] text-white/30 text-center py-4">No available slots</p>
+                                              ) : (
+                                                availableSlots.map(t => (
+                                                  <button key={t} onClick={() => setRescheduleTime(t)}
+                                                    className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                                                      rescheduleTime === t
+                                                        ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                                                        : "bg-white/[0.04] text-white/50 border border-white/[0.06] hover:text-white/70"
+                                                    }`}>
+                                                    {t}
+                                                  </button>
+                                                ))
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center justify-between mt-4">
+                                          <div className="text-xs text-white/40">
+                                            {rescheduleDate && rescheduleTime
+                                              ? <span>New: <span className="text-white/70 font-medium">{format(rescheduleDate, "d MMM yyyy")} at {rescheduleTime}</span></span>
+                                              : <span>Select a date and time</span>
+                                            }
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => { setReschedulingId(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+                                              className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors"
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button
+                                              disabled={!rescheduleDate || !rescheduleTime}
+                                              onClick={() => handleReschedule(b)}
+                                              className="px-4 py-1.5 rounded-lg bg-sky-500/20 border border-sky-500/30 text-xs font-semibold text-sky-400 hover:bg-sky-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                            >
+                                              <CalendarClock className="w-3 h-3" /> Confirm Reschedule
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              };
+
+              return (
+                <>
+                  {activeFilter !== "Today" && todayItems.length > 0 && (
+                    <div className="flex items-center gap-3 px-1 pt-1">
+                      <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400/70">Today</span>
+                      <div className="flex-1 h-px bg-emerald-500/15" />
+                    </div>
+                  )}
+                  {(activeFilter !== "Today" ? todayItems : filtered).map(b => renderCard(b))}
+                  {activeFilter !== "Today" && otherItems.length > 0 && (
+                    <div className="flex items-center gap-3 px-1 pt-2">
+                      <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/20">Upcoming & Past</span>
+                      <div className="flex-1 h-px bg-white/[0.05]" />
+                    </div>
+                  )}
+                  {activeFilter !== "Today" && otherItems.map(b => renderCard(b))}
+                </>
               );
-            })}
+            })()}
           </AnimatePresence>
         </div>
       )}
