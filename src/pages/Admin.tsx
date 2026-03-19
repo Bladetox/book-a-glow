@@ -8,7 +8,6 @@ import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
-// ── Lazily loaded ──────────────────────────────────────────────────────────────
 const AdminBookings      = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminServices      = lazy(() => import("@/components/admin/AdminServices"));
 const AdminConsultations = lazy(() => import("@/components/admin/AdminConsultations"));
@@ -33,7 +32,6 @@ const views = [
 
 type ViewName = typeof views[number];
 
-// ── Inner authenticated shell ─────────────────────────────────────────────────
 const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   const [activeView, setActiveView]         = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen]       = useState(false);
@@ -67,7 +65,8 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   };
 
   return (
-    <div className="min-h-dvh bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex">
+    // FIX: replace min-h-dvh with min-h-screen — dvh has inconsistent support on mobile Safari < 16
+    <div className="min-h-screen bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex overflow-hidden">
       <AdminSidebar
         views={views as unknown as string[]}
         activeView={activeView}
@@ -76,8 +75,9 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-h-dvh min-w-0 pb-14 lg:pb-0">
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06]">
+      {/* FIX: main area uses min-h-screen not min-h-dvh; overflow-hidden prevents sidebar bleed */}
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-14 lg:pb-0">
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06] shrink-0">
           <button
             className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
             onClick={() => setSidebarOpen(true)}
@@ -110,7 +110,6 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   );
 };
 
-// ── Root Admin component ────────────────────────────────────────────────────────
 const Admin = () => {
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
   const [tenantId, setTenantId]   = useState<string | null>(null);
@@ -159,7 +158,8 @@ const Admin = () => {
 
   if (authState === "loading") {
     return (
-      <div className="min-h-dvh bg-[hsl(0,0%,3%)] flex items-center justify-center">
+      // FIX: min-h-screen fallback here too
+      <div className="min-h-screen bg-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
       </div>
     );

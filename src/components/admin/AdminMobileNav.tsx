@@ -17,21 +17,22 @@ interface AdminMobileNavProps {
 }
 
 const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileNavProps) => (
+  // FIX: removed backdrop-blur-md — causes blank screen on low-end mobile browsers
+  // FIX: use min-h instead of h to prevent collapse on older Safari
   <nav
-    className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-white/[0.07] bg-[#0a0a0a]/95 backdrop-blur-md"
-    style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-white/[0.07] bg-[#0a0a0a]"
+    style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
   >
-    <div className="flex items-center justify-around h-14">
+    <div className="flex items-center justify-around" style={{ height: "56px" }}>
       {NAV_ITEMS.map(({ label, view, icon: Icon }) => {
         const isActive = activeView === view;
         return (
           <button
             key={view}
             onClick={() => onSelect(view)}
-            className="relative flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors"
+            className="relative flex flex-col items-center justify-center flex-1 h-full gap-0.5"
             aria-label={label}
           >
-            {/* Active pill background */}
             {isActive && (
               <motion.div
                 layoutId="mobile-nav-active"
@@ -39,13 +40,12 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               />
             )}
-            <div className="relative">
+            <div className="relative z-10">
               <Icon
-                className={`w-5 h-5 transition-colors ${
+                className={`w-5 h-5 ${
                   isActive ? "text-white" : "text-white/30"
                 }`}
               />
-              {/* Pending badge on Bookings */}
               {view === "Bookings" && pendingCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-amber-400 text-[8px] font-bold text-black flex items-center justify-center leading-none">
                   {pendingCount > 9 ? "9+" : pendingCount}
@@ -53,7 +53,7 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
               )}
             </div>
             <span
-              className={`text-[9px] font-medium tracking-wide transition-colors ${
+              className={`text-[9px] font-medium tracking-wide relative z-10 ${
                 isActive ? "text-white/80" : "text-white/25"
               }`}
             >
