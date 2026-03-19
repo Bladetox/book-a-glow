@@ -71,23 +71,25 @@ const Index = () => {
         return booking.selectedDate !== null && booking.selectedTime !== null;
 
       case 2: {
-        // Base contact fields always required
+        // Base contact validation — always required
         const contactValid =
           booking.fullName.trim().length >= 2 &&
           /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) &&
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) &&
           booking.isExistingClient !== null;
 
-        // Address is only required when the tenant offers mobile/call-out service
-        // If mobileServiceEnabled is false (or still loading), skip the address check
-        if (!config.mobileServiceEnabled) return contactValid;
+        // Address only required when tenant offers mobile / call-out service.
+        // If config is still loading, default to NOT requiring address to avoid
+        // incorrectly blocking the next button before settings are fetched.
+        const mobileEnabled = (config as any).mobileServiceEnabled === true;
+        if (!mobileEnabled) return contactValid;
         return contactValid && booking.addressVerified === true;
       }
 
       default:
         return true;
     }
-  }, [step, booking, config.mobileServiceEnabled]);
+  }, [step, booking, config]);
 
   const handleNext = useCallback(() => {
     if (!canProceed()) return;
@@ -107,9 +109,7 @@ const Index = () => {
     setShowSplash(false);
   }, []);
 
-  // Wait for both tenant and config to resolve before rendering
-  // This prevents a flash where canProceed incorrectly passes without address
-  if (tenantLoading || !tenantId || config.loading) {
+  if (tenantLoading || !tenantId) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -233,14 +233,14 @@ const Index = () => {
         )}
 
         <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] mt-4 pb-4">
-          Powered by{" "}
-          
+          {"Powered by "}
+          <a
             href="https://nextslot.co.za"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-muted-foreground transition-colors underline underline-offset-2"
           >
-            nextslot.co.za
+            {"nextslot.co.za"}
           </a>
         </p>
       </div>
