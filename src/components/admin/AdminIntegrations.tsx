@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import {
   CreditCard, Calendar, MapPin, Mail,
   Eye, EyeOff, Save, CheckCircle2, AlertCircle,
-  Loader2, Edit2,
+  Loader2, Edit2, LogOut,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { ReactNode, ElementType, Dispatch, SetStateAction } from "react";
@@ -160,6 +160,7 @@ interface GoogleCalendarCardProps {
 
 const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
   const [isConnected, setIsConnected] = useState(connected);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -204,6 +205,33 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${oauthParams}`;
   };
 
+  const handleDisconnect = async () => {
+    if (!confirm("Disconnect Google Calendar? New bookings will no longer sync automatically.")) return;
+    setIsDisconnecting(true);
+    try {
+      const keysToDelete = [
+        "gcal_connected",
+        "gcal_access_token",
+        "gcal_refresh_token",
+        "gcal_token_expiry",
+      ];
+      const { error } = await supabase
+        .from("app_settings")
+        .delete()
+        .eq("tenant_id", tenantId)
+        .in("key", keysToDelete);
+
+      if (error) throw error;
+
+      setIsConnected(false);
+      toast.success("Google Calendar disconnected.");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to disconnect. Please try again.");
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -241,14 +269,26 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
           : "Connect once — new bookings appear in your calendar automatically the moment a deposit is confirmed."}
       </p>
 
-      <div className="pt-1 border-t border-white/[0.04] flex items-center justify-end">
+      <div className="pt-1 border-t border-white/[0.04] flex items-center justify-end gap-3">
         {isConnected ? (
-          <button
-            onClick={handleConnect}
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
-          >
-            <Edit2 className="w-3 h-3" /> Reconnect
-          </button>
+          <>
+            <button
+              onClick={handleDisconnect}
+              disabled={isDisconnecting}
+              className="flex items-center gap-1.5 text-xs text-rose-400/60 hover:text-rose-400 transition-colors disabled:opacity-50"
+            >
+              {isDisconnecting
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <LogOut className="w-3 h-3" />}
+              {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+            </button>
+            <button
+              onClick={handleConnect}
+              className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
+            >
+              <Edit2 className="w-3 h-3" /> Reconnect
+            </button>
+          </>
         ) : (
           <button
             onClick={handleConnect}
