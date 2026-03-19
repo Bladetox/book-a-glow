@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, MapPin, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
-  Globe,
+  Globe, CalendarCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -137,8 +137,8 @@ const AdminSettings = () => {
   const { setThemeById } = useBusinessTheme();
   const { tenantId } = useTenant();
 
-  const [draft, setDraft]     = useState<Record<string, string>>({});
-  const [saved, setSaved]     = useState<string | null>(null);
+  const [draft, setDraft]       = useState<Record<string, string>>({});
+  const [saved, setSaved]       = useState<string | null>(null);
   const [unmasked, setUnmasked] = useState<Set<string>>(new Set());
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -147,6 +147,9 @@ const AdminSettings = () => {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError]     = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
+
+  const [gcalSyncing, setGcalSyncing]       = useState(false);
+  const [gcalSyncResult, setGcalSyncResult] = useState<string | null>(null);
 
   // ── Booking URL ────────────────────────────────────────────────────────────
   const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
@@ -195,17 +198,14 @@ const AdminSettings = () => {
   const isMasked = (key: string) =>
     SENSITIVE_KEYS.has(key) &&
     !unmasked.has(key) &&
-    !!appSettings[key]; // only mask if a value already exists in DB
+    !!appSettings[key];
 
   // ── Save: tenant-table fields ──────────────────────────────────────────────
-  // Writes to tenants table. Also syncs currency to app_settings so the
-  // public booking app (which reads app_settings) stays consistent.
   const saveTenantFields = (section: string, fields: string[]) => {
     const tenantUpdates: Record<string, unknown> = {};
     fields.forEach((f) => { tenantUpdates[f] = draft[f] ?? ""; });
     updateTenant.mutate(tenantUpdates);
 
-    // Keep app_settings in sync for fields the booking app reads there
     const syncToSettings: Record<string, string> = {};
     if (fields.includes("currency")) syncToSettings["currency"] = draft["currency"] ?? "R";
     if (fields.includes("theme_id")) {
@@ -221,13 +221,11 @@ const AdminSettings = () => {
   const saveSettings = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => {
-      // Skip masked fields that haven't been unlocked for editing
       if (SENSITIVE_KEYS.has(f) && !unmasked.has(f)) return;
       updates[f] = draft[f] ?? "";
     });
     if (Object.keys(updates).length > 0) upsertSetting.mutate(updates);
 
-    // Re-mask after saving
     setUnmasked((prev) => {
       const next = new Set(prev);
       fields.forEach((f) => next.delete(f));
@@ -274,6 +272,26 @@ const AdminSettings = () => {
     setPwSuccess("Password updated successfully");
   };
 
+  // ── GCal backfill ──────────────────────────────────────────────────────────
+  const handleGcalBackfill = async () => {
+    if (gcalSyncing) return;
+    setGcalSyncing(true);
+    setGcalSyncResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("gcal-backfill", {
+        body: { tenant_id: tenantId },
+      });
+      if (error) throw new Error(error.message);
+      const result = `${data.created} created, ${data.skipped} skipped`;
+      setGcalSyncResult(result);
+      toast.success(`Calendar sync complete — ${data.created} events created`);
+    } catch (e: any) {
+      toast.error(e.message || "Sync failed");
+    } finally {
+      setGcalSyncing(false);
+    }
+  };
+
   const SavedBadge = ({ section }: { section: string }) =>
     saved === section ? (
       <span className="text-xs text-emerald-400 flex items-center gap-1">
@@ -303,7 +321,6 @@ const AdminSettings = () => {
           Your Booking Page
         </h4>
 
-        {/* Active URL */}
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
             {customDomain ? "Custom Domain (active)" : "Default URL (active)"}
@@ -329,7 +346,6 @@ const AdminSettings = () => {
           </div>
         </div>
 
-        {/* Show default fallback when custom domain is active */}
         {customDomain && (
           <div className="flex items-center gap-2">
             <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 shrink-0">
@@ -505,8 +521,6 @@ const AdminSettings = () => {
           <div className="flex items-center gap-3">
             <SaveBtn
               onClick={() => {
-                // fixed_origin_address + rate_per_km → app_settings only
-                // currency → both tenants + app_settings (handled in saveTenantFields)
                 upsertSetting.mutate({
                   fixed_origin_address: draft.fixed_origin_address ?? "",
                   rate_per_km:          draft.rate_per_km          ?? "",
@@ -677,6 +691,23 @@ const AdminSettings = () => {
             <SavedBadge section="reviews" />
           </div>
         </SettingsCard>
+
+        {/* Google Calendar Sync */}
+        {appSettings["gcal_connected"] === "true" && (
+          <SettingsCard title="Google Calendar" icon={CalendarCheck} gradient="from-emerald-500/[0.05] to-white/[0.02]">
+            <p className="text-xs text-white/40 leading-relaxed">
+              Create calendar events for all existing bookings that are missing one.
+              Safe to run multiple times — only processes bookings without an existing event.
+            </p>
+            <div className="flex items-center gap-3">
+              <SaveBtn
+                label={gcalSyncing ? "Syncing..." : gcalSyncResult ? `✓ ${gcalSyncResult}` : "Sync All Bookings"}
+                loading={gcalSyncing}
+                onClick={handleGcalBackfill}
+              />
+            </div>
+          </SettingsCard>
+        )}
 
         {/* Change Password */}
         <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]">
