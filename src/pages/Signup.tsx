@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+
+const HCAPTCHA_SITE_KEY = "0dd0e842-7d24-4fba-9fd0-59a61b6ab782";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -11,6 +14,8 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -22,6 +27,11 @@ const Signup = () => {
       return;
     }
 
+    if (!captchaToken) {
+      setError("Please complete the CAPTCHA verification.");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -30,17 +40,19 @@ const Signup = () => {
         options: {
           emailRedirectTo: window.location.origin,
           data: { full_name: fullName },
+          captchaToken,
         },
       });
 
       if (signUpError) {
         setError(signUpError.message);
+        captchaRef.current?.resetCaptcha();
+        setCaptchaToken(null);
         setLoading(false);
         return;
       }
 
       if (data.user) {
-        // Update profile with full name
         await supabase
           .from("profiles")
           .update({ full_name: fullName })
@@ -51,6 +63,8 @@ const Signup = () => {
       }
     } catch {
       setError("An unexpected error occurred");
+      captchaRef.current?.resetCaptcha();
+      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
@@ -115,10 +129,23 @@ const Signup = () => {
                   required
                 />
               </div>
+
+              {/* hCaptcha widget */}
+              <div className="flex justify-center">
+                <HCaptcha
+                  ref={captchaRef}
+                  sitekey={HCAPTCHA_SITE_KEY}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  theme="dark"
+                />
+              </div>
+
               {error && <p className="text-sm text-destructive text-center">{error}</p>}
+
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !captchaToken}
                 className="w-full bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
