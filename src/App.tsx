@@ -19,6 +19,7 @@ import Signup from "./pages/Signup";
 import Privacy from "./pages/Privacy";
 import SiteTerms from "./pages/SiteTerms";
 import Admin from "./pages/Admin";
+import SuperAdmin from "./pages/SuperAdmin";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import TenantNotFound from "./pages/TenantNotFound";
@@ -60,6 +61,7 @@ const MarketingRoutes = () => (
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<SiteTerms />} />
       <Route path="/admin" element={<Navigate to="/login" replace />} />
+      <Route path="/superadmin" element={<SuperAdmin />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
