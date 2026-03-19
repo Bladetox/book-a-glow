@@ -5,7 +5,7 @@ import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Edit3, Save, Trash2, ChevronDown, ChevronUp,
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
-  SendHorizonal
+  SendHorizonal, Search, AlertTriangle
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,162 @@ const statusBorderAccent: Record<BookingRow["status"], string> = {
   cancelled: "border-l-2 border-l-red-500/20",
 };
 
+// ── A1: Confirm modal ──────────────────────────────────────────────────────
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmClass: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+const ConfirmDialog = ({ open, title, description, confirmLabel, confirmClass, onConfirm, onCancel }: ConfirmDialogProps) => (
+  <AnimatePresence>
+    {open && (
+      <>
+        <motion.div
+          key="backdrop"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          onClick={onCancel}
+        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
+          <motion.div
+            key="dialog"
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            className="pointer-events-auto w-full max-w-xs rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
+          >
+            <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <p className="text-sm font-semibold text-white/90">{title}</p>
+              </div>
+              <p className="text-[13px] text-white/50 leading-relaxed">{description}</p>
+            </div>
+            <div className="mx-5 border-t border-white/[0.06]" />
+            <div className="px-5 py-4 flex items-center justify-end gap-2">
+              <button onClick={onCancel} className="px-4 py-2 rounded-lg text-xs text-white/40 hover:text-white/70 transition-colors">
+                Keep
+              </button>
+              <button onClick={onConfirm} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${confirmClass}`}>
+                {confirmLabel}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </>
+    )}
+  </AnimatePresence>
+);
+
+// ── A3: Reschedule modal ───────────────────────────────────────────────────
+interface RescheduleModalProps {
+  booking: BookingRow | null;
+  rescheduleDate: Date | undefined;
+  rescheduleTime: string | null;
+  availableSlots: string[];
+  slotsLoading: boolean;
+  onDateSelect: (d: Date | undefined) => void;
+  onTimeSelect: (t: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+const RescheduleModal = ({
+  booking, rescheduleDate, rescheduleTime, availableSlots, slotsLoading,
+  onDateSelect, onTimeSelect, onConfirm, onClose,
+}: RescheduleModalProps) => (
+  <AnimatePresence>
+    {booking && (
+      <>
+        <motion.div
+          key="rs-backdrop"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <motion.div
+            key="rs-modal"
+            initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            className="pointer-events-auto w-full max-w-lg rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+              <div>
+                <p className="text-[10px] tracking-[0.14em] uppercase text-white/30">Reschedule</p>
+                <p className="text-sm font-semibold text-white/85">{booking.client} — {booking.service}</p>
+              </div>
+              <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="mx-5 border-t border-white/[0.06]" />
+            <div className="px-5 py-4 flex flex-col sm:flex-row gap-4">
+              {/* Calendar */}
+              <div className="flex-1">
+                <p className="text-[10px] text-white/30 mb-2">New Date</p>
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+                  <Calendar
+                    mode="single"
+                    selected={rescheduleDate}
+                    onSelect={onDateSelect}
+                    disabled={(date) => date < new Date()}
+                    className={cn("p-3 pointer-events-auto [&_.rdp-day_focus]:bg-white/10 [&_.rdp-day]:text-white/70")}
+                  />
+                </div>
+              </div>
+              {/* Time slots */}
+              <div className="flex-1">
+                <p className="text-[10px] text-white/30 mb-2">New Time</p>
+                <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
+                  {slotsLoading ? (
+                    <div className="col-span-3 flex justify-center py-6">
+                      <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+                    </div>
+                  ) : !rescheduleDate ? (
+                    <p className="col-span-3 text-[11px] text-white/30 text-center py-4">Select a date first</p>
+                  ) : availableSlots.length === 0 ? (
+                    <p className="col-span-3 text-[11px] text-white/30 text-center py-4">No available slots</p>
+                  ) : (
+                    availableSlots.map(t => (
+                      <button key={t} onClick={() => onTimeSelect(t)}
+                        className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                          rescheduleTime === t
+                            ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                            : "bg-white/[0.04] text-white/50 border border-white/[0.06] hover:text-white/70"
+                        }`}>
+                        {t}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex items-center justify-between gap-3">
+              <div className="text-xs text-white/40">
+                {rescheduleDate && rescheduleTime
+                  ? <span>New: <span className="text-white/70 font-medium">{format(rescheduleDate, "d MMM yyyy")} at {rescheduleTime}</span></span>
+                  : <span className="text-white/25">Select date and time</span>
+                }
+              </div>
+              <button
+                disabled={!rescheduleDate || !rescheduleTime}
+                onClick={onConfirm}
+                className="px-4 py-2 rounded-xl bg-sky-500/20 border border-sky-500/30 text-xs font-semibold text-sky-400 hover:bg-sky-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                <CalendarClock className="w-3 h-3" /> Confirm Reschedule
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </>
+    )}
+  </AnimatePresence>
+);
+
 interface AdminBookingsProps {
   initialClient?: string | null;
   onClearClient?: () => void;
@@ -45,15 +201,21 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const deleteBooking = useDeleteBooking();
 
   const [activeFilter, setActiveFilter]               = useState<FilterType>("All");
+  // A4: client name search
+  const [searchQuery, setSearchQuery]                 = useState("");
   const [expandedId, setExpandedId]                   = useState<string | null>(null);
   const [editingId, setEditingId]                     = useState<string | null>(null);
   const [editDraft, setEditDraft]                     = useState<Partial<BookingRow>>({});
-  const [reschedulingId, setReschedulingId]           = useState<string | null>(null);
+  // A3: reschedule as modal
+  const [reschedulingBooking, setReschedulingBooking] = useState<BookingRow | null>(null);
   const [rescheduleDate, setRescheduleDate]           = useState<Date | undefined>();
   const [rescheduleTime, setRescheduleTime]           = useState<string | null>(null);
   const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
   const [availableSlots, setAvailableSlots]           = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading]               = useState(false);
+  // A1: confirm dialogs
+  const [confirmDelete, setConfirmDelete]             = useState<BookingRow | null>(null);
+  const [confirmCancel, setConfirmCancel]             = useState<BookingRow | null>(null);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -71,16 +233,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   }, [initialClient, bookings.length]);
 
   useEffect(() => {
-    if (!rescheduleDate || !reschedulingId || !tenantId) {
+    const b = reschedulingBooking;
+    if (!rescheduleDate || !b || !tenantId) {
       setAvailableSlots([]);
       setRescheduleTime(null);
       return;
     }
-
-    const booking  = bookings.find(b => b.id === reschedulingId);
-    const duration = booking?.duration || 60;
+    const duration = b.duration || 60;
     const dateStr  = format(rescheduleDate, "yyyy-MM-dd");
-
     let cancelled = false;
     setSlotsLoading(true);
     setAvailableSlots([]);
@@ -113,15 +273,29 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       });
 
     return () => { cancelled = true; };
-  }, [rescheduleDate, reschedulingId, tenantId, bookings]);
+  }, [rescheduleDate, reschedulingBooking, tenantId]);
 
+  // A4: filter by search + status
   const filtered = useMemo(() => {
     return bookings.filter(b => {
-      if (activeFilter === "All")   return true;
-      if (activeFilter === "Today") return b.date === todayStr;
-      return b.status === activeFilter.toLowerCase();
+      if (activeFilter === "All")   {
+        if (searchQuery.trim()) {
+          return b.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                 b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                 (b.ref ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+        }
+        return true;
+      }
+      if (activeFilter === "Today") {
+        const matchDate = b.date === todayStr;
+        if (searchQuery.trim()) return matchDate && b.client.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchDate;
+      }
+      const matchStatus = b.status === activeFilter.toLowerCase();
+      if (searchQuery.trim()) return matchStatus && b.client.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchStatus;
     });
-  }, [bookings, activeFilter, todayStr]);
+  }, [bookings, activeFilter, todayStr, searchQuery]);
 
   const counts: Record<FilterType, number> = {
     All:       bookings.length,
@@ -141,8 +315,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  const handleReschedule = async (b: BookingRow) => {
-    if (!rescheduleDate || !rescheduleTime) return;
+  const handleReschedule = async () => {
+    const b = reschedulingBooking;
+    if (!b || !rescheduleDate || !rescheduleTime) return;
     try {
       await reschedule.mutateAsync({
         bookingId:    b.id,
@@ -152,7 +327,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         booking:      b,
       });
       toast.success("Booking rescheduled");
-      setReschedulingId(null);
+      setReschedulingBooking(null);
       setRescheduleDate(undefined);
       setRescheduleTime(null);
     } catch (e: any) {
@@ -186,13 +361,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         client_email:     editDraft.email,
         call_out_address: editDraft.address,
       };
-
       await updateFields.mutateAsync({ bookingId: editingId, updates });
-
       if (editDraft.status) {
         await updateStatus.mutateAsync({ bookingId: editingId, status: editDraft.status });
       }
-
       toast.success("Booking updated");
       setEditingId(null);
       setEditDraft({});
@@ -209,7 +381,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     try {
       const clientEmail = b.email;
       const balance     = b.balance;
-
       if (!clientEmail) throw new Error("No client email on record for this booking");
       if (!balance || balance <= 0) throw new Error("No outstanding balance");
 
@@ -224,14 +395,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           cancel_url:   `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
         },
       });
-
       if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
       if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
         throw new Error(checkoutData?.error || "Failed to create payment link");
       }
-
       const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
-
       await supabase
         .from("bookings")
         .update({
@@ -239,16 +407,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           yoco_final_link:        paymentUrl,
         })
         .eq("id", b.id);
-
       const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
-        body: {
-          booking_id:  b.id,
-          tenant_id:   b.tenantId,
-          email_type:  "balance_request",
-          payment_url: paymentUrl,
-        },
+        body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
       });
-
       if (emailErr) console.warn("Email send warning:", emailErr.message);
       toast.success(`Balance request sent to ${clientEmail}`);
     } catch (e: any) {
@@ -275,7 +436,40 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Stats — Serial Position Effect: most important context first */}
+      {/* A1: Confirm dialogs */}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete booking?"
+        description={confirmDelete ? `This will permanently delete ${confirmDelete.client}'s booking for ${confirmDelete.service} on ${confirmDelete.date}. This cannot be undone.` : ""}
+        confirmLabel="Delete"
+        confirmClass="bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+        onConfirm={() => { if (confirmDelete) handleDelete(confirmDelete.id); setConfirmDelete(null); }}
+        onCancel={() => setConfirmDelete(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancel booking?"
+        description={confirmCancel ? `Are you sure you want to cancel ${confirmCancel.client}'s booking for ${confirmCancel.service}?` : ""}
+        confirmLabel="Yes, Cancel"
+        confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
+        onConfirm={() => { if (confirmCancel) handleStatusChange(confirmCancel.id, "cancelled"); setConfirmCancel(null); }}
+        onCancel={() => setConfirmCancel(null)}
+      />
+
+      {/* A3: Reschedule modal */}
+      <RescheduleModal
+        booking={reschedulingBooking}
+        rescheduleDate={rescheduleDate}
+        rescheduleTime={rescheduleTime}
+        availableSlots={availableSlots}
+        slotsLoading={slotsLoading}
+        onDateSelect={setRescheduleDate}
+        onTimeSelect={setRescheduleTime}
+        onConfirm={handleReschedule}
+        onClose={() => { setReschedulingBooking(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+      />
+
+      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <CalendarCheck className="w-4 h-4 text-white/30" />
@@ -311,6 +505,23 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         </div>
       </div>
 
+      {/* A4: Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search client, service, or ref…"
+          className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] transition-colors"
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* Filter pills */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {filters.map(f => {
@@ -337,7 +548,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       {filtered.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
-          <p className="text-sm text-white/30">No bookings match this filter</p>
+          <p className="text-sm text-white/30">
+            {searchQuery ? `No bookings matching "${searchQuery}"` : "No bookings match this filter"}
+          </p>
         </motion.div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -426,28 +639,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                               <div className="flex flex-col gap-3 mt-3">
                                 <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">Contact Details</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                  <EditField
-                                    label="Client Name"
-                                    value={editDraft.client || ""}
-                                    onChange={v => setEditDraft(d => ({ ...d, client: v }))}
-                                  />
-                                  <EditField
-                                    label="Phone"
-                                    value={editDraft.phone || ""}
-                                    onChange={v => setEditDraft(d => ({ ...d, phone: v }))}
-                                  />
-                                  <EditField
-                                    label="Email"
-                                    value={editDraft.email || ""}
-                                    onChange={v => setEditDraft(d => ({ ...d, email: v }))}
-                                  />
-                                  <EditField
-                                    label="Address"
-                                    value={editDraft.address || ""}
-                                    onChange={v => setEditDraft(d => ({ ...d, address: v }))}
-                                  />
+                                  <EditField label="Client Name" value={editDraft.client || ""} onChange={v => setEditDraft(d => ({ ...d, client: v }))} />
+                                  <EditField label="Phone"       value={editDraft.phone || ""}  onChange={v => setEditDraft(d => ({ ...d, phone: v }))} />
+                                  <EditField label="Email"       value={editDraft.email || ""}  onChange={v => setEditDraft(d => ({ ...d, email: v }))} />
+                                  <EditField label="Address"     value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
                                 </div>
-
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
                                     Service <span className="normal-case text-white/20">(read-only — edit via booking items)</span>
@@ -456,11 +652,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     {editDraft.service || "—"}
                                   </p>
                                 </div>
-
                                 <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mt-1">Notes</p>
                                 <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
                                 <EditField label="Client Notes" value={editDraft.notes || ""}      onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
-
                                 <div className="flex items-center gap-2 pt-1">
                                   <select
                                     value={editDraft.status || "pending"}
@@ -518,30 +712,47 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
                                 </div>
 
-                                {/* Action buttons */}
+                                {/* A2: Action buttons with clear visual hierarchy */}
                                 <div className="flex items-center gap-2 pt-1 flex-wrap">
 
-                                  {b.status !== "cancelled" && (
-                                    <ActionBtn icon={CalendarClock} label="Reschedule" color="text-sky-400" onClick={() => {
-                                      setReschedulingId(reschedulingId === b.id ? null : b.id);
-                                      setRescheduleDate(undefined);
-                                      setRescheduleTime(null);
-                                      setAvailableSlots([]);
-                                    }} />
-                                  )}
-
+                                  {/* Primary positive actions — emerald */}
                                   {b.status === "pending" && (
-                                    <ActionBtn icon={Check} label="Confirm" color="text-emerald-400"
-                                      onClick={() => handleStatusChange(b.id, "confirmed")} />
+                                    <button
+                                      onClick={e => { e.stopPropagation(); handleStatusChange(b.id, "confirmed"); }}
+                                      className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5"
+                                    >
+                                      <Check className="w-3 h-3" /> Confirm
+                                    </button>
                                   )}
 
                                   {(b.status === "confirmed" || b.status === "pending") && (
-                                    <ActionBtn icon={Check} label="Complete" color="text-white/60"
-                                      onClick={() => handleStatusChange(b.id, "complete")} />
+                                    <button
+                                      onClick={e => { e.stopPropagation(); handleStatusChange(b.id, "complete"); }}
+                                      className="px-3 py-1.5 rounded-lg border border-white/[0.1] bg-white/[0.06] text-xs font-medium text-white/70 hover:bg-white/[0.1] transition-colors flex items-center gap-1.5"
+                                    >
+                                      <Check className="w-3 h-3" /> Complete
+                                    </button>
                                   )}
 
-                                  <ActionBtn icon={Edit3} label="Edit" color="text-white/60" onClick={() => startEdit(b)} />
+                                  {/* Reschedule — sky */}
+                                  {b.status !== "cancelled" && (
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+                                      className="px-3 py-1.5 rounded-lg border border-sky-500/25 bg-sky-500/[0.08] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5"
+                                    >
+                                      <CalendarClock className="w-3 h-3" /> Reschedule
+                                    </button>
+                                  )}
 
+                                  {/* Edit — neutral */}
+                                  <button
+                                    onClick={e => { e.stopPropagation(); startEdit(b); }}
+                                    className="px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs font-medium text-white/50 hover:bg-white/[0.06] hover:text-white/70 transition-colors flex items-center gap-1.5"
+                                  >
+                                    <Edit3 className="w-3 h-3" /> Edit
+                                  </button>
+
+                                  {/* Request balance — amber */}
                                   {showRequestBalance(b) && (
                                     <button
                                       disabled={isRequestingBalance}
@@ -558,88 +769,23 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                   <div className="flex-1" />
 
+                                  {/* Destructive — red ghost, pushed right */}
                                   {b.status !== "cancelled" && b.status !== "complete" && (
-                                    <ActionBtn icon={X} label="Cancel" color="text-red-400/70"
-                                      onClick={() => handleStatusChange(b.id, "cancelled")} />
-                                  )}
-                                  <ActionBtn icon={Trash2} label="Delete" color="text-red-400/50" onClick={() => handleDelete(b.id)} />
-                                </div>
-
-                                {/* Reschedule panel */}
-                                <AnimatePresence>
-                                  {reschedulingId === b.id && (
-                                    <motion.div
-                                      initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden"
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setConfirmCancel(b); }}
+                                      className="px-3 py-1.5 rounded-lg border border-red-500/20 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-1.5"
                                     >
-                                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
-                                        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/40 mb-3">Reschedule Booking</p>
-                                        <div className="flex flex-col sm:flex-row gap-3">
-                                          <div className="flex-1">
-                                            <p className="text-[10px] text-white/30 mb-1.5">New Date</p>
-                                            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
-                                              <Calendar
-                                                mode="single"
-                                                selected={rescheduleDate}
-                                                onSelect={setRescheduleDate}
-                                                disabled={(date) => date < new Date()}
-                                                className={cn("p-3 pointer-events-auto [&_.rdp-day_focus]:bg-white/10 [&_.rdp-day]:text-white/70")}
-                                              />
-                                            </div>
-                                          </div>
-                                          <div className="flex-1">
-                                            <p className="text-[10px] text-white/30 mb-1.5">New Time</p>
-                                            <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
-                                              {slotsLoading ? (
-                                                <div className="col-span-3 flex justify-center py-6">
-                                                  <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
-                                                </div>
-                                              ) : !rescheduleDate ? (
-                                                <p className="col-span-3 text-[11px] text-white/30 text-center py-4">Select a date first</p>
-                                              ) : availableSlots.length === 0 ? (
-                                                <p className="col-span-3 text-[11px] text-white/30 text-center py-4">No available slots</p>
-                                              ) : (
-                                                availableSlots.map(t => (
-                                                  <button key={t} onClick={() => setRescheduleTime(t)}
-                                                    className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
-                                                      rescheduleTime === t
-                                                        ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
-                                                        : "bg-white/[0.04] text-white/50 border border-white/[0.06] hover:text-white/70"
-                                                    }`}>
-                                                    {t}
-                                                  </button>
-                                                ))
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center justify-between mt-4">
-                                          <div className="text-xs text-white/40">
-                                            {rescheduleDate && rescheduleTime
-                                              ? <span>New: <span className="text-white/70 font-medium">{format(rescheduleDate, "d MMM yyyy")} at {rescheduleTime}</span></span>
-                                              : <span>Select a date and time</span>
-                                            }
-                                          </div>
-                                          <div className="flex gap-2">
-                                            <button
-                                              onClick={() => { setReschedulingId(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
-                                              className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors"
-                                            >
-                                              Cancel
-                                            </button>
-                                            <button
-                                              disabled={!rescheduleDate || !rescheduleTime}
-                                              onClick={() => handleReschedule(b)}
-                                              className="px-4 py-1.5 rounded-lg bg-sky-500/20 border border-sky-500/30 text-xs font-semibold text-sky-400 hover:bg-sky-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
-                                            >
-                                              <CalendarClock className="w-3 h-3" /> Confirm Reschedule
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </motion.div>
+                                      <X className="w-3 h-3" /> Cancel
+                                    </button>
                                   )}
-                                </AnimatePresence>
+                                  <button
+                                    onClick={e => { e.stopPropagation(); setConfirmDelete(b); }}
+                                    className="p-1.5 rounded-lg border border-red-500/15 text-red-400/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                                    aria-label="Delete booking"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -652,7 +798,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
               return (
                 <>
-                  {/* ── Today (pinned) ── */}
                   {activeFilter !== "Today" && todayItems.length > 0 && (
                     <div className="flex items-center gap-3 px-1 pt-1">
                       <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400/70">Today</span>
@@ -661,7 +806,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                   )}
                   {(activeFilter === "Today" ? filtered.sort((a, b) => a.time.localeCompare(b.time)) : todayItems).map(b => renderCard(b))}
 
-                  {/* ── Upcoming (soonest first) ── */}
                   {activeFilter !== "Today" && upcoming.length > 0 && (
                     <>
                       <div className="flex items-center gap-3 px-1 pt-2">
@@ -672,7 +816,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                     </>
                   )}
 
-                  {/* ── Past (most recent first) ── */}
                   {activeFilter !== "Today" && past.length > 0 && (
                     <>
                       <div className="flex items-center gap-3 px-1 pt-2">
@@ -712,15 +855,6 @@ const EditField = ({ label, value, onChange }: { label: string; value: string; o
       className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
     />
   </div>
-);
-
-const ActionBtn = ({ icon: Icon, label, color, onClick }: { icon: React.ElementType; label: string; color: string; onClick: () => void }) => (
-  <button
-    onClick={e => { e.stopPropagation(); onClick(); }}
-    className={`px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs font-medium ${color} hover:bg-white/[0.06] transition-colors flex items-center gap-1.5`}
-  >
-    <Icon className="w-3 h-3" /> {label}
-  </button>
 );
 
 export default AdminBookings;
