@@ -2,34 +2,38 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useMemo } from "react";
-import { format, startOfMonth, endOfMonth, subMonths, getDaysInMonth } from "date-fns";
+import {
+  format, startOfMonth, endOfMonth, subMonths, getDaysInMonth,
+  eachDayOfInterval, parseISO, getDay,
+} from "date-fns";
 
+// ─── helpers ────────────────────────────────────────────────────────────────
 function resolveClientName(b: any): string {
   return b.client_name || b.guest_name || b.client?.full_name || "Unknown";
 }
 function resolveClientKey(b: any): string {
   return b.client_id || b.guest_email || b.guest_phone || b.id;
 }
-function timeToMins(t: string): number {
-  const [h, m] = (t || "00:00").split(":").map(Number);
-  return h * 60 + m;
-}
 
 const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HEAT_SLOTS = ["08-10", "10-12", "12-14", "14-16", "16-18"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
 
+// Roles that count as bookable staff (future-proof: add 'staff' when multi-staff lands)
+const STAFF_ROLES = ["owner", "admin", "staff"] as const;
+
+// ─── main hook ──────────────────────────────────────────────────────────────
 export function useDashboardData() {
   const { tenantId } = useTenant();
-  const now         = new Date();
-  const todayStr    = format(now, "yyyy-MM-dd");
-  const monthStart  = format(startOfMonth(now), "yyyy-MM-dd");
-  const monthEnd    = format(endOfMonth(now),   "yyyy-MM-dd");
-  const prevStart   = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
-  const prevEnd     = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
-  const daysInMonth = getDaysInMonth(now);
+  const now          = new Date();
+  const todayStr     = format(now, "yyyy-MM-dd");
+  const monthStart   = format(startOfMonth(now), "yyyy-MM-dd");
+  const monthEnd     = format(endOfMonth(now),   "yyyy-MM-dd");
+  const prevStart    = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
+  const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
+  const daysInMonth  = getDaysInMonth(now);
 
-  // 1. Bookings - current month
+  // 1. Bookings — current month
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
@@ -50,6 +54,7 @@ export function useDashboardData() {
           guest_name,
           guest_email,
           guest_phone,
+          staff_id,
           client:profiles!bookings_client_id_fkey(full_name, phone),
           items:booking_items(service_name, price, duration_minutes, sort_order)
         `)
@@ -63,7 +68,7 @@ export function useDashboardData() {
     },
   });
 
-  // 2. Previous month bookings - for lastMonth revenue fallback
+  // 2. Previous month bookings — for lastMonth revenue fallback
   const { data: prevBookings = [], isLoading: l2 } = useQuery({
     queryKey:  ["dash-bookings-prev", tenantId, prevStart],
     staleTime: 10 * 60 * 1000,
@@ -80,7 +85,7 @@ export function useDashboardData() {
     },
   });
 
-  // 3. Payments - single query covering prev + current month
+  // 3. Payments — single query covering prev + current month
   const { data: allPayments = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-payments", tenantId, prevStart, monthEnd],
     staleTime: 3 * 60 * 1000,
@@ -96,22 +101,6 @@ export function useDashboardData() {
       return data ?? [];
     },
   });
-
-  // date-only slice strips UTC time so SAST offset never bleeds payments across months
-  const thisMonthPayments = useMemo(
-    () => allPayments.filter((p: any) => {
-      const d = (p.created_at ?? "").slice(0, 10);
-      return d >= monthStart && d <= monthEnd;
-    }),
-    [allPayments, monthStart, monthEnd]
-  );
-  const prevMonthPayments = useMemo(
-    () => allPayments.filter((p: any) => {
-      const d = (p.created_at ?? "").slice(0, 10);
-      return d >= prevStart && d <= prevEnd;
-    }),
-    [allPayments, prevStart, prevEnd]
-  );
 
   // 4. Stock alerts
   const { data: stockItems = [] } = useQuery({
@@ -129,19 +118,63 @@ export function useDashboardData() {
     },
   });
 
-  // 5 & 6. Staff / availability — public.staff table does not exist in this schema.
-  //        Fill rate card returns null (graceful "not configured" state) until
-  //        a staff table is implemented.
-  const staffSlots: any[] = [];
-  const l4 = false;
-  const l5 = false;
+  // 5. Staff profiles for this tenant (owner + admin + staff roles)
+  //    Future-proof: when new staff members are added they automatically
+  //    appear here because we query by tenant_id + role.
+  const { data: staffProfiles = [], isLoading: l4 } = useQuery({
+    queryKey:  ["dash-staff-profiles", tenantId],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, role")
+        .eq("tenant_id", tenantId)
+        .in("role", STAFF_ROLES as unknown as string[]);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
-  // Core loading: bookings + payments only - enough to render the whole dashboard
-  // Staff loading only blocks the fill rate card
+  // 6. Staff availability rows for all staff members this month
+  //    We query by tenant_id so we get everyone's slots in one call.
+  //    Each row is a 30-min slot; is_available=true and day_enabled=true means it's bookable.
+  const staffIds = useMemo(() => staffProfiles.map((s: any) => s.id), [staffProfiles]);
+
+  const { data: availabilityRows = [], isLoading: l5 } = useQuery({
+    queryKey:  ["dash-availability", tenantId, monthStart],
+    staleTime: 5 * 60 * 1000,
+    enabled:   staffIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("staff_availability")
+        .select("staff_id, day_of_week, day_enabled, slot_start_time, is_available, specific_date")
+        .eq("tenant_id", tenantId)
+        .in("staff_id", staffIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const coreLoading  = l1 || l2 || l3;
   const staffLoading = l4 || l5;
 
-  // Derived: split bookings
+  // ─── payment slices ──────────────────────────────────────────────────────
+  const thisMonthPayments = useMemo(
+    () => allPayments.filter((p: any) => {
+      const d = (p.created_at ?? "").slice(0, 10);
+      return d >= monthStart && d <= monthEnd;
+    }),
+    [allPayments, monthStart, monthEnd]
+  );
+  const prevMonthPayments = useMemo(
+    () => allPayments.filter((p: any) => {
+      const d = (p.created_at ?? "").slice(0, 10);
+      return d >= prevStart && d <= prevEnd;
+    }),
+    [allPayments, prevStart, prevEnd]
+  );
+
+  // ─── booking splits ───────────────────────────────────────────────────────
   const todayBookings = useMemo(
     () => bookings.filter((b: any) => b.booking_date === todayStr),
     [bookings, todayStr]
@@ -155,8 +188,7 @@ export function useDashboardData() {
     [bookings]
   );
 
-  // Revenue - payments table is source of truth
-  // If payments table returns 0 for prev month, fall back to bookings total_amount
+  // ─── revenue ─────────────────────────────────────────────────────────────
   const monthRevenue = useMemo(
     () => thisMonthPayments.reduce((s: number, p: any) => s + Number(p.amount), 0),
     [thisMonthPayments]
@@ -169,7 +201,6 @@ export function useDashboardData() {
     () => prevBookings.reduce((s: number, b: any) => s + Number(b.total_amount ?? 0), 0),
     [prevBookings]
   );
-  // Use payments if available, otherwise fall back to bookings total_amount
   const prevMonthRevenue = prevMonthRevenueFromPayments > 0
     ? prevMonthRevenueFromPayments
     : prevMonthRevenueFromBookings;
@@ -181,8 +212,8 @@ export function useDashboardData() {
     [thisMonthPayments, todayStr]
   );
 
-  // Next appointment today
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  // ─── next appointment today ───────────────────────────────────────────────
+  const nowMins  = now.getHours() * 60 + now.getMinutes();
   const upcoming = useMemo(() =>
     todayBookings
       .filter((b: any) => b.status !== "cancelled")
@@ -194,23 +225,19 @@ export function useDashboardData() {
   [todayBookings, nowMins]);
   const nextAppt = upcoming[0] as any;
 
-  // Top services
-  // Top services — count = unique bookings containing that service (not item rows)
+  // ─── top services ─────────────────────────────────────────────────────────
   const topServices = useMemo(() => {
     const svcMap = new Map<string, { count: number; revenue: number }>();
     active.forEach((b: any) => {
-      const seenInThisBooking = new Set<string>();
+      const seen = new Set<string>();
       [...(b.items ?? [])]
         .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
         .forEach((i: any) => {
           const name = i.service_name;
-          if (!name || seenInThisBooking.has(name)) return;
-          seenInThisBooking.add(name);
+          if (!name || seen.has(name)) return;
+          seen.add(name);
           const prev = svcMap.get(name) || { count: 0, revenue: 0 };
-          svcMap.set(name, {
-            count:   prev.count + 1,
-            revenue: prev.revenue + Number(i.price),
-          });
+          svcMap.set(name, { count: prev.count + 1, revenue: prev.revenue + Number(i.price) });
         });
     });
     return [...svcMap.entries()]
@@ -219,7 +246,7 @@ export function useDashboardData() {
       .slice(0, 5);
   }, [active]);
 
-  // Revenue trend
+  // ─── revenue trend ────────────────────────────────────────────────────────
   const revenueTrend = useMemo(() => {
     const trendMap: Record<number, number> = {};
     thisMonthPayments.forEach((p: any) => {
@@ -232,7 +259,7 @@ export function useDashboardData() {
     }));
   }, [thisMonthPayments, daysInMonth]);
 
-  // Heatmap - O(N) index, O(1) lookup
+  // ─── booking heatmap ──────────────────────────────────────────────────────
   const heatmap = useMemo(() => {
     const idx: Record<string, number> = {};
     active.forEach((b: any) => {
@@ -252,15 +279,15 @@ export function useDashboardData() {
     }));
   }, [active]);
 
-  // Unique + returning clients
+  // ─── client insights ──────────────────────────────────────────────────────
   const { clientKeySet, returningCount, retentionRate } = useMemo(() => {
-    const clientBookingCount = new Map<string, number>();
+    const countMap = new Map<string, number>();
     active.forEach((b: any) => {
       const key = resolveClientKey(b);
-      clientBookingCount.set(key, (clientBookingCount.get(key) || 0) + 1);
+      countMap.set(key, (countMap.get(key) || 0) + 1);
     });
     const keySet    = new Set(active.map((b: any) => resolveClientKey(b)));
-    const returning = [...clientBookingCount.values()].filter(c => c > 1).length;
+    const returning = [...countMap.values()].filter(c => c > 1).length;
     return {
       clientKeySet:   keySet,
       returningCount: returning,
@@ -268,10 +295,85 @@ export function useDashboardData() {
     };
   }, [active]);
 
-  // Fill Rate — disabled until staff table is implemented; returns null gracefully
-  const fillRate: number | null = null;
+  // ─── fill rate ────────────────────────────────────────────────────────────
+  // Strategy:
+  //   totalAvailableSlots = sum of all is_available=true, day_enabled=true slots
+  //   across all staff members, expanded over each calendar day this month.
+  //
+  //   For recurring (weekly) slots  → count per matching weekday in the month.
+  //   For specific_date overrides   → count only for that exact date.
+  //   Overrides take precedence over recurring for the same date+staff.
+  //
+  //   bookedSlots = count of confirmed/complete bookings this month.
+  //   fillRate    = bookedSlots / totalAvailableSlots  (null if no availability configured).
+  //
+  //   Future-proof: new staff profiles auto-join staffProfiles query;
+  //   their availability rows are included automatically in the same query.
+  const fillRate: number | null = useMemo(() => {
+    if (staffLoading)   return null;
+    if (availabilityRows.length === 0) return null; // not configured yet
 
-  // Alerts
+    // Build the calendar days for this month
+    const monthDays = eachDayOfInterval({
+      start: parseISO(monthStart),
+      end:   parseISO(monthEnd),
+    });
+
+    // Index availability: staffId → { recurring: Map<dayOfWeek, slotCount>, overrides: Map<dateStr, slotCount> }
+    type StaffSlots = {
+      recurring: Map<number, number>; // dayOfWeek (0=Sun) → available slot count
+      overrides: Map<string, number>; // dateStr → available slot count
+    };
+    const staffIndex = new Map<string, StaffSlots>();
+
+    availabilityRows.forEach((row: any) => {
+      if (!staffIndex.has(row.staff_id)) {
+        staffIndex.set(row.staff_id, { recurring: new Map(), overrides: new Map() });
+      }
+      const entry = staffIndex.get(row.staff_id)!;
+
+      if (row.specific_date) {
+        // Date override — only count if day_enabled and is_available
+        if (row.day_enabled && row.is_available) {
+          const prev = entry.overrides.get(row.specific_date) ?? 0;
+          entry.overrides.set(row.specific_date, prev + 1);
+        } else if (!entry.overrides.has(row.specific_date)) {
+          // Explicitly blocked day — store 0 so recurring doesn't override
+          entry.overrides.set(row.specific_date, 0);
+        }
+      } else {
+        // Recurring weekly slot
+        if (row.day_enabled && row.is_available) {
+          const prev = entry.recurring.get(row.day_of_week) ?? 0;
+          entry.recurring.set(row.day_of_week, prev + 1);
+        }
+      }
+    });
+
+    // Expand across the month calendar
+    let totalSlots = 0;
+    monthDays.forEach(day => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      const dow     = getDay(day); // 0=Sun…6=Sat
+
+      staffIndex.forEach(entry => {
+        if (entry.overrides.has(dateStr)) {
+          // Override wins
+          totalSlots += entry.overrides.get(dateStr)!;
+        } else {
+          // Fall back to recurring weekly pattern
+          totalSlots += entry.recurring.get(dow) ?? 0;
+        }
+      });
+    });
+
+    if (totalSlots === 0) return null; // availability rows exist but no slots enabled
+
+    const bookedSlots = active.length;
+    return Math.min(bookedSlots / totalSlots, 1); // cap at 100%
+  }, [availabilityRows, active, monthStart, monthEnd, staffLoading]);
+
+  // ─── alerts ───────────────────────────────────────────────────────────────
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts = useMemo(() => {
     const list: Alert[] = [];
@@ -291,6 +393,7 @@ export function useDashboardData() {
     return list;
   }, [bookings, cancelled, stockItems]);
 
+  // ─── return ───────────────────────────────────────────────────────────────
   return {
     coreLoading,
     staffLoading,
