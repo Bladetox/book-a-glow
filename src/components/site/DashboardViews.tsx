@@ -51,7 +51,8 @@ const heatmapData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => ({
   slots: heatmapSlots.map(() => Math.round(Math.random() * 5)),
 }));
 
-const card = "rounded-xl border border-white/[0.06] bg-white/[0.03]";
+// Lux card: slightly brighter border with a warm shimmer tint
+const card = "rounded-xl border border-white/[0.10] bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";
 const label = "text-[8px] tracking-[0.12em] uppercase text-white/30";
 const labelLg = "text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2.5";
 
@@ -68,14 +69,15 @@ export const DashboardContent = () => {
   const pctChange = Math.round(((mockRevenue.month - mockRevenue.lastMonth) / mockRevenue.lastMonth) * 100);
   return (
     <div className="flex-1 p-4 overflow-y-auto overflow-x-hidden space-y-3 scrollbar-hide">
-      <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-4">
+      {/* Revenue hero card */}
+      <div className="rounded-2xl border border-white/[0.12] bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
         <p className={label}>Monthly Revenue</p>
         <p className="text-2xl font-bold text-white tracking-tight mt-0.5">R {mockRevenue.month.toLocaleString()}</p>
         <div className="flex items-center gap-1 mt-1">
           <TrendingUp className="w-3 h-3 text-emerald-400/80" />
           <span className="text-[9px] text-emerald-400/80">{pctChange}% vs last month</span>
         </div>
-        <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+        <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-white/[0.08]">
           {[{ l: "Revenue Today", v: `R ${mockRevenue.today.toLocaleString()}` }, { l: "Appointments", v: "6" }, { l: "Remaining", v: "2", color: "text-amber-400" }, { l: "Next Up", v: "14:00 James" }].map(s => (
             <div key={s.l} className="flex flex-col">
               <span className="text-[7px] tracking-[0.1em] uppercase text-white/25">{s.l}</span>
@@ -84,6 +86,8 @@ export const DashboardContent = () => {
           ))}
         </div>
       </div>
+
+      {/* Health metric cards */}
       <div className="grid grid-cols-4 gap-2">
         {[{ icon: BarChart3, l: "Fill Rate", v: `${mockHealth.fillRate}%`, color: "text-emerald-400" }, { icon: ShoppingBag, l: "Avg Basket", v: `R ${mockHealth.avgBasket.toLocaleString()}`, color: "text-white/80" }, { icon: CalendarCheck, l: "Appointments", v: String(mockHealth.totalAppointments), color: "text-white/80" }, { icon: XCircle, l: "Cancellations", v: `${mockHealth.cancellationRate}%`, color: "text-red-400" }].map(m => (
           <div key={m.l} className={`${card} p-2.5 flex flex-col gap-1`}>
@@ -93,6 +97,8 @@ export const DashboardContent = () => {
           </div>
         ))}
       </div>
+
+      {/* Top services + client insights */}
       <div className="grid grid-cols-2 gap-2">
         <div className={`${card} p-3`}>
           <p className={labelLg}>Top Services</p>
@@ -128,6 +134,8 @@ export const DashboardContent = () => {
           ))}
         </div>
       </div>
+
+      {/* Alerts */}
       <div className={`${card} p-3`}>
         <p className={`${labelLg} flex items-center gap-1.5`}><Bell className="w-3 h-3" /> Alerts</p>
         <div className="space-y-1.5">
@@ -138,22 +146,75 @@ export const DashboardContent = () => {
           ))}
         </div>
       </div>
+
+      {/* Revenue trend */}
       <div className={`${card} p-3`}>
         <div className="flex items-center justify-between mb-2"><p className={labelLg}>Revenue Trend</p><span className="text-[7px] text-white/15">Last 30 days</span></div>
         <div className="h-16 flex items-end gap-[1px]">
           {mockRevenueTrend.map(d => { const max = Math.max(...mockRevenueTrend.map(x => x.value), 1); return (<div key={d.day} className="flex-1 bg-emerald-400/20 hover:bg-emerald-400/40 rounded-t transition-colors" style={{ height: `${Math.max((d.value / max) * 100, 4)}%` }} />); })}
         </div>
       </div>
+
+      {/* Booking Heatmap — fixed for mobile: table-fixed, compressed slot labels, day col pinned */}
       <div className={`${card} p-3`}>
         <p className={labelLg}>Booking Heatmap</p>
-        <table className="w-full"><thead><tr><th className="text-[7px] text-white/15 text-left pr-1 pb-1" />{heatmapSlots.map(s => (<th key={s} className="text-[7px] text-white/15 text-center pb-1 px-0.5">{s}</th>))}</tr></thead>
-          <tbody>{heatmapData.map(row => (<tr key={row.day}><td className="text-[7px] text-white/20 pr-1 py-0.5">{row.day}</td>{row.slots.map((intensity, i) => (<td key={i} className="p-0.5"><div className="h-4 rounded" style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(intensity / 5 * 0.8, 0.06)})` }} /></td>))}</tr>))}</tbody>
-        </table>
+        <div className="w-full overflow-hidden">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[28px]" />
+              <col /><col /><col /><col /><col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th className="text-[6px] text-white/15 text-left pb-1" />
+                {heatmapSlots.map(s => (
+                  <th key={s} className="text-[6px] text-white/15 text-center pb-1 px-0.5 truncate">
+                    {s.replace("-", "–")}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {heatmapData.map(row => (
+                <tr key={row.day}>
+                  <td className="text-[7px] font-medium text-white/30 pr-1 py-0.5 truncate">{row.day}</td>
+                  {row.slots.map((intensity, i) => (
+                    <td key={i} className="p-0.5">
+                      <div
+                        className="h-4 rounded"
+                        style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(intensity / 5 * 0.8, 0.06)})` }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Today's appointments */}
       <div className={`${card} p-3`}>
         <p className={labelLg}>Today's Appointments</p>
-        <table className="w-full text-[9px]"><thead><tr className="text-white/20 text-left"><th className="pb-1 font-medium">Time</th><th className="pb-1 font-medium">Client</th><th className="pb-1 font-medium">Service</th><th className="pb-1 font-medium text-right">Status</th></tr></thead>
-          <tbody>{mockAppointments.map(a => (<tr key={a.id} className="border-t border-white/[0.04]"><td className="py-1.5 text-white/50">{a.time}</td><td className="py-1.5 text-white/70 font-medium">{a.client}</td><td className="py-1.5 text-white/40">{a.service}</td><td className="py-1.5 text-right"><StatusBadge status={a.status} /></td></tr>))}</tbody>
+        <table className="w-full text-[9px]">
+          <thead>
+            <tr className="text-white/20 text-left">
+              <th className="pb-1 font-medium">Time</th>
+              <th className="pb-1 font-medium">Client</th>
+              <th className="pb-1 font-medium">Service</th>
+              <th className="pb-1 font-medium text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mockAppointments.map(a => (
+              <tr key={a.id} className="border-t border-white/[0.04]">
+                <td className="py-1.5 text-white/50">{a.time}</td>
+                <td className="py-1.5 text-white/70 font-medium">{a.client}</td>
+                <td className="py-1.5 text-white/40">{a.service}</td>
+                <td className="py-1.5 text-right"><StatusBadge status={a.status} /></td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
     </div>
@@ -175,7 +236,7 @@ export const BookingsContent = () => (
   <div className="flex-1 p-4 overflow-y-auto overflow-x-hidden space-y-3 scrollbar-hide">
     <div className="flex gap-1.5 overflow-x-auto pb-1">
       {["All", "Today", "Pending", "Confirmed", "Complete"].map((f, i) => (
-        <button key={f} className={`px-2.5 py-1 rounded-full text-[8px] font-semibold tracking-wider uppercase whitespace-nowrap border transition-all ${i === 0 ? "bg-white/[0.1] text-white/80 border-white/[0.15]" : "text-white/30 border-white/[0.06]"}`}>{f}</button>
+        <button key={f} className={`px-2.5 py-1 rounded-full text-[8px] font-semibold tracking-wider uppercase whitespace-nowrap border transition-all ${i === 0 ? "bg-white/[0.1] text-white/80 border-white/[0.15]" : "text-white/30 border-white/[0.08]"}`}>{f}</button>
       ))}
     </div>
     <div className="grid grid-cols-4 gap-2">
@@ -283,7 +344,7 @@ export const LoyaltyContent = () => (
     {[{ name: "Sipho M.", visits: 22, status: "VIP", lastVisit: "14 Mar" }, { name: "Karabo T.", visits: 11, status: "Regular", lastVisit: "14 Mar" }, { name: "James V.", visits: 8, status: "Regular", lastVisit: "14 Mar" }, { name: "Luca R.", visits: 2, status: "New", lastVisit: "11 Mar" }].map(c => (
       <div key={c.name} className={`${card} px-3 py-2 flex items-center gap-2.5`}>
         <Gem className="w-3 h-3 text-white/20" />
-        <div className="flex-1"><p className="text-[9px] font-medium text-white/70">{c.name}</p><p className="text-[7px] text-white/25">{c.visits} visits Last: {c.lastVisit}</p></div>
+        <div className="flex-1"><p className="text-[9px] font-medium text-white/70">{c.name}</p><p className="text-[7px] text-white/25">{c.visits} visits · Last: {c.lastVisit}</p></div>
         <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${c.status === "VIP" ? "bg-amber-500/10 text-amber-400" : c.status === "Regular" ? "bg-emerald-500/10 text-emerald-400" : "bg-white/[0.06] text-white/40"}`}>{c.status}</span>
       </div>
     ))}
