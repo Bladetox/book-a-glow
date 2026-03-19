@@ -47,15 +47,13 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   };
 
   const businessName = tenant?.name || tenantId;
-  const abbreviation = businessName ? getAbbreviation(businessName) : "NS";
+  const logoUrl      = tenant?.logo_url ?? null;
+  const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
 
-  // FIX: use animate instead of CSS translate so Framer controls position from first frame.
-  // On desktop (not mobile) sidebar is always visible — we still use motion but always x:0.
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
 
   return (
     <>
-      {/* Mobile backdrop */}
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50"
@@ -65,23 +63,43 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
       )}
 
       <motion.aside
-        // FIX: initial must match closed state on mobile so first paint is off-screen
         initial={{ x: isMobile ? "-100%" : 0 }}
         animate={{ x: xPos }}
         transition={{ type: "spring", stiffness: 380, damping: 38, mass: 0.8 }}
         className="fixed lg:static z-50 top-0 left-0 h-full lg:h-auto w-64 border-r border-white/[0.06] bg-[hsl(0,0%,5%)] flex flex-col py-6"
-        // FIX: on desktop, override any transform so static layout is correct
         style={!isMobile ? { transform: "none", position: "relative" } : undefined}
       >
-        {/* Logo / business name */}
-        <div className="px-6 mb-8 flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center shrink-0">
-            <span className="font-display text-sm font-bold text-white">{abbreviation}</span>
+        {/* ── Brand header ── */}
+        <div className="px-5 mb-8 flex items-center gap-3 shrink-0">
+          {/* Logo: show image if logo_url exists, otherwise initials */}
+          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-white/[0.1] bg-white/[0.06] flex items-center justify-center">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={String(businessName)}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // If image fails to load, hide it and fall back to initials via parent
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  const fallback = (e.currentTarget.parentNode as HTMLElement).querySelector(".logo-fallback") as HTMLElement | null;
+                  if (fallback) fallback.style.display = "flex";
+                }}
+              />
+            ) : null}
+            {/* Fallback initials — always in DOM, hidden when logo loads */}
+            <span
+              className="logo-fallback font-display text-sm font-bold text-white"
+              style={{ display: logoUrl ? "none" : "flex" }}
+            >
+              {abbreviation}
+            </span>
           </div>
+
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white truncate">{businessName}</p>
             <p className="text-[9px] text-white/30 tracking-wider uppercase">Admin</p>
           </div>
+
           {isMobile && (
             <button
               onClick={onClose}

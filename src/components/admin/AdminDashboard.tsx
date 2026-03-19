@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Loader2, Info, X, ArrowRight
+  XCircle, Package, Bell, Clock, Info, X
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 
@@ -12,27 +12,32 @@ const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 const ALL_SECTIONS = [
   "hero", "health", "topServices", "alerts",
   "revenueGraph", "heatmap", "todayAppointments", "clientInsights",
-  "stockAlerts", "settingsSnapshot"
+  "stockAlerts"
 ] as const;
 type SectionKey = typeof ALL_SECTIONS[number];
 
 const sectionLabels: Record<SectionKey, string> = {
-  hero:               "Revenue Hero",
-  health:             "Business Health",
-  topServices:        "Top Services",
-  alerts:             "Alerts",
-  revenueGraph:       "Revenue Trend",
-  heatmap:            "Booking Heatmap",
-  todayAppointments:  "Today's Appointments",
-  clientInsights:     "Client Insights",
-  stockAlerts:        "Stock Alerts",
-  settingsSnapshot:   "Settings Snapshot",
+  hero:              "Overview Card",
+  health:            "Business Health",
+  topServices:       "Top Services",
+  alerts:            "Alerts",
+  revenueGraph:      "Revenue Trend",
+  heatmap:           "Booking Heatmap",
+  todayAppointments: "Today's Appointments",
+  clientInsights:    "Client Insights",
+  stockAlerts:       "Stock Alerts",
 };
 
 function getVisibility(): Record<SectionKey, boolean> {
   try {
     const stored = localStorage.getItem(DASHBOARD_VIS_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Migrate: remove old settingsSnapshot key if present
+      return Object.fromEntries(
+        ALL_SECTIONS.map(s => [s, parsed[s] !== false])
+      ) as Record<SectionKey, boolean>;
+    }
   } catch {}
   return Object.fromEntries(ALL_SECTIONS.map(s => [s, true])) as Record<SectionKey, boolean>;
 }
@@ -86,29 +91,29 @@ interface ExpandedCard extends MetricEntry {
 const METRIC_COPY: MetricCopyShape = {
   revenueToday: {
     title: "Daily Revenue",
-    explain: "Total money received today. Big brands track this hourly to spot slow periods and push promotions.",
+    explain: "Total money received today.",
     benchmark: "Aim: consistent with your weekday average.",
   },
   appointmentsToday: {
     title: "Today's Bookings",
-    explain: "How many clients are booked in today. Used alongside Fill Rate to measure daily capacity.",
+    explain: "How many clients are booked in today.",
   },
   remaining: {
     title: "Remaining Appointments",
-    explain: "Appointments still ahead today. Watch this - if it drops suddenly, a no-show may have occurred.",
+    explain: "Appointments still ahead today. If this drops suddenly a no-show may have occurred.",
   },
   nextUp: {
     title: "Next Appointment",
-    explain: "Your next client. Knowing their service in advance lets you prep and deliver a peak experience.",
+    explain: "Your next client. Knowing their service lets you prep and deliver a great experience.",
   },
   fillRate: {
     title: "Fill Rate (Capacity Utilisation)",
-    explain: "The % of your available time that was actually booked. Airlines, hotels, and salons all track this.",
+    explain: "The % of your available time that was actually booked.",
     benchmark: "Target: 70%+. Below 50% means you're losing revenue to empty slots.",
   },
   avgBasket: {
     title: "Average Transaction Value (ATV)",
-    explain: "Average revenue per appointment. Lifting it by even 10% compounds fast.",
+    explain: "Average revenue per appointment. Lifting it by 10% compounds fast.",
     benchmark: "Tip: add one upsell per appointment to grow this.",
   },
   appointments: {
@@ -117,11 +122,11 @@ const METRIC_COPY: MetricCopyShape = {
   },
   cancellations: {
     title: "Cancellation Rate",
-    explain: "% of bookings cancelled. High cancellation rates destroy revenue predictability.",
+    explain: "% of bookings cancelled. High rates destroy revenue predictability.",
     benchmark: "Target: below 10%. Above 20% = take action.",
   },
   clients: {
-    title: "Unique Clients (Reach)",
+    title: "Unique Clients",
     explain: "Total distinct people who booked with you this month.",
   },
   returning: {
@@ -141,10 +146,10 @@ const METRIC_COPY: MetricCopyShape = {
     { term: "Month-on-Month",   def: "Compare this to last month to see if revenue is growing." },
   ],
   heatmap: [
-    { term: "Booking Heatmap",      def: "Shows which days and time slots get the most bookings." },
-    { term: "Bright Green Cells",   def: "Your peak demand slots. Never discount these." },
-    { term: "Faint / Empty Cells",  def: "Quiet slots. Run targeted offers here." },
-    { term: "Day Patterns",         def: "Weekend-heavy? Build weekday traffic to smooth revenue." },
+    { term: "Booking Heatmap",    def: "Shows which days and time slots get the most bookings." },
+    { term: "Bright Green",       def: "Peak demand slots. Never discount these." },
+    { term: "Faint / Empty",      def: "Quiet slots. Run targeted offers here." },
+    { term: "Day Patterns",       def: "Weekend-heavy? Build weekday traffic to smooth revenue." },
   ],
 };
 
@@ -414,9 +419,9 @@ const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
 );
 
 const alertIcons: Record<string, React.ElementType> = {
-  warning:  CircleDollarSign,
-  info:     CalendarCheck,
-  danger:   Package,
+  warning: CircleDollarSign,
+  info:    CalendarCheck,
+  danger:  Package,
 };
 
 const AdminDashboard = ({
@@ -452,30 +457,24 @@ const AdminDashboard = ({
     );
   }
 
-  // ── Derived values — all safe with fallbacks ─────────────────────────────────
-  const monthRevenue    = data.revenue?.month    ?? 0;
-  const lastMonthRev    = data.revenue?.lastMonth ?? 0;
-  const todayRevenue    = data.revenue?.today     ?? 0;
-
-  // today
-  const todayAppts      = data.today?.appointments ?? 0;
-  const todayRemaining  = data.today?.remaining    ?? 0;
-
-  // health
-  const fillRate        = data.health?.fillRate          ?? null;
-  const avgBasket       = data.health?.avgBasket         ?? 0;
-  const totalAppts      = data.health?.totalAppointments ?? 0;
-  const cancelRate      = data.health?.cancellationRate  ?? 0; // already a %
-
-  // clients — from data.clients sub-object
-  const totalClients    = data.clients?.total     ?? 0;
-  const returningCount  = data.clients?.returning ?? 0;
-  const retentionRate   = data.clients?.retentionRate ?? 0;
-
-  // pending bookings count for hero pill
-  // hook doesn't expose a pending count directly — derive from todayBookings length - confirmed
-  // Safest: use todayRemaining as proxy, or just show todayAppts
-  const pendingDisplay  = String(todayRemaining);
+  // ── Safe derived values ────────────────────────────────────────────────────
+  const monthRevenue   = data.revenue?.month    ?? 0;
+  const lastMonthRev   = data.revenue?.lastMonth ?? 0;
+  const todayRevenue   = data.revenue?.today     ?? 0;
+  const todayAppts     = data.today?.appointments ?? 0;
+  const todayRemaining = data.today?.remaining    ?? 0;
+  const nextAppt       = data.today?.nextAppointment ?? null;
+  const fillRate       = data.health?.fillRate    ?? null;
+  const avgBasket      = data.health?.avgBasket   ?? 0;
+  const totalAppts     = data.health?.totalAppointments ?? 0;
+  const cancelRate     = data.health?.cancellationRate  ?? 0;
+  const totalClients   = data.clients?.total     ?? 0;
+  const returningCount = data.clients?.returning ?? 0;
+  const revenueTrend   = data.revenueTrend ?? [];
+  const maxTrend       = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
+  const stockAlerts    = data.stockAlerts ?? [];
+  const topServices    = data.topServices ?? [];
+  const alerts         = data.alerts ?? [];
 
   const hasLastMonth = lastMonthRev > 0;
   const pctChange    = hasLastMonth
@@ -494,30 +493,10 @@ const AdminDashboard = ({
   };
   const fr = fillRateDisplay();
 
-  // cancellation rate display — hook returns a pre-computed %
-  const cancelDisplay = `${Math.round(cancelRate)}%`;
-  const cancelColor   = cancelRate > 20 ? "text-red-400" : "text-white/90";
-
-  // retention display
-  const retentionDisplay = totalClients > 0
-    ? `${Math.round((returningCount / totalClients) * 100)}%`
-    : "0%";
-  const retentionColor = totalClients > 0 && (returningCount / totalClients) >= 0.4
-    ? "text-emerald-400"
-    : "text-white/90";
-
-  // revenue trend — hook returns revenueTrend: {day, value}[]
-  const revenueTrend = data.revenueTrend ?? [];
-  const maxTrend     = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
-
-  // stock alerts — hook returns { item: string, level: 'critical'|'low' }[]
-  const stockAlerts = data.stockAlerts ?? [];
-
-  // top services — hook returns { name, count, revenue }[]
-  const topServices = data.topServices ?? [];
-
-  // alerts — hook returns { text, type }[]
-  const alerts = data.alerts ?? [];
+  const cancelDisplay  = `${Math.round(cancelRate)}%`;
+  const cancelColor    = cancelRate > 20 ? "text-red-400" : "text-white/90";
+  const retentionDisp  = totalClients > 0 ? `${Math.round((returningCount / totalClients) * 100)}%` : "0%";
+  const retentionColor = totalClients > 0 && (returningCount / totalClients) >= 0.4 ? "text-emerald-400" : "text-white/90";
 
   return (
     <div className="flex flex-col gap-6">
@@ -568,9 +547,11 @@ const AdminDashboard = ({
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-4">
+
+            {/* Month revenue headline */}
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] tracking-[0.16em] uppercase text-white/25 mb-1">This Month</p>
+                <p className="text-[10px] tracking-[0.16em] uppercase text-white/25 mb-1">Revenue This Month</p>
                 <p className="text-3xl sm:text-4xl font-bold text-white/95 leading-none">
                   R {monthRevenue.toLocaleString()}
                 </p>
@@ -584,26 +565,46 @@ const AdminDashboard = ({
               <BarChart3 className="w-5 h-5 text-white/15" />
             </div>
 
-            {/* B2 — Quick-action shortcut pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-white/[0.05]">
-              {[
-                { label: "Today's Bookings", value: String(todayAppts),                      view: "Bookings",     color: "text-white/80" },
-                { label: "Remaining Today",  value: String(todayRemaining),                  view: "Bookings",     color: "text-amber-400" },
-                { label: "Today Revenue",    value: `R ${todayRevenue.toLocaleString()}`,    view: "Bookings",     color: "text-emerald-400" },
-                { label: "Fill Rate",        value: fr.text,                                 view: "Availability", color: fr.color },
-              ].map(item => (
-                <button
-                  key={item.label}
-                  onClick={() => onNavigate?.(item.view)}
-                  className="flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all group text-left"
-                >
-                  <span className="text-[9px] tracking-[0.1em] uppercase text-white/25 group-hover:text-white/40 transition-colors">{item.label}</span>
-                  <div className="flex items-center gap-1 w-full">
+            {/* ── Today at a glance — pure stats, no navigation ── */}
+            <div className="border-t border-white/[0.05] pt-3">
+              <p className="text-[9px] tracking-[0.14em] uppercase text-white/20 mb-2">Today at a glance</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  {
+                    label: "Bookings Today",
+                    value: String(todayAppts),
+                    color: "text-white/80",
+                    sub: todayAppts === 1 ? "appointment" : "appointments",
+                  },
+                  {
+                    label: "Still to Come",
+                    value: String(todayRemaining),
+                    color: todayRemaining > 0 ? "text-amber-400" : "text-white/40",
+                    sub: "remaining",
+                  },
+                  {
+                    label: "Revenue Today",
+                    value: `R ${todayRevenue.toLocaleString()}`,
+                    color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40",
+                    sub: "paid in",
+                  },
+                  {
+                    label: "Next Client",
+                    value: nextAppt ? nextAppt.split(" - ")[0] : "—",
+                    color: nextAppt ? "text-white/80" : "text-white/25",
+                    sub: nextAppt ? nextAppt.split(" - ").slice(1).join(" ") : "no more today",
+                  },
+                ].map(item => (
+                  <div
+                    key={item.label}
+                    className="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]"
+                  >
+                    <span className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</span>
                     <span className={`text-sm font-bold ${item.color}`}>{item.value}</span>
-                    <ArrowRight className="w-2.5 h-2.5 text-white/10 group-hover:text-white/30 ml-auto transition-colors" />
+                    {item.sub && <span className="text-[9px] text-white/20">{item.sub}</span>}
                   </div>
-                </button>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </motion.section>
@@ -614,12 +615,12 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.04 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Business Health</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <MetricCard id="mc-fill"    icon={Percent}       label="Fill Rate"         value={fr.text}                          color={fr.color}    sub={fillRate === null ? "not configured" : undefined} {...METRIC_COPY.fillRate}    onExpand={setExpandedCard} />
-            <MetricCard id="mc-atv"     icon={ShoppingBag}   label="Avg Basket"        value={`R ${Math.round(avgBasket)}`}                         {...METRIC_COPY.avgBasket}   onExpand={setExpandedCard} />
-            <MetricCard id="mc-appts"   icon={CalendarCheck} label="Appointments"      value={String(totalAppts)}                                   {...METRIC_COPY.appointments} onExpand={setExpandedCard} />
-            <MetricCard id="mc-cancel"  icon={XCircle}       label="Cancellation Rate" value={cancelDisplay}                    color={cancelColor}  {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
-            <MetricCard id="mc-clients" icon={UserPlus}      label="Unique Clients"    value={String(totalClients)}                                 {...METRIC_COPY.clients}     onExpand={setExpandedCard} />
-            <MetricCard id="mc-ret"     icon={Bell}          label="Retention"         value={retentionDisplay}                 color={retentionColor} {...METRIC_COPY.retention}  onExpand={setExpandedCard} />
+            <MetricCard id="mc-fill"    icon={Percent}       label="Fill Rate"         value={fr.text}                color={fr.color}    sub={fillRate === null ? "not configured" : undefined} {...METRIC_COPY.fillRate}    onExpand={setExpandedCard} />
+            <MetricCard id="mc-atv"     icon={ShoppingBag}   label="Avg Basket"        value={`R ${Math.round(avgBasket)}`}                {...METRIC_COPY.avgBasket}   onExpand={setExpandedCard} />
+            <MetricCard id="mc-appts"   icon={CalendarCheck} label="Appointments"      value={String(totalAppts)}                          {...METRIC_COPY.appointments} onExpand={setExpandedCard} />
+            <MetricCard id="mc-cancel"  icon={XCircle}       label="Cancellation Rate" value={cancelDisplay}          color={cancelColor}  {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
+            <MetricCard id="mc-clients" icon={UserPlus}      label="Unique Clients"    value={String(totalClients)}                        {...METRIC_COPY.clients}     onExpand={setExpandedCard} />
+            <MetricCard id="mc-ret"     icon={Bell}          label="Retention"         value={retentionDisp}          color={retentionColor} {...METRIC_COPY.retention}  onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
@@ -645,7 +646,6 @@ const AdminDashboard = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {/* FIX: hook returns s.name not s.service */}
                   {topServices.slice(0, 5).map((s: any, i: number) => (
                     <tr key={s.name} className="border-t border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3 text-white/25">{i + 1}</td>
@@ -678,7 +678,6 @@ const AdminDashboard = ({
                     alert.type === "danger"  ? "text-red-400" :
                     alert.type === "warning" ? "text-amber-400" : "text-white/30"
                   }`} />
-                  {/* FIX: hook returns alert.text not alert.message */}
                   <p className="text-xs text-white/60 leading-relaxed">{alert.text}</p>
                 </div>
               );
@@ -704,7 +703,6 @@ const AdminDashboard = ({
               </div>
             ) : (
               <div className="flex items-end gap-0.5 h-24 overflow-x-auto">
-                {/* FIX: hook returns {day, value} not {day, revenue} */}
                 {revenueTrend.map((d: any, i: number) => {
                   const h = Math.max((d.value / maxTrend) * 100, d.value > 0 ? 4 : 1);
                   return (
@@ -753,7 +751,7 @@ const AdminDashboard = ({
                 onClick={() => onNavigate("Bookings")}
                 className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/60 transition-colors"
               >
-                View all <ArrowRight className="w-3 h-3" />
+                View all in Bookings →
               </button>
             )}
           </div>
@@ -777,8 +775,8 @@ const AdminDashboard = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <ClientMiniCard id="ci-total"  icon={UserPlus}         iconColor="text-sky-400/60"     value={String(totalClients)}   valueColor="text-sky-400"     label="Total Clients" {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-ret"    icon={UserCheck}        iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Returning"     {...METRIC_COPY.returning} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-retpct" icon={Percent}          iconColor="text-violet-400/60"  value={retentionDisplay}       valueColor="text-violet-400" label="Retention %"  {...METRIC_COPY.retention} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-rev"    icon={CircleDollarSign} iconColor="text-amber-400/60"   value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket" {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-retpct" icon={Percent}          iconColor="text-violet-400/60"  value={retentionDisp}          valueColor="text-violet-400" label="Retention %"  {...METRIC_COPY.retention} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-rev"    icon={CircleDollarSign} iconColor="text-amber-400/60"   value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket"  {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
@@ -793,12 +791,11 @@ const AdminDashboard = ({
                 onClick={() => onNavigate("Stock")}
                 className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/60 transition-colors"
               >
-                View all <ArrowRight className="w-3 h-3" />
+                View in Stock →
               </button>
             )}
           </div>
           <div className="flex flex-col gap-2">
-            {/* FIX: hook returns { item, level } not { name, qty, unit } */}
             {stockAlerts.map((s: any, i: number) => (
               <div key={i} className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
                 s.level === "critical" ? "border-red-500/15 bg-red-500/[0.04]" : "border-amber-500/15 bg-amber-500/[0.04]"
@@ -815,9 +812,6 @@ const AdminDashboard = ({
           </div>
         </motion.section>
       )}
-
-      {/* ── SETTINGS SNAPSHOT — removed, hook does not expose settings ── */}
-      {/* Settings shortcut kept as nav-only pill in hero B2 row */}
 
     </div>
   );
