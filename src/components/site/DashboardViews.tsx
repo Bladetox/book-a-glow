@@ -51,7 +51,6 @@ const heatmapData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => ({
   slots: heatmapSlots.map(() => Math.round(Math.random() * 5)),
 }));
 
-// Lux card: slightly brighter border with a warm shimmer tint
 const card = "rounded-xl border border-white/[0.10] bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";
 const label = "text-[8px] tracking-[0.12em] uppercase text-white/30";
 const labelLg = "text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2.5";
@@ -64,6 +63,112 @@ const StatusBadge = ({ status }: { status: string }) => (
     "bg-amber-500/10 text-amber-400"
   }`}>{status}</span>
 );
+
+/* Revenue Trend Chart */
+const RevenueTrendChart = () => {
+  const values = mockRevenueTrend.map(d => d.value);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+  const peakIdx = values.indexOf(max);
+  const todayIdx = 18; // day 19 = index 18
+  const fmt = (v: number) => v >= 1000 ? `R${(v / 1000).toFixed(1)}k` : `R${v}`;
+
+  return (
+    <div className={`${card} p-3`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-1">
+        <p className={labelLg}>Revenue Trend</p>
+        <span className="text-[7px] text-white/20">Last 30 days</span>
+      </div>
+
+      {/* Y-axis labels + chart */}
+      <div className="flex gap-1.5">
+        {/* Y-axis */}
+        <div className="flex flex-col justify-between pb-4 shrink-0">
+          <span className="text-[6px] text-white/20">{fmt(max)}</span>
+          <span className="text-[6px] text-white/20">{fmt(Math.round((max + min) / 2))}</span>
+          <span className="text-[6px] text-white/20">{fmt(min)}</span>
+        </div>
+
+        {/* Bars + week labels */}
+        <div className="flex-1 min-w-0">
+          {/* Peak value label */}
+          <div className="relative h-3 mb-0.5">
+            <span
+              className="absolute text-[6px] text-emerald-400/70 -translate-x-1/2 whitespace-nowrap"
+              style={{ left: `${(peakIdx / 29) * 100}%` }}
+            >
+              ↑ {fmt(max)}
+            </span>
+          </div>
+
+          {/* Bar chart */}
+          <div className="h-20 flex items-end gap-[1.5px]">
+            {mockRevenueTrend.map((d, i) => {
+              const heightPct = Math.max(((d.value - min) / (max - min)) * 100, 4);
+              const isPeak = i === peakIdx;
+              const isToday = i === todayIdx;
+              const barColor = isPeak
+                ? "bg-emerald-400/70"
+                : isToday
+                ? "bg-amber-400/60"
+                : "bg-emerald-400/20";
+              return (
+                <div key={d.day} className="flex-1 flex flex-col justify-end">
+                  {/* week separator gap */}
+                  {i > 0 && i % 7 === 0 && (
+                    <div className="absolute" />
+                  )}
+                  <div
+                    className={`${barColor} rounded-t transition-colors w-full ${
+                      i > 0 && i % 7 === 0 ? "ml-[2px]" : ""
+                    }`}
+                    style={{ height: `${heightPct}%` }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Week labels below bars */}
+          <div className="flex mt-1">
+            {["W1", "W2", "W3", "W4"].map((w, i) => (
+              <div key={w} className="flex-1 text-center">
+                <span className="text-[6px] text-white/20">{w}</span>
+              </div>
+            ))}
+            <div className="w-[7px]" />{/* spacer for last 2 days */}
+          </div>
+        </div>
+      </div>
+
+      {/* Today marker label */}
+      <div className="flex items-center gap-1 mt-1 mb-2">
+        <span className="inline-block w-2 h-1.5 rounded-sm bg-amber-400/60" />
+        <span className="text-[6px] text-amber-400/60">Today (day 19)</span>
+        <span className="inline-block w-2 h-1.5 rounded-sm bg-emerald-400/70 ml-2" />
+        <span className="text-[6px] text-emerald-400/60">Peak day</span>
+      </div>
+
+      {/* Summary row */}
+      <div className="grid grid-cols-3 gap-1 pt-2 border-t border-white/[0.06]">
+        <div className="text-center">
+          <p className="text-[8px] font-bold text-emerald-400">{fmt(max)}</p>
+          <p className="text-[6px] text-white/25">Best day</p>
+        </div>
+        <div className="text-center border-x border-white/[0.06]">
+          <p className="text-[8px] font-bold text-white/70">{fmt(avg)}</p>
+          <p className="text-[6px] text-white/25">Daily avg</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[8px] font-bold text-white/70">R {mockRevenue.month.toLocaleString()}</p>
+          <p className="text-[6px] text-white/25">Month total</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const DashboardContent = () => {
   const pctChange = Math.round(((mockRevenue.month - mockRevenue.lastMonth) / mockRevenue.lastMonth) * 100);
@@ -140,22 +245,21 @@ export const DashboardContent = () => {
         <p className={`${labelLg} flex items-center gap-1.5`}><Bell className="w-3 h-3" /> Alerts</p>
         <div className="space-y-1.5">
           {mockAlerts.map((a, i) => (
-            <div key={i} className={`flex items-center gap-2 text-[8px] p-2 rounded-lg ${a.type === "danger" ? "bg-red-500/[0.08] text-red-400" : a.type === "warning" ? "bg-amber-500/[0.08] text-amber-400" : "bg-white/[0.04] text-white/50"}`}>
+            <div key={i} className={`flex items-center gap-2 text-[8px] p-2 rounded-lg ${
+              a.type === "danger" ? "bg-red-500/[0.08] text-red-400" :
+              a.type === "warning" ? "bg-amber-500/[0.08] text-amber-400" :
+              "bg-white/[0.04] text-white/50"
+            }`}>
               <a.icon className="w-3 h-3 shrink-0" /><span>{a.text}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Revenue trend */}
-      <div className={`${card} p-3`}>
-        <div className="flex items-center justify-between mb-2"><p className={labelLg}>Revenue Trend</p><span className="text-[7px] text-white/15">Last 30 days</span></div>
-        <div className="h-16 flex items-end gap-[1px]">
-          {mockRevenueTrend.map(d => { const max = Math.max(...mockRevenueTrend.map(x => x.value), 1); return (<div key={d.day} className="flex-1 bg-emerald-400/20 hover:bg-emerald-400/40 rounded-t transition-colors" style={{ height: `${Math.max((d.value / max) * 100, 4)}%` }} />); })}
-        </div>
-      </div>
+      {/* Revenue Trend — redesigned */}
+      <RevenueTrendChart />
 
-      {/* Booking Heatmap — fixed for mobile: table-fixed, compressed slot labels, day col pinned */}
+      {/* Booking Heatmap */}
       <div className={`${card} p-3`}>
         <p className={labelLg}>Booking Heatmap</p>
         <div className="w-full overflow-hidden">
@@ -236,20 +340,37 @@ export const BookingsContent = () => (
   <div className="flex-1 p-4 overflow-y-auto overflow-x-hidden space-y-3 scrollbar-hide">
     <div className="flex gap-1.5 overflow-x-auto pb-1">
       {["All", "Today", "Pending", "Confirmed", "Complete"].map((f, i) => (
-        <button key={f} className={`px-2.5 py-1 rounded-full text-[8px] font-semibold tracking-wider uppercase whitespace-nowrap border transition-all ${i === 0 ? "bg-white/[0.1] text-white/80 border-white/[0.15]" : "text-white/30 border-white/[0.08]"}`}>{f}</button>
+        <button key={f} className={`px-2.5 py-1 rounded-full text-[8px] font-semibold tracking-wider uppercase whitespace-nowrap border transition-all ${
+          i === 0 ? "bg-white/[0.1] text-white/80 border-white/[0.15]" : "text-white/30 border-white/[0.08]"
+        }`}>{f}</button>
       ))}
     </div>
     <div className="grid grid-cols-4 gap-2">
       {[{ icon: CalendarCheck, l: "Today", v: "6", color: "text-white/80" }, { icon: Clock, l: "Pending", v: "2", color: "text-amber-400" }, { icon: CircleDollarSign, l: "Revenue", v: "R 9,200", color: "text-white/80" }, { icon: CircleDollarSign, l: "Outstanding", v: "R 3,440", color: "text-red-400" }].map(m => (
-        <div key={m.l} className={`${card} p-2 flex items-center gap-2`}><m.icon className="w-3.5 h-3.5 text-white/25" /><div><p className={`text-[10px] font-bold ${m.color}`}>{m.v}</p><p className="text-[7px] text-white/25">{m.l}</p></div></div>
+        <div key={m.l} className={`${card} p-2 flex items-center gap-2`}>
+          <m.icon className="w-3.5 h-3.5 text-white/25" />
+          <div><p className={`text-[10px] font-bold ${m.color}`}>{m.v}</p><p className="text-[7px] text-white/25">{m.l}</p></div>
+        </div>
       ))}
     </div>
     <div className="space-y-1.5">
       {allBookings.map(b => (
         <div key={b.ref} className={`${card} p-2.5 flex items-center gap-2.5 hover:bg-white/[0.02] transition-colors cursor-default`}>
-          <div className="flex flex-col items-center w-8 shrink-0"><Clock className="w-2.5 h-2.5 text-white/20 mb-0.5" /><span className="text-[9px] font-semibold text-white/60">{b.time}</span><span className="text-[7px] text-white/15">{b.date}</span></div>
-          <div className="flex-1 min-w-0"><p className="text-[9px] font-medium text-white/80 truncate">{b.client}</p><p className="text-[7px] text-white/30 truncate">{b.service} {b.duration}</p></div>
-          <div className="flex flex-col items-end gap-0.5 shrink-0"><StatusBadge status={b.status} />{b.balance > 0 && b.status !== "cancelled" && (<span className="text-[7px] text-amber-400/70">R {b.balance} due</span>)}</div>
+          <div className="flex flex-col items-center w-8 shrink-0">
+            <Clock className="w-2.5 h-2.5 text-white/20 mb-0.5" />
+            <span className="text-[9px] font-semibold text-white/60">{b.time}</span>
+            <span className="text-[7px] text-white/15">{b.date}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-medium text-white/80 truncate">{b.client}</p>
+            <p className="text-[7px] text-white/30 truncate">{b.service} · {b.duration}</p>
+          </div>
+          <div className="flex flex-col items-end gap-0.5 shrink-0">
+            <StatusBadge status={b.status} />
+            {b.balance > 0 && b.status !== "cancelled" && (
+              <span className="text-[7px] text-amber-400/70">R {b.balance} due</span>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -262,8 +383,11 @@ export const ConsultationsContent = () => (
     <p className="text-[10px] font-semibold text-white/80">Consultations (3)</p>
     {[{ client: "Luca R.", type: "Hot Towel Shave", date: "12 Mar", notes: "First visit. Prefers light pressure.", status: "complete" }, { client: "Ethan P.", type: "Kids Cut", date: "11 Mar", notes: "Discussed length and style with parent.", status: "complete" }, { client: "New Lead", type: "Beard Sculpt", date: "15 Mar", notes: "Enquiry via Instagram DM.", status: "pending" }].map((c, i) => (
       <div key={i} className={`${card} p-3 space-y-1.5`}>
-        <div className="flex items-center justify-between"><span className="text-[9px] font-medium text-white/80">{c.client}</span><StatusBadge status={c.status} /></div>
-        <p className="text-[8px] text-white/40">{c.type} {c.date}</p>
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-medium text-white/80">{c.client}</span>
+          <StatusBadge status={c.status} />
+        </div>
+        <p className="text-[8px] text-white/40">{c.type} · {c.date}</p>
         <p className="text-[8px] text-white/30 leading-relaxed">{c.notes}</p>
       </div>
     ))}
@@ -289,8 +413,15 @@ export const StockContent = () => (
     <p className="text-[10px] font-semibold text-white/80 mb-2">Inventory</p>
     {[{ name: "Barber Tape", qty: 1, status: "critical" }, { name: "Clipper Oil", qty: 6, status: "ok" }, { name: "Shaving Cream", qty: 3, status: "low" }, { name: "Disposable Razors", qty: 30, status: "ok" }, { name: "Beard Oil", qty: 4, status: "low" }].map(item => (
       <div key={item.name} className={`${card} px-3 py-2 flex items-center justify-between`}>
-        <div><p className="text-[9px] font-medium text-white/70">{item.name}</p><p className="text-[7px] text-white/30">Qty: {item.qty}</p></div>
-        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${item.status === "critical" ? "bg-red-500/10 text-red-400" : item.status === "low" ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>{item.status}</span>
+        <div>
+          <p className="text-[9px] font-medium text-white/70">{item.name}</p>
+          <p className="text-[7px] text-white/30">Qty: {item.qty}</p>
+        </div>
+        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
+          item.status === "critical" ? "bg-red-500/10 text-red-400" :
+          item.status === "low" ? "bg-amber-500/10 text-amber-400" :
+          "bg-emerald-500/10 text-emerald-400"
+        }`}>{item.status}</span>
       </div>
     ))}
   </div>
@@ -302,8 +433,15 @@ export const ReviewsContent = () => (
     <p className="text-[10px] font-semibold text-white/80 mb-2">Google Reviews</p>
     {[{ name: "Sipho M.", rating: 5, text: "Best fade in the city. Clean shop, great vibes.", date: "12 Mar" }, { name: "Karabo T.", rating: 5, text: "Beard sculpt was immaculate. Will be back every week.", date: "10 Mar" }, { name: "Luca R.", rating: 4, text: "Really good hot towel shave. Relaxing experience.", date: "8 Mar" }].map((r, i) => (
       <div key={i} className={`${card} p-3 space-y-1`}>
-        <div className="flex items-center justify-between"><span className="text-[9px] font-medium text-white/70">{r.name}</span><span className="text-[8px] text-white/25">{r.date}</span></div>
-        <div className="flex gap-0.5">{Array.from({ length: 5 }).map((_, j) => (<Star key={j} className={`w-2.5 h-2.5 ${j < r.rating ? "text-amber-400 fill-amber-400" : "text-white/10"}`} />))}</div>
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-medium text-white/70">{r.name}</span>
+          <span className="text-[8px] text-white/25">{r.date}</span>
+        </div>
+        <div className="flex gap-0.5">
+          {Array.from({ length: 5 }).map((_, j) => (
+            <Star key={j} className={`w-2.5 h-2.5 ${j < r.rating ? "text-amber-400 fill-amber-400" : "text-white/10"}`} />
+          ))}
+        </div>
         <p className="text-[8px] text-white/40 leading-relaxed">{r.text}</p>
       </div>
     ))}
@@ -344,8 +482,15 @@ export const LoyaltyContent = () => (
     {[{ name: "Sipho M.", visits: 22, status: "VIP", lastVisit: "14 Mar" }, { name: "Karabo T.", visits: 11, status: "Regular", lastVisit: "14 Mar" }, { name: "James V.", visits: 8, status: "Regular", lastVisit: "14 Mar" }, { name: "Luca R.", visits: 2, status: "New", lastVisit: "11 Mar" }].map(c => (
       <div key={c.name} className={`${card} px-3 py-2 flex items-center gap-2.5`}>
         <Gem className="w-3 h-3 text-white/20" />
-        <div className="flex-1"><p className="text-[9px] font-medium text-white/70">{c.name}</p><p className="text-[7px] text-white/25">{c.visits} visits · Last: {c.lastVisit}</p></div>
-        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${c.status === "VIP" ? "bg-amber-500/10 text-amber-400" : c.status === "Regular" ? "bg-emerald-500/10 text-emerald-400" : "bg-white/[0.06] text-white/40"}`}>{c.status}</span>
+        <div className="flex-1">
+          <p className="text-[9px] font-medium text-white/70">{c.name}</p>
+          <p className="text-[7px] text-white/25">{c.visits} visits · Last: {c.lastVisit}</p>
+        </div>
+        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
+          c.status === "VIP" ? "bg-amber-500/10 text-amber-400" :
+          c.status === "Regular" ? "bg-emerald-500/10 text-emerald-400" :
+          "bg-white/[0.06] text-white/40"
+        }`}>{c.status}</span>
       </div>
     ))}
   </div>
