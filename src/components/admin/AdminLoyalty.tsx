@@ -10,14 +10,21 @@ import {
 import { format, subDays } from "date-fns";
 
 // ─── Excel serial date → readable string ───
-// Excel epoch is 1900-01-00 (effectively 1899-12-30 in JS)
 function excelToDate(serial: number | string | null | undefined): string {
   if (!serial) return "—";
-  const n = Number(serial);
-  if (isNaN(n) || n < 1) return String(serial);
+  const str = String(serial).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    try {
+      return format(new Date(str.slice(0, 10) + "T00:00:00"), "dd MMM yyyy");
+    } catch {
+      return str;
+    }
+  }
+  const n = Number(str);
+  if (isNaN(n) || n < 1) return str;
   const ms = (n - 25569) * 86400 * 1000;
   const d = new Date(ms);
-  if (isNaN(d.getTime())) return String(serial);
+  if (isNaN(d.getTime())) return str;
   return format(d, "dd MMM yyyy");
 }
 
@@ -49,7 +56,12 @@ const STATUS_ICON: Record<string, React.ElementType> = {
 // ─── WhatsApp deep link ───
 function waLink(phone: string, name: string, status: string): string {
   const cleaned = phone.replace(/\D/g, "");
-  const num = cleaned.startsWith("27") ? cleaned : `27${cleaned.replace(/^0/, "")}`;
+  let num: string;
+  if (cleaned.startsWith("27") && cleaned.length >= 11) {
+    num = cleaned;
+  } else {
+    num = "27" + cleaned.replace(/^0/, "");
+  }
   let msg = "";
   if (status === "OVERDUE") {
     msg = `Hi ${name}! ✨ We miss you at PhenomeBeauty. You're overdue for your wax — let's get you booked in! Reply to grab a slot.`;
@@ -88,10 +100,12 @@ const PackPill = ({ raw }: { raw: string | number | null | undefined }) => {
 
 // ─── Enroll modal ───
 interface EnrollCandidate {
-  client_name: string;
-  phone: string;
+  client_name:  string;
+  phone:        string;
   bookingCount: number;
-  totalSpend: number;
+  totalSpend:   number;
+  lastWaxDate?: string;
+  nextDueDate?: string;
 }
 
 const EnrollModal = ({
@@ -99,12 +113,14 @@ const EnrollModal = ({
 }: {
   candidate: EnrollCandidate;
   onClose: () => void;
-  onConfirm: (name: string, phone: string, notes: string) => void;
+  onConfirm: (name: string, phone: string, notes: string, lastWax: string, nextDue: string) => void;
   saving: boolean;
 }) => {
-  const [name, setName]   = useState(candidate.client_name);
-  const [phone, setPhone] = useState(candidate.phone);
-  const [notes, setNotes] = useState("");
+  const [name, setName]       = useState(candidate.client_name);
+  const [phone, setPhone]     = useState(candidate.phone);
+  const [notes, setNotes]     = useState("");
+  const [lastWax, setLastWax] = useState(candidate.lastWaxDate ?? "");
+  const [nextDue, setNextDue] = useState(candidate.nextDueDate ?? "");
 
   return (
     <motion.div
@@ -139,6 +155,16 @@ const EnrollModal = ({
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
           </div>
           <div className="flex flex-col gap-1">
+            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last Wax Date</label>
+            <input type="date" value={lastWax} onChange={e => setLastWax(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Next Due Date</label>
+            <input type="date" value={nextDue} onChange={e => setNextDue(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+          </div>
+          <div className="flex flex-col gap-1">
             <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Notes (optional)</label>
             <input value={notes} onChange={e => setNotes(e.target.value)}
               placeholder="e.g. 3-pack candidate"
@@ -146,7 +172,7 @@ const EnrollModal = ({
           </div>
         </div>
         <button
-          onClick={() => onConfirm(name, phone, notes)}
+          onClick={() => onConfirm(name, phone, notes, lastWax, nextDue)}
           disabled={saving || !name.trim()}
           className="w-full py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
         >
@@ -160,7 +186,11 @@ const EnrollModal = ({
 
 // ─── Helper: resolve client identity from booking ───
 function resolveKey(b: any): string {
-  return b.client_id || b.guest_email || b.guest_phone || b.id;
+  if (b.client_id) return b.client_id;
+  const phone = resolvePhone(b).replace(/\D/g, "");
+  if (phone && phone.length >= 9) return phone;
+  if (b.guest_email) return b.guest_email;
+  return b.id;
 }
 function resolveName(b: any): string {
   return b.client_name || b.guest_name || (b.client && b.client.full_name) || "Unknown";
@@ -172,7 +202,7 @@ function resolvePhone(b: any): string {
 const FILTERS = ["All", "On Track", "Time to Book", "Overdue"] as const;
 type Filter = typeof FILTERS[number];
 
-// ════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 const AdminLoyalty = () => {
   const { tenantId } = useTenant();
   const qc           = useQueryClient();
@@ -220,7 +250,9 @@ const AdminLoyalty = () => {
 
   // ─── 3. Enroll mutation ───
   const { mutate: enroll, isPending: enrollPending } = useMutation({
-    mutationFn: async ({ name, phone, notes }: { name: string; phone: string; notes: string }) => {
+    mutationFn: async ({ name, phone, notes, lastWax, nextDue }: {
+      name: string; phone: string; notes: string; lastWax: string; nextDue: string;
+    }) => {
       const { error } = await supabase.from("loyalty_tracker").insert({
         tenant_id:     tenantId,
         client_name:   name,
@@ -228,6 +260,8 @@ const AdminLoyalty = () => {
         status:        "ON TRACK",
         pack_progress: "No Pack Purchased",
         notes,
+        ...(lastWax ? { last_wax_date: lastWax } : {}),
+        ...(nextDue ? { next_due_date: nextDue } : {}),
       });
       if (error) throw error;
     },
@@ -246,13 +280,20 @@ const AdminLoyalty = () => {
 
   // ─── Derived: booking recommendation candidates ───
   const candidates = useMemo(() => {
-    const map = new Map<string, { name: string; phone: string; count: number; spend: number }>();
+    const map = new Map<string, { name: string; phone: string; count: number; spend: number; lastBookingDate: string }>();
     recentBookings.forEach((b: any) => {
       const key   = resolveKey(b);
       const name  = resolveName(b);
       const phone = resolvePhone(b);
-      const prev  = map.get(key) || { name, phone, count: 0, spend: 0 };
-      map.set(key, { name, phone, count: prev.count + 1, spend: prev.spend + Number(b.total_amount ?? 0) });
+      const prev  = map.get(key) || { name, phone, count: 0, spend: 0, lastBookingDate: "" };
+      const bDate = b.booking_date ?? "";
+      map.set(key, {
+        name,
+        phone,
+        count:           prev.count + 1,
+        spend:           prev.spend + Number(b.total_amount ?? 0),
+        lastBookingDate: bDate > prev.lastBookingDate ? bDate : prev.lastBookingDate,
+      });
     });
     const totalSpend = recentBookings.reduce((s: number, b: any) => s + Number(b.total_amount ?? 0), 0);
     const avgBasket  = recentBookings.length > 0 ? totalSpend / recentBookings.length : 0;
@@ -260,7 +301,20 @@ const AdminLoyalty = () => {
       .filter(([, v]) => v.count >= 2 || v.spend > avgBasket)
       .filter(([, v]) => !trackedPhones.has(v.phone.replace(/\D/g, "")))
       .filter(([, v]) => !enrollSaved.includes(v.name + v.phone))
-      .map(([, v]) => ({ client_name: v.name, phone: v.phone, bookingCount: v.count, totalSpend: v.spend } as EnrollCandidate))
+      .map(([, v]) => {
+        const lastWaxDate = v.lastBookingDate ?? "";
+        const nextDueSuggestion = lastWaxDate
+          ? format(new Date(new Date(lastWaxDate).getTime() + 28 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
+          : "";
+        return {
+          client_name:  v.name,
+          phone:        v.phone,
+          bookingCount: v.count,
+          totalSpend:   v.spend,
+          lastWaxDate,
+          nextDueDate:  nextDueSuggestion,
+        } as EnrollCandidate;
+      })
       .sort((a, b) => b.bookingCount - a.bookingCount || b.totalSpend - a.totalSpend)
       .slice(0, 8);
   }, [recentBookings, trackedPhones, enrollSaved]);
@@ -515,7 +569,7 @@ const AdminLoyalty = () => {
           <EnrollModal
             candidate={enrolling}
             onClose={() => setEnrolling(null)}
-            onConfirm={(name, phone, notes) => enroll({ name, phone, notes })}
+            onConfirm={(name, phone, notes, lastWax, nextDue) => enroll({ name, phone, notes, lastWax, nextDue })}
             saving={enrollPending}
           />
         )}
