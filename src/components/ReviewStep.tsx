@@ -122,6 +122,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         // from app_settings with a potentially-null tenant context ──
         p_total_amount:           total,
         p_deposit_amount:         dbDepositAmount,
+        p_tenant_id:              tenantId,
       });
 
       if (error) throw error;
