@@ -156,8 +156,8 @@ export function useSupabaseBookings() {
           items:booking_items(service_name, price, duration_minutes, sort_order)
         `)
         .eq("tenant_id", tenantId)
-        .order("booking_date", { ascending: false })
-        .order("start_time", { ascending: false });
+        .order("booking_date", { ascending: true })
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return (data ?? []).map(mapBooking);
     },
