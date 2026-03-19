@@ -129,42 +129,16 @@ export function useDashboardData() {
     },
   });
 
-  // 5. Staff IDs
-  const { data: staff = [], isLoading: l4 } = useQuery({
-    queryKey:  ["dash-staff-ids", tenantId],
-    staleTime: 10 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("staff")
-        .select("id")
-        .eq("tenant_id", tenantId);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // 6. Staff availability - no day_enabled filter in DB (unreliable null column)
-  //    Filter is applied safely in JS below
-  const staffIds = useMemo(() => staff.map((s: any) => s.id as string), [staff]);
-  const { data: staffSlots = [], isLoading: l5 } = useQuery({
-    queryKey:  ["dash-staff-avail", tenantId, staffIds],
-    staleTime: 10 * 60 * 1000,
-    enabled:   staffIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("staff_availability")
-        .select("staff_id, day_of_week, specific_date, slot_start_time, slot_end_time, is_available, day_enabled")
-        .in("staff_id", staffIds)
-        .eq("is_available", true);
-      if (error) throw error;
-      // Filter day_enabled in JS: treat null as true (not explicitly disabled)
-      return (data ?? []).filter((s: any) => s.day_enabled !== false);
-    },
-  });
+  // 5 & 6. Staff / availability — public.staff table does not exist in this schema.
+  //        Fill rate card returns null (graceful "not configured" state) until
+  //        a staff table is implemented.
+  const staffSlots: any[] = [];
+  const l4 = false;
+  const l5 = false;
 
   // Core loading: bookings + payments only - enough to render the whole dashboard
   // Staff loading only blocks the fill rate card
-  const coreLoading = l1 || l2 || l3;
+  const coreLoading  = l1 || l2 || l3;
   const staffLoading = l4 || l5;
 
   // Derived: split bookings
@@ -289,40 +263,8 @@ export function useDashboardData() {
     };
   }, [active]);
 
-  // Fill Rate - day_enabled filtered in JS (null treated as enabled)
-  const fillRate = useMemo(() => {
-    if (staffSlots.length === 0) return null; // null = still loading or no staff configured
-    const overrideDates = new Set<string>();
-    staffSlots.forEach((s: any) => {
-      if (s.specific_date) overrideDates.add(`${s.staff_id}__${s.specific_date}`);
-    });
-    const uniqueStaff = [...new Set(staffSlots.map((s: any) => s.staff_id as string))];
-    let totalAvailableMins = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date    = new Date(now.getFullYear(), now.getMonth(), d);
-      const dateStr = format(date, "yyyy-MM-dd");
-      const dow     = date.getDay();
-      uniqueStaff.forEach(staffId => {
-        const overrideKey = `${staffId}__${dateStr}`;
-        const hasOverride = overrideDates.has(overrideKey);
-        staffSlots
-          .filter((s: any) => {
-            if (s.staff_id !== staffId) return false;
-            if (hasOverride) return s.specific_date === dateStr;
-            return (s.specific_date === null || s.specific_date === undefined) && s.day_of_week === dow;
-          })
-          .forEach((s: any) => {
-            const mins = timeToMins(s.slot_end_time) - timeToMins(s.slot_start_time);
-            if (mins > 0) totalAvailableMins += mins;
-          });
-      });
-    }
-    if (totalAvailableMins === 0) return 0;
-    const bookedMins = active.reduce((sum: number, b: any) =>
-      sum + Math.max(timeToMins(b.end_time) - timeToMins(b.start_time), 0), 0
-    );
-    return Math.min(Math.round((bookedMins / totalAvailableMins) * 100), 100);
-  }, [staffSlots, active, daysInMonth]);
+  // Fill Rate — disabled until staff table is implemented; returns null gracefully
+  const fillRate: number | null = null;
 
   // Alerts
   type Alert = { text: string; type: "warning" | "info" | "danger" };
@@ -360,7 +302,7 @@ export function useDashboardData() {
         : null,
     },
     health: {
-      fillRate,       // null = staff still loading, 0 = no availability configured
+      fillRate,
       staffLoading,
       avgBasket:
         active.length > 0
