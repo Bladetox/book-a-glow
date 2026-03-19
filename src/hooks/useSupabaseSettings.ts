@@ -2,20 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 
-// Keys permitted by RLS policy "Public read allowed settings"
+// ─── Keys the admin UI is allowed to read from app_settings ──────────────────
+// NOTE: Secret values (passwords, api keys) are masked in the UI after saving.
+// They must be in this list so the UI can detect "is this configured?" status.
 const ALLOWED_APP_SETTING_KEYS = [
+  // Booking rules
   "booking_ref_prefix",
+  "deposit_percent",
+  "min_notice_hours",
+  "max_advance_days",
+  // Business / branding
   "business_name",
   "currency",
   "theme_id",
-  "google_calendar_id",
-  "smtp_host",
-  "smtp_port",
-  "smtp_from",
-  // Google Reviews — place_id and review_link are safe to expose (not secret)
-  // google_maps_api_key intentionally excluded — backend only
-  "google_place_id",
-  "google_review_link",
+  // Travel
+  "fixed_origin_address",
+  "rate_per_km",
+  "default_distance_km",
   // Splash / confirmation copy
   "splash_welcome_label",
   "splash_tagline1",
@@ -26,18 +29,34 @@ const ALLOWED_APP_SETTING_KEYS = [
   "confirmation_intro",
   "confirmation_outro",
   "sign_off",
-  // Travel
-  "fixed_origin_address",
-  "rate_per_km",
+  // Google Maps
+  "google_maps_api_key",
   "default_distance_km",
-  // Booking rules
-  "deposit_percent",
-  "min_notice_hours",
-  "max_advance_days",
+  // Google Reviews
+  "google_place_id",
+  "google_review_link",
+  // Google Calendar
+  "google_calendar_id",
+  "gcal_connected",
+  "gcal_access_token",
+  "gcal_refresh_token",
+  "gcal_token_expiry",
+  // Yoco Payments
+  "yoco_public_key",
+  "yoco_secret_key",
+  "yoco_webhook_secret",
+  "yoco_webhook_id",
+  // SMTP / Email
+  "smtp_host",
+  "smtp_port",
+  "smtp_from",
+  "smtp_user",
+  "smtp_username",
+  "smtp_password",
+  "smtp_from_email",
 ] as const;
 
-// Tenant fields safe to expose to the client
-// Deliberately excludes: yoco_secret_key, yoco_webhook_id, yoco_webhook_secret
+// ─── Tenant fields safe to expose to the client ───────────────────────────────
 const SAFE_TENANT_FIELDS = [
   "id",
   "name",
@@ -57,7 +76,7 @@ const SAFE_TENANT_FIELDS = [
   "updated_at",
 ].join(", ");
 
-// Fields the admin UI is permitted to update — never allow secret key fields
+// ─── Tenant fields the admin UI is allowed to update ─────────────────────────
 const SAFE_UPDATE_KEYS = new Set([
   "name",
   "email",
@@ -70,6 +89,7 @@ const SAFE_UPDATE_KEYS = new Set([
   "min_notice_hours",
   "max_advance_days",
   "travel_buffer_minutes",
+  "custom_domain",
 ]);
 
 export function useTenantSettings() {
@@ -116,7 +136,6 @@ export function useUpdateTenant() {
 
   return useMutation({
     mutationFn: async (updates: Record<string, unknown>) => {
-      // Strip any fields that are not in the safe update allowlist
       const safeUpdates = Object.fromEntries(
         Object.entries(updates).filter(([key]) => SAFE_UPDATE_KEYS.has(key))
       );
@@ -139,7 +158,6 @@ export function useUpsertAppSetting() {
 
   return useMutation({
     mutationFn: async (settings: Record<string, string>) => {
-      // Only upsert keys that are in the allowed list
       const rows = Object.entries(settings)
         .filter(([key]) =>
           (ALLOWED_APP_SETTING_KEYS as readonly string[]).includes(key)
