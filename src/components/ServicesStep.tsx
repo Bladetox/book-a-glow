@@ -11,7 +11,6 @@ interface ServicesStepProps {
 const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
   const { data: treatments = [], isLoading: loadingServices } = usePublicServices();
   const { data: categories = [], isLoading: loadingCats } = usePublicCategories();
-  // Default to first category once loaded
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   if (loadingServices || loadingCats) {
@@ -22,10 +21,8 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
     );
   }
 
-  // Auto-select first category if none selected yet
   const activeCat = activeCategory ?? (categories[0]?.id ?? null);
 
-  // Only treatments in the active category, already sorted price DESC from the hook
   const visibleTreatments = activeCat
     ? treatments.filter((t) => t.category === activeCat)
     : [];
@@ -65,7 +62,7 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
         </div>
       )}
 
-      {/* Services for active category only */}
+      {/* Services for active category */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeCat ?? "empty"}
@@ -98,15 +95,23 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
                         : "border-muted-foreground/30"
                     }`}
                   >
-                    {isSelected && <Check className="w-2.5 h-2.5 text-primary-foreground" strokeWidth={3} />}
+                    {isSelected && (
+                      <Check className="w-2.5 h-2.5 text-primary-foreground" strokeWidth={3} />
+                    )}
                   </div>
 
-                  {/* Name + meta */}
+                  {/* Name + description + duration */}
                   <div className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-foreground leading-snug">{t.name}</span>
-                    {t.duration > 0 && (
-                      <span className="text-[10px] text-muted-foreground">{t.duration} min</span>
-                    )}
+                    <span className="block text-sm font-semibold text-foreground leading-snug">
+                      {t.name}
+                    </span>
+                    <span className="block text-[10px] text-muted-foreground truncate leading-snug mt-0.5">
+                      {t.description
+                        ? `${t.description}${t.duration > 0 ? ` · ${t.duration} min` : ""}`
+                        : t.duration > 0
+                        ? `${t.duration} min`
+                        : ""}
+                    </span>
                   </div>
 
                   {/* Price */}
