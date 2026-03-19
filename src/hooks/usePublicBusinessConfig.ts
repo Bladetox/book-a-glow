@@ -38,19 +38,24 @@ export interface PublicBusinessConfig {
   confirmationTitle: string;
   confirmationIntro: string;
   confirmationOutro: string;
+  // Mobile service — controls address collection + call-out fee
+  mobileServiceEnabled: boolean;
+  // Client type button labels — configurable per tenant
+  clientLabelExisting: string;
+  clientLabelNew: string;
 }
 
 const defaults: PublicBusinessConfig = {
-  name: "PhenomeBeauty",
-  abbreviation: ".pb",
+  name: "Your Business",
+  abbreviation: "",
   logoUrl: null,
-  tagline: "Mobile Beauty Services",
-  subtitle: "Premium At-Home Treatments",
+  tagline: "Online Booking",
+  subtitle: "Book your appointment",
   ctaLabel: "Book Now",
   splashWelcomeLabel: "Welcome to",
-  splashTagline1: "Mobile Beauty Services",
-  splashTagline2: "Premium At-Home Treatments",
-  splashCtaLabel: "Select Your Treatment",
+  splashTagline1: "Online Booking",
+  splashTagline2: "Book your appointment",
+  splashCtaLabel: "Select a Service",
   referralOptions: defaultReferralOptions,
   signOff: "Thank you.",
   email: "",
@@ -65,6 +70,9 @@ const defaults: PublicBusinessConfig = {
   confirmationTitle: "Your booking is confirmed",
   confirmationIntro: "Thank you for your booking.",
   confirmationOutro: "We look forward to seeing you.",
+  mobileServiceEnabled: false,
+  clientLabelExisting: "Returning Client",
+  clientLabelNew: "New Client",
 };
 
 /**
@@ -80,7 +88,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     loading: tenantLoading,
   } = usePublicTenant();
 
-  // ── Tenants table: operational values (source of truth) ──────────────────────
+  // ── Tenants table: operational values (source of truth) ─────────────────────
   const { data: tenantRow, isLoading: tenantRowLoading } = useQuery({
     queryKey: ["public-tenant-row", tenantId],
     enabled: !!tenantId,
@@ -99,7 +107,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     },
   });
 
-  // ── App settings: display-only overrides (graceful fallback if key absent) ──
+  // ── App settings: display + feature overrides ────────────────────────────────
   const { data: appSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ["public-app-settings", tenantId],
     enabled: !!tenantId,
@@ -156,7 +164,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     phone: t?.phone || s.phone || defaults.phone,
     address: s.fixed_origin_address || t?.address || defaults.address,
 
-    // Operational values — tenants table ONLY (correct source)
+    // Operational values — tenants table ONLY
     currency: t?.currency || s.currency || defaults.currency,
     minNoticeHours: t?.min_notice_hours ?? defaults.minNoticeHours,
     maxAdvanceDays: t?.max_advance_days ?? defaults.maxAdvanceDays,
@@ -167,6 +175,14 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     defaultDistanceKm: s.default_distance_km
       ? Number(s.default_distance_km)
       : defaults.defaultDistanceKm,
+
+    // Feature flags — app_settings
+    // mobile_service_enabled = "true" means tenant offers call-out → show address field
+    mobileServiceEnabled: s.mobile_service_enabled === "true",
+
+    // Client type labels — tenant-configurable, generic defaults
+    clientLabelExisting: s.client_label_existing || defaults.clientLabelExisting,
+    clientLabelNew: s.client_label_new || defaults.clientLabelNew,
 
     loading: tenantLoading || tenantRowLoading || settingsLoading,
   };
