@@ -107,39 +107,31 @@ const Admin = () => {
 
   const renderView = () => {
     switch (activeView) {
-      case "Dashboard":         return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
-      case "Bookings":          return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
-      case "Services":          return <AdminServices />;
-      case "Consultations":     return <AdminConsultations />;
-      case "Availability":      return <AdminAvailability />;
-      case "Stock":             return <AdminStock />;
-      case "Reviews":           return <AdminReviews />;
-      case "Integrations":      return <AdminIntegrations />;
-      case "Settings":          return <AdminSettings />;
-      case "Loyalty Tracker":   return <AdminLoyalty />;
+      case "Dashboard":          return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
+      case "Bookings":           return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
+      case "Services":           return <AdminServices />;
+      case "Consultations":      return <AdminConsultations />;
+      case "Availability":       return <AdminAvailability />;
+      case "Stock":              return <AdminStock />;
+      case "Reviews":            return <AdminReviews />;
+      case "Integrations":       return <AdminIntegrations />;
+      case "Settings":           return <AdminSettings />;
+      case "Loyalty Tracker":    return <AdminLoyalty />;
       case "Terms & Conditions": return <AdminTerms />;
-      default:                  return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
+      default:                   return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
     }
   };
 
   return (
     <TenantProvider value={tenantCtx}>
       <div className="min-h-dvh bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex">
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-        </AnimatePresence>
-
+        {/* Sidebar owns its own mobile backdrop — no duplicate here */}
         <AdminSidebar
           views={views as unknown as string[]}
           activeView={activeView}
           onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
           isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
 
         <div className="flex-1 flex flex-col min-h-dvh min-w-0">
