@@ -1,13 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, MessageCircle, Search, X, UserPlus,
-  Sparkles, Clock, CheckCircle, AlertCircle, Star
+  Sparkles, Clock, CheckCircle, AlertCircle, Star,
+  Download, Eye, Pencil, Check
 } from "lucide-react";
 import { format, subDays } from "date-fns";
+import { toast } from "sonner";
 
 // ─── Excel serial date → readable string ───
 function excelToDate(serial: number | string | null | undefined): string {
@@ -28,7 +30,7 @@ function excelToDate(serial: number | string | null | undefined): string {
   return format(d, "dd MMM yyyy");
 }
 
-// ─── Normalise status (strip emoji prefix) ───
+// ─── Normalise status ───
 function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
   const s = (raw ?? "").toUpperCase().replace(/[^A-Z ]/g, "").trim();
   if (s.includes("ON TRACK")) return "ON TRACK";
@@ -53,22 +55,23 @@ const STATUS_ICON: Record<string, React.ElementType> = {
   "UNKNOWN":      Clock,
 };
 
-// ─── WhatsApp deep link ───
-function waLink(phone: string, name: string, status: string): string {
+// ─── WhatsApp deep link with B2 preview ───
+function waMessage(name: string, status: string): string {
+  if (status === "OVERDUE") {
+    return `Hi ${name}! ✨ We miss you at PhenomeBeauty. You're overdue for your wax — let's get you booked in! Reply to grab a slot.`;
+  } else if (status === "TIME TO BOOK") {
+    return `Hi ${name}! 📅 It's time to book your next wax at PhenomeBeauty. Reply and we'll sort out the perfect time for you!`;
+  }
+  return `Hi ${name}! Just a friendly reminder from PhenomeBeauty — looking forward to seeing you soon! 💖`;
+}
+
+function waLink(phone: string, msg: string): string {
   const cleaned = phone.replace(/\D/g, "");
   let num: string;
   if (cleaned.startsWith("27") && cleaned.length >= 11) {
     num = cleaned;
   } else {
     num = "27" + cleaned.replace(/^0/, "");
-  }
-  let msg = "";
-  if (status === "OVERDUE") {
-    msg = `Hi ${name}! ✨ We miss you at PhenomeBeauty. You're overdue for your wax — let's get you booked in! Reply to grab a slot.`;
-  } else if (status === "TIME TO BOOK") {
-    msg = `Hi ${name}! 📅 It's time to book your next wax at PhenomeBeauty. Reply and we'll sort out the perfect time for you!`;
-  } else {
-    msg = `Hi ${name}! Just a friendly reminder from PhenomeBeauty — looking forward to seeing you soon! 💖`;
   }
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
@@ -94,6 +97,119 @@ const PackPill = ({ raw }: { raw: string | number | null | undefined }) => {
       <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
         <div className="h-full rounded-full bg-emerald-400/70 transition-all" style={{ width: `${pct}%` }} />
       </div>
+    </div>
+  );
+};
+
+// ─── B2: WA preview tooltip ───
+const WaPreview = ({ name, status, phone }: { name: string; status: string; phone: string }) => {
+  const [show, setShow] = useState(false);
+  const msg = waMessage(name, status);
+  return (
+    <div className="relative inline-flex items-center gap-1">
+      <a
+        href={waLink(phone, msg)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={e => e.stopPropagation()}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/[0.09] text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/[0.18] transition-colors"
+        title="Open WhatsApp"
+      >
+        <MessageCircle className="w-3 h-3" />
+        WA
+      </a>
+      <button
+        onClick={e => { e.stopPropagation(); setShow(s => !s); }}
+        className="p-1 rounded text-white/20 hover:text-white/50 transition-colors"
+        title="Preview message"
+      >
+        <Eye className="w-3 h-3" />
+      </button>
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 4 }}
+            className="absolute bottom-full left-0 mb-2 z-30 w-72 rounded-xl border border-white/[0.12] bg-[#161616] shadow-xl p-3"
+          >
+            <p className="text-[10px] tracking-widest uppercase text-white/30 mb-1.5">WA Message Preview</p>
+            <p className="text-[12px] text-white/70 leading-relaxed">{msg}</p>
+            <button onClick={() => setShow(false)} className="absolute top-2 right-2 text-white/20 hover:text-white/60">
+              <X className="w-3 h-3" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ─── B1: Inline status editor ───
+const STATUS_OPTIONS = ["ON TRACK", "TIME TO BOOK", "OVERDUE"] as const;
+
+const InlineStatusEditor = ({ rowId, current, tenantId, onUpdated }: {
+  rowId: string;
+  current: string;
+  tenantId: string;
+  onUpdated: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleSelect = async (newStatus: string) => {
+    if (newStatus === current) { setOpen(false); return; }
+    setSaving(true);
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .update({ status: newStatus })
+      .eq("id", rowId)
+      .eq("tenant_id", tenantId);
+    setSaving(false);
+    setOpen(false);
+    if (error) {
+      toast.error("Failed to update status");
+    } else {
+      toast.success("Status updated");
+      onUpdated();
+    }
+  };
+
+  const norm = normaliseStatus(current);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-all ${STATUS_STYLE[norm] ?? STATUS_STYLE["UNKNOWN"]} hover:opacity-80`}
+      >
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+        {norm}
+        <Pencil className="w-2.5 h-2.5 opacity-50" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 4 }}
+            className="absolute top-full mt-1 left-0 z-20 flex flex-col gap-0.5 rounded-xl border border-white/[0.1] bg-[#161616] shadow-xl p-1 min-w-[130px]"
+          >
+            {STATUS_OPTIONS.map(s => (
+              <button
+                key={s}
+                onClick={() => handleSelect(s)}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors hover:bg-white/[0.06] ${
+                  norm === s ? "text-white" : "text-white/50"
+                }`}
+              >
+                {norm === s && <Check className="w-3 h-3 text-emerald-400" />}
+                <span>{s}</span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -144,16 +260,16 @@ const EnrollModal = ({
           {candidate.bookingCount} bookings · R {candidate.totalSpend.toLocaleString()} total spend
         </div>
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Client Name</label>
-            <input value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Phone (with country code)</label>
-            <input value={phone} onChange={e => setPhone(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
-          </div>
+          {[
+            { label: "Client Name", value: name, onChange: setName, type: "text" },
+            { label: "Phone (with country code)", value: phone, onChange: setPhone, type: "text" },
+          ].map(f => (
+            <div key={f.label} className="flex flex-col gap-1">
+              <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">{f.label}</label>
+              <input value={f.value} onChange={e => f.onChange(e.target.value)} type={f.type}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+            </div>
+          ))}
           <div className="flex flex-col gap-1">
             <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last Wax Date</label>
             <input type="date" value={lastWax} onChange={e => setLastWax(e.target.value)}
@@ -184,7 +300,7 @@ const EnrollModal = ({
   );
 };
 
-// ─── Helper: resolve client identity from booking ───
+// ─── Helpers ───
 function resolveKey(b: any): string {
   if (b.client_id) return b.client_id;
   const phone = resolvePhone(b).replace(/\D/g, "");
@@ -202,6 +318,31 @@ function resolvePhone(b: any): string {
 const FILTERS = ["All", "On Track", "Time to Book", "Overdue"] as const;
 type Filter = typeof FILTERS[number];
 
+// ─── B4: CSV export ───
+function exportCSV(rows: any[]) {
+  if (!rows.length) return;
+  const headers = ["Client Name", "Phone", "Status", "Last Wax Date", "Next Due Date", "Pack Progress", "Notes"];
+  const lines = [
+    headers.join(","),
+    ...rows.map(r => [
+      `"${(r.client_name ?? "").replace(/"/g, '""')}"`,
+      `"${(r.phone ?? "").replace(/"/g, '""')}"`,
+      `"${normaliseStatus(r.status)}"`,
+      `"${r.last_wax_date ?? ""}"`,
+      `"${r.next_due_date ?? ""}"`,
+      `"${r.pack_progress ?? ""}"`,
+      `"${(r.notes ?? "").replace(/"/g, '""')}"`,
+    ].join(",")),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `loyalty-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ══════════════════════════════════════════════════
 const AdminLoyalty = () => {
   const { tenantId } = useTenant();
@@ -211,7 +352,6 @@ const AdminLoyalty = () => {
   const [search, setSearch]           = useState("");
   const [enrolling, setEnrolling]     = useState<EnrollCandidate | null>(null);
   const [enrollSaved, setEnrollSaved] = useState<string[]>([]);
-  const [waSent, setWaSent]           = useState<string[]>([]);
 
   // ─── 1. Loyalty tracker rows ───
   const { data: rows = [], isLoading: loadingRows } = useQuery({
@@ -385,16 +525,15 @@ const AdminLoyalty = () => {
             <div className="flex flex-col gap-2">
               {candidates.map(c => (
                 <div key={c.client_name + c.phone}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                  className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/80 font-medium truncate">{c.client_name}</p>
-                    <p className="text-[11px] text-white/35">
-                      {c.bookingCount} booking{c.bookingCount !== 1 ? "s" : ""}
-                      {c.totalSpend > 0 ? ` · R ${c.totalSpend.toLocaleString()} spend` : ""}
-                    </p>
+                    <p className="text-xs font-semibold text-white/80 truncate">{c.client_name}</p>
+                    <p className="text-[10px] text-white/35">{c.bookingCount} bookings · R{c.totalSpend.toLocaleString()}</p>
                   </div>
-                  <button onClick={() => setEnrolling(c)}
-                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/25 transition-colors">
+                  <button
+                    onClick={() => setEnrolling(c)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-colors shrink-0"
+                  >
                     <UserPlus className="w-3 h-3" /> Enroll
                   </button>
                 </div>
@@ -404,172 +543,152 @@ const AdminLoyalty = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Search + filter bar ── */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search client…"
-            className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl pl-9 pr-3 py-2 text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15]" />
+      {/* ── Search + filter + B4 export ── */}
+      <div className="flex flex-col sm:flex-row gap-2 items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name…"
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] transition-colors"
+          />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60">
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
-          {FILTERS.map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-2 rounded-full text-xs font-semibold tracking-wide uppercase whitespace-nowrap transition-all ${
-                filter === f
-                  ? "bg-white/[0.10] text-white border border-white/[0.15]"
-                  : "text-white/35 border border-white/[0.06] hover:text-white/60"
-              }`}>{f}
-            </button>
-          ))}
-        </div>
+        {/* B4: export CSV */}
+        <button
+          onClick={() => exportCSV(filteredRows)}
+          disabled={filteredRows.length === 0}
+          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/[0.06] text-xs font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.05] transition-colors disabled:opacity-30 shrink-0"
+        >
+          <Download className="w-3.5 h-3.5" /> Export CSV
+        </button>
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Filter pills ── */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+        {FILTERS.map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all
+              ${ filter === f ? "bg-white/[0.12] text-white border border-white/[0.15]" : "text-white/35 border border-white/[0.06] hover:text-white/60" }`}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Table ── */}
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
         </div>
       ) : filteredRows.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
-          <p className="text-white/30 text-sm">No clients found.</p>
-        </div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center flex flex-col items-center gap-3">
+          <Star className="w-8 h-8 text-white/10" />
+          <p className="text-sm text-white/30">
+            {rows.length === 0
+              ? "No clients enrolled yet. Enroll your first client above."
+              : "No clients match this filter."}
+          </p>
+        </motion.div>
       ) : (
-        <>
-          {/* Desktop table */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="hidden sm:block rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  {["Client", "Status", "Last Wax", "Next Due", "Pack Progress", "Notes", "WhatsApp"].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-[10px] font-semibold tracking-wider uppercase text-white/25">{h}</th>
+                  {["Client", "Status", "Last Wax", "Next Due", "Pack", "WA"].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map((r: any) => {
-                  const status = normaliseStatus(r.status);
-                  const Icon   = STATUS_ICON[status];
-                  const sent   = waSent.includes(r.id);
-                  const is3Pac = (r.notes ?? "").toLowerCase().includes("3-pack");
+                {filteredRows.map((r: any, i: number) => {
+                  const norm = normaliseStatus(r.status);
+                  const StatusIcon = STATUS_ICON[norm] ?? Clock;
                   return (
-                    <tr key={r.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <motion.tr
+                      key={r.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                      className={`border-b border-white/[0.04] last:border-0 ${
+                        norm === "OVERDUE" ? "bg-red-500/[0.02]" :
+                        norm === "TIME TO BOOK" ? "bg-amber-500/[0.02]" : ""
+                      }`}
+                    >
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-white/80 font-medium">{r.client_name}</span>
-                          {is3Pac && (
-                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-[9px] text-amber-400 font-semibold">
-                              <Star className="w-2.5 h-2.5" /> Pack
-                            </span>
+                        {/* B3: note tooltip on name */}
+                        <div className="relative group inline-flex flex-col">
+                          <span className="text-sm font-medium text-white/80 cursor-default">{r.client_name}</span>
+                          {r.phone && <span className="text-[10px] text-white/35">{r.phone}</span>}
+                          {r.notes && (
+                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-20">
+                              <div className="rounded-xl bg-[#1a1a1a] border border-white/[0.12] px-3 py-2 text-[11px] text-white/70 max-w-[200px] shadow-xl whitespace-pre-wrap">
+                                {r.notes}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </td>
+
+                      {/* B1: inline status editor */}
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_STYLE[status]}`}>
-                          <Icon className="w-3 h-3" />{status}
+                        <InlineStatusEditor
+                          rowId={r.id}
+                          current={r.status}
+                          tenantId={tenantId}
+                          onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty", tenantId] })}
+                        />
+                      </td>
+
+                      <td className="px-4 py-3 text-xs text-white/50">{excelToDate(r.last_wax_date)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-medium ${
+                          norm === "OVERDUE" ? "text-red-400" :
+                          norm === "TIME TO BOOK" ? "text-amber-400" :
+                          "text-white/50"
+                        }`}>
+                          {excelToDate(r.next_due_date)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-white/50 text-xs">{excelToDate(r.last_wax_date)}</td>
-                      <td className="px-4 py-3 text-white/50 text-xs">{excelToDate(r.next_due_date)}</td>
-                      <td className="px-4 py-3"><PackPill raw={r.pack_progress} /></td>
-                      <td className="px-4 py-3 text-white/40 text-xs max-w-[140px] truncate">{r.notes || "—"}</td>
+
                       <td className="px-4 py-3">
-                        {r.phone ? (
-                          <a href={waLink(r.phone, r.client_name, status)}
-                            target="_blank" rel="noopener noreferrer"
-                            onClick={() => setWaSent(prev => [...prev, r.id])}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                              sent
-                                ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
-                                : "bg-white/[0.06] border border-white/[0.08] text-white/50 hover:bg-emerald-500/15 hover:text-emerald-400 hover:border-emerald-500/25"
-                            }`}>
-                            <MessageCircle className="w-3 h-3" />
-                            {sent ? "Sent" : "WhatsApp"}
-                          </a>
-                        ) : (
-                          <span className="text-white/20 text-xs">—</span>
-                        )}
+                        <PackPill raw={r.pack_progress} />
                       </td>
-                    </tr>
+
+                      {/* B2: WA with preview */}
+                      <td className="px-4 py-3">
+                        {r.phone
+                          ? <WaPreview name={r.client_name} status={norm} phone={r.phone} />
+                          : <span className="text-white/20 text-xs">—</span>
+                        }
+                      </td>
+                    </motion.tr>
                   );
                 })}
               </tbody>
             </table>
-          </motion.div>
-
-          {/* Mobile cards */}
-          <div className="sm:hidden flex flex-col gap-3">
-            {filteredRows.map((r: any) => {
-              const status = normaliseStatus(r.status);
-              const Icon   = STATUS_ICON[status];
-              const sent   = waSent.includes(r.id);
-              const is3Pac = (r.notes ?? "").toLowerCase().includes("3-pack");
-              return (
-                <motion.div key={r.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-white/85">{r.client_name}</span>
-                        {is3Pac && (
-                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-[9px] text-amber-400 font-semibold">
-                            <Star className="w-2.5 h-2.5" /> Pack
-                          </span>
-                        )}
-                      </div>
-                      {r.notes && <p className="text-[11px] text-white/35">{r.notes}</p>}
-                    </div>
-                    <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_STYLE[status]}`}>
-                      <Icon className="w-3 h-3" />{status}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    {[
-                      { label: "Last Wax",  val: excelToDate(r.last_wax_date) },
-                      { label: "Next Due",  val: excelToDate(r.next_due_date) },
-                    ].map(d => (
-                      <div key={d.label} className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-2">
-                        <p className="text-[9px] uppercase tracking-wide text-white/25 mb-0.5">{d.label}</p>
-                        <p className="text-[11px] text-white/60">{d.val}</p>
-                      </div>
-                    ))}
-                    <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-2 flex flex-col items-center justify-center gap-1">
-                      <p className="text-[9px] uppercase tracking-wide text-white/25">Pack</p>
-                      <PackPill raw={r.pack_progress} />
-                    </div>
-                  </div>
-                  {r.phone && (
-                    <a href={waLink(r.phone, r.client_name, status)}
-                      target="_blank" rel="noopener noreferrer"
-                      onClick={() => setWaSent(prev => [...prev, r.id])}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                        sent
-                          ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
-                          : "bg-white/[0.06] border border-white/[0.08] text-white/60 hover:bg-emerald-500/15 hover:text-emerald-400"
-                      }`}>
-                      <MessageCircle className="w-4 h-4" />
-                      {sent ? "Reminder Sent ✓" : "Send WhatsApp Reminder"}
-                    </a>
-                  )}
-                </motion.div>
-              );
-            })}
           </div>
-        </>
+        </div>
       )}
 
-      {/* ── Enroll modal ── */}
+      {/* Enroll modal */}
       <AnimatePresence>
         {enrolling && (
           <EnrollModal
             candidate={enrolling}
             onClose={() => setEnrolling(null)}
-            onConfirm={(name, phone, notes, lastWax, nextDue) => enroll({ name, phone, notes, lastWax, nextDue })}
+            onConfirm={(name, phone, notes, lastWax, nextDue) =>
+              enroll({ name, phone, notes, lastWax, nextDue })
+            }
             saving={enrollPending}
           />
         )}
