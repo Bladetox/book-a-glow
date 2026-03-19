@@ -5,11 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { TenantProvider } from "@/contexts/TenantContext";
 import AdminLogin    from "@/components/admin/AdminLogin";
 import AdminSidebar  from "@/components/admin/AdminSidebar";
+import AdminMobileNav from "@/components/admin/AdminMobileNav";
+import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
-// ── Eagerly loaded (always needed on first paint) ─────────────────────────────
+// ── Eagerly loaded ─────────────────────────────────────────────────────────────
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
-// ── Lazily loaded (only when the user switches to that tab) ───────────────────
+// ── Lazily loaded ───────────────────────────────────────────────────────────────
 const AdminBookings      = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminServices      = lazy(() => import("@/components/admin/AdminServices"));
 const AdminConsultations = lazy(() => import("@/components/admin/AdminConsultations"));
@@ -34,13 +36,92 @@ const views = [
 
 type ViewName = typeof views[number];
 
-const Admin = () => {
-  const [authState, setAuthState]     = useState<"loading" | "unauthenticated" | "authenticated">("loading");
-  const [tenantId, setTenantId]       = useState<string | null>(null);
-  const [userId, setUserId]           = useState<string | null>(null);
+// ── Inner authenticated shell (needs hooks) ───────────────────────────────────
+const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   const [activeView, setActiveView]   = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+
+  // B2 + C7: live pending count for badges
+  const { data: bookings = [] } = useSupabaseBookings();
+  const pendingCount = bookings.filter(b => b.status === "pending").length;
+
+  const handleSelectAppointment = (client: string) => {
+    setSelectedClient(client);
+    setActiveView("Bookings");
+  };
+
+  // B2: navigate from dashboard hero shortcuts
+  const handleDashboardNav = (view: ViewName) => setActiveView(view);
+
+  const renderView = () => {
+    switch (activeView) {
+      case "Dashboard":          return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+      case "Bookings":           return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
+      case "Services":           return <AdminServices />;
+      case "Consultations":      return <AdminConsultations />;
+      case "Availability":       return <AdminAvailability />;
+      case "Stock":              return <AdminStock />;
+      case "Reviews":            return <AdminReviews />;
+      case "Integrations":       return <AdminIntegrations />;
+      case "Settings":           return <AdminSettings />;
+      case "Loyalty Tracker":    return <AdminLoyalty />;
+      case "Terms & Conditions": return <AdminTerms />;
+      default:                   return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+    }
+  };
+
+  return (
+    <div className="min-h-dvh bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex">
+      <AdminSidebar
+        views={views as unknown as string[]}
+        activeView={activeView}
+        onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Main content — extra bottom padding on mobile for nav bar */}
+      <div className="flex-1 flex flex-col min-h-dvh min-w-0 pb-14 lg:pb-0">
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06]">
+          <button
+            className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <h2 className="font-display text-base sm:text-lg font-semibold text-white/90 truncate">{activeView}</h2>
+          <div className="flex-1" />
+          <button
+            className="text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08]"
+            onClick={onSignOut}
+          >
+            Sign out
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <Suspense fallback={<TabLoader />}>
+            {renderView()}
+          </Suspense>
+        </div>
+      </div>
+
+      {/* C7 — Mobile bottom nav */}
+      <AdminMobileNav
+        activeView={activeView}
+        onSelect={(v) => setActiveView(v as ViewName)}
+        pendingCount={pendingCount}
+      />
+    </div>
+  );
+};
+
+// ── Root Admin component ────────────────────────────────────────────────────────
+const Admin = () => {
+  const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
+  const [tenantId, setTenantId]   = useState<string | null>(null);
+  const [userId, setUserId]       = useState<string | null>(null);
 
   const checkAdminSession = async () => {
     try {
@@ -95,70 +176,14 @@ const Admin = () => {
     return <AdminLogin onLogin={() => checkAdminSession()} />;
   }
 
-  const handleSelectAppointment = (client: string) => {
-    setSelectedClient(client);
-    setActiveView("Bookings");
-  };
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setAuthState("unauthenticated");
   };
 
-  const renderView = () => {
-    switch (activeView) {
-      case "Dashboard":          return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
-      case "Bookings":           return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
-      case "Services":           return <AdminServices />;
-      case "Consultations":      return <AdminConsultations />;
-      case "Availability":       return <AdminAvailability />;
-      case "Stock":              return <AdminStock />;
-      case "Reviews":            return <AdminReviews />;
-      case "Integrations":       return <AdminIntegrations />;
-      case "Settings":           return <AdminSettings />;
-      case "Loyalty Tracker":    return <AdminLoyalty />;
-      case "Terms & Conditions": return <AdminTerms />;
-      default:                   return <AdminDashboard onSelectAppointment={handleSelectAppointment} />;
-    }
-  };
-
   return (
     <TenantProvider value={tenantCtx}>
-      <div className="min-h-dvh bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex">
-        {/* Sidebar owns its own mobile backdrop — no duplicate here */}
-        <AdminSidebar
-          views={views as unknown as string[]}
-          activeView={activeView}
-          onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
-
-        <div className="flex-1 flex flex-col min-h-dvh min-w-0">
-          <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06]">
-            <button
-              className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <h2 className="font-display text-base sm:text-lg font-semibold text-white/90 truncate">{activeView}</h2>
-            <div className="flex-1" />
-            <button
-              className="text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08]"
-              onClick={handleSignOut}
-            >
-              Sign out
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <Suspense fallback={<TabLoader />}>
-              {renderView()}
-            </Suspense>
-          </div>
-        </div>
-      </div>
+      <AdminShell onSignOut={handleSignOut} />
     </TenantProvider>
   );
 };
