@@ -1,176 +1,233 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Users, DollarSign, Calendar, TrendingUp, AlertTriangle, ArrowRight } from "lucide-react";
-import DisplayCards from "@/components/ui/display-cards";
+import {
+  Building2, Users, DollarSign, Activity,
+  TrendingUp, ArrowRight, CheckCircle2, XCircle
+} from "lucide-react";
 
-const COLOR_MAP: Record<string, string> = {
-  violet: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  blue:   "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  amber:  "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  pink:   "bg-pink-500/10 text-pink-400 border-pink-500/20",
-  red:    "bg-red-500/10 text-red-400 border-red-500/20",
-};
+interface Props { onNavigate: (v: string) => void; }
 
-interface KPI {
-  label: string;
-  value: string;
-  sub: string;
-  icon: React.ElementType;
-  color: string;
-  action?: string;
+interface Stats {
+  tenants: number;
+  activeTenants: number;
+  users: number;
+  revenue: number;
+  bookings: number;
 }
 
-export default function SAOverview({ onNavigate }: { onNavigate: (v: string) => void }) {
-  const [tenantCount, setTenantCount] = useState<number | null>(null);
-  const [userCount, setUserCount] = useState<number | null>(null);
-  const [bookingCount, setBookingCount] = useState<number | null>(null);
-  const [revenue, setRevenue] = useState<number>(0);
+interface RecentTenant {
+  id: string;
+  name: string;
+  email: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+}
 
-  useEffect(() => {
-    const fetchCounts = async () => {
-      const [{ count: tc }, { count: uc }, { count: bc }] = await Promise.all([
-        supabase.from("tenants").select("*", { count: "exact", head: true }),
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("bookings").select("*", { count: "exact", head: true }),
-      ]);
-      setTenantCount(tc ?? 0);
-      setUserCount(uc ?? 0);
-      setBookingCount(bc ?? 0);
-      const { data: payments } = await supabase
-        .from("payments")
-        .select("amount")
-        .eq("status", "completed");
-      const total = (payments ?? []).reduce((sum, p) => sum + (p.amount ?? 0), 0);
-      setRevenue(total);
-    };
-    fetchCounts();
-  }, []);
-
-  const fmt = (n: number | null) => n !== null ? String(n) : "\u2014";
-
-  const kpis: KPI[] = [
-    { label: "Active Tenants",   value: fmt(tenantCount),           sub: "businesses on platform", icon: Building2,     color: "violet", action: "tenants" },
-    { label: "Total Users",      value: fmt(userCount),             sub: "across all tenants",     icon: Users,         color: "blue",   action: "users" },
-    { label: "Total Bookings",   value: fmt(bookingCount),          sub: "all time",               icon: Calendar,      color: "emerald" },
-    { label: "Platform Revenue", value: `R${revenue.toLocaleString()}`, sub: "completed payments", icon: DollarSign,    color: "amber",  action: "revenue" },
-    { label: "Churn Rate",       value: "0%",                       sub: "last 30 days",           icon: TrendingUp,    color: "pink" },
-    { label: "Open Alerts",      value: "0",                        sub: "requiring attention",    icon: AlertTriangle, color: "red",    action: "health" },
-  ];
-
-  const heroCards = [
-    {
-      className:
-        "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-      icon: <Building2 className="size-4 text-violet-300" />,
-      title: fmt(tenantCount) + " Tenants",
-      description: "Active businesses on NextSlot",
-      date: "Live",
-      iconClassName: "text-violet-500",
-      titleClassName: "text-violet-400",
-    },
-    {
-      className:
-        "[grid-area:stack] translate-x-16 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-      icon: <Users className="size-4 text-blue-300" />,
-      title: fmt(userCount) + " Users",
-      description: "Across all tenant accounts",
-      date: "All time",
-      iconClassName: "text-blue-500",
-      titleClassName: "text-blue-400",
-    },
-    {
-      className: "[grid-area:stack] translate-x-32 translate-y-20 hover:translate-y-10",
-      icon: <DollarSign className="size-4 text-amber-300" />,
-      title: `R${revenue.toLocaleString()} Revenue`,
-      description: "Total completed payments",
-      date: "All time",
-      iconClassName: "text-amber-500",
-      titleClassName: "text-amber-400",
-    },
-  ];
-
+function StatCard({
+  label, value, sub, icon: Icon, gradient, trend,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ElementType;
+  gradient: string;
+  trend?: string;
+}) {
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div>
-        <h2 className="text-white font-semibold text-lg">Platform Overview</h2>
-        <p className="text-white/40 text-sm mt-1">Real-time health of all NextSlot tenants and users.</p>
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[hsl(220,13%,7%)] p-5 flex flex-col gap-4 group hover:border-white/[0.1] transition-colors">
+      {/* Background glow */}
+      <div className={`absolute -top-6 -right-6 w-24 h-24 rounded-full blur-2xl opacity-20 ${gradient}`} />
+
+      <div className="flex items-start justify-between relative">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/35">{label}</p>
+          <p className="text-3xl font-bold text-white mt-1.5 tracking-tight">{value}</p>
+          {sub && <p className="text-xs text-white/35 mt-1">{sub}</p>}
+        </div>
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${gradient} bg-opacity-20`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
       </div>
 
-      {/* Hero DisplayCards */}
-      <div className="flex justify-center py-4">
-        <DisplayCards cards={heroCards} />
-      </div>
-
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {kpis.map(({ label, value, sub, icon: Icon, color, action }) => (
-          <button
-            key={label}
-            onClick={() => action && onNavigate(action)}
-            className={[
-              "text-left p-5 rounded-2xl border bg-[hsl(0,0%,7%)] border-white/[0.06]",
-              "hover:border-white/[0.12] transition-all group",
-              action ? "cursor-pointer" : "cursor-default",
-            ].join(" ")}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`p-2.5 rounded-xl border ${COLOR_MAP[color]}`}>
-                <Icon className="w-4 h-4" />
-              </div>
-              {action && (
-                <ArrowRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 transition-colors mt-1" />
-              )}
-            </div>
-            <p className="text-2xl font-bold text-white">{value}</p>
-            <p className="text-xs text-white/40 mt-1">{label}</p>
-            <p className="text-[11px] text-white/25 mt-0.5">{sub}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Recent tenants */}
-      <RecentTenants />
+      {trend && (
+        <div className="flex items-center gap-1.5 relative">
+          <TrendingUp className="w-3 h-3 text-emerald-400" />
+          <span className="text-[11px] text-emerald-400 font-medium">{trend}</span>
+        </div>
+      )}
     </div>
   );
 }
 
-function RecentTenants() {
-  const [recent, setRecent] = useState<{ id: string; name: string; created_at: string; is_active: boolean | null }[]>([]);
+export default function SAOverview({ onNavigate }: Props) {
+  const [stats,         setStats]         = useState<Stats | null>(null);
+  const [recentTenants, setRecentTenants] = useState<RecentTenant[]>([]);
+  const [loading,       setLoading]       = useState(true);
+
   useEffect(() => {
-    supabase
-      .from("tenants")
-      .select("id, name, created_at, is_active")
-      .order("created_at", { ascending: false })
-      .limit(5)
-      .then(({ data }) => setRecent(data ?? []));
+    const fetchAll = async () => {
+      const [
+        { count: totalTenants },
+        { count: activeTenants },
+        { count: totalUsers },
+        { data: payments },
+        { count: totalBookings },
+        { data: recent },
+      ] = await Promise.all([
+        supabase.from("tenants").select("*", { count: "exact", head: true }),
+        supabase.from("tenants").select("*", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("payments").select("amount").eq("status", "completed"),
+        supabase.from("bookings").select("*", { count: "exact", head: true }),
+        supabase.from("tenants").select("id, name, email, is_active, created_at").order("created_at", { ascending: false }).limit(5),
+      ]);
+
+      const revenue = (payments ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
+      setStats({
+        tenants: totalTenants ?? 0,
+        activeTenants: activeTenants ?? 0,
+        users: totalUsers ?? 0,
+        revenue,
+        bookings: totalBookings ?? 0,
+      });
+      setRecentTenants(recent ?? []);
+      setLoading(false);
+    };
+    fetchAll();
   }, []);
+
+  const fmt = (n: number) =>
+    n >= 1000 ? `R${(n / 1000).toFixed(1)}k` : `R${n.toLocaleString()}`;
+
+  const fmtDate = (s: string | null) =>
+    s ? new Date(s).toLocaleDateString("en-ZA", { day: "numeric", month: "short" }) : "—";
+
+  const STAT_CARDS = stats ? [
+    {
+      label: "Total Tenants",
+      value: String(stats.tenants),
+      sub: `${stats.activeTenants} active`,
+      icon: Building2,
+      gradient: "bg-violet-500",
+      trend: `${stats.activeTenants} active businesses`,
+    },
+    {
+      label: "Registered Users",
+      value: String(stats.users),
+      sub: "across all tenants",
+      icon: Users,
+      gradient: "bg-blue-500",
+    },
+    {
+      label: "Total Revenue",
+      value: fmt(stats.revenue),
+      sub: "completed payments",
+      icon: DollarSign,
+      gradient: "bg-emerald-500",
+      trend: "All time",
+    },
+    {
+      label: "Total Bookings",
+      value: String(stats.bookings),
+      sub: "platform-wide",
+      icon: Activity,
+      gradient: "bg-pink-500",
+    },
+  ] : [];
+
   return (
-    <div className="bg-[hsl(0,0%,7%)] border border-white/[0.06] rounded-2xl p-5">
-      <h3 className="text-sm font-medium text-white/80 mb-4">Recently Joined Tenants</h3>
-      {recent.length === 0 ? (
-        <p className="text-xs text-white/30 py-3 text-center">No tenants yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {recent.map(t => (
-            <div key={t.id} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
-              <div>
-                <p className="text-sm text-white/80 font-medium">{t.name}</p>
-                <p className="text-[11px] text-white/30">
-                  {new Date(t.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
-              </div>
-              <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                t.is_active
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                  : "bg-red-500/10 text-red-400 border-red-500/20"
-              }`}>
-                {t.is_active ? "Active" : "Inactive"}
-              </span>
-            </div>
+    <div className="space-y-8 max-w-6xl">
+      {/* Page header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Platform Overview</h1>
+        <p className="text-white/35 text-sm mt-1">
+          {new Date().toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+        </p>
+      </div>
+
+      {/* Stat cards */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-36 rounded-2xl bg-white/[0.03] border border-white/[0.05] animate-pulse" />
           ))}
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {STAT_CARDS.map(card => <StatCard key={card.label} {...card} />)}
+        </div>
       )}
+
+      {/* Recent Tenants */}
+      <div className="bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.05]">
+          <div>
+            <h2 className="text-sm font-semibold text-white">Recent Tenants</h2>
+            <p className="text-[11px] text-white/30 mt-0.5">Latest businesses onboarded</p>
+          </div>
+          <button
+            onClick={() => onNavigate("tenants")}
+            className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors font-medium"
+          >
+            View all <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="divide-y divide-white/[0.04]">
+          {loading
+            ? [...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 px-6 py-4">
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.04] animate-pulse" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 w-36 bg-white/[0.04] rounded animate-pulse" />
+                    <div className="h-2.5 w-24 bg-white/[0.03] rounded animate-pulse" />
+                  </div>
+                </div>
+              ))
+            : recentTenants.map(t => (
+                <div key={t.id} className="flex items-center gap-4 px-6 py-4 hover:bg-white/[0.02] transition-colors">
+                  <div className="w-9 h-9 rounded-xl bg-violet-600/15 border border-violet-500/15 flex items-center justify-center shrink-0">
+                    <Building2 className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/80 font-medium truncate">{t.name}</p>
+                    <p className="text-[11px] text-white/30 mt-0.5 truncate">{t.email ?? "No email"}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-[11px] text-white/25">{fmtDate(t.created_at)}</span>
+                    {t.is_active
+                      ? <CheckCircle2 className="w-4 h-4 text-emerald-400/70" />
+                      : <XCircle className="w-4 h-4 text-red-400/70" />
+                    }
+                  </div>
+                </div>
+              ))
+          }
+        </div>
+      </div>
+
+      {/* Quick nav cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {[
+          { label: "Manage Tenants",    sub: "Suspend, activate, inspect",   view: "tenants",   icon: Building2,  color: "violet" },
+          { label: "Broadcast",         sub: "Send platform announcement",    view: "broadcast", icon: Activity,   color: "blue" },
+          { label: "Feature Flags",     sub: "Toggle platform features",      view: "flags",     icon: Activity,   color: "pink" },
+        ].map(({ label, sub, view, icon: Icon, color }) => (
+          <button
+            key={view}
+            onClick={() => onNavigate(view)}
+            className="flex items-start gap-3 p-4 rounded-2xl border border-white/[0.06] bg-[hsl(220,13%,7%)] hover:border-white/[0.1] hover:bg-white/[0.03] transition-all text-left group"
+          >
+            <span className={`w-9 h-9 rounded-xl bg-${color}-600/15 flex items-center justify-center shrink-0 group-hover:bg-${color}-600/25 transition-colors`}>
+              <Icon className={`w-4 h-4 text-${color}-400`} />
+            </span>
+            <div>
+              <p className="text-sm text-white/80 font-medium">{label}</p>
+              <p className="text-[11px] text-white/30 mt-0.5">{sub}</p>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
