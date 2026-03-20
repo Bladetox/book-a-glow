@@ -8,6 +8,26 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/google-calendar-callback`;
 
+// Allowed origins for the post-OAuth returnUrl to prevent open redirects
+const ALLOWED_RETURN_ORIGINS = [
+  "https://nextslot.co.za",
+  "https://www.nextslot.co.za",
+  "https://book-a-glow.vercel.app",
+  "https://phenomebeauty.nextslot.co.za",
+];
+
+function isSafeReturnUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_RETURN_ORIGINS.some(
+      (origin) => parsed.origin === new URL(origin).origin
+    ) || parsed.hostname.endsWith(".nextslot.co.za");
+  } catch {
+    return false;
+  }
+}
+
 const redirect = (url: string) =>
   new Response(null, { status: 302, headers: { Location: url } });
 
@@ -23,7 +43,9 @@ serve(async (req: Request) => {
   try {
     const parsed = JSON.parse(atob(stateRaw ?? ""));
     tenantId = parsed.tenantId ?? "";
-    returnUrl = parsed.returnUrl ?? "";
+    // Validate returnUrl against allowed origins to prevent open redirect
+    const rawReturn = parsed.returnUrl ?? "";
+    returnUrl = isSafeReturnUrl(rawReturn) ? rawReturn : "";
   } catch {
     return redirect("https://phenomebeauty.nextslot.co.za/admin?gcal=error");
   }

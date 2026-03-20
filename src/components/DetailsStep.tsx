@@ -129,7 +129,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     debounceRef.current = setTimeout(async () => {
       setAddressLoading(true);
       try {
-        const data = await callPlacesFunction({ input: query, tenant_id: tenantId });
+        const data = await callPlacesFunction({ input: query });
         if (data?.predictions?.length > 0) {
           setAddressSuggestions(data.predictions.slice(0, 5));
           setShowSuggestions(true);
@@ -160,7 +160,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     const origin = config.address;
     if (!origin) return;
     try {
-      const data = await callPlacesFunction({ input: description, origin, tenant_id: tenantId });
+      const data = await callPlacesFunction({ input: description, origin });
       if (data?.distanceKm != null) onUpdate({ distanceKm: data.distanceKm });
     } catch { /* fallback to defaultDistanceKm in ReviewStep */ }
   };

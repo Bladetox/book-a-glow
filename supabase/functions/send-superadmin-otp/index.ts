@@ -6,7 +6,13 @@ const corsHeaders = {
 };
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-const SUPER_ADMIN_EMAIL = "arshadsegal@gmail.com";
+
+// Allowed frontend origins that may request a super-admin magic link.
+const ALLOWED_ORIGINS = [
+  "https://nextslot.co.za",
+  "https://www.nextslot.co.za",
+  "https://book-a-glow.vercel.app",
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,13 +20,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const resendKey   = Deno.env.get("RESEND_API_KEY")!;
+    const supabaseUrl      = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey       = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const resendKey        = Deno.env.get("RESEND_API_KEY")!;
+    const superAdminEmail  = Deno.env.get("SUPER_ADMIN_EMAIL")!;
+    const superAdminSecret = Deno.env.get("SUPER_ADMIN_SECRET");
 
-    // Parse redirect origin from request body
-    const { origin } = await req.json().catch(() => ({ origin: "https://nextslot.co.za" }));
-    const redirectTo  = `${origin}/superadmin`;
+    // Require shared secret to prevent public abuse
+    if (superAdminSecret) {
+      const callerSecret = req.headers.get("X-Admin-Secret");
+      if (callerSecret !== superAdminSecret) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Parse and validate origin from request body against whitelist
+    const body = await req.json().catch(() => ({}));
+    const rawOrigin = typeof body.origin === "string" ? body.origin.trim() : "";
+    const origin = ALLOWED_ORIGINS.includes(rawOrigin) ? rawOrigin : ALLOWED_ORIGINS[0];
+    const redirectTo = `${origin}/superadmin`;
 
     // Use service-role admin client — completely bypasses captcha
     const supabase = createClient(supabaseUrl, serviceKey, {
@@ -30,7 +50,7 @@ Deno.serve(async (req) => {
     // Generate a magic link server-side — no browser captcha involved
     const { data, error: genError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
-      email: SUPER_ADMIN_EMAIL,
+      email: superAdminEmail,
       options: { redirectTo },
     });
 
@@ -104,7 +124,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from:    "NextSlot <noreply@nextslot.co.za>",
-        to:      [SUPER_ADMIN_EMAIL],
+        to:      [superAdminEmail],
         subject: "⚡ Super Admin sign-in link",
         html,
       }),
