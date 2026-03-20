@@ -7,6 +7,15 @@ const corsHeaders = {
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("en-ZA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -101,11 +110,11 @@ Deno.serve(async (req) => {
     }
 
     // Resolve client details — denormalised columns first, then guest, then profile join
-    const clientName  = (booking as any).client_name  || (booking as any).guest_name  || (booking.client as any)?.full_name || "Client";
+    const clientName  = escapeHtml((booking as any).client_name  || (booking as any).guest_name  || (booking.client as any)?.full_name || "Client");
     const clientEmail = (booking as any).client_email || (booking as any).guest_email || (booking.client as any)?.email    || null;
-    const clientPhone = (booking as any).client_phone || (booking as any).guest_phone || (booking.client as any)?.phone    || "";
+    const clientPhone = escapeHtml((booking as any).client_phone || (booking as any).guest_phone || (booking.client as any)?.phone    || "");
 
-    const tenantName  = tenant?.name ?? "PhenomeBeauty";
+    const tenantName  = escapeHtml(tenant?.name ?? "PhenomeBeauty");
     const tenantEmail = (tenant?.email && tenant.email.trim() !== "")
       ? tenant.email.trim()
       : (settings["email"] && settings["email"].trim() !== "")
@@ -125,8 +134,8 @@ Deno.serve(async (req) => {
     const depositAmount = `R${rawDeposit.toFixed(2)}`;
     const balanceDue    = `R${rawBalance.toFixed(2)}`;
     const location      = booking.is_call_out
-      ? `Call-out to ${booking.call_out_address}`
-      : tenant?.address ?? "Our Studio";
+      ? `Call-out to ${escapeHtml(booking.call_out_address ?? "")}`
+      : escapeHtml(tenant?.address ?? "Our Studio");
 
     const logoHtml = logoUrl
       ? `<img src="${logoUrl}" alt="${tenantName}" style="width:52px;height:52px;object-fit:contain;border-radius:8px;margin:0 auto 10px;display:block;" />`

@@ -118,11 +118,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         p_guest_name:             booking.fullName  || null,
         p_guest_email:            booking.email     || null,
         p_guest_phone:            guestPhone        || null,
-        // ── Pass frontend-computed amounts so the RPC never re-derives
-        // from app_settings with a potentially-null tenant context ──
-        p_total_amount:           total,
-        p_deposit_amount:         dbDepositAmount,
-        p_tenant_id:              tenantId,
       });
 
       if (error) throw error;
@@ -144,7 +139,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
             success_url:  successUrl,
             cancel_url:   cancelUrl,
             payment_type: paymentChoice,
-            ...(paymentChoice === "full" && { amount: Math.round(total * 100) }),
           },
         });
 

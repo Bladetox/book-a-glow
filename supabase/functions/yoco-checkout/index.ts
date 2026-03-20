@@ -34,7 +34,6 @@ Deno.serve(async (req) => {
       success_url,
       cancel_url,
       payment_type = "deposit",
-      amount: overrideAmountCents,
     } = body;
 
     if (!booking_id) {
@@ -90,20 +89,17 @@ Deno.serve(async (req) => {
 
     let amountInCents: number;
     if (payment_type === "balance") {
-      // FIX: prefer explicit override, then stored balance_due (source of truth),
-      // only fall back to total-deposit if balance_due is zero/null (legacy rows).
-      if (overrideAmountCents) {
-        amountInCents = Math.round(overrideAmountCents);
-      } else if (Number(booking.balance_due) > 0) {
+      // Use stored balance_due as source of truth.
+      // Fall back to total-deposit for legacy rows where balance_due not yet written.
+      if (Number(booking.balance_due) > 0) {
         amountInCents = Math.round(Number(booking.balance_due) * 100);
       } else {
-        // Legacy fallback: balance_due not yet written by webhook
         amountInCents = Math.round(
           (Number(booking.total_amount) - Number(booking.deposit_amount)) * 100
         );
       }
     } else if (payment_type === "full") {
-      // Client chose to pay the full amount upfront
+      // Client chose to pay the full amount upfront — always use DB total
       amountInCents = Math.round(Number(booking.total_amount) * 100);
     } else {
       amountInCents = Math.round(Number(booking.deposit_amount) * 100);

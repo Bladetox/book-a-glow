@@ -1,5 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -17,8 +26,6 @@ async function verifyYocoSignature(
   );
   const signature   = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
   const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
-  console.log("Computed signature (b64):", computedB64);
-  console.log("Received signature:",       signatureHeader);
   return computedB64 === signatureHeader;
 }
 
@@ -92,13 +99,13 @@ async function createCalendarEvent(
     const durationMins = booking.service_duration_minutes ?? 60;
     const endDate      = new Date(startDate.getTime() + durationMins * 60_000);
 
-    const clientName  = booking.client_name  ?? booking.guest_name  ?? "Client";
-    const clientPhone = booking.client_phone ?? booking.guest_phone ?? "";
-    const clientEmail = booking.client_email ?? booking.guest_email ?? "";
-    const address     = booking.is_call_out ? (booking.call_out_address ?? "") : "";
+    const clientName  = escapeHtml(booking.client_name  ?? booking.guest_name  ?? "Client");
+    const clientPhone = escapeHtml(booking.client_phone ?? booking.guest_phone ?? "");
+    const clientEmail = escapeHtml(booking.client_email ?? booking.guest_email ?? "");
+    const address     = escapeHtml(booking.is_call_out ? (booking.call_out_address ?? "") : "");
     const tot         = Number(booking.total_amount   ?? 0);
     const dep         = Number(booking.deposit_amount ?? 0);
-    // FIX: use stored balance_due — not recomputed from total - deposit
+    // Use stored balance_due — not recomputed from total - deposit
     const bal         = Number(booking.balance_due ?? Math.max(0, tot - dep)).toFixed(2);
 
     const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
@@ -110,12 +117,12 @@ async function createCalendarEvent(
       clientEmail ? `<b>Email:</b>   ${clientEmail}`  : "",
       address     ? `<b>Address:</b> ${addressLink}`  : "",
       booking.is_call_out && booking.call_out_distance_km
-        ? `<b>Distance:</b> ${booking.call_out_distance_km} km` : "",
+        ? `<b>Distance:</b> ${Number(booking.call_out_distance_km).toFixed(1)} km` : "",
       `<b>Duration:</b> ${durationMins} min`,
       `<b>Total:</b> R${tot.toFixed(2)}`,
       `<b>Deposit paid ✅</b> R${dep.toFixed(2)}`,
       `<b>Balance due:</b> R${bal}`,
-      booking.client_notes ? `<b>Notes:</b> ${booking.client_notes}` : "",
+      booking.client_notes ? `<b>Notes:</b> ${escapeHtml(booking.client_notes)}` : "",
     ].filter(Boolean).join("<br>");
 
     const calRes = await fetch(
@@ -127,7 +134,7 @@ async function createCalendarEvent(
           "Content-Type":  "application/json",
         },
         body: JSON.stringify({
-          summary:     `Booking — ${clientName}`,
+          summary:     `Booking — ${clientName}`,  // already escaped
           description: descLines,
           location:    address || undefined,
           start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
@@ -166,13 +173,10 @@ Deno.serve(async (req) => {
 
     const { type, payload } = body;
     console.log("Yoco webhook received:", type);
-    console.log("Payload metadata:", JSON.stringify(payload?.metadata));
 
     const checkoutId      = payload?.id ?? payload?.checkoutId ?? payload?.metadata?.checkoutId;
     const metaBookingId   = payload?.metadata?.booking_id;
     const metaPaymentType = payload?.metadata?.payment_type ?? "deposit";
-
-    console.log("checkoutId:", checkoutId, "| metaBookingId:", metaBookingId, "| metaPaymentType:", metaPaymentType);
 
     let tenantId: string | null = null;
     if (metaBookingId) {
@@ -201,27 +205,30 @@ Deno.serve(async (req) => {
     console.log("Resolved tenant_id:", tenantId);
 
     const signatureHeader = req.headers.get("X-Yoco-Signature");
-    if (signatureHeader) {
-      const { data: tenant, error: tenantErr } = await supabase
-        .from("tenants")
-        .select("yoco_webhook_secret")
-        .eq("id", tenantId)
-        .single();
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("yoco_webhook_secret")
+      .eq("id", tenantId)
+      .single();
 
-      if (!tenantErr && tenant?.yoco_webhook_secret) {
-        const valid = await verifyYocoSignature(payloadBytes, signatureHeader, tenant.yoco_webhook_secret);
-        if (!valid) {
-          console.error("Invalid Yoco webhook signature for tenant:", tenantId);
-          return new Response(JSON.stringify({ error: "Invalid signature" }), {
-            status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        console.log("Signature verified for tenant:", tenantId);
-      } else {
-        console.warn("No webhook secret configured — skipping signature check for tenant:", tenantId);
+    if (tenant?.yoco_webhook_secret) {
+      // Secret is configured — signature is mandatory
+      if (!signatureHeader) {
+        console.error("Missing X-Yoco-Signature header for tenant:", tenantId);
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      const valid = await verifyYocoSignature(payloadBytes, signatureHeader, tenant.yoco_webhook_secret);
+      if (!valid) {
+        console.error("Invalid Yoco webhook signature for tenant:", tenantId);
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.log("Signature verified for tenant:", tenantId);
     } else {
-      console.warn("No X-Yoco-Signature header — skipping signature check for tenant:", tenantId);
+      console.warn("No webhook secret configured for tenant — skipping signature check:", tenantId);
     }
 
     if (type !== "payment.succeeded") {

@@ -12,19 +12,18 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { input, origin: distanceOrigin, tenant_id: bodyTenantId } = body;
+    const { input, origin: distanceOrigin } = body;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Resolve tenant_id: body > Origin header subdomain > skip
-    let tenantId = bodyTenantId ?? null;
-    if (!tenantId) {
-      const reqOrigin = req.headers.get('Origin') ?? req.headers.get('Referer') ?? '';
-      const sub = reqOrigin.match(/https?:\/\/([^.]+)\.nextslot\.co\.za/);
-      if (sub) tenantId = sub[1];
-    }
+    // Resolve tenant_id from Origin/Referer subdomain only — never from request body
+    // to prevent cross-tenant API key enumeration.
+    let tenantId: string | null = null;
+    const reqOrigin = req.headers.get('Origin') ?? req.headers.get('Referer') ?? '';
+    const sub = reqOrigin.match(/https?:\/\/([^.]+)\.nextslot\.co\.za/);
+    if (sub) tenantId = sub[1];
 
     // Fetch API key from DB (preferred) then fall back to Supabase secret
     let apiKey: string | null = null;
