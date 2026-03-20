@@ -15,7 +15,10 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
     try {
       // Call edge function — generates magic link server-side, bypasses captcha entirely
       const { error: fnError } = await supabase.functions.invoke("send-superadmin-otp", {
-        body: { origin: window.location.origin },
+        body: {
+          origin: window.location.origin,
+          secret: import.meta.env.VITE_SUPER_ADMIN_SECRET,
+        },
       });
 
       if (fnError) throw fnError;
