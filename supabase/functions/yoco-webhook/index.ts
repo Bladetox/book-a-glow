@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
     const signatureHeader = req.headers.get("X-Yoco-Signature");
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("yoco_webhook_secret")
+      .select("yoco_webhook_secret, yoco_secret_key")
       .eq("id", tenantId)
       .single();
 
@@ -353,6 +353,47 @@ Deno.serve(async (req) => {
     }
 
     const effectiveTenantId = booking.tenant_id ?? tenantId;
+
+    // ══════════════════════════════════════════════════════════════════════
+    // VERIFY PAYMENT WITH YOCO — must confirm checkout is genuinely complete
+    // before touching booking state. Prevents replay attacks and fake webhooks
+    // (e.g. Yoco re-registration test pings replaying an existing checkout ID).
+    // ══════════════════════════════════════════════════════════════════════
+    if (!tenant?.yoco_secret_key) {
+      console.error("No Yoco secret key on tenant — cannot verify payment:", effectiveTenantId);
+      return new Response(JSON.stringify({ error: "Payment verification not possible" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (checkoutId) {
+      const verifyRes = await fetch(
+        `https://payments.yoco.com/api/checkouts/${checkoutId}`,
+        { headers: { "Authorization": `Bearer ${tenant.yoco_secret_key}` } }
+      );
+      const verifyData = await verifyRes.json();
+      console.log("Yoco checkout verification:", verifyRes.status, verifyData?.status, "| id:", checkoutId);
+
+      if (!verifyRes.ok) {
+        console.error("Yoco checkout not found or API error:", JSON.stringify(verifyData));
+        // Return 200 so Yoco stops retrying — but do not process the payment
+        return new Response(JSON.stringify({ received: true, skipped: "checkout_not_found" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const checkoutStatus = verifyData?.status ?? "";
+      if (checkoutStatus !== "complete") {
+        console.warn("Yoco checkout not complete — status:", checkoutStatus, "| id:", checkoutId);
+        return new Response(JSON.stringify({ received: true, skipped: "not_complete", checkout_status: checkoutStatus }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Yoco checkout verified as complete:", checkoutId);
+    } else {
+      console.warn("No checkoutId in payload — skipping Yoco verification. booking:", booking.id);
+    }
 
     // ══════════════════════════════════════════════════════════════════════
     // FULL PAYMENT — client paid 100% at booking time
