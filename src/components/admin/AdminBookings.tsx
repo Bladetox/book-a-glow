@@ -306,9 +306,28 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     Cancelled: bookings.filter(b => b.status === "cancelled").length,
   };
 
-  const handleStatusChange = async (bookingId: string, status: string) => {
+  const deleteGcalEvent = async (gcalEventId: string | null, tenantId: string) => {
+    if (!gcalEventId) return;
+    try {
+      await supabase.functions.invoke("delete-gcal-event", {
+        body: { gcal_event_id: gcalEventId, tenant_id: tenantId },
+      });
+    } catch (e) {
+      console.warn("Could not delete calendar event (best-effort):", e);
+    }
+  };
+
+  const handleStatusChange = async (
+    bookingId: string,
+    status: string,
+    gcalEventId?: string | null,
+    tenantId?: string
+  ) => {
     try {
       await updateStatus.mutateAsync({ bookingId, status });
+      if (status === "cancelled" && gcalEventId && tenantId) {
+        await deleteGcalEvent(gcalEventId, tenantId);
+      }
       toast.success(`Status updated to ${status}`);
     } catch (e: any) {
       toast.error(e.message || "Failed to update status");
@@ -335,8 +354,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, gcalEventId: string | null, tenantId: string) => {
     try {
+      // Delete the calendar event first (best-effort, before row is gone)
+      await deleteGcalEvent(gcalEventId, tenantId);
       await deleteBooking.mutateAsync(id);
       toast.success("Booking deleted");
       if (expandedId === id) setExpandedId(null);
@@ -443,7 +464,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         description={confirmDelete ? `This will permanently delete ${confirmDelete.client}'s booking for ${confirmDelete.service} on ${confirmDelete.date}. This cannot be undone.` : ""}
         confirmLabel="Delete"
         confirmClass="bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-        onConfirm={() => { if (confirmDelete) handleDelete(confirmDelete.id); setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) handleDelete(confirmDelete.id, confirmDelete.gcalEventId, confirmDelete.tenantId); setConfirmDelete(null); }}
         onCancel={() => setConfirmDelete(null)}
       />
       <ConfirmDialog
@@ -452,7 +473,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         description={confirmCancel ? `Are you sure you want to cancel ${confirmCancel.client}'s booking for ${confirmCancel.service}?` : ""}
         confirmLabel="Yes, Cancel"
         confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
-        onConfirm={() => { if (confirmCancel) handleStatusChange(confirmCancel.id, "cancelled"); setConfirmCancel(null); }}
+        onConfirm={() => { if (confirmCancel) handleStatusChange(confirmCancel.id, "cancelled", confirmCancel.gcalEventId, confirmCancel.tenantId); setConfirmCancel(null); }}
         onCancel={() => setConfirmCancel(null)}
       />
 
