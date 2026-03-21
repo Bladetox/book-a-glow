@@ -67,6 +67,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         name: `book-a-glow-${tenant_id}`,
         url: webhookUrl,
+        // Explicitly subscribe to the events we handle
+        events: ["payment.succeeded", "payment.failed"],
       }),
     });
 
