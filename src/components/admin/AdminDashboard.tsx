@@ -470,8 +470,13 @@ const AdminDashboard = ({
   const cancelRate     = data.health?.cancellationRate  ?? 0;
   const totalClients   = data.clients?.total     ?? 0;
   const returningCount = data.clients?.returning ?? 0;
-  const revenueTrend   = data.revenueTrend ?? [];
-  const maxTrend       = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
+  const revenueTrend     = data.revenueTrend ?? [];
+  const maxTrend         = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
+  const todayDayOfMonth  = new Date().getDate();
+  const trendEarningDays = revenueTrend.filter((d: any) => d.value > 0).length;
+  const trendPeakDay     = revenueTrend.reduce(
+    (p: any, c: any) => c.value > (p?.value ?? 0) ? c : p, null as any
+  );
   const stockAlerts    = data.stockAlerts ?? [];
   const topServices    = data.topServices ?? [];
   const alerts         = data.alerts ?? [];
@@ -580,13 +585,13 @@ const AdminDashboard = ({
                     label: "Still to Come",
                     value: String(todayRemaining),
                     color: todayRemaining > 0 ? "text-amber-400" : "text-white/40",
-                    sub: "remaining",
+                    sub: todayRemaining > 0 ? `appointment${todayRemaining !== 1 ? "s" : ""} left today` : "all done for today",
                   },
                   {
-                    label: "Revenue Today",
+                    label: "Received Today",
                     value: `R ${todayRevenue.toLocaleString()}`,
                     color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40",
-                    sub: "paid in",
+                    sub: "actual payments in",
                   },
                   {
                     label: "Next Client",
@@ -689,37 +694,91 @@ const AdminDashboard = ({
       {/* ── REVENUE TREND ── */}
       {visibility.revenueGraph && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Revenue Trend</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Daily Revenue — This Month</p>
             <button onClick={() => setShowTrendInfo(v => !v)} className="text-white/20 hover:text-white/50 transition-colors">
               <Info className="w-3.5 h-3.5" />
             </button>
           </div>
+
+          {/* Plain-English caption — always visible */}
+          <p className="text-[11px] text-white/35 mb-3 leading-relaxed">
+            Each bar is one day.{" "}
+            <span className="text-white/20">Taller = more money received.</span>
+            {monthRevenue > 0 && trendEarningDays > 0 && (
+              <>
+                {" "}R {monthRevenue.toLocaleString()} total across {trendEarningDays} earning day{trendEarningDays !== 1 ? "s" : ""}.
+                {trendPeakDay?.value > 0 && (
+                  <> Best day: {trendPeakDay.day}{["st","nd","rd"][((trendPeakDay.day % 10) - 1)] ?? "th"} (R {trendPeakDay.value.toLocaleString()}).</>
+                )}
+              </>
+            )}
+          </p>
+
           {showTrendInfo && <SectionInfoPanel lines={METRIC_COPY.revenueTrend} />}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 pb-3">
             {revenueTrend.length === 0 ? (
               <div className="h-24 flex items-center justify-center">
                 <p className="text-xs text-white/20">No revenue data yet</p>
               </div>
             ) : (
-              <div className="flex items-end gap-0.5 h-24 overflow-x-auto">
-                {revenueTrend.map((d: any, i: number) => {
-                  const h = Math.max((d.value / maxTrend) * 100, d.value > 0 ? 4 : 1);
-                  return (
-                    <div
-                      key={i}
-                      title={`Day ${d.day}: R ${d.value}`}
-                      className="flex-1 min-w-[6px] rounded-sm transition-all"
-                      style={{
-                        height: `${h}%`,
-                        backgroundColor: d.value > 0
-                          ? `rgba(52,211,153,${0.3 + (h / 100) * 0.6})`
-                          : "rgba(255,255,255,0.04)"
-                      }}
-                    />
-                  );
-                })}
-              </div>
+              <>
+                {/* Bar chart */}
+                <div className="flex items-end gap-0.5 h-24">
+                  {revenueTrend.map((d: any, i: number) => {
+                    const isToday = d.day === todayDayOfMonth;
+                    const h = Math.max((d.value / maxTrend) * 100, d.value > 0 ? 4 : 1);
+                    return (
+                      <div
+                        key={i}
+                        className="relative flex-1 min-w-[6px] flex flex-col justify-end group cursor-default"
+                      >
+                        {/* Hover tooltip */}
+                        {d.value > 0 && (
+                          <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap">
+                            <span className="block rounded-md bg-[#1c1c1c] border border-white/[0.12] px-1.5 py-0.5 text-[9px] font-semibold text-white/80">
+                              R {d.value.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        <div
+                          className={`rounded-sm transition-all ${isToday ? "ring-1 ring-white/30" : ""}`}
+                          style={{
+                            height: `${h}%`,
+                            backgroundColor: isToday
+                              ? `rgba(255,255,255,${0.25 + (h / 100) * 0.45})`
+                              : d.value > 0
+                                ? `rgba(52,211,153,${0.3 + (h / 100) * 0.6})`
+                                : "rgba(255,255,255,0.04)",
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Day-number axis */}
+                <div className="flex gap-0.5 mt-1.5">
+                  {revenueTrend.map((d: any) => {
+                    const isToday   = d.day === todayDayOfMonth;
+                    const showLabel = [1, 8, 15, 22, 29].includes(d.day) || isToday;
+                    return (
+                      <div key={d.day} className="flex-1 min-w-[6px] flex justify-center">
+                        {showLabel && (
+                          <span className={`text-[7px] leading-none ${isToday ? "text-white/50 font-semibold" : "text-white/15"}`}>
+                            {isToday ? "↑" : d.day}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between mt-0.5 px-0">
+                  <span className="text-[8px] text-white/15">Day 1</span>
+                  <span className="text-[8px] text-white/15">Day {revenueTrend.length}</span>
+                </div>
+              </>
             )}
           </div>
         </motion.section>
@@ -773,8 +832,8 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Client Insights</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ClientMiniCard id="ci-total"  icon={UserPlus}         iconColor="text-sky-400/60"     value={String(totalClients)}   valueColor="text-sky-400"     label="Total Clients" {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-ret"    icon={UserCheck}        iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Returning"     {...METRIC_COPY.returning} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-total"  icon={UserPlus}         iconColor="text-sky-400/60"     value={String(totalClients)}   valueColor="text-sky-400"     label="Clients This Month" {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-ret"    icon={UserCheck}        iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Booked Again"   {...METRIC_COPY.returning} onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-retpct" icon={Percent}          iconColor="text-violet-400/60"  value={retentionDisp}          valueColor="text-violet-400" label="Retention %"  {...METRIC_COPY.retention} onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-rev"    icon={CircleDollarSign} iconColor="text-amber-400/60"   value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket"  {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
           </div>
