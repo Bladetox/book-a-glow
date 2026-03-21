@@ -155,6 +155,77 @@ async function createCalendarEvent(
   }
 }
 
+async function patchCalendarEventDescription(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  eventId: string,
+  booking: Record<string, any>
+) {
+  try {
+    const { data: rows } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", tenantId)
+      .in("key", ["gcal_connected", "gcal_access_token", "gcal_refresh_token", "gcal_token_expiry"]);
+
+    const settings: Record<string, string> = {};
+    for (const row of rows ?? []) settings[row.key] = row.value;
+    if (settings["gcal_connected"] !== "true") return;
+
+    const clientId     = Deno.env.get("GOOGLE_CLIENT_ID")!;
+    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
+
+    let accessToken  = settings["gcal_access_token"];
+    const expiry     = Number(settings["gcal_token_expiry"] ?? 0);
+    if (Date.now() > expiry - 60_000) {
+      const newToken = await refreshGcalToken(supabase, tenantId, settings["gcal_refresh_token"], clientId, clientSecret);
+      if (!newToken) { console.error("Could not refresh gcal token for patch"); return; }
+      accessToken = newToken;
+    }
+
+    const clientName  = escapeHtml(booking.client_name  ?? booking.guest_name  ?? "Client");
+    const clientPhone = escapeHtml(booking.client_phone ?? booking.guest_phone ?? "");
+    const clientEmail = escapeHtml(booking.client_email ?? booking.guest_email ?? "");
+    const address     = escapeHtml(booking.is_call_out ? (booking.call_out_address ?? "") : "");
+    const tot         = Number(booking.total_amount   ?? 0);
+    const dep         = Number(booking.deposit_amount ?? 0);
+    const durationMins = booking.service_duration_minutes ?? 60;
+    const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
+    const addressLink = address     ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}">${address}</a>` : "";
+
+    const descLines = [
+      `<b>Client:</b> ${clientName}`,
+      clientPhone ? `<b>Phone:</b>   ${phoneLink}`    : "",
+      clientEmail ? `<b>Email:</b>   ${clientEmail}`  : "",
+      address     ? `<b>Address:</b> ${addressLink}`  : "",
+      booking.is_call_out && booking.call_out_distance_km
+        ? `<b>Distance:</b> ${Number(booking.call_out_distance_km).toFixed(1)} km` : "",
+      `<b>Duration:</b> ${durationMins} min`,
+      `<b>Total:</b> R${tot.toFixed(2)}`,
+      `<b>Deposit paid ✅</b> R${dep.toFixed(2)}`,
+      `<b>Balance due:</b> R0.00 ✅ Fully settled`,
+      booking.client_notes ? `<b>Notes:</b> ${escapeHtml(booking.client_notes)}` : "",
+    ].filter(Boolean).join("<br>");
+
+    const patchRes = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
+      {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ description: descLines }),
+      }
+    );
+    if (!patchRes.ok) {
+      const errData = await patchRes.json();
+      console.error("GCal PATCH description error:", JSON.stringify(errData));
+    } else {
+      console.log("GCal event description patched for booking:", booking.id);
+    }
+  } catch (err) {
+    console.error("patchCalendarEventDescription error:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -400,6 +471,12 @@ Deno.serve(async (req) => {
         transaction_id: transactionId,
         completed_at:   new Date().toISOString(),
       });
+
+      // Patch the existing calendar event description to show balance fully settled
+      if (booking.gcal_event_id) {
+        patchCalendarEventDescription(supabase, effectiveTenantId, booking.gcal_event_id, { ...booking, balance_due: 0 })
+          .catch((e) => console.error("gcal balance patch error:", e));
+      }
 
       console.log("Balance payment confirmed for booking:", booking.id, "| amount:", balanceAmount);
       return new Response(

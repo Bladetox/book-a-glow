@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
       .select(`
         id, booking_date, start_time, end_time,
         total_amount, deposit_amount, balance_due,
+        final_payment_paid, full_payment_received,
         is_call_out, call_out_address, call_out_fee, service_ids,
         tenant_id,
         client_name, client_email, client_phone,
@@ -126,13 +127,17 @@ Deno.serve(async (req) => {
     const formattedTime = formatTime(booking.start_time);
     const rawTotal   = Math.round(parseFloat(booking.total_amount)   * 100) / 100;
     const rawDeposit = Math.round(parseFloat(booking.deposit_amount) * 100) / 100;
-    // Always derive balance from source-of-truth columns — balance_due column
-    // has DEFAULT 0 and is never written by the booking RPC, so trusting it
-    // produces a stale R0.00 in emails for all unpaid balances.
-    const rawBalance = Math.round((rawTotal - rawDeposit) * 100) / 100;
+    // For full payments final_payment_paid=true and balance_due=0 in DB.
+    // For deposits balance_due = total - deposit (set at booking creation and confirmed by webhook).
+    const isFullPayment = (booking as any).final_payment_paid === true || (booking as any).full_payment_received === true;
+    const rawBalance = isFullPayment
+      ? 0
+      : Math.round((rawTotal - rawDeposit) * 100) / 100;
     const totalAmount   = `R${rawTotal.toFixed(2)}`;
-    const depositAmount = `R${rawDeposit.toFixed(2)}`;
+    // For full payment show total paid; for deposit show the deposit amount
+    const depositAmount = isFullPayment ? `R${rawTotal.toFixed(2)}` : `R${rawDeposit.toFixed(2)}`;
     const balanceDue    = `R${rawBalance.toFixed(2)}`;
+    const depositLabel  = isFullPayment ? "Total Paid" : "Deposit Paid";
     const location      = booking.is_call_out
       ? `Call-out to ${escapeHtml(booking.call_out_address ?? "")}`
       : escapeHtml(tenant?.address ?? "Our Studio");
@@ -186,10 +191,10 @@ Deno.serve(async (req) => {
     <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;">Payment Summary</p>
     <table class="es" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;border-radius:8px;padding:4px 16px;">
       <tr><td class="tl dv" style="padding:10px 0;font-size:13px;color:#666;width:42%;border-bottom:1px solid #e0e0e0;">Total</td><td class="tv dv" style="padding:10px 0;font-size:13px;font-weight:600;color:#000;border-bottom:1px solid #e0e0e0;">${totalAmount}</td></tr>
-      <tr><td class="tl dv" style="padding:10px 0;font-size:13px;color:#666;border-bottom:1px solid #e0e0e0;">Deposit Paid</td><td class="tv dv" style="padding:10px 0;font-size:13px;font-weight:700;color:#000;border-bottom:1px solid #e0e0e0;">${depositAmount} ✓</td></tr>
+      <tr><td class="tl dv" style="padding:10px 0;font-size:13px;color:#666;border-bottom:1px solid #e0e0e0;">${depositLabel}</td><td class="tv dv" style="padding:10px 0;font-size:13px;font-weight:700;color:#000;border-bottom:1px solid #e0e0e0;">${depositAmount} ✓</td></tr>
       <tr><td class="tl" style="padding:10px 0;font-size:13px;color:#666;">Balance Due</td><td class="tv" style="padding:10px 0;font-size:13px;font-weight:600;color:#000;">${balanceDue}</td></tr>
     </table>
-    <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;">Balance is due on the day of your appointment.</p>
+    ${!isFullPayment ? `<p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;">Balance is due on the day of your appointment.</p>` : ""}
   </td></tr>
   <tr><td style="padding:0 32px 24px;">
     <p class="tl" style="margin:0;font-size:13px;color:#666;">Questions? <a href="tel:${tenant?.phone ?? ""}" style="color:#000;font-weight:600;">${tenant?.phone ?? ""}</a></p>
@@ -248,7 +253,7 @@ Deno.serve(async (req) => {
       ${row("Date",             formattedDate)}
       ${row("Time",             formattedTime)}
       ${row("Location",         location)}
-      ${row("Deposit received", depositAmount, true)}
+      ${row(depositLabel, depositAmount, true)}
       ${row("Balance due",      balanceDue)}
     </table>
   </td></tr>

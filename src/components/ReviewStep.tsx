@@ -63,9 +63,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const amountDueNow   = paymentChoice === "full" ? total   : deposit;
   const balanceAfterPay = paymentChoice === "full" ? 0       : balance;
 
-  // When paying full, we tell the DB deposit = total so balance_due = 0
-  const dbDepositAmount = paymentChoice === "full" ? total : deposit;
-
   const handleConfirm = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -129,7 +126,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       if (bookingId) {
         const origin         = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-        const successUrl     = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
+        const successUrl     = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&type=${paymentChoice}`;
         const cancelUrl      = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
 
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
