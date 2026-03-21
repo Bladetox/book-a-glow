@@ -690,12 +690,22 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
                                   </div>
                                   <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                    <p className="text-[10px] text-white/30">Deposit</p>
-                                    <p className="text-sm font-bold text-emerald-400">R {b.deposit.toLocaleString()}</p>
+                                    <p className="text-[10px] text-white/30">
+                                      Deposit{b.depositPaid ? " ✓" : ""}
+                                    </p>
+                                    <p className={`text-sm font-bold ${b.depositPaid ? "text-emerald-400" : "text-white/40"}`}>
+                                      R {b.deposit.toLocaleString()}
+                                    </p>
                                   </div>
                                   <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
                                     <p className="text-[10px] text-white/30">Balance</p>
-                                    <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
+                                    <p className={`text-sm font-bold ${
+                                      b.fullPaymentReceived
+                                        ? "text-white/50"
+                                        : b.balance > 0 && b.status !== "cancelled" && b.status !== "complete"
+                                          ? "text-amber-400"
+                                          : "text-white/50"
+                                    }`}>
                                       {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
                                     </p>
                                   </div>
