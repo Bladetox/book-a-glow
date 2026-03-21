@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mail, KeyRound, Loader2 } from "lucide-react";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { supabase } from "@/integrations/supabase/client";
+
+const HCAPTCHA_SITE_KEY = "0dd0e842-7d24-4fba-9fd0-59a61b6ab782";
 
 interface AdminLoginProps {
   onLogin: () => void;
@@ -16,19 +19,30 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
+    if (!captchaToken) {
+      setError("Please complete the CAPTCHA verification.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: { captchaToken },
       });
 
       if (signInError) {
+        captchaRef.current?.resetCaptcha();
+        setCaptchaToken(null);
         setError(signInError.message);
         setLoading(false);
         return;
@@ -58,6 +72,8 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
 
       onLogin();
     } catch {
+      captchaRef.current?.resetCaptcha();
+      setCaptchaToken(null);
       setError("An unexpected error occurred");
     } finally {
       setLoading(false);
@@ -120,7 +136,16 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
                     <input type="password" value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} placeholder="Enter your password" className={inputClass} required />
                   </div>
                   {error && <p className="text-xs text-red-400 text-center">{error}</p>}
-                  <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-white text-black text-sm font-semibold tracking-wider uppercase hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <div className="flex justify-center">
+                    <HCaptcha
+                      sitekey={HCAPTCHA_SITE_KEY}
+                      onVerify={(token) => setCaptchaToken(token)}
+                      onExpire={() => setCaptchaToken(null)}
+                      ref={captchaRef}
+                      theme="dark"
+                    />
+                  </div>
+                  <button type="submit" disabled={loading || !captchaToken} className="w-full py-3 rounded-xl bg-white text-black text-sm font-semibold tracking-wider uppercase hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                     {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                     Sign In
                   </button>

@@ -24,9 +24,23 @@ async function verifyYocoSignature(
   const cryptoKey = await crypto.subtle.importKey(
     "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
-  const signature   = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
-  const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
-  return computedB64 === signatureHeader;
+  const sig    = new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes));
+  const header = signatureHeader.trim();
+
+  // Hex (lowercase) — Yoco's actual format
+  const computedHex = Array.from(sig).map(b => b.toString(16).padStart(2, "0")).join("");
+  if (computedHex === header.toLowerCase()) { console.log("Signature matched: hex"); return true; }
+  // Hex with sha256= prefix (GitHub-style)
+  if (`sha256=${computedHex}` === header.toLowerCase()) { console.log("Signature matched: sha256=hex"); return true; }
+  // Standard base64
+  const computedB64 = btoa(String.fromCharCode(...sig));
+  if (computedB64 === header) { console.log("Signature matched: base64"); return true; }
+  // Base64url (no padding, URL-safe chars)
+  const computedB64url = computedB64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  if (computedB64url === header) { console.log("Signature matched: base64url"); return true; }
+
+  console.error("Signature mismatch. Header prefix:", header.slice(0, 16), "Hex prefix:", computedHex.slice(0, 16));
+  return false;
 }
 
 async function refreshGcalToken(
