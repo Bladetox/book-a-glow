@@ -12,13 +12,13 @@ interface ServiceCheck {
 
 export default function SASystemHealth() {
   const [checks, setChecks] = useState<ServiceCheck[]>([
-    { label: "Database (Supabase)",    status: "checking" },
-    { label: "Auth Service",           status: "checking" },
-    { label: "Tenants Table",          status: "checking" },
-    { label: "Bookings Table",         status: "checking" },
-    { label: "Payments Table",         status: "checking" },
-    { label: "Vercel Edge Network",    status: "ok",      detail: "CDN serving" },
-    { label: "Yoco Payment Gateway",   status: "ok",      detail: "External" },
+    { label: "Database (Supabase)",  status: "checking" },
+    { label: "Auth Service",         status: "checking" },
+    { label: "Tenants Table",        status: "checking" },
+    { label: "Bookings Table",       status: "checking" },
+    { label: "Payments Table",       status: "checking" },
+    { label: "Vercel Edge Network",  status: "ok",      detail: "CDN serving" },
+    { label: "Yoco Payment Gateway", status: "ok",      detail: "External" },
   ]);
 
   const runChecks = async () => {
@@ -27,7 +27,6 @@ export default function SASystemHealth() {
     const update = (label: string, status: ServiceStatus, detail?: string) =>
       setChecks(prev => prev.map(c => c.label === label ? { ...c, status, detail } : c));
 
-    // DB check
     try {
       await supabase.from("tenants").select("id").limit(1);
       update("Database (Supabase)", "ok", "Connected");
@@ -37,7 +36,6 @@ export default function SASystemHealth() {
       update("Tenants Table", "error");
     }
 
-    // Auth check
     try {
       const { data: { user } } = await supabase.auth.getUser();
       update("Auth Service", user ? "ok" : "error", user ? "Session valid" : "No session");
@@ -45,7 +43,6 @@ export default function SASystemHealth() {
       update("Auth Service", "error");
     }
 
-    // Bookings check
     try {
       await supabase.from("bookings").select("id").limit(1);
       update("Bookings Table", "ok", "Accessible");
@@ -53,7 +50,6 @@ export default function SASystemHealth() {
       update("Bookings Table", "error");
     }
 
-    // Payments check
     try {
       await supabase.from("payments").select("id").limit(1);
       update("Payments Table", "ok", "Accessible");
@@ -64,53 +60,63 @@ export default function SASystemHealth() {
 
   useEffect(() => { runChecks(); }, []);
 
-  const allOk = checks.every(c => c.status === "ok");
+  const allOk    = checks.every(c => c.status === "ok");
   const hasError = checks.some(c => c.status === "error");
 
   return (
     <div className="space-y-5 max-w-2xl">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-white font-semibold text-lg">System Health</h2>
-          <p className="text-white/40 text-sm">Live status of all platform services.</p>
+          <h2 className="text-white font-bold text-xl">System Health</h2>
+          <p className="text-[#A3AED0] text-sm">Live status of all platform services.</p>
         </div>
         <button
           onClick={runChecks}
-          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white/80 transition-colors"
+          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl bg-[#1B2559] border border-[#ffffff0f] text-[#A3AED0] hover:text-white transition-colors"
         >
           <RefreshCw className="w-3 h-3" /> Refresh
         </button>
       </div>
 
-      <div className={`px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-2 ${
+      <div className={`px-4 py-3.5 rounded-xl border text-sm font-semibold flex items-center gap-2 ${
         hasError
           ? "bg-red-500/10 border-red-500/20 text-red-400"
           : allOk
-            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-            : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+            ? "bg-[#01B574]/10 border-[#01B574]/20 text-[#01B574]"
+            : "bg-[#FFB547]/10 border-[#FFB547]/20 text-[#FFB547]"
       }`}>
         {hasError ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
         {hasError ? "One or more services have issues" : allOk ? "All systems operational" : "Checking services…"}
       </div>
 
-      <div className="bg-[hsl(0,0%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05]">
+      <div className="bg-[#111C44] border border-[#ffffff0f] rounded-2xl divide-y divide-[#ffffff05]">
         {checks.map(({ label, status, detail }) => (
-          <div key={label} className="flex items-center justify-between px-5 py-4">
+          <div key={label} className="flex items-center justify-between px-5 py-4 hover:bg-[#1B2559] transition-colors rounded-xl">
             <div className="flex items-center gap-3">
-              <Activity className="w-4 h-4 text-white/30" />
+              <div className={`p-1.5 rounded-lg ${
+                status === "ok"
+                  ? "bg-[#01B574]/10"
+                  : status === "error"
+                    ? "bg-red-500/10"
+                    : "bg-[#ffffff08]"
+              }`}>
+                <Activity className={`w-3.5 h-3.5 ${
+                  status === "ok" ? "text-[#01B574]" : status === "error" ? "text-red-400" : "text-[#A3AED0]"
+                }`} />
+              </div>
               <div>
-                <p className="text-sm text-white/70">{label}</p>
-                {detail && <p className="text-[11px] text-white/30">{detail}</p>}
+                <p className="text-sm text-white font-medium">{label}</p>
+                {detail && <p className="text-[11px] text-[#A3AED0]">{detail}</p>}
               </div>
             </div>
             {status === "checking" ? (
-              <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 text-[#A3AED0] animate-spin" />
             ) : status === "ok" ? (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-400">
+              <span className="flex items-center gap-1.5 text-xs text-[#01B574] font-medium">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Operational
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 text-xs text-red-400">
+              <span className="flex items-center gap-1.5 text-xs text-red-400 font-medium">
                 <AlertCircle className="w-3.5 h-3.5" /> Error
               </span>
             )}

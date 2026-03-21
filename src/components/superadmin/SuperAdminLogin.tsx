@@ -1,26 +1,20 @@
 import { useState } from "react";
+import { Loader2, Zap, Mail, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Zap, ShieldCheck, Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
-  const [stage,   setStage]   = useState<"request" | "sent">("request");
-  const [error,   setError]   = useState("");
+  const [stage, setStage] = useState<"request" | "sent">("request");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      // Call edge function — generates magic link server-side, bypasses captcha entirely
       const { error: fnError } = await supabase.functions.invoke("send-superadmin-otp", {
-        body: {
-          origin: window.location.origin,
-          secret: import.meta.env.VITE_SUPER_ADMIN_SECRET,
-        },
+        body: { origin: window.location.origin, secret: import.meta.env.VITE_SUPER_ADMIN_SECRET },
       });
-
       if (fnError) throw fnError;
       setStage("sent");
     } catch (err: unknown) {
@@ -31,36 +25,34 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(0,0%,3%)] flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-[#0B1437] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient blobs */}
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-[#4318FF]/20 blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-[#FF0080]/10 blur-[100px] pointer-events-none" />
 
+      <div className="relative w-full max-w-sm">
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-violet-900/40">
-            <Zap className="w-6 h-6 text-white" />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#868CFF] to-[#4318FF] flex items-center justify-center shadow-xl shadow-[#4318FF]/40 mb-4">
+            <Zap className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-white">NextSlot</h1>
-          <p className="text-sm text-white/40 mt-1 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" /> Super Admin Portal
-          </p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">NextSlot</h1>
+          <p className="text-[#A3AED0] text-xs tracking-widest uppercase font-semibold mt-1">Super Admin Portal</p>
         </div>
 
         {stage === "request" ? (
           <form
             onSubmit={handleSendLink}
-            className="bg-[hsl(0,0%,7%)] rounded-2xl border border-white/[0.07] p-6 space-y-5"
+            className="bg-[#111C44] rounded-3xl border border-[#ffffff0f] p-7 shadow-2xl shadow-black/40"
           >
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-white/80">Sign in with magic link</p>
-              <p className="text-xs text-white/35 leading-relaxed">
-                A secure one-click sign-in link will be sent to<br />
-                <span className="text-white/60 font-medium">arshadsegal@gmail.com</span>
-              </p>
-            </div>
+            <h2 className="text-lg font-bold text-white mb-1">Sign in with magic link</h2>
+            <p className="text-[#A3AED0] text-sm leading-relaxed mb-5">
+              A secure one-click link will be sent to the registered super admin email.
+            </p>
 
             {error && (
-              <div className="flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <div className="flex items-start gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-4">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                 {error}
               </div>
             )}
@@ -68,42 +60,41 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#868CFF] to-[#4318FF] text-white font-semibold text-sm tracking-wide hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#4318FF]/30"
             >
               {loading
-                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending…</>
-                : <><Mail className="w-3.5 h-3.5" /> Send Sign-In Link</>
+                ? <><Loader2 className="w-4 h-4 animate-spin" />Sending…</>
+                : <><Mail className="w-4 h-4" />Send Sign-In Link</>
               }
             </button>
+
+            <p className="text-[#A3AED0]/40 text-xs text-center mt-4">
+              Expires in 1 hour · Single use only
+            </p>
           </form>
         ) : (
-          <div className="bg-[hsl(0,0%,7%)] rounded-2xl border border-white/[0.07] p-6 space-y-5 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Check your email</p>
-                <p className="text-xs text-white/40 mt-1 leading-relaxed">
-                  Sign-in link sent to<br />
-                  <span className="text-white/60 font-medium">arshadsegal@gmail.com</span>
-                </p>
-              </div>
+          <div className="bg-[#111C44] rounded-3xl border border-[#ffffff0f] p-7 shadow-2xl shadow-black/40 flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#01B574] to-[#3DDB85] flex items-center justify-center shadow-lg shadow-[#01B574]/30 mb-4">
+              <CheckCircle2 className="w-7 h-7 text-white" />
             </div>
-
-            <p className="text-[11px] text-white/25 leading-relaxed">
-              Click the link in your email to open the Super Admin dashboard.<br />
-              Expires in 1 hour &middot; Single use only.
+            <h2 className="text-lg font-bold text-white mb-2">Check your email</h2>
+            <p className="text-[#A3AED0] text-sm leading-relaxed mb-6">
+              A sign-in link has been sent. Click it to open the Super Admin dashboard.
             </p>
-
+            <p className="text-[#A3AED0]/40 text-xs mb-5">Expires in 1 hour · Single use only</p>
             <button
               onClick={() => { setStage("request"); setError(""); }}
-              className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors mx-auto"
+              className="flex items-center gap-1.5 text-sm text-[#868CFF] hover:text-white transition-colors"
             >
-              <ArrowLeft className="w-3 h-3" /> Send again
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Send again
             </button>
           </div>
         )}
+
+        <p className="text-center text-[#A3AED0]/30 text-xs mt-6">
+          © {new Date().getFullYear()} NextSlot · Internal use only
+        </p>
       </div>
     </div>
   );

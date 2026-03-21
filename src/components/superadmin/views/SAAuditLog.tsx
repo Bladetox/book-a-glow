@@ -18,7 +18,6 @@ export default function SAAuditLog() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Using webhook_queue as a platform activity log (real table in schema)
     supabase
       .from("webhook_queue")
       .select("id, event_type, tenant_id, processed, created_at, processed_at, retry_count, error_message")
@@ -33,53 +32,55 @@ export default function SAAuditLog() {
   return (
     <div className="space-y-5 max-w-5xl">
       <div>
-        <h2 className="text-white font-semibold text-lg">Audit Log</h2>
-        <p className="text-white/40 text-sm">Platform webhook events and system activity across all tenants.</p>
+        <h2 className="text-white font-bold text-xl">Audit Log</h2>
+        <p className="text-[#A3AED0] text-sm">Platform webhook events and system activity across all tenants.</p>
       </div>
 
-      <div className="bg-[hsl(0,0%,7%)] border border-white/[0.06] rounded-2xl overflow-hidden">
+      <div className="bg-[#111C44] border border-[#ffffff0f] rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[600px]">
             <thead>
-              <tr className="border-b border-white/[0.06]">
+              <tr className="border-b border-[#ffffff0f] bg-[#111C44]">
                 {["Event", "Tenant", "Status", "Retries", "Time", "Error"].map(h => (
-                  <th key={h} className="text-left text-xs text-white/30 font-medium px-4 py-3">{h}</th>
+                  <th key={h} className="text-left text-xs text-[#A3AED0] font-semibold px-4 py-3.5">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-10 text-white/30 text-xs">Loading…</td></tr>
+                <tr><td colSpan={6} className="text-center py-10 text-[#A3AED0] text-xs">Loading…</td></tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10">
-                    <div className="flex flex-col items-center gap-2 text-white/30">
-                      <Database className="w-8 h-8 opacity-30" />
+                  <td colSpan={6} className="py-14">
+                    <div className="flex flex-col items-center gap-3 text-[#A3AED0]">
+                      <div className="p-4 rounded-2xl bg-[#1B2559]">
+                        <Database className="w-8 h-8 opacity-40" />
+                      </div>
                       <p className="text-xs">No webhook events found</p>
                     </div>
                   </td>
                 </tr>
               ) : logs.map(l => (
-                <tr key={l.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                  <td className="px-4 py-3 text-white/80 text-xs font-medium">{l.event_type}</td>
-                  <td className="px-4 py-3 text-white/30 text-[11px] font-mono">{l.tenant_id.slice(0, 8)}…</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                <tr key={l.id} className="border-b border-[#ffffff05] bg-[#0B1437] hover:bg-[#1B2559] transition-colors">
+                  <td className="px-4 py-3.5 text-white text-xs font-semibold">{l.event_type}</td>
+                  <td className="px-4 py-3.5 text-[#A3AED0]/60 text-[11px] font-mono">{l.tenant_id.slice(0, 8)}…</td>
+                  <td className="px-4 py-3.5">
+                    <span className={`text-[11px] px-2.5 py-1 rounded-full border font-medium ${
                       l.processed
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        ? "bg-[#01B574]/10 text-[#01B574] border-[#01B574]/20"
+                        : "bg-[#FFB547]/10 text-[#FFB547] border-[#FFB547]/20"
                     }`}>
                       {l.processed ? "Processed" : "Pending"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-white/40 text-xs">{l.retry_count ?? 0}</td>
-                  <td className="px-4 py-3 text-white/40 text-[11px]">
+                  <td className="px-4 py-3.5 text-[#A3AED0] text-xs">{l.retry_count ?? 0}</td>
+                  <td className="px-4 py-3.5 text-[#A3AED0] text-[11px]">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {l.created_at ? new Date(l.created_at).toLocaleString("en-ZA") : "—"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-red-400/70 text-[11px] max-w-xs truncate">
+                  <td className="px-4 py-3.5 text-red-400/70 text-[11px] max-w-xs truncate">
                     {l.error_message || "—"}
                   </td>
                 </tr>
