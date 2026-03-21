@@ -369,7 +369,20 @@ export function useDashboardData() {
 
     if (totalSlots === 0) return null; // availability rows exist but no slots enabled
 
-    const bookedSlots = active.length;
+    // Count 30-min slots occupied by each booking using start/end times.
+    // Fallback to summing booking_items duration when times are missing.
+    const bookedSlots = active.reduce((sum: number, b: any) => {
+      if (b.start_time && b.end_time) {
+        const [sh, sm] = (b.start_time as string).split(":").map(Number);
+        const [eh, em] = (b.end_time   as string).split(":").map(Number);
+        const mins = (eh * 60 + em) - (sh * 60 + sm);
+        if (mins > 0) return sum + Math.ceil(mins / 30);
+      }
+      const itemMins = (b.items ?? []).reduce(
+        (s: number, i: any) => s + (i.duration_minutes ?? 30), 0
+      );
+      return sum + Math.ceil(Math.max(itemMins, 30) / 30);
+    }, 0);
     return Math.min(bookedSlots / totalSlots, 1); // cap at 100%
   }, [availabilityRows, active, monthStart, monthEnd, staffLoading]);
 
@@ -377,8 +390,10 @@ export function useDashboardData() {
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts = useMemo(() => {
     const list: Alert[] = [];
+    // Only alert on confirmed bookings where deposit hasn't been received.
+    // "pending" status = awaiting initial checkout — that's a separate flow.
     const pendingDeposits = bookings.filter(
-      (b: any) => b.deposit_paid !== true && b.status !== "cancelled"
+      (b: any) => b.deposit_paid !== true && b.status === "confirmed"
     ).length;
     if (pendingDeposits > 0)
       list.push({ text: `${pendingDeposits} deposit${pendingDeposits > 1 ? "s" : ""} still pending`, type: "warning" });
