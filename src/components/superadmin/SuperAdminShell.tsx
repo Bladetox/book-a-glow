@@ -1,8 +1,9 @@
 import { useState, lazy, Suspense } from "react";
 import {
   LayoutDashboard, Users, Building2, DollarSign, Settings,
-  ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Zap, Loader2
+  ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Loader2
 } from "lucide-react";
+import nextslotLogo from "@/assets/nextslot-logo.png";
 
 const SAOverview     = lazy(() => import("./views/SAOverview"));
 const SATenants      = lazy(() => import("./views/SATenants"));
@@ -68,8 +69,8 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
       >
         {/* Brand */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-[#ffffff0a] shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#868CFF] to-[#4318FF] flex items-center justify-center shadow-md shadow-[#4318FF]/30 shrink-0">
-            <Zap className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
+            <img src={nextslotLogo} alt="NextSlot" className="w-full h-full object-contain" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white leading-none">NextSlot</p>

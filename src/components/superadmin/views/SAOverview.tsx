@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Users, DollarSign, Calendar, TrendingUp, AlertTriangle, ArrowRight } from "lucide-react";
-import DisplayCards from "@/components/ui/display-cards";
+import { Building2, Users, DollarSign, Calendar, PowerOff, CalendarCheck, ArrowRight } from "lucide-react";
 
 interface KPI {
   label: string;
@@ -13,21 +12,38 @@ interface KPI {
 }
 
 export default function SAOverview({ onNavigate }: { onNavigate: (v: string) => void }) {
-  const [tenantCount, setTenantCount] = useState<number | null>(null);
-  const [userCount, setUserCount] = useState<number | null>(null);
-  const [bookingCount, setBookingCount] = useState<number | null>(null);
-  const [revenue, setRevenue] = useState<number>(0);
+  const [activeTenants, setActiveTenants]     = useState<number | null>(null);
+  const [inactiveTenants, setInactiveTenants] = useState<number | null>(null);
+  const [userCount, setUserCount]             = useState<number | null>(null);
+  const [bookingCount, setBookingCount]       = useState<number | null>(null);
+  const [monthBookings, setMonthBookings]     = useState<number | null>(null);
+  const [revenue, setRevenue]                 = useState<number>(0);
 
   useEffect(() => {
     const fetchCounts = async () => {
-      const [{ count: tc }, { count: uc }, { count: bc }] = await Promise.all([
-        supabase.from("tenants").select("*", { count: "exact", head: true }),
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      const [
+        { count: activeTC },
+        { count: inactiveTC },
+        { count: uc },
+        { count: bc },
+        { count: mbc },
+      ] = await Promise.all([
+        supabase.from("tenants").select("*", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("tenants").select("*", { count: "exact", head: true }).eq("is_active", false),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("bookings").select("*", { count: "exact", head: true }),
+        supabase.from("bookings").select("*", { count: "exact", head: true }).gte("created_at", monthStart),
       ]);
-      setTenantCount(tc ?? 0);
+
+      setActiveTenants(activeTC ?? 0);
+      setInactiveTenants(inactiveTC ?? 0);
       setUserCount(uc ?? 0);
       setBookingCount(bc ?? 0);
+      setMonthBookings(mbc ?? 0);
+
       const { data: payments } = await supabase
         .from("payments")
         .select("amount")
@@ -41,44 +57,12 @@ export default function SAOverview({ onNavigate }: { onNavigate: (v: string) => 
   const fmt = (n: number | null) => n !== null ? String(n) : "\u2014";
 
   const kpis: KPI[] = [
-    { label: "Active Tenants",   value: fmt(tenantCount),              sub: "businesses on platform", icon: Building2,     gradient: "from-[#868CFF] to-[#4318FF]", action: "tenants" },
-    { label: "Total Users",      value: fmt(userCount),                sub: "across all tenants",     icon: Users,         gradient: "from-[#4ADEDE] to-[#1678F2]", action: "users" },
-    { label: "Total Bookings",   value: fmt(bookingCount),             sub: "all time",               icon: Calendar,      gradient: "from-[#01B574] to-[#3DDB85]" },
-    { label: "Platform Revenue", value: `R${revenue.toLocaleString()}`, sub: "completed payments",    icon: DollarSign,    gradient: "from-[#FFB547] to-[#FF7A00]", action: "revenue" },
-    { label: "Churn Rate",       value: "0%",                          sub: "last 30 days",           icon: TrendingUp,    gradient: "from-[#FF6B9D] to-[#C9184A]" },
-    { label: "Open Alerts",      value: "0",                           sub: "requiring attention",    icon: AlertTriangle, gradient: "from-[#FF416C] to-[#FF4B2B]", action: "health" },
-  ];
-
-  const heroCards = [
-    {
-      className:
-        "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-      icon: <Building2 className="size-4 text-[#868CFF]" />,
-      title: fmt(tenantCount) + " Tenants",
-      description: "Active businesses on NextSlot",
-      date: "Live",
-      iconClassName: "text-[#868CFF]",
-      titleClassName: "text-[#868CFF]",
-    },
-    {
-      className:
-        "[grid-area:stack] translate-x-16 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-      icon: <Users className="size-4 text-[#4ADEDE]" />,
-      title: fmt(userCount) + " Users",
-      description: "Across all tenant accounts",
-      date: "All time",
-      iconClassName: "text-[#4ADEDE]",
-      titleClassName: "text-[#4ADEDE]",
-    },
-    {
-      className: "[grid-area:stack] translate-x-32 translate-y-20 hover:translate-y-10",
-      icon: <DollarSign className="size-4 text-[#FFB547]" />,
-      title: `R${revenue.toLocaleString()} Revenue`,
-      description: "Total completed payments",
-      date: "All time",
-      iconClassName: "text-[#FFB547]",
-      titleClassName: "text-[#FFB547]",
-    },
+    { label: "Active Tenants",    value: fmt(activeTenants),             sub: "businesses on platform",    icon: Building2,    gradient: "from-[#868CFF] to-[#4318FF]", action: "tenants" },
+    { label: "Total Users",       value: fmt(userCount),                 sub: "across all tenants",        icon: Users,        gradient: "from-[#4ADEDE] to-[#1678F2]", action: "users" },
+    { label: "Total Bookings",    value: fmt(bookingCount),              sub: "all time",                  icon: Calendar,     gradient: "from-[#01B574] to-[#3DDB85]" },
+    { label: "Platform Revenue",  value: `R${revenue.toLocaleString()}`, sub: "completed payments",        icon: DollarSign,   gradient: "from-[#FFB547] to-[#FF7A00]", action: "revenue" },
+    { label: "Bookings This Month", value: fmt(monthBookings),           sub: "since 1st of the month",   icon: CalendarCheck, gradient: "from-[#FF6B9D] to-[#C9184A]" },
+    { label: "Inactive Tenants",  value: fmt(inactiveTenants),           sub: "not yet active",            icon: PowerOff,     gradient: "from-[#FF416C] to-[#FF4B2B]", action: "tenants" },
   ];
 
   return (
@@ -86,11 +70,6 @@ export default function SAOverview({ onNavigate }: { onNavigate: (v: string) => 
       <div>
         <h2 className="text-white font-bold text-xl">Platform Overview</h2>
         <p className="text-[#A3AED0] text-sm mt-1">Real-time health of all NextSlot tenants and users.</p>
-      </div>
-
-      {/* Hero DisplayCards */}
-      <div className="flex justify-center py-4">
-        <DisplayCards cards={heroCards} />
       </div>
 
       {/* KPI Grid */}

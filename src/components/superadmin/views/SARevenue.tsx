@@ -21,7 +21,6 @@ export default function SARevenue() {
       .from("payments")
       .select("id, amount, status, payment_type, gateway, created_at, tenant_id")
       .order("created_at", { ascending: false })
-      .limit(100)
       .then(({ data }) => { setPayments(data ?? []); setLoading(false); });
   }, []);
 

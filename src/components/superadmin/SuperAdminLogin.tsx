@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Loader2, Zap, Mail, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import nextslotLogo from "@/assets/nextslot-logo.png";
 
 export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
   const [stage, setStage] = useState<"request" | "sent">("request");
@@ -33,8 +34,8 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
       <div className="relative w-full max-w-sm">
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#868CFF] to-[#4318FF] flex items-center justify-center shadow-xl shadow-[#4318FF]/40 mb-4">
-            <Zap className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden mb-4 shadow-xl shadow-[#4318FF]/20">
+            <img src={nextslotLogo} alt="NextSlot" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">NextSlot</h1>
           <p className="text-[#A3AED0] text-xs tracking-widest uppercase font-semibold mt-1">Super Admin Portal</p>
