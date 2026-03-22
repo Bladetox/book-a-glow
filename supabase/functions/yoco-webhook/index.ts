@@ -16,20 +16,33 @@ const corsHeaders = {
 
 async function verifyYocoSignature(
   payloadBytes: Uint8Array,
-  signatureHeader: string,
+  svixSignature: string,
+  svixTimestamp: string,
   secret: string
 ): Promise<boolean> {
-  const base64Secret = secret.startsWith("whsec_")
-    ? secret.slice("whsec_".length)
-    : secret;
-  const keyBytes = Uint8Array.from(atob(base64Secret), (c) => c.charCodeAt(0));
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
-  );
-  const expectedSigBytes = Uint8Array.from(
-    atob(signatureHeader), (c) => c.charCodeAt(0)
-  );
-  return await crypto.subtle.verify("HMAC", cryptoKey, expectedSigBytes, payloadBytes);
+  try {
+    const base64Secret = secret.startsWith("whsec_")
+      ? secret.slice("whsec_".length)
+      : secret;
+    const keyBytes = Uint8Array.from(atob(base64Secret), (c) => c.charCodeAt(0));
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+
+    const bodyText = new TextDecoder().decode(payloadBytes);
+    const toSign = `${svixTimestamp}.${bodyText}`;
+    const toSignBytes = new TextEncoder().encode(toSign);
+
+    const signatureBytes = await crypto.subtle.sign("HMAC", cryptoKey, toSignBytes);
+    const computedSig = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
+
+    // svix-signature header = "v1,base64sig v1,base64sig2 ..."
+    const signatures = svixSignature.split(" ").map(s => s.replace(/^v1,/, ""));
+    return signatures.some(sig => sig === computedSig);
+  } catch (err) {
+    console.error("verifyYocoSignature error:", err);
+    return false;
+  }
 }
 
 async function refreshGcalToken(
@@ -108,7 +121,6 @@ async function createCalendarEvent(
     const address     = escapeHtml(booking.is_call_out ? (booking.call_out_address ?? "") : "");
     const tot         = Number(booking.total_amount   ?? 0);
     const dep         = Number(booking.deposit_amount ?? 0);
-    // FIX #1: derive balance reliably — never trust balance_due column
     const bal         = Number(booking.balance_due > 0 ? booking.balance_due : Math.max(0, tot - dep)).toFixed(2);
 
     const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
@@ -128,7 +140,6 @@ async function createCalendarEvent(
       booking.client_notes ? `<b>Notes:</b> ${escapeHtml(booking.client_notes)}` : "",
     ].filter(Boolean).join("<br>");
 
-    // If a GCal event already exists for this booking, update it; otherwise create new
     const method   = booking.gcal_event_id ? "PUT" : "POST";
     const endpoint = booking.gcal_event_id
       ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${booking.gcal_event_id}`
@@ -154,7 +165,6 @@ async function createCalendarEvent(
       console.error("Google Calendar API error:", JSON.stringify(calData));
     } else {
       console.log("Calendar event upserted:", calData.id, calData.htmlLink);
-      // Only write gcal_event_id on first creation
       if (!booking.gcal_event_id) {
         await supabase.from("bookings").update({ gcal_event_id: calData.id }).eq("id", booking.id);
       }
@@ -171,6 +181,10 @@ Deno.serve(async (req) => {
 
   try {
     console.log("Yoco webhook function started");
+    const allHeaders: Record<string, string> = {};
+    req.headers.forEach((value, key) => { allHeaders[key] = value; });
+    console.log("Incoming headers:", JSON.stringify(allHeaders));
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
@@ -183,8 +197,6 @@ Deno.serve(async (req) => {
     const { type, payload } = body;
     console.log("Yoco webhook received:", type);
 
-    // FIX #6 (security): tenant_id is no longer trusted from metadata —
-    // always resolve from the booking row itself
     const checkoutId      = payload?.id ?? payload?.checkoutId ?? payload?.metadata?.checkoutId;
     const metaBookingId   = payload?.metadata?.booking_id;
     const metaPaymentType = payload?.metadata?.payment_type ?? "deposit";
@@ -215,8 +227,9 @@ Deno.serve(async (req) => {
 
     console.log("Resolved tenant_id:", tenantId);
 
-    // Signature verification — secret read from tenants table only (never app_settings)
-    const signatureHeader = req.headers.get("x-yoco-signature");
+    const svixSignature = req.headers.get("svix-signature");
+    const svixTimestamp = req.headers.get("svix-timestamp") ?? "";
+
     const { data: tenant } = await supabase
       .from("tenants")
       .select("yoco_webhook_secret")
@@ -224,13 +237,13 @@ Deno.serve(async (req) => {
       .single();
 
     if (tenant?.yoco_webhook_secret) {
-      if (!signatureHeader) {
-        console.error("Missing x-yoco-signature header for tenant:", tenantId);
+      if (!svixSignature) {
+        console.error("Missing svix-signature header for tenant:", tenantId);
         return new Response(JSON.stringify({ error: "Missing signature" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const valid = await verifyYocoSignature(payloadBytes, signatureHeader, tenant.yoco_webhook_secret);
+      const valid = await verifyYocoSignature(payloadBytes, svixSignature, svixTimestamp, tenant.yoco_webhook_secret);
       if (!valid) {
         console.error("Invalid Yoco webhook signature for tenant:", tenantId);
         return new Response(JSON.stringify({ error: "Invalid signature" }), {
@@ -292,11 +305,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Always use booking.tenant_id — never trust payload metadata for tenant
     const effectiveTenantId = booking.tenant_id;
 
     // ══════════════════════════════════════════════════════════════════════
-    // FULL PAYMENT — client paid 100% at booking time
+    // FULL PAYMENT
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "full") {
       if (booking.final_payment_paid === true) {
@@ -370,7 +382,7 @@ Deno.serve(async (req) => {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // BALANCE PAYMENT — admin requested final payment after deposit
+    // BALANCE PAYMENT
     // ══════════════════════════════════════════════════════════════════════
     if (paymentType === "balance") {
       if (booking.final_payment_paid === true) {
@@ -381,7 +393,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // FIX #1: fallback if balance_due was never written by booking RPC
       const balanceAmount = Number(booking.balance_due) > 0
         ? Number(booking.balance_due)
         : Math.max(0, Number(booking.total_amount) - Number(booking.deposit_amount));
@@ -392,7 +403,7 @@ Deno.serve(async (req) => {
           final_payment_paid:    true,
           full_payment_received: true,
           balance_due:           0,
-          status:                "completed", // FIX #2: was "complete" — now consistent
+          status:                "completed",
           completed_at:          new Date().toISOString(),
         })
         .eq("id", booking.id);
@@ -417,11 +428,9 @@ Deno.serve(async (req) => {
         completed_at:   new Date().toISOString(),
       });
 
-      // FIX #3: update GCal event to reflect balance_due = 0
       createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: 0 })
         .catch((e) => console.error("gcal background error (balance):", e));
 
-      // FIX #4: send client a "balance received" confirmation email
       try {
         const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
           method: "POST",
@@ -450,7 +459,7 @@ Deno.serve(async (req) => {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // DEPOSIT PAYMENT — standard flow
+    // DEPOSIT PAYMENT
     // ══════════════════════════════════════════════════════════════════════
     const depositAmount    = Number(booking.deposit_amount ?? 0);
     const totalAmount      = Number(booking.total_amount   ?? 0);
