@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
 
     if (tenant?.yoco_webhook_secret) {
       if (!signatureHeader) {
-        console.error("Missing X-Yoco-Signature header for tenant:", tenantId);
+        console.error("Missing x-yoco-signature header for tenant:", tenantId);
         return new Response(JSON.stringify({ error: "Missing signature" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
