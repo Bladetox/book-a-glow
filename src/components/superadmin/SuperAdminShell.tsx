@@ -22,34 +22,48 @@ const TabLoader = () => (
   </div>
 );
 
+// Updated nav structure: group by Operate / Health / Business / Config
 const NAV_GROUPS = [
   {
-    label: "Platform",
+    label: "Operate",
     items: [
-      { id: "overview",  label: "Overview",      icon: LayoutDashboard },
-      { id: "tenants",   label: "Tenants",        icon: Building2 },
-      { id: "users",     label: "All Users",      icon: Users },
-      { id: "revenue",   label: "Revenue",        icon: DollarSign },
+      { id: "overview", label: "Overview", icon: LayoutDashboard },
+      { id: "tenants",  label: "Tenants",  icon: Building2 },
+      { id: "users",    label: "Users",    icon: Users },
     ],
   },
   {
-    label: "System",
+    label: "Health",
     items: [
-      { id: "health",    label: "System Health",  icon: Activity },
-      { id: "audit",     label: "Audit Log",      icon: ShieldAlert },
-      { id: "broadcast", label: "Broadcast",      icon: Bell },
+      { id: "health", label: "Monitoring",       icon: Activity },
+      { id: "audit",  label: "Security & Audit", icon: ShieldAlert },
+    ],
+  },
+  {
+    label: "Business",
+    items: [
+      { id: "revenue", label: "Billing & Revenue", icon: DollarSign },
     ],
   },
   {
     label: "Config",
     items: [
-      { id: "flags",     label: "Feature Flags",  icon: Flag },
-      { id: "settings",  label: "Settings",       icon: Settings },
+      { id: "flags",    label: "Feature Flags", icon: Flag },
+      { id: "settings", label: "Settings",      icon: Settings },
     ],
   },
 ] as const;
 
-type ViewId = "overview" | "tenants" | "users" | "revenue" | "health" | "audit" | "broadcast" | "flags" | "settings";
+type ViewId =
+  | "overview"
+  | "tenants"
+  | "users"
+  | "revenue"
+  | "health"
+  | "audit"
+  | "broadcast"
+  | "flags"
+  | "settings";
 
 const ALL_NAV = NAV_GROUPS.flatMap(g => g.items);
 
@@ -70,7 +84,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
       case "broadcast": return <SABroadcast />;
       case "flags":     return <SAFeatureFlags />;
       case "settings":  return <SASettings />;
-      default:          return <SAOverview onNavigate={(v) => setActiveView(v as ViewId)} />;
+      default:           return <SAOverview onNavigate={(v) => setActiveView(v as ViewId)} />;
     }
   };
 
@@ -99,15 +113,15 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
 
   return (
     <div className="min-h-screen bg-[hsl(220,13%,9%)] text-[hsl(0,0%,90%)] flex overflow-hidden">
-
-      {/* ── Sidebar ── */}
-      <aside className={[
-        "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200",
-        "bg-[hsl(220,13%,7%)] border-r border-white/[0.05]",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full",
-        "lg:relative lg:translate-x-0",
-      ].join(" ")}>
-
+      {/* Sidebar */}
+      <aside
+        className={[
+          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200",
+          "bg-[hsl(220,13%,7%)] border-r border-white/[0.05]",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "lg:relative lg:translate-x-0",
+        ].join(" ")}
+      >
         {/* Brand */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.05] shrink-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg shadow-violet-500/25">
@@ -117,13 +131,16 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
             <p className="text-sm font-bold text-white leading-none tracking-tight">NextSlot</p>
             <p className="text-[10px] text-violet-400/80 font-medium mt-0.5 tracking-wide uppercase">Super Admin</p>
           </div>
-          <button className="lg:hidden text-white/30 hover:text-white p-1 rounded-lg" onClick={() => setSidebarOpen(false)}>
+          <button
+            className="lg:hidden text-white/30 hover:text-white p-1 rounded-lg"
+            onClick={() => setSidebarOpen(false)}
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Nav Groups */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-7">
           {NAV_GROUPS.map(group => (
             <div key={group.label}>
               <p className="text-[10px] font-semibold text-white/20 uppercase tracking-[0.15em] px-3 mb-1.5">
@@ -154,12 +171,14 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
 
       {/* Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/70 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-black/70 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
-      {/* ── Main Content ── */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
-
         {/* Top Header */}
         <header className="flex items-center gap-4 px-5 sm:px-8 py-4 border-b border-white/[0.05] shrink-0 bg-[hsl(220,13%,7%)]/80 backdrop-blur-md sticky top-0 z-30">
           <button
