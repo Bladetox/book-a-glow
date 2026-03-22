@@ -135,7 +135,6 @@ Deno.serve(async (req) => {
         cancelUrl:  finalCancelUrl,
         metadata: {
           booking_id,
-          tenant_id:    booking.tenant_id,
           payment_type,
         },
       }),
