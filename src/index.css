@@ -595,6 +595,39 @@ html:not(.dark) .tenant-logo-img {
   }
 }
 
+/* ===== SUPER ADMIN ANIMATIONS ===== */
+@keyframes sa-logo-shimmer {
+  0%        { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
+  20%       { opacity: 1; }
+  80%       { opacity: 1; }
+  100%      { transform: translateX(200%) skewX(-12deg); opacity: 0; }
+}
+.sa-logo-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.sa-logo-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%);
+  animation: sa-logo-shimmer 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sa-toast-in {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.sa-toast-in { animation: sa-toast-in 0.22s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+@keyframes sa-check-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.sa-check-pop { animation: sa-check-pop 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
 /* ===== NEXTSLOT SITE THEME ===== */
 .nextslot-theme {
   --background: 0 0% 100%;
