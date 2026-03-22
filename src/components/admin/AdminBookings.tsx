@@ -33,7 +33,7 @@ const statusBorderAccent: Record<BookingRow["status"], string> = {
   cancelled: "border-l-2 border-l-red-500/20",
 };
 
-// ── A1: Confirm modal ──────────────────────────────────────────────────────
+// ── Confirm modal ──────────────────────────────────────────────────────────
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -83,7 +83,7 @@ const ConfirmDialog = ({ open, title, description, confirmLabel, confirmClass, o
   </AnimatePresence>
 );
 
-// ── A3: Reschedule modal ───────────────────────────────────────────────────
+// ── Reschedule modal ───────────────────────────────────────────────────────
 interface RescheduleModalProps {
   booking: BookingRow | null;
   rescheduleDate: Date | undefined;
@@ -115,7 +115,6 @@ const RescheduleModal = ({
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             className="pointer-events-auto w-full max-w-lg rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div>
                 <p className="text-[10px] tracking-[0.14em] uppercase text-white/30">Reschedule</p>
@@ -127,7 +126,6 @@ const RescheduleModal = ({
             </div>
             <div className="mx-5 border-t border-white/[0.06]" />
             <div className="px-5 py-4 flex flex-col sm:flex-row gap-4">
-              {/* Calendar */}
               <div className="flex-1">
                 <p className="text-[10px] text-white/30 mb-2">New Date</p>
                 <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
@@ -140,7 +138,6 @@ const RescheduleModal = ({
                   />
                 </div>
               </div>
-              {/* Time slots */}
               <div className="flex-1">
                 <p className="text-[10px] text-white/30 mb-2">New Time</p>
                 <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
@@ -189,14 +186,6 @@ const RescheduleModal = ({
   </AnimatePresence>
 );
 
-{/* Add service modal */}
-<AddServiceModal
-  bookingId={addServiceBooking?.id ?? null}
-  clientName={addServiceBooking?.client ?? ""}
-  onClose={() => setAddServiceBooking(null)}
-  onAdded={() => { /* react-query refetches automatically */ }}
-/>
-
 interface AdminBookingsProps {
   initialClient?: string | null;
   onClearClient?: () => void;
@@ -211,21 +200,19 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const deleteBooking = useDeleteBooking();
 
   const [activeFilter, setActiveFilter]               = useState<FilterType>("All");
-  // A4: client name search
   const [searchQuery, setSearchQuery]                 = useState("");
   const [expandedId, setExpandedId]                   = useState<string | null>(null);
   const [editingId, setEditingId]                     = useState<string | null>(null);
   const [editDraft, setEditDraft]                     = useState<Partial<BookingRow>>({});
-  // A3: reschedule as modal
   const [reschedulingBooking, setReschedulingBooking] = useState<BookingRow | null>(null);
   const [rescheduleDate, setRescheduleDate]           = useState<Date | undefined>();
   const [rescheduleTime, setRescheduleTime]           = useState<string | null>(null);
   const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
   const [availableSlots, setAvailableSlots]           = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading]               = useState(false);
-  // A1: confirm dialogs
   const [confirmDelete, setConfirmDelete]             = useState<BookingRow | null>(null);
   const [confirmCancel, setConfirmCancel]             = useState<BookingRow | null>(null);
+  const [addServiceBooking, setAddServiceBooking]     = useState<BookingRow | null>(null); // ← NEW
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -285,10 +272,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     return () => { cancelled = true; };
   }, [rescheduleDate, reschedulingBooking, tenantId]);
 
-  // A4: filter by search + status
   const filtered = useMemo(() => {
     return bookings.filter(b => {
-      if (activeFilter === "All")   {
+      if (activeFilter === "All") {
         if (searchQuery.trim()) {
           return b.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
                  b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -446,7 +432,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   return (
     <div className="flex flex-col gap-4">
 
-      {/* A1: Confirm dialogs */}
+      {/* Confirm dialogs */}
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete booking?"
@@ -466,7 +452,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onCancel={() => setConfirmCancel(null)}
       />
 
-      {/* A3: Reschedule modal */}
+      {/* Reschedule modal */}
       <RescheduleModal
         booking={reschedulingBooking}
         rescheduleDate={rescheduleDate}
@@ -477,6 +463,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onTimeSelect={setRescheduleTime}
         onConfirm={handleReschedule}
         onClose={() => { setReschedulingBooking(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+      />
+
+      {/* Add service modal ← NEW */}
+      <AddServiceModal
+        bookingId={addServiceBooking?.id ?? null}
+        clientName={addServiceBooking?.client ?? ""}
+        onClose={() => setAddServiceBooking(null)}
+        onAdded={() => { /* react-query refetches automatically */ }}
       />
 
       {/* Stats */}
@@ -515,7 +509,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         </div>
       </div>
 
-      {/* A4: Search bar */}
+      {/* Search bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
         <input
@@ -722,10 +716,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
                                 </div>
 
-                                {/* A2: Action buttons with clear visual hierarchy */}
+                                {/* Action buttons */}
                                 <div className="flex items-center gap-2 pt-1 flex-wrap">
 
-                                  {/* Primary positive actions — emerald */}
+                                  {/* Confirm — emerald */}
                                   {b.status === "pending" && (
                                     <button
                                       onClick={e => { e.stopPropagation(); handleStatusChange(b.id, "confirmed"); }}
@@ -735,6 +729,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </button>
                                   )}
 
+                                  {/* Complete — neutral */}
                                   {(b.status === "confirmed" || b.status === "pending") && (
                                     <button
                                       onClick={e => { e.stopPropagation(); handleStatusChange(b.id, "complete"); }}
@@ -762,6 +757,16 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     <Edit3 className="w-3 h-3" /> Edit
                                   </button>
 
+                                  {/* Add service — violet ← NEW */}
+                                  {b.status !== "cancelled" && b.status !== "complete" && (
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
+                                      className="px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors flex items-center gap-1.5"
+                                    >
+                                      <PlusCircle className="w-3 h-3" /> Add Service
+                                    </button>
+                                  )}
+
                                   {/* Request balance — amber */}
                                   {showRequestBalance(b) && (
                                     <button
@@ -779,7 +784,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                   <div className="flex-1" />
 
-                                  {/* Destructive — red ghost, pushed right */}
+                                  {/* Cancel — red ghost */}
                                   {b.status !== "cancelled" && b.status !== "complete" && (
                                     <button
                                       onClick={e => { e.stopPropagation(); setConfirmCancel(b); }}
@@ -788,6 +793,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                       <X className="w-3 h-3" /> Cancel
                                     </button>
                                   )}
+
+                                  {/* Delete — red icon */}
                                   <button
                                     onClick={e => { e.stopPropagation(); setConfirmDelete(b); }}
                                     className="p-1.5 rounded-lg border border-red-500/15 text-red-400/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
