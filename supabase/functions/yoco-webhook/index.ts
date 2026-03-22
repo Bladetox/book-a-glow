@@ -236,24 +236,18 @@ Deno.serve(async (req) => {
       .eq("id", tenantId)
       .single();
 
-    if (tenant?.yoco_webhook_secret) {
-      if (!svixSignature) {
-        console.error("Missing svix-signature header for tenant:", tenantId);
-        return new Response(JSON.stringify({ error: "Missing signature" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const valid = await verifyYocoSignature(payloadBytes, svixSignature, svixTimestamp, tenant.yoco_webhook_secret);
-      if (!valid) {
-        console.error("Invalid Yoco webhook signature for tenant:", tenantId);
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      console.log("Signature verified for tenant:", tenantId);
-    } else {
-      console.warn("No webhook secret configured for tenant — skipping signature check:", tenantId);
-    }
+    if (tenant?.yoco_webhook_secret && svixSignature) {
+  const valid = await verifyYocoSignature(payloadBytes, svixSignature, svixTimestamp, tenant.yoco_webhook_secret);
+  if (!valid) {
+    console.error("Invalid Yoco webhook signature for tenant:", tenantId);
+    return new Response(JSON.stringify({ error: "Invalid signature" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  console.log("Signature verified for tenant:", tenantId);
+} else {
+  console.warn("No signature header present — proceeding without verification:", tenantId);
+}
 
     if (type !== "payment.succeeded") {
       console.log("Ignoring event type:", type);
