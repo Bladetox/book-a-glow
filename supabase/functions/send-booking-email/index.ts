@@ -126,9 +126,6 @@ Deno.serve(async (req) => {
     const formattedTime = formatTime(booking.start_time);
     const rawTotal   = Math.round(parseFloat(booking.total_amount)   * 100) / 100;
     const rawDeposit = Math.round(parseFloat(booking.deposit_amount) * 100) / 100;
-    // Always derive balance from source-of-truth columns — balance_due column
-    // has DEFAULT 0 and is never written by the booking RPC, so trusting it
-    // produces a stale R0.00 in emails for all unpaid balances.
     const rawBalance = Math.round((rawTotal - rawDeposit) * 100) / 100;
     const totalAmount   = `R${rawTotal.toFixed(2)}`;
     const depositAmount = `R${rawDeposit.toFixed(2)}`;
@@ -348,6 +345,64 @@ Deno.serve(async (req) => {
         }),
       });
       console.log("Balance request email:", balanceRes.status, JSON.stringify(await balanceRes.json()));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // BALANCE PAID — triggered by yoco-webhook after successful balance payment
+    // ══════════════════════════════════════════════════════════════════════
+    if (email_type === "balance_paid") {
+      if (!clientEmail) {
+        console.warn("No client email for balance_paid notification — skipping");
+      } else {
+        const balancePaidHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    @media (prefers-color-scheme:dark){
+      .eb{background-color:#000!important}.ec{background-color:#111!important;border-color:#333!important}
+      .eh{background-color:#111!important;border-bottom:1px solid #333!important}.es{background-color:#1a1a1a!important}
+      .tm{color:#fff!important}.tl{color:#999!important}.tv{color:#fff!important}.tf{color:#666!important}
+    }
+  </style>
+</head>
+<body class="eb" style="margin:0;padding:20px;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table class="ec" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:12px;border:1px solid #e0e0e0;overflow:hidden;">
+  <tr><td class="eh" style="padding:28px 32px;text-align:center;background:#fff;border-bottom:1px solid #e0e0e0;">
+    ${logoHtml}
+    <p class="tm" style="margin:0;font-size:20px;font-weight:700;color:#000;">${tenantName}</p>
+    <p class="tl" style="margin:6px 0 0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#777;">Payment Received</p>
+  </td></tr>
+  <tr><td style="padding:28px 32px 16px;">
+    <p class="tm" style="margin:0 0 12px;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>,</p>
+    <p class="tl" style="margin:0 0 8px;font-size:14px;color:#555;line-height:1.6;">Your balance payment for <strong style="color:#000;">${serviceNames}</strong> on <strong style="color:#000;">${formattedDate}</strong> has been received. ✅</p>
+    <p class="tl" style="margin:0;font-size:14px;color:#555;line-height:1.6;">Your booking is now fully settled. Thank you for choosing ${tenantName}.</p>
+  </td></tr>
+  ${reviewLink ? `<tr><td style="padding:0 32px 24px;">
+    <p class="tl" style="margin:0;font-size:13px;color:#666;">We'd love to hear about your experience — <a href="${reviewLink}" target="_blank" style="color:#000;font-weight:600;">share your review</a> and help other women find their glow too. 🌸</p>
+  </td></tr>` : ""}
+  <tr><td class="es" style="padding:14px 32px;text-align:center;background:#f0f0f0;">
+    <p class="tf" style="margin:0;font-size:11px;color:#999;">&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+        const bpRes = await fetch(RESEND_API_URL, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from:     `${tenantName} <bookings@nextslot.co.za>`,
+            reply_to: tenantEmail,
+            to:       [clientEmail],
+            subject:  `Payment received — ${serviceNames} on ${formattedDate}`,
+            html:     balancePaidHtml,
+          }),
+        });
+        console.log("Balance paid email:", bpRes.status, JSON.stringify(await bpRes.json()));
+      }
     }
 
     return new Response(
