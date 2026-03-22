@@ -578,6 +578,27 @@ Deno.serve(async (req) => {
           .catch((e) => console.error("gcal balance patch error:", e));
       }
 
+      // Notify client (receipt) and tenant (settlement alert)
+      try {
+        const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+            "apikey":        serviceKey,
+          },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            tenant_id:  effectiveTenantId,
+            email_type: "balance_paid",
+          }),
+        });
+        const emailJson = await emailRes.json();
+        console.log("balance_paid email response:", emailRes.status, JSON.stringify(emailJson));
+      } catch (emailErr) {
+        console.error("Failed to call send-booking-email (balance_paid):", emailErr);
+      }
+
       console.log("Balance payment confirmed for booking:", booking.id, "| amount:", balanceAmount);
       return new Response(
         JSON.stringify({ received: true, booking_id: booking.id, type: "balance" }),
