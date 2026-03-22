@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // 2. Fetch the service to add
     const { data: service, error: serviceErr } = await supabase
       .from("services")
-      .select("id, name, price, duration_minutes, deposit_type, deposit_value")
+      .select("id, name, price, duration_minutes, deposit_percent")
       .eq("id", service_id)
       .eq("tenant_id", tenant_id)
       .single();
@@ -65,24 +65,17 @@ Deno.serve(async (req) => {
     const servicePrice  = Number(service.price ?? 0);
     const serviceDurMin = Number(service.duration_minutes ?? 0);
 
-    // Work out the deposit increment for the added service
+    // Deposit increment for the added service
     let additionalDeposit = 0;
     if (!booking.deposit_paid) {
-      // Deposit hasn't been paid yet — deposit is still outstanding, recalculate it
-      if (service.deposit_type === "percentage") {
-        additionalDeposit = (servicePrice * Number(service.deposit_value ?? 0)) / 100;
-      } else if (service.deposit_type === "fixed") {
-        additionalDeposit = Number(service.deposit_value ?? 0);
-      } else {
-        additionalDeposit = servicePrice; // full price upfront
-      }
+      const pct = Number(service.deposit_percent ?? 50);
+      additionalDeposit = (servicePrice * pct) / 100;
     }
-    // If deposit already paid, the entire service price goes to balance_due
 
-    const newTotal    = oldTotal    + servicePrice;
+    const newTotal    = oldTotal + servicePrice;
     const newDeposit  = booking.deposit_paid ? oldDeposit : oldDeposit + additionalDeposit;
     const newBalance  = booking.deposit_paid
-      ? oldBalance + servicePrice                // deposit already done — full extra goes to balance
+      ? oldBalance + servicePrice
       : newTotal - newDeposit;
     const newDuration = oldDuration + serviceDurMin;
 
@@ -94,12 +87,12 @@ Deno.serve(async (req) => {
     const endM     = Math.floor((endMs % 3600000) / 60000);
     const newEndTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`;
 
-    // 4. Insert into booking_services (many-to-many junction)
+    // 4. Insert into booking_services
     await supabase.from("booking_services").insert({
-      booking_id: booking_id,
-      service_id: service_id,
-      tenant_id:  tenant_id,
-      price:      servicePrice,
+      booking_id:       booking_id,
+      service_id:       service_id,
+      tenant_id:        tenant_id,
+      price:            servicePrice,
       duration_minutes: serviceDurMin,
     });
 
@@ -107,11 +100,11 @@ Deno.serve(async (req) => {
     const { error: updateErr } = await supabase
       .from("bookings")
       .update({
-        total_amount:              newTotal,
-        deposit_amount:            newDeposit,
-        balance_due:               newBalance,
-        service_duration_minutes:  newDuration,
-        end_time:                  newEndTime,
+        total_amount:             newTotal,
+        deposit_amount:           newDeposit,
+        balance_due:              newBalance,
+        service_duration_minutes: newDuration,
+        end_time:                 newEndTime,
       })
       .eq("id", booking_id);
 
@@ -131,10 +124,7 @@ Deno.serve(async (req) => {
             "Authorization": `Bearer ${serviceKey}`,
             "apikey":        serviceKey,
           },
-          body: JSON.stringify({
-            booking_id: booking_id,
-            tenant_id:  tenant_id,
-          }),
+          body: JSON.stringify({ booking_id, tenant_id }),
         });
       } catch (gcalErr) {
         console.error("GCal update error (non-fatal):", gcalErr);
