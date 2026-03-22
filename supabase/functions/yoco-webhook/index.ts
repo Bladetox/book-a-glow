@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
     console.log("Resolved tenant_id:", tenantId);
 
     // Signature verification — secret read from tenants table only (never app_settings)
-    const signatureHeader = req.headers.get("X-Yoco-Signature");
+    const signatureHeader = req.headers.get("x-yoco-signature");
     const { data: tenant } = await supabase
       .from("tenants")
       .select("yoco_webhook_secret")
