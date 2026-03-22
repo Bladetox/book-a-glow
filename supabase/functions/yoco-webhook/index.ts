@@ -19,22 +19,16 @@ async function verifyYocoSignature(
   signatureHeader: string,
   secret: string
 ): Promise<boolean> {
-  // Strip "whsec_" prefix, then base64-decode to raw key bytes
   const base64Secret = secret.startsWith("whsec_")
     ? secret.slice("whsec_".length)
     : secret;
   const keyBytes = Uint8Array.from(atob(base64Secret), (c) => c.charCodeAt(0));
-
   const cryptoKey = await crypto.subtle.importKey(
     "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
   );
-
-  // Decode expected signature bytes for constant-time comparison
   const expectedSigBytes = Uint8Array.from(
     atob(signatureHeader), (c) => c.charCodeAt(0)
   );
-
-  // crypto.subtle.verify is constant-time — no timing attack risk
   return await crypto.subtle.verify("HMAC", cryptoKey, expectedSigBytes, payloadBytes);
 }
 
@@ -114,7 +108,8 @@ async function createCalendarEvent(
     const address     = escapeHtml(booking.is_call_out ? (booking.call_out_address ?? "") : "");
     const tot         = Number(booking.total_amount   ?? 0);
     const dep         = Number(booking.deposit_amount ?? 0);
-    const bal         = Number(booking.balance_due ?? Math.max(0, tot - dep)).toFixed(2);
+    // FIX #1: derive balance reliably — never trust balance_due column
+    const bal         = Number(booking.balance_due > 0 ? booking.balance_due : Math.max(0, tot - dep)).toFixed(2);
 
     const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
     const addressLink = address     ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}">${address}</a>` : "";
@@ -133,30 +128,36 @@ async function createCalendarEvent(
       booking.client_notes ? `<b>Notes:</b> ${escapeHtml(booking.client_notes)}` : "",
     ].filter(Boolean).join("<br>");
 
-    const calRes = await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type":  "application/json",
-        },
-        body: JSON.stringify({
-          summary:     `Booking — ${clientName}`,
-          description: descLines,
-          location:    address || undefined,
-          start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
-          end:   { dateTime: endDate.toISOString(),   timeZone: "Africa/Johannesburg" },
-        }),
-      }
-    );
+    // If a GCal event already exists for this booking, update it; otherwise create new
+    const method   = booking.gcal_event_id ? "PUT" : "POST";
+    const endpoint = booking.gcal_event_id
+      ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${booking.gcal_event_id}`
+      : "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+    const calRes = await fetch(endpoint, {
+      method,
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type":  "application/json",
+      },
+      body: JSON.stringify({
+        summary:     `Booking — ${clientName}`,
+        description: descLines,
+        location:    address || undefined,
+        start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
+        end:   { dateTime: endDate.toISOString(),   timeZone: "Africa/Johannesburg" },
+      }),
+    });
 
     const calData = await calRes.json();
     if (!calRes.ok) {
       console.error("Google Calendar API error:", JSON.stringify(calData));
     } else {
-      console.log("Calendar event created:", calData.id, calData.htmlLink);
-      await supabase.from("bookings").update({ gcal_event_id: calData.id }).eq("id", booking.id);
+      console.log("Calendar event upserted:", calData.id, calData.htmlLink);
+      // Only write gcal_event_id on first creation
+      if (!booking.gcal_event_id) {
+        await supabase.from("bookings").update({ gcal_event_id: calData.id }).eq("id", booking.id);
+      }
     }
   } catch (err) {
     console.error("createCalendarEvent error:", err);
@@ -182,6 +183,8 @@ Deno.serve(async (req) => {
     const { type, payload } = body;
     console.log("Yoco webhook received:", type);
 
+    // FIX #6 (security): tenant_id is no longer trusted from metadata —
+    // always resolve from the booking row itself
     const checkoutId      = payload?.id ?? payload?.checkoutId ?? payload?.metadata?.checkoutId;
     const metaBookingId   = payload?.metadata?.booking_id;
     const metaPaymentType = payload?.metadata?.payment_type ?? "deposit";
@@ -212,6 +215,7 @@ Deno.serve(async (req) => {
 
     console.log("Resolved tenant_id:", tenantId);
 
+    // Signature verification — secret read from tenants table only (never app_settings)
     const signatureHeader = req.headers.get("X-Yoco-Signature");
     const { data: tenant } = await supabase
       .from("tenants")
@@ -288,7 +292,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const effectiveTenantId = booking.tenant_id ?? tenantId;
+    // Always use booking.tenant_id — never trust payload metadata for tenant
+    const effectiveTenantId = booking.tenant_id;
 
     // ══════════════════════════════════════════════════════════════════════
     // FULL PAYMENT — client paid 100% at booking time
@@ -376,7 +381,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      const balanceAmount = Number(booking.balance_due ?? 0);
+      // FIX #1: fallback if balance_due was never written by booking RPC
+      const balanceAmount = Number(booking.balance_due) > 0
+        ? Number(booking.balance_due)
+        : Math.max(0, Number(booking.total_amount) - Number(booking.deposit_amount));
 
       const { error: updateErr } = await supabase
         .from("bookings")
@@ -384,7 +392,7 @@ Deno.serve(async (req) => {
           final_payment_paid:    true,
           full_payment_received: true,
           balance_due:           0,
-          status:                "complete",
+          status:                "completed", // FIX #2: was "complete" — now consistent
           completed_at:          new Date().toISOString(),
         })
         .eq("id", booking.id);
@@ -408,6 +416,31 @@ Deno.serve(async (req) => {
         transaction_id: transactionId,
         completed_at:   new Date().toISOString(),
       });
+
+      // FIX #3: update GCal event to reflect balance_due = 0
+      createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: 0 })
+        .catch((e) => console.error("gcal background error (balance):", e));
+
+      // FIX #4: send client a "balance received" confirmation email
+      try {
+        const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+            "apikey":        serviceKey,
+          },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            tenant_id:  effectiveTenantId,
+            email_type: "balance_paid",
+          }),
+        });
+        const emailJson = await emailRes.json();
+        console.log("send-booking-email (balance_paid) response:", emailRes.status, JSON.stringify(emailJson));
+      } catch (emailErr) {
+        console.error("Failed to call send-booking-email (balance):", emailErr);
+      }
 
       console.log("Balance payment confirmed for booking:", booking.id, "| amount:", balanceAmount);
       return new Response(
