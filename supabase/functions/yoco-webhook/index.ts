@@ -19,14 +19,23 @@ async function verifyYocoSignature(
   signatureHeader: string,
   secret: string
 ): Promise<boolean> {
-  const encoder   = new TextEncoder();
-  const keyBytes  = encoder.encode(secret);
+  // Strip "whsec_" prefix, then base64-decode to raw key bytes
+  const base64Secret = secret.startsWith("whsec_")
+    ? secret.slice("whsec_".length)
+    : secret;
+  const keyBytes = Uint8Array.from(atob(base64Secret), (c) => c.charCodeAt(0));
+
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
   );
-  const signature   = await crypto.subtle.sign("HMAC", cryptoKey, payloadBytes);
-  const computedB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
-  return computedB64 === signatureHeader;
+
+  // Decode expected signature bytes for constant-time comparison
+  const expectedSigBytes = Uint8Array.from(
+    atob(signatureHeader), (c) => c.charCodeAt(0)
+  );
+
+  // crypto.subtle.verify is constant-time — no timing attack risk
+  return await crypto.subtle.verify("HMAC", cryptoKey, expectedSigBytes, payloadBytes);
 }
 
 async function refreshGcalToken(
@@ -52,7 +61,7 @@ async function refreshGcalToken(
     return null;
   }
   await supabase.from("app_settings").upsert(
-    { tenant_id: tenantId, key: "gcal_access_token",  value: data.access_token },
+    { tenant_id: tenantId, key: "gcal_access_token", value: data.access_token },
     { onConflict: "tenant_id,key" }
   );
   await supabase.from("app_settings").upsert(
@@ -85,8 +94,8 @@ async function createCalendarEvent(
     const clientId     = Deno.env.get("GOOGLE_CLIENT_ID")!;
     const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
-    let accessToken  = settings["gcal_access_token"];
-    const expiry     = Number(settings["gcal_token_expiry"] ?? 0);
+    let accessToken = settings["gcal_access_token"];
+    const expiry    = Number(settings["gcal_token_expiry"] ?? 0);
     if (Date.now() > expiry - 60_000) {
       const newToken = await refreshGcalToken(supabase, tenantId, settings["gcal_refresh_token"], clientId, clientSecret);
       if (!newToken) { console.error("Could not refresh gcal token"); return; }
@@ -105,7 +114,6 @@ async function createCalendarEvent(
     const address     = escapeHtml(booking.is_call_out ? (booking.call_out_address ?? "") : "");
     const tot         = Number(booking.total_amount   ?? 0);
     const dep         = Number(booking.deposit_amount ?? 0);
-    // Use stored balance_due — not recomputed from total - deposit
     const bal         = Number(booking.balance_due ?? Math.max(0, tot - dep)).toFixed(2);
 
     const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
@@ -113,9 +121,9 @@ async function createCalendarEvent(
 
     const descLines = [
       `<b>Client:</b> ${clientName}`,
-      clientPhone ? `<b>Phone:</b>   ${phoneLink}`    : "",
-      clientEmail ? `<b>Email:</b>   ${clientEmail}`  : "",
-      address     ? `<b>Address:</b> ${addressLink}`  : "",
+      clientPhone ? `<b>Phone:</b>   ${phoneLink}`   : "",
+      clientEmail ? `<b>Email:</b>   ${clientEmail}` : "",
+      address     ? `<b>Address:</b> ${addressLink}` : "",
       booking.is_call_out && booking.call_out_distance_km
         ? `<b>Distance:</b> ${Number(booking.call_out_distance_km).toFixed(1)} km` : "",
       `<b>Duration:</b> ${durationMins} min`,
@@ -134,7 +142,7 @@ async function createCalendarEvent(
           "Content-Type":  "application/json",
         },
         body: JSON.stringify({
-          summary:     `Booking — ${clientName}`,  // already escaped
+          summary:     `Booking — ${clientName}`,
           description: descLines,
           location:    address || undefined,
           start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
@@ -212,7 +220,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (tenant?.yoco_webhook_secret) {
-      // Secret is configured — signature is mandatory
       if (!signatureHeader) {
         console.error("Missing X-Yoco-Signature header for tenant:", tenantId);
         return new Response(JSON.stringify({ error: "Missing signature" }), {
@@ -331,7 +338,7 @@ Deno.serve(async (req) => {
         .catch((e) => console.error("gcal background error:", e));
 
       try {
-        await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
+        const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
           method: "POST",
           headers: {
             "Content-Type":  "application/json",
@@ -344,6 +351,8 @@ Deno.serve(async (req) => {
             email_type: "booking_confirmed",
           }),
         });
+        const emailJson = await emailRes.json();
+        console.log("send-booking-email (full) response:", emailRes.status, JSON.stringify(emailJson));
       } catch (emailErr) {
         console.error("Failed to call send-booking-email:", emailErr);
       }
@@ -367,7 +376,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // FIX: use stored balance_due as source of truth — not recomputed
       const balanceAmount = Number(booking.balance_due ?? 0);
 
       const { error: updateErr } = await supabase
@@ -411,9 +419,8 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════════════
     // DEPOSIT PAYMENT — standard flow
     // ══════════════════════════════════════════════════════════════════════
-    const depositAmount  = Number(booking.deposit_amount ?? 0);
-    const totalAmount    = Number(booking.total_amount   ?? 0);
-    // FIX: set balance_due to what remains after deposit is paid
+    const depositAmount    = Number(booking.deposit_amount ?? 0);
+    const totalAmount      = Number(booking.total_amount   ?? 0);
     const remainingBalance = Math.max(0, totalAmount - depositAmount);
 
     const { data: updatedRows, error: updateErr } = await supabase
@@ -456,7 +463,6 @@ Deno.serve(async (req) => {
       completed_at:   new Date().toISOString(),
     });
 
-    // Pass updated balance_due into GCal description
     createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: remainingBalance })
       .catch((e) => console.error("gcal background error:", e));
 
@@ -475,7 +481,7 @@ Deno.serve(async (req) => {
         }),
       });
       const emailJson = await emailRes.json();
-      console.log("send-booking-email response:", emailRes.status, JSON.stringify(emailJson));
+      console.log("send-booking-email (deposit) response:", emailRes.status, JSON.stringify(emailJson));
     } catch (emailErr) {
       console.error("Failed to call send-booking-email:", emailErr);
     }
