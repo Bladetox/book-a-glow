@@ -189,6 +189,14 @@ const RescheduleModal = ({
   </AnimatePresence>
 );
 
+{/* Add service modal */}
+<AddServiceModal
+  bookingId={addServiceBooking?.id ?? null}
+  clientName={addServiceBooking?.client ?? ""}
+  onClose={() => setAddServiceBooking(null)}
+  onAdded={() => { /* react-query refetches automatically */ }}
+/>
+
 interface AdminBookingsProps {
   initialClient?: string | null;
   onClearClient?: () => void;
