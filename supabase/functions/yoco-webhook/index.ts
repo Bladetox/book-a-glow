@@ -24,68 +24,61 @@ async function verifyYocoSignature(
 
   console.log("Signature header (first 60):", header.slice(0, 60));
 
-  // ── Resolve key bytes ────────────────────────────────────────────────────
-  // whsec_XXX → the XXX part is base64url-encoded key material (Stripe convention).
-  // Using encoder.encode("whsec_...") as the key is wrong — decode first.
-  let keyBytes: Uint8Array;
-  if (secret.startsWith("whsec_")) {
-    const encoded = secret.slice(6); // strip prefix
-    // base64url → standard base64 → binary
-    const b64 = encoded.replace(/-/g, "+").replace(/_/g, "/").padEnd(
-      Math.ceil(encoded.length / 4) * 4, "="
-    );
-    const binary = atob(b64);
-    keyBytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) keyBytes[i] = binary.charCodeAt(i);
-    console.log("whsec_ prefix detected — key decoded, length:", keyBytes.length);
-  } else {
-    keyBytes = encoder.encode(secret);
-  }
-
   const importKey = (kb: Uint8Array) =>
     crypto.subtle.importKey("raw", kb, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
 
-  // ── Try Stripe-style: t=TIMESTAMP,v1=HEXSIG ─────────────────────────────
-  // Signed payload = UTF8(timestamp + "." + body)
+  // ── PRIMARY: Yoco spec — raw UTF-8 bytes of entire whsec_ string, base64 output ──
+  // Per official Yoco API guide: hmac.new(secret.encode("utf-8"), body, sha256) → base64
+  const rawKey = await importKey(encoder.encode(secret));
+  const rawSig = new Uint8Array(await crypto.subtle.sign("HMAC", rawKey, payloadBytes));
+  const rawB64 = btoa(String.fromCharCode(...rawSig));
+  if (rawB64 === header) { console.log("Signature matched: Yoco-spec raw-key base64"); return true; }
+
+  // ── FALLBACK: Stripe-style t=TIMESTAMP,v1=HEXSIG ─────────────────────────
   const stripeMatch = header.match(/t=(\d+)[,;]\s*v\d+=([a-fA-F0-9]+)/);
   if (stripeMatch) {
     const timestamp     = stripeMatch[1];
     const sigHex        = stripeMatch[2].toLowerCase();
     const signedPayload = encoder.encode(`${timestamp}.${new TextDecoder().decode(payloadBytes)}`);
-    const ck  = await importKey(keyBytes);
+    const ck  = await importKey(encoder.encode(secret));
     const sig = new Uint8Array(await crypto.subtle.sign("HMAC", ck, signedPayload));
     const computedHex = Array.from(sig).map(b => b.toString(16).padStart(2, "0")).join("");
     if (computedHex === sigHex) { console.log("Signature matched: stripe-style t=,v1="); return true; }
-    console.log("Stripe-style mismatch. Expected:", sigHex.slice(0, 16), "Got:", computedHex.slice(0, 16));
   }
 
-  // ── Try raw payload HMAC with decoded key (all output encodings) ─────────
-  const ck  = await importKey(keyBytes);
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", ck, payloadBytes));
-
-  const computedHex    = Array.from(sig).map(b => b.toString(16).padStart(2, "0")).join("");
-  const computedB64    = btoa(String.fromCharCode(...sig));
-  const computedB64url = computedB64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-  if (computedHex === header.toLowerCase())              { console.log("Signature matched: hex");          return true; }
-  if (`sha256=${computedHex}` === header.toLowerCase())  { console.log("Signature matched: sha256=hex");   return true; }
-  if (computedB64    === header)                         { console.log("Signature matched: base64");        return true; }
-  if (computedB64url === header)                         { console.log("Signature matched: base64url");     return true; }
-
-  // ── Fallback: try with raw string key (in case whsec_ is used as-is) ────
-  const rawKey  = await importKey(encoder.encode(secret));
-  const rawSig  = new Uint8Array(await crypto.subtle.sign("HMAC", rawKey, payloadBytes));
+  // ── FALLBACK: other encodings of raw-key signature ────────────────────────
   const rawHex  = Array.from(rawSig).map(b => b.toString(16).padStart(2, "0")).join("");
-  const rawB64  = btoa(String.fromCharCode(...rawSig));
   const rawB64u = rawB64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  if (rawHex === header.toLowerCase())             { console.log("Signature matched: raw-key hex");          return true; }
-  if (`sha256=${rawHex}` === header.toLowerCase()) { console.log("Signature matched: raw-key sha256=hex");   return true; }
-  if (rawB64  === header)                          { console.log("Signature matched: raw-key base64");        return true; }
-  if (rawB64u === header)                          { console.log("Signature matched: raw-key base64url");     return true; }
+  if (rawHex === header.toLowerCase())             { console.log("Signature matched: raw-key hex");        return true; }
+  if (`sha256=${rawHex}` === header.toLowerCase()) { console.log("Signature matched: raw-key sha256=hex"); return true; }
+  if (rawB64u === header)                          { console.log("Signature matched: raw-key base64url");  return true; }
 
-  console.error("All signature formats failed. Header:", header.slice(0, 60),
-    "| decoded-key hex:", computedHex.slice(0, 16),
-    "| raw-key hex:", rawHex.slice(0, 16));
+  // ── FALLBACK: whsec_ base64url-decoded key (Stripe convention) ───────────
+  if (secret.startsWith("whsec_")) {
+    const encoded = secret.slice(6);
+    const b64 = encoded.replace(/-/g, "+").replace(/_/g, "/").padEnd(
+      Math.ceil(encoded.length / 4) * 4, "="
+    );
+    const binary = atob(b64);
+    const decodedKey = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) decodedKey[i] = binary.charCodeAt(i);
+    const dk  = await importKey(decodedKey);
+    const dSig = new Uint8Array(await crypto.subtle.sign("HMAC", dk, payloadBytes));
+    const dHex  = Array.from(dSig).map(b => b.toString(16).padStart(2, "0")).join("");
+    const dB64  = btoa(String.fromCharCode(...dSig));
+    const dB64u = dB64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    if (dB64  === header)                          { console.log("Signature matched: decoded-key base64");    return true; }
+    if (dHex  === header.toLowerCase())            { console.log("Signature matched: decoded-key hex");       return true; }
+    if (dB64u === header)                          { console.log("Signature matched: decoded-key base64url"); return true; }
+    console.error("All signature formats failed.",
+      "| raw-key base64:", rawB64.slice(0, 16),
+      "| decoded-key base64:", dB64.slice(0, 16),
+      "| header:", header.slice(0, 16));
+  } else {
+    console.error("All signature formats failed.",
+      "| raw-key base64:", rawB64.slice(0, 16),
+      "| header:", header.slice(0, 16));
+  }
   return false;
 }
 
@@ -305,7 +298,9 @@ Deno.serve(async (req) => {
     const { type, payload } = body;
     console.log("Yoco webhook received:", type);
 
-    const checkoutId      = payload?.id ?? payload?.checkoutId ?? payload?.metadata?.checkoutId;
+    // payload?.id is the PAYMENT ID (pay_...), NOT the checkout ID.
+    // Checkout ID (ch_...) lives in payload.metadata.checkoutId per Yoco webhook spec.
+    const checkoutId      = payload?.metadata?.checkoutId ?? payload?.checkoutId;
     const metaBookingId   = payload?.metadata?.booking_id;
     const metaPaymentType = payload?.metadata?.payment_type ?? "deposit";
 
@@ -432,7 +427,7 @@ Deno.serve(async (req) => {
 
     if (checkoutId) {
       const verifyRes = await fetch(
-        `https://online.yoco.com/v1/checkouts/${checkoutId}`,
+        `https://payments.yoco.com/api/checkouts/${checkoutId}`,
         { headers: { "Authorization": `Bearer ${tenant.yoco_secret_key}` } }
       );
       const verifyData = await verifyRes.json();

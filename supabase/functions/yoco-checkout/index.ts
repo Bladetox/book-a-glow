@@ -122,15 +122,15 @@ Deno.serve(async (req) => {
     const finalCancelUrl  = cancel_url  ||
       `${origin}/payment-success?payment=cancelled&tenant=${slug}`;
 
-    const yocoRes = await fetch("https://online.yoco.com/v1/checkouts", {
+    const yocoRes = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${yocoSecret}`,
       },
       body: JSON.stringify({
-        amountInCents: amountInCents,
-        currency:      "ZAR",
+        amount:   amountInCents,
+        currency: "ZAR",
         successUrl: finalSuccessUrl,
         cancelUrl:  finalCancelUrl,
         metadata: {
