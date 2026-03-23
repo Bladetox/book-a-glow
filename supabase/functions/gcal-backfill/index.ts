@@ -58,6 +58,13 @@ async function refreshIfNeeded(
   return data.access_token;
 }
 
+// Build a local datetime string like "2026-03-23T10:00:00" without UTC conversion.
+// Google Calendar interprets this against the supplied timeZone field.
+function toLocalISOString(year: number, month: number, day: number, hours: number, minutes: number): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -149,18 +156,22 @@ Deno.serve(async (req) => {
           if (names.length > 0) serviceLabel = names.join(", ");
         }
 
-        // Build start/end datetimes — no date-fns, pure Deno
+        // Build start datetime as a local string — avoids UTC offset shift on Deno runtime
         const [year, month, day] = booking.booking_date.split("-").map(Number);
         const [startH, startM]   = booking.start_time.split(":").map(Number);
-        const startDate = new Date(year, month - 1, day, startH, startM, 0);
 
-        let endDate: Date;
+        const startLocal = toLocalISOString(year, month, day, startH, startM);
+
+        let endLocal: string;
         if (booking.end_time) {
           const [endH, endM] = booking.end_time.split(":").map(Number);
-          endDate = new Date(year, month - 1, day, endH, endM, 0);
+          endLocal = toLocalISOString(year, month, day, endH, endM);
         } else {
           const durationMins = Number(booking.service_duration_minutes) || 60;
-          endDate = new Date(startDate.getTime() + durationMins * 60_000);
+          const totalMins    = startH * 60 + startM + durationMins;
+          const endH         = Math.floor(totalMins / 60) % 24;
+          const endM         = totalMins % 60;
+          endLocal = toLocalISOString(year, month, day, endH, endM);
         }
 
         // 4. Create GCal event
@@ -175,8 +186,8 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               summary:     `${serviceLabel} — ${clientLabel}`,
               description: `Booking ID: ${booking.id}`,
-              start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
-              end:   { dateTime: endDate.toISOString(),   timeZone: "Africa/Johannesburg" },
+              start: { dateTime: startLocal, timeZone: "Africa/Johannesburg" },
+              end:   { dateTime: endLocal,   timeZone: "Africa/Johannesburg" },
             }),
           }
         );
