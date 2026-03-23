@@ -113,13 +113,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Fetch bookings without a gcal_event_id
+    // 2. Fetch ALL confirmed/completed bookings — with and without gcal_event_id
+    //    so we can re-sync existing events with correct times and format
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
-      .select("id, client_name, guest_name, service_ids, booking_date, start_time, end_time, service_duration_minutes, gcal_event_id")
+      .select(`
+        id, tenant_id,
+        client_name, guest_name,
+        client_phone, guest_phone,
+        client_email, guest_email,
+        client_notes,
+        booking_date, start_time, end_time, service_duration_minutes,
+        is_call_out, call_out_address, call_out_distance_km,
+        total_amount, deposit_amount, balance_due,
+        gcal_event_id
+      `)
       .eq("tenant_id", tenant_id)
       .in("status", ["confirmed", "deposit_paid", "completed", "complete"])
-      .is("gcal_event_id", null)
       .not("booking_date", "is", null)
       .not("start_time", "is", null);
 
@@ -127,39 +137,41 @@ Deno.serve(async (req) => {
 
     console.log("Bookings to sync:", (bookings ?? []).length);
 
-    // 3. Load services for name lookup
-    const { data: services } = await supabase
-      .from("services")
-      .select("id, name")
-      .eq("tenant_id", tenant_id);
-
-    const serviceMap: Record<string, string> = {};
-    for (const s of services ?? []) serviceMap[s.id] = s.name;
-
     let created = 0;
+    let updated = 0;
     let skipped = 0;
 
     for (const booking of bookings ?? []) {
       try {
-        const clientLabel = booking.client_name || booking.guest_name || "Client";
+        // ── Client details ──────────────────────────────────────────────
+        const clientName  = booking.client_name  ?? booking.guest_name  ?? "Client";
+        const clientPhone = booking.client_phone ?? booking.guest_phone ?? "";
+        const clientEmail = booking.client_email ?? booking.guest_email ?? "";
+        const address     = booking.is_call_out ? (booking.call_out_address ?? "") : "";
+        const tot         = Number(booking.total_amount   ?? 0);
+        const dep         = Number(booking.deposit_amount ?? 0);
+        const bal         = Math.max(0, Number(booking.balance_due) > 0 ? Number(booking.balance_due) : tot - dep);
 
-        // Resolve service names
-        let serviceLabel = "Appointment";
-        if (booking.service_ids) {
-          let ids: string[] = [];
-          try {
-            ids = JSON.parse(booking.service_ids);
-          } catch {
-            ids = booking.service_ids.split(",").map((s: string) => s.trim()).filter(Boolean);
-          }
-          const names = ids.map((id: string) => serviceMap[id]).filter(Boolean);
-          if (names.length > 0) serviceLabel = names.join(", ");
-        }
+        // ── Fetch service names + prices from booking_services ──────────
+        const { data: bsRows } = await supabase
+          .from("booking_services")
+          .select("price, duration_minutes, services ( name )")
+          .eq("booking_id", booking.id);
 
-        // Build start datetime as a local string — avoids UTC offset shift on Deno runtime
+        const serviceItems: string[] = (bsRows ?? []).map((bs: any) => {
+          const name  = bs.services?.name ?? "Service";
+          const price = Number(bs.price ?? 0);
+          const dur   = Number(bs.duration_minutes ?? 0);
+          return `- ${name} — R${price} (${dur} min)`;
+        });
+
+        const serviceLabel = (bsRows ?? []).length > 0
+          ? (bsRows ?? []).map((bs: any) => bs.services?.name).filter(Boolean).join(", ")
+          : "Appointment";
+
+        // ── Build times as local strings ────────────────────────────────
         const [year, month, day] = booking.booking_date.split("-").map(Number);
         const [startH, startM]   = booking.start_time.split(":").map(Number);
-
         const startLocal = toLocalISOString(year, month, day, startH, startM);
 
         let endLocal: string;
@@ -174,47 +186,83 @@ Deno.serve(async (req) => {
           endLocal = toLocalISOString(year, month, day, endH, endM);
         }
 
-        // 4. Create GCal event
-        const eventRes = await fetch(
-          "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${accessToken}`,
-              "Content-Type":  "application/json",
-            },
-            body: JSON.stringify({
-              summary:     `${serviceLabel} — ${clientLabel}`,
-              description: `Booking ID: ${booking.id}`,
-              start: { dateTime: startLocal, timeZone: "Africa/Johannesburg" },
-              end:   { dateTime: endLocal,   timeZone: "Africa/Johannesburg" },
-            }),
-          }
-        );
+        // ── Build description matching Hunga's event format ─────────────
+        const descParts: string[] = [
+          `Guest: ${clientName}`,
+          clientPhone ? `Phone: ${clientPhone}` : "",
+          clientEmail ? `Email: ${clientEmail}`  : "",
+          address     ? `Address: ${address}`    : "",
+          booking.is_call_out && booking.call_out_distance_km
+            ? `Distance: ${Number(booking.call_out_distance_km).toFixed(1)} km` : "",
+        ].filter(Boolean);
+
+        if (serviceItems.length > 0) {
+          descParts.push("");
+          descParts.push("Services:");
+          descParts.push(...serviceItems);
+        }
+
+        descParts.push("");
+        descParts.push(`Total: R${tot.toFixed(2)} | Deposit paid: R${dep.toFixed(2)}`);
+        if (bal > 0) descParts.push(`Balance due: R${bal.toFixed(2)}`);
+        if (booking.client_notes) descParts.push(`Notes: ${booking.client_notes}`);
+        descParts.push(`Booking ID: ${booking.id}`);
+
+        const description = descParts.join("\n");
+        const summary     = `${clientName} — ${serviceLabel}`;
+        const attendees   = clientEmail ? [{ email: clientEmail }] : [];
+
+        // ── POST (new) or PUT (re-sync existing) ────────────────────────
+        const isUpdate = !!booking.gcal_event_id;
+        const method   = isUpdate ? "PUT" : "POST";
+        const endpoint = isUpdate
+          ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${booking.gcal_event_id}`
+          : "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+        const eventRes = await fetch(endpoint, {
+          method,
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type":  "application/json",
+          },
+          body: JSON.stringify({
+            summary,
+            description,
+            location:  address || undefined,
+            attendees: attendees.length > 0 ? attendees : undefined,
+            start: { dateTime: startLocal, timeZone: "Africa/Johannesburg" },
+            end:   { dateTime: endLocal,   timeZone: "Africa/Johannesburg" },
+          }),
+        });
 
         const eventData = await eventRes.json();
+
         if (!eventRes.ok) {
-          console.error("GCal create error for booking", booking.id, JSON.stringify(eventData));
+          console.error("GCal error for booking", booking.id, JSON.stringify(eventData));
           skipped++;
           continue;
         }
 
-        // 5. Write gcal_event_id back to booking
-        await supabase
-          .from("bookings")
-          .update({ gcal_event_id: eventData.id })
-          .eq("id", booking.id);
+        // ── Write gcal_event_id back if this was a new event ────────────
+        if (!isUpdate) {
+          await supabase
+            .from("bookings")
+            .update({ gcal_event_id: eventData.id })
+            .eq("id", booking.id);
+          created++;
+        } else {
+          updated++;
+        }
 
-        created++;
       } catch (err) {
         console.error("Error on booking", booking.id, err);
         skipped++;
       }
     }
 
-    console.log(`Sync complete — created: ${created}, skipped: ${skipped}`);
+    console.log(`Sync complete — created: ${created}, updated: ${updated}, skipped: ${skipped}`);
 
-    return new Response(JSON.stringify({ created, skipped }), {
+    return new Response(JSON.stringify({ created, updated, skipped }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
