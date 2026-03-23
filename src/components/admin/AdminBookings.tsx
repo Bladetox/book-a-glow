@@ -430,7 +430,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         completed_at:          new Date().toISOString(),
       },
     });
-    await updateStatus.mutateAsync({ bookingId: b.id, status: "complete" });
+    await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
     toast.success(`${b.client}'s booking marked as fully paid & complete`);
   } catch (e: any) {
     toast.error(e.message || "Failed to mark as paid");
