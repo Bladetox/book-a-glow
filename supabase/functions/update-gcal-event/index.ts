@@ -40,6 +40,13 @@ async function refreshIfNeeded(
   return data.access_token;
 }
 
+// Build a local datetime string like "2026-03-23T10:00:00" without UTC conversion.
+// Google Calendar interprets this against the supplied timeZone field.
+function toLocalISOString(year: number, month: number, day: number, hours: number, minutes: number): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -79,12 +86,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build new start/end
+    // Build new start/end as local strings — avoids UTC offset shift on Deno runtime
     const [year, month, day] = new_date.split("-").map(Number);
     const [hours, minutes]   = new_start_time.split(":").map(Number);
-    const startDate = new Date(year, month - 1, day, hours, minutes, 0);
+
+    const startLocal   = toLocalISOString(year, month, day, hours, minutes);
     const durationMins = Number(duration_minutes) || 60;
-    const endDate = new Date(startDate.getTime() + durationMins * 60_000);
+    const totalMins    = hours * 60 + minutes + durationMins;
+    const endH         = Math.floor(totalMins / 60) % 24;
+    const endM         = totalMins % 60;
+    const endLocal     = toLocalISOString(year, month, day, endH, endM);
 
     // PATCH only start/end on the existing event
     const patchRes = await fetch(
@@ -96,8 +107,8 @@ Deno.serve(async (req) => {
           "Content-Type":  "application/json",
         },
         body: JSON.stringify({
-          start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
-          end:   { dateTime: endDate.toISOString(),   timeZone: "Africa/Johannesburg" },
+          start: { dateTime: startLocal, timeZone: "Africa/Johannesburg" },
+          end:   { dateTime: endLocal,   timeZone: "Africa/Johannesburg" },
         }),
       }
     );
