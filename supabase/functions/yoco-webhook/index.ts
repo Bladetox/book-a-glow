@@ -109,36 +109,75 @@ async function createCalendarEvent(
       accessToken = newToken;
     }
 
+    // ── Build start/end as LOCAL datetime strings (no UTC conversion) ─────
+    // Using new Date().toISOString() shifts SAST times back 2 hours because
+    // Deno runs in UTC. Passing a naive local string lets Google Calendar
+    // apply the timeZone field correctly.
+    const pad = (n: number) => String(n).padStart(2, "0");
     const [year, month, day] = (booking.booking_date as string).split("-").map(Number);
-    const [hours, minutes]   = (booking.start_time   as string ?? "00:00").split(":").map(Number);
-    const startDate    = new Date(year, month - 1, day, hours, minutes, 0);
-    const durationMins = booking.service_duration_minutes ?? 60;
-    const endDate      = new Date(startDate.getTime() + durationMins * 60_000);
+    const [hours, minutes]   = (booking.start_time as string ?? "00:00").split(":").map(Number);
+    const durationMins       = Number(booking.service_duration_minutes ?? 60);
+    const totalMins          = hours * 60 + minutes + durationMins;
+    const endH               = Math.floor(totalMins / 60) % 24;
+    const endM               = totalMins % 60;
+    const startLocal = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
+    const endLocal   = `${year}-${pad(month)}-${pad(day)}T${pad(endH)}:${pad(endM)}:00`;
 
-    const clientName  = escapeHtml(booking.client_name  ?? booking.guest_name  ?? "Client");
-    const clientPhone = escapeHtml(booking.client_phone ?? booking.guest_phone ?? "");
-    const clientEmail = escapeHtml(booking.client_email ?? booking.guest_email ?? "");
-    const address     = escapeHtml(booking.is_call_out ? (booking.call_out_address ?? "") : "");
+    // ── Client details ────────────────────────────────────────────────────
+    const clientName  = booking.client_name  ?? booking.guest_name  ?? "Client";
+    const clientPhone = booking.client_phone ?? booking.guest_phone ?? "";
+    const clientEmail = booking.client_email ?? booking.guest_email ?? "";
+    const address     = booking.is_call_out ? (booking.call_out_address ?? "") : "";
     const tot         = Number(booking.total_amount   ?? 0);
     const dep         = Number(booking.deposit_amount ?? 0);
-    const bal         = Number(booking.balance_due > 0 ? booking.balance_due : Math.max(0, tot - dep)).toFixed(2);
+    const bal         = Math.max(0, Number(booking.balance_due) > 0 ? Number(booking.balance_due) : tot - dep);
 
-    const phoneLink   = clientPhone ? `<a href="tel:${clientPhone}">${clientPhone}</a>` : "";
-    const addressLink = address     ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}">${address}</a>` : "";
+    // ── Fetch service names from booking_services ─────────────────────────
+    const { data: bsRows } = await supabase
+      .from("booking_services")
+      .select("price, duration_minutes, services ( name )")
+      .eq("booking_id", booking.id);
 
-    const descLines = [
-      `<b>Client:</b> ${clientName}`,
-      clientPhone ? `<b>Phone:</b>   ${phoneLink}`   : "",
-      clientEmail ? `<b>Email:</b>   ${clientEmail}` : "",
-      address     ? `<b>Address:</b> ${addressLink}` : "",
+    const serviceItems: string[] = (bsRows ?? []).map((bs: any) => {
+      const name  = bs.services?.name ?? "Service";
+      const price = Number(bs.price ?? 0);
+      const dur   = Number(bs.duration_minutes ?? 0);
+      return `- ${name} — R${price} (${dur} min)`;
+    });
+
+    const serviceLabel = (bsRows ?? []).length > 0
+      ? (bsRows ?? []).map((bs: any) => bs.services?.name).filter(Boolean).join(", ")
+      : "Appointment";
+
+    // ── Build description matching Hunga's event format ───────────────────
+    const descParts: string[] = [
+      `Guest: ${clientName}`,
+      clientPhone ? `Phone: ${clientPhone}` : "",
+      clientEmail ? `Email: ${clientEmail}`  : "",
+      address     ? `Address: ${address}`    : "",
       booking.is_call_out && booking.call_out_distance_km
-        ? `<b>Distance:</b> ${Number(booking.call_out_distance_km).toFixed(1)} km` : "",
-      `<b>Duration:</b> ${durationMins} min`,
-      `<b>Total:</b> R${tot.toFixed(2)}`,
-      `<b>Deposit paid ✅</b> R${dep.toFixed(2)}`,
-      `<b>Balance due:</b> R${bal}`,
-      booking.client_notes ? `<b>Notes:</b> ${escapeHtml(booking.client_notes)}` : "",
-    ].filter(Boolean).join("<br>");
+        ? `Distance: ${Number(booking.call_out_distance_km).toFixed(1)} km` : "",
+    ].filter(Boolean);
+
+    if (serviceItems.length > 0) {
+      descParts.push("");
+      descParts.push("Services:");
+      descParts.push(...serviceItems);
+    }
+
+    descParts.push("");
+    descParts.push(`Total: R${tot.toFixed(2)} | Deposit paid: R${dep.toFixed(2)}`);
+    if (bal > 0) descParts.push(`Balance due: R${bal.toFixed(2)}`);
+    if (booking.client_notes) descParts.push(`Notes: ${booking.client_notes}`);
+    descParts.push(`Booking ID: ${booking.id}`);
+
+    const description = descParts.join("\n");
+
+    // ── Attendee: invite client so they get a calendar notification ───────
+    const attendees = clientEmail ? [{ email: clientEmail }] : [];
+
+    // ── Summary matches Hunga's format: "ClientName — Service1, Service2" ─
+    const summary = `${clientName} — ${serviceLabel}`;
 
     const method   = booking.gcal_event_id ? "PUT" : "POST";
     const endpoint = booking.gcal_event_id
@@ -152,11 +191,12 @@ async function createCalendarEvent(
         "Content-Type":  "application/json",
       },
       body: JSON.stringify({
-        summary:     `Booking — ${clientName}`,
-        description: descLines,
-        location:    address || undefined,
-        start: { dateTime: startDate.toISOString(), timeZone: "Africa/Johannesburg" },
-        end:   { dateTime: endDate.toISOString(),   timeZone: "Africa/Johannesburg" },
+        summary,
+        description,
+        location:  address || undefined,
+        attendees: attendees.length > 0 ? attendees : undefined,
+        start: { dateTime: startLocal, timeZone: "Africa/Johannesburg" },
+        end:   { dateTime: endLocal,   timeZone: "Africa/Johannesburg" },
       }),
     });
 
