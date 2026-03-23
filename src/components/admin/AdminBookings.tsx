@@ -213,6 +213,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [confirmDelete, setConfirmDelete]             = useState<BookingRow | null>(null);
   const [confirmCancel, setConfirmCancel]             = useState<BookingRow | null>(null);
   const [addServiceBooking, setAddServiceBooking]     = useState<BookingRow | null>(null); // ← NEW
+  const [markingPaidId, setMarkingPaidId]             = useState<string | null>(null);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -415,6 +416,29 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
+  const handleMarkFullyPaid = async (b: BookingRow) => {
+  if (markingPaidId === b.id) return;
+  setMarkingPaidId(b.id);
+  try {
+    await updateFields.mutateAsync({
+      bookingId: b.id,
+      updates: {
+        balance_due:           0,
+        deposit_paid:          true,
+        full_payment_received: true,
+        final_payment_paid:    true,
+        completed_at:          new Date().toISOString(),
+      },
+    });
+    await updateStatus.mutateAsync({ bookingId: b.id, status: "complete" });
+    toast.success(`${b.client}'s booking marked as fully paid & complete`);
+  } catch (e: any) {
+    toast.error(e.message || "Failed to mark as paid");
+  } finally {
+    setMarkingPaidId(null);
+  }
+};
+
   const showRequestBalance = (b: BookingRow) =>
     b.balance > 0 &&
     b.status !== "cancelled" &&
@@ -580,6 +604,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                 const isExpanded            = expandedId === b.id;
                 const isEditing             = editingId === b.id;
                 const isRequestingBalance   = requestingBalanceId === b.id;
+                const isMarkingPaid = markingPaidId === b.id;
+
                 const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived;
 
                 return (
@@ -764,6 +790,21 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                       className="px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors flex items-center gap-1.5"
                                     >
                                       <PlusCircle className="w-3 h-3" /> Add Service
+                                    </button>
+                                  )}
+
+                                  {/* Mark Fully Paid — green */}
+                                  {b.status !== "cancelled" && b.status !== "complete" && (
+                                    <button
+                                      disabled={markingPaidId === b.id}
+                                      onClick={e => { e.stopPropagation(); handleMarkFullyPaid(b); }}
+                                      className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.08] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      {markingPaidId === b.id
+                                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                                        : <CircleDollarSign className="w-3 h-3" />
+                                      }
+                                      Mark Fully Paid
                                     </button>
                                   )}
 
