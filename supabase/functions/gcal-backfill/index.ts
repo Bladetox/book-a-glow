@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       .from("bookings")
       .select("id, client_name, guest_name, service_ids, booking_date, start_time, end_time, service_duration_minutes, gcal_event_id")
       .eq("tenant_id", tenant_id)
-      .in("status", ["confirmed", "deposit_paid", "completed"])
+      .in("status", ["confirmed", "deposit_paid", "completed", "complete"])
       .is("gcal_event_id", null)
       .not("booking_date", "is", null)
       .not("start_time", "is", null);
