@@ -20,9 +20,9 @@ async function refreshIfNeeded(
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: "refresh_token",
+      grant_type:    "refresh_token",
       refresh_token: settings["gcal_refresh_token"],
-      client_id: clientId,
+      client_id:     clientId,
       client_secret: clientSecret,
     }),
   });
@@ -40,8 +40,6 @@ async function refreshIfNeeded(
   return data.access_token;
 }
 
-// Build a local datetime string like "2026-03-23T10:00:00" without UTC conversion.
-// Google Calendar interprets this against the supplied timeZone field.
 function toLocalISOString(year: number, month: number, day: number, hours: number, minutes: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
@@ -55,9 +53,21 @@ Deno.serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
 
-    const { tenant_id, gcal_event_id, new_date, new_start_time, duration_minutes } = await req.json();
+    const {
+      tenant_id,
+      gcal_event_id,
+      booking_id,
+      new_date,
+      new_start_time,
+      duration_minutes,
+      client_name,
+      service_name,
+      client_phone,
+      location,
+    } = await req.json();
 
-    if (!tenant_id || !gcal_event_id || !new_date || !new_start_time) {
+    // gcal_event_id is intentionally optional — null means CREATE a new event
+    if (!tenant_id || !new_date || !new_start_time) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -86,7 +96,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build new start/end as local strings — avoids UTC offset shift on Deno runtime
+    // Build start/end as local strings — avoids UTC offset shift on Deno runtime
     const [year, month, day] = new_date.split("-").map(Number);
     const [hours, minutes]   = new_start_time.split(":").map(Number);
 
@@ -97,7 +107,53 @@ Deno.serve(async (req) => {
     const endM         = totalMins % 60;
     const endLocal     = toLocalISOString(year, month, day, endH, endM);
 
-    // PATCH only start/end on the existing event
+    // ── BRANCH: CREATE (no existing gcal_event_id) ──────────────────────────
+    if (!gcal_event_id) {
+      console.log("No gcal_event_id — creating new GCal event for booking:", booking_id);
+
+      const summary = [service_name, client_name].filter(Boolean).join(" — ") || "Appointment";
+      const createRes = await fetch(
+        "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type":  "application/json",
+          },
+          body: JSON.stringify({
+            summary,
+            description: booking_id ? `Booking ID: ${booking_id}` : undefined,
+            location:    location ?? undefined,
+            start: { dateTime: startLocal, timeZone: "Africa/Johannesburg" },
+            end:   { dateTime: endLocal,   timeZone: "Africa/Johannesburg" },
+          }),
+        }
+      );
+
+      const createData = await createRes.json();
+      if (!createRes.ok) {
+        console.error("GCal CREATE error:", JSON.stringify(createData));
+        return new Response(JSON.stringify({ error: createData }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Write the new event ID back to the booking row
+      if (booking_id) {
+        const { error: dbErr } = await supabase
+          .from("bookings")
+          .update({ gcal_event_id: createData.id })
+          .eq("id", booking_id);
+        if (dbErr) console.error("Failed to write gcal_event_id back to booking:", dbErr);
+        else console.log("gcal_event_id saved to booking:", booking_id, "->", createData.id);
+      }
+
+      return new Response(JSON.stringify({ success: true, created: true, eventId: createData.id }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── BRANCH: PATCH (existing gcal_event_id) ──────────────────────────────
     const patchRes = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(gcal_event_id)}`,
       {
@@ -122,7 +178,7 @@ Deno.serve(async (req) => {
     }
 
     console.log("GCal event updated:", patchData.id, patchData.htmlLink);
-    return new Response(JSON.stringify({ success: true, eventId: patchData.id }), {
+    return new Response(JSON.stringify({ success: true, created: false, eventId: patchData.id }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
