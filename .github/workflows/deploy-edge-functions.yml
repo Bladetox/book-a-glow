@@ -16,7 +16,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Supabase CLI
-        run: npm install -g supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Deploy edge functions
         env:
@@ -32,4 +34,8 @@ jobs:
           supabase functions deploy yoco-webhook --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: yoco-webhook"
           echo "=== Deploying register-yoco-webhook ==="
           supabase functions deploy register-yoco-webhook --project-ref kjibbbuceipnialfgflt --debug || echo "FAILED: register-yoco-webhook"
+          echo "=== Deploying gcal-backfill ==="
+          supabase functions deploy gcal-backfill --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: gcal-backfill"
+          echo "=== Deploying update-gcal-event ==="
+          supabase functions deploy update-gcal-event --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: update-gcal-event"
           echo "=== All deploy attempts complete ==="
