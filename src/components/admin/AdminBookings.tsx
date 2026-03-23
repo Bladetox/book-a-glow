@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
   Clock, User, Scissors, Phone, Mail, MapPin,
-  Check, X, Edit3, Save, Trash2, ChevronDown, ChevronUp,
+  Check, X, Save, Trash2, ChevronDown, ChevronUp,
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
-  SendHorizonal, Search, AlertTriangle
+  SendHorizonal, Search, AlertTriangle, Edit3
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -202,18 +202,27 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [activeFilter, setActiveFilter]               = useState<FilterType>("All");
   const [searchQuery, setSearchQuery]                 = useState("");
   const [expandedId, setExpandedId]                   = useState<string | null>(null);
-  const [editingId, setEditingId]                     = useState<string | null>(null);
+
+  // Inline edit (collapsible, inside card — not in action row)
+  const [editingInlineId, setEditingInlineId]         = useState<string | null>(null);
   const [editDraft, setEditDraft]                     = useState<Partial<BookingRow>>({});
+
   const [reschedulingBooking, setReschedulingBooking] = useState<BookingRow | null>(null);
   const [rescheduleDate, setRescheduleDate]           = useState<Date | undefined>();
   const [rescheduleTime, setRescheduleTime]           = useState<string | null>(null);
   const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
   const [availableSlots, setAvailableSlots]           = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading]               = useState(false);
+  const [markingPaidId, setMarkingPaidId]             = useState<string | null>(null);
+
+  // Confirm dialog states
   const [confirmDelete, setConfirmDelete]             = useState<BookingRow | null>(null);
   const [confirmCancel, setConfirmCancel]             = useState<BookingRow | null>(null);
-  const [addServiceBooking, setAddServiceBooking]     = useState<BookingRow | null>(null); // ← NEW
-  const [markingPaidId, setMarkingPaidId]             = useState<string | null>(null);
+  const [confirmConfirm, setConfirmConfirm]           = useState<BookingRow | null>(null);
+  const [confirmMarkPaid, setConfirmMarkPaid]         = useState<BookingRow | null>(null);
+  const [confirmRequestBalance, setConfirmRequestBalance] = useState<BookingRow | null>(null);
+
+  const [addServiceBooking, setAddServiceBooking]     = useState<BookingRow | null>(null);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -342,13 +351,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  const startEdit = (b: BookingRow) => {
-    setEditingId(b.id);
+  const startInlineEdit = (b: BookingRow) => {
+    setEditingInlineId(b.id);
     setEditDraft({ ...b });
   };
 
-  const saveEdit = async () => {
-    if (!editingId || !editDraft) return;
+  const saveInlineEdit = async () => {
+    if (!editingInlineId || !editDraft) return;
     try {
       const updates: Record<string, unknown> = {
         client_notes:     editDraft.notes,
@@ -358,19 +367,19 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         client_email:     editDraft.email,
         call_out_address: editDraft.address,
       };
-      await updateFields.mutateAsync({ bookingId: editingId, updates });
+      await updateFields.mutateAsync({ bookingId: editingInlineId, updates });
       if (editDraft.status) {
-        await updateStatus.mutateAsync({ bookingId: editingId, status: editDraft.status });
+        await updateStatus.mutateAsync({ bookingId: editingInlineId, status: editDraft.status });
       }
       toast.success("Booking updated");
-      setEditingId(null);
+      setEditingInlineId(null);
       setEditDraft({});
     } catch (e: any) {
       toast.error(e.message || "Failed to save");
     }
   };
 
-  const cancelEdit = () => { setEditingId(null); setEditDraft({}); };
+  const cancelInlineEdit = () => { setEditingInlineId(null); setEditDraft({}); };
 
   const handleRequestBalance = async (b: BookingRow) => {
     if (requestingBalanceId === b.id) return;
@@ -417,27 +426,27 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   };
 
   const handleMarkFullyPaid = async (b: BookingRow) => {
-  if (markingPaidId === b.id) return;
-  setMarkingPaidId(b.id);
-  try {
-    await updateFields.mutateAsync({
-      bookingId: b.id,
-      updates: {
-        balance_due:           0,
-        deposit_paid:          true,
-        full_payment_received: true,
-        final_payment_paid:    true,
-        completed_at:          new Date().toISOString(),
-      },
-    });
-    await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
-    toast.success(`${b.client}'s booking marked as fully paid & complete`);
-  } catch (e: any) {
-    toast.error(e.message || "Failed to mark as paid");
-  } finally {
-    setMarkingPaidId(null);
-  }
-};
+    if (markingPaidId === b.id) return;
+    setMarkingPaidId(b.id);
+    try {
+      await updateFields.mutateAsync({
+        bookingId: b.id,
+        updates: {
+          balance_due:           0,
+          deposit_paid:          true,
+          full_payment_received: true,
+          final_payment_paid:    true,
+          completed_at:          new Date().toISOString(),
+        },
+      });
+      await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
+      toast.success(`${b.client}'s booking marked as fully paid & complete`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to mark as paid");
+    } finally {
+      setMarkingPaidId(null);
+    }
+  };
 
   const showRequestBalance = (b: BookingRow) =>
     b.balance > 0 &&
@@ -456,7 +465,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Confirm dialogs */}
+      {/* ── Confirm dialogs ── */}
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete booking?"
@@ -475,8 +484,35 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onConfirm={() => { if (confirmCancel) handleStatusChange(confirmCancel.id, "cancelled"); setConfirmCancel(null); }}
         onCancel={() => setConfirmCancel(null)}
       />
+      <ConfirmDialog
+        open={!!confirmConfirm}
+        title="Confirm booking?"
+        description={confirmConfirm ? `Mark ${confirmConfirm.client}'s booking for ${confirmConfirm.service} as confirmed?` : ""}
+        confirmLabel="Confirm"
+        confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+        onConfirm={() => { if (confirmConfirm) handleStatusChange(confirmConfirm.id, "confirmed"); setConfirmConfirm(null); }}
+        onCancel={() => setConfirmConfirm(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmMarkPaid}
+        title="Mark as fully paid?"
+        description={confirmMarkPaid ? `This will clear the outstanding balance for ${confirmMarkPaid.client} and mark the booking complete.` : ""}
+        confirmLabel="Mark Paid"
+        confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+        onConfirm={() => { if (confirmMarkPaid) handleMarkFullyPaid(confirmMarkPaid); setConfirmMarkPaid(null); }}
+        onCancel={() => setConfirmMarkPaid(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmRequestBalance}
+        title="Send payment request?"
+        description={confirmRequestBalance ? `This will send a final payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.email}.` : ""}
+        confirmLabel="Send Request"
+        confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
+        onConfirm={() => { if (confirmRequestBalance) handleRequestBalance(confirmRequestBalance); setConfirmRequestBalance(null); }}
+        onCancel={() => setConfirmRequestBalance(null)}
+      />
 
-      {/* Reschedule modal */}
+      {/* ── Reschedule modal ── */}
       <RescheduleModal
         booking={reschedulingBooking}
         rescheduleDate={rescheduleDate}
@@ -489,7 +525,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onClose={() => { setReschedulingBooking(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
       />
 
-      {/* Add service modal ← NEW */}
+      {/* ── Add service modal ── */}
       <AddServiceModal
         bookingId={addServiceBooking?.id ?? null}
         clientName={addServiceBooking?.client ?? ""}
@@ -497,7 +533,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onAdded={() => { /* react-query refetches automatically */ }}
       />
 
-      {/* Stats */}
+      {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <CalendarCheck className="w-4 h-4 text-white/30" />
@@ -533,7 +569,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         </div>
       </div>
 
-      {/* Search bar */}
+      {/* ── Search bar ── */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
         <input
@@ -550,7 +586,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         )}
       </div>
 
-      {/* Filter pills */}
+      {/* ── Filter pills ── */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {filters.map(f => {
           const showCount = f !== "All" && f !== "Today";
@@ -572,7 +608,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         })}
       </div>
 
-      {/* Bookings list */}
+      {/* ── Bookings list ── */}
       {filtered.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
@@ -601,11 +637,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                 );
 
               const renderCard = (b: BookingRow) => {
-                const isExpanded            = expandedId === b.id;
-                const isEditing             = editingId === b.id;
-                const isRequestingBalance   = requestingBalanceId === b.id;
-                const isMarkingPaid = markingPaidId === b.id;
-
+                const isExpanded          = expandedId === b.id;
+                const isEditingInline     = editingInlineId === b.id;
+                const isRequestingBalance = requestingBalanceId === b.id;
+                const isMarkingPaid       = markingPaidId === b.id;
                 const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived;
 
                 return (
@@ -614,10 +649,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                     layout
                     className={`rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden ${statusBorderAccent[b.status]}`}>
 
-                    {/* Main row */}
+                    {/* ── Main row ── */}
                     <div
                       className="p-3 sm:p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                      onClick={() => !isEditing && setExpandedId(isExpanded ? null : b.id)}
+                      onClick={() => setExpandedId(isExpanded ? null : b.id)}
                     >
                       <div className="flex flex-col items-center shrink-0 w-16">
                         <Clock className="w-3 h-3 text-white/25 mb-0.5" />
@@ -656,7 +691,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       </div>
                     </div>
 
-                    {/* Expanded details */}
+                    {/* ── Expanded details ── */}
                     <AnimatePresence>
                       {isExpanded && (
                         <motion.div
@@ -664,188 +699,181 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                           className="overflow-hidden"
                         >
                           <div className="px-3 sm:px-4 pb-4 pt-1 border-t border-white/[0.06]">
+                            <div className="flex flex-col gap-3 mt-3">
 
-                            {isEditing ? (
-                              <div className="flex flex-col gap-3 mt-3">
-                                <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">Contact Details</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                  <EditField label="Client Name" value={editDraft.client || ""} onChange={v => setEditDraft(d => ({ ...d, client: v }))} />
-                                  <EditField label="Phone"       value={editDraft.phone || ""}  onChange={v => setEditDraft(d => ({ ...d, phone: v }))} />
-                                  <EditField label="Email"       value={editDraft.email || ""}  onChange={v => setEditDraft(d => ({ ...d, email: v }))} />
-                                  <EditField label="Address"     value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
+                              {/* ① Read-only detail rows */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <DetailRow icon={User}     label="Client"  value={b.client} />
+                                <DetailRow icon={Phone}    label="Phone"   value={b.phone} />
+                                <DetailRow icon={Mail}     label="Email"   value={b.email} />
+                                <DetailRow icon={MapPin}   label="Address" value={b.address} />
+                                <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} />
+                                <DetailRow icon={Clock}    label="Ref"     value={b.ref} />
+                              </div>
+
+                              {/* ② Financial summary */}
+                              <div className="grid grid-cols-3 gap-2 mt-1">
+                                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                  <p className="text-[10px] text-white/30">Total</p>
+                                  <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
                                 </div>
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
-                                    Service <span className="normal-case text-white/20">(read-only — edit via booking items)</span>
-                                  </label>
-                                  <p className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs text-white/30">
-                                    {editDraft.service || "—"}
+                                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                  <p className="text-[10px] text-white/30">Deposit</p>
+                                  <p className="text-sm font-bold text-emerald-400">R {b.deposit.toLocaleString()}</p>
+                                </div>
+                                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                  <p className="text-[10px] text-white/30">Balance</p>
+                                  <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
+                                    {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
                                   </p>
                                 </div>
-                                <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mt-1">Notes</p>
-                                <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
-                                <EditField label="Client Notes" value={editDraft.notes || ""}      onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
-                                <div className="flex items-center gap-2 pt-1">
-                                  <select
-                                    value={editDraft.status || "pending"}
-                                    onChange={e => setEditDraft(d => ({ ...d, status: e.target.value as BookingRow["status"] }))}
-                                    className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 focus:outline-none"
-                                  >
-                                    <option value="pending">Pending</option>
-                                    <option value="confirmed">Confirmed</option>
-                                    <option value="complete">Complete</option>
-                                    <option value="cancelled">Cancelled</option>
-                                  </select>
-                                  <div className="flex-1" />
-                                  <button onClick={cancelEdit} className="px-3 py-2 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">Cancel</button>
-                                  <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-white/[0.1] border border-white/[0.15] text-xs font-semibold text-white/80 hover:bg-white/[0.15] transition-colors flex items-center gap-1.5">
-                                    <Save className="w-3 h-3" /> Save
-                                  </button>
-                                </div>
                               </div>
-                            ) : (
-                              <div className="flex flex-col gap-3 mt-3">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                  <DetailRow icon={User}     label="Client"  value={b.client} />
-                                  <DetailRow icon={Phone}    label="Phone"   value={b.phone} />
-                                  <DetailRow icon={Mail}     label="Email"   value={b.email} />
-                                  <DetailRow icon={MapPin}   label="Address" value={b.address} />
-                                  <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} />
-                                  <DetailRow icon={Clock}    label="Ref"     value={b.ref} />
-                                </div>
 
-                                <div className="grid grid-cols-3 gap-2 mt-1">
-                                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                    <p className="text-[10px] text-white/30">Total</p>
-                                    <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
-                                  </div>
-                                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                    <p className="text-[10px] text-white/30">Deposit</p>
-                                    <p className="text-sm font-bold text-emerald-400">R {b.deposit.toLocaleString()}</p>
-                                  </div>
-                                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                    <p className="text-[10px] text-white/30">Balance</p>
-                                    <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
-                                      {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
-                                    </p>
-                                  </div>
+                              {/* ③ Notes */}
+                              {(b.notes || b.staffNotes) && (
+                                <div className="flex items-start gap-2 text-xs text-white/40 mt-1">
+                                  <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                                  <span>{b.staffNotes || b.notes}</span>
                                 </div>
+                              )}
 
-                                {(b.notes || b.staffNotes) && (
-                                  <div className="flex items-start gap-2 text-xs text-white/40 mt-1">
-                                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                                    <span>{b.staffNotes || b.notes}</span>
+                              <div className="text-[10px] text-white/20">
+                                Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
+                              </div>
+
+                              {/* ④ Collapsible inline edit section */}
+                              <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    isEditingInline ? cancelInlineEdit() : startInlineEdit(b);
+                                  }}
+                                  className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-white/[0.03] transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Edit3 className="w-3 h-3 text-white/30" />
+                                    <span className="text-[11px] font-medium text-white/40">Edit guest details & notes</span>
                                   </div>
+                                  <ChevronDown className={`w-3.5 h-3.5 text-white/20 transition-transform ${isEditingInline ? "rotate-180" : ""}`} />
+                                </button>
+
+                                <AnimatePresence>
+                                  {isEditingInline && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="px-3 pb-3 pt-1 flex flex-col gap-3 border-t border-white/[0.06]">
+                                        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mt-1">Contact Details</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                          <EditField label="Client Name" value={editDraft.client || ""} onChange={v => setEditDraft(d => ({ ...d, client: v }))} />
+                                          <EditField label="Phone"       value={editDraft.phone || ""}  onChange={v => setEditDraft(d => ({ ...d, phone: v }))} />
+                                          <EditField label="Email"       value={editDraft.email || ""}  onChange={v => setEditDraft(d => ({ ...d, email: v }))} />
+                                          <EditField label="Address"     value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
+                                        </div>
+                                        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Notes</p>
+                                        <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
+                                        <EditField label="Client Notes" value={editDraft.notes || ""}      onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
+                                        <div className="flex items-center justify-end gap-2 pt-1">
+                                          <button onClick={e => { e.stopPropagation(); cancelInlineEdit(); }} className="px-3 py-2 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">
+                                            Cancel
+                                          </button>
+                                          <button onClick={e => { e.stopPropagation(); saveInlineEdit(); }} className="px-4 py-2 rounded-lg bg-white/[0.1] border border-white/[0.15] text-xs font-semibold text-white/80 hover:bg-white/[0.15] transition-colors flex items-center gap-1.5">
+                                            <Save className="w-3 h-3" /> Save Changes
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+
+                              {/* ⑤ Action button row — primary actions only */}
+                              <div className="flex items-center gap-2 pt-1 flex-wrap">
+
+                                {/* Confirm */}
+                                {b.status === "pending" && (
+                                  <button
+                                    onClick={e => { e.stopPropagation(); setConfirmConfirm(b); }}
+                                    className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5"
+                                  >
+                                    <Check className="w-3 h-3" /> Confirm
+                                  </button>
                                 )}
 
-                                <div className="text-[10px] text-white/20">
-                                  Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}
-                                </div>
-
-                                {/* Action buttons */}
-                                <div className="flex items-center gap-2 pt-1 flex-wrap">
-
-                                  {/* Confirm — emerald */}
-                                  {b.status === "pending" && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); handleStatusChange(b.id, "confirmed"); }}
-                                      className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5"
-                                    >
-                                      <Check className="w-3 h-3" /> Confirm
-                                    </button>
-                                  )}
-
-                                  {/* Complete — neutral */}
-                                  {(b.status === "confirmed" || b.status === "pending") && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); handleStatusChange(b.id, "complete"); }}
-                                      className="px-3 py-1.5 rounded-lg border border-white/[0.1] bg-white/[0.06] text-xs font-medium text-white/70 hover:bg-white/[0.1] transition-colors flex items-center gap-1.5"
-                                    >
-                                      <Check className="w-3 h-3" /> Complete
-                                    </button>
-                                  )}
-
-                                  {/* Reschedule — sky */}
-                                  {b.status !== "cancelled" && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
-                                      className="px-3 py-1.5 rounded-lg border border-sky-500/25 bg-sky-500/[0.08] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5"
-                                    >
-                                      <CalendarClock className="w-3 h-3" /> Reschedule
-                                    </button>
-                                  )}
-
-                                  {/* Edit — neutral */}
+                                {/* Reschedule */}
+                                {b.status !== "cancelled" && b.status !== "complete" && (
                                   <button
-                                    onClick={e => { e.stopPropagation(); startEdit(b); }}
-                                    className="px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs font-medium text-white/50 hover:bg-white/[0.06] hover:text-white/70 transition-colors flex items-center gap-1.5"
+                                    onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+                                    className="px-3 py-1.5 rounded-lg border border-sky-500/25 bg-sky-500/[0.08] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5"
                                   >
-                                    <Edit3 className="w-3 h-3" /> Edit
+                                    <CalendarClock className="w-3 h-3" /> Reschedule
                                   </button>
+                                )}
 
-                                  {/* Add service — violet ← NEW */}
-                                  {b.status !== "cancelled" && b.status !== "complete" && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
-                                      className="px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors flex items-center gap-1.5"
-                                    >
-                                      <PlusCircle className="w-3 h-3" /> Add Service
-                                    </button>
-                                  )}
-
-                                  {/* Mark Fully Paid — green */}
-                                  {b.status !== "cancelled" && b.status !== "complete" && (
-                                    <button
-                                      disabled={markingPaidId === b.id}
-                                      onClick={e => { e.stopPropagation(); handleMarkFullyPaid(b); }}
-                                      className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.08] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      {markingPaidId === b.id
-                                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                                        : <CircleDollarSign className="w-3 h-3" />
-                                      }
-                                      Mark Fully Paid
-                                    </button>
-                                  )}
-
-                                  {/* Request balance — amber */}
-                                  {showRequestBalance(b) && (
-                                    <button
-                                      disabled={isRequestingBalance}
-                                      onClick={e => { e.stopPropagation(); handleRequestBalance(b); }}
-                                      className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.07] text-xs font-medium text-amber-400 hover:bg-amber-500/[0.15] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      {isRequestingBalance
-                                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                                        : <SendHorizonal className="w-3 h-3" />
-                                      }
-                                      Request Final Payment
-                                    </button>
-                                  )}
-
-                                  <div className="flex-1" />
-
-                                  {/* Cancel — red ghost */}
-                                  {b.status !== "cancelled" && b.status !== "complete" && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); setConfirmCancel(b); }}
-                                      className="px-3 py-1.5 rounded-lg border border-red-500/20 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-1.5"
-                                    >
-                                      <X className="w-3 h-3" /> Cancel
-                                    </button>
-                                  )}
-
-                                  {/* Delete — red icon */}
+                                {/* Add Service */}
+                                {b.status !== "cancelled" && b.status !== "complete" && (
                                   <button
-                                    onClick={e => { e.stopPropagation(); setConfirmDelete(b); }}
-                                    className="p-1.5 rounded-lg border border-red-500/15 text-red-400/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                                    aria-label="Delete booking"
+                                    onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
+                                    className="px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors flex items-center gap-1.5"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <PlusCircle className="w-3 h-3" /> Add Service
                                   </button>
-                                </div>
+                                )}
+
+                                {/* Mark Fully Paid */}
+                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                  <button
+                                    disabled={isMarkingPaid}
+                                    onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }}
+                                    className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.08] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    {isMarkingPaid
+                                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                                      : <CircleDollarSign className="w-3 h-3" />
+                                    }
+                                    Mark Fully Paid
+                                  </button>
+                                )}
+
+                                {/* Request Final Payment */}
+                                {showRequestBalance(b) && (
+                                  <button
+                                    disabled={isRequestingBalance}
+                                    onClick={e => { e.stopPropagation(); setConfirmRequestBalance(b); }}
+                                    className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.07] text-xs font-medium text-amber-400 hover:bg-amber-500/[0.15] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    {isRequestingBalance
+                                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                                      : <SendHorizonal className="w-3 h-3" />
+                                    }
+                                    Request Final Payment
+                                  </button>
+                                )}
+
+                                <div className="flex-1" />
+
+                                {/* Cancel */}
+                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                  <button
+                                    onClick={e => { e.stopPropagation(); setConfirmCancel(b); }}
+                                    className="px-3 py-1.5 rounded-lg border border-red-500/20 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-1.5"
+                                  >
+                                    <X className="w-3 h-3" /> Cancel
+                                  </button>
+                                )}
+
+                                {/* Delete */}
+                                <button
+                                  onClick={e => { e.stopPropagation(); setConfirmDelete(b); }}
+                                  className="p-1.5 rounded-lg border border-red-500/15 text-red-400/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                                  aria-label="Delete booking"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
-                            )}
+
+                            </div>
                           </div>
                         </motion.div>
                       )}
