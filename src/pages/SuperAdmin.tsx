@@ -4,8 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
 import SuperAdminShell from "@/components/superadmin/SuperAdminShell";
 
-const SUPER_ADMIN_EMAIL = "arshadsegal@gmail.com";
-
 const SuperAdmin = () => {
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
 
@@ -13,7 +11,15 @@ const SuperAdmin = () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!user || error) { setAuthState("unauthenticated"); return; }
-      if (user.email === SUPER_ADMIN_EMAIL) {
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+
+      if (roles) {
         setAuthState("authenticated");
       } else {
         setAuthState("unauthenticated");
