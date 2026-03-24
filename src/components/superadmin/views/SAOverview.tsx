@@ -8,8 +8,9 @@ import {
 import { saLog } from "@/lib/saAudit";
 
 // ─── Founder lock ─────────────────────────────────────────────────────────────
-// Add any tenant IDs here that must never be suspended or plan-downgraded via SA.
-// These are read from env at build time so they never appear in source control.
+// Reads from VITE_FOUNDER_TENANT_IDS env var (comma-separated tenant IDs).
+// Matches against tenants.id — which may be a slug (e.g. 'phenomebeauty')
+// or a UUID depending on how the tenant was created.
 const FOUNDER_IDS: ReadonlySet<string> = new Set(
   (import.meta.env.VITE_FOUNDER_TENANT_IDS ?? "")
     .split(",")
@@ -53,7 +54,7 @@ interface DrawerData extends Tenant {
   recentBookings: RecentBooking[];
 }
 
-// ─── Plans — sourced from src/pages/Pricing.tsx ────────────────────────────────
+// ─── Plans ─────────────────────────────────────────────────────────────────────
 const PLANS = ["starter", "professional", "studio", "enterprise"] as const;
 type PlanKey = typeof PLANS[number];
 
@@ -87,9 +88,13 @@ const fmtRand = (rands: number) =>
     ? `R${(rands / 1000).toFixed(1)}k`
     : `R${rands.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Fixed: guard against invalid/non-ISO date strings that produce NaN
 const timeAgo = (s: string | null) => {
   if (!s) return "Never";
-  const diff = Date.now() - new Date(s).getTime();
+  const ms = new Date(s).getTime();
+  if (isNaN(ms)) return "Never";
+  const diff = Date.now() - ms;
+  if (diff < 0) return "Just now";
   const d = Math.floor(diff / 86400000);
   if (d === 0) return "Today";
   if (d === 1) return "Yesterday";
@@ -161,8 +166,8 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
   const [planSaved,    setPlanSaved]    = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>(tenant.stats.plan || "starter");
 
-  const founder  = isFounder(tenant.id);
-  const planKey  = safePlanKey(selectedPlan);
+  const founder = isFounder(tenant.id);
+  const planKey = safePlanKey(selectedPlan);
 
   const handleResetPassword = async () => {
     if (!tenant.email) return;
@@ -177,7 +182,7 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
   };
 
   const handlePlanSave = async () => {
-    if (founder) return;                                           // ← founder guard
+    if (founder) return;
     if (selectedPlan === (tenant.stats.plan || "starter")) return;
     setPlanSaving(true);
     await supabase
@@ -378,7 +383,7 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
             </button>
             {founder && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[hsl(220,13%,12%)] border border-white/[0.08] rounded-lg text-[11px] text-white/50 whitespace-nowrap opacity-0 group-hover/suspend:opacity-100 transition-opacity pointer-events-none shadow-xl">
-                Add tenant ID to VITE_FOUNDER_TENANT_IDS to remove this lock
+                Remove from VITE_FOUNDER_TENANT_IDS to unlock
               </div>
             )}
           </div>
@@ -445,7 +450,7 @@ export default function SAOverview() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recentBookings: RecentBooking[] = (recentRaw ?? []).map((b: any) => ({
       id:           b.id,
-      client_name:  b.profiles?.full_name            ?? "Client",
+      client_name:  b.profiles?.full_name             ?? "Client",
       service_name: b.booking_items?.[0]?.service_name ?? "Service",
       start_time:   b.start_time,
       status:       b.status,
@@ -456,7 +461,7 @@ export default function SAOverview() {
   };
 
   const handleToggleActive = async (id: string, current: boolean | null) => {
-    if (isFounder(id)) return;                                     // ← double-guard
+    if (isFounder(id)) return;
     const tenant = tenants.find(t => t.id === id);
     if (!tenant) return;
     if (current) {
@@ -471,7 +476,7 @@ export default function SAOverview() {
 
   const confirmSuspend = async (reason: string) => {
     if (!suspendTarget) return;
-    if (isFounder(suspendTarget.id)) return;                       // ← double-guard
+    if (isFounder(suspendTarget.id)) return;
     const { id, name } = suspendTarget;
     await supabase.from("tenants").update({ is_active: false }).eq("id", id);
     await saLog("tenant.suspended", "tenant", id, name, { reason: reason || "No reason given" });
