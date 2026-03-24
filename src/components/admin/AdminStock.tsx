@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Save, X, Loader2, Trash2, Edit3, Upload,
@@ -10,7 +10,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
-import StockScanModal from "./StockScanModal";
+
+// Lazy-loaded — tesseract.js + pdfjs-dist are NOT bundled into the main chunk
+const StockScanModal = lazy(() => import("./StockScanModal"));
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -61,7 +63,7 @@ const AdminStock = () => {
   const [tab, setTab]               = useState<Tab>("stock");
   const [search, setSearch]         = useState("");
   const [showModal, setShowModal]   = useState(false);
-  const [showScan, setShowScan]     = useState(false);   // ← NEW
+  const [showScan, setShowScan]     = useState(false);
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [deleteItem, setDeleteItem] = useState<StockItem | null>(null);
   const [actionItem, setActionItem] = useState<StockItem | null>(null);
@@ -269,7 +271,6 @@ const AdminStock = () => {
           <h3 className="font-display text-xl sm:text-2xl font-bold text-white/90">Stock Management</h3>
         </div>
         <div className="flex gap-2 self-start flex-wrap">
-          {/* ── NEW: Scan button ── */}
           <button
             onClick={() => setShowScan(true)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-xs font-semibold text-white/70 hover:bg-white/[0.10] transition-colors"
@@ -548,7 +549,6 @@ const AdminStock = () => {
                               </button>
                             </div>
                           </td>
-
                         </tr>
                       );
                     })}
@@ -784,15 +784,17 @@ const AdminStock = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Scan Modal ── */}
-      <AnimatePresence>
-        {showScan && (
-          <StockScanModal
-            tenantId={tenantId}
-            onClose={() => setShowScan(false)}
-          />
-        )}
-      </AnimatePresence>
+      {/* ── Scan Modal — lazy loaded, Suspense fallback is null (modal has its own loading state) ── */}
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {showScan && (
+            <StockScanModal
+              tenantId={tenantId}
+              onClose={() => setShowScan(false)}
+            />
+          )}
+        </AnimatePresence>
+      </Suspense>
 
     </div>
   );
