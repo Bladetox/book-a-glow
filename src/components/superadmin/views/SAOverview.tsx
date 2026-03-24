@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search, CheckCircle2, XCircle, RefreshCw, ChevronRight,
   Building2, Calendar, DollarSign, X, ExternalLink,
-  KeyRound, TrendingUp, Clock, Loader2, AlertTriangle
+  KeyRound, TrendingUp, Loader2, AlertTriangle,
 } from "lucide-react";
 import { saLog } from "@/lib/saAudit";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 interface Tenant {
   id: string;
   name: string;
@@ -18,6 +18,7 @@ interface Tenant {
   custom_domain: string | null;
   owner_id: string | null;
   slug: string | null;
+  plan: string;
 }
 
 interface TenantStats {
@@ -28,12 +29,20 @@ interface TenantStats {
   plan: string;
 }
 
-interface DrawerData extends Tenant {
-  stats: TenantStats;
-  recentBookings: { id: string; client_name: string | null; service_name: string | null; start_time: string | null; status: string | null }[];
+interface RecentBooking {
+  id: string;
+  client_name: string;
+  service_name: string;
+  start_time: string | null;
+  status: string | null;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+interface DrawerData extends Tenant {
+  stats: TenantStats;
+  recentBookings: RecentBooking[];
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 const PLAN_STYLES: Record<string, string> = {
   free:       "bg-white/[0.05] text-white/40 border-white/[0.08]",
   starter:    "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -44,8 +53,12 @@ const PLAN_STYLES: Record<string, string> = {
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
-const fmtRand = (n: number) =>
-  n >= 1000 ? `R${(n / 1000).toFixed(1)}k` : `R${n.toLocaleString()}`;
+const fmtRand = (cents: number) => {
+  const rand = cents / 100;
+  return rand >= 1000
+    ? `R${(rand / 1000).toFixed(1)}k`
+    : `R${rand.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 const timeAgo = (s: string | null) => {
   if (!s) return "Never";
@@ -58,7 +71,12 @@ const timeAgo = (s: string | null) => {
   return `${Math.floor(d / 365)}y ago`;
 };
 
-// ─── Suspend Confirm Modal ────────────────────────────────────────────────────
+const parsePlan = (raw: string | null): string => {
+  if (!raw) return "free";
+  try { return JSON.parse(raw) as string; } catch { return raw; }
+};
+
+// ─── Suspend Modal ─────────────────────────────────────────────────────────────
 function SuspendModal({
   tenant,
   onConfirm,
@@ -78,7 +96,9 @@ function SuspendModal({
           </div>
           <div>
             <p className="text-sm font-semibold text-white">Suspend Tenant</p>
-            <p className="text-xs text-white/40 mt-0.5">This will block all access for <span className="text-white/70">{tenant.name}</span></p>
+            <p className="text-xs text-white/40 mt-0.5">
+              This will block all access for <span className="text-white/70">{tenant.name}</span>
+            </p>
           </div>
         </div>
         <div>
@@ -112,7 +132,7 @@ function SuspendModal({
   );
 }
 
-// ─── Tenant Drawer ────────────────────────────────────────────────────────────
+// ─── Tenant Drawer ─────────────────────────────────────────────────────────────
 function TenantDrawer({
   tenant,
   onClose,
@@ -147,10 +167,7 @@ function TenantDrawer({
 
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
-
-      {/* Drawer */}
       <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[hsl(220,13%,7%)] border-l border-white/[0.06] flex flex-col shadow-2xl overflow-hidden">
 
         {/* Header */}
@@ -176,9 +193,9 @@ function TenantDrawer({
           {/* Stats grid */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Bookings",   value: String(tenant.stats.bookings), icon: Calendar,    color: "violet" },
-              { label: "Revenue",    value: fmtRand(tenant.stats.revenue), icon: DollarSign,  color: "emerald" },
-              { label: "Services",   value: String(tenant.stats.services), icon: TrendingUp,  color: "blue" },
+              { label: "Bookings", value: String(tenant.stats.bookings), icon: Calendar,   color: "violet" },
+              { label: "Revenue",  value: fmtRand(tenant.stats.revenue), icon: DollarSign, color: "emerald" },
+              { label: "Services", value: String(tenant.stats.services), icon: TrendingUp,  color: "blue" },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 text-center">
                 <div className={`w-7 h-7 rounded-lg bg-${color}-500/10 flex items-center justify-center mx-auto mb-2`}>
@@ -193,16 +210,18 @@ function TenantDrawer({
           {/* Meta info */}
           <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl divide-y divide-white/[0.04]">
             {[
-              { label: "Tenant ID",    value: tenant.id,                            mono: true },
-              { label: "Phone",        value: tenant.phone ?? "—",                  mono: false },
-              { label: "Domain",       value: tenant.custom_domain ?? "Not set",    mono: true },
-              { label: "Joined",       value: fmtDate(tenant.created_at),           mono: false },
-              { label: "Last Booking", value: timeAgo(tenant.stats.lastBooking),    mono: false },
+              { label: "Tenant ID",    value: tenant.id,                                 mono: true  },
+              { label: "Phone",        value: tenant.phone ?? "—",                       mono: false },
+              { label: "Domain",       value: tenant.custom_domain ?? "Not set",         mono: true  },
+              { label: "Joined",       value: fmtDate(tenant.created_at),               mono: false },
+              { label: "Last Booking", value: timeAgo(tenant.stats.lastBooking),         mono: false },
               { label: "Status",       value: tenant.is_active ? "Active" : "Suspended", mono: false },
             ].map(({ label, value, mono }) => (
               <div key={label} className="flex items-center justify-between px-4 py-2.5 gap-4">
                 <span className="text-[11px] text-white/30 shrink-0">{label}</span>
-                <span className={`text-[11px] text-right truncate max-w-[200px] ${mono ? "font-mono text-white/50" : "text-white/60"}`}>{value}</span>
+                <span className={`text-[11px] text-right truncate max-w-[200px] ${mono ? "font-mono text-white/50" : "text-white/60"}`}>
+                  {value}
+                </span>
               </div>
             ))}
           </div>
@@ -215,12 +234,19 @@ function TenantDrawer({
                 {tenant.recentBookings.map(b => (
                   <div key={b.id} className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white/70 font-medium truncate">{b.client_name ?? "Client"}</p>
-                      <p className="text-[11px] text-white/30 truncate">{b.service_name ?? "Service"}</p>
+                      <p className="text-xs text-white/70 font-medium truncate">{b.client_name}</p>
+                      <p className="text-[11px] text-white/30 truncate">{b.service_name}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] text-white/30">{b.start_time ? new Date(b.start_time).toLocaleDateString("en-ZA", { day: "numeric", month: "short" }) : "—"}</p>
-                      <span className={`text-[10px] font-medium ${b.status === "confirmed" ? "text-emerald-400" : b.status === "cancelled" ? "text-red-400" : "text-white/40"}`}>
+                      <p className="text-[10px] text-white/30">
+                        {b.start_time
+                          ? new Date(b.start_time).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })
+                          : "—"}
+                      </p>
+                      <span className={`text-[10px] font-medium ${
+                        b.status === "confirmed"  ? "text-emerald-400" :
+                        b.status === "cancelled"  ? "text-red-400"     : "text-white/40"
+                      }`}>
                         {b.status ?? "—"}
                       </span>
                     </div>
@@ -231,7 +257,7 @@ function TenantDrawer({
           )}
         </div>
 
-        {/* Actions footer */}
+        {/* Footer actions */}
         <div className="p-4 border-t border-white/[0.05] shrink-0 space-y-2">
           {bookingUrl && (
             <a
@@ -240,8 +266,7 @@ function TenantDrawer({
               rel="noreferrer"
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.08] text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              View Booking Page
+              <ExternalLink className="w-3.5 h-3.5" /> View Booking Page
             </a>
           )}
           <button
@@ -272,12 +297,11 @@ function TenantDrawer({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-export default function SATenants() {
+// ─── Main Component ────────────────────────────────────────────────────────────
+export default function SAOverview() {
   const [tenants,       setTenants]       = useState<Tenant[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [search,        setSearch]        = useState("");
-  const [actionId,      setActionId]      = useState<string | null>(null);
   const [drawerData,    setDrawerData]    = useState<DrawerData | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [suspendTarget, setSuspendTarget] = useState<Tenant | null>(null);
@@ -285,43 +309,72 @@ export default function SATenants() {
 
   const fetchTenants = async () => {
     setLoading(true);
-    const { data } = await supabase
+
+    const { data: tenantRows } = await supabase
       .from("tenants")
       .select("id, name, email, phone, is_active, created_at, custom_domain, owner_id, slug")
       .order("created_at", { ascending: false });
-    setTenants(data ?? []);
+
+    const rows = tenantRows ?? [];
+
+    // Batch-fetch plans for all tenants in a single query
+    const { data: planRows } = await supabase
+      .from("app_settings")
+      .select("tenant_id, value")
+      .eq("key", "plan")
+      .in("tenant_id", rows.map(t => t.id));
+
+    const planMap: Record<string, string> = {};
+    for (const p of planRows ?? []) {
+      planMap[p.tenant_id] = parsePlan(p.value);
+    }
+
+    setTenants(rows.map(t => ({ ...t, plan: planMap[t.id] ?? "free" })));
     setLoading(false);
   };
 
   useEffect(() => { fetchTenants(); }, []);
 
-  // Open drawer — load stats
   const openDrawer = async (tenant: Tenant) => {
     setDrawerLoading(true);
-    setDrawerData({ ...tenant, stats: { bookings: 0, revenue: 0, services: 0, lastBooking: null, plan: "free" }, recentBookings: [] });
+    setDrawerData({
+      ...tenant,
+      stats: { bookings: 0, revenue: 0, services: 0, lastBooking: null, plan: tenant.plan },
+      recentBookings: [],
+    });
 
     const [
       { count: bookingCount },
       { data: payments },
       { count: serviceCount },
       { data: lastBookingRow },
-      { data: planRow },
-      { data: recentBookings },
+      { data: recentRaw },
     ] = await Promise.all([
       supabase.from("bookings").select("*", { count: "exact", head: true }).eq("tenant_id", tenant.id),
       supabase.from("payments").select("amount").eq("tenant_id", tenant.id).eq("status", "completed"),
       supabase.from("services").select("*", { count: "exact", head: true }).eq("tenant_id", tenant.id),
-      supabase.from("bookings").select("start_time").eq("tenant_id", tenant.id).order("start_time", { ascending: false }).limit(1),
-      supabase.from("app_settings").select("value").eq("tenant_id", tenant.id).eq("key", "plan").single(),
       supabase.from("bookings")
-        .select("id, client_name, service_name, start_time, status")
+        .select("start_time")
+        .eq("tenant_id", tenant.id)
+        .order("start_time", { ascending: false })
+        .limit(1),
+      supabase.from("bookings")
+        .select("id, start_time, status, profiles!bookings_client_id_fkey(full_name), booking_items(service_name)")
         .eq("tenant_id", tenant.id)
         .order("start_time", { ascending: false })
         .limit(5),
     ]);
 
-    const revenue  = (payments ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
-    const planVal  = planRow?.value ? JSON.parse(planRow.value as string) : "free";
+    const revenue = (payments ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recentBookings: RecentBooking[] = (recentRaw ?? []).map((b: any) => ({
+      id:           b.id,
+      client_name:  b.profiles?.full_name  ?? "Client",
+      service_name: b.booking_items?.[0]?.service_name ?? "Service",
+      start_time:   b.start_time,
+      status:       b.status,
+    }));
 
     setDrawerData({
       ...tenant,
@@ -330,42 +383,34 @@ export default function SATenants() {
         revenue,
         services:    serviceCount ?? 0,
         lastBooking: lastBookingRow?.[0]?.start_time ?? null,
-        plan:        planVal,
+        plan:        tenant.plan,
       },
-      recentBookings: recentBookings ?? [],
+      recentBookings,
     });
     setDrawerLoading(false);
   };
 
-  // Toggle active with audit log
   const handleToggleActive = async (id: string, current: boolean | null) => {
     const tenant = tenants.find(t => t.id === id);
     if (!tenant) return;
-
     if (current) {
-      // Suspending — show modal
       setSuspendTarget(tenant);
     } else {
-      // Activating — no confirmation needed
-      setActionId(id);
       await supabase.from("tenants").update({ is_active: true }).eq("id", id);
       await saLog("tenant.activated", "tenant", id, tenant.name);
       setTenants(prev => prev.map(t => t.id === id ? { ...t, is_active: true } : t));
       if (drawerData?.id === id) setDrawerData(d => d ? { ...d, is_active: true } : d);
-      setActionId(null);
     }
   };
 
   const confirmSuspend = async (reason: string) => {
     if (!suspendTarget) return;
     const { id, name } = suspendTarget;
-    setActionId(id);
     await supabase.from("tenants").update({ is_active: false }).eq("id", id);
     await saLog("tenant.suspended", "tenant", id, name, { reason: reason || "No reason given" });
     setTenants(prev => prev.map(t => t.id === id ? { ...t, is_active: false } : t));
     if (drawerData?.id === id) setDrawerData(d => d ? { ...d, is_active: false } : d);
     setSuspendTarget(null);
-    setActionId(null);
   };
 
   const filtered = tenants
@@ -395,7 +440,6 @@ export default function SATenants() {
           </p>
         </div>
         <div className="sm:ml-auto flex items-center gap-2 flex-wrap">
-          {/* Filter pills */}
           {(["all", "active", "inactive"] as const).map(f => (
             <button
               key={f}
@@ -465,8 +509,8 @@ export default function SATenants() {
                   </td>
                   <td className="px-4 py-3 text-white/45 text-xs">{t.email || "—"}</td>
                   <td className="px-4 py-3">
-                    <span className="text-[10px] px-2 py-1 rounded-md border font-medium uppercase tracking-wide bg-white/[0.03] text-white/30 border-white/[0.06]">
-                      free
+                    <span className={`text-[10px] px-2 py-1 rounded-md border font-medium uppercase tracking-wide ${PLAN_STYLES[t.plan] ?? PLAN_STYLES.free}`}>
+                      {t.plan}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-white/40 text-xs">{fmtDate(t.created_at)}</td>
@@ -491,7 +535,6 @@ export default function SATenants() {
         </div>
       </div>
 
-      {/* Drawer */}
       {drawerData && (
         <TenantDrawer
           tenant={drawerData}
@@ -499,13 +542,13 @@ export default function SATenants() {
           onToggleActive={handleToggleActive}
         />
       )}
+
       {drawerLoading && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-[hsl(220,13%,10%)] border border-white/[0.08] rounded-xl text-xs text-white/50 shadow-xl">
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading tenant data…
         </div>
       )}
 
-      {/* Suspend modal */}
       {suspendTarget && (
         <SuspendModal
           tenant={suspendTarget}
