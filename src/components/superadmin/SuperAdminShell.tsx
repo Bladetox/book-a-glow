@@ -1,94 +1,110 @@
 import { useState, lazy, Suspense } from "react";
+import type { ElementType } from "react";
 import {
   LayoutDashboard, Users, Building2, DollarSign, Settings,
   ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Zap,
-  ChevronRight
+  ChevronRight, Loader2,
 } from "lucide-react";
-import { Loader2 } from "lucide-react";
 
-const SAOverview     = lazy(() => import("./views/SAOverview"));
-const SATenants      = lazy(() => import("./views/SATenants"));
-const SAUsers        = lazy(() => import("./views/SAUsers"));
-const SARevenue      = lazy(() => import("./views/SARevenue"));
-const SASystemHealth = lazy(() => import("./views/SASystemHealth"));
-const SAAuditLog     = lazy(() => import("./views/SAAuditLog"));
-const SABroadcast    = lazy(() => import("./views/SABroadcast"));
-const SAFeatureFlags = lazy(() => import("./views/SAFeatureFlags"));
-const SASettings     = lazy(() => import("./views/SASettings"));
+// ─── Lazy Views ────────────────────────────────────────────────────────────────
+const SAOverview      = lazy(() => import("./views/SAOverview"));
+const SAUsers         = lazy(() => import("./views/SAUsers"));
+const SARevenue       = lazy(() => import("./views/SARevenue"));
+const SASystemHealth  = lazy(() => import("./views/SASystemHealth"));
+const SAAuditLog      = lazy(() => import("./views/SAAuditLog"));
+const SABroadcast     = lazy(() => import("./views/SABroadcast"));
+const SAFeatureFlags  = lazy(() => import("./views/SAFeatureFlags"));
+const SASettings      = lazy(() => import("./views/SASettings"));
+const SAWebhookQueue  = lazy(() => import("./views/SAWebhookQueue"));
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
+type ViewId =
+  | "overview"
+  | "users"
+  | "revenue"
+  | "health"
+  | "audit"
+  | "broadcast"
+  | "webhooks"
+  | "flags"
+  | "settings";
+
+interface NavItem {
+  id: ViewId;
+  label: string;
+  icon: ElementType;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+// ─── Navigation ────────────────────────────────────────────────────────────────
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Operate",
+    items: [
+      { id: "overview", label: "Overview",  icon: LayoutDashboard },
+      { id: "users",    label: "Users",     icon: Users           },
+    ],
+  },
+  {
+    label: "Health",
+    items: [
+      { id: "health",   label: "Monitoring",       icon: Activity    },
+      { id: "audit",    label: "Security & Audit", icon: ShieldAlert },
+      { id: "webhooks", label: "Webhook Queue",    icon: Bell        },
+    ],
+  },
+  {
+    label: "Business",
+    items: [
+      { id: "revenue",   label: "Billing & Revenue", icon: DollarSign },
+      { id: "broadcast", label: "Broadcast",         icon: Bell       },
+    ],
+  },
+  {
+    label: "Config",
+    items: [
+      { id: "flags",    label: "Feature Flags", icon: Flag     },
+      { id: "settings", label: "Settings",      icon: Settings },
+    ],
+  },
+];
+
+const ALL_NAV = NAV_GROUPS.flatMap(g => g.items);
+
+// ─── Tab Loader ────────────────────────────────────────────────────────────────
 const TabLoader = () => (
   <div className="flex items-center justify-center py-20">
     <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
   </div>
 );
 
-// Updated nav structure: group by Operate / Health / Business / Config
-const NAV_GROUPS = [
-  {
-    label: "Operate",
-    items: [
-      { id: "overview", label: "Overview", icon: LayoutDashboard },
-      { id: "tenants",  label: "Tenants",  icon: Building2 },
-      { id: "users",    label: "Users",    icon: Users },
-    ],
-  },
-  {
-    label: "Health",
-    items: [
-      { id: "health", label: "Monitoring",       icon: Activity },
-      { id: "audit",  label: "Security & Audit", icon: ShieldAlert },
-    ],
-  },
-  {
-    label: "Business",
-    items: [
-      { id: "revenue", label: "Billing & Revenue", icon: DollarSign },
-    ],
-  },
-  {
-    label: "Config",
-    items: [
-      { id: "flags",    label: "Feature Flags", icon: Flag },
-      { id: "settings", label: "Settings",      icon: Settings },
-    ],
-  },
-] as const;
-
-type ViewId =
-  | "overview"
-  | "tenants"
-  | "users"
-  | "revenue"
-  | "health"
-  | "audit"
-  | "broadcast"
-  | "flags"
-  | "settings";
-
-const ALL_NAV = NAV_GROUPS.flatMap(g => g.items);
-
+// ─── Shell ─────────────────────────────────────────────────────────────────────
 export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }) {
-  const [activeView, setActiveView] = useState<ViewId>("overview");
+  const [activeView,  setActiveView]  = useState<ViewId>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const activeLabel = ALL_NAV.find(n => n.id === activeView)?.label ?? "";
 
   const renderView = () => {
     switch (activeView) {
-      case "overview":  return <SAOverview onNavigate={(v) => setActiveView(v as ViewId)} />;
-      case "tenants":   return <SATenants />;
+      case "overview":  return <SAOverview />;
       case "users":     return <SAUsers />;
       case "revenue":   return <SARevenue />;
       case "health":    return <SASystemHealth />;
       case "audit":     return <SAAuditLog />;
       case "broadcast": return <SABroadcast />;
+      case "webhooks":  return <SAWebhookQueue />;
       case "flags":     return <SAFeatureFlags />;
       case "settings":  return <SASettings />;
-      default:           return <SAOverview onNavigate={(v) => setActiveView(v as ViewId)} />;
+      default:          return <SAOverview />;
     }
   };
 
-  const NavItem = ({ id, label, icon: Icon }: { id: ViewId; label: string; icon: React.ElementType }) => (
+  const NavItemButton = ({ id, label, icon: Icon }: NavItem) => (
     <button
       onClick={() => { setActiveView(id); setSidebarOpen(false); }}
       className={[
@@ -113,15 +129,15 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
 
   return (
     <div className="min-h-screen bg-[hsl(220,13%,9%)] text-[hsl(0,0%,90%)] flex overflow-hidden">
-      {/* Sidebar */}
-      <aside
-        className={[
-          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200",
-          "bg-[hsl(220,13%,7%)] border-r border-white/[0.05]",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          "lg:relative lg:translate-x-0",
-        ].join(" ")}
-      >
+
+      {/* ── Sidebar ── */}
+      <aside className={[
+        "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200",
+        "bg-[hsl(220,13%,7%)] border-r border-white/[0.05]",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        "lg:relative lg:translate-x-0",
+      ].join(" ")}>
+
         {/* Brand */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.05] shrink-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg shadow-violet-500/25">
@@ -139,7 +155,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
           </button>
         </div>
 
-        {/* Nav Groups */}
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-7">
           {NAV_GROUPS.map(group => (
             <div key={group.label}>
@@ -148,7 +164,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
               </p>
               <div className="space-y-0.5">
                 {group.items.map(item => (
-                  <NavItem key={item.id} {...item} id={item.id as ViewId} />
+                  <NavItemButton key={item.id} {...item} />
                 ))}
               </div>
             </div>
@@ -169,7 +185,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
         </div>
       </aside>
 
-      {/* Overlay */}
+      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/70 lg:hidden"
@@ -177,9 +193,10 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
         />
       )}
 
-      {/* Main Content */}
+      {/* ── Main ── */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
-        {/* Top Header */}
+
+        {/* Top header */}
         <header className="flex items-center gap-4 px-5 sm:px-8 py-4 border-b border-white/[0.05] shrink-0 bg-[hsl(220,13%,7%)]/80 backdrop-blur-md sticky top-0 z-30">
           <button
             className="lg:hidden text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
@@ -188,7 +205,6 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm">
             <span className="text-white/25 hidden sm:block">NextSlot</span>
             <ChevronRight className="w-3 h-3 text-white/15 hidden sm:block" />
@@ -197,7 +213,6 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
 
           <div className="flex-1" />
 
-          {/* Status pill */}
           <div className="flex items-center gap-2">
             <span className="hidden sm:flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -209,7 +224,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
           </div>
         </header>
 
-        {/* Page */}
+        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-5 sm:p-8 bg-[hsl(220,13%,9%)]">
           <Suspense fallback={<TabLoader />}>
             {renderView()}
