@@ -12,6 +12,9 @@ interface Payment {
   tenant_id: string | null;
 }
 
+const toRand = (cents: number) =>
+  `R${(cents / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export default function SARevenue() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -21,30 +24,30 @@ export default function SARevenue() {
       .from("payments")
       .select("id, amount, status, payment_type, gateway, created_at, tenant_id")
       .order("created_at", { ascending: false })
-      .limit(100)
+      .limit(200)
       .then(({ data }) => { setPayments(data ?? []); setLoading(false); });
   }, []);
 
-  const completed  = payments.filter(p => p.status === "completed");
-  const totalRev   = completed.reduce((s, p) => s + p.amount, 0);
-  const thisMonth  = completed.filter(p => {
+  const completed = payments.filter(p => p.status === "completed");
+  const totalRev  = completed.reduce((s, p) => s + p.amount, 0);
+
+  const thisMonth = completed.filter(p => {
     if (!p.created_at) return false;
-    const d = new Date(p.created_at);
-    const now = new Date();
+    const d = new Date(p.created_at), now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).reduce((s, p) => s + p.amount, 0);
-  const lastMonth  = completed.filter(p => {
+
+  const lastMonth = completed.filter(p => {
     if (!p.created_at) return false;
-    const d   = new Date(p.created_at);
-    const now = new Date();
-    const lm  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const d = new Date(p.created_at), now = new Date();
+    const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     return d.getMonth() === lm.getMonth() && d.getFullYear() === lm.getFullYear();
   }).reduce((s, p) => s + p.amount, 0);
 
   const stats = [
-    { label: "Total Revenue",     value: `R${totalRev.toLocaleString()}`,    sub: "all completed payments", icon: DollarSign },
-    { label: "This Month",        value: `R${thisMonth.toLocaleString()}`,   sub: "current month",          icon: TrendingUp },
-    { label: "Last Month",        value: `R${lastMonth.toLocaleString()}`,   sub: "previous month",         icon: CreditCard },
+    { label: "Total Revenue", value: toRand(totalRev),  sub: "all completed payments", icon: DollarSign },
+    { label: "This Month",    value: toRand(thisMonth), sub: "current month",           icon: TrendingUp },
+    { label: "Last Month",    value: toRand(lastMonth), sub: "previous month",          icon: CreditCard },
   ];
 
   return (
@@ -85,9 +88,9 @@ export default function SARevenue() {
                 <tr><td colSpan={6} className="text-center py-8 text-white/30 text-xs">Loading…</td></tr>
               ) : payments.length === 0 ? (
                 <tr><td colSpan={6} className="text-center py-8 text-white/30 text-xs">No payments found</td></tr>
-              ) : payments.slice(0, 50).map(p => (
+              ) : payments.slice(0, 100).map(p => (
                 <tr key={p.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                  <td className="px-4 py-3 text-white/80 font-medium text-sm">R{p.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-white/80 font-medium text-sm">{toRand(p.amount)}</td>
                   <td className="px-4 py-3 text-white/50 text-xs">{p.payment_type}</td>
                   <td className="px-4 py-3 text-white/50 text-xs">{p.gateway}</td>
                   <td className="px-4 py-3">
