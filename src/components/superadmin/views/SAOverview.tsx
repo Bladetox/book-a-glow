@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search, CheckCircle2, XCircle, RefreshCw, ChevronRight,
   Building2, Calendar, DollarSign, X, ExternalLink,
-  KeyRound, TrendingUp, Loader2, AlertTriangle,
+  KeyRound, TrendingUp, Loader2, AlertTriangle, CreditCard,
 } from "lucide-react";
 import { saLog } from "@/lib/saAudit";
 
@@ -42,17 +42,27 @@ interface DrawerData extends Tenant {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-const PLAN_STYLES: Record<string, string> = {
+const PLANS = ["free", "starter", "pro", "enterprise"] as const;
+type PlanKey = typeof PLANS[number];
+
+const PLAN_STYLES: Record<PlanKey, string> = {
   free:       "bg-white/[0.05] text-white/40 border-white/[0.08]",
   starter:    "bg-blue-500/10 text-blue-400 border-blue-500/20",
   pro:        "bg-violet-500/10 text-violet-400 border-violet-500/20",
   enterprise: "bg-amber-500/10 text-amber-400 border-amber-500/20",
 };
 
+const PLAN_SELECT_STYLES: Record<PlanKey, string> = {
+  free:       "text-white/40",
+  starter:    "text-blue-400",
+  pro:        "text-violet-400",
+  enterprise: "text-amber-400",
+};
+
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
-// Amounts are stored in rands — no division needed
+// Amounts stored in rands — no division needed
 const fmtRand = (rands: number) =>
   rands >= 1000
     ? `R${(rands / 1000).toFixed(1)}k`
@@ -76,9 +86,7 @@ const parsePlan = (raw: string | null): string => {
 
 // ─── Suspend Modal ─────────────────────────────────────────────────────────────
 function SuspendModal({
-  tenant,
-  onConfirm,
-  onCancel,
+  tenant, onConfirm, onCancel,
 }: {
   tenant: Tenant;
   onConfirm: (reason: string) => void;
@@ -112,16 +120,10 @@ function SuspendModal({
           />
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors"
-          >
+          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors">
             Cancel
           </button>
-          <button
-            onClick={() => onConfirm(reason)}
-            className="flex-1 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-sm text-red-400 hover:bg-red-500/30 transition-colors font-medium"
-          >
+          <button onClick={() => onConfirm(reason)} className="flex-1 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-sm text-red-400 hover:bg-red-500/30 transition-colors font-medium">
             Suspend
           </button>
         </div>
@@ -132,16 +134,20 @@ function SuspendModal({
 
 // ─── Tenant Drawer ─────────────────────────────────────────────────────────────
 function TenantDrawer({
-  tenant,
-  onClose,
-  onToggleActive,
+  tenant, onClose, onToggleActive, onPlanChanged,
 }: {
   tenant: DrawerData;
   onClose: () => void;
   onToggleActive: (id: string, current: boolean | null) => void;
+  onPlanChanged: (id: string, newPlan: string) => void;
 }) {
-  const [resetting, setResetting] = useState(false);
-  const [resetDone, setResetDone] = useState(false);
+  const [resetting,    setResetting]    = useState(false);
+  const [resetDone,    setResetDone]    = useState(false);
+  const [planSaving,   setPlanSaving]   = useState(false);
+  const [planSaved,    setPlanSaved]    = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>(tenant.stats.plan || "free");
+
+  const planKey = (selectedPlan in PLAN_STYLES ? selectedPlan : "free") as PlanKey;
 
   const handleResetPassword = async () => {
     if (!tenant.email) return;
@@ -155,11 +161,28 @@ function TenantDrawer({
     setTimeout(() => setResetDone(false), 3000);
   };
 
+  const handlePlanSave = async () => {
+    if (selectedPlan === (tenant.stats.plan || "free")) return;
+    setPlanSaving(true);
+    await supabase
+      .from("app_settings")
+      .upsert(
+        { tenant_id: tenant.id, key: "plan", value: JSON.stringify(selectedPlan) },
+        { onConflict: "tenant_id,key" }
+      );
+    await saLog("tenant.plan_changed", "tenant", tenant.id, tenant.name, {
+      from: tenant.stats.plan || "free",
+      to:   selectedPlan,
+    });
+    onPlanChanged(tenant.id, selectedPlan);
+    setPlanSaving(false);
+    setPlanSaved(true);
+    setTimeout(() => setPlanSaved(false), 2500);
+  };
+
   const bookingUrl = tenant.custom_domain
     ? `https://${tenant.custom_domain}`
     : `${window.location.origin}/book/${tenant.id}`;
-
-  const planKey = tenant.stats.plan || "free";
 
   return (
     <>
@@ -175,7 +198,7 @@ function TenantDrawer({
             <p className="text-sm font-semibold text-white truncate">{tenant.name}</p>
             <p className="text-[11px] text-white/35 mt-0.5 truncate">{tenant.email ?? "No email"}</p>
           </div>
-          <span className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold uppercase tracking-wide ${PLAN_STYLES[planKey] ?? PLAN_STYLES.free}`}>
+          <span className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold uppercase tracking-wide ${PLAN_STYLES[planKey]}`}>
             {planKey}
           </span>
           <button onClick={onClose} className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/[0.06] transition-colors ml-1">
@@ -201,6 +224,47 @@ function TenantDrawer({
                 <p className="text-[10px] text-white/30 mt-1">{label}</p>
               </div>
             ))}
+          </div>
+
+          {/* Plan assignment */}
+          <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 space-y-3">
+            <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold">Subscription Plan</p>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedPlan}
+                onChange={e => { setSelectedPlan(e.target.value); setPlanSaved(false); }}
+                className={`flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-violet-500/40 transition-colors ${
+                  PLAN_SELECT_STYLES[(selectedPlan as PlanKey)] ?? "text-white/40"
+                }`}
+              >
+                {PLANS.map(p => (
+                  <option key={p} value={p} className="bg-[hsl(220,13%,10%)] text-white">
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handlePlanSave}
+                disabled={planSaving || selectedPlan === (tenant.stats.plan || "free")}
+                className={[
+                  "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors disabled:opacity-40",
+                  planSaved
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                    : "bg-violet-600/20 border-violet-500/30 text-violet-300 hover:bg-violet-600/30",
+                ].join(" ")}
+              >
+                {planSaving
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <CreditCard className="w-3 h-3" />
+                }
+                {planSaved ? "Saved ✓" : "Apply"}
+              </button>
+            </div>
+            {planSaved && (
+              <p className="text-[11px] text-emerald-400/70">
+                Plan updated to <span className="font-semibold">{selectedPlan}</span> and logged to audit.
+              </p>
+            )}
           </div>
 
           {/* Meta info */}
@@ -306,7 +370,6 @@ export default function SAOverview() {
   const fetchTenants = async () => {
     setLoading(true);
 
-    // slug removed — column does not exist in tenants table
     const { data: tenantRows } = await supabase
       .from("tenants")
       .select("id, name, email, phone, is_active, created_at, custom_domain, owner_id")
@@ -409,6 +472,13 @@ export default function SAOverview() {
     setSuspendTarget(null);
   };
 
+  // Called from drawer after successful plan upsert
+  const handlePlanChanged = (id: string, newPlan: string) => {
+    setTenants(prev => prev.map(t => t.id === id ? { ...t, plan: newPlan } : t));
+    if (drawerData?.id === id)
+      setDrawerData(d => d ? { ...d, plan: newPlan, stats: { ...d.stats, plan: newPlan } } : d);
+  };
+
   const filtered = tenants
     .filter(t => {
       if (filter === "active")   return t.is_active === true;
@@ -505,7 +575,7 @@ export default function SAOverview() {
                   </td>
                   <td className="px-4 py-3 text-white/45 text-xs">{t.email || "—"}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] px-2 py-1 rounded-md border font-medium uppercase tracking-wide ${PLAN_STYLES[t.plan] ?? PLAN_STYLES.free}`}>
+                    <span className={`text-[10px] px-2 py-1 rounded-md border font-medium uppercase tracking-wide ${PLAN_STYLES[(t.plan as PlanKey)] ?? PLAN_STYLES.free}`}>
                       {t.plan}
                     </span>
                   </td>
@@ -536,6 +606,7 @@ export default function SAOverview() {
           tenant={drawerData}
           onClose={() => setDrawerData(null)}
           onToggleActive={handleToggleActive}
+          onPlanChanged={handlePlanChanged}
         />
       )}
 
