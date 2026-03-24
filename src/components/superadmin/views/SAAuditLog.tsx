@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   RefreshCw, ShieldAlert, Search, Loader2,
@@ -121,14 +121,14 @@ export default function SAAuditLog() {
                   <p className="text-white/25 text-xs">No audit events yet</p>
                 </td></tr>
               ) : filtered.map(log => {
-                const Icon  = ACTION_ICON[log.action] ?? UserCog;
-                const color = ACTION_COLOR[log.action] ?? DEFAULT_COLOR;
-                const isOpen = expanded === log.id;
+                const Icon    = ACTION_ICON[log.action] ?? UserCog;
+                const color   = ACTION_COLOR[log.action] ?? DEFAULT_COLOR;
+                const isOpen  = expanded === log.id;
                 const hasMeta = log.meta && Object.keys(log.meta).length > 0;
                 return (
-                  <>
+                  // Fragment with key — required when .map() returns multiple sibling elements
+                  <Fragment key={log.id}>
                     <tr
-                      key={log.id}
                       onClick={() => setExpanded(isOpen ? null : log.id)}
                       className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors cursor-pointer"
                     >
@@ -166,7 +166,7 @@ export default function SAAuditLog() {
                       </td>
                     </tr>
                     {isOpen && hasMeta && (
-                      <tr key={`${log.id}-meta`} className="border-b border-white/[0.04] bg-white/[0.015]">
+                      <tr className="border-b border-white/[0.04] bg-white/[0.015]">
                         <td colSpan={5} className="px-6 py-3">
                           <pre className="text-[11px] text-white/40 font-mono whitespace-pre-wrap">
                             {JSON.stringify(log.meta, null, 2)}
@@ -174,7 +174,7 @@ export default function SAAuditLog() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>

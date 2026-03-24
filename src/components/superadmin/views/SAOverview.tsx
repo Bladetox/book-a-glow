@@ -17,7 +17,6 @@ interface Tenant {
   created_at: string | null;
   custom_domain: string | null;
   owner_id: string | null;
-  slug: string | null;
   plan: string;
 }
 
@@ -53,12 +52,11 @@ const PLAN_STYLES: Record<string, string> = {
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
-const fmtRand = (cents: number) => {
-  const rand = cents / 100;
-  return rand >= 1000
-    ? `R${(rand / 1000).toFixed(1)}k`
-    : `R${rand.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+// Amounts are stored in rands — no division needed
+const fmtRand = (rands: number) =>
+  rands >= 1000
+    ? `R${(rands / 1000).toFixed(1)}k`
+    : `R${rands.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const timeAgo = (s: string | null) => {
   if (!s) return "Never";
@@ -159,9 +157,7 @@ function TenantDrawer({
 
   const bookingUrl = tenant.custom_domain
     ? `https://${tenant.custom_domain}`
-    : tenant.slug
-    ? `${window.location.origin}/book/${tenant.slug}`
-    : null;
+    : `${window.location.origin}/book/${tenant.id}`;
 
   const planKey = tenant.stats.plan || "free";
 
@@ -310,14 +306,14 @@ export default function SAOverview() {
   const fetchTenants = async () => {
     setLoading(true);
 
+    // slug removed — column does not exist in tenants table
     const { data: tenantRows } = await supabase
       .from("tenants")
-      .select("id, name, email, phone, is_active, created_at, custom_domain, owner_id, slug")
+      .select("id, name, email, phone, is_active, created_at, custom_domain, owner_id")
       .order("created_at", { ascending: false });
 
     const rows = tenantRows ?? [];
 
-    // Batch-fetch plans for all tenants in a single query
     const { data: planRows } = await supabase
       .from("app_settings")
       .select("tenant_id, value")

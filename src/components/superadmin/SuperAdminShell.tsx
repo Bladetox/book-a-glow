@@ -3,7 +3,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Users, Building2, DollarSign, Settings,
   ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Zap,
-  ChevronRight, Loader2,
+  ChevronRight, Loader2, Radio,
 } from "lucide-react";
 
 // ─── Lazy Views ────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "health",   label: "Monitoring",       icon: Activity    },
       { id: "audit",    label: "Security & Audit", icon: ShieldAlert },
-      { id: "webhooks", label: "Webhook Queue",    icon: Bell        },
+      { id: "webhooks", label: "Webhook Queue",    icon: Radio       },
     ],
   },
   {

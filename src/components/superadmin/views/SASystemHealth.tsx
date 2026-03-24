@@ -27,44 +27,33 @@ export default function SASystemHealth() {
     const update = (label: string, status: ServiceStatus, detail?: string) =>
       setChecks(prev => prev.map(c => c.label === label ? { ...c, status, detail } : c));
 
-    // DB check
-    try {
-      await supabase.from("tenants").select("id").limit(1);
-      update("Database (Supabase)", "ok", "Connected");
-      update("Tenants Table", "ok", "Accessible");
-    } catch {
+    // Supabase never throws — always use { error } destructuring
+    const { error: dbErr } = await supabase.from("tenants").select("id").limit(1);
+    if (dbErr) {
       update("Database (Supabase)", "error", "Connection failed");
       update("Tenants Table", "error");
+    } else {
+      update("Database (Supabase)", "ok", "Connected");
+      update("Tenants Table", "ok", "Accessible");
     }
 
-    // Auth check
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      update("Auth Service", user ? "ok" : "error", user ? "Session valid" : "No session");
-    } catch {
-      update("Auth Service", "error");
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) {
+      update("Auth Service", "error", authErr?.message ?? "No session");
+    } else {
+      update("Auth Service", "ok", "Session valid");
     }
 
-    // Bookings check
-    try {
-      await supabase.from("bookings").select("id").limit(1);
-      update("Bookings Table", "ok", "Accessible");
-    } catch {
-      update("Bookings Table", "error");
-    }
+    const { error: bookErr } = await supabase.from("bookings").select("id").limit(1);
+    update("Bookings Table", bookErr ? "error" : "ok", bookErr ? bookErr.message : "Accessible");
 
-    // Payments check
-    try {
-      await supabase.from("payments").select("id").limit(1);
-      update("Payments Table", "ok", "Accessible");
-    } catch {
-      update("Payments Table", "error");
-    }
+    const { error: payErr } = await supabase.from("payments").select("id").limit(1);
+    update("Payments Table", payErr ? "error" : "ok", payErr ? payErr.message : "Accessible");
   };
 
   useEffect(() => { runChecks(); }, []);
 
-  const allOk = checks.every(c => c.status === "ok");
+  const allOk    = checks.every(c => c.status === "ok");
   const hasError = checks.some(c => c.status === "error");
 
   return (
