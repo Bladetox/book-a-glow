@@ -3,9 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search, CheckCircle2, XCircle, RefreshCw, ChevronRight,
   Building2, Calendar, DollarSign, X, ExternalLink,
-  KeyRound, TrendingUp, Loader2, AlertTriangle, CreditCard,
+  KeyRound, TrendingUp, Loader2, AlertTriangle, CreditCard, Lock,
 } from "lucide-react";
 import { saLog } from "@/lib/saAudit";
+
+// ─── Founder lock ─────────────────────────────────────────────────────────────
+// Add any tenant IDs here that must never be suspended or plan-downgraded via SA.
+// These are read from env at build time so they never appear in source control.
+const FOUNDER_IDS: ReadonlySet<string> = new Set(
+  (import.meta.env.VITE_FOUNDER_TENANT_IDS ?? "")
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean)
+);
+
+const isFounder = (id: string) => FOUNDER_IDS.has(id);
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface Tenant {
@@ -42,7 +54,6 @@ interface DrawerData extends Tenant {
 }
 
 // ─── Plans — sourced from src/pages/Pricing.tsx ────────────────────────────────
-// Starter R399 | Professional R599 | Studio R899 | Enterprise = custom
 const PLANS = ["starter", "professional", "studio", "enterprise"] as const;
 type PlanKey = typeof PLANS[number];
 
@@ -128,6 +139,15 @@ function SuspendModal({ tenant, onConfirm, onCancel }: {
   );
 }
 
+// ─── Founder badge ─────────────────────────────────────────────────────────────
+function FounderBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold shrink-0">
+      <Lock className="w-2.5 h-2.5" /> Founder
+    </span>
+  );
+}
+
 // ─── Tenant Drawer ─────────────────────────────────────────────────────────────
 function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
   tenant: DrawerData;
@@ -141,7 +161,8 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
   const [planSaved,    setPlanSaved]    = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>(tenant.stats.plan || "starter");
 
-  const planKey = safePlanKey(selectedPlan);
+  const founder  = isFounder(tenant.id);
+  const planKey  = safePlanKey(selectedPlan);
 
   const handleResetPassword = async () => {
     if (!tenant.email) return;
@@ -156,6 +177,7 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
   };
 
   const handlePlanSave = async () => {
+    if (founder) return;                                           // ← founder guard
     if (selectedPlan === (tenant.stats.plan || "starter")) return;
     setPlanSaving(true);
     await supabase
@@ -189,7 +211,10 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
             <Building2 className="w-5 h-5 text-violet-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{tenant.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-white truncate">{tenant.name}</p>
+              {founder && <FounderBadge />}
+            </div>
             <p className="text-[11px] text-white/35 mt-0.5 truncate">{tenant.email ?? "No email"}</p>
           </div>
           <span className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold uppercase tracking-wide ${PLAN_STYLES[planKey]}`}>
@@ -199,6 +224,17 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Founder notice */}
+        {founder && (
+          <div className="mx-5 mt-4 flex items-start gap-2.5 bg-amber-500/[0.06] border border-amber-500/15 rounded-xl px-4 py-3">
+            <Lock className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-[11px] text-amber-300/80 leading-relaxed">
+              This is a <strong className="text-amber-300">founder-protected</strong> tenant.
+              Suspension and plan changes are disabled to prevent accidental disruption.
+            </p>
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -220,43 +256,45 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
             ))}
           </div>
 
-          {/* Plan assignment */}
-          <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 space-y-3">
-            <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold">Subscription Plan</p>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedPlan}
-                onChange={e => { setSelectedPlan(e.target.value); setPlanSaved(false); }}
-                className={`flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-violet-500/40 transition-colors ${
-                  PLAN_SELECT_STYLES[safePlanKey(selectedPlan)]
-                }`}
-              >
-                {PLANS.map(p => (
-                  <option key={p} value={p} className="bg-[hsl(220,13%,10%)] text-white">
-                    {PLAN_LABELS[p]}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handlePlanSave}
-                disabled={planSaving || selectedPlan === (tenant.stats.plan || "starter")}
-                className={[
-                  "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors disabled:opacity-40",
-                  planSaved
-                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                    : "bg-violet-600/20 border-violet-500/30 text-violet-300 hover:bg-violet-600/30",
-                ].join(" ")}
-              >
-                {planSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
-                {planSaved ? "Saved ✓" : "Apply"}
-              </button>
+          {/* Plan assignment — hidden for founder tenants */}
+          {!founder && (
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 space-y-3">
+              <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold">Subscription Plan</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedPlan}
+                  onChange={e => { setSelectedPlan(e.target.value); setPlanSaved(false); }}
+                  className={`flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-violet-500/40 transition-colors ${
+                    PLAN_SELECT_STYLES[safePlanKey(selectedPlan)]
+                  }`}
+                >
+                  {PLANS.map(p => (
+                    <option key={p} value={p} className="bg-[hsl(220,13%,10%)] text-white">
+                      {PLAN_LABELS[p]}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handlePlanSave}
+                  disabled={planSaving || selectedPlan === (tenant.stats.plan || "starter")}
+                  className={[
+                    "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors disabled:opacity-40",
+                    planSaved
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                      : "bg-violet-600/20 border-violet-500/30 text-violet-300 hover:bg-violet-600/30",
+                  ].join(" ")}
+                >
+                  {planSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
+                  {planSaved ? "Saved ✓" : "Apply"}
+                </button>
+              </div>
+              {planSaved && (
+                <p className="text-[11px] text-emerald-400/70">
+                  Plan updated to <span className="font-semibold">{PLAN_LABELS[safePlanKey(selectedPlan)]}</span> and logged to audit.
+                </p>
+              )}
             </div>
-            {planSaved && (
-              <p className="text-[11px] text-emerald-400/70">
-                Plan updated to <span className="font-semibold">{PLAN_LABELS[safePlanKey(selectedPlan)]}</span> and logged to audit.
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Meta */}
           <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl divide-y divide-white/[0.04]">
@@ -317,18 +355,33 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
             {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
             {resetDone ? "Reset Email Sent ✓" : "Send Password Reset"}
           </button>
-          <button onClick={() => onToggleActive(tenant.id, tenant.is_active)}
-            className={[
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-colors",
-              tenant.is_active
-                ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
-                : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20",
-            ].join(" ")}>
-            {tenant.is_active
-              ? <><XCircle className="w-3.5 h-3.5" /> Suspend Tenant</>
-              : <><CheckCircle2 className="w-3.5 h-3.5" /> Activate Tenant</>
-            }
-          </button>
+
+          {/* Suspend / Activate — disabled + tooltip for founder tenants */}
+          <div className="relative group/suspend">
+            <button
+              onClick={() => !founder && onToggleActive(tenant.id, tenant.is_active)}
+              disabled={founder}
+              className={[
+                "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-colors",
+                founder
+                  ? "opacity-40 cursor-not-allowed border-white/[0.06] text-white/30 bg-white/[0.02]"
+                  : tenant.is_active
+                    ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
+                    : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20",
+              ].join(" ")}>
+              {founder
+                ? <><Lock className="w-3.5 h-3.5" /> Protected — cannot suspend</>
+                : tenant.is_active
+                  ? <><XCircle className="w-3.5 h-3.5" /> Suspend Tenant</>
+                  : <><CheckCircle2 className="w-3.5 h-3.5" /> Activate Tenant</>
+              }
+            </button>
+            {founder && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[hsl(220,13%,12%)] border border-white/[0.08] rounded-lg text-[11px] text-white/50 whitespace-nowrap opacity-0 group-hover/suspend:opacity-100 transition-opacity pointer-events-none shadow-xl">
+                Add tenant ID to VITE_FOUNDER_TENANT_IDS to remove this lock
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>
@@ -392,7 +445,7 @@ export default function SAOverview() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recentBookings: RecentBooking[] = (recentRaw ?? []).map((b: any) => ({
       id:           b.id,
-      client_name:  b.profiles?.full_name         ?? "Client",
+      client_name:  b.profiles?.full_name            ?? "Client",
       service_name: b.booking_items?.[0]?.service_name ?? "Service",
       start_time:   b.start_time,
       status:       b.status,
@@ -403,6 +456,7 @@ export default function SAOverview() {
   };
 
   const handleToggleActive = async (id: string, current: boolean | null) => {
+    if (isFounder(id)) return;                                     // ← double-guard
     const tenant = tenants.find(t => t.id === id);
     if (!tenant) return;
     if (current) {
@@ -417,6 +471,7 @@ export default function SAOverview() {
 
   const confirmSuspend = async (reason: string) => {
     if (!suspendTarget) return;
+    if (isFounder(suspendTarget.id)) return;                       // ← double-guard
     const { id, name } = suspendTarget;
     await supabase.from("tenants").update({ is_active: false }).eq("id", id);
     await saLog("tenant.suspended", "tenant", id, name, { reason: reason || "No reason given" });
@@ -499,7 +554,12 @@ export default function SAOverview() {
                         <Building2 className="w-3.5 h-3.5 text-violet-400/60" />
                       </div>
                       <div>
-                        <p className="text-white/80 font-medium text-sm">{t.name || "—"}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-white/80 font-medium text-sm">{t.name || "—"}</p>
+                          {isFounder(t.id) && (
+                            <Lock className="w-3 h-3 text-amber-400/60 shrink-0" title="Founder-protected" />
+                          )}
+                        </div>
                         <p className="text-white/25 text-[10px] font-mono">{t.id.slice(0, 8)}…</p>
                       </div>
                     </div>
