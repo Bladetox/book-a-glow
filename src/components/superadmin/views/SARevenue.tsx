@@ -12,8 +12,9 @@ interface Payment {
   tenant_id: string | null;
 }
 
-const toRand = (cents: number) =>
-  `R${(cents / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// Amounts are stored in rands — no division needed
+const toRand = (rands: number) =>
+  `R${rands.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function SARevenue() {
   const [payments, setPayments] = useState<Payment[]>([]);
