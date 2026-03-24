@@ -4,11 +4,13 @@ import {
   Plus, Save, X, Loader2, Trash2, Edit3, Upload,
   AlertTriangle, MinusCircle, PlusCircle, Search,
   Package, TrendingDown, CircleDollarSign, PackageOpen,
+  ScanLine,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import StockScanModal from "./StockScanModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -30,7 +32,7 @@ const USE_PILLS     = [{ label: "¼", value: 0.25 }, { label: "½", value: 0.5 }
 const RESTOCK_PILLS = [{ label: "½", value: 0.5 },  { label: "1", value: 1 },   { label: "2", value: 2 },   { label: "5", value: 5 }, { label: "10", value: 10 }];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared field component — reduces repeated label+input boilerplate
+// Shared field component
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FormField = ({
@@ -58,7 +60,8 @@ const AdminStock = () => {
 
   const [tab, setTab]               = useState<Tab>("stock");
   const [search, setSearch]         = useState("");
-  const [showModal, setShowModal]   = useState(false);   // Add/Edit modal
+  const [showModal, setShowModal]   = useState(false);
+  const [showScan, setShowScan]     = useState(false);   // ← NEW
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [deleteItem, setDeleteItem] = useState<StockItem | null>(null);
   const [actionItem, setActionItem] = useState<StockItem | null>(null);
@@ -93,7 +96,6 @@ const AdminStock = () => {
   const totalStockValue = items.reduce((s, i) => s + (i.total_cost ?? i.stock_on_hand * i.cost), 0);
   const totalCostUsed   = items.reduce((s, i) => s + Math.max(0, (i.opening_stock ?? 0) - i.stock_on_hand) * i.cost, 0);
 
-  // Client-side search filter — no extra DB calls (Miller's Law)
   const filtered = useMemo(() =>
     search.trim()
       ? items.filter(i => i.item_name.toLowerCase().includes(search.toLowerCase()))
@@ -266,7 +268,14 @@ const AdminStock = () => {
           <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">Inventory</p>
           <h3 className="font-display text-xl sm:text-2xl font-bold text-white/90">Stock Management</h3>
         </div>
-        <div className="flex gap-2 self-start">
+        <div className="flex gap-2 self-start flex-wrap">
+          {/* ── NEW: Scan button ── */}
+          <button
+            onClick={() => setShowScan(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-xs font-semibold text-white/70 hover:bg-white/[0.10] transition-colors"
+          >
+            <ScanLine className="w-3.5 h-3.5" /> Scan
+          </button>
           <button onClick={() => fileRef.current?.click()}
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-white/60 hover:bg-white/[0.09] transition-colors">
             <Upload className="w-3.5 h-3.5" /> CSV
@@ -279,10 +288,7 @@ const AdminStock = () => {
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          PHASE 1 — Change 1: Stats bar
-          Serial Position Effect + Pareto: most important KPIs first
-      ════════════════════════════════════════════════════════════════════════ */}
+      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <Package className="w-4 h-4 text-white/30" />
@@ -318,7 +324,7 @@ const AdminStock = () => {
         </div>
       </div>
 
-      {/* ── Alert banners — unchanged logic, still show item names ── */}
+      {/* Alert banners */}
       <AnimatePresence>
         {outItems.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -352,7 +358,7 @@ const AdminStock = () => {
         )}
       </AnimatePresence>
 
-      {/* ── CSV preview ── */}
+      {/* CSV preview */}
       <AnimatePresence>
         {csvRows && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
@@ -382,12 +388,8 @@ const AdminStock = () => {
         )}
       </AnimatePresence>
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          PHASE 2 — Change 6: Search input (Miller's Law + Hick's Law)
-          + Change 7: Tab badges with alert count (Zeigarnik Effect)
-      ════════════════════════════════════════════════════════════════════════ */}
+      {/* Search + Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        {/* Search */}
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
           <input
@@ -398,8 +400,6 @@ const AdminStock = () => {
             className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
           />
         </div>
-
-        {/* Tabs with badges */}
         <div className="flex gap-1 border-b border-white/[0.06] w-full sm:w-auto self-end">
           {(["stock", "consumption"] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -407,7 +407,6 @@ const AdminStock = () => {
                 tab === t ? "border-white/40 text-white/80" : "border-transparent text-white/30 hover:text-white/50"
               }`}>
               {t === "stock" ? "Stock" : "Consumption"}
-              {/* Badge — Change 7: Zeigarnik open loop */}
               {t === "stock" && alertCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-400">
                   {alertCount}
@@ -418,15 +417,11 @@ const AdminStock = () => {
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          TABLE / CARD LIST
-      ════════════════════════════════════════════════════════════════════════ */}
+      {/* TABLE / CARD LIST */}
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 text-white/30 animate-spin" /></div>
       ) : tab === "stock" ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-
-          {/* ── Change 9: Empty state with CTA (Aesthetic-Usability + Paradox of Active User) ── */}
           {filtered.length === 0 && !search && (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <PackageOpen className="w-10 h-10 text-white/15" />
@@ -437,17 +432,15 @@ const AdminStock = () => {
               </button>
             </div>
           )}
-
           {filtered.length === 0 && search && (
             <div className="flex flex-col items-center justify-center py-12 gap-2">
               <Search className="w-6 h-6 text-white/15" />
               <p className="text-sm text-white/30">No products match &ldquo;{search}&rdquo;</p>
             </div>
           )}
-
           {filtered.length > 0 && (
             <>
-              {/* ── Change 2: Mobile card list — Fitts + Jakob's Law ── */}
+              {/* Mobile cards */}
               <div className="flex flex-col gap-2 md:hidden">
                 {filtered.map(item => {
                   const isOut = item.stock_on_hand === 0;
@@ -459,8 +452,6 @@ const AdminStock = () => {
                               : isLow ? "border-amber-500/20 bg-amber-500/[0.03]"
                               : "border-white/[0.06] bg-white/[0.02]"
                       }`}>
-
-                      {/* Row 1: name + badge + qty */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-sm font-semibold text-white/85 truncate">{item.item_name}</span>
@@ -471,16 +462,11 @@ const AdminStock = () => {
                           isOut ? "text-red-400" : isLow ? "text-amber-400" : "text-white/70"
                         }`}>{item.stock_on_hand}</span>
                       </div>
-
-                      {/* Row 2: cost + value + notes */}
                       <div className="flex items-center gap-4 text-[11px] text-white/40">
                         <span>R{item.cost} / unit</span>
                         <span>Value: R{(item.total_cost ?? item.stock_on_hand * item.cost).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</span>
                         {item.notes && <span className="truncate">{item.notes}</span>}
                       </div>
-
-                      {/* Row 3: Primary actions — Change 3 visual hierarchy */}
-                      {/* Change 2: Full-width touch-friendly buttons ≥44px (Fitts's Law) */}
                       <div className="grid grid-cols-2 gap-2">
                         <button onClick={() => openAction(item, "use")}
                           className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-semibold text-red-400 hover:bg-red-500/20 active:scale-95 transition-all">
@@ -491,8 +477,6 @@ const AdminStock = () => {
                           <PlusCircle className="w-3.5 h-3.5" /> Restock
                         </button>
                       </div>
-
-                      {/* Row 4: Secondary ghost actions */}
                       <div className="flex items-center gap-1 justify-end border-t border-white/[0.04] pt-2">
                         <button onClick={() => startEdit(item)}
                           className="p-2 rounded-lg hover:bg-white/[0.06] text-white/35 hover:text-white/70 transition-colors">
@@ -508,7 +492,7 @@ const AdminStock = () => {
                 })}
               </div>
 
-              {/* ── Desktop table — unchanged structure, Change 3 action weight ── */}
+              {/* Desktop table */}
               <div className="hidden md:block rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -545,7 +529,6 @@ const AdminStock = () => {
                           </td>
                           <td className="px-4 py-3 text-xs text-white/40">{item.notes || "—"}</td>
                           <td className="px-4 py-3">
-                            {/* Change 3: Primary actions prominent, secondary ghost (Hick's Law + Von Restorff) */}
                             <div className="flex gap-1 justify-end items-center">
                               <button onClick={() => openAction(item, "use")}
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors">
@@ -555,7 +538,6 @@ const AdminStock = () => {
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors">
                                 <PlusCircle className="w-3 h-3" /> Restock
                               </button>
-                              {/* Secondary ghost — smaller, icon-only */}
                               <button onClick={() => startEdit(item)}
                                 className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors">
                                 <Edit3 className="w-3 h-3" />
@@ -566,6 +548,7 @@ const AdminStock = () => {
                               </button>
                             </div>
                           </td>
+
                         </tr>
                       );
                     })}
@@ -584,13 +567,8 @@ const AdminStock = () => {
             </>
           )}
         </motion.div>
-
       ) : (
-        /* ════════════════════════════════════════════════════════════════════
-           CONSUMPTION TAB — Change 10: period label (Cognitive Bias fix)
-        ════════════════════════════════════════════════════════════════════ */
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-3">
-          {/* Change 10: Period context label — eliminates anchoring ambiguity */}
           <p className="text-[10px] text-white/30 px-1">
             Usage since last restock — based on opening stock vs current on-hand per product.
           </p>
@@ -637,10 +615,7 @@ const AdminStock = () => {
         </motion.div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          PHASE 2 — Change 4: Add/Edit → centred MODAL
-          Cognitive Load fix: table stays visible behind modal
-      ════════════════════════════════════════════════════════════════════════ */}
+      {/* Add/Edit modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -657,7 +632,6 @@ const AdminStock = () => {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <FormField label="Product Name" value={form.item_name}
@@ -676,7 +650,6 @@ const AdminStock = () => {
                     onChange={v => setForm(f => ({ ...f, notes: v }))} placeholder="e.g. Check expiry date" />
                 </div>
               </div>
-
               <div className="flex gap-2 justify-end pt-1">
                 <button onClick={closeModal}
                   className="px-3 py-2 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">
@@ -693,31 +666,22 @@ const AdminStock = () => {
         )}
       </AnimatePresence>
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          PHASE 2 — Change 5: Enriched Use / Restock modal
-          Working Memory fix: reorder level, cost, notes visible during action
-      ════════════════════════════════════════════════════════════════════════ */}
+      {/* Use/Restock modal */}
       <AnimatePresence>
         {actionItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="rounded-2xl border border-white/[0.08] bg-[#1a1a1a] p-6 max-w-sm w-full flex flex-col gap-4">
-
-              {/* Header */}
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold text-white/80">
-                    {actionType === "use" ? "Log Usage" : "Restock"}
-                  </p>
+                  <p className="text-xs font-bold text-white/80">{actionType === "use" ? "Log Usage" : "Restock"}</p>
                   <p className="text-sm font-semibold text-white/90 mt-0.5">{actionItem.item_name}</p>
                 </div>
                 <button onClick={closeAction} className="text-white/30 hover:text-white/60 transition-colors shrink-0">
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
-              {/* Change 5: Item context row — offloads working memory */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] px-2 py-2">
                   <p className="text-[9px] uppercase tracking-wider text-white/25 mb-0.5">On Hand</p>
@@ -736,13 +700,9 @@ const AdminStock = () => {
                   <p className="text-sm font-bold text-white/50">R{actionItem.cost}</p>
                 </div>
               </div>
-
-              {/* Notes if present */}
               {actionItem.notes && (
                 <p className="text-[11px] text-white/35 italic px-1">📝 {actionItem.notes}</p>
               )}
-
-              {/* Qty pills */}
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-white/30 mb-2">
                   {actionType === "use" ? "How much used?" : "How much bought?"}
@@ -769,8 +729,6 @@ const AdminStock = () => {
                   />
                 </div>
               </div>
-
-              {/* Preview */}
               {previewQty !== null && (
                 <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
                   <span className="text-[10px] uppercase tracking-wider text-white/30">New qty on hand</span>
@@ -781,7 +739,6 @@ const AdminStock = () => {
                   }`}>{previewQty}</span>
                 </div>
               )}
-
               <div className="flex gap-2 justify-end">
                 <button onClick={closeAction}
                   className="px-4 py-2 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">Cancel</button>
@@ -805,9 +762,7 @@ const AdminStock = () => {
         )}
       </AnimatePresence>
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          PHASE 3 — Change 8: Delete confirm with item name (Mental Model)
-      ════════════════════════════════════════════════════════════════════════ */}
+      {/* Delete confirm */}
       <AnimatePresence>
         {deleteItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -826,6 +781,16 @@ const AdminStock = () => {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Scan Modal ── */}
+      <AnimatePresence>
+        {showScan && (
+          <StockScanModal
+            tenantId={tenantId}
+            onClose={() => setShowScan(false)}
+          />
         )}
       </AnimatePresence>
 
