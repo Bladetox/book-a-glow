@@ -159,7 +159,7 @@ export type Database = {
           updated_at?: string | null
           yoco_checkout_id?: string | null
           yoco_link?: string | null
-                lead_source?: string | null
+          lead_source?: string | null
         }
         Update: {
           booking_date?: string
@@ -192,7 +192,7 @@ export type Database = {
           updated_at?: string | null
           yoco_checkout_id?: string | null
           yoco_link?: string | null
-                lead_source?: string | null
+          lead_source?: string | null
         }
         Relationships: [
           {
@@ -499,6 +499,42 @@ export type Database = {
           relative_time?: string | null
           review_text?: string | null
           tenant_id?: string
+        }
+        Relationships: []
+      }
+      sa_audit_logs: {
+        Row: {
+          id: string
+          action: string
+          entity: string
+          entity_id: string
+          label: string | null
+          meta: Json | null
+          actor_id: string | null
+          actor_email: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          action: string
+          entity: string
+          entity_id: string
+          label?: string | null
+          meta?: Json | null
+          actor_id?: string | null
+          actor_email?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          action?: string
+          entity?: string
+          entity_id?: string
+          label?: string | null
+          meta?: Json | null
+          actor_id?: string | null
+          actor_email?: string | null
+          created_at?: string
         }
         Relationships: []
       }
