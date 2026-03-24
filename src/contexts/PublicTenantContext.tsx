@@ -30,6 +30,17 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    // Safety net: if DB call hangs for >8s, unblock the UI
+    const timeout = setTimeout(() => {
+      setState((s) => {
+        if (s.loading) {
+          console.warn("[PublicTenantContext] timeout — unblocking with slug fallback");
+          return { ...s, loading: false };
+        }
+        return s;
+      });
+    }, 8000);
+
     const resolve = async () => {
       try {
         if (resolution.slug) {
@@ -42,7 +53,8 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
 
           if (error || !data) {
             console.error("[PublicTenantContext] tenant lookup failed:", error?.message, "slug:", resolution.slug);
-            setState((s) => ({ ...s, loading: false, notFound: true }));
+            // Don't set notFound — fall back to slug so booking still works
+            setState((s) => ({ ...s, loading: false, tenantId: resolution.slug ?? "" }));
           } else {
             setState({
               tenantId: data.id,
@@ -64,7 +76,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             .single();
 
           if (error || !data) {
-            console.error("[PublicTenantContext] custom domain lookup failed:", error?.message, "host:", resolution.customDomainHost);
+            console.error("[PublicTenantContext] custom domain lookup failed:", error?.message);
             setState((s) => ({ ...s, loading: false, notFound: true }));
           } else {
             setState({
@@ -83,11 +95,15 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {
         console.error("[PublicTenantContext] unexpected error:", e);
-        setState((s) => ({ ...s, loading: false, notFound: true }));
+        // Fall back to slug — don't hard-block the UI
+        setState((s) => ({ ...s, loading: false, tenantId: resolution.slug ?? "" }));
+      } finally {
+        clearTimeout(timeout);
       }
     };
 
     resolve();
+    return () => clearTimeout(timeout);
   }, [resolution.slug, resolution.isCustomDomain, resolution.customDomainHost]);
 
   return (
