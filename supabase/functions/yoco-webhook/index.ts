@@ -399,7 +399,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             booking_id: booking.id,
             tenant_id:  effectiveTenantId,
-            email_type: "booking_confirmed",
+            email_type: "full_payment_confirmed",
           }),
         });
         const emailJson = await emailRes.json();
