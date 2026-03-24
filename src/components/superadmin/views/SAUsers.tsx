@@ -21,8 +21,10 @@ const ROLE_COLORS: Record<string, string> = {
   owner:  "bg-violet-500/10 text-violet-400 border-violet-500/20",
   admin:  "bg-blue-500/10   text-blue-400   border-blue-500/20",
   staff:  "bg-amber-500/10  text-amber-400  border-amber-500/20",
-  client: "bg-white/[0.06]  text-white/40   border-white/[0.08]",
 };
+
+// Operator roles only — clients belong to tenants, not to the platform
+const OPERATOR_ROLES = ["owner", "admin", "staff"] as const;
 
 export default function SAUsers() {
   const [users,      setUsers]      = useState<Profile[]>([]);
@@ -34,9 +36,11 @@ export default function SAUsers() {
   const fetchUsers = async () => {
     setLoading(true);
 
+    // Filter at DB level — never pull client-role profiles into the SA panel
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, full_name, email, role, tenant_id, created_at, is_active")
+      .in("role", OPERATOR_ROLES)
       .order("created_at", { ascending: false })
       .limit(300);
 
@@ -94,8 +98,8 @@ export default function SAUsers() {
     <div className="space-y-5 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div>
-          <h2 className="text-white font-semibold text-lg">All Users</h2>
-          <p className="text-white/40 text-sm">{users.length} registered accounts</p>
+          <h2 className="text-white font-semibold text-lg">Operator Accounts</h2>
+          <p className="text-white/40 text-sm">{users.length} owners, admins & staff · clients excluded</p>
         </div>
         <div className="sm:ml-auto flex items-center gap-2 flex-wrap">
           <select
@@ -107,7 +111,6 @@ export default function SAUsers() {
             <option value="owner">Owner</option>
             <option value="admin">Admin</option>
             <option value="staff">Staff</option>
-            <option value="client">Client</option>
           </select>
           <button
             onClick={fetchUsers}
@@ -143,7 +146,7 @@ export default function SAUsers() {
                   <Loader2 className="w-5 h-5 text-white/20 animate-spin mx-auto" />
                 </td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-white/25 text-xs">No users found</td></tr>
+                <tr><td colSpan={7} className="text-center py-12 text-white/25 text-xs">No operator accounts found</td></tr>
               ) : filtered.map(u => {
                 const isBusy   = actionId === u.id;
                 const isActive = u.is_active !== false;
@@ -152,7 +155,7 @@ export default function SAUsers() {
                     <td className="px-4 py-3 text-white/80 text-sm font-medium">{u.full_name || "—"}</td>
                     <td className="px-4 py-3 text-white/50 text-xs">{u.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[u.role] ?? ROLE_COLORS.client}`}>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[u.role] ?? "bg-white/[0.06] text-white/40 border-white/[0.08]"}`}>
                         {u.role}
                       </span>
                     </td>
