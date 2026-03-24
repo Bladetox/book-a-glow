@@ -1,6 +1,7 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import { getTenantSlug } from "@/lib/tenant-resolver";
 
 /** Resolve the staff/owner id for a tenant */
 async function getStaffId(tenantId: string): Promise<string> {
@@ -29,8 +30,8 @@ export function useMonthAvailability(year: number, month: number, durationMinute
   return useQuery({
     queryKey: ["public-month-availability", tenantId, year, month, durationMinutes],
     enabled: !!tenantId,
-    staleTime: 0,          // always consider data stale — re-fetch on every mount/focus
-    refetchOnWindowFocus: true,  // re-fetch when user switches back to the tab
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const staffId = await getStaffId(tenantId);
       const { data, error } = await supabase.rpc("get_month_availability", {
@@ -83,8 +84,8 @@ export function useResolveStaffId() {
 }
 
 // Keep backward-compat export for ReviewStep
+// Uses static import (not dynamic) to avoid Vite chunk deadlock
 export async function resolveStaffId(): Promise<string> {
-  const { getTenantSlug } = await import("@/lib/tenant-resolver");
   const slug = getTenantSlug();
   if (!slug) throw new Error("No tenant context");
   return getStaffId(slug);
