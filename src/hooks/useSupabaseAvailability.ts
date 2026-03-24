@@ -187,6 +187,7 @@ export function useSaveDailyOverride() {
       allSlots: string[];
       deleteOnly?: boolean;
     }) => {
+      // Always delete existing override rows for this date first
       const { error: delErr } = await supabase
         .from("staff_availability")
         .delete()
@@ -197,6 +198,25 @@ export function useSaveDailyOverride() {
 
       if (deleteOnly) return;
 
+      // Closing the day — write ONE unambiguous sentinel row
+      if (!enabled) {
+        const { error: sentErr } = await supabase
+          .from("staff_availability")
+          .insert({
+            staff_id: staffId,
+            tenant_id: tenantId,
+            day_of_week: dayOfWeek,
+            specific_date: date,
+            slot_start_time: "00:00:00",
+            slot_end_time: "00:30:00",
+            is_available: false,
+            day_enabled: false,
+          });
+        if (sentErr) throw sentErr;
+        return;
+      }
+
+      // Day is open — insert full slot rows
       const rows = allSlots.map((slot) => {
         const [h, m] = slot.split(":");
         const startMin = parseInt(h) * 60 + parseInt(m);
@@ -210,8 +230,8 @@ export function useSaveDailyOverride() {
           specific_date: date,
           slot_start_time: `${slot}:00`,
           slot_end_time: `${endH}:${endM}:00`,
-          is_available: enabled ? slots.includes(slot) : false,
-          day_enabled: enabled,
+          is_available: slots.includes(slot),
+          day_enabled: true,
         };
       });
 
@@ -220,23 +240,7 @@ export function useSaveDailyOverride() {
           .from("staff_availability")
           .insert(rows);
         if (insErr) throw insErr;
-        return;
       }
-
-      // Sentinel row for closed day with empty allSlots
-      const { error: sentErr } = await supabase
-        .from("staff_availability")
-        .insert({
-          staff_id: staffId,
-          tenant_id: tenantId,
-          day_of_week: dayOfWeek,
-          specific_date: date,
-          slot_start_time: "00:00:00",
-          slot_end_time: "00:30:00",
-          is_available: false,
-          day_enabled: false,
-        });
-      if (sentErr) throw sentErr;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["availability", tenantId] });
