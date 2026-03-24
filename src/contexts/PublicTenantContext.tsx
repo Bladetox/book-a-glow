@@ -7,9 +7,7 @@ interface PublicTenantData {
   name: string;
   ownerId: string;
   logoUrl: string | null;
-  /** Default subdomain: <tenantId>.nextslot.co.za */
   defaultSubdomain: string;
-  /** Optional custom domain set by tenant */
   customDomain: string | null;
   loading: boolean;
   notFound: boolean;
@@ -43,6 +41,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             .single();
 
           if (error || !data) {
+            console.error("[PublicTenantContext] tenant lookup failed:", error?.message, "slug:", resolution.slug);
             setState((s) => ({ ...s, loading: false, notFound: true }));
           } else {
             setState({
@@ -65,6 +64,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             .single();
 
           if (error || !data) {
+            console.error("[PublicTenantContext] custom domain lookup failed:", error?.message, "host:", resolution.customDomainHost);
             setState((s) => ({ ...s, loading: false, notFound: true }));
           } else {
             setState({
@@ -79,10 +79,10 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             });
           }
         } else {
-          // No tenant context (marketing site)
           setState((s) => ({ ...s, loading: false }));
         }
-      } catch {
+      } catch (e) {
+        console.error("[PublicTenantContext] unexpected error:", e);
         setState((s) => ({ ...s, loading: false, notFound: true }));
       }
     };
