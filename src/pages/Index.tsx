@@ -331,33 +331,55 @@ const Index = () => {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-8 animate-fade-in">
+
+              {/* Status badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 text-xs font-medium border border-foreground/80 shadow-[0_4px_16px_-4px_hsl(var(--foreground)/0.25)]">
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse border-2 border-solid bg-emerald-600" />
                 Built for South African service businesses
               </div>
+
+              {/* Headline */}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.08] tracking-tight">
                 Run your bookings.<br />
                 <span className="text-muted-foreground">Not your messages.</span>
               </h1>
+
+              {/* Subheadline */}
               <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
                 NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artists and mobile service providers.
               </p>
-              <div className="border-l-2 border-accent pl-4 space-y-1">
-                <p className="text-sm font-semibold">A fully customisable dashboard that works like a business advisor.</p>
-                <p className="text-xs text-muted-foreground">Only show what matters to your business. Revenue, bookings, clients, stock. Your call.</p>
-              </div>
+
+              {/* CTAs — primary first, secondary plain text only */}
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
-                <Link to="/onboarding" className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200">
+                <Link
+                  to="/onboarding"
+                  className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200"
+                >
                   Create Your Booking Page
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
-                <Link to="/product" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-3.5">
-                  See how it works <ArrowRight className="h-4 w-4" />
+                <Link
+                  to="/product"
+                  className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-3.5"
+                >
+                  See how it works
                 </Link>
               </div>
+
+              {/* Accent callout — source tracking differentiator, below CTAs */}
+              <div className="border-l-2 border-accent pl-4 space-y-1">
+                <p className="text-sm font-semibold">Finally know where your clients are actually coming from.</p>
+                <p className="text-xs text-muted-foreground">
+                  Every booking asks: TikTok, Instagram, Google, WhatsApp, or referral?
+                  Your dashboard shows exactly which channel drives your business — so you stop guessing and start investing in what works.
+                </p>
+              </div>
+
+              {/* Trust badges */}
               <div className="pt-4 border-t border-border">
                 <TrustBadges />
               </div>
+
             </div>
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div
