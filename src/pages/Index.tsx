@@ -371,7 +371,7 @@ const Index = () => {
                 <p className="text-sm font-semibold">Finally know where your clients are actually coming from.</p>
                 <p className="text-xs text-muted-foreground">
                   Every booking asks: TikTok, Instagram, Google, WhatsApp, or referral?
-                  Your dashboard shows exactly which channel drives your business — so you stop guessing and start investing in what works.
+                  Your dashboard shows exactly which channel drives your business, so you stop guessing and start investing in what works.
                 </p>
               </div>
 
