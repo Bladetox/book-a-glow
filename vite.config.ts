@@ -85,9 +85,20 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           if (!id.includes("node_modules")) return;
-          if (id.includes("@supabase")) return "supabase";
+          /* Heavy animation library — own chunk, loaded only when needed */
+          if (id.includes("framer-motion"))           return "framer";
+          /* Icon library — large, split away from app code */
+          if (id.includes("lucide-react"))             return "icons";
+          /* Radix primitives — shared UI, but large */
+          if (id.includes("@radix-ui"))               return "radix";
+          /* Data / query */
+          if (id.includes("@supabase"))               return "supabase";
+          if (id.includes("@tanstack"))               return "query";
+          /* Charts */
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
+          /* Date utils */
           if (id.includes("date-fns") || id.includes("dayjs")) return "dates";
+          /* Everything else */
           return "vendor";
         },
       },

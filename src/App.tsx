@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,25 +8,35 @@ import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
 import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantContext";
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
-import Index from "./pages/Index";
-import About from "./pages/About";
-import Book from "./pages/Book";
-import Product from "./pages/Product";
-import Pricing from "./pages/Pricing";
-import Login from "./pages/Login";
-import Onboarding from "./pages/Onboarding";
-import Signup from "./pages/Signup";
-import Privacy from "./pages/Privacy";
-import SiteTerms from "./pages/SiteTerms";
-import Admin from "./pages/Admin";
-import SuperAdmin from "./pages/SuperAdmin";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
-import TenantNotFound from "./pages/TenantNotFound";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import Demo from "./pages/Demo";
+
+/* ─── Route-level lazy imports ───────────────────────────────────
+   Each page becomes its own async chunk — only downloaded when
+   the user actually navigates to that route.
+──────────────────────────────────────────────────────────────── */
+const Index         = lazy(() => import("./pages/Index"));
+const About         = lazy(() => import("./pages/About"));
+const Book          = lazy(() => import("./pages/Book"));
+const Product       = lazy(() => import("./pages/Product"));
+const Pricing       = lazy(() => import("./pages/Pricing"));
+const Login         = lazy(() => import("./pages/Login"));
+const Onboarding    = lazy(() => import("./pages/Onboarding"));
+const Signup        = lazy(() => import("./pages/Signup"));
+const Privacy       = lazy(() => import("./pages/Privacy"));
+const SiteTerms     = lazy(() => import("./pages/SiteTerms"));
+const Admin         = lazy(() => import("./pages/Admin"));
+const SuperAdmin    = lazy(() => import("./pages/SuperAdmin"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound      = lazy(() => import("./pages/NotFound"));
+const TenantNotFound = lazy(() => import("./pages/TenantNotFound"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const Demo          = lazy(() => import("./pages/Demo"));
 
 const queryClient = new QueryClient();
+
+/* Minimal fallback — no layout shift, no spinner flash */
+const PageShell = () => (
+  <div className="min-h-screen bg-background" aria-hidden="true" />
+);
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -50,40 +60,48 @@ const AuthRecoveryHandler = () => {
 const MarketingRoutes = () => (
   <>
     <AuthRecoveryHandler />
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/product" element={<Product />} />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/terms" element={<SiteTerms />} />
-      <Route path="/admin" element={<Navigate to="/login" replace />} />
-      <Route path="/superadmin" element={<SuperAdmin />} />
-      <Route path="/demo" element={<Demo />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
-      <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
-      <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <Suspense fallback={<PageShell />}>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/product" element={<Product />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<SiteTerms />} />
+        <Route path="/admin" element={<Navigate to="/login" replace />} />
+        <Route path="/superadmin" element={<SuperAdmin />} />
+        <Route path="/demo" element={<Demo />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
+        <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
+        <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   </>
 );
 
 const TenantRoutes = () => {
   const { notFound } = usePublicTenant();
-  if (notFound) return <TenantNotFound hostname={window.location.hostname} />;
+  if (notFound) return (
+    <Suspense fallback={<PageShell />}>
+      <TenantNotFound hostname={window.location.hostname} />
+    </Suspense>
+  );
   return (
-    <Routes>
-      <Route path="/" element={<Book />} />
-      <Route path="/book" element={<Book />} />
-      <Route path="/payment" element={<PaymentSuccess />} />
-      <Route path="/payment-success" element={<PaymentSuccess />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <Suspense fallback={<PageShell />}>
+      <Routes>
+        <Route path="/" element={<Book />} />
+        <Route path="/book" element={<Book />} />
+        <Route path="/payment" element={<PaymentSuccess />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 

@@ -1,13 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
-import DashboardPreview from "@/components/site/DashboardPreview";
-import MobileDashboardPreview from "@/components/site/MobileDashboardPreview";
-import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import StickyCtaBar from "@/components/site/StickyCtaBar";
-import LiveDemoSection from "@/components/site/LiveDemoSection";
 import TrustBadges from "@/components/site/TrustBadges";
-import PhoneShowcaseSection from "@/components/site/PhoneShowcaseSection";
 import {
   ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle,
   CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2,
@@ -15,10 +10,25 @@ import {
   Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck, PaintBucket
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
 import serviceProvidersImg from "@/assets/service-providers.png";
 
-/* ─── DATA ──────────────────────────────────────────────────── */
+/* ─── Below-fold sections: lazy-loaded ───────────────────────────
+   These components are heavy (animations, SVGs, device frames).
+   They are NOT needed for first paint — load them only when the
+   browser is idle / user scrolls near them.
+──────────────────────────────────────────────────────────────── */
+const DashboardPreview      = lazy(() => import("@/components/site/DashboardPreview"));
+const MobileDashboardPreview = lazy(() => import("@/components/site/MobileDashboardPreview"));
+const LaptopFrame            = lazy(() =>
+  import("@/components/site/DeviceFrames").then(m => ({ default: m.LaptopFrame }))
+);
+const MobileFrame            = lazy(() =>
+  import("@/components/site/DeviceFrames").then(m => ({ default: m.MobileFrame }))
+);
+const PhoneShowcaseSection   = lazy(() => import("@/components/site/PhoneShowcaseSection"));
+const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSection"));
+
+/* ─── DATA ──────────────────────────────────────────────────────── */
 
 const industries = [
   { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles     },
@@ -134,65 +144,77 @@ const caseStudyCards = [
   },
 ];
 
-/* ─── INDUSTRY CARD ─────────────────────────────────────────── */
+/* ─── INDUSTRY CARDS ────────────────────────────────────────────
+   Single shared IntersectionObserver for all 8 cards.
+   Eliminates 7 redundant observer instances vs the old per-card
+   approach, reducing memory overhead during scroll.
+──────────────────────────────────────────────────────────────── */
 
-const IndustryCard = ({
-  index,
-  label,
-  desc,
-  icon: Icon,
-}: {
-  index: number;
-  label: string;
-  desc: string;
-  icon: React.ElementType;
-}) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(false);
+const IndustryGrid = () => {
+  const [visibleSet, setVisibleSet] = useState<Set<number>>(new Set());
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) { setVisible(true); observer.unobserve(e.target); }
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = Number((entry.target as HTMLElement).dataset.idx);
+            setVisibleSet((prev) => {
+              if (prev.has(idx)) return prev;
+              const next = new Set(prev);
+              next.add(idx);
+              return next;
+            });
+            observer.unobserve(entry.target);
+          }
         });
       },
       { threshold: 0.12 }
     );
-    observer.observe(el);
+
+    itemRefs.current.forEach((el) => { if (el) observer.observe(el); });
     return () => observer.disconnect();
   }, []);
 
   return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${index * 70}ms` }}
-      className={[
-        "group relative overflow-hidden cursor-default",
-        "rounded-2xl border border-border/60 bg-background",
-        "p-5 flex flex-col items-center text-center gap-3",
-        "shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)]",
-        "hover:border-accent/50",
-        "transition-all duration-400 ease-out",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
-      ].join(" ")}
-    >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
-        style={{
-          background: "radial-gradient(ellipse at 50% 0%, hsl(var(--accent)/0.12) 0%, transparent 70%)",
-        }}
-      />
-      <div className="relative z-10 w-12 h-12 rounded-xl bg-accent/15 border border-accent/25 flex items-center justify-center group-hover:bg-accent/25 group-hover:border-accent/45 transition-all duration-300">
-        <Icon className="h-5 w-5 text-accent" strokeWidth={2} />
-      </div>
-      <div className="relative z-10">
-        <p className="text-sm font-semibold leading-snug group-hover:text-foreground transition-colors">{label}</p>
-        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{desc}</p>
-      </div>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+      {industries.map((ind, index) => {
+        const Icon = ind.icon;
+        const visible = visibleSet.has(index);
+        return (
+          <div
+            key={ind.label}
+            ref={(el) => { itemRefs.current[index] = el; }}
+            data-idx={index}
+            style={{ transitionDelay: `${index * 70}ms` }}
+            className={[
+              "group relative overflow-hidden cursor-default",
+              "rounded-2xl border border-border/60 bg-background",
+              "p-5 flex flex-col items-center text-center gap-3",
+              "shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)]",
+              "hover:border-accent/50",
+              "transition-all duration-400 ease-out",
+              visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
+            ].join(" ")}
+          >
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
+              style={{
+                background: "radial-gradient(ellipse at 50% 0%, hsl(var(--accent)/0.12) 0%, transparent 70%)",
+              }}
+            />
+            <div className="relative z-10 w-12 h-12 rounded-xl bg-accent/15 border border-accent/25 flex items-center justify-center group-hover:bg-accent/25 group-hover:border-accent/45 transition-all duration-300">
+              <Icon className="h-5 w-5 text-accent" strokeWidth={2} />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm font-semibold leading-snug group-hover:text-foreground transition-colors">{ind.label}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{ind.desc}</p>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -225,14 +247,23 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
     }
   };
 
+  /* Fixed: stable refs so the listener is registered once, not on
+     every active change. prev/next read active via closure over
+     the stable callbacks without needing to re-subscribe. */
+  const prevRef = useRef(prev);
+  const nextRef = useRef(next);
+  useEffect(() => { prevRef.current = prev; }, [active]);
+  useEffect(() => { nextRef.current = next; }, [active]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") next();
-      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") nextRef.current();
+      if (e.key === "ArrowLeft")  prevRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active]);
+    /* Empty dep array — listener registered once, never re-added */
+  }, []);
 
   return (
     <div className="relative w-full select-none">
@@ -314,7 +345,12 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
   );
 };
 
-/* ─── PAGE ──────────────────────────────────────────────────── */
+/* ─── Lazy section shell — prevents layout shift while loading ── */
+const SectionShell = ({ height = 500 }: { height?: number }) => (
+  <div style={{ minHeight: height }} className="w-full" aria-hidden="true" />
+);
+
+/* ─── PAGE ──────────────────────────────────────────────────────── */
 
 const Index = () => {
   const [hoveredProblem, setHoveredProblem] = useState<number | null>(null);
@@ -349,7 +385,7 @@ const Index = () => {
                 NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artists and mobile service providers.
               </p>
 
-              {/* CTAs — primary first, secondary plain text only */}
+              {/* CTAs */}
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
                 <Link
                   to="/onboarding"
@@ -366,7 +402,7 @@ const Index = () => {
                 </Link>
               </div>
 
-              {/* Accent callout — source tracking differentiator, below CTAs */}
+              {/* Accent callout */}
               <div className="border-l-2 border-accent pl-4 space-y-1">
                 <p className="text-sm font-semibold">Finally know where your clients are actually coming from.</p>
                 <p className="text-xs text-muted-foreground">
@@ -381,17 +417,21 @@ const Index = () => {
               </div>
 
             </div>
+
+            {/* Hero device frames — lazy loaded, not needed for LCP text */}
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-square rounded-full opacity-30 blur-3xl pointer-events-none -z-0"
                 style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, hsl(var(--accent) / 0.3) 50%, transparent 80%)" }}
               />
-              <div className="flex-1 relative z-10">
-                <LaptopFrame interactive={false}><DashboardPreview /></LaptopFrame>
-              </div>
-              <div className="hidden md:block w-[120px] shrink-0 -mb-1 relative z-10">
-                <MobileFrame interactive={false}><MobileDashboardPreview /></MobileFrame>
-              </div>
+              <Suspense fallback={<SectionShell height={340} />}>
+                <div className="flex-1 relative z-10">
+                  <LaptopFrame interactive={false}><DashboardPreview /></LaptopFrame>
+                </div>
+                <div className="hidden md:block w-[120px] shrink-0 -mb-1 relative z-10">
+                  <MobileFrame interactive={false}><MobileDashboardPreview /></MobileFrame>
+                </div>
+              </Suspense>
             </div>
           </div>
         </section>
@@ -403,14 +443,17 @@ const Index = () => {
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">If your business runs on appointments, NextSlot runs your schedule.</p>
             <div className="max-w-4xl mx-auto mb-14">
               <div className="rounded-2xl overflow-hidden shadow-lg">
-                <img src={serviceProvidersImg} alt="South African service providers" className="w-full h-auto border-solid border-black rounded-lg shadow-lg" />
+                {/* lazy + decoding: avoid blocking main thread on image decode */}
+                <img
+                  src={serviceProvidersImg}
+                  alt="South African service providers"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-auto border-solid border-black rounded-lg shadow-lg"
+                />
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
-              {industries.map((ind, index) => (
-                <IndustryCard key={ind.label} index={index} label={ind.label} desc={ind.desc} icon={ind.icon} />
-              ))}
-            </div>
+            <IndustryGrid />
           </div>
         </section>
 
@@ -456,6 +499,11 @@ const Index = () => {
               <img
                 src="/web-app-manifest-192x192.png"
                 alt="NextSlot"
+                width={96}
+                height={96}
+                fetchPriority="low"
+                loading="lazy"
+                decoding="async"
                 className="h-20 w-20 md:h-24 md:w-24 object-contain rounded-2xl shadow-md"
               />
               <span className="text-xl font-bold tracking-tight">
@@ -481,18 +529,17 @@ const Index = () => {
           </div>
         </section>
 
-        {/* FEATURES — Everything you need */}
+        {/* FEATURES */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don’t.</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
             Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
           </p>
-
-          {/* Phone showcase animation — replaces product-features.png */}
           <div className="max-w-3xl mx-auto mb-14">
-            <PhoneShowcaseSection />
+            <Suspense fallback={<SectionShell height={500} />}>
+              <PhoneShowcaseSection />
+            </Suspense>
           </div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {showcaseCards.map((card) => (
               <div
@@ -514,7 +561,10 @@ const Index = () => {
           </div>
         </section>
 
-        <LiveDemoSection />
+        {/* LIVE DEMO */}
+        <Suspense fallback={<SectionShell height={400} />}>
+          <LiveDemoSection />
+        </Suspense>
 
         {/* CASE STUDY */}
         <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
@@ -525,7 +575,7 @@ const Index = () => {
                 PhenomeBeauty
               </h2>
               <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
-                A mobile beauty studio’s journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
+                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
               </p>
             </div>
 
