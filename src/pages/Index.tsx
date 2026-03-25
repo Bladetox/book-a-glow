@@ -7,6 +7,7 @@ import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import StickyCtaBar from "@/components/site/StickyCtaBar";
 import LiveDemoSection from "@/components/site/LiveDemoSection";
 import TrustBadges from "@/components/site/TrustBadges";
+import PhoneShowcaseSection from "@/components/site/PhoneShowcaseSection";
 import {
   ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle,
   CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2,
@@ -16,7 +17,6 @@ import {
 import { Link } from "react-router-dom";
 
 import serviceProvidersImg from "@/assets/service-providers.png";
-import productFeaturesImg from "@/assets/product-features.png";
 
 /* ─── DATA ──────────────────────────────────────────────────── */
 
@@ -406,7 +406,6 @@ const Index = () => {
                 <img src={serviceProvidersImg} alt="South African service providers" className="w-full h-auto border-solid border-black rounded-lg shadow-lg" />
               </div>
             </div>
-            {/* 8 cards: 2-col mobile → 4-col sm → perfect 2×4 grid at all sizes */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
               {industries.map((ind, index) => (
                 <IndustryCard key={ind.label} index={index} label={ind.label} desc={ind.desc} icon={ind.icon} />
@@ -484,13 +483,16 @@ const Index = () => {
 
         {/* FEATURES — Everything you need */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don’t.</h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
             Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
           </p>
+
+          {/* Phone showcase animation — replaces product-features.png */}
           <div className="max-w-3xl mx-auto mb-14">
-            <img src={productFeaturesImg} alt="Scheduling, tracking, clients, and dashboard features" className="w-full h-auto opacity-70 mix-blend-multiply dark:mix-blend-screen" />
+            <PhoneShowcaseSection />
           </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {showcaseCards.map((card) => (
               <div
@@ -523,7 +525,7 @@ const Index = () => {
                 PhenomeBeauty
               </h2>
               <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
-                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
+                A mobile beauty studio’s journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
               </p>
             </div>
 
