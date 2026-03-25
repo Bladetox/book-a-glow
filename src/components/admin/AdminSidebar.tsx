@@ -1,8 +1,17 @@
 import { motion } from "framer-motion";
 import {
-  LayoutDashboard, CalendarCheck, Sparkles, Clock,
-  Package, Star, Link2, Settings, Gem, Scissors, FileText
-} from "lucide-react";
+  DashboardIcon,
+  BookingsIcon,
+  ServicesIcon,
+  ConsultationsIcon,
+  AvailabilityIcon,
+  StockIcon,
+  ReviewsIcon,
+  IntegrationsIcon,
+  SettingsIcon,
+  LoyaltyIcon,
+  TermsIcon,
+} from "@/components/icons/BrandIcons";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantSettings } from "@/hooks/useSupabaseSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -10,17 +19,17 @@ import { useStockAlerts } from "@/hooks/useStockAlerts";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
 const iconMap: Record<string, React.ElementType> = {
-  "Dashboard":          LayoutDashboard,
-  "Bookings":           CalendarCheck,
-  "Services":           Scissors,
-  "Consultations":      Sparkles,
-  "Availability":       Clock,
-  "Stock":              Package,
-  "Reviews":            Star,
-  "Integrations":       Link2,
-  "Settings":           Settings,
-  "Loyalty Tracker":    Gem,
-  "Terms & Conditions": FileText,
+  "Dashboard":          DashboardIcon,
+  "Bookings":           BookingsIcon,
+  "Services":           ServicesIcon,
+  "Consultations":      ConsultationsIcon,
+  "Availability":       AvailabilityIcon,
+  "Stock":              StockIcon,
+  "Reviews":            ReviewsIcon,
+  "Integrations":       IntegrationsIcon,
+  "Settings":           SettingsIcon,
+  "Loyalty Tracker":    LoyaltyIcon,
+  "Terms & Conditions": TermsIcon,
 };
 
 interface AdminSidebarProps {
@@ -115,7 +124,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
 
         <nav className="flex-1 px-3 flex flex-col gap-1 overflow-y-auto">
           {views.map((view) => {
-            const Icon       = iconMap[view] || LayoutDashboard;
+            const Icon       = iconMap[view] || DashboardIcon;
             const isActive   = activeView === view;
             const isStock    = view === "Stock";
             const isBookings = view === "Bookings";
