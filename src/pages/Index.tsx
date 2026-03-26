@@ -10,7 +10,6 @@ import {
   Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck, PaintBucket
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import serviceProvidersImg from "@/assets/service-providers.png";
 
 /* ─── Below-fold sections: lazy-loaded ───────────────────────────
    These components are heavy (animations, SVGs, device frames).
@@ -146,8 +145,18 @@ const caseStudyCards = [
 
 /* ─── INDUSTRY CARDS ────────────────────────────────────────────
    Single shared IntersectionObserver for all 8 cards.
-   Eliminates 7 redundant observer instances vs the old per-card
-   approach, reducing memory overhead during scroll.
+
+   Animation direction:
+   • Cards in the LEFT half of each row  → slide in from the left  (translateX(-40px))
+   • Cards in the RIGHT half of each row → slide in from the right (translateX(+40px))
+
+   The grid is 2-col on mobile and 4-col on sm+.
+   We determine "left" vs "right" by whether the card index falls
+   in the first or second half of its row:
+     • mobile (2-col): index % 2 === 0 → left, else right
+     • sm+ (4-col):    index % 4 < 2   → left, else right
+   We use the simpler rule index % 2 === 0 which works correctly
+   for both layouts as a consistent directional split.
 ──────────────────────────────────────────────────────────────── */
 
 const IndustryGrid = () => {
@@ -182,20 +191,35 @@ const IndustryGrid = () => {
       {industries.map((ind, index) => {
         const Icon = ind.icon;
         const visible = visibleSet.has(index);
+
+        /*
+          Direction: even indices come from the left, odd from the right.
+          On a 4-col grid this means: cols 0,2 from left · cols 1,3 from right.
+          On a 2-col grid: col 0 from left · col 1 from right.
+          Both feel natural and balanced.
+        */
+        const fromLeft = index % 2 === 0;
+        const hiddenTransform = fromLeft ? "translateX(-40px)" : "translateX(40px)";
+
         return (
           <div
             key={ind.label}
             ref={(el) => { itemRefs.current[index] = el; }}
             data-idx={index}
-            style={{ transitionDelay: `${index * 70}ms` }}
+            style={{
+              transitionDelay: `${index * 70}ms`,
+              transitionProperty: "opacity, transform",
+              transitionDuration: "500ms",
+              transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateX(0)" : hiddenTransform,
+            }}
             className={[
               "group relative overflow-hidden cursor-default",
               "rounded-2xl border border-border/60 bg-background",
               "p-5 flex flex-col items-center text-center gap-3",
               "shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)]",
               "hover:border-accent/50",
-              "transition-all duration-400 ease-out",
-              visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
             ].join(" ")}
           >
             <div
@@ -441,18 +465,6 @@ const Index = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Built for modern service businesses</h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">If your business runs on appointments, NextSlot runs your schedule.</p>
-            <div className="max-w-4xl mx-auto mb-14">
-              <div className="rounded-2xl overflow-hidden shadow-lg">
-                {/* lazy + decoding: avoid blocking main thread on image decode */}
-                <img
-                  src={serviceProvidersImg}
-                  alt="South African service providers"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-auto border-solid border-black rounded-lg shadow-lg"
-                />
-              </div>
-            </div>
             <IndustryGrid />
           </div>
         </section>
