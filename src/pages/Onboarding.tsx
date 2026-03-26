@@ -10,7 +10,6 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
-import logo from "@/assets/nextslot-logo.png";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -133,7 +132,6 @@ const Onboarding = () => {
       }
 
       // 5. Insert staff_availability slots
-      // Owner is the initial staff member
       const availabilityRows: {
         tenant_id: string;
         staff_id: string;
@@ -182,7 +180,20 @@ const Onboarding = () => {
     <div className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground" style={themeStyle}>
       <div className="border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2"><img src={logo} alt="NextSlot" className="h-10 w-auto" /></Link>
+          <Link to="/" className="flex items-center gap-2">
+            <img
+              src="/web-app-manifest-192x192.png"
+              alt="NextSlot"
+              width={40}
+              height={40}
+              loading="lazy"
+              decoding="async"
+              className="h-10 w-10 object-contain rounded-lg shrink-0"
+            />
+            <span className="text-base font-bold tracking-tight leading-none">
+              Next<span className="text-accent">Slot</span>
+            </span>
+          </Link>
           <div className="flex items-center gap-3">
             {activeTheme && <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-accent/20 text-accent-foreground transition-colors duration-500">{activeTheme.vibe}</span>}
             <span className="text-xs text-muted-foreground">Step {step} of {totalSteps}</span>
