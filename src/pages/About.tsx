@@ -2,7 +2,6 @@ import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { Link } from "react-router-dom";
 import { ArrowRight, ExternalLink } from "lucide-react";
-import logoImg from "@/assets/nextslot-logo.png";
 
 const About = () => (
   <div className="min-h-screen nextslot-theme bg-background">
@@ -12,9 +11,13 @@ const About = () => (
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12 md:pt-28 md:pb-16 text-center">
         <div className="flex justify-center mb-8">
           <img
-            src={logoImg}
+            src="/web-app-manifest-192x192.png"
             alt="NextSlot"
-            className="h-20 md:h-24 w-auto mix-blend-multiply dark:mix-blend-screen"
+            width={96}
+            height={96}
+            loading="lazy"
+            decoding="async"
+            className="h-20 md:h-24 w-auto object-contain rounded-2xl shadow-md"
           />
         </div>
         <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">About</p>
