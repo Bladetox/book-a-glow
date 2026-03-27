@@ -48,23 +48,36 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
 
-  const selected = allServices.filter((t) => booking.selectedTreatments.includes(t.id));
-  const servicesTotal = selected.reduce((sum, t) => sum + t.price, 0);
+  /**
+   * Build a display-ready list that respects quantities.
+   * e.g. if ["abc", "abc", "xyz"] is selected, we get:
+   *   [{ service, qty: 2 }, { service, qty: 1 }]
+   */
+  const selectedWithQty = (() => {
+    const seen = new Map<string, number>();
+    for (const id of booking.selectedTreatments) {
+      seen.set(id, (seen.get(id) ?? 0) + 1);
+    }
+    return Array.from(seen.entries()).flatMap(([id, qty]) => {
+      const svc = allServices.find((t) => t.id === id);
+      return svc ? [{ svc, qty }] : [];
+    });
+  })();
+
+  const servicesTotal = selectedWithQty.reduce((sum, { svc, qty }) => sum + svc.price * qty, 0);
 
   const estimatedDistanceKm = booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0);
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
 
   const total = servicesTotal + callOutFee;
-  const depositPercent = config.depositPercent;   // sourced from app_settings.deposit_percent
+  const depositPercent = config.depositPercent;
   const deposit = Math.ceil(total * (depositPercent / 100));
   const balance = total - deposit;
   const cur = config.currency;
 
-  const amountDueNow   = paymentChoice === "full" ? total   : deposit;
+  const amountDueNow    = paymentChoice === "full" ? total   : deposit;
   const balanceAfterPay = paymentChoice === "full" ? 0       : balance;
-
-  // When paying full, we tell the DB deposit = total so balance_due = 0
-  const dbDepositAmount = paymentChoice === "full" ? total : deposit;
+  const dbDepositAmount = paymentChoice === "full" ? total   : deposit;
 
   const handleConfirm = async () => {
     if (submitting) return;
@@ -113,7 +126,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         p_health_conditions:      safetyMap[5] === "Yes" ? "Flagged by client" : (booking.isExistingClient ? "On File" : "None reported"),
         p_environmental_exposure: safetyMap[6] === "Yes" ? "Flagged by client" : null,
         p_physical_factors:       safetyMap[7] === "Yes" ? "Flagged by client" : null,
-        p_hair_length_ok: safetyMap[8] === "No" ? "No" : "Yes",
+        p_hair_length_ok:         safetyMap[8] === "No" ? "No" : "Yes",
         p_additional_notes:       booking.additionalNotes || null,
         p_guest_name:             booking.fullName  || null,
         p_guest_email:            booking.email     || null,
@@ -204,10 +217,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-0">
 
-        {selected.map((t) => (
-          <div key={t.id} className="flex items-baseline justify-between py-1.5">
-            <span className="text-sm text-foreground">{t.name}</span>
-            <span className="text-sm font-semibold text-foreground ml-4">{cur}{t.price}</span>
+        {selectedWithQty.map(({ svc, qty }) => (
+          <div key={svc.id} className="flex items-baseline justify-between py-1.5">
+            <span className="text-sm text-foreground">
+              {qty > 1 && (
+                <span className="text-xs font-bold text-primary mr-1">{qty}×</span>
+              )}
+              {svc.name}
+            </span>
+            <span className="text-sm font-semibold text-foreground ml-4">{cur}{svc.price * qty}</span>
           </div>
         ))}
 
@@ -231,7 +249,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
         <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2">How would you like to pay?</p>
         <div className="grid grid-cols-2 gap-2 mb-3">
 
-          {/* Deposit option — shown when depositPercent < 100 */}
           {depositPercent < 100 && (
             <button
               type="button"
@@ -252,7 +269,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
             </button>
           )}
 
-          {/* Full payment */}
           <button
             type="button"
             onClick={() => setPaymentChoice("full")}
@@ -274,7 +290,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
           </button>
         </div>
 
-        {/* If tenant requires 100% upfront, auto-select full and hide toggle */}
         <div className="flex justify-between items-baseline py-1 text-sm">
           <span className="text-muted-foreground">Due now</span>
           <span className="font-bold text-primary">{cur}{amountDueNow}</span>

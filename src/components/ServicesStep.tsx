@@ -1,14 +1,15 @@
 import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
 import { useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Loader2, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ServicesStepProps {
   selectedTreatments: string[];
-  onToggle: (id: string) => void;
+  onAdd: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
-const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
+const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps) => {
   const { data: treatments = [], isLoading: loadingServices } = usePublicServices();
   const { data: categories = [], isLoading: loadingCats } = usePublicCategories();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -27,6 +28,11 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
     ? treatments.filter((t) => t.category === activeCat)
     : [];
 
+  /** How many times this id appears in the current selection */
+  const qty = (id: string) => selectedTreatments.filter((t) => t === id).length;
+
+  const totalSelected = selectedTreatments.length;
+
   return (
     <div className="flex flex-col gap-4">
       {/* Title row */}
@@ -34,9 +40,9 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
         <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
           Select treatments
         </h3>
-        {selectedTreatments.length > 0 && (
+        {totalSelected > 0 && (
           <span className="text-[10px] font-semibold text-primary">
-            {selectedTreatments.length} selected
+            {totalSelected} selected
           </span>
         )}
       </div>
@@ -78,28 +84,15 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
             </p>
           ) : (
             visibleTreatments.map((t) => {
-              const isSelected = selectedTreatments.includes(t.id);
+              const count = qty(t.id);
+              const isSelected = count > 0;
               return (
-                <button
+                <div
                   key={t.id}
-                  onClick={() => onToggle(t.id)}
-                  className={`glass-card-service rounded-xl px-4 py-3.5 flex items-center gap-3 text-left w-full transition-all duration-150 ${
+                  className={`glass-card-service rounded-xl px-4 py-3.5 flex items-center gap-3 w-full transition-all duration-150 ${
                     isSelected ? "selected" : ""
                   }`}
                 >
-                  {/* Selection indicator */}
-                  <div
-                    className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                      isSelected
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground/30"
-                    }`}
-                  >
-                    {isSelected && (
-                      <Check className="w-2.5 h-2.5 text-primary-foreground" strokeWidth={3} />
-                    )}
-                  </div>
-
                   {/* Name + description + duration */}
                   <div className="flex-1 min-w-0">
                     <span className="block text-sm font-semibold text-foreground leading-snug">
@@ -118,7 +111,56 @@ const ServicesStep = ({ selectedTreatments, onToggle }: ServicesStepProps) => {
                   <span className="shrink-0 text-sm font-bold text-foreground">
                     R{t.price}
                   </span>
-                </button>
+
+                  {/* Quantity counter */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <AnimatePresence>
+                      {isSelected && (
+                        <motion.button
+                          key="minus"
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.15 }}
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => onRemove(t.id)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          aria-label={`Remove one ${t.name}`}
+                        >
+                          <Minus className="w-3 h-3" strokeWidth={2.5} />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                      {isSelected && (
+                        <motion.span
+                          key="count"
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.15 }}
+                          className="w-5 text-center text-sm font-bold text-foreground"
+                        >
+                          {count}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => onAdd(t.id)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-primary hover:text-primary"
+                      }`}
+                      aria-label={`Add ${t.name}`}
+                    >
+                      <Plus className="w-3 h-3" strokeWidth={2.5} />
+                    </motion.button>
+                  </div>
+                </div>
               );
             })
           )}

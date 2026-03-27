@@ -9,17 +9,40 @@ export function useBooking() {
     setBooking((prev) => ({ ...prev, ...updates }));
   };
 
-  const toggleTreatment = (id: string) => {
+  /** Add one occurrence of a service id (duplicates allowed). */
+  const addTreatment = (id: string) => {
     setBooking((prev) => ({
       ...prev,
-      selectedTreatments: prev.selectedTreatments.includes(id)
-        ? prev.selectedTreatments.filter((t) => t !== id)
-        : [...prev.selectedTreatments, id],
+      selectedTreatments: [...prev.selectedTreatments, id],
     }));
   };
+
+  /** Remove the last occurrence of a service id. */
+  const removeTreatment = (id: string) => {
+    setBooking((prev) => {
+      const arr = [...prev.selectedTreatments];
+      const lastIdx = arr.lastIndexOf(id);
+      if (lastIdx !== -1) arr.splice(lastIdx, 1);
+      return { ...prev, selectedTreatments: arr };
+    });
+  };
+
+  /** Count how many times a service id appears in the selection. */
+  const getTreatmentQty = (id: string) =>
+    booking.selectedTreatments.filter((t) => t === id).length;
 
   const nextStep = () => setStep((s) => Math.min(s + 1, 3));
   const prevStep = () => setStep((s) => Math.max(s - 1, 0));
 
-  return { step, setStep, booking, updateBooking, toggleTreatment, nextStep, prevStep };
+  return {
+    step,
+    setStep,
+    booking,
+    updateBooking,
+    addTreatment,
+    removeTreatment,
+    getTreatmentQty,
+    nextStep,
+    prevStep,
+  };
 }

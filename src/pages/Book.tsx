@@ -55,7 +55,16 @@ const resetScroll = () => {
 };
 
 const Index = () => {
-  const { step, booking, updateBooking, toggleTreatment, nextStep, prevStep, setStep } = useBooking();
+  const {
+    step,
+    booking,
+    updateBooking,
+    addTreatment,
+    removeTreatment,
+    nextStep,
+    prevStep,
+    setStep,
+  } = useBooking();
   const { data: treatments = [] } = usePublicServices();
   const { tenantId, loading: tenantLoading } = usePublicTenant();
   const config = usePublicBusinessConfig();
@@ -71,16 +80,12 @@ const Index = () => {
         return booking.selectedDate !== null && booking.selectedTime !== null;
 
       case 2: {
-        // Base contact validation — always required
         const contactValid =
           booking.fullName.trim().length >= 2 &&
           /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) &&
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) &&
           booking.isExistingClient !== null;
 
-        // Address only required when tenant offers mobile / call-out service.
-        // If config is still loading, default to NOT requiring address to avoid
-        // incorrectly blocking the next button before settings are fetched.
         const mobileEnabled = (config as any).mobileServiceEnabled === true;
         if (!mobileEnabled) return contactValid;
         return contactValid && booking.addressVerified === true;
@@ -120,7 +125,15 @@ const Index = () => {
   const businessName = config.name || tenantId;
   const abbreviation = config.abbreviation || businessName.slice(0, 2).toUpperCase();
 
-  const selectedServices = treatments.filter((t) => booking.selectedTreatments.includes(t.id));
+  // Build unique service objects for selected IDs (deduplicated for price/duration calc)
+  const uniqueSelectedIds = [...new Set(booking.selectedTreatments)];
+  const selectedServices = uniqueSelectedIds.flatMap((id) => {
+    const svc = treatments.find((t) => t.id === id);
+    if (!svc) return [];
+    const count = booking.selectedTreatments.filter((t) => t === id).length;
+    return Array(count).fill(svc);
+  });
+
   const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
   const durationForSlots = Math.max(totalDuration, 30);
@@ -189,7 +202,8 @@ const Index = () => {
                 {step === 0 && (
                   <ServicesStep
                     selectedTreatments={booking.selectedTreatments}
-                    onToggle={toggleTreatment}
+                    onAdd={addTreatment}
+                    onRemove={removeTreatment}
                   />
                 )}
                 {step === 1 && (
