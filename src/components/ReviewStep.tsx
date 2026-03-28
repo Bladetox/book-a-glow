@@ -140,6 +140,40 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
 
       const bookingId = result?.booking_id;
       if (bookingId) {
+        // --- Create GCal event immediately after booking, before Yoco redirect ---
+        try {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          const serviceNames = selectedWithQty
+            .map(({ svc, qty }) => (qty > 1 ? `${qty}× ${svc.name}` : svc.name))
+            .join(", ");
+          const totalDuration = selectedWithQty.reduce((s, { svc, qty }) => s + svc.duration * qty, 0);
+          await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+              apikey: supabaseKey,
+            },
+            body: JSON.stringify({
+              tenant_id:        tenantId,
+              gcal_event_id:    null,           // null = CREATE a new event
+              booking_id:       bookingId,      // so gcal_event_id is saved back to DB
+              new_date:         bookingDate,
+              new_start_time:   booking.selectedTime ?? "",
+              duration_minutes: totalDuration || 60,
+              client_name:      booking.fullName  || "Guest",
+              service_name:     serviceNames,
+              client_phone:     guestPhone        || null,
+              location:         booking.address   || null,
+            }),
+          });
+        } catch (gcalErr) {
+          // Non-fatal — booking is confirmed, calendar sync failed silently
+          console.error("GCal create failed:", gcalErr);
+        }
+        // -------------------------------------------------------------------------
+
         const origin         = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
         const successUrl     = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
