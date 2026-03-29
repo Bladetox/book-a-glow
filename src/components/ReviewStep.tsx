@@ -16,6 +16,7 @@ interface ReviewStepProps {
   booking: BookingState;
   onUpdate: (updates: Partial<BookingState>) => void;
   onGoToStep: (step: number) => void;
+  releaseHold: () => Promise<void>;
 }
 
 type PaymentChoice = "deposit" | "full";
@@ -37,7 +38,7 @@ function friendlyBookingError(err: any): string {
   return "Something went wrong while placing your booking. Please try again or contact us directly.";
 }
 
-const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
+const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
@@ -48,11 +49,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
 
-  /**
-   * Build a display-ready list that respects quantities.
-   * e.g. if ["abc", "abc", "xyz"] is selected, we get:
-   *   [{ service, qty: 2 }, { service, qty: 1 }]
-   */
   const selectedWithQty = (() => {
     const seen = new Map<string, number>();
     for (const id of booking.selectedTreatments) {
@@ -140,7 +136,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
 
       const bookingId = result?.booking_id;
       if (bookingId) {
-        // --- Create GCal event immediately after booking, before Yoco redirect ---
+        // Create GCal event immediately after booking, before Yoco redirect
         try {
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
           const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -157,8 +153,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
             },
             body: JSON.stringify({
               tenant_id:        tenantId,
-              gcal_event_id:    null,           // null = CREATE a new event
-              booking_id:       bookingId,      // so gcal_event_id is saved back to DB
+              gcal_event_id:    null,
+              booking_id:       bookingId,
               new_date:         bookingDate,
               new_start_time:   booking.selectedTime ?? "",
               duration_minutes: totalDuration || 60,
@@ -169,10 +165,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
             }),
           });
         } catch (gcalErr) {
-          // Non-fatal — booking is confirmed, calendar sync failed silently
           console.error("GCal create failed:", gcalErr);
         }
-        // -------------------------------------------------------------------------
 
         const origin         = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
@@ -191,6 +185,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
 
         if (checkoutErr) throw checkoutErr;
         if (checkoutData?.redirect_url || checkoutData?.redirectUrl || checkoutData?.url) {
+          // Release the hold before redirecting — slot is now a real booking
+          await releaseHold();
           window.location.href = checkoutData.redirect_url ?? checkoutData.redirectUrl ?? checkoutData.url;
           return;
         } else {
@@ -279,7 +275,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep }: ReviewStepProps) => {
 
         <div className="h-px bg-border/30 my-3" />
 
-        {/* Payment choice */}
         <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2">How would you like to pay?</p>
         <div className="grid grid-cols-2 gap-2 mb-3">
 

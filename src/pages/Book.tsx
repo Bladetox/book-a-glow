@@ -11,6 +11,7 @@ import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useMonthAvailability } from "@/hooks/usePublicAvailability";
+import { useSlotHold } from "@/hooks/useSlotHold";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useCallback } from "react";
 
@@ -68,6 +69,7 @@ const Index = () => {
   const { data: treatments = [] } = usePublicServices();
   const { tenantId, loading: tenantLoading } = usePublicTenant();
   const config = usePublicBusinessConfig();
+  const slotHold = useSlotHold();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
 
@@ -77,7 +79,7 @@ const Index = () => {
         return booking.selectedTreatments.length > 0;
 
       case 1:
-        return booking.selectedDate !== null && booking.selectedTime !== null;
+        return booking.selectedDate !== null && booking.selectedTime !== null && booking.selectedTime !== "";
 
       case 2: {
         const contactValid =
@@ -125,7 +127,6 @@ const Index = () => {
   const businessName = config.name || tenantId;
   const abbreviation = config.abbreviation || businessName.slice(0, 2).toUpperCase();
 
-  // Build unique service objects for selected IDs (deduplicated for price/duration calc)
   const uniqueSelectedIds = [...new Set(booking.selectedTreatments)];
   const selectedServices = uniqueSelectedIds.flatMap((id) => {
     const svc = treatments.find((t) => t.id === id);
@@ -213,6 +214,8 @@ const Index = () => {
                     onSelectDate={(d) => updateBooking({ selectedDate: d })}
                     onSelectTime={(t) => updateBooking({ selectedTime: t })}
                     totalDuration={durationForSlots}
+                    tenantId={tenantId}
+                    slotHold={slotHold}
                   />
                 )}
                 {step === 2 && (
@@ -227,6 +230,7 @@ const Index = () => {
                       setDirection(-1);
                       setStep(s);
                     }}
+                    releaseHold={slotHold.releaseHold}
                   />
                 )}
               </motion.div>

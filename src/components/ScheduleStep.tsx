@@ -11,9 +11,11 @@ import {
   isToday,
   isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ChevronDown, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ChevronDown, X, Clock } from "lucide-react";
 import { useMonthAvailability, useDateSlots } from "@/hooks/usePublicAvailability";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import type { useSlotHold } from "@/hooks/useSlotHold";
 
 interface ScheduleStepProps {
   selectedDate: Date | null;
@@ -21,6 +23,18 @@ interface ScheduleStepProps {
   onSelectDate: (date: Date) => void;
   onSelectTime: (time: string) => void;
   totalDuration: number;
+  tenantId: string;
+  slotHold: ReturnType<typeof useSlotHold>;
+}
+
+async function getStaffId(tenantId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("owner_id")
+    .eq("id", tenantId)
+    .single();
+  if (error || !data?.owner_id) throw new Error("Tenant not found");
+  return data.owner_id;
 }
 
 const ScheduleStep = ({
@@ -29,10 +43,13 @@ const ScheduleStep = ({
   onSelectDate,
   onSelectTime,
   totalDuration,
+  tenantId,
+  slotHold,
 }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [bookedPopup, setBookedPopup] = useState(false);
+  const [acquiringSlot, setAcquiringSlot] = useState(false);
   const timeSlotsRef = useRef<HTMLDivElement>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,9 +58,12 @@ const ScheduleStep = ({
   const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(year, month, totalDuration);
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
-  // DB (get_available_slots) already filters past slots using Africa/Johannesburg TZ.
-  // No client-side time filter needed — avoids device clock mismatch.
-  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(selectedDateStr, totalDuration);
+  // Pass sessionToken so the client's own hold never greys out their own slot
+  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(
+    selectedDateStr,
+    totalDuration,
+    slotHold.sessionToken,
+  );
 
   const today = useMemo(() => {
     const t = new Date();
@@ -66,7 +86,6 @@ const ScheduleStep = ({
     return (monthAvailability[ds]?.length ?? 0) > 0;
   };
 
-  /** Show the booked popup and auto-dismiss after 3 s */
   const showBookedPopup = useCallback(() => {
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
     setBookedPopup(true);
@@ -85,17 +104,11 @@ const ScheduleStep = ({
     [onSelectDate, onSelectTime]
   );
 
-  /**
-   * Called for EVERY day tap — available or not.
-   * Past dates remain silently blocked.
-   * Future dates with no slots show the popup.
-   */
   const handleDayTap = useCallback(
     (day: Date) => {
       const isPast = isBefore(day, today) && !isToday(day);
       if (isPast) return;
       const isAvailable = isDayAvailable(day);
-      // Only show popup once monthAvailability has loaded (avoid false positives)
       if (!isAvailable && monthAvailability !== undefined) {
         showBookedPopup();
         return;
@@ -112,6 +125,40 @@ const ScheduleStep = ({
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 50);
   }, []);
+
+  /** Called when a time slot button is tapped */
+  const handleSlotTap = useCallback(async (time: string) => {
+    if (!selectedDate || acquiringSlot) return;
+
+    // Deselect if same slot tapped again
+    if (selectedTime === time) {
+      onSelectTime("");
+      return;
+    }
+
+    setAcquiringSlot(true);
+    try {
+      const staffId = await getStaffId(tenantId);
+      const result = await slotHold.acquireHold({
+        tenantId,
+        staffId,
+        bookingDate: format(selectedDate, "yyyy-MM-dd"),
+        startTime:   `${time}:00`,
+        durationMins: totalDuration,
+      });
+
+      if (!result.success) {
+        // slotHold.error is now set — the error banner renders automatically
+        return;
+      }
+      onSelectTime(time);
+    } finally {
+      setAcquiringSlot(false);
+    }
+  }, [selectedDate, selectedTime, acquiringSlot, tenantId, totalDuration, slotHold, onSelectTime]);
+
+  const mm = String(Math.floor(slotHold.secondsLeft / 60)).padStart(2, "0");
+  const ss = String(slotHold.secondsLeft % 60).padStart(2, "0");
 
   return (
     <div className="flex flex-col gap-5">
@@ -142,6 +189,44 @@ const ScheduleStep = ({
             >
               <X className="w-4 h-4" />
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Slot hold error banner ── */}
+      <AnimatePresence>
+        {slotHold.error && (
+          <motion.div
+            key="hold-error"
+            initial={{ opacity: 0, y: -10, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3"
+          >
+            <span className="text-lg leading-none shrink-0">⚡</span>
+            <p className="text-sm font-medium text-foreground">{slotHold.error}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Hold countdown timer ── */}
+      <AnimatePresence>
+        {slotHold.secondsLeft > 0 && selectedTime && (
+          <motion.div
+            key="hold-countdown"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-2.5"
+          >
+            <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              Slot held for{" "}
+              <span className="font-semibold text-foreground tabular-nums">{mm}:{ss}</span>
+              {" "}— complete your booking before it expires
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -287,15 +372,23 @@ const ScheduleStep = ({
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.02 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => onSelectTime(time)}
-                      className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                      disabled={acquiringSlot}
+                      onClick={() => handleSlotTap(time)}
+                      className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-1
                         ${
                           selectedTime === time
                             ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                             : "glass-card-service text-foreground"
-                        }`}
+                        }
+                        ${acquiringSlot ? "opacity-60 cursor-wait" : ""}
+                      `}
                     >
-                      {time}
+                      {acquiringSlot && selectedTime !== time
+                        ? time
+                        : acquiringSlot && selectedTime === time
+                        ? <><span>{time}</span><Loader2 className="w-3 h-3 animate-spin" /></>
+                        : time
+                      }
                     </motion.button>
                   ))}
                 </div>
