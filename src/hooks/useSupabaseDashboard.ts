@@ -15,6 +15,14 @@ function resolveClientKey(b: any): string {
   return b.client_id || b.guest_email || b.guest_phone || b.id;
 }
 
+// Lead source values that describe client TYPE, not acquisition channel.
+// These are filtered out of the Acquisition Channels card to prevent
+// conflating "I am a returning client" with a marketing channel.
+const CLIENT_TYPE_LABELS = ["returning client", "returning", "existing client", "existing"];
+function isClientTypeLabel(src: string): boolean {
+  return CLIENT_TYPE_LABELS.includes(src.toLowerCase().trim());
+}
+
 const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HEAT_SLOTS = ["08-10", "10-12", "12-14", "14-16", "16-18"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
@@ -32,7 +40,7 @@ export function useDashboardData() {
   const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
   const daysInMonth  = getDaysInMonth(now);
 
-  // 1. Bookings — current month (lead_source added)
+  // 1. Bookings — current month
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
@@ -68,14 +76,14 @@ export function useDashboardData() {
     },
   });
 
-  // 2. Previous month bookings
+  // 2. Previous month bookings — client identity fields added for retention calc
   const { data: prevBookings = [], isLoading: l2 } = useQuery({
     queryKey:  ["dash-bookings-prev", tenantId, prevStart],
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("total_amount, status")
+        .select("total_amount, status, client_id, guest_email, guest_phone, id")
         .eq("tenant_id", tenantId)
         .gte("booking_date", prevStart)
         .lte("booking_date", prevEnd)
@@ -276,26 +284,42 @@ export function useDashboardData() {
   }, [active]);
 
   // ─── client insights ──────────────────────────────────────────────────────
+  // Retention = % of THIS month's unique clients who also booked LAST month.
+  // This is the standard definition: did you keep them month-over-month?
   const { clientKeySet, returningCount, retentionRate } = useMemo(() => {
+    // Build a set of client keys from last month
+    const prevKeySet = new Set<string>();
+    prevBookings.forEach((b: any) => {
+      const key = resolveClientKey(b);
+      if (key) prevKeySet.add(key);
+    });
+
+    // This month's unique clients
     const countMap = new Map<string, number>();
     active.forEach((b: any) => {
       const key = resolveClientKey(b);
       countMap.set(key, (countMap.get(key) || 0) + 1);
     });
-    const keySet    = new Set(active.map((b: any) => resolveClientKey(b)));
-    const returning = [...countMap.values()].filter(c => c > 1).length;
+    const keySet = new Set(active.map((b: any) => resolveClientKey(b)));
+
+    // Retained = booked this month AND last month
+    const retained = [...keySet].filter(k => prevKeySet.has(k)).length;
+
     return {
       clientKeySet:   keySet,
-      returningCount: returning,
-      retentionRate:  keySet.size > 0 ? Math.round((returning / keySet.size) * 100) : 0,
+      returningCount: retained,
+      retentionRate:  keySet.size > 0 ? Math.round((retained / keySet.size) * 100) : 0,
     };
-  }, [active]);
+  }, [active, prevBookings]);
 
   // ─── lead source / acquisition channel breakdown ─────────────────────────
+  // Client-type self-reports ("Returning Client", "Existing") are intentionally
+  // excluded — they are not acquisition channels and skew the marketing data.
   const leadSourceBreakdown = useMemo(() => {
     const map = new Map<string, number>();
     active.forEach((b: any) => {
-      const src = (b.lead_source || "Not specified").trim();
+      const src = (b.lead_source || "").trim();
+      if (!src || isClientTypeLabel(src)) return; // skip blanks and client-type labels
       map.set(src, (map.get(src) || 0) + 1);
     });
     return [...map.entries()]
