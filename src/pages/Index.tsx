@@ -145,18 +145,6 @@ const caseStudyCards = [
 
 /* ─── INDUSTRY CARDS ────────────────────────────────────────────
    Single shared IntersectionObserver for all 8 cards.
-
-   Animation direction:
-   • Cards in the LEFT half of each row  → slide in from the left  (translateX(-40px))
-   • Cards in the RIGHT half of each row → slide in from the right (translateX(+40px))
-
-   The grid is 2-col on mobile and 4-col on sm+.
-   We determine "left" vs "right" by whether the card index falls
-   in the first or second half of its row:
-     • mobile (2-col): index % 2 === 0 → left, else right
-     • sm+ (4-col):    index % 4 < 2   → left, else right
-   We use the simpler rule index % 2 === 0 which works correctly
-   for both layouts as a consistent directional split.
 ──────────────────────────────────────────────────────────────── */
 
 const IndustryGrid = () => {
@@ -191,13 +179,6 @@ const IndustryGrid = () => {
       {industries.map((ind, index) => {
         const Icon = ind.icon;
         const visible = visibleSet.has(index);
-
-        /*
-          Direction: even indices come from the left, odd from the right.
-          On a 4-col grid this means: cols 0,2 from left · cols 1,3 from right.
-          On a 2-col grid: col 0 from left · col 1 from right.
-          Both feel natural and balanced.
-        */
         const fromLeft = index % 2 === 0;
         const hiddenTransform = fromLeft ? "translateX(-40px)" : "translateX(40px)";
 
@@ -271,9 +252,6 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
     }
   };
 
-  /* Fixed: stable refs so the listener is registered once, not on
-     every active change. prev/next read active via closure over
-     the stable callbacks without needing to re-subscribe. */
   const prevRef = useRef(prev);
   const nextRef = useRef(next);
   useEffect(() => { prevRef.current = prev; }, [active]);
@@ -286,7 +264,6 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    /* Empty dep array — listener registered once, never re-added */
   }, []);
 
   return (
@@ -297,7 +274,7 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
         onTouchEnd={handleTouchEnd}
       >
         <div
-          className="flex items-stretch transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          className="flex items-stretch transition-transform duration-500 ease-smooth-slide"
           style={{ transform: `translateX(-${active * 100}%)` }}
         >
           {caseStudyCards.map((card, i) => {
@@ -598,7 +575,7 @@ const Index = () => {
               </div>
               <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-accent rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                  className="h-full bg-accent rounded-full transition-all duration-500 ease-smooth-slide"
                   style={{ width: `${(caseActive / (total - 1)) * 100}%` }}
                 />
               </div>
