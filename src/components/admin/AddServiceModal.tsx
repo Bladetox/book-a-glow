@@ -31,18 +31,32 @@ const AddServiceModal = ({ bookingId, clientName, onClose, onAdded }: AddService
   useEffect(() => {
     if (!tenantId || !bookingId) return;
     setLoading(true);
-    // Use the edge function to bypass RLS — service_role_key has full read access
-    supabase.functions
-      .invoke("add-booking-service", {
-        body: { action: "list_services", tenant_id: tenantId },
-      })
-      .then(({ data, error }) => {
-        if (error || data?.error) {
+
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+    const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+    fetch(`${SUPABASE_URL}/functions/v1/add-booking-service`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "apikey": SUPABASE_KEY,
+      },
+      body: JSON.stringify({ action: "list_services", tenant_id: tenantId }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.error) {
           toast.error("Could not load services");
-          console.error("list_services error:", error ?? data?.error);
+          console.error("list_services error:", data.error);
         } else {
           setServices(data?.services ?? []);
         }
+        setLoading(false);
+      })
+      .catch(err => {
+        toast.error("Could not load services");
+        console.error("list_services fetch error:", err);
         setLoading(false);
       });
   }, [tenantId, bookingId]);
@@ -52,12 +66,26 @@ const AddServiceModal = ({ bookingId, clientName, onClose, onAdded }: AddService
   const handleAdd = async () => {
     if (!selectedId || !bookingId || !tenantId) return;
     setSubmitting(true);
+
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+    const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
     try {
-      const { data, error } = await supabase.functions.invoke("add-booking-service", {
-        body: { booking_id: bookingId, service_id: selectedId, tenant_id: tenantId },
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/add-booking-service`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "apikey": SUPABASE_KEY,
+        },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          service_id: selectedId,
+          tenant_id:  tenantId,
+        }),
       });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      const data = await res.json();
+      if (!res.ok || data?.error) throw new Error(data?.error || "Failed to add service");
       toast.success(`"${data.service_name}" added — new total R${Number(data.new_total).toFixed(2)}`);
       onAdded();
       onClose();

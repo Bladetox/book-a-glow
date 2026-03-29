@@ -15,11 +15,26 @@ Deno.serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
 
-    const body = await req.json();
+    // Guard against empty body
+    const rawText = await req.text();
+    if (!rawText || rawText.trim() === "") {
+      return new Response(JSON.stringify({ error: "Empty request body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let body: any;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { action, tenant_id } = body;
 
-    // ── ACTION: list_services ─────────────────────────────────────────────
-    // Called by AddServiceModal to bypass client-side RLS restrictions.
+    // ── ACTION: list_services ──────────────────────────────────────────
     if (action === "list_services") {
       if (!tenant_id) {
         return new Response(JSON.stringify({ error: "Missing tenant_id" }), {
@@ -43,7 +58,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── ACTION: add (default) ─────────────────────────────────────────────
+    // ── ACTION: add (default) ──────────────────────────────────────────
     const { booking_id, service_id } = body;
 
     if (!booking_id || !service_id || !tenant_id) {
@@ -127,7 +142,7 @@ Deno.serve(async (req) => {
       ? (existingItems[0].sort_order ?? 0) + 1
       : 0;
 
-    // 5. Insert into booking_items (the correct table)
+    // 5. Insert into booking_items (correct table)
     const { error: insertErr } = await supabase
       .from("booking_items")
       .insert({
