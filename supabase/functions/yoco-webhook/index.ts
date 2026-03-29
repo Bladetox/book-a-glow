@@ -359,9 +359,11 @@ Deno.serve(async (req) => {
           deposit_paid:          true,
           final_payment_paid:    true,
           full_payment_received: true,
+          deposit_amount:        Number(booking.total_amount),
           balance_due:           0,
-          status:                "confirmed",
+          status:                "completed",
           confirmed_at:          new Date().toISOString(),
+          completed_at:          new Date().toISOString(),
         })
         .eq("id", booking.id);
 
