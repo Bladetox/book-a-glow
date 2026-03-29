@@ -52,13 +52,12 @@ export function useMonthAvailability(year: number, month: number, durationMinute
 /**
  * Fetch available time slots for a specific date.
  * staleTime: 0 for same reason — slot list must always be fresh.
- * sessionToken is passed so the client's own hold never hides their slot.
  */
 export function useDateSlots(date: string | null, durationMinutes: number = 60, sessionToken?: string) {
   const { tenantId } = usePublicTenant();
 
   return useQuery({
-    queryKey: ["public-date-slots", tenantId, date, durationMinutes, sessionToken ?? null],
+    queryKey: ["public-date-slots", tenantId, date, durationMinutes],
     enabled: !!date && !!tenantId,
     staleTime: 0,
     refetchOnWindowFocus: true,
@@ -69,7 +68,6 @@ export function useDateSlots(date: string | null, durationMinutes: number = 60, 
         p_staff_id:         staffId,
         p_date:             date,
         p_duration_minutes: durationMinutes,
-        p_session_token:    sessionToken ?? null,
       } as any);
       if (error) throw error;
       return (data ?? [])
