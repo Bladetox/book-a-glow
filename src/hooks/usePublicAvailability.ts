@@ -32,9 +32,8 @@ export function useMonthAvailability(year: number, month: number, durationMinute
       if (error) throw error;
       const map: Record<string, string[]> = {};
       (data ?? []).forEach((row: any) => {
-        // DB returns date_text (not date_str)
         const key = row.date_text ?? row.date_str;
-        if (key) map[key] = row.available_slots ?? [];
+        if (key) map[key] = row.slots ?? row.available_slots ?? [];
       });
       return map;
     },
