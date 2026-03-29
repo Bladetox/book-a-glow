@@ -19,7 +19,7 @@ export interface BookingRow {
   total: number;
   deposit: number;
   balance: number;
-  status: "pending" | "confirmed" | "complete" | "cancelled";
+  status: "pending" | "confirmed" | "completed" | "cancelled";
   depositPaid: boolean;
   fullPaymentReceived: boolean;
   finalPaymentPaid: boolean;
@@ -99,9 +99,9 @@ export function useSupabaseBookings() {
       .channel(`bookings-realtime-${tenantId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "bookings" },
-        (payload) => {
-          if (payload.new?.tenant_id !== tenantId) return;
+        { event: "*", schema: "public", table: "bookings" },
+        (payload: any) => {
+          if (payload.new?.tenant_id !== tenantId && payload.old?.tenant_id !== tenantId) return;
           qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
           qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
         }
@@ -217,47 +217,43 @@ export function useRescheduleBooking() {
       });
       if (error) throw error;
 
-      // Harden result check — treat null/empty/missing success as failure
       const result = Array.isArray(data) ? data[0] : data;
       if (!result) throw new Error("Reschedule failed: no response from server");
       if (!result.success) throw new Error(result.message || "Reschedule failed");
 
-      // Always call update-gcal-event — it creates a new event if gcal_event_id is null
-if (booking) {
-  try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${supabaseKey}`,
-        apikey: supabaseKey,
-      },
-      body: JSON.stringify({
-        tenant_id:        booking.tenantId,
-        gcal_event_id:    gcalEventId ?? null,  // null triggers CREATE path
-        booking_id:       bookingId,            // so new event id gets saved back
-        new_date:         newDate,
-        new_start_time:   newStartTime,
-        duration_minutes: booking.duration,
-        client_name:      booking.client,
-        service_name:     booking.service,
-        client_phone:     booking.phone,
-        location:         booking.address || null,
-      }),
-    });
-  } catch (gcalErr) {
-    console.error("GCal reschedule sync failed:", gcalErr);
-  }
-}
-
+      if (booking) {
+        try {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+              apikey: supabaseKey,
+            },
+            body: JSON.stringify({
+              tenant_id:        booking.tenantId,
+              gcal_event_id:    gcalEventId ?? null,
+              booking_id:       bookingId,
+              new_date:         newDate,
+              new_start_time:   newStartTime,
+              duration_minutes: booking.duration,
+              client_name:      booking.client,
+              service_name:     booking.service,
+              client_phone:     booking.phone,
+              location:         booking.address || null,
+            }),
+          });
+        } catch (gcalErr) {
+          console.error("GCal reschedule sync failed:", gcalErr);
+        }
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
-      // Broad invalidation so any calendar view re-fetches immediately
       qc.invalidateQueries({ queryKey: ["dash-"] });
       qc.invalidateQueries({ queryKey: ["public-month-availability"] });
       qc.invalidateQueries({ queryKey: ["public-date-slots"] });
