@@ -21,7 +21,6 @@ DECLARE
   v_expires_at timestamptz;
   v_conflict   boolean;
 BEGIN
-  -- Qualify with table name to avoid ambiguity with the RETURNS TABLE column
   DELETE FROM public.slot_holds sh WHERE sh.expires_at <= NOW();
 
   SELECT EXISTS (
@@ -30,8 +29,7 @@ BEGIN
       AND h.booking_date  = p_booking_date
       AND h.session_token <> p_session_token
       AND h.expires_at    > NOW()
-      AND (h.start_time, h.start_time + (h.duration_mins || ' minutes')::interval)
-          OVERLAPS (p_start_time, v_end_time)
+      AND (h.start_time, h.end_time) OVERLAPS (p_start_time, v_end_time)
   ) INTO v_conflict;
 
   IF NOT v_conflict THEN
@@ -52,9 +50,9 @@ BEGIN
   END IF;
 
   INSERT INTO public.slot_holds
-    (tenant_id, staff_id, booking_date, start_time, duration_mins, session_token, expires_at)
+    (tenant_id, staff_id, booking_date, start_time, end_time, duration_mins, session_token, expires_at)
   VALUES
-    (p_tenant_id, p_staff_id, p_booking_date, p_start_time, p_duration_mins, p_session_token,
+    (p_tenant_id, p_staff_id, p_booking_date, p_start_time, v_end_time, p_duration_mins, p_session_token,
      NOW() + INTERVAL '10 minutes')
   RETURNING id, slot_holds.expires_at INTO v_hold_id, v_expires_at;
 
