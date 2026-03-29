@@ -1,5 +1,6 @@
 import AddServiceModal from "@/components/admin/AddServiceModal";
-import { PlusCircle } from "lucide-react";
+import BlockClientModal from "@/components/admin/BlockClientModal";
+import { PlusCircle, ShieldBan, ShieldCheck } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -224,6 +225,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   const [addServiceBooking, setAddServiceBooking]     = useState<BookingRow | null>(null);
 
+  // ── Block client state ──────────────────────────────────────────────────────
+  const [blockModalBooking, setBlockModalBooking]     = useState<BookingRow | null>(null);
+  // Map of bookingId -> { blockId, isBlocked } — loaded lazily when a row is expanded
+  const [blockStatusMap, setBlockStatusMap]           = useState<Record<string, { blockId: string | null; isBlocked: boolean }>>({});
+
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
@@ -238,6 +244,38 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       onClearClient?.();
     }
   }, [initialClient, bookings.length, onClearClient]);
+
+  // When a row is expanded, lazily load its block status
+  useEffect(() => {
+    if (!expandedId || !tenantId) return;
+    if (blockStatusMap[expandedId] !== undefined) return; // already loaded
+    const booking = bookings.find(b => b.id === expandedId);
+    if (!booking) return;
+
+    const checkBlock = async () => {
+      const orParts: string[] = [];
+      if (booking.email?.trim())   orParts.push(`email.ilike.${booking.email.trim()}`);
+      if (booking.phone?.trim())   orParts.push(`phone.eq.${booking.phone.trim().replace(/\s/g, "")}`);
+      if (booking.client?.trim())  orParts.push(`name.ilike.${booking.client.trim()}`);
+      if (booking.address?.trim()) orParts.push(`address.ilike.${booking.address.trim()}`);
+      if (orParts.length === 0) return;
+
+      const { data } = await supabase
+        .from("blocked_clients")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .or(orParts.join(","))
+        .limit(1);
+
+      setBlockStatusMap(prev => ({
+        ...prev,
+        [expandedId]: { blockId: data?.[0]?.id ?? null, isBlocked: (data ?? []).length > 0 },
+      }));
+    };
+
+    checkBlock();
+  }, [expandedId, tenantId, bookings]);
 
   useEffect(() => {
     const b = reschedulingBooking;
@@ -462,7 +500,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     );
   }
 
-  // ── Pre-computed stat values ──────────────────────────────────────────────
   const totalRevenue     = bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.total, 0);
   const totalOutstanding = bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.balance, 0);
   const dueToday         = bookings
@@ -546,10 +583,27 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onAdded={() => { /* react-query refetches automatically */ }}
       />
 
+      {/* ── Block client modal ── */}
+      <BlockClientModal
+        open={!!blockModalBooking}
+        clientName={blockModalBooking?.client ?? ""}
+        clientEmail={blockModalBooking?.email ?? ""}
+        clientPhone={blockModalBooking?.phone ?? ""}
+        clientAddress={blockModalBooking?.address ?? ""}
+        existingBlockId={blockModalBooking ? (blockStatusMap[blockModalBooking.id]?.blockId ?? null) : null}
+        onClose={() => setBlockModalBooking(null)}
+        onSuccess={(nowBlocked) => {
+          if (blockModalBooking) {
+            setBlockStatusMap(prev => ({
+              ...prev,
+              [blockModalBooking.id]: { blockId: nowBlocked ? "pending-refresh" : null, isBlocked: nowBlocked },
+            }));
+          }
+        }}
+      />
+
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-
-        {/* Today */}
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <CalendarCheck className="w-4 h-4 text-white/30" />
           <div>
@@ -557,8 +611,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
             <p className="text-[10px] text-white/30">Today</p>
           </div>
         </div>
-
-        {/* Pending */}
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <Clock className="w-4 h-4 text-amber-400/50" />
           <div>
@@ -566,28 +618,18 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
             <p className="text-[10px] text-white/30">Pending</p>
           </div>
         </div>
-
-        {/* Revenue — spans 2 cols on all breakpoints */}
         <div className="col-span-2 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3">
           <CircleDollarSign className="w-4 h-4 text-white/30 shrink-0" />
           <div className="flex flex-1 items-center justify-between gap-3 flex-wrap">
-
-            {/* Total Revenue */}
             <div className="min-w-0">
               <p className="text-lg font-bold text-white/90">R {totalRevenue.toLocaleString()}</p>
               <p className="text-[10px] text-white/30">Total Revenue</p>
             </div>
-
-            {/* Divider */}
             <div className="h-7 w-px bg-white/[0.07] shrink-0" />
-
-            {/* Outstanding */}
             <div className="min-w-0">
               <p className="text-lg font-bold text-red-400">R {totalOutstanding.toLocaleString()}</p>
               <p className="text-[10px] text-white/30">Outstanding</p>
             </div>
-
-            {/* Due Today — only shown when > 0 */}
             {dueToday > 0 && (
               <>
                 <div className="h-7 w-px bg-white/[0.07] shrink-0" />
@@ -597,10 +639,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                 </div>
               </>
             )}
-
           </div>
         </div>
-
       </div>
 
       {/* ── Search bar ── */}
@@ -676,6 +716,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                 const isRequestingBalance = requestingBalanceId === b.id;
                 const isMarkingPaid       = markingPaidId === b.id;
                 const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "completed" && !b.fullPaymentReceived;
+                const blockStatus         = blockStatusMap[b.id];
+                const isClientBlocked     = blockStatus?.isBlocked ?? false;
 
                 return (
                   <motion.div key={b.id}
@@ -702,7 +744,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
+                          {isClientBlocked && (
+                            <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />
+                          )}
+                        </div>
                         <p className="text-[11px] text-white/40 truncate">{b.service} • {b.duration}min</p>
                       </div>
 
@@ -895,6 +942,21 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     Request Final Payment
                                   </button>
                                 )}
+
+                                {/* Block / Unblock Client */}
+                                <button
+                                  onClick={e => { e.stopPropagation(); setBlockModalBooking(b); }}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                                    isClientBlocked
+                                      ? "border border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-400 hover:bg-emerald-500/15"
+                                      : "border border-red-500/20 bg-red-500/[0.06] text-red-400/80 hover:bg-red-500/10 hover:text-red-400"
+                                  }`}
+                                >
+                                  {isClientBlocked
+                                    ? <><ShieldCheck className="w-3 h-3" /> Unblock Client</>
+                                    : <><ShieldBan   className="w-3 h-3" /> Block Client</>
+                                  }
+                                </button>
 
                                 <div className="flex-1" />
 

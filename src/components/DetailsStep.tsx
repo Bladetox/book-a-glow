@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 interface DetailsStepProps {
   booking: BookingState;
   onUpdate: (updates: Partial<BookingState>) => void;
+  /** Called with true when the guest is blocked — parent should prevent advancing */
+  onBlockedChange?: (blocked: boolean) => void;
 }
 
 const phoneCodes = [
@@ -32,23 +34,22 @@ interface PlaceSuggestion {
   description: string;
 }
 
-const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
+const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) => {
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockChecking, setBlockChecking] = useState(false);
+  const blockCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
-  // True while the user's finger/pointer is down on a suggestion row.
-  // onBlur checks this flag and bails out early so the list never collapses
-  // before the selection handler fires — eliminates the visible jump on iOS.
   const selectingRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Deferred focus on Full Name after step animation settles
   useEffect(() => {
     const t = setTimeout(() => {
       requestAnimationFrame(() => {
@@ -88,7 +89,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
     return validators[field](value) ? "valid" : "invalid";
   };
 
-  // Address validation is separate — driven by addressVerified flag, not string length
   const getAddressValidationClass = () => {
     if (!touched["address"]) return "";
     return booking.addressVerified ? "valid" : "invalid";
@@ -97,14 +97,50 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
   const inputClass =
     "w-full glass-input rounded-2xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
 
-  // Uses the shared supabase client — no hardcoded keys
   const callPlacesFunction = async (body: object) => {
     const { data, error } = await supabase.functions.invoke("places-autocomplete", { body });
     if (error) throw error;
     return data;
   };
 
-  // Autocomplete effect — skip if address is already verified (user hasn't edited since selection)
+  // ── Block check: fires 800ms after any of the 3 identity fields settle ──────
+  useEffect(() => {
+    const email = booking.email.trim();
+    const phone = booking.phone.trim().replace(/\s/g, "");
+    const name  = booking.fullName.trim();
+
+    // Need at least email OR phone to fire — avoids spamming on first keystrokes
+    const hasEnough = validators.email(email) || validators.phone(phone);
+    if (!hasEnough || !tenantId) {
+      if (isBlocked) {
+        setIsBlocked(false);
+        onBlockedChange?.(false);
+      }
+      return;
+    }
+
+    if (blockCheckRef.current) clearTimeout(blockCheckRef.current);
+    blockCheckRef.current = setTimeout(async () => {
+      setBlockChecking(true);
+      try {
+        const { data } = await supabase.functions.invoke("check-guest-blocked", {
+          body: { tenant_id: tenantId, email, phone, name },
+        });
+        const blocked = data?.blocked === true;
+        setIsBlocked(blocked);
+        onBlockedChange?.(blocked);
+      } catch {
+        // Fail open — don't block on error
+        setIsBlocked(false);
+        onBlockedChange?.(false);
+      } finally {
+        setBlockChecking(false);
+      }
+    }, 800);
+
+    return () => { if (blockCheckRef.current) clearTimeout(blockCheckRef.current); };
+  }, [booking.email, booking.phone, booking.fullName, tenantId]);
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const query = booking.address.trim();
@@ -114,7 +150,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       return;
     }
 
-    // Don't re-query if address is already verified and unchanged
     if (booking.addressVerified) {
       setShowSuggestions(false);
       return;
@@ -149,14 +184,11 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
 
   const handleSelectSuggestion = async (description: string) => {
     justSelectedRef.current = true;
-    selectingRef.current = false; // selection complete, reset flag
-    // Mark as verified immediately on selection from Google Places
+    selectingRef.current = false;
     onUpdate({ address: description, addressVerified: true, distanceKm: null });
     setShowSuggestions(false);
     setAddressSuggestions([]);
-    // Mark address as touched so green border appears immediately
     setTouched((prev) => ({ ...prev, address: true }));
-    // Fire distance matrix call in background
     const origin = config.address;
     if (!origin) return;
     try {
@@ -177,6 +209,18 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
       <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
         Your details
       </h3>
+
+      {/* Blocked banner — shown instead of the form fields when blocked */}
+      <AnimatePresence>
+        {isBlocked && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3.5 text-sm text-destructive"
+          >
+            Sorry, this date is fully booked. Please try another date.
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Existing / New client */}
       <div>
@@ -368,21 +412,21 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             }}
             onBlur={() => markTouched("email")}
           />
+          {/* Subtle spinner while block check runs */}
+          {blockChecking && (
+            <div className="absolute right-3.5 top-3.5 w-3.5 h-3.5 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
+          )}
         </div>
 
-        {/* Address field. Suggestions render INLINE not absolutely positioned so the parent
-            card grows naturally. This bypasses the overflow:clip stacking context in Book.tsx
-            that was clipping the overlay dropdown entirely. */}
+        {/* Address */}
         <div>
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
 
-            {/* Spinner while loading suggestions */}
             {addressLoading && !booking.addressVerified && (
               <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
             )}
 
-            {/* Clear button — only shown when there is content and not loading */}
             {booking.address.length > 0 && !addressLoading && (
               <button
                 type="button"
@@ -411,12 +455,7 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
               }}
               onBlur={() => {
                 markTouched("address");
-                // If the user's finger/pointer is still down on a suggestion row,
-                // bail out immediately — do NOT collapse the list. The selection
-                // handler will dismiss it cleanly once the tap completes.
                 if (selectingRef.current) return;
-                // Belt-and-suspenders fallback: wait 300ms (covers the full iOS
-                // touch cycle) then hide only if focus truly left the list.
                 setTimeout(() => {
                   if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
                     setShowSuggestions(false);
@@ -434,7 +473,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             />
           </div>
 
-          {/* Inline suggestion list — animates open/closed, card grows to fit */}
           <AnimatePresence>
             {showSuggestions && addressSuggestions.length > 0 && (
               <motion.div
@@ -450,9 +488,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
                     <button
                       key={s.place_id}
                       type="button"
-                      // onMouseDown + onTouchStart both set selectingRef=true.
-                      // This fires BEFORE the input's onBlur so the blur handler
-                      // sees the flag and skips collapsing the list.
                       onMouseDown={() => { selectingRef.current = true; }}
                       onTouchStart={() => { selectingRef.current = true; }}
                       onClick={() => handleSelectSuggestion(s.description)}
@@ -468,7 +503,6 @@ const DetailsStep = ({ booking, onUpdate }: DetailsStepProps) => {
             )}
           </AnimatePresence>
 
-          {/* Helper text — hidden while suggestions are open to avoid clutter */}
           {!showSuggestions && (
             <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
               {booking.addressVerified
