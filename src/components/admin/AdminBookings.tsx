@@ -462,6 +462,19 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     );
   }
 
+  // ── Pre-computed stat values ──────────────────────────────────────────────
+  const totalRevenue     = bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.total, 0);
+  const totalOutstanding = bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.balance, 0);
+  const dueToday         = bookings
+    .filter(b =>
+      b.date === todayStr &&
+      b.status !== "cancelled" &&
+      b.status !== "completed" &&
+      b.balance > 0 &&
+      !b.fullPaymentReceived
+    )
+    .reduce((a, b) => a + b.balance, 0);
+
   return (
     <div className="flex flex-col gap-4">
 
@@ -535,6 +548,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+        {/* Today */}
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <CalendarCheck className="w-4 h-4 text-white/30" />
           <div>
@@ -542,6 +557,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
             <p className="text-[10px] text-white/30">Today</p>
           </div>
         </div>
+
+        {/* Pending */}
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
           <Clock className="w-4 h-4 text-amber-400/50" />
           <div>
@@ -549,24 +566,41 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
             <p className="text-[10px] text-white/30">Pending</p>
           </div>
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
-          <CircleDollarSign className="w-4 h-4 text-white/30" />
-          <div>
-            <p className="text-lg font-bold text-white/90">
-              R {bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.total, 0).toLocaleString()}
-            </p>
-            <p className="text-[10px] text-white/30">Total Revenue</p>
+
+        {/* Revenue — spans 2 cols on all breakpoints */}
+        <div className="col-span-2 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3">
+          <CircleDollarSign className="w-4 h-4 text-white/30 shrink-0" />
+          <div className="flex flex-1 items-center justify-between gap-3 flex-wrap">
+
+            {/* Total Revenue */}
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-white/90">R {totalRevenue.toLocaleString()}</p>
+              <p className="text-[10px] text-white/30">Total Revenue</p>
+            </div>
+
+            {/* Divider */}
+            <div className="h-7 w-px bg-white/[0.07] shrink-0" />
+
+            {/* Outstanding */}
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-red-400">R {totalOutstanding.toLocaleString()}</p>
+              <p className="text-[10px] text-white/30">Outstanding</p>
+            </div>
+
+            {/* Due Today — only shown when > 0 */}
+            {dueToday > 0 && (
+              <>
+                <div className="h-7 w-px bg-white/[0.07] shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-lg font-bold text-amber-400">R {dueToday.toLocaleString()}</p>
+                  <p className="text-[10px] text-white/30">Due Today</p>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-2.5">
-          <CircleDollarSign className="w-4 h-4 text-red-400/50" />
-          <div>
-            <p className="text-lg font-bold text-red-400">
-              R {bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.balance, 0).toLocaleString()}
-            </p>
-            <p className="text-[10px] text-white/30">Outstanding</p>
-          </div>
-        </div>
+
       </div>
 
       {/* ── Search bar ── */}
