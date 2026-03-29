@@ -33,7 +33,8 @@ const statusBorderAccent: Record<BookingRow["status"], string> = {
   cancelled: "border-l-2 border-l-red-500/20",
 };
 
-// ── Confirm modal ──────────────────────────────────────────────────────────
+// ── Confirm modal ───────────────────────────────────────────────────────────────
+
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -83,7 +84,8 @@ const ConfirmDialog = ({ open, title, description, confirmLabel, confirmClass, o
   </AnimatePresence>
 );
 
-// ── Reschedule modal ───────────────────────────────────────────────────────
+// ── Reschedule modal ──────────────────────────────────────────────────────────
+
 interface RescheduleModalProps {
   booking: BookingRow | null;
   rescheduleDate: Date | undefined;
@@ -716,8 +718,19 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
                                 </div>
                                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
-                                  <p className="text-[10px] text-white/30">Deposit</p>
-                                  <p className="text-sm font-bold text-emerald-400">R {b.deposit.toLocaleString()}</p>
+                                  <p className="text-[10px] text-white/30">
+                                    {b.fullPaymentReceived && b.balance === 0 ? "Full Payment" : "Deposit"}
+                                  </p>
+                                  <p className={`text-sm font-bold ${
+                                    b.fullPaymentReceived && b.balance === 0
+                                      ? "text-white/50"
+                                      : "text-emerald-400"
+                                  }`}>
+                                    {b.fullPaymentReceived && b.balance === 0
+                                      ? "Paid ✓"
+                                      : `R ${b.deposit.toLocaleString()}`
+                                    }
+                                  </p>
                                 </div>
                                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
                                   <p className="text-[10px] text-white/30">Balance</p>
@@ -919,7 +932,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   );
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub-components ─────────────────────────────────────────────────────────────────────────────
 
 const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
   <div className="flex items-center gap-2">
