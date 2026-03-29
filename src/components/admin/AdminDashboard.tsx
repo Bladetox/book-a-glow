@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Info, X
+  XCircle, Package, Bell, Clock, Info, X, Megaphone
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 
@@ -12,7 +12,7 @@ const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 const ALL_SECTIONS = [
   "hero", "health", "topServices", "alerts",
   "revenueGraph", "heatmap", "todayAppointments", "clientInsights",
-  "stockAlerts"
+  "leadSource", "stockAlerts"
 ] as const;
 type SectionKey = typeof ALL_SECTIONS[number];
 
@@ -25,6 +25,7 @@ const sectionLabels: Record<SectionKey, string> = {
   heatmap:           "Booking Heatmap",
   todayAppointments: "Today's Appointments",
   clientInsights:    "Client Insights",
+  leadSource:        "Acquisition Channels",
   stockAlerts:       "Stock Alerts",
 };
 
@@ -33,7 +34,6 @@ function getVisibility(): Record<SectionKey, boolean> {
     const stored = localStorage.getItem(DASHBOARD_VIS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Migrate: remove old settingsSnapshot key if present
       return Object.fromEntries(
         ALL_SECTIONS.map(s => [s, parsed[s] !== false])
       ) as Record<SectionKey, boolean>;
@@ -77,6 +77,7 @@ interface MetricCopyShape {
   clients:           MetricEntry;
   returning:         MetricEntry;
   retention:         MetricEntry;
+  leadSource:        MetricEntry;
   revenueTrend:      InfoLine[];
   heatmap:           InfoLine[];
 }
@@ -86,6 +87,7 @@ interface ExpandedCard extends MetricEntry {
   label: string;
   value: string;
   valueColor?: string;
+  extraLines?: InfoLine[];
 }
 
 const METRIC_COPY: MetricCopyShape = {
@@ -138,6 +140,11 @@ const METRIC_COPY: MetricCopyShape = {
     title: "Retention Rate",
     explain: "The % of your clients who came back.",
     benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
+  },
+  leadSource: {
+    title: "Acquisition Channel",
+    explain: "Where your clients are discovering you. This month's top channel is shown on the card. Tap to see the full breakdown.",
+    benchmark: "Double down on your top channel. If 'Not specified' leads, prompt clients to answer at booking.",
   },
   revenueTrend: [
     { term: "Revenue Trend",    def: "Daily revenue plotted across the month." },
@@ -196,6 +203,17 @@ const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onC
               {card.benchmark && (
                 <div className="mt-1 rounded-lg bg-emerald-400/[0.07] border border-emerald-400/[0.15] px-3 py-2.5">
                   <p className="text-[12px] text-emerald-400/80 leading-snug">{card.benchmark}</p>
+                </div>
+              )}
+              {card.extraLines && card.extraLines.length > 0 && (
+                <div className="mt-1 flex flex-col gap-1.5">
+                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mb-0.5">Breakdown this month</p>
+                  {card.extraLines.map((l, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3">
+                      <span className="text-[12px] text-white/60 truncate flex-1">{l.term}</span>
+                      <span className="text-[12px] font-semibold text-white/85 shrink-0">{l.def}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -457,7 +475,6 @@ const AdminDashboard = ({
     );
   }
 
-  // ── Safe derived values ────────────────────────────────────────────────────
   const monthRevenue   = data.revenue?.month    ?? 0;
   const lastMonthRev   = data.revenue?.lastMonth ?? 0;
   const todayRevenue   = data.revenue?.today     ?? 0;
@@ -475,6 +492,7 @@ const AdminDashboard = ({
   const stockAlerts    = data.stockAlerts ?? [];
   const topServices    = data.topServices ?? [];
   const alerts         = data.alerts ?? [];
+  const leadSourceBreakdown: { channel: string; count: number }[] = data.leadSourceBreakdown ?? [];
 
   const hasLastMonth = lastMonthRev > 0;
   const pctChange    = hasLastMonth
@@ -497,6 +515,18 @@ const AdminDashboard = ({
   const cancelColor    = cancelRate > 20 ? "text-red-400" : "text-white/90";
   const retentionDisp  = totalClients > 0 ? `${Math.round((returningCount / totalClients) * 100)}%` : "0%";
   const retentionColor = totalClients > 0 && (returningCount / totalClients) >= 0.4 ? "text-emerald-400" : "text-white/90";
+
+  // Lead source card derived values
+  const topChannel     = leadSourceBreakdown[0]?.channel ?? "—";
+  const totalWithSource = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
+  const topChannelPct  = totalWithSource > 0 && leadSourceBreakdown[0]
+    ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
+    : null;
+  const leadSourceSub  = topChannelPct !== null ? `${topChannelPct}% of bookings` : undefined;
+  const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map(r => ({
+    term: r.channel,
+    def:  `${r.count} booking${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -547,8 +577,6 @@ const AdminDashboard = ({
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-4">
-
-            {/* Month revenue headline */}
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[10px] tracking-[0.16em] uppercase text-white/25 mb-1">Revenue This Month</p>
@@ -564,41 +592,16 @@ const AdminDashboard = ({
               </div>
               <BarChart3 className="w-5 h-5 text-white/15" />
             </div>
-
-            {/* ── Today at a glance — pure stats, no navigation ── */}
             <div className="border-t border-white/[0.05] pt-3">
               <p className="text-[9px] tracking-[0.14em] uppercase text-white/20 mb-2">Today at a glance</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  {
-                    label: "Bookings Today",
-                    value: String(todayAppts),
-                    color: "text-white/80",
-                    sub: todayAppts === 1 ? "appointment" : "appointments",
-                  },
-                  {
-                    label: "Still to Come",
-                    value: String(todayRemaining),
-                    color: todayRemaining > 0 ? "text-amber-400" : "text-white/40",
-                    sub: "remaining",
-                  },
-                  {
-                    label: "Revenue Today",
-                    value: `R ${todayRevenue.toLocaleString()}`,
-                    color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40",
-                    sub: "paid in",
-                  },
-                  {
-                    label: "Next Client",
-                    value: nextAppt ? nextAppt.split(" - ")[0] : "—",
-                    color: nextAppt ? "text-white/80" : "text-white/25",
-                    sub: nextAppt ? nextAppt.split(" - ").slice(1).join(" ") : "no more today",
-                  },
+                  { label: "Bookings Today",  value: String(todayAppts),    color: "text-white/80",   sub: todayAppts === 1 ? "appointment" : "appointments" },
+                  { label: "Still to Come",   value: String(todayRemaining), color: todayRemaining > 0 ? "text-amber-400" : "text-white/40", sub: "remaining" },
+                  { label: "Revenue Today",   value: `R ${todayRevenue.toLocaleString()}`, color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40", sub: "paid in" },
+                  { label: "Next Client",     value: nextAppt ? nextAppt.split(" - ")[0] : "—", color: nextAppt ? "text-white/80" : "text-white/25", sub: nextAppt ? nextAppt.split(" - ").slice(1).join(" ") : "no more today" },
                 ].map(item => (
-                  <div
-                    key={item.label}
-                    className="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]"
-                  >
+                  <div key={item.label} className="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <span className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</span>
                     <span className={`text-sm font-bold ${item.color}`}>{item.value}</span>
                     {item.sub && <span className="text-[9px] text-white/20">{item.sub}</span>}
@@ -778,6 +781,64 @@ const AdminDashboard = ({
             <ClientMiniCard id="ci-retpct" icon={Percent}          iconColor="text-violet-400/60"  value={retentionDisp}          valueColor="text-violet-400" label="Retention %"  {...METRIC_COPY.retention} onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-rev"    icon={CircleDollarSign} iconColor="text-amber-400/60"   value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket"  {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
           </div>
+        </motion.section>
+      )}
+
+      {/* ── ACQUISITION CHANNELS ── */}
+      {visibility.leadSource && (
+        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.19 }}>
+          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Acquisition Channels</p>
+          <motion.div
+            layoutId="mc-lead-source"
+            onClick={() =>
+              setExpandedCard({
+                id:         "mc-lead-source",
+                label:      "Acquisition Channel",
+                value:      topChannel,
+                valueColor: "text-violet-400",
+                extraLines: leadSourceExtraLines,
+                ...METRIC_COPY.leadSource,
+              })
+            }
+            className="rounded-xl border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            role="button"
+            aria-label="Learn more about Acquisition Channel"
+          >
+            <div className="flex items-start gap-2 p-3 sm:p-4">
+              <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
+                <Megaphone className="w-4 h-4 text-white/50" />
+              </div>
+              <div className="flex flex-col gap-0.5 flex-1 min-w-0 justify-center">
+                <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">Top Acquisition Channel</span>
+                <span className="text-base sm:text-lg font-bold text-violet-400 truncate">{topChannel}</span>
+                {leadSourceSub && <span className="text-[10px] text-white/25">{leadSourceSub}</span>}
+              </div>
+              <div className="shrink-0 mt-1 ml-1"><Info className="w-3 h-3 text-white/15" /></div>
+            </div>
+            {leadSourceBreakdown.length > 1 && (
+              <div className="px-3 sm:px-4 pb-3 flex flex-col gap-1">
+                {leadSourceBreakdown.slice(0, 4).map(r => {
+                  const pct = totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0;
+                  return (
+                    <div key={r.channel} className="flex items-center gap-2">
+                      <span className="text-[11px] text-white/45 truncate flex-1">{r.channel}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="w-16 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-violet-400/50"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-white/30 w-7 text-right">{pct}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
         </motion.section>
       )}
 

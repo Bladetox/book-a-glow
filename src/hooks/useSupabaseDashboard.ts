@@ -19,7 +19,6 @@ const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HEAT_SLOTS = ["08-10", "10-12", "12-14", "14-16", "16-18"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
 
-// Roles that count as bookable staff (future-proof: add 'staff' when multi-staff lands)
 const STAFF_ROLES = ["owner", "admin", "staff"] as const;
 
 // ─── main hook ──────────────────────────────────────────────────────────────
@@ -33,7 +32,7 @@ export function useDashboardData() {
   const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
   const daysInMonth  = getDaysInMonth(now);
 
-  // 1. Bookings — current month
+  // 1. Bookings — current month (lead_source added)
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
@@ -55,6 +54,7 @@ export function useDashboardData() {
           guest_email,
           guest_phone,
           staff_id,
+          lead_source,
           client:profiles!bookings_client_id_fkey(full_name, phone),
           items:booking_items(service_name, price, duration_minutes, sort_order)
         `)
@@ -68,7 +68,7 @@ export function useDashboardData() {
     },
   });
 
-  // 2. Previous month bookings — for lastMonth revenue fallback
+  // 2. Previous month bookings
   const { data: prevBookings = [], isLoading: l2 } = useQuery({
     queryKey:  ["dash-bookings-prev", tenantId, prevStart],
     staleTime: 10 * 60 * 1000,
@@ -85,7 +85,7 @@ export function useDashboardData() {
     },
   });
 
-  // 3. Payments — single query covering prev + current month
+  // 3. Payments
   const { data: allPayments = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-payments", tenantId, prevStart, monthEnd],
     staleTime: 3 * 60 * 1000,
@@ -118,9 +118,7 @@ export function useDashboardData() {
     },
   });
 
-  // 5. Staff profiles for this tenant (owner + admin + staff roles)
-  //    Future-proof: when new staff members are added they automatically
-  //    appear here because we query by tenant_id + role.
+  // 5. Staff profiles
   const { data: staffProfiles = [], isLoading: l4 } = useQuery({
     queryKey:  ["dash-staff-profiles", tenantId],
     staleTime: 10 * 60 * 1000,
@@ -135,9 +133,7 @@ export function useDashboardData() {
     },
   });
 
-  // 6. Staff availability rows for all staff members this month
-  //    We query by tenant_id so we get everyone's slots in one call.
-  //    Each row is a 30-min slot; is_available=true and day_enabled=true means it's bookable.
+  // 6. Staff availability
   const staffIds = useMemo(() => staffProfiles.map((s: any) => s.id), [staffProfiles]);
 
   const { data: availabilityRows = [], isLoading: l5 } = useQuery({
@@ -295,34 +291,31 @@ export function useDashboardData() {
     };
   }, [active]);
 
+  // ─── lead source / acquisition channel breakdown ─────────────────────────
+  const leadSourceBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    active.forEach((b: any) => {
+      const src = (b.lead_source || "Not specified").trim();
+      map.set(src, (map.get(src) || 0) + 1);
+    });
+    return [...map.entries()]
+      .map(([channel, count]) => ({ channel, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [active]);
+
   // ─── fill rate ────────────────────────────────────────────────────────────
-  // Strategy:
-  //   totalAvailableSlots = sum of all is_available=true, day_enabled=true slots
-  //   across all staff members, expanded over each calendar day this month.
-  //
-  //   For recurring (weekly) slots  → count per matching weekday in the month.
-  //   For specific_date overrides   → count only for that exact date.
-  //   Overrides take precedence over recurring for the same date+staff.
-  //
-  //   bookedSlots = count of confirmed/complete bookings this month.
-  //   fillRate    = bookedSlots / totalAvailableSlots  (null if no availability configured).
-  //
-  //   Future-proof: new staff profiles auto-join staffProfiles query;
-  //   their availability rows are included automatically in the same query.
   const fillRate: number | null = useMemo(() => {
     if (staffLoading)   return null;
-    if (availabilityRows.length === 0) return null; // not configured yet
+    if (availabilityRows.length === 0) return null;
 
-    // Build the calendar days for this month
     const monthDays = eachDayOfInterval({
       start: parseISO(monthStart),
       end:   parseISO(monthEnd),
     });
 
-    // Index availability: staffId → { recurring: Map<dayOfWeek, slotCount>, overrides: Map<dateStr, slotCount> }
     type StaffSlots = {
-      recurring: Map<number, number>; // dayOfWeek (0=Sun) → available slot count
-      overrides: Map<string, number>; // dateStr → available slot count
+      recurring: Map<number, number>;
+      overrides: Map<string, number>;
     };
     const staffIndex = new Map<string, StaffSlots>();
 
@@ -333,16 +326,13 @@ export function useDashboardData() {
       const entry = staffIndex.get(row.staff_id)!;
 
       if (row.specific_date) {
-        // Date override — only count if day_enabled and is_available
         if (row.day_enabled && row.is_available) {
           const prev = entry.overrides.get(row.specific_date) ?? 0;
           entry.overrides.set(row.specific_date, prev + 1);
         } else if (!entry.overrides.has(row.specific_date)) {
-          // Explicitly blocked day — store 0 so recurring doesn't override
           entry.overrides.set(row.specific_date, 0);
         }
       } else {
-        // Recurring weekly slot
         if (row.day_enabled && row.is_available) {
           const prev = entry.recurring.get(row.day_of_week) ?? 0;
           entry.recurring.set(row.day_of_week, prev + 1);
@@ -350,27 +340,22 @@ export function useDashboardData() {
       }
     });
 
-    // Expand across the month calendar
     let totalSlots = 0;
     monthDays.forEach(day => {
       const dateStr = format(day, "yyyy-MM-dd");
-      const dow     = getDay(day); // 0=Sun…6=Sat
-
+      const dow     = getDay(day);
       staffIndex.forEach(entry => {
         if (entry.overrides.has(dateStr)) {
-          // Override wins
           totalSlots += entry.overrides.get(dateStr)!;
         } else {
-          // Fall back to recurring weekly pattern
           totalSlots += entry.recurring.get(dow) ?? 0;
         }
       });
     });
 
-    if (totalSlots === 0) return null; // availability rows exist but no slots enabled
-
+    if (totalSlots === 0) return null;
     const bookedSlots = active.length;
-    return Math.min(bookedSlots / totalSlots, 1); // cap at 100%
+    return Math.min(bookedSlots / totalSlots, 1);
   }, [availabilityRows, active, monthStart, monthEnd, staffLoading]);
 
   // ─── alerts ───────────────────────────────────────────────────────────────
@@ -427,6 +412,7 @@ export function useDashboardData() {
       returning:     returningCount,
       retentionRate,
     },
+    leadSourceBreakdown,
     topServices,
     alerts,
     todayAppointments: todayBookings
