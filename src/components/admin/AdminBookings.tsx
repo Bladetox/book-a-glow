@@ -16,20 +16,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 
-const filters = ["All", "Today", "Pending", "Confirmed", "Complete", "Cancelled"] as const;
+const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
 const statusColors: Record<BookingRow["status"], string> = {
   pending:   "bg-amber-500/10 text-amber-400",
   confirmed: "bg-emerald-500/10 text-emerald-400",
-  complete:  "bg-white/[0.06] text-white/50",
+  completed: "bg-white/[0.06] text-white/50",
   cancelled: "bg-red-500/10 text-red-400",
 };
 
 const statusBorderAccent: Record<BookingRow["status"], string> = {
   pending:   "border-l-2 border-l-amber-500/50",
   confirmed: "border-l-2 border-l-emerald-500/30",
-  complete:  "border-l-2 border-l-white/10",
+  completed: "border-l-2 border-l-white/10",
   cancelled: "border-l-2 border-l-red-500/20",
 };
 
@@ -203,7 +203,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [searchQuery, setSearchQuery]                 = useState("");
   const [expandedId, setExpandedId]                   = useState<string | null>(null);
 
-  // Inline edit (collapsible, inside card — not in action row)
   const [editingInlineId, setEditingInlineId]         = useState<string | null>(null);
   const [editDraft, setEditDraft]                     = useState<Partial<BookingRow>>({});
 
@@ -215,7 +214,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [slotsLoading, setSlotsLoading]               = useState(false);
   const [markingPaidId, setMarkingPaidId]             = useState<string | null>(null);
 
-  // Confirm dialog states
   const [confirmDelete, setConfirmDelete]             = useState<BookingRow | null>(null);
   const [confirmCancel, setConfirmCancel]             = useState<BookingRow | null>(null);
   const [confirmConfirm, setConfirmConfirm]           = useState<BookingRow | null>(null);
@@ -237,7 +235,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       }
       onClearClient?.();
     }
-  }, [initialClient, bookings.length]);
+  }, [initialClient, bookings.length, onClearClient]);
 
   useEffect(() => {
     const b = reschedulingBooking;
@@ -308,7 +306,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     Today:     bookings.filter(b => b.date === todayStr).length,
     Pending:   bookings.filter(b => b.status === "pending").length,
     Confirmed: bookings.filter(b => b.status === "confirmed").length,
-    Complete:  bookings.filter(b => b.status === "complete").length,
+    Completed: bookings.filter(b => b.status === "completed").length,
     Cancelled: bookings.filter(b => b.status === "cancelled").length,
   };
 
@@ -451,7 +449,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const showRequestBalance = (b: BookingRow) =>
     b.balance > 0 &&
     b.status !== "cancelled" &&
-    b.status !== "complete" &&
+    b.status !== "completed" &&
     !b.fullPaymentReceived;
 
   if (isLoading) {
@@ -641,7 +639,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                 const isEditingInline     = editingInlineId === b.id;
                 const isRequestingBalance = requestingBalanceId === b.id;
                 const isMarkingPaid       = markingPaidId === b.id;
-                const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "complete" && !b.fullPaymentReceived;
+                const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "completed" && !b.fullPaymentReceived;
 
                 return (
                   <motion.div key={b.id}
@@ -788,7 +786,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 </AnimatePresence>
                               </div>
 
-                              {/* ⑤ Action button row — primary actions only */}
+                              {/* ⑤ Action button row */}
                               <div className="flex items-center gap-2 pt-1 flex-wrap">
 
                                 {/* Confirm */}
@@ -802,7 +800,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 )}
 
                                 {/* Reschedule */}
-                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
                                     className="px-3 py-1.5 rounded-lg border border-sky-500/25 bg-sky-500/[0.08] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5"
@@ -812,7 +810,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 )}
 
                                 {/* Add Service */}
-                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
                                     className="px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors flex items-center gap-1.5"
@@ -822,7 +820,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 )}
 
                                 {/* Mark Fully Paid */}
-                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     disabled={isMarkingPaid}
                                     onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }}
@@ -854,7 +852,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <div className="flex-1" />
 
                                 {/* Cancel */}
-                                {b.status !== "cancelled" && b.status !== "complete" && (
+                                {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setConfirmCancel(b); }}
                                     className="px-3 py-1.5 rounded-lg border border-red-500/20 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-1.5"
