@@ -132,13 +132,13 @@ const METRIC_COPY: MetricCopyShape = {
     explain: "Total distinct people who booked with you this month.",
   },
   returning: {
-    title: "Repeat Clients",
-    explain: "Clients who booked more than once this month.",
-    benchmark: "Aim: at least 30-40% of your client base returning monthly.",
+    title: "Returning Clients",
+    explain: "Clients who booked this month and also booked last month — your retained base.",
+    benchmark: "Aim: at least 30–40% of this month's clients should be returning from last month.",
   },
   retention: {
     title: "Retention Rate",
-    explain: "The % of your clients who came back.",
+    explain: "The % of this month's clients who also came back from last month. This is the standard month-over-month retention measure.",
     benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
   },
   leadSource: {
@@ -487,6 +487,8 @@ const AdminDashboard = ({
   const cancelRate     = data.health?.cancellationRate  ?? 0;
   const totalClients   = data.clients?.total     ?? 0;
   const returningCount = data.clients?.returning ?? 0;
+  // Use the pre-computed retention rate from the hook (month-over-month overlap)
+  const retentionRate  = data.clients?.retentionRate ?? 0;
   const revenueTrend   = data.revenueTrend ?? [];
   const maxTrend       = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
   const stockAlerts    = data.stockAlerts ?? [];
@@ -513,8 +515,8 @@ const AdminDashboard = ({
 
   const cancelDisplay  = `${Math.round(cancelRate)}%`;
   const cancelColor    = cancelRate > 20 ? "text-red-400" : "text-white/90";
-  const retentionDisp  = totalClients > 0 ? `${Math.round((returningCount / totalClients) * 100)}%` : "0%";
-  const retentionColor = totalClients > 0 && (returningCount / totalClients) >= 0.4 ? "text-emerald-400" : "text-white/90";
+  const retentionDisp  = `${retentionRate}%`;
+  const retentionColor = retentionRate >= 40 ? "text-emerald-400" : "text-white/90";
 
   // Lead source card derived values
   const topChannel     = leadSourceBreakdown[0]?.channel ?? "—";
