@@ -31,15 +31,18 @@ const AddServiceModal = ({ bookingId, clientName, onClose, onAdded }: AddService
   useEffect(() => {
     if (!tenantId || !bookingId) return;
     setLoading(true);
-    supabase
-      .from("services")
-      .select("id, name, price, duration_minutes, deposit_type, deposit_value")
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true)
-      .order("name")
+    // Use the edge function to bypass RLS — service_role_key has full read access
+    supabase.functions
+      .invoke("add-booking-service", {
+        body: { action: "list_services", tenant_id: tenantId },
+      })
       .then(({ data, error }) => {
-        if (error) { toast.error("Could not load services"); }
-        else        { setServices(data ?? []); }
+        if (error || data?.error) {
+          toast.error("Could not load services");
+          console.error("list_services error:", error ?? data?.error);
+        } else {
+          setServices(data?.services ?? []);
+        }
         setLoading(false);
       });
   }, [tenantId, bookingId]);
