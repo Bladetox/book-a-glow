@@ -14,16 +14,6 @@ async function getStaffId(tenantId: string): Promise<string> {
   return data.owner_id;
 }
 
-/**
- * Fetch a full month of availability (dates with open slots).
- *
- * staleTime: 0  — always re-fetch from Supabase when this query mounts or
- * the window regains focus. This ensures admin-side closes/overrides are
- * reflected immediately for the booking user without a hard refresh.
- *
- * gcTime (formerly cacheTime) left at default (5 min) so the cached value
- * is shown instantly while a background re-fetch runs — no flicker.
- */
 export function useMonthAvailability(year: number, month: number, durationMinutes: number = 60) {
   const { tenantId } = usePublicTenant();
 
@@ -42,17 +32,15 @@ export function useMonthAvailability(year: number, month: number, durationMinute
       if (error) throw error;
       const map: Record<string, string[]> = {};
       (data ?? []).forEach((row: any) => {
-        map[row.date_str] = row.available_slots ?? [];
+        // DB returns date_text (not date_str)
+        const key = row.date_text ?? row.date_str;
+        if (key) map[key] = row.available_slots ?? [];
       });
       return map;
     },
   });
 }
 
-/**
- * Fetch available time slots for a specific date.
- * staleTime: 0 for same reason — slot list must always be fresh.
- */
 export function useDateSlots(date: string | null, durationMinutes: number = 60, sessionToken?: string) {
   const { tenantId } = usePublicTenant();
 
@@ -83,8 +71,6 @@ export function useResolveStaffId() {
   return async () => getStaffId(tenantId);
 }
 
-// Keep backward-compat export for ReviewStep
-// Uses static import (not dynamic) to avoid Vite chunk deadlock
 export async function resolveStaffId(): Promise<string> {
   const slug = getTenantSlug();
   if (!slug) throw new Error("No tenant context");
