@@ -15,7 +15,36 @@ Deno.serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
 
-    const { booking_id, service_id, tenant_id } = await req.json();
+    const body = await req.json();
+    const { action, tenant_id } = body;
+
+    // ── ACTION: list_services ─────────────────────────────────────────────
+    // Called by AddServiceModal to bypass client-side RLS restrictions.
+    if (action === "list_services") {
+      if (!tenant_id) {
+        return new Response(JSON.stringify({ error: "Missing tenant_id" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, price, duration_minutes, deposit_type, deposit_value, deposit_percent")
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ services: data ?? [] }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── ACTION: add (default) ─────────────────────────────────────────────
+    const { booking_id, service_id } = body;
 
     if (!booking_id || !service_id || !tenant_id) {
       return new Response(JSON.stringify({ error: "Missing booking_id, service_id or tenant_id" }), {
@@ -43,7 +72,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Fetch the service to add
+    // 2. Fetch the service
     const { data: service, error: serviceErr } = await supabase
       .from("services")
       .select("id, name, price, duration_minutes, deposit_percent")
@@ -65,7 +94,6 @@ Deno.serve(async (req) => {
     const servicePrice  = Number(service.price ?? 0);
     const serviceDurMin = Number(service.duration_minutes ?? 0);
 
-    // Deposit increment for the added service
     let additionalDeposit = 0;
     if (!booking.deposit_paid) {
       const pct = Number(service.deposit_percent ?? 50);
@@ -87,16 +115,39 @@ Deno.serve(async (req) => {
     const endM     = Math.floor((endMs % 3600000) / 60000);
     const newEndTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`;
 
-    // 4. Insert into booking_services
-    await supabase.from("booking_services").insert({
-      booking_id:       booking_id,
-      service_id:       service_id,
-      tenant_id:        tenant_id,
-      price:            servicePrice,
-      duration_minutes: serviceDurMin,
-    });
+    // 4. Get current max sort_order for this booking
+    const { data: existingItems } = await supabase
+      .from("booking_items")
+      .select("sort_order")
+      .eq("booking_id", booking_id)
+      .order("sort_order", { ascending: false })
+      .limit(1);
 
-    // 5. Update the booking row
+    const nextSortOrder = existingItems && existingItems.length > 0
+      ? (existingItems[0].sort_order ?? 0) + 1
+      : 0;
+
+    // 5. Insert into booking_items (the correct table)
+    const { error: insertErr } = await supabase
+      .from("booking_items")
+      .insert({
+        booking_id:       booking_id,
+        service_id:       service_id,
+        service_name:     service.name,
+        price:            servicePrice,
+        duration_minutes: serviceDurMin,
+        sort_order:       nextSortOrder,
+        tenant_id:        tenant_id,
+      });
+
+    if (insertErr) {
+      console.error("Failed to insert booking_item:", insertErr);
+      return new Response(JSON.stringify({ error: "Failed to insert booking item: " + insertErr.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 6. Update the booking row
     const { error: updateErr } = await supabase
       .from("bookings")
       .update({
@@ -114,7 +165,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 6. Update Google Calendar event if connected
+    // 7. Update Google Calendar if connected
     if (booking.gcal_event_id) {
       try {
         await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
