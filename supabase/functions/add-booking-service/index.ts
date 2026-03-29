@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       }
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, price, duration_minutes, deposit_type, deposit_value, deposit_percent")
+        .select("id, name, price, duration_minutes")
         .eq("tenant_id", tenant_id)
         .eq("is_active", true)
         .order("name");
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     // 2. Fetch the service
     const { data: service, error: serviceErr } = await supabase
       .from("services")
-      .select("id, name, price, duration_minutes, deposit_percent")
+      .select("id, name, price, duration_minutes")
       .eq("id", service_id)
       .eq("tenant_id", tenant_id)
       .single();
@@ -109,10 +109,10 @@ Deno.serve(async (req) => {
     const servicePrice  = Number(service.price ?? 0);
     const serviceDurMin = Number(service.duration_minutes ?? 0);
 
+    // Default to 50% deposit if deposit not yet paid
     let additionalDeposit = 0;
     if (!booking.deposit_paid) {
-      const pct = Number(service.deposit_percent ?? 50);
-      additionalDeposit = (servicePrice * pct) / 100;
+      additionalDeposit = (servicePrice * 50) / 100;
     }
 
     const newTotal    = oldTotal + servicePrice;
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       ? (existingItems[0].sort_order ?? 0) + 1
       : 0;
 
-    // 5. Insert into booking_items (correct table)
+    // 5. Insert into booking_items
     const { error: insertErr } = await supabase
       .from("booking_items")
       .insert({
