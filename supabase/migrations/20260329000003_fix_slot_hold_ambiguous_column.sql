@@ -1,9 +1,9 @@
--- ============================================================
--- acquire_slot_hold / release_slot_hold RPCs
--- ============================================================
+-- Fix: ambiguous column reference 'expires_at' in acquire_slot_hold
+-- RETURNS TABLE declares a column named 'expires_at' which conflicts
+-- with the table column of the same name in DELETE/SELECT statements.
+-- Solution: alias the table in every reference inside the function body.
 
 DROP FUNCTION IF EXISTS acquire_slot_hold(text, uuid, date, time without time zone, integer, text);
-DROP FUNCTION IF EXISTS release_slot_hold(uuid, text);
 
 CREATE OR REPLACE FUNCTION acquire_slot_hold(
   p_tenant_id     text,
@@ -21,7 +21,6 @@ DECLARE
   v_expires_at timestamptz;
   v_conflict   boolean;
 BEGIN
-  -- Qualify with table name to avoid ambiguity with the RETURNS TABLE column
   DELETE FROM public.slot_holds sh WHERE sh.expires_at <= NOW();
 
   SELECT EXISTS (
@@ -70,16 +69,5 @@ BEGIN
   END IF;
 
   RETURN QUERY SELECT true, 'Slot held.', v_hold_id, v_expires_at;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION release_slot_hold(
-  p_hold_id       uuid,
-  p_session_token text
-)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  DELETE FROM public.slot_holds
-  WHERE id = p_hold_id AND session_token = p_session_token;
 END;
 $$;
