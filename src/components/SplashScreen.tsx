@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 
 interface SplashScreenProps {
@@ -10,6 +10,7 @@ interface SplashScreenProps {
 
 const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashScreenProps) => {
   const config = usePublicBusinessConfig();
+  const [attempted, setAttempted] = useState(false);
 
   // Ice-white orbs — large, slow, luminous
   const orbs = useMemo(
@@ -52,6 +53,16 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     }
     return opts;
   }, [config.referralOptions]);
+
+  const isSelected = referralSource.trim().length > 0;
+
+  const handleCta = () => {
+    if (!isSelected) {
+      setAttempted(true);
+      return;
+    }
+    onComplete();
+  };
 
   return (
     <div
@@ -229,7 +240,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           }}
         />
 
-        {/* Where did you hear about us */}
+        {/* Where did you hear about us — REQUIRED */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -238,34 +249,53 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         >
           <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-center mb-1" style={{ color: "rgba(210,228,255,0.3)" }}>
             Where did you hear about us?
+            <span style={{ color: attempted && !isSelected ? "rgba(255,120,120,0.85)" : "rgba(210,228,255,0.5)" }}> *</span>
           </p>
-          <p className="text-[8px] text-center mb-3 tracking-wide" style={{ color: "rgba(255,255,255,0.15)" }}>
-            Scroll to see all options
+          <p
+            className="text-[8px] text-center mb-3 tracking-wide transition-colors duration-300"
+            style={{
+              color: attempted && !isSelected
+                ? "rgba(255,120,120,0.7)"
+                : "rgba(255,255,255,0.15)",
+            }}
+          >
+            {attempted && !isSelected ? "Please select an option to continue" : "Scroll to see all options"}
           </p>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-6 px-6">
+          <motion.div
+            className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-6 px-6"
+            animate={attempted && !isSelected ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+          >
             {referralOptions.map(opt => (
               <motion.button
                 key={opt}
                 whileTap={{ scale: 0.91 }}
-                onClick={() => onReferralChange(referralSource === opt ? "" : opt)}
+                onClick={() => {
+                  onReferralChange(referralSource === opt ? "" : opt);
+                  if (attempted) setAttempted(false);
+                }}
                 className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
                 style={{
                   border: referralSource === opt
                     ? "1px solid rgba(210,228,255,0.4)"
-                    : "1px solid rgba(255,255,255,0.08)",
+                    : attempted && !isSelected
+                      ? "1px solid rgba(255,120,120,0.25)"
+                      : "1px solid rgba(255,255,255,0.08)",
                   background: referralSource === opt
                     ? "rgba(210,228,255,0.1)"
                     : "transparent",
                   color: referralSource === opt
                     ? "rgba(225,240,255,0.95)"
-                    : "rgba(255,255,255,0.32)",
+                    : attempted && !isSelected
+                      ? "rgba(255,180,180,0.55)"
+                      : "rgba(255,255,255,0.32)",
                   backdropFilter: referralSource === opt ? "blur(8px)" : undefined,
                 }}
               >
                 {opt}
               </motion.button>
             ))}
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* CTA */}
@@ -273,29 +303,40 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.25, duration: 0.5 }}
-          whileHover={{ scale: 1.012 }}
-          whileTap={{ scale: 0.975 }}
-          onClick={onComplete}
+          whileHover={isSelected ? { scale: 1.012 } : {}}
+          whileTap={{ scale: isSelected ? 0.975 : 1 }}
+          onClick={handleCta}
           className="mt-10 w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase relative overflow-hidden cursor-pointer transition-all duration-300"
           style={{
-            background: "rgba(210,228,255,0.07)",
+            background: isSelected
+              ? "rgba(210,228,255,0.07)"
+              : "rgba(255,255,255,0.03)",
             backdropFilter: "blur(28px)",
             WebkitBackdropFilter: "blur(28px)",
-            border: "1px solid rgba(210,228,255,0.18)",
-            boxShadow: "0 0 40px rgba(210,228,255,0.04), 0 1px 0 rgba(220,236,255,0.14) inset",
-            color: "rgba(255,255,255,0.88)",
+            border: isSelected
+              ? "1px solid rgba(210,228,255,0.18)"
+              : "1px solid rgba(255,255,255,0.06)",
+            boxShadow: isSelected
+              ? "0 0 40px rgba(210,228,255,0.04), 0 1px 0 rgba(220,236,255,0.14) inset"
+              : "none",
+            color: isSelected
+              ? "rgba(255,255,255,0.88)"
+              : "rgba(255,255,255,0.28)",
+            cursor: isSelected ? "pointer" : "default",
           }}
         >
-          {/* Ice shimmer sweep */}
-          <motion.span
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "linear-gradient(105deg, transparent 30%, rgba(210,228,255,0.1) 50%, transparent 70%)",
-            }}
-            initial={{ x: "-100%" }}
-            whileHover={{ x: "200%" }}
-            transition={{ duration: 0.7, ease: "easeInOut" }}
-          />
+          {/* Ice shimmer sweep — only when enabled */}
+          {isSelected && (
+            <motion.span
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: "linear-gradient(105deg, transparent 30%, rgba(210,228,255,0.1) 50%, transparent 70%)",
+              }}
+              initial={{ x: "-100%" }}
+              whileHover={{ x: "200%" }}
+              transition={{ duration: 0.7, ease: "easeInOut" }}
+            />
+          )}
           {/* Top highlight */}
           <span className="absolute top-0 left-6 right-6 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(220,238,255,0.3), transparent)" }} />
           <span className="relative">{config.splashCtaLabel}</span>
