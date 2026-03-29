@@ -159,6 +159,21 @@ export function useDashboardData() {
     },
   });
 
+  // 7. All-time lead source — no date filter, used for Acquisition Channels card
+  const { data: allLeadSourceBookings = [] } = useQuery({
+    queryKey:  ["dash-lead-source-all", tenantId],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("lead_source, status")
+        .eq("tenant_id", tenantId)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const coreLoading  = l1 || l2 || l3;
   const staffLoading = l4 || l5;
 
@@ -284,17 +299,13 @@ export function useDashboardData() {
   }, [active]);
 
   // ─── client insights ──────────────────────────────────────────────────────
-  // Retention = % of THIS month's unique clients who also booked LAST month.
-  // This is the standard definition: did you keep them month-over-month?
   const { clientKeySet, returningCount, retentionRate } = useMemo(() => {
-    // Build a set of client keys from last month
     const prevKeySet = new Set<string>();
     prevBookings.forEach((b: any) => {
       const key = resolveClientKey(b);
       if (key) prevKeySet.add(key);
     });
 
-    // This month's unique clients
     const countMap = new Map<string, number>();
     active.forEach((b: any) => {
       const key = resolveClientKey(b);
@@ -302,7 +313,6 @@ export function useDashboardData() {
     });
     const keySet = new Set(active.map((b: any) => resolveClientKey(b)));
 
-    // Retained = booked this month AND last month
     const retained = [...keySet].filter(k => prevKeySet.has(k)).length;
 
     return {
@@ -313,19 +323,19 @@ export function useDashboardData() {
   }, [active, prevBookings]);
 
   // ─── lead source / acquisition channel breakdown ─────────────────────────
-  // Client-type self-reports ("Returning Client", "Existing") are intentionally
-  // excluded — they are not acquisition channels and skew the marketing data.
+  // Uses ALL-TIME bookings (query 7) so history beyond current month is included.
+  // Client-type self-reports ("Returning Client", "Existing") are excluded.
   const leadSourceBreakdown = useMemo(() => {
     const map = new Map<string, number>();
-    active.forEach((b: any) => {
+    allLeadSourceBookings.forEach((b: any) => {
       const src = (b.lead_source || "").trim();
-      if (!src || isClientTypeLabel(src)) return; // skip blanks and client-type labels
+      if (!src || isClientTypeLabel(src)) return;
       map.set(src, (map.get(src) || 0) + 1);
     });
     return [...map.entries()]
       .map(([channel, count]) => ({ channel, count }))
       .sort((a, b) => b.count - a.count);
-  }, [active]);
+  }, [allLeadSourceBookings]);
 
   // ─── fill rate ────────────────────────────────────────────────────────────
   const fillRate: number | null = useMemo(() => {
@@ -450,7 +460,7 @@ export function useDashboardData() {
           .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
           .map((i: any) => i.service_name)
           .join(", ") || "none",
-        status:  b.status as "confirmed" | "pending" | "complete" | "cancelled",
+        status:  b.status as "confirmed" | "pending" | "complete" | "completed" | "cancelled",
         balance: Number(b.balance_due ?? 0),
       })),
     stockAlerts: stockItems.map((s: any) => ({

@@ -50,7 +50,7 @@ interface Appointment {
   time: string;
   client: string;
   service: string;
-  status: "confirmed" | "pending" | "complete" | "cancelled";
+  status: "confirmed" | "pending" | "complete" | "completed" | "cancelled";
   balance: number;
 }
 interface HeatmapCell { slot: string; intensity: number; }
@@ -143,7 +143,7 @@ const METRIC_COPY: MetricCopyShape = {
   },
   leadSource: {
     title: "Acquisition Channel",
-    explain: "Where your clients are discovering you. This month's top channel is shown on the card. Tap to see the full breakdown.",
+    explain: "Where your clients are discovering you. All-time booking history is shown. Tap to see the full breakdown.",
     benchmark: "Double down on your top channel. If 'Not specified' leads, prompt clients to answer at booking.",
   },
   revenueTrend: [
@@ -207,7 +207,7 @@ const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onC
               )}
               {card.extraLines && card.extraLines.length > 0 && (
                 <div className="mt-1 flex flex-col gap-1.5">
-                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mb-0.5">Breakdown this month</p>
+                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mb-0.5">All-time breakdown</p>
                   {card.extraLines.map((l, i) => (
                     <div key={i} className="flex items-center justify-between gap-3">
                       <span className="text-[12px] text-white/60 truncate flex-1">{l.term}</span>
@@ -427,12 +427,12 @@ const AppointmentsList = ({
 
 const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-    status === "confirmed" ? "bg-emerald-500/10 text-emerald-400" :
-    status === "complete"  ? "bg-white/[0.08] text-white/50" :
-    status === "cancelled" ? "bg-red-500/10 text-red-400" :
+    status === "confirmed"  ? "bg-emerald-500/10 text-emerald-400" :
+    status === "complete" || status === "completed" ? "bg-white/[0.08] text-white/50" :
+    status === "cancelled"  ? "bg-red-500/10 text-red-400" :
     "bg-amber-500/10 text-amber-400"
   }`}>
-    {status}
+    {status === "completed" ? "complete" : status}
   </span>
 );
 
@@ -487,7 +487,6 @@ const AdminDashboard = ({
   const cancelRate     = data.health?.cancellationRate  ?? 0;
   const totalClients   = data.clients?.total     ?? 0;
   const returningCount = data.clients?.returning ?? 0;
-  // Use the pre-computed retention rate from the hook (month-over-month overlap)
   const retentionRate  = data.clients?.retentionRate ?? 0;
   const revenueTrend   = data.revenueTrend ?? [];
   const maxTrend       = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
@@ -518,13 +517,12 @@ const AdminDashboard = ({
   const retentionDisp  = `${retentionRate}%`;
   const retentionColor = retentionRate >= 40 ? "text-emerald-400" : "text-white/90";
 
-  // Lead source card derived values
   const topChannel     = leadSourceBreakdown[0]?.channel ?? "—";
   const totalWithSource = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
   const topChannelPct  = totalWithSource > 0 && leadSourceBreakdown[0]
     ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
     : null;
-  const leadSourceSub  = topChannelPct !== null ? `${topChannelPct}% of bookings` : undefined;
+  const leadSourceSub  = topChannelPct !== null ? `${topChannelPct}% of all bookings` : undefined;
   const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map(r => ({
     term: r.channel,
     def:  `${r.count} booking${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
