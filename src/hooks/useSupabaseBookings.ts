@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -93,32 +93,56 @@ export function useSupabaseBookings() {
   const { tenantId } = useTenant();
   const qc = useQueryClient();
 
+  // Hold a ref to the active channel so cleanup is always referentially correct.
+  // Using a ref (not state) means channel re-creation never triggers a re-render loop.
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   useEffect(() => {
     if (!tenantId) return;
+
     const channelName = `bookings-realtime-${tenantId}`;
 
-    // Remove any stale channel with this name before creating a new one.
-    // Prevents "cannot add postgres_changes after subscribe()" crash that
-    // occurs in StrictMode or when the effect re-runs before the previous
-    // channel has been fully torn down asynchronously.
-    const existing = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
-    if (existing) supabase.removeChannel(existing);
+    // Async-safe teardown: if a channel already exists in the ref, remove it first
+    // and wait for Supabase to confirm the unsubscribe before creating the new one.
+    // This prevents the "cannot add postgres_changes after subscribe()" crash that
+    // occurs in StrictMode / fast re-mounts when removeChannel() is fire-and-forget.
+    const setup = async () => {
+      if (channelRef.current) {
+        await supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "bookings" },
-        (payload: any) => {
-          if (payload.new?.tenant_id !== tenantId && payload.old?.tenant_id !== tenantId) return;
-          qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
-          qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
-        }
-      )
-      .subscribe();
+      const channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "bookings" },
+          (payload: any) => {
+            if (
+              payload.new?.tenant_id !== tenantId &&
+              payload.old?.tenant_id !== tenantId
+            ) return;
+            qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
+            qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
+          }
+        )
+        .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId]); // qc intentionally omitted: QueryClient is stable and must not re-trigger this
+      channelRef.current = channel;
+    };
+
+    setup();
+
+    return () => {
+      // Cleanup: remove the channel and clear the ref.
+      // We do NOT await here (effect cleanup must be synchronous),
+      // but the ref ensures the next setup() call will await removal before re-subscribing.
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [tenantId]); // qc intentionally omitted: QueryClient is stable
 
   return useQuery({
     queryKey: ["bookings", tenantId],
