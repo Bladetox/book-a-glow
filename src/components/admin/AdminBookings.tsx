@@ -750,7 +750,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                             <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />
                           )}
                         </div>
-                      <p className="text-[11px] text-white/40 line-clamp-2 leading-relaxed">{b.service} • {b.duration}min</p>                            
+                      <p className="text-[11px] text-white/40 leading-relaxed">{b.service} • {b.duration}min</p>                           
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
@@ -792,7 +792,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   <Scissors className="w-3 h-3 text-white/25 shrink-0 mt-0.5" />
                                   <span className="text-[10px] text-white/30 w-12 shrink-0 mt-0.5">Services</span>
                                   <div className="flex flex-wrap gap-1.5 min-w-0">
-                                    {b.service.split(", ").map((svc, i) => (
+                                    {(b.service ?? \"\").split(\", \").map((svc, i) => (
                                       <span key={i} className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/70">
                                         {svc}
                                       </span>
