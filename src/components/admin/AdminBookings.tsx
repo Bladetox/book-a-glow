@@ -730,10 +730,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                     {/* ── Main row ── */}
                     <div
-                      className="p-3 sm:p-4 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      className="p-3 sm:p-4 flex items-start gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                       onClick={() => setExpandedId(isExpanded ? null : b.id)}
                     >
-                      <div className="flex flex-col items-center shrink-0 w-16">
+                      <div className="flex flex-col items-center shrink-0 w-16 pt-0.5">
                         <Clock className="w-3 h-3 text-white/25 mb-0.5" />
                         <span className="text-xs font-semibold text-white/70">{b.time}</span>
                         <span className="text-[10px] text-white/50 font-medium">
@@ -747,21 +747,29 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 mb-1">
                           <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
                           {isClientBlocked && (
                             <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />
                           )}
                         </div>
-                        <p className="text-[11px] text-white/40 truncate">
-                          {serviceList.length > 1
-                            ? `${serviceList[0]} +${serviceList.length - 1} more`
-                            : b.service
-                          } · {b.duration}min
-                        </p>
+                        {/* ── Collapsed service list: show all as inline pills, not truncated ── */}
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {serviceList.map((svc, i) => (
+                            <span
+                              key={i}
+                              className="inline-block px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.07] text-[10px] text-white/50 leading-tight"
+                            >
+                              {svc}
+                            </span>
+                          ))}
+                          <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] text-white/25 leading-tight">
+                            {b.duration}min
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
                         <div className="flex items-center gap-1.5">
                           {hasOutstandingBalance && (
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
@@ -775,7 +783,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                         )}
                       </div>
 
-                      <div className="shrink-0 text-white/20">
+                      <div className="shrink-0 text-white/20 pt-0.5">
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </div>
                     </div>
@@ -799,22 +807,24 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <DetailRow icon={Clock}  label="Ref"     value={b.ref} />
                               </div>
 
-                              {/* ── Services — full-width pill list, always fully visible ── */}
-                              <div className="flex items-start gap-2">
-                                <Scissors className="w-3 h-3 text-white/25 shrink-0 mt-1" />
-                                <span className="text-[10px] text-white/30 w-12 shrink-0 mt-1">Services</span>
+                              {/* ── Services — full-width pill list, every service visible, no truncation ── */}
+                              <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                                <div className="flex items-center gap-2 mb-2.5">
+                                  <Scissors className="w-3 h-3 text-white/30 shrink-0" />
+                                  <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
+                                    Services ({serviceList.length})
+                                  </span>
+                                  <span className="ml-auto text-[10px] text-white/25">{b.duration}min total</span>
+                                </div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {serviceList.map((svc, i) => (
                                     <span
                                       key={i}
-                                      className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/70"
+                                      className="px-2.5 py-1 rounded-full bg-white/[0.07] border border-white/[0.10] text-[11px] font-medium text-white/75"
                                     >
                                       {svc}
                                     </span>
                                   ))}
-                                  <span className="px-2 py-0.5 rounded-full bg-white/[0.04] text-[10px] text-white/30">
-                                    {b.duration}min total
-                                  </span>
                                 </div>
                               </div>
 
@@ -870,7 +880,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 >
                                   <div className="flex items-center gap-2">
                                     <Edit3 className="w-3 h-3 text-white/30" />
-                                    <span className="text-[11px] font-medium text-white/40">Edit guest details & notes</span>
+                                    <span className="text-[11px] font-medium text-white/40">Edit guest details &amp; notes</span>
                                   </div>
                                   <ChevronDown className={`w-3.5 h-3.5 text-white/20 transition-transform ${isEditingInline ? "rotate-180" : ""}`} />
                                 </button>
