@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -91,70 +90,6 @@ function mapBooking(b: any): BookingRow {
 
 export function useSupabaseBookings() {
   const { tenantId } = useTenant();
-  const qc = useQueryClient();
-
-  // Hold a ref to the active channel so cleanup is always referentially correct.
-  // Using a ref (not state) means channel re-creation never triggers a re-render loop.
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
-  useEffect(() => {
-    if (!tenantId) return;
-
-    const channelName = `bookings-realtime-${tenantId}`;
-
-    // `cancelled` is set synchronously by the cleanup function.
-    // This guards against the React StrictMode double-mount race where the first
-    // mount's async setup() is still in-flight when the second mount's cleanup runs.
-    // Without this flag, setup() would call .on() on an already-subscribed channel
-    // name → "cannot add postgres_changes callbacks after subscribe()".
-    let cancelled = false;
-
-    const setup = async () => {
-      // Await removal of any pre-existing channel first.
-      if (channelRef.current) {
-        await supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-
-      // If cleanup fired while we were awaiting the removal, bail out entirely.
-      if (cancelled) return;
-
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "bookings" },
-          (payload: any) => {
-            if (
-              payload.new?.tenant_id !== tenantId &&
-              payload.old?.tenant_id !== tenantId
-            ) return;
-            qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
-            qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
-          }
-        )
-        .subscribe();
-
-      // Final guard: if cleanup ran while subscribe() was executing, remove immediately.
-      if (cancelled) {
-        supabase.removeChannel(channel);
-        return;
-      }
-
-      channelRef.current = channel;
-    };
-
-    setup();
-
-    return () => {
-      // Set cancelled synchronously so any in-flight setup() sees it immediately.
-      cancelled = true;
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-    };
-  }, [tenantId]); // qc intentionally omitted: QueryClient is stable
 
   return useQuery({
     queryKey: ["bookings", tenantId],
