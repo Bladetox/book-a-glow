@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +6,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, MessageCircle, Search, X, UserPlus,
   Sparkles, Clock, CheckCircle, AlertCircle, Star,
-  Download, Eye, Pencil, Check
+  Download, Eye, Pencil, Check, StickyNote
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { toast } from "sonner";
@@ -31,10 +31,13 @@ function excelToDate(serial: number | string | null | undefined): string {
 }
 
 // ─── Normalise status ───
+// FIX 1: Removed the overly-broad `s.includes("TIME")` fallback which incorrectly
+// matched any status containing the word "time" (e.g. "OVERTIME", custom labels).
+// Now only exact phrase "TIME TO BOOK" matches that bucket.
 function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
   const s = (raw ?? "").toUpperCase().replace(/[^A-Z ]/g, "").trim();
   if (s.includes("ON TRACK")) return "ON TRACK";
-  if (s.includes("TIME TO BOOK") || s.includes("TIME")) return "TIME TO BOOK";
+  if (s.includes("TIME TO BOOK")) return "TIME TO BOOK";
   if (s.includes("OVERDUE")) return "OVERDUE";
   return "UNKNOWN";
 }
@@ -343,15 +346,36 @@ function exportCSV(rows: any[]) {
   URL.revokeObjectURL(url);
 }
 
+// ─── sessionStorage key for enrollSaved persistence ───
+const ENROLL_SAVED_KEY = "loyalty_enroll_saved";
+
 // ══════════════════════════════════════════════════
 const AdminLoyalty = () => {
   const { tenantId } = useTenant();
   const qc           = useQueryClient();
 
-  const [filter, setFilter]           = useState<Filter>("All");
-  const [search, setSearch]           = useState("");
-  const [enrolling, setEnrolling]     = useState<EnrollCandidate | null>(null);
-  const [enrollSaved, setEnrollSaved] = useState<string[]>([]);
+  const [filter, setFilter]       = useState<Filter>("All");
+  const [search, setSearch]       = useState("");
+  const [enrolling, setEnrolling] = useState<EnrollCandidate | null>(null);
+
+  // FIX 3: Persist enrollSaved in sessionStorage so re-renders / page refreshes
+  // within the same browser session don't re-surface just-enrolled candidates.
+  const [enrollSaved, setEnrollSaved] = useState<string[]>(() => {
+    try {
+      const stored = sessionStorage.getItem(ENROLL_SAVED_KEY);
+      return stored ? (JSON.parse(stored) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const addEnrollSaved = (key: string) => {
+    setEnrollSaved(prev => {
+      const next = [...prev, key];
+      try { sessionStorage.setItem(ENROLL_SAVED_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   // ─── 1. Loyalty tracker rows ───
   const { data: rows = [], isLoading: loadingRows } = useQuery({
@@ -407,7 +431,7 @@ const AdminLoyalty = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
-      if (enrolling) setEnrollSaved(prev => [...prev, enrolling.client_name + enrolling.phone]);
+      if (enrolling) addEnrollSaved(enrolling.client_name + enrolling.phone);
       setEnrolling(null);
     },
   });
@@ -456,7 +480,8 @@ const AdminLoyalty = () => {
         } as EnrollCandidate;
       })
       .sort((a, b) => b.bookingCount - a.bookingCount || b.totalSpend - a.totalSpend)
-      .slice(0, 8);
+      // FIX 2: Raised cap from 8 to 20 so high-value tenants see all relevant candidates.
+      .slice(0, 20);
   }, [recentBookings, trackedPhones, enrollSaved]);
 
   // ─── Derived: sorted + filtered loyalty rows ───
@@ -599,10 +624,11 @@ const AdminLoyalty = () => {
       ) : (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px]">
+            {/* FIX 4: Added Notes column header; min-w widened to accommodate it */}
+            <table className="w-full min-w-[680px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  {["Client", "Status", "Last Wax", "Next Due", "Pack", "WA"].map(h => (
+                  {["Client", "Status", "Last Wax", "Next Due", "Pack", "Notes", "WA"].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
                       {h}
                     </th>
@@ -625,17 +651,9 @@ const AdminLoyalty = () => {
                       }`}
                     >
                       <td className="px-4 py-3">
-                        {/* B3: note tooltip on name */}
-                        <div className="relative group inline-flex flex-col">
-                          <span className="text-sm font-medium text-white/80 cursor-default">{r.client_name}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-white/80">{r.client_name}</span>
                           {r.phone && <span className="text-[10px] text-white/35">{r.phone}</span>}
-                          {r.notes && (
-                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-20">
-                              <div className="rounded-xl bg-[#1a1a1a] border border-white/[0.12] px-3 py-2 text-[11px] text-white/70 max-w-[200px] shadow-xl whitespace-pre-wrap">
-                                {r.notes}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </td>
 
@@ -662,6 +680,19 @@ const AdminLoyalty = () => {
 
                       <td className="px-4 py-3">
                         <PackPill raw={r.pack_progress} />
+                      </td>
+
+                      {/* FIX 4: Notes now visible as a dedicated column */}
+                      <td className="px-4 py-3 max-w-[180px]">
+                        {r.notes
+                          ? (
+                            <span className="inline-flex items-start gap-1 text-[11px] text-white/50 leading-snug">
+                              <StickyNote className="w-3 h-3 mt-0.5 shrink-0 text-white/25" />
+                              <span className="line-clamp-2">{r.notes}</span>
+                            </span>
+                          )
+                          : <span className="text-white/20 text-xs">—</span>
+                        }
                       </td>
 
                       {/* B2: WA with preview */}
