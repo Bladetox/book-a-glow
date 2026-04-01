@@ -102,15 +102,22 @@ export function useSupabaseBookings() {
 
     const channelName = `bookings-realtime-${tenantId}`;
 
-    // Async-safe teardown: if a channel already exists in the ref, remove it first
-    // and wait for Supabase to confirm the unsubscribe before creating the new one.
-    // This prevents the "cannot add postgres_changes after subscribe()" crash that
-    // occurs in StrictMode / fast re-mounts when removeChannel() is fire-and-forget.
+    // `cancelled` is set synchronously by the cleanup function.
+    // This guards against the React StrictMode double-mount race where the first
+    // mount's async setup() is still in-flight when the second mount's cleanup runs.
+    // Without this flag, setup() would call .on() on an already-subscribed channel
+    // name → "cannot add postgres_changes callbacks after subscribe()".
+    let cancelled = false;
+
     const setup = async () => {
+      // Await removal of any pre-existing channel first.
       if (channelRef.current) {
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
+
+      // If cleanup fired while we were awaiting the removal, bail out entirely.
+      if (cancelled) return;
 
       const channel = supabase
         .channel(channelName)
@@ -128,15 +135,20 @@ export function useSupabaseBookings() {
         )
         .subscribe();
 
+      // Final guard: if cleanup ran while subscribe() was executing, remove immediately.
+      if (cancelled) {
+        supabase.removeChannel(channel);
+        return;
+      }
+
       channelRef.current = channel;
     };
 
     setup();
 
     return () => {
-      // Cleanup: remove the channel and clear the ref.
-      // We do NOT await here (effect cleanup must be synchronous),
-      // but the ref ensures the next setup() call will await removal before re-subscribing.
+      // Set cancelled synchronously so any in-flight setup() sees it immediately.
+      cancelled = true;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
