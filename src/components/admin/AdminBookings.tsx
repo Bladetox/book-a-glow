@@ -753,19 +753,15 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                             <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />
                           )}
                         </div>
-                        {/* ── Collapsed service list: show all as inline pills, not truncated ── */}
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {serviceList.map((svc, i) => (
-                            <span
-                              key={i}
-                              className="inline-block px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.07] text-[10px] text-white/50 leading-tight"
-                            >
-                              {svc}
-                            </span>
-                          ))}
-                          <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] text-white/25 leading-tight">
-                            {b.duration}min
+                        {/* ── Collapsed row: show service count + duration only, no pill repetition ── */}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] text-white/40">
+                            {serviceList.length === 1
+                              ? serviceList[0]
+                              : `${serviceList.length} services`}
                           </span>
+                          <span className="text-[10px] text-white/20">·</span>
+                          <span className="text-[10px] text-white/25">{b.duration}min</span>
                         </div>
                       </div>
 
