@@ -227,7 +227,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   // ── Block client state ──────────────────────────────────────────────────────
   const [blockModalBooking, setBlockModalBooking]     = useState<BookingRow | null>(null);
-  // Map of bookingId -> { blockId, isBlocked } — loaded lazily when a row is expanded
   const [blockStatusMap, setBlockStatusMap]           = useState<Record<string, { blockId: string | null; isBlocked: boolean }>>({});
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -245,10 +244,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   }, [initialClient, bookings.length, onClearClient]);
 
-  // When a row is expanded, lazily load its block status
   useEffect(() => {
     if (!expandedId || !tenantId) return;
-    if (blockStatusMap[expandedId] !== undefined) return; // already loaded
+    if (blockStatusMap[expandedId] !== undefined) return;
     const booking = bookings.find(b => b.id === expandedId);
     if (!booking) return;
 
@@ -719,6 +717,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                 const blockStatus         = blockStatusMap[b.id];
                 const isClientBlocked     = blockStatus?.isBlocked ?? false;
 
+                // Split the comma-separated services string into an array
+                const serviceList = (b.service ?? "").split(", ").filter(Boolean);
+
                 return (
                   <motion.div key={b.id}
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
@@ -750,7 +751,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                             <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />
                           )}
                         </div>
-                      <p className="text-[11px] text-white/40 leading-relaxed">{b.service} • {b.duration}min</p>                           
+                        <p className="text-[11px] text-white/40 leading-relaxed truncate">{b.service} • {b.duration}min</p>
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
@@ -784,24 +785,31 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                               {/* ① Read-only detail rows */}
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                <DetailRow icon={User}     label="Client"  value={b.client} />
-                                <DetailRow icon={Phone}    label="Phone"   value={b.phone} />
-                                <DetailRow icon={Mail}     label="Email"   value={b.email} />
-                                <DetailRow icon={MapPin}   label="Address" value={b.address} />
-                                <div className="flex items-start gap-2 sm:col-span-2">
-                                  <Scissors className="w-3 h-3 text-white/25 shrink-0 mt-0.5" />
-                                  <span className="text-[10px] text-white/30 w-12 shrink-0 mt-0.5">Services</span>
-                                  <div className="flex flex-wrap gap-1.5 min-w-0">
-                                    {(b.service ?? \"\").split(\", \").map((svc, i) => (
-                                      <span key={i} className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/70">
-                                        {svc}
-                                      </span>
-                                    ))}
-                                    <span className="px-2 py-0.5 rounded-full bg-white/[0.04] text-[10px] text-white/30">
-                                      {b.duration}min total
+                                <DetailRow icon={User}   label="Client"  value={b.client} />
+                                <DetailRow icon={Phone}  label="Phone"   value={b.phone} />
+                                <DetailRow icon={Mail}   label="Email"   value={b.email} />
+                                <DetailRow icon={MapPin} label="Address" value={b.address} />
+                                <DetailRow icon={Clock}  label="Ref"     value={b.ref} />
+                              </div>
+
+                              {/* ── Services — full-width pill list, always fully visible ── */}
+                              <div className="flex items-start gap-2">
+                                <Scissors className="w-3 h-3 text-white/25 shrink-0 mt-1" />
+                                <span className="text-[10px] text-white/30 w-12 shrink-0 mt-1">Services</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {serviceList.map((svc, i) => (
+                                    <span
+                                      key={i}
+                                      className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/70"
+                                    >
+                                      {svc}
                                     </span>
-                                  </div>
-                                </div> <DetailRow icon={Clock}    label="Ref"     value={b.ref} /> </div>
+                                  ))}
+                                  <span className="px-2 py-0.5 rounded-full bg-white/[0.04] text-[10px] text-white/30">
+                                    {b.duration}min total
+                                  </span>
+                                </div>
+                              </div>
 
                               {/* ② Financial summary */}
                               <div className="grid grid-cols-3 gap-2 mt-1">
@@ -869,10 +877,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                       <div className="px-3 pb-3 pt-1 flex flex-col gap-3 border-t border-white/[0.06]">
                                         <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mt-1">Contact Details</p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                          <EditField label="Client Name" value={editDraft.client || ""} onChange={v => setEditDraft(d => ({ ...d, client: v }))} />
-                                          <EditField label="Phone"       value={editDraft.phone || ""}  onChange={v => setEditDraft(d => ({ ...d, phone: v }))} />
-                                          <EditField label="Email"       value={editDraft.email || ""}  onChange={v => setEditDraft(d => ({ ...d, email: v }))} />
-                                          <EditField label="Address"     value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
+                                          <EditField label="Client Name" value={editDraft.client || ""}     onChange={v => setEditDraft(d => ({ ...d, client: v }))} />
+                                          <EditField label="Phone"       value={editDraft.phone || ""}      onChange={v => setEditDraft(d => ({ ...d, phone: v }))} />
+                                          <EditField label="Email"       value={editDraft.email || ""}      onChange={v => setEditDraft(d => ({ ...d, email: v }))} />
+                                          <EditField label="Address"     value={editDraft.address || ""}    onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
                                         </div>
                                         <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Notes</p>
                                         <EditField label="Staff Notes"  value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
@@ -894,7 +902,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                               {/* ⑤ Action button row */}
                               <div className="flex items-center gap-2 pt-1 flex-wrap">
 
-                                {/* Confirm */}
                                 {b.status === "pending" && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setConfirmConfirm(b); }}
@@ -904,7 +911,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
-                                {/* Reschedule */}
                                 {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
@@ -914,7 +920,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
-                                {/* Add Service */}
                                 {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
@@ -924,7 +929,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
-                                {/* Mark Fully Paid */}
                                 {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     disabled={isMarkingPaid}
@@ -939,7 +943,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
-                                {/* Request Final Payment */}
                                 {showRequestBalance(b) && (
                                   <button
                                     disabled={isRequestingBalance}
@@ -954,7 +957,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
-                                {/* Block / Unblock Client */}
                                 <button
                                   onClick={e => { e.stopPropagation(); setBlockModalBooking(b); }}
                                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
@@ -971,7 +973,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                 <div className="flex-1" />
 
-                                {/* Cancel */}
                                 {b.status !== "cancelled" && b.status !== "completed" && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setConfirmCancel(b); }}
@@ -981,7 +982,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </button>
                                 )}
 
-                                {/* Delete */}
                                 <button
                                   onClick={e => { e.stopPropagation(); setConfirmDelete(b); }}
                                   className="p-1.5 rounded-lg border border-red-500/15 text-red-400/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
@@ -1039,7 +1039,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   );
 };
 
-// ─── Sub-components ─────────────────────────────────────────────────────────────────────────────
+// ─── Sub-components ──────────────────────────────────────────────────────────────────────────────
 
 const DetailRow = ({ icon: Icon, label, value, wrap }: { icon: React.ElementType; label: string; value: string; wrap?: boolean }) => (
   <div className={`flex ${wrap ? "items-start" : "items-center"} gap-2`}>
