@@ -264,6 +264,7 @@ export function useRescheduleBooking() {
       qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
+      qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-"] });
       qc.invalidateQueries({ queryKey: ["public-month-availability"] });
       qc.invalidateQueries({ queryKey: ["public-date-slots"] });
