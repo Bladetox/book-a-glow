@@ -30,10 +30,14 @@ function excelToDate(serial: number | string | null | undefined): string {
   return format(d, "dd MMM yyyy");
 }
 
+// ─── Normalise SA phone to last 9 digits for reliable dedup ───
+// Handles: 0735279609 / +27735279609 / 27735279609 / +27 73 527 9609
+function normPhone(p: string | null | undefined): string {
+  const d = (p ?? "").replace(/\D/g, "");
+  return d.slice(-9); // e.g. "735279609"
+}
+
 // ─── Normalise status ───
-// FIX 1: Removed the overly-broad `s.includes("TIME")` fallback which incorrectly
-// matched any status containing the word "time" (e.g. "OVERTIME", custom labels).
-// Now only exact phrase "TIME TO BOOK" matches that bucket.
 function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
   const s = (raw ?? "").toUpperCase().replace(/[^A-Z ]/g, "").trim();
   if (s.includes("ON TRACK")) return "ON TRACK";
@@ -358,8 +362,6 @@ const AdminLoyalty = () => {
   const [search, setSearch]       = useState("");
   const [enrolling, setEnrolling] = useState<EnrollCandidate | null>(null);
 
-  // FIX 3: Persist enrollSaved in sessionStorage so re-renders / page refreshes
-  // within the same browser session don't re-surface just-enrolled candidates.
   const [enrollSaved, setEnrollSaved] = useState<string[]>(() => {
     try {
       const stored = sessionStorage.getItem(ENROLL_SAVED_KEY);
@@ -436,9 +438,15 @@ const AdminLoyalty = () => {
     },
   });
 
-  // ─── Derived: loyalty phones already tracked ───
+  // ─── Derived: sets for fast enrolled-client lookup ───
+  // Phone set: last 9 digits of every enrolled phone (handles all SA formats)
   const trackedPhones = useMemo(
-    () => new Set(rows.map((r: any) => (r.phone ?? "").replace(/\D/g, ""))),
+    () => new Set(rows.map((r: any) => normPhone(r.phone))),
+    [rows]
+  );
+  // Name set: lowercase trimmed names of every enrolled client
+  const trackedNames = useMemo(
+    () => new Set(rows.map((r: any) => (r.client_name ?? "").trim().toLowerCase())),
     [rows]
   );
 
@@ -463,7 +471,11 @@ const AdminLoyalty = () => {
     const avgBasket  = recentBookings.length > 0 ? totalSpend / recentBookings.length : 0;
     return [...map.entries()]
       .filter(([, v]) => v.count >= 2 || v.spend > avgBasket)
-      .filter(([, v]) => !trackedPhones.has(v.phone.replace(/\D/g, "")))
+      // Exclude if phone (last 9 digits) matches any enrolled record
+      .filter(([, v]) => !trackedPhones.has(normPhone(v.phone)))
+      // Exclude if name matches any enrolled record (catches format mismatches)
+      .filter(([, v]) => !trackedNames.has(v.name.trim().toLowerCase()))
+      // Exclude if manually dismissed this session
       .filter(([, v]) => !enrollSaved.includes(v.name + v.phone))
       .map(([, v]) => {
         const lastWaxDate = v.lastBookingDate ?? "";
@@ -480,15 +492,22 @@ const AdminLoyalty = () => {
         } as EnrollCandidate;
       })
       .sort((a, b) => b.bookingCount - a.bookingCount || b.totalSpend - a.totalSpend)
-      // FIX 2: Raised cap from 8 to 20 so high-value tenants see all relevant candidates.
       .slice(0, 20);
-  }, [recentBookings, trackedPhones, enrollSaved]);
+  }, [recentBookings, trackedPhones, trackedNames, enrollSaved]);
 
-  // ─── Derived: sorted + filtered loyalty rows ───
-  const sortedRows = useMemo(() =>
-    [...rows].sort((a: any, b: any) =>
-      (STATUS_ORDER[normaliseStatus(a.status)] ?? 3) - (STATUS_ORDER[normaliseStatus(b.status)] ?? 3)
-    ), [rows]);
+  // ─── Derived: sorted + filtered loyalty rows (deduplicated by id) ───
+  const sortedRows = useMemo(() => {
+    const seen = new Set<string>();
+    return [...rows]
+      .filter((r: any) => {
+        if (seen.has(r.id)) return false;
+        seen.add(r.id);
+        return true;
+      })
+      .sort((a: any, b: any) =>
+        (STATUS_ORDER[normaliseStatus(a.status)] ?? 3) - (STATUS_ORDER[normaliseStatus(b.status)] ?? 3)
+      );
+  }, [rows]);
 
   const filteredRows = useMemo(() =>
     sortedRows.filter((r: any) => {
@@ -585,7 +604,6 @@ const AdminLoyalty = () => {
             </button>
           )}
         </div>
-        {/* B4: export CSV */}
         <button
           onClick={() => exportCSV(filteredRows)}
           disabled={filteredRows.length === 0}
@@ -624,7 +642,6 @@ const AdminLoyalty = () => {
       ) : (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
           <div className="overflow-x-auto">
-            {/* FIX 4: Added Notes column header; min-w widened to accommodate it */}
             <table className="w-full min-w-[680px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
@@ -657,7 +674,6 @@ const AdminLoyalty = () => {
                         </div>
                       </td>
 
-                      {/* B1: inline status editor */}
                       <td className="px-4 py-3">
                         <InlineStatusEditor
                           rowId={r.id}
@@ -682,7 +698,6 @@ const AdminLoyalty = () => {
                         <PackPill raw={r.pack_progress} />
                       </td>
 
-                      {/* FIX 4: Notes now visible as a dedicated column */}
                       <td className="px-4 py-3 max-w-[180px]">
                         {r.notes
                           ? (
@@ -695,7 +710,6 @@ const AdminLoyalty = () => {
                         }
                       </td>
 
-                      {/* B2: WA with preview */}
                       <td className="px-4 py-3">
                         {r.phone
                           ? <WaPreview name={r.client_name} status={norm} phone={r.phone} />
