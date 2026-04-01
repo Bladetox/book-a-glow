@@ -751,7 +751,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                             <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />
                           )}
                         </div>
-                        <p className="text-[11px] text-white/40 leading-relaxed truncate">{b.service} • {b.duration}min</p>
+                      <div className="grid grid-cols-3 gap-1.5 pr-1">    
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
