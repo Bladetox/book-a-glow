@@ -95,8 +95,17 @@ export function useSupabaseBookings() {
 
   useEffect(() => {
     if (!tenantId) return;
+    const channelName = `bookings-realtime-${tenantId}`;
+
+    // Remove any stale channel with this name before creating a new one.
+    // Prevents "cannot add postgres_changes after subscribe()" crash that
+    // occurs in StrictMode or when the effect re-runs before the previous
+    // channel has been fully torn down asynchronously.
+    const existing = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
+    if (existing) supabase.removeChannel(existing);
+
     const channel = supabase
-      .channel(`bookings-realtime-${tenantId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bookings" },
@@ -107,8 +116,9 @@ export function useSupabaseBookings() {
         }
       )
       .subscribe();
+
     return () => { supabase.removeChannel(channel); };
-  }, [tenantId, qc]);
+  }, [tenantId]); // qc intentionally omitted: QueryClient is stable and must not re-trigger this
 
   return useQuery({
     queryKey: ["bookings", tenantId],
