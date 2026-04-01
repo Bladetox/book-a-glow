@@ -251,11 +251,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     if (!booking) return;
 
     const checkBlock = async () => {
+      // NOTE: address is intentionally excluded — it often contains commas, colons,
+      // and parentheses that break the PostgREST .or() filter syntax (400 Bad Request).
+      // email, phone, and name are structurally safe for use in filter strings.
       const orParts: string[] = [];
-      if (booking.email?.trim())   orParts.push(`email.ilike.${booking.email.trim()}`);
-      if (booking.phone?.trim())   orParts.push(`phone.eq.${booking.phone.trim().replace(/\s/g, "")}`);
-      if (booking.client?.trim())  orParts.push(`name.ilike.${booking.client.trim()}`);
-      if (booking.address?.trim()) orParts.push(`address.ilike.${booking.address.trim()}`);
+      if (booking.email?.trim())  orParts.push(`email.ilike.${booking.email.trim()}`);
+      if (booking.phone?.trim())  orParts.push(`phone.eq.${booking.phone.trim().replace(/\s/g, "")}`);
+      if (booking.client?.trim()) orParts.push(`name.ilike.${booking.client.trim()}`);
       if (orParts.length === 0) return;
 
       const { data } = await supabase
