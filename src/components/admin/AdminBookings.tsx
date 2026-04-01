@@ -788,7 +788,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <DetailRow icon={Phone}    label="Phone"   value={b.phone} />
                                 <DetailRow icon={Mail}     label="Email"   value={b.email} />
                                 <DetailRow icon={MapPin}   label="Address" value={b.address} />
-                                <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} />
+                                <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} wrap />
                                 <DetailRow icon={Clock}    label="Ref"     value={b.ref} />
                               </div>
 
@@ -1030,11 +1030,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
 // ─── Sub-components ─────────────────────────────────────────────────────────────────────────────
 
-const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
-  <div className="flex items-center gap-2">
-    <Icon className="w-3 h-3 text-white/25 shrink-0" />
-    <span className="text-[10px] text-white/30 w-12 shrink-0">{label}</span>
-    <span className="text-xs text-white/70 truncate">{value}</span>
+const DetailRow = ({ icon: Icon, label, value, wrap }: { icon: React.ElementType; label: string; value: string; wrap?: boolean }) => (
+  <div className={`flex ${wrap ? "items-start" : "items-center"} gap-2`}>
+    <Icon className="w-3 h-3 text-white/25 shrink-0 mt-0.5" />
+    <span className="text-[10px] text-white/30 w-12 shrink-0 mt-0.5">{label}</span>
+    <span className={`text-xs text-white/70 ${wrap ? "break-words min-w-0" : "truncate"}`}>{value}</span>
   </div>
 );
 
