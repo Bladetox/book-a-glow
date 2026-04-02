@@ -574,12 +574,17 @@ const AdminLoyalty = () => {
                     <p className="text-xs font-semibold text-white/80 truncate">{c.client_name}</p>
                     <p className="text-[10px] text-white/35">{c.bookingCount} bookings · R{c.totalSpend.toLocaleString()}</p>
                   </div>
-                  <button
-                    onClick={() => setEnrolling(c)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-colors shrink-0"
-                  >
-                    <UserPlus className="w-3 h-3" /> Enroll
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {c.phone && (
+                      <WaPreview name={c.client_name} status="TIME TO BOOK" phone={c.phone} />
+                    )}
+                    <button
+                      onClick={() => setEnrolling(c)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-colors"
+                    >
+                      <UserPlus className="w-3 h-3" /> Enroll
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
