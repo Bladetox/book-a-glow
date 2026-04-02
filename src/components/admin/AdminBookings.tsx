@@ -803,6 +803,24 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <DetailRow icon={Clock}  label="Ref"     value={b.ref} />
                               </div>
 
+                              {/* ── Services booked ── */}
+                              {serviceList.length > 0 && (
+                                <div className="flex flex-col gap-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <Scissors className="w-3 h-3 text-white/25 shrink-0" />
+                                    <span className="text-[10px] text-white/25">Services booked</span>
+                                    <span className="ml-auto text-[10px] text-white/20">{b.duration}min total</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {serviceList.map((svc, i) => (
+                                      <span key={i} className="px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-[11px] text-white/60">
+                                        {svc}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               {/* ② Financial summary */}
                               <div className="grid grid-cols-3 gap-2 mt-1">
                                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
