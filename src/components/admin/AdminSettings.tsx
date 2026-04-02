@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2 } from "lucide-react";
+import { Check, KeyRound, Palette, Building2, MapPin, Clock, FileText, Loader2, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
@@ -20,7 +20,7 @@ const SettingsCard = ({ title, icon: Icon, gradient, children }: { title: string
   </motion.div>
 );
 
-const SettingRow = ({ label, placeholder, type = "text", value, onChange }: { label: string; placeholder: string; type?: string; value?: string; onChange?: (v: string) => void }) => (
+const SettingRow = ({ label, placeholder, type = "text", value, onChange, hint }: { label: string; placeholder: string; type?: string; value?: string; onChange?: (v: string) => void; hint?: string }) => (
   <div className="flex flex-col gap-1.5">
     <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">{label}</label>
     <input
@@ -30,6 +30,7 @@ const SettingRow = ({ label, placeholder, type = "text", value, onChange }: { la
       onChange={onChange ? (e) => onChange(e.target.value) : undefined}
       className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
     />
+    {hint && <p className="text-[10px] text-white/25 leading-relaxed">{hint}</p>}
   </div>
 );
 
@@ -217,6 +218,33 @@ const AdminSettings = () => {
         <div className="flex items-center gap-3">
           <SaveBtn onClick={() => saveTenantFields("rules", ["deposit_percent", "min_notice_hours", "max_advance_days", "booking_ref_prefix"])} loading={upsertSetting.isPending} />
           <SavedBadge section="rules" />
+        </div>
+      </SettingsCard>
+
+      {/* Loyalty Windows */}
+      <SettingsCard title="Loyalty Windows" icon={Heart} gradient="from-white/[0.05] to-white/[0.02]">
+        <p className="text-[10px] text-white/30 leading-relaxed -mt-1">
+          Controls how quickly a client moves from On Track → Time to Book → Overdue on the Loyalty page.
+        </p>
+        <SettingRow
+          label="On Track window (days)"
+          placeholder="28"
+          type="number"
+          value={draft.loyalty_on_track_days}
+          onChange={v => update("loyalty_on_track_days", v)}
+          hint="Clients with a visit within this many days are considered On Track."
+        />
+        <SettingRow
+          label="Overdue threshold (days)"
+          placeholder="42"
+          type="number"
+          value={draft.loyalty_overdue_days}
+          onChange={v => update("loyalty_overdue_days", v)}
+          hint="Clients beyond this many days since their last visit are Overdue. Between the two thresholds = Time to Book."
+        />
+        <div className="flex items-center gap-3">
+          <SaveBtn onClick={() => saveTenantFields("loyalty", ["loyalty_on_track_days", "loyalty_overdue_days"])} loading={upsertSetting.isPending} />
+          <SavedBadge section="loyalty" />
         </div>
       </SettingsCard>
 
