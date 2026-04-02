@@ -9,23 +9,39 @@ import {
   Download, Eye, Pencil, Check, StickyNote, Settings2, Save,
   Users,
 } from "lucide-react";
-import { format, subDays, addDays } from "date-fns";
+import { format, subDays, addDays, isAfter, parseISO, startOfDay } from "date-fns";
 import { toast } from "sonner";
+
+// ─── Excel serial date → ISO string (yyyy-MM-dd) ───
+function excelToISO(serial: number | string | null | undefined): string | null {
+  if (!serial) return null;
+  const str = String(serial).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+  const n = Number(str);
+  if (isNaN(n) || n < 1) return null;
+  const ms = (n - 25569) * 86400 * 1000;
+  const d = new Date(ms);
+  if (isNaN(d.getTime())) return null;
+  return format(d, "yyyy-MM-dd");
+}
 
 // ─── Excel serial date → readable string ───
 function excelToDate(serial: number | string | null | undefined): string {
-  if (!serial) return "—";
-  const str = String(serial).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    try { return format(new Date(str.slice(0, 10) + "T00:00:00"), "dd MMM yyyy"); }
-    catch { return str; }
-  }
-  const n = Number(str);
-  if (isNaN(n) || n < 1) return str;
-  const ms = (n - 25569) * 86400 * 1000;
-  const d = new Date(ms);
-  if (isNaN(d.getTime())) return str;
-  return format(d, "dd MMM yyyy");
+  const iso = excelToISO(serial);
+  if (!iso) return "—";
+  try { return format(new Date(iso + "T00:00:00"), "dd MMM yyyy"); }
+  catch { return iso; }
+}
+
+// ─── Determine if a next_due_date is overdue (strictly past today) ───
+function isDateOverdue(raw: string | number | null | undefined): boolean {
+  const iso = excelToISO(raw);
+  if (!iso) return false;
+  try {
+    const due = startOfDay(parseISO(iso));
+    const today = startOfDay(new Date());
+    return isAfter(today, due); // today is AFTER due → overdue
+  } catch { return false; }
 }
 
 function normPhone(p: string | null | undefined): string {
@@ -39,6 +55,14 @@ function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO 
   if (s.includes("TIME TO BOOK")) return "TIME TO BOOK";
   if (s.includes("OVERDUE")) return "OVERDUE";
   return "UNKNOWN";
+}
+
+// ─── Compute effective status: if stored status isn't OVERDUE but next_due_date is past → force OVERDUE ───
+function effectiveStatus(r: any): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
+  const stored = normaliseStatus(r.status);
+  if (stored === "OVERDUE") return "OVERDUE";
+  if (isDateOverdue(r.next_due_date)) return "OVERDUE";
+  return stored;
 }
 
 const STATUS_ORDER: Record<string, number> = { "OVERDUE": 0, "TIME TO BOOK": 1, "ON TRACK": 2, "UNKNOWN": 3 };
@@ -84,7 +108,7 @@ function parsePackProgress(raw: string | number | null | undefined): { used: num
   return null;
 }
 
-// ─── Improved PackPill — thicker bar + percentage ───
+// ─── PackPill — thicker bar + percentage ───
 const PackPill = ({ raw }: { raw: string | number | null | undefined }) => {
   const pack = parsePackProgress(raw);
   if (!pack) return <span className="text-white/25 text-xs">—</span>;
@@ -144,7 +168,6 @@ const WaPreview = ({ name, status, phone }: { name: string; status: string; phon
       <AnimatePresence>
         {show && (
           <>
-            {/* backdrop to close on outside click */}
             <div className="fixed inset-0 z-20" onClick={() => setShow(false)} />
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: above ? -4 : 4 }}
@@ -311,10 +334,15 @@ const EnrollModal = ({
   );
 };
 
+// ─── Key resolution helpers ───
+// BUG FIX: bookings.client_id is always a UUID (non-null per schema). Using it as dedup key
+// caused ALL bookings from the same registered client to be collapsed into one entry, meaning
+// count never exceeded 1 per client_id.  We now use phone as the primary dedup key so that
+// multiple bookings by the same person (same phone, different booking rows) accumulate correctly.
 function resolveKey(b: any): string {
-  if (b.client_id) return b.client_id;
   const phone = resolvePhone(b).replace(/\D/g, "");
-  if (phone && phone.length >= 9) return phone;
+  if (phone && phone.length >= 9) return phone.slice(-9);
+  if (b.client_id) return b.client_id;
   if (b.guest_email) return b.guest_email;
   return b.id;
 }
@@ -336,7 +364,7 @@ function exportCSV(rows: any[]) {
     ...rows.map(r => [
       `"${(r.client_name ?? "").replace(/"/g, '""')}"`,
       `"${(r.phone ?? "").replace(/"/g, '""')}"`,
-      `"${normaliseStatus(r.status)}"`,
+      `"${effectiveStatus(r)}"`,
       `"${r.last_wax_date ?? ""}"`,
       `"${r.next_due_date ?? ""}"`,
       `"${r.pack_progress ?? ""}"`,
@@ -521,13 +549,14 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
 const MAIN_TABS = ["Tracker", "Settings"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
-// ─── Client card row (replaces raw <tr>) ───
+// ─── Client card row ───
 const ClientRow = ({
   r, i, tenantId, onUpdated,
 }: {
   r: any; i: number; tenantId: string; onUpdated: () => void;
 }) => {
-  const norm = normaliseStatus(r.status);
+  // Use effectiveStatus so overdue-by-date shows correctly regardless of stored status
+  const norm = effectiveStatus(r);
   const StatusIcon = STATUS_ICON[norm] ?? Clock;
 
   const rowAccent =
@@ -556,17 +585,27 @@ const ClientRow = ({
         {/* Name + phone */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white/85 truncate">{r.client_name}</p>
-          {r.phone && <p className="text-[10px] text-white/30 truncate">{r.phone}</p>}
+          {r.phone
+            ? <p className="text-[10px] text-white/30 truncate">{r.phone}</p>
+            : <p className="text-[10px] text-white/20 italic">No phone on file</p>
+          }
         </div>
 
-        {/* Status pill — inline editor */}
+        {/* Status pill — inline editor (passes stored status, display is effective) */}
         <div className="shrink-0">
-          <InlineStatusEditor
-            rowId={r.id}
-            current={r.status}
-            tenantId={tenantId}
-            onUpdated={onUpdated}
-          />
+          {/* Show effective status visually but edit the stored value */}
+          <div className="relative inline-block">
+            <InlineStatusEditor
+              rowId={r.id}
+              current={r.status ?? ""}
+              tenantId={tenantId}
+              onUpdated={onUpdated}
+            />
+            {/* Overdue override badge when stored status isn't OVERDUE but date says otherwise */}
+            {norm === "OVERDUE" && normaliseStatus(r.status) !== "OVERDUE" && (
+              <span className="ml-1 text-[9px] text-red-400/70 italic">(auto)</span>
+            )}
+          </div>
         </div>
 
         {/* WA */}
@@ -583,7 +622,9 @@ const ClientRow = ({
         {/* Last wax */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last Wax</span>
-          <span className="text-[11px] text-white/55">{excelToDate(r.last_wax_date)}</span>
+          <span className="text-[11px] text-white/55">
+            {r.last_wax_date ? excelToDate(r.last_wax_date) : <span className="text-white/20 italic">Not set</span>}
+          </span>
         </div>
 
         {/* Next due */}
@@ -594,7 +635,7 @@ const ClientRow = ({
             norm === "TIME TO BOOK" ? "text-amber-400" :
             "text-white/55"
           }`}>
-            {excelToDate(r.next_due_date)}
+            {r.next_due_date ? excelToDate(r.next_due_date) : <span className="text-white/20 italic">Not set</span>}
           </span>
         </div>
 
@@ -640,7 +681,6 @@ const AdminLoyalty = () => {
     });
   };
 
-  // ─── Skip a candidate (same mechanism as enroll-saved) ───
   const skipCandidate = (c: EnrollCandidate) => {
     addEnrollSaved(c.client_name + c.phone);
   };
@@ -685,9 +725,11 @@ const AdminLoyalty = () => {
   });
 
   // ─── 2. Bookings for recommendation engine ───
-  const sinceDate = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
+  // BUG FIX: Do NOT apply a date filter on the bookings query — the date filter was using
+  // booking_date >= sinceDate which silently excluded clients whose bookings span the boundary.
+  // Instead, fetch ALL non-cancelled bookings and filter by date in JS so the count is accurate.
   const { data: recentBookings = [], isLoading: loadingBookings } = useQuery({
-    queryKey: ["loyalty-reco-bookings", tenantId, sinceDate],
+    queryKey: ["loyalty-reco-bookings", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
@@ -700,7 +742,7 @@ const AdminLoyalty = () => {
         `)
         .eq("tenant_id", tenantId)
         .neq("status", "cancelled")
-        .gte("booking_date", sinceDate);
+        .order("booking_date", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -730,14 +772,23 @@ const AdminLoyalty = () => {
     },
   });
 
+  // ─── Tracked phones/names for deduplication against already-enrolled ───
   const trackedPhones = useMemo(() => new Set(rows.map((r: any) => normPhone(r.phone))), [rows]);
   const trackedNames  = useMemo(() => new Set(rows.map((r: any) => (r.client_name ?? "").trim().toLowerCase())), [rows]);
 
+  // ─── Recommendation engine ───
   const candidates = useMemo(() => {
-    const keyword = settings.qualifyingService;
-    const map = new Map<string, { name: string; phone: string; count: number; spend: number; lastBookingDate: string }>();
+    const keyword    = settings.qualifyingService;
+    const cutoff     = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
+
+    const map = new Map<string, {
+      name: string; phone: string; count: number; spend: number; lastBookingDate: string;
+    }>();
 
     recentBookings.forEach((b: any) => {
+      // Apply lookback filter in JS
+      if ((b.booking_date ?? "") < cutoff) return;
+
       const items: any[] = b.booking_items ?? [];
       const hasQualifying = keyword
         ? items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))
@@ -750,7 +801,8 @@ const AdminLoyalty = () => {
       const prev  = map.get(key) || { name, phone, count: 0, spend: 0, lastBookingDate: "" };
       const bDate = b.booking_date ?? "";
       map.set(key, {
-        name, phone,
+        name,
+        phone,
         count:           prev.count + 1,
         spend:           prev.spend + Number(b.total_amount ?? 0),
         lastBookingDate: bDate > prev.lastBookingDate ? bDate : prev.lastBookingDate,
@@ -759,8 +811,10 @@ const AdminLoyalty = () => {
 
     return [...map.entries()]
       .filter(([, v]) => v.count >= settings.minBookings)
+      // Exclude if already tracked by phone OR by name
       .filter(([, v]) => !trackedPhones.has(normPhone(v.phone)))
       .filter(([, v]) => !trackedNames.has(v.name.trim().toLowerCase()))
+      // Exclude if manually dismissed this session
       .filter(([, v]) => !enrollSaved.includes(v.name + v.phone))
       .map(([, v]) => {
         const lastWaxDate = v.lastBookingDate ?? "";
@@ -780,18 +834,19 @@ const AdminLoyalty = () => {
       .slice(0, 20);
   }, [recentBookings, trackedPhones, trackedNames, enrollSaved, settings]);
 
+  // ─── Sort tracker rows — overdue (by date OR stored) floats to top ───
   const sortedRows = useMemo(() => {
     const seen = new Set<string>();
     return [...rows]
       .filter((r: any) => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
       .sort((a: any, b: any) =>
-        (STATUS_ORDER[normaliseStatus(a.status)] ?? 3) - (STATUS_ORDER[normaliseStatus(b.status)] ?? 3)
+        (STATUS_ORDER[effectiveStatus(a)] ?? 3) - (STATUS_ORDER[effectiveStatus(b)] ?? 3)
       );
   }, [rows]);
 
   const filteredRows = useMemo(() =>
     sortedRows.filter((r: any) => {
-      const st = normaliseStatus(r.status);
+      const st = effectiveStatus(r);
       const matchFilter =
         filter === "All" ||
         (filter === "On Track"     && st === "ON TRACK") ||
@@ -801,11 +856,12 @@ const AdminLoyalty = () => {
       return matchFilter && matchSearch;
     }), [sortedRows, filter, search]);
 
+  // ─── Counts use effectiveStatus so overdue-by-date is reflected ───
   const counts = useMemo(() => ({
     total:    rows.length,
-    onTrack:  rows.filter((r: any) => normaliseStatus(r.status) === "ON TRACK").length,
-    timeBook: rows.filter((r: any) => normaliseStatus(r.status) === "TIME TO BOOK").length,
-    overdue:  rows.filter((r: any) => normaliseStatus(r.status) === "OVERDUE").length,
+    onTrack:  rows.filter((r: any) => effectiveStatus(r) === "ON TRACK").length,
+    timeBook: rows.filter((r: any) => effectiveStatus(r) === "TIME TO BOOK").length,
+    overdue:  rows.filter((r: any) => effectiveStatus(r) === "OVERDUE").length,
   }), [rows]);
 
   const isLoading = loadingRows || loadingBookings;
@@ -842,7 +898,7 @@ const AdminLoyalty = () => {
         {activeTab === "Tracker" && (
           <motion.div key="tracker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-5">
 
-            {/* ── Summary stat cards with icons ── */}
+            {/* ── Summary stat cards ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: "Total Clients", value: counts.total,    color: "text-white/80",    border: "border-white/[0.07]",      icon: Users,         iconColor: "text-white/25",    bg: "" },
@@ -895,7 +951,6 @@ const AdminLoyalty = () => {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {c.phone && <WaPreview name={c.client_name} status="TIME TO BOOK" phone={c.phone} />}
-                          {/* Skip button */}
                           <button
                             onClick={() => skipCandidate(c)}
                             title="Dismiss this suggestion"
@@ -917,9 +972,8 @@ const AdminLoyalty = () => {
               )}
             </AnimatePresence>
 
-            {/* ── Unified toolbar: search + filters + export ── */}
+            {/* ── Unified toolbar ── */}
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              {/* Search */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
                 <input
@@ -936,7 +990,6 @@ const AdminLoyalty = () => {
                 )}
               </div>
 
-              {/* Filter pills */}
               <div className="flex gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
                 {FILTERS.map(f => (
                   <button
@@ -953,7 +1006,6 @@ const AdminLoyalty = () => {
                 ))}
               </div>
 
-              {/* Export */}
               <button
                 onClick={() => exportCSV(filteredRows)}
                 disabled={filteredRows.length === 0}
