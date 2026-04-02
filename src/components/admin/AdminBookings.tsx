@@ -803,27 +803,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <DetailRow icon={Clock}  label="Ref"     value={b.ref} />
                               </div>
 
-                              {/* ── Services — full-width pill list, every service visible, no truncation ── */}
-                              <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-                                <div className="flex items-center gap-2 mb-2.5">
-                                  <Scissors className="w-3 h-3 text-white/30 shrink-0" />
-                                  <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
-                                    Services ({serviceList.length})
-                                  </span>
-                                  <span className="ml-auto text-[10px] text-white/25">{b.duration}min total</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {serviceList.map((svc, i) => (
-                                    <span
-                                      key={i}
-                                      className="px-2.5 py-1 rounded-full bg-white/[0.07] border border-white/[0.10] text-[11px] font-medium text-white/75"
-                                    >
-                                      {svc}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-
                               {/* ② Financial summary */}
                               <div className="grid grid-cols-3 gap-2 mt-1">
                                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
