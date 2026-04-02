@@ -803,6 +803,24 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <DetailRow icon={Clock}  label="Ref"     value={b.ref} />
                               </div>
 
+                              {/* ── Services — full-width pill list ── */}
+                              <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                                <div className="flex items-center gap-2 mb-2.5">
+                                  <Scissors className="w-3 h-3 text-white/30 shrink-0" />
+                                  <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">
+                                    Services ({serviceList.length})
+                                  </span>
+                                  <span className="ml-auto text-[10px] text-white/25">{b.duration}min total</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {serviceList.map((svc, i) => (
+                                    <span key={i} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/[0.05] border border-white/[0.08] text-white/60">
+                                      {svc}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+
                               {/* ② Financial summary */}
                               <div className="grid grid-cols-3 gap-2 mt-1">
                                 <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
@@ -1034,21 +1052,25 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 // ─── Sub-components ──────────────────────────────────────────────────────────────────────────────
 
 const DetailRow = ({ icon: Icon, label, value, wrap }: { icon: React.ElementType; label: string; value: string; wrap?: boolean }) => (
-  <div className={`flex ${wrap ? "items-start" : "items-center"} gap-2`}>
-    <Icon className="w-3 h-3 text-white/25 shrink-0 mt-0.5" />
-    <span className="text-[10px] text-white/30 w-12 shrink-0 mt-0.5">{label}</span>
-    <span className={`text-xs text-white/70 ${wrap ? "break-words min-w-0" : "truncate"}`}>{value}</span>
-  </div>
+  value ? (
+    <div className="flex items-start gap-2">
+      <Icon className="w-3 h-3 text-white/25 mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[10px] text-white/25">{label}</p>
+        <p className={`text-xs text-white/65 ${wrap ? "" : "truncate"}`}>{value}</p>
+      </div>
+    </div>
+  ) : null
 );
 
 const EditField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">{label}</label>
+    <label className="text-[10px] text-white/30">{label}</label>
     <input
       type="text"
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+      className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.18] transition-colors"
     />
   </div>
 );
