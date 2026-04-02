@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import {
   Loader2, MessageCircle, Search, X, UserPlus,
   Sparkles, Clock, CheckCircle, AlertCircle, Star,
   Download, Eye, Pencil, Check, StickyNote, Settings2, Save,
+  Users,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -83,23 +84,42 @@ function parsePackProgress(raw: string | number | null | undefined): { used: num
   return null;
 }
 
+// ─── Improved PackPill — thicker bar + percentage ───
 const PackPill = ({ raw }: { raw: string | number | null | undefined }) => {
   const pack = parsePackProgress(raw);
   if (!pack) return <span className="text-white/25 text-xs">—</span>;
   const pct = Math.min((pack.used / pack.total) * 100, 100);
+  const color = pct >= 80 ? "bg-emerald-400" : pct >= 50 ? "bg-amber-400/80" : "bg-white/30";
   return (
-    <div className="flex flex-col gap-0.5 min-w-[64px]">
-      <span className="text-[10px] text-white/50">{pack.used}/{pack.total} used</span>
-      <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
-        <div className="h-full rounded-full bg-emerald-400/70 transition-all" style={{ width: `${pct}%` }} />
+    <div className="flex flex-col gap-1 min-w-[72px]">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-white/50">{pack.used}/{pack.total}</span>
+        <span className="text-[10px] text-white/30">{Math.round(pct)}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${color}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
 };
 
+// ─── WA Preview — safe positioning via ref ───
 const WaPreview = ({ name, status, phone }: { name: string; status: string; phone: string }) => {
   const [show, setShow] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [above, setAbove] = useState(false);
   const msg = waMessage(name, status);
+
+  useEffect(() => {
+    if (show && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setAbove(rect.bottom + 160 > window.innerHeight);
+    }
+  }, [show]);
+
   return (
     <div className="relative inline-flex items-center gap-1">
       <a
@@ -114,6 +134,7 @@ const WaPreview = ({ name, status, phone }: { name: string; status: string; phon
         WA
       </a>
       <button
+        ref={btnRef}
         onClick={e => { e.stopPropagation(); setShow(s => !s); }}
         className="p-1 rounded text-white/20 hover:text-white/50 transition-colors"
         title="Preview message"
@@ -122,18 +143,22 @@ const WaPreview = ({ name, status, phone }: { name: string; status: string; phon
       </button>
       <AnimatePresence>
         {show && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 4 }}
-            className="absolute bottom-full left-0 mb-2 z-30 w-72 rounded-xl border border-white/[0.12] bg-[#161616] shadow-xl p-3"
-          >
-            <p className="text-[10px] tracking-widest uppercase text-white/30 mb-1.5">WA Message Preview</p>
-            <p className="text-[12px] text-white/70 leading-relaxed">{msg}</p>
-            <button onClick={() => setShow(false)} className="absolute top-2 right-2 text-white/20 hover:text-white/60">
-              <X className="w-3 h-3" />
-            </button>
-          </motion.div>
+          <>
+            {/* backdrop to close on outside click */}
+            <div className="fixed inset-0 z-20" onClick={() => setShow(false)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: above ? -4 : 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: above ? -4 : 4 }}
+              className={`absolute ${above ? "bottom-full mb-2" : "top-full mt-2"} left-0 z-30 w-72 rounded-xl border border-white/[0.12] bg-[#161616] shadow-xl p-3`}
+            >
+              <p className="text-[10px] tracking-widest uppercase text-white/30 mb-1.5">WA Message Preview</p>
+              <p className="text-[12px] text-white/70 leading-relaxed">{msg}</p>
+              <button onClick={() => setShow(false)} className="absolute top-2 right-2 text-white/20 hover:text-white/60">
+                <X className="w-3 h-3" />
+              </button>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
@@ -142,6 +167,7 @@ const WaPreview = ({ name, status, phone }: { name: string; status: string; phon
 
 const STATUS_OPTIONS = ["ON TRACK", "TIME TO BOOK", "OVERDUE"] as const;
 
+// ─── InlineStatusEditor — with backdrop to close on outside click ───
 const InlineStatusEditor = ({ rowId, current, tenantId, onUpdated }: {
   rowId: string; current: string; tenantId: string; onUpdated: () => void;
 }) => {
@@ -164,6 +190,9 @@ const InlineStatusEditor = ({ rowId, current, tenantId, onUpdated }: {
   const norm = normaliseStatus(current);
   return (
     <div className="relative inline-block">
+      {open && (
+        <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+      )}
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
         className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-all ${STATUS_STYLE[norm] ?? STATUS_STYLE["UNKNOWN"]} hover:opacity-80`}
@@ -352,7 +381,6 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
     },
   });
 
-  // Build local state from DB rows, falling back to defaults
   const initialValues = useMemo(() => {
     const map: Record<string, string> = { ...SETTING_DEFAULTS };
     settingsRows.forEach((r: any) => { if (r.key in map) map[r.key] = r.value ?? map[r.key]; });
@@ -360,7 +388,6 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
   }, [settingsRows]);
 
   const [local, setLocal] = useState<Record<SettingKey, string>>(initialValues);
-  // Sync when DB data loads
   useMemo(() => setLocal(initialValues), [initialValues]);
 
   const { mutate: saveSettings, isPending: saving } = useMutation({
@@ -466,7 +493,7 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
         </div>
       </div>
 
-      {/* Live preview of what the settings mean */}
+      {/* Live preview */}
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 flex flex-col gap-3">
         <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">Live Preview</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -494,6 +521,101 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
 const MAIN_TABS = ["Tracker", "Settings"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
+// ─── Client card row (replaces raw <tr>) ───
+const ClientRow = ({
+  r, i, tenantId, onUpdated,
+}: {
+  r: any; i: number; tenantId: string; onUpdated: () => void;
+}) => {
+  const norm = normaliseStatus(r.status);
+  const StatusIcon = STATUS_ICON[norm] ?? Clock;
+
+  const rowAccent =
+    norm === "OVERDUE"      ? "border-l-2 border-l-red-500/40" :
+    norm === "TIME TO BOOK" ? "border-l-2 border-l-amber-500/40" :
+    norm === "ON TRACK"     ? "border-l-2 border-l-emerald-500/30" :
+    "border-l-2 border-l-white/[0.04]";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(i * 0.03, 0.3) }}
+      className={`rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.035] transition-colors ${rowAccent} overflow-hidden`}
+    >
+      {/* ── Main row ── */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Avatar initial */}
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold
+          ${norm === "OVERDUE" ? "bg-red-500/10 text-red-400" :
+            norm === "TIME TO BOOK" ? "bg-amber-500/10 text-amber-400" :
+            "bg-emerald-500/10 text-emerald-400"}`}>
+          {(r.client_name ?? "?")[0].toUpperCase()}
+        </div>
+
+        {/* Name + phone */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white/85 truncate">{r.client_name}</p>
+          {r.phone && <p className="text-[10px] text-white/30 truncate">{r.phone}</p>}
+        </div>
+
+        {/* Status pill — inline editor */}
+        <div className="shrink-0">
+          <InlineStatusEditor
+            rowId={r.id}
+            current={r.status}
+            tenantId={tenantId}
+            onUpdated={onUpdated}
+          />
+        </div>
+
+        {/* WA */}
+        <div className="shrink-0">
+          {r.phone
+            ? <WaPreview name={r.client_name} status={norm} phone={r.phone} />
+            : <span className="text-white/20 text-xs">—</span>
+          }
+        </div>
+      </div>
+
+      {/* ── Detail strip ── */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 pb-3 border-t border-white/[0.04] pt-2.5">
+        {/* Last wax */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last Wax</span>
+          <span className="text-[11px] text-white/55">{excelToDate(r.last_wax_date)}</span>
+        </div>
+
+        {/* Next due */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Next Due</span>
+          <span className={`text-[11px] font-medium ${
+            norm === "OVERDUE" ? "text-red-400" :
+            norm === "TIME TO BOOK" ? "text-amber-400" :
+            "text-white/55"
+          }`}>
+            {excelToDate(r.next_due_date)}
+          </span>
+        </div>
+
+        {/* Pack */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Pack</span>
+          <PackPill raw={r.pack_progress} />
+        </div>
+
+        {/* Notes */}
+        {r.notes && (
+          <div className="flex items-start gap-1 max-w-[220px]">
+            <StickyNote className="w-3 h-3 mt-0.5 shrink-0 text-white/25" />
+            <span className="text-[11px] text-white/40 leading-snug line-clamp-2">{r.notes}</span>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
 const AdminLoyalty = () => {
   const { tenantId } = useTenant();
   const qc           = useQueryClient();
@@ -518,7 +640,12 @@ const AdminLoyalty = () => {
     });
   };
 
-  // ─── Load loyalty settings from app_settings ───
+  // ─── Skip a candidate (same mechanism as enroll-saved) ───
+  const skipCandidate = (c: EnrollCandidate) => {
+    addEnrollSaved(c.client_name + c.phone);
+  };
+
+  // ─── Load loyalty settings ───
   const { data: settingsRows = [] } = useQuery({
     queryKey: ["loyalty-settings", tenantId],
     queryFn: async () => {
@@ -557,7 +684,7 @@ const AdminLoyalty = () => {
     },
   });
 
-  // ─── 2. Bookings + items for recommendation engine ───
+  // ─── 2. Bookings for recommendation engine ───
   const sinceDate = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
   const { data: recentBookings = [], isLoading: loadingBookings } = useQuery({
     queryKey: ["loyalty-reco-bookings", tenantId, sinceDate],
@@ -606,13 +733,11 @@ const AdminLoyalty = () => {
   const trackedPhones = useMemo(() => new Set(rows.map((r: any) => normPhone(r.phone))), [rows]);
   const trackedNames  = useMemo(() => new Set(rows.map((r: any) => (r.client_name ?? "").trim().toLowerCase())), [rows]);
 
-  // ─── Derived: candidates filtered by qualifying service keyword ───
   const candidates = useMemo(() => {
     const keyword = settings.qualifyingService;
     const map = new Map<string, { name: string; phone: string; count: number; spend: number; lastBookingDate: string }>();
 
     recentBookings.forEach((b: any) => {
-      // Only count bookings that include the qualifying service
       const items: any[] = b.booking_items ?? [];
       const hasQualifying = keyword
         ? items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))
@@ -717,20 +842,31 @@ const AdminLoyalty = () => {
         {activeTab === "Tracker" && (
           <motion.div key="tracker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-5">
 
-            {/* ── Summary pills ── */}
+            {/* ── Summary stat cards with icons ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Total Clients", value: counts.total,    color: "text-white/80",    border: "border-white/[0.06]" },
-                { label: "On Track",      value: counts.onTrack,  color: "text-emerald-400", border: "border-emerald-500/20" },
-                { label: "Time to Book",  value: counts.timeBook, color: "text-amber-400",   border: "border-amber-500/20" },
-                { label: "Overdue",       value: counts.overdue,  color: "text-red-400",     border: "border-red-500/20" },
-              ].map(s => (
-                <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  className={`rounded-2xl border bg-white/[0.03] p-4 ${s.border}`}>
-                  <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-1">{s.label}</p>
-                  <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-                </motion.div>
-              ))}
+                { label: "Total Clients", value: counts.total,    color: "text-white/80",    border: "border-white/[0.07]",      icon: Users,         iconColor: "text-white/25",    bg: "" },
+                { label: "On Track",      value: counts.onTrack,  color: "text-emerald-400", border: "border-emerald-500/20",    icon: CheckCircle,   iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
+                { label: "Time to Book",  value: counts.timeBook, color: "text-amber-400",   border: "border-amber-500/20",      icon: Clock,         iconColor: "text-amber-500/40",  bg: "bg-amber-500/[0.03]" },
+                { label: "Overdue",       value: counts.overdue,  color: "text-red-400",     border: "border-red-500/20",        icon: AlertCircle,   iconColor: "text-red-500/40",    bg: "bg-red-500/[0.03]" },
+              ].map((s, idx) => {
+                const Icon = s.icon;
+                return (
+                  <motion.div
+                    key={s.label}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.04 }}
+                    className={`rounded-2xl border ${s.bg || "bg-white/[0.02]"} ${s.border} p-4 flex items-start justify-between gap-2`}
+                  >
+                    <div>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-1.5">{s.label}</p>
+                      <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                    </div>
+                    <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${s.iconColor}`} />
+                  </motion.div>
+                );
+              })}
             </div>
 
             {/* ── Recommendations banner ── */}
@@ -759,6 +895,14 @@ const AdminLoyalty = () => {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {c.phone && <WaPreview name={c.client_name} status="TIME TO BOOK" phone={c.phone} />}
+                          {/* Skip button */}
+                          <button
+                            onClick={() => skipCandidate(c)}
+                            title="Dismiss this suggestion"
+                            className="p-1.5 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.05] transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                           <button
                             onClick={() => setEnrolling(c)}
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-colors"
@@ -773,9 +917,10 @@ const AdminLoyalty = () => {
               )}
             </AnimatePresence>
 
-            {/* ── Search + filter + export ── */}
-            <div className="flex flex-col sm:flex-row gap-2 items-center">
-              <div className="relative flex-1 w-full">
+            {/* ── Unified toolbar: search + filters + export ── */}
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              {/* Search */}
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
                 <input
                   type="text"
@@ -790,116 +935,67 @@ const AdminLoyalty = () => {
                   </button>
                 )}
               </div>
+
+              {/* Filter pills */}
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
+                {FILTERS.map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all
+                      ${filter === f
+                        ? "bg-white/[0.1] text-white border border-white/[0.18] shadow-sm"
+                        : "text-white/35 border border-white/[0.06] hover:text-white/60 hover:bg-white/[0.04]"
+                      }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+
+              {/* Export */}
               <button
                 onClick={() => exportCSV(filteredRows)}
                 disabled={filteredRows.length === 0}
+                title="Export to CSV"
                 className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/[0.06] text-xs font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.05] transition-colors disabled:opacity-30 shrink-0"
               >
-                <Download className="w-3.5 h-3.5" /> Export CSV
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Export CSV</span>
               </button>
             </div>
 
-            {/* ── Filter pills ── */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              {FILTERS.map(f => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all
-                    ${ filter === f ? "bg-white/[0.12] text-white border border-white/[0.15]" : "text-white/35 border border-white/[0.06] hover:text-white/60" }`}>
-                  {f}
-                </button>
-              ))}
-            </div>
-
-            {/* ── Table ── */}
+            {/* ── Client list ── */}
             {isLoading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
               </div>
             ) : filteredRows.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center flex flex-col items-center gap-3">
-                <Star className="w-8 h-8 text-white/10" />
-                <p className="text-sm text-white/30">
+                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-12 text-center flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/[0.04] flex items-center justify-center mb-1">
+                  <Star className="w-6 h-6 text-white/20" />
+                </div>
+                <p className="text-sm font-medium text-white/40">
                   {rows.length === 0
-                    ? "No clients enrolled yet. Enroll your first client above."
+                    ? "No clients enrolled yet."
                     : "No clients match this filter."}
+                </p>
+                <p className="text-xs text-white/20">
+                  {rows.length === 0 ? "Enroll your first client using the recommendations above." : "Try a different filter or search term."}
                 </p>
               </motion.div>
             ) : (
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[680px]">
-                    <thead>
-                      <tr className="border-b border-white/[0.06]">
-                        {["Client", "Status", "Last Wax", "Next Due", "Pack", "Notes", "WA"].map(h => (
-                          <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRows.map((r: any, i: number) => {
-                        const norm = normaliseStatus(r.status);
-                        return (
-                          <motion.tr
-                            key={r.id}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                            className={`border-b border-white/[0.04] last:border-0 ${
-                              norm === "OVERDUE" ? "bg-red-500/[0.02]" :
-                              norm === "TIME TO BOOK" ? "bg-amber-500/[0.02]" : ""
-                            }`}
-                          >
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-white/80">{r.client_name}</span>
-                                {r.phone && <span className="text-[10px] text-white/35">{r.phone}</span>}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <InlineStatusEditor
-                                rowId={r.id}
-                                current={r.status}
-                                tenantId={tenantId}
-                                onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty", tenantId] })}
-                              />
-                            </td>
-                            <td className="px-4 py-3 text-xs text-white/50">{excelToDate(r.last_wax_date)}</td>
-                            <td className="px-4 py-3">
-                              <span className={`text-xs font-medium ${
-                                norm === "OVERDUE" ? "text-red-400" :
-                                norm === "TIME TO BOOK" ? "text-amber-400" :
-                                "text-white/50"
-                              }`}>
-                                {excelToDate(r.next_due_date)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3"><PackPill raw={r.pack_progress} /></td>
-                            <td className="px-4 py-3 max-w-[180px]">
-                              {r.notes
-                                ? (
-                                  <span className="inline-flex items-start gap-1 text-[11px] text-white/50 leading-snug">
-                                    <StickyNote className="w-3 h-3 mt-0.5 shrink-0 text-white/25" />
-                                    <span className="line-clamp-2">{r.notes}</span>
-                                  </span>
-                                )
-                                : <span className="text-white/20 text-xs">—</span>
-                              }
-                            </td>
-                            <td className="px-4 py-3">
-                              {r.phone
-                                ? <WaPreview name={r.client_name} status={norm} phone={r.phone} />
-                                : <span className="text-white/20 text-xs">—</span>
-                              }
-                            </td>
-                          </motion.tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="flex flex-col gap-2">
+                {filteredRows.map((r: any, i: number) => (
+                  <ClientRow
+                    key={r.id}
+                    r={r}
+                    i={i}
+                    tenantId={tenantId}
+                    onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty", tenantId] })}
+                  />
+                ))}
               </div>
             )}
           </motion.div>
