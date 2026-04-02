@@ -266,7 +266,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <DetailRow icon={Phone} label="Phone" value={b.phone} />
                                 <DetailRow icon={Mail} label="Email" value={b.email} />
                                 <DetailRow icon={MapPin} label="Address" value={b.address} />
-                                <DetailRow icon={Scissors} label="Service" value={`${b.service} (${b.duration}min)`} />
                                 <DetailRow icon={Clock} label="Ref" value={b.ref} />
                               </div>
 
