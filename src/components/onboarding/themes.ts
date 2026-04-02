@@ -9,11 +9,18 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+export interface SuggestedService {
+  name: string;
+  price: string;
+  duration: string;
+}
+
 export interface OnboardingTheme {
   icon: LucideIcon;
   label: string;
   desc: string;
   vibe: string;
+  suggestedServices: SuggestedService[];
   colors: {
     background: string;
     foreground: string;
@@ -42,6 +49,11 @@ export const businessThemes: OnboardingTheme[] = [
     label: "Makeup Artist",
     desc: "Bridal, editorial, events",
     vibe: "Professional, Focused",
+    suggestedServices: [
+      { name: "Full Glam", price: "800", duration: "120" },
+      { name: "Natural Look", price: "500", duration: "60" },
+      { name: "Touch-Up", price: "250", duration: "30" },
+    ],
     colors: {
       background: "30 45% 88%",
       foreground: "0 0% 7%",
@@ -68,6 +80,11 @@ export const businessThemes: OnboardingTheme[] = [
     label: "Beautician",
     desc: "Facials, skincare, waxing",
     vibe: "Relaxing, Calm",
+    suggestedServices: [
+      { name: "Full Facial", price: "450", duration: "60" },
+      { name: "Back Treatment", price: "380", duration: "45" },
+      { name: "Wax — Full Legs", price: "300", duration: "45" },
+    ],
     colors: {
       background: "80 25% 92%",
       foreground: "150 15% 12%",
@@ -94,6 +111,11 @@ export const businessThemes: OnboardingTheme[] = [
     label: "Tattoo Artist",
     desc: "Custom ink, cover-ups, flash",
     vibe: "Bold, Edgy, Artistic",
+    suggestedServices: [
+      { name: "Small Tattoo", price: "600", duration: "60" },
+      { name: "Medium Tattoo", price: "1200", duration: "120" },
+      { name: "Consultation", price: "0", duration: "30" },
+    ],
     colors: {
       background: "0 5% 5%",
       foreground: "0 0% 92%",
@@ -120,6 +142,11 @@ export const businessThemes: OnboardingTheme[] = [
     label: "Lash Tech",
     desc: "Extensions, lifts, tinting",
     vibe: "Feminine, Cozy",
+    suggestedServices: [
+      { name: "Classic Full Set", price: "550", duration: "90" },
+      { name: "Lash Lift & Tint", price: "400", duration: "60" },
+      { name: "Infill", price: "300", duration: "45" },
+    ],
     colors: {
       background: "340 45% 86%",
       foreground: "340 20% 10%",
@@ -146,6 +173,11 @@ export const businessThemes: OnboardingTheme[] = [
     label: "Barber",
     desc: "Haircuts, fades, beard trims",
     vibe: "Classic, Masculine",
+    suggestedServices: [
+      { name: "Fade Cut", price: "150", duration: "30" },
+      { name: "Beard Trim", price: "80", duration: "20" },
+      { name: "Cut & Beard", price: "200", duration: "45" },
+    ],
     colors: {
       background: "210 15% 15%",
       foreground: "210 10% 92%",
@@ -172,6 +204,11 @@ export const businessThemes: OnboardingTheme[] = [
     label: "Nail Tech",
     desc: "Manicures, gel, nail art",
     vibe: "Clean, Trendy",
+    suggestedServices: [
+      { name: "Gel Manicure", price: "280", duration: "60" },
+      { name: "Acrylic Full Set", price: "450", duration: "90" },
+      { name: "Nail Art Add-on", price: "150", duration: "30" },
+    ],
     colors: {
       background: "330 38% 87%",
       foreground: "330 15% 8%",
@@ -198,6 +235,11 @@ export const businessThemes: OnboardingTheme[] = [
     label: "Standard",
     desc: "Any appointment-based service",
     vibe: "Minimal, Zen, Unisex",
+    suggestedServices: [
+      { name: "Consultation", price: "0", duration: "30" },
+      { name: "30-Min Session", price: "300", duration: "30" },
+      { name: "1-Hour Session", price: "500", duration: "60" },
+    ],
     colors: {
       background: "0 0% 100%",
       foreground: "0 0% 7%",
