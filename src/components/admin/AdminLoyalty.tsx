@@ -190,9 +190,13 @@ const WaPreview = ({ name, status, phone }: { name: string; status: string; phon
 
 const STATUS_OPTIONS = ["ON TRACK", "TIME TO BOOK", "OVERDUE"] as const;
 
-// ─── InlineStatusEditor — with backdrop to close on outside click ───
-const InlineStatusEditor = ({ rowId, current, tenantId, onUpdated }: {
-  rowId: string; current: string; tenantId: string; onUpdated: () => void;
+// ─── InlineStatusEditor ───
+// FIX: accepts effectiveNorm (computed from effectiveStatus) for display styling,
+// while current (raw DB value) is used only for the edit dropdown highlight and save.
+// This ensures a client whose next_due_date is past shows the OVERDUE pill correctly
+// even if the stored DB status is still "ON TRACK".
+const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated }: {
+  rowId: string; current: string; effectiveNorm: string; tenantId: string; onUpdated: () => void;
 }) => {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -210,7 +214,13 @@ const InlineStatusEditor = ({ rowId, current, tenantId, onUpdated }: {
     if (error) { toast.error("Failed to update status"); } else { toast.success("Status updated"); onUpdated(); }
   };
 
-  const norm = normaliseStatus(current);
+  // Use effectiveNorm for the pill display style so overdue-by-date shows correctly
+  const displayNorm = (effectiveNorm as keyof typeof STATUS_STYLE) in STATUS_STYLE
+    ? (effectiveNorm as keyof typeof STATUS_STYLE)
+    : "UNKNOWN";
+  // Use stored normalised value for the dropdown checkmark
+  const storedNorm = normaliseStatus(current);
+
   return (
     <div className="relative inline-block">
       {open && (
@@ -218,10 +228,10 @@ const InlineStatusEditor = ({ rowId, current, tenantId, onUpdated }: {
       )}
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-all ${STATUS_STYLE[norm] ?? STATUS_STYLE["UNKNOWN"]} hover:opacity-80`}
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-all ${STATUS_STYLE[displayNorm] ?? STATUS_STYLE["UNKNOWN"]} hover:opacity-80`}
       >
         {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-        {norm}
+        {displayNorm}
         <Pencil className="w-2.5 h-2.5 opacity-50" />
       </button>
       <AnimatePresence>
@@ -236,9 +246,9 @@ const InlineStatusEditor = ({ rowId, current, tenantId, onUpdated }: {
               <button
                 key={s}
                 onClick={() => handleSelect(s)}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors hover:bg-white/[0.06] ${norm === s ? "text-white" : "text-white/50"}`}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors hover:bg-white/[0.06] ${storedNorm === s ? "text-white" : "text-white/50"}`}
               >
-                {norm === s && <Check className="w-3 h-3 text-emerald-400" />}
+                {storedNorm === s && <Check className="w-3 h-3 text-emerald-400" />}
                 <span>{s}</span>
               </button>
             ))}
@@ -335,10 +345,6 @@ const EnrollModal = ({
 };
 
 // ─── Key resolution helpers ───
-// BUG FIX: bookings.client_id is always a UUID (non-null per schema). Using it as dedup key
-// caused ALL bookings from the same registered client to be collapsed into one entry, meaning
-// count never exceeded 1 per client_id.  We now use phone as the primary dedup key so that
-// multiple bookings by the same person (same phone, different booking rows) accumulate correctly.
 function resolveKey(b: any): string {
   const phone = resolvePhone(b).replace(/\D/g, "");
   if (phone && phone.length >= 9) return phone.slice(-9);
@@ -383,11 +389,13 @@ function exportCSV(rows: any[]) {
 const ENROLL_SAVED_KEY = "loyalty_enroll_saved";
 
 // ─── Default setting values ───
+// FIX: lookback changed from 90 → 365 days so clients with Hollywood bookings
+// spread across the past year are captured by the recommendation engine.
 const SETTING_DEFAULTS = {
   loyalty_qualifying_service: "hollywood",
   loyalty_min_bookings:       "2",
   loyalty_reminder_weeks:     "4",
-  loyalty_lookback_days:      "90",
+  loyalty_lookback_days:      "365",
 };
 
 type SettingKey = keyof typeof SETTING_DEFAULTS;
@@ -555,7 +563,7 @@ const ClientRow = ({
 }: {
   r: any; i: number; tenantId: string; onUpdated: () => void;
 }) => {
-  // Use effectiveStatus so overdue-by-date shows correctly regardless of stored status
+  // effectiveStatus drives ALL visual treatment — colour, icon, sort, and pill
   const norm = effectiveStatus(r);
   const StatusIcon = STATUS_ICON[norm] ?? Clock;
 
@@ -591,21 +599,15 @@ const ClientRow = ({
           }
         </div>
 
-        {/* Status pill — inline editor (passes stored status, display is effective) */}
+        {/* Status pill — FIX: passes effectiveNorm so pill reflects date-driven overdue */}
         <div className="shrink-0">
-          {/* Show effective status visually but edit the stored value */}
-          <div className="relative inline-block">
-            <InlineStatusEditor
-              rowId={r.id}
-              current={r.status ?? ""}
-              tenantId={tenantId}
-              onUpdated={onUpdated}
-            />
-            {/* Overdue override badge when stored status isn't OVERDUE but date says otherwise */}
-            {norm === "OVERDUE" && normaliseStatus(r.status) !== "OVERDUE" && (
-              <span className="ml-1 text-[9px] text-red-400/70 italic">(auto)</span>
-            )}
-          </div>
+          <InlineStatusEditor
+            rowId={r.id}
+            current={r.status ?? ""}
+            effectiveNorm={norm}
+            tenantId={tenantId}
+            onUpdated={onUpdated}
+          />
         </div>
 
         {/* WA */}
@@ -706,7 +708,7 @@ const AdminLoyalty = () => {
       qualifyingService: map.loyalty_qualifying_service.toLowerCase(),
       minBookings:       Math.max(1, parseInt(map.loyalty_min_bookings) || 2),
       reminderWeeks:     Math.max(1, parseInt(map.loyalty_reminder_weeks) || 4),
-      lookbackDays:      Math.max(7, parseInt(map.loyalty_lookback_days) || 90),
+      lookbackDays:      Math.max(7, parseInt(map.loyalty_lookback_days) || 365),
     };
   }, [settingsRows]);
 
@@ -725,9 +727,6 @@ const AdminLoyalty = () => {
   });
 
   // ─── 2. Bookings for recommendation engine ───
-  // BUG FIX: Do NOT apply a date filter on the bookings query — the date filter was using
-  // booking_date >= sinceDate which silently excluded clients whose bookings span the boundary.
-  // Instead, fetch ALL non-cancelled bookings and filter by date in JS so the count is accurate.
   const { data: recentBookings = [], isLoading: loadingBookings } = useQuery({
     queryKey: ["loyalty-reco-bookings", tenantId],
     queryFn: async () => {
