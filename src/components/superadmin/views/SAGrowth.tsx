@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   TrendingUp, Users, DollarSign, Activity, Calendar,
-  ArrowUpRight, ArrowDownRight, Minus, RefreshCw
+  ArrowUpRight, ArrowDownRight, Minus, RefreshCw, BarChart2
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,6 +21,12 @@ interface BookingStat {
   tenant_id: string;
   count: number;
   total_amount: number;
+}
+
+interface BookingRaw {
+  tenant_id: string;
+  total_amount: number | null;
+  created_at: string;
 }
 
 interface KPI {
@@ -63,23 +69,35 @@ function daysUntil(dateStr: string | null): number | null {
   return Math.ceil(diff / 86_400_000);
 }
 
+/** Median of an array of numbers */
+function median(nums: number[]): number {
+  if (nums.length === 0) return 0;
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function SAGrowth() {
   const [tenants,      setTenants]      = useState<TenantRow[]>([]);
   const [bookingStats, setBookingStats] = useState<BookingStat[]>([]);
+  const [recentRaw,    setRecentRaw]    = useState<BookingRaw[]>([]);
   const [events,       setEvents]       = useState<{ event: string; recorded_at: string; tenant_id: string }[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [refreshedAt,  setRefreshedAt]  = useState<Date>(new Date());
 
   const load = async () => {
     setLoading(true);
-    const [{ data: t }, { data: bs }, { data: ev }] = await Promise.all([
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const [{ data: t }, { data: bs }, { data: recent }, { data: ev }] = await Promise.all([
       supabase.from("tenants").select("id,name,subscription_status,is_lifetime_free,trial_ends_at,trial_started_at,created_at,is_active").order("created_at", { ascending: false }),
       supabase.from("bookings").select("tenant_id,total_amount").not("tenant_id", "is", null),
+      supabase.from("bookings").select("tenant_id,total_amount,created_at").not("tenant_id", "is", null).gte("created_at", thirtyDaysAgo),
       supabase.from("platform_events").select("event,recorded_at,tenant_id").order("recorded_at", { ascending: false }).limit(100),
     ]);
     setTenants(t ?? []);
-    // aggregate booking stats
     const map: Record<string, BookingStat> = {};
     for (const b of (bs ?? [])) {
       if (!map[b.tenant_id]) map[b.tenant_id] = { tenant_id: b.tenant_id, count: 0, total_amount: 0 };
@@ -87,6 +105,7 @@ export default function SAGrowth() {
       map[b.tenant_id].total_amount += Number(b.total_amount ?? 0);
     }
     setBookingStats(Object.values(map));
+    setRecentRaw(recent ?? []);
     setEvents(ev ?? []);
     setRefreshedAt(new Date());
     setLoading(false);
@@ -95,16 +114,38 @@ export default function SAGrowth() {
   useEffect(() => { load(); }, []);
 
   // ── Derived KPIs ──
-  const totalTenants   = tenants.length;
-  const activeTenants  = tenants.filter(t => t.subscription_status === "active" || t.subscription_status === "lifetime_free").length;
-  const trialTenants   = tenants.filter(t => t.subscription_status === "trial").length;
-  const expiredTenants = tenants.filter(t => t.subscription_status === "trial_expired").length;
+  const totalTenants     = tenants.length;
+  const activeTenants    = tenants.filter(t => t.subscription_status === "active" || t.subscription_status === "lifetime_free").length;
+  const trialTenants     = tenants.filter(t => t.subscription_status === "trial").length;
+  const expiredTenants   = tenants.filter(t => t.subscription_status === "trial_expired").length;
   const cancelledTenants = tenants.filter(t => t.subscription_status === "cancelled").length;
-  const totalBookings  = bookingStats.reduce((s, b) => s + b.count, 0);
-  const totalRevProxy  = bookingStats.reduce((s, b) => s + b.total_amount, 0);
-  // MRR estimate: active tenants × R299/mo (placeholder until real billing)
-  const mrrEstimate    = activeTenants * 299;
-  const conversionRate = totalTenants > 0 ? ((activeTenants / totalTenants) * 100).toFixed(0) : "0";
+  const totalBookings    = bookingStats.reduce((s, b) => s + b.count, 0);
+  const totalRevProxy    = bookingStats.reduce((s, b) => s + b.total_amount, 0);
+  const mrrEstimate      = activeTenants * 299;
+  const conversionRate   = totalTenants > 0 ? ((activeTenants / totalTenants) * 100).toFixed(0) : "0";
+
+  // ── Median Bookings per Tenant (last 30 days) — THE ONE METRIC ──
+  const recentByTenant: Record<string, number> = {};
+  for (const b of recentRaw) {
+    recentByTenant[b.tenant_id] = (recentByTenant[b.tenant_id] ?? 0) + 1;
+  }
+  // Include ALL tenants — tenants with 0 bookings get 0
+  const medianBookingsArr = tenants.map(t => recentByTenant[t.id] ?? 0);
+  const medianBookings30d = median(medianBookingsArr);
+
+  // ── Activation Funnel ──
+  // Step 1: Signed up (all tenants)
+  const funnelSignups = totalTenants;
+  // Step 2: Made at least 1 booking ever
+  const funnelFirstBooking = bookingStats.filter(b => b.count >= 1).length;
+  // Step 3: Has at least 1 payment (active/lifetime = paying)
+  const funnelFirstPayment = activeTenants;
+
+  const funnelSteps = [
+    { label: "Signed Up",    value: funnelSignups,     color: "#38bdf8" },
+    { label: "First Booking",value: funnelFirstBooking, color: "#818cf8" },
+    { label: "First Payment",value: funnelFirstPayment, color: "#00c853" },
+  ];
 
   const kpis: KPI[] = [
     {
@@ -152,6 +193,15 @@ export default function SAGrowth() {
       icon: Activity,
       color: "#f97316",
     },
+    {
+      label: "Median Bookings / Tenant",
+      value: medianBookings30d,
+      sub: "Last 30 days · filters outliers",
+      trend: medianBookings30d >= 5 ? "up" : medianBookings30d >= 2 ? "flat" : "down",
+      trendValue: medianBookings30d >= 5 ? "Healthy engagement" : medianBookings30d >= 2 ? "Moderate" : "Low usage",
+      icon: BarChart2,
+      color: "#34d399",
+    },
   ];
 
   // ── Trials expiring soon (≤7 days) ──
@@ -186,15 +236,19 @@ export default function SAGrowth() {
         </button>
       </div>
 
-      {/* ── KPI Grid ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* ── KPI Grid (now 6 cards, 3 cols on lg) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map(k => (
           <div
             key={k.label}
             className="rounded-xl p-4 border"
             style={{
-              background: "rgba(255,255,255,0.025)",
-              borderColor: "rgba(255,255,255,0.07)",
+              background: k.label === "Median Bookings / Tenant"
+                ? "rgba(52,211,153,0.04)"
+                : "rgba(255,255,255,0.025)",
+              borderColor: k.label === "Median Bookings / Tenant"
+                ? "rgba(52,211,153,0.18)"
+                : "rgba(255,255,255,0.07)",
             }}
           >
             <div className="flex items-center justify-between mb-3">
@@ -219,7 +273,80 @@ export default function SAGrowth() {
         ))}
       </div>
 
-      {/* ── Two-column: Tenant Table + Expiring Trials ── */}
+      {/* ── Activation Funnel ── */}
+      <div
+        className="rounded-xl border p-5"
+        style={{ background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.07)" }}
+      >
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-white">Activation Funnel</h2>
+          <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+            Signup → First Booking → First Payment
+          </p>
+        </div>
+        <div className="flex items-end gap-4 overflow-x-auto pb-1">
+          {funnelSteps.map((step, i) => {
+            const pct = funnelSignups > 0 ? Math.round((step.value / funnelSignups) * 100) : 0;
+            const dropoff = i > 0 && funnelSteps[i - 1].value > 0
+              ? Math.round(((funnelSteps[i - 1].value - step.value) / funnelSteps[i - 1].value) * 100)
+              : null;
+            return (
+              <div key={step.label} className="flex-1 min-w-[120px] flex flex-col items-center gap-2">
+                {/* Dropoff arrow */}
+                {dropoff !== null && (
+                  <div className="text-[10px] font-semibold" style={{ color: dropoff > 40 ? "#ef4444" : "rgba(255,255,255,0.25)" }}>
+                    ↓ {dropoff}% drop
+                  </div>
+                )}
+                {dropoff === null && <div className="h-4" />}
+                {/* Bar */}
+                <div
+                  className="w-full rounded-lg flex flex-col items-center justify-end relative overflow-hidden"
+                  style={{ height: 120, background: "rgba(255,255,255,0.04)" }}
+                >
+                  <div
+                    className="w-full rounded-lg transition-all duration-700"
+                    style={{
+                      height: `${Math.max(pct, 4)}%`,
+                      background: `linear-gradient(to top, ${step.color}88, ${step.color}44)`,
+                      boxShadow: `0 0 16px ${step.color}33`,
+                    }}
+                  />
+                  <span
+                    className="absolute top-2 text-[13px] font-bold tabular-nums"
+                    style={{ color: step.color }}
+                  >
+                    {pct}%
+                  </span>
+                </div>
+                {/* Label */}
+                <div className="text-center">
+                  <p className="text-[11px] font-medium" style={{ color: step.color }}>{step.label}</p>
+                  <p className="text-[10px] tabular-nums" style={{ color: "rgba(255,255,255,0.3)" }}>{step.value} tenants</p>
+                </div>
+              </div>
+            );
+          })}
+          {/* Conversion summary */}
+          <div
+            className="flex-1 min-w-[140px] rounded-xl p-4 flex flex-col justify-center gap-1.5"
+            style={{ background: "rgba(0,200,83,0.05)", border: "1px solid rgba(0,200,83,0.12)" }}
+          >
+            <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: "rgba(0,200,83,0.6)" }}>Overall</p>
+            <p className="text-2xl font-bold tabular-nums" style={{ color: "#00c853" }}>
+              {funnelSignups > 0 ? Math.round((funnelFirstPayment / funnelSignups) * 100) : 0}%
+            </p>
+            <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>Signup → Paid</p>
+            <div className="mt-2 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                {funnelFirstBooking} booked · {funnelFirstPayment} paid
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Two-column: Tenant Table + Right Column ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Tenant Lifecycle Table */}
@@ -235,15 +362,16 @@ export default function SAGrowth() {
             <table className="w-full text-xs">
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                  {["Tenant", "Status", "Bookings", "Rev Proxy", "Trial Ends", "Since"].map(h => (
+                  {["Tenant", "Status", "Bookings", "30d Bkgs", "Rev Proxy", "Trial Ends", "Since"].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-medium" style={{ color: "rgba(255,255,255,0.25)" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {tenants.map((t, i) => {
-                  const bs  = bookingStats.find(b => b.tenant_id === t.id);
-                  const days = daysUntil(t.trial_ends_at);
+                {tenants.map(t => {
+                  const bs    = bookingStats.find(b => b.tenant_id === t.id);
+                  const b30   = recentByTenant[t.id] ?? 0;
+                  const days  = daysUntil(t.trial_ends_at);
                   return (
                     <tr
                       key={t.id}
@@ -266,6 +394,11 @@ export default function SAGrowth() {
                         </span>
                       </td>
                       <td className="px-4 py-3 tabular-nums text-white/60">{bs?.count ?? 0}</td>
+                      <td className="px-4 py-3 tabular-nums">
+                        <span style={{ color: b30 >= 5 ? "#34d399" : b30 >= 1 ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)" }}>
+                          {b30}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 tabular-nums text-white/60">{bs ? fmtCurrency(Math.round(bs.total_amount)) : "—"}</td>
                       <td className="px-4 py-3">
                         {days !== null ? (
@@ -282,7 +415,7 @@ export default function SAGrowth() {
                 })}
                 {tenants.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
+                    <td colSpan={7} className="px-4 py-12 text-center text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
                       No tenants found
                     </td>
                   </tr>

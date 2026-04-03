@@ -4,53 +4,63 @@ import {
   LayoutDashboard, Users, Building2, DollarSign, Settings,
   ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Zap,
   ChevronRight, Loader2, Radio, CalendarDays, Wrench, TrendingUp,
+  Heart, GitBranch, Puzzle,
 } from "lucide-react";
 
 // ─── Lazy Views ────────────────────────────────────────────────────────────────
-const SAOverview      = lazy(() => import("./views/SAOverview"));
-const SAUsers         = lazy(() => import("./views/SAUsers"));
-const SARevenue       = lazy(() => import("./views/SARevenue"));
-const SASystemHealth  = lazy(() => import("./views/SASystemHealth"));
-const SAAuditLog      = lazy(() => import("./views/SAAuditLog"));
-const SABroadcast     = lazy(() => import("./views/SABroadcast"));
-const SAFeatureFlags  = lazy(() => import("./views/SAFeatureFlags"));
-const SASettings      = lazy(() => import("./views/SASettings"));
-const SAWebhookQueue  = lazy(() => import("./views/SAWebhookQueue"));
-const SABookings      = lazy(() => import("./views/SABookings"));
-const SATroubleshoot  = lazy(() => import("./views/SATroubleshoot"));
-const SAGrowth        = lazy(() => import("./views/SAGrowth"));
+const SAOverview        = lazy(() => import("./views/SAOverview"));
+const SAUsers           = lazy(() => import("./views/SAUsers"));
+const SARevenue         = lazy(() => import("./views/SARevenue"));
+const SASystemHealth    = lazy(() => import("./views/SASystemHealth"));
+const SAAuditLog        = lazy(() => import("./views/SAAuditLog"));
+const SABroadcast       = lazy(() => import("./views/SABroadcast"));
+const SAFeatureFlags    = lazy(() => import("./views/SAFeatureFlags"));
+const SASettings        = lazy(() => import("./views/SASettings"));
+const SAWebhookQueue    = lazy(() => import("./views/SAWebhookQueue"));
+const SABookings        = lazy(() => import("./views/SABookings"));
+const SATroubleshoot    = lazy(() => import("./views/SATroubleshoot"));
+const SAGrowth          = lazy(() => import("./views/SAGrowth"));
+const SATenantHealth    = lazy(() => import("./views/SATenantHealth"));
+const SACohortRetention = lazy(() => import("./views/SACohortRetention"));
+const SAFeatureAdoption = lazy(() => import("./views/SAFeatureAdoption"));
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ViewId =
   | "overview" | "users" | "bookings" | "revenue"
   | "health" | "audit" | "broadcast" | "webhooks"
-  | "flags" | "settings" | "troubleshoot" | "growth";
+  | "flags" | "settings" | "troubleshoot" | "growth"
+  | "tenant-health" | "cohort-retention" | "feature-adoption";
 
 interface NavItem  { id: ViewId; label: string; icon: ElementType; badge?: string; }
 interface NavGroup { label: string; items: NavItem[]; }
 
 const NAV_GROUPS: NavGroup[] = [
   { label: "Operate", items: [
-    { id: "overview",  label: "Overview",          icon: LayoutDashboard },
-    { id: "growth",    label: "Growth Engine",      icon: TrendingUp, badge: "New" },
-    { id: "users",     label: "Users",              icon: Users },
-    { id: "bookings",  label: "Booking Health",     icon: CalendarDays },
+    { id: "overview",          label: "Overview",          icon: LayoutDashboard },
+    { id: "growth",            label: "Growth Engine",      icon: TrendingUp },
+    { id: "users",             label: "Users",              icon: Users },
+    { id: "bookings",          label: "Booking Health",     icon: CalendarDays },
   ]},
   { label: "Support", items: [
-    { id: "troubleshoot", label: "Troubleshoot",    icon: Wrench },
+    { id: "troubleshoot",      label: "Troubleshoot",       icon: Wrench },
+  ]},
+  { label: "Intelligence", items: [
+    { id: "tenant-health",     label: "Tenant Health",      icon: Heart,       badge: "New" },
+    { id: "cohort-retention",  label: "Cohort Retention",   icon: GitBranch,   badge: "New" },
+    { id: "feature-adoption",  label: "Feature Adoption",   icon: Puzzle,      badge: "New" },
   ]},
   { label: "Health", items: [
-    { id: "health",    label: "Monitoring",         icon: Activity },
-    { id: "audit",     label: "Security & Audit",   icon: ShieldAlert },
-    { id: "webhooks",  label: "Webhook Queue",      icon: Radio },
+    { id: "health",            label: "Monitoring",         icon: Activity },
+    { id: "audit",             label: "Security & Audit",   icon: ShieldAlert },
+    { id: "webhooks",          label: "Webhook Queue",      icon: Radio },
   ]},
   { label: "Business", items: [
-    { id: "revenue",   label: "Billing & Revenue",  icon: DollarSign },
-    { id: "broadcast", label: "Broadcast",          icon: Bell },
+    { id: "revenue",           label: "Billing & Revenue",  icon: DollarSign },
+    { id: "broadcast",         label: "Broadcast",          icon: Bell },
   ]},
   { label: "Config", items: [
-    { id: "flags",     label: "Feature Flags",      icon: Flag },
-    { id: "settings",  label: "Settings",           icon: Settings },
+    { id: "flags",             label: "Feature Flags",      icon: Flag },
+    { id: "settings",          label: "Settings",           icon: Settings },
   ]},
 ];
 
@@ -73,19 +83,22 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
 
   const renderView = () => {
     switch (activeView) {
-      case "overview":     return <SAOverview />;
-      case "growth":       return <SAGrowth />;
-      case "users":        return <SAUsers />;
-      case "bookings":     return <SABookings />;
-      case "revenue":      return <SARevenue />;
-      case "health":       return <SASystemHealth />;
-      case "audit":        return <SAAuditLog />;
-      case "broadcast":    return <SABroadcast />;
-      case "webhooks":     return <SAWebhookQueue />;
-      case "flags":        return <SAFeatureFlags />;
-      case "settings":     return <SASettings />;
-      case "troubleshoot": return <SATroubleshoot />;
-      default:             return <SAOverview />;
+      case "overview":          return <SAOverview />;
+      case "growth":            return <SAGrowth />;
+      case "users":             return <SAUsers />;
+      case "bookings":          return <SABookings />;
+      case "revenue":           return <SARevenue />;
+      case "health":            return <SASystemHealth />;
+      case "audit":             return <SAAuditLog />;
+      case "broadcast":         return <SABroadcast />;
+      case "webhooks":          return <SAWebhookQueue />;
+      case "flags":             return <SAFeatureFlags />;
+      case "settings":          return <SASettings />;
+      case "troubleshoot":      return <SATroubleshoot />;
+      case "tenant-health":     return <SATenantHealth />;
+      case "cohort-retention":  return <SACohortRetention />;
+      case "feature-adoption":  return <SAFeatureAdoption />;
+      default:                  return <SAOverview />;
     }
   };
 
