@@ -7,12 +7,12 @@ const GlassCard = ({ children, className = "" }: { children: React.ReactNode; cl
 );
 
 interface Stats {
-  tenants: number; users: number; bookings: number; revenue: number;
+  tenants: number; users: number; bookings: number; gmv: number;
   bookingsToday: number; activeStaff: number;
 }
 
 export default function SAOverview() {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats,   setStats]   = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,27 +20,24 @@ export default function SAOverview() {
       supabase.from("tenants").select("id", { count: "exact", head: true }),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("bookings").select("id", { count: "exact", head: true }),
+      // GMV = sum of completed payments (what tenants processed, not NextSlot revenue)
       supabase.from("payments").select("amount").eq("status", "completed"),
       supabase
         .from("bookings")
         .select("id", { count: "exact", head: true })
         .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
-      // staff_members table does not exist — count distinct staff_ids from staff_availability
-      supabase
-        .from("staff_availability")
-        .select("staff_id")
-        .eq("is_available", true),
+      // Distinct staff count from staff_availability
+      supabase.from("staff_availability").select("staff_id").eq("is_available", true),
     ]).then(([t, u, b, pay, bt, st]) => {
-      const revenue = (pay.data ?? []).reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
-      // Deduplicate staff_ids for a true "active staff" count
+      const gmv = (pay.data ?? []).reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
       const uniqueStaff = new Set((st.data ?? []).map((r: any) => r.staff_id)).size;
       setStats({
         tenants: t.count ?? 0,
-        users: u.count ?? 0,
+        users:   u.count ?? 0,
         bookings: b.count ?? 0,
-        revenue,
+        gmv,
         bookingsToday: bt.count ?? 0,
-        activeStaff: uniqueStaff,
+        activeStaff:   uniqueStaff,
       });
       setLoading(false);
     });
@@ -49,19 +46,20 @@ export default function SAOverview() {
   const toRand = (v: number) => v >= 1000 ? `R${(v / 1000).toFixed(1)}k` : `R${v.toFixed(2)}`;
 
   const kpis = stats ? [
-    { label: "Tenants",        value: stats.tenants.toString(),         icon: Building2,    accent: "#00c853" },
-    { label: "Users",          value: stats.users.toString(),           icon: Users,        accent: "#00c853" },
-    { label: "Total Bookings", value: stats.bookings.toString(),        icon: CalendarDays, accent: "rgba(255,255,255,0.4)" },
-    { label: "Total Revenue",  value: toRand(stats.revenue),            icon: DollarSign,   accent: "#00c853" },
-    { label: "Bookings Today", value: stats.bookingsToday.toString(),   icon: TrendingUp,   accent: "rgba(255,255,255,0.4)" },
-    { label: "Active Staff",   value: stats.activeStaff.toString(),     icon: Activity,     accent: "rgba(255,255,255,0.4)" },
+    { label: "Tenants",        value: stats.tenants.toString(),       icon: Building2,    accent: "#00c853" },
+    { label: "Platform Users", value: stats.users.toString(),         icon: Users,        accent: "#00c853" },
+    { label: "Total Bookings", value: stats.bookings.toString(),      icon: CalendarDays, accent: "rgba(255,255,255,0.4)" },
+    // Labelled GMV — this is tenant revenue processed, not NextSlot's own revenue
+    { label: "Platform GMV",   value: toRand(stats.gmv),              icon: DollarSign,   accent: "#00c853" },
+    { label: "Bookings Today", value: stats.bookingsToday.toString(), icon: TrendingUp,   accent: "rgba(255,255,255,0.4)" },
+    { label: "Active Staff",   value: stats.activeStaff.toString(),   icon: Activity,     accent: "rgba(255,255,255,0.4)" },
   ] : [];
 
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
         <h2 className="text-white font-semibold text-lg tracking-tight">Platform Overview</h2>
-        <p className="text-white/35 text-sm mt-0.5">Live snapshot of the entire Phenomebeauty platform.</p>
+        <p className="text-white/35 text-sm mt-0.5">Live snapshot of the entire NextSlot platform.</p>
       </div>
       {loading ? (
         <div className="flex items-center justify-center py-20">

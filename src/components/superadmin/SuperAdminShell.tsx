@@ -30,9 +30,9 @@ interface NavGroup { label: string; items: NavItem[]; }
 
 const NAV_GROUPS: NavGroup[] = [
   { label: "Operate", items: [
-    { id: "overview", label: "Overview",  icon: LayoutDashboard },
-    { id: "users",    label: "Users",     icon: Users },
-    { id: "bookings", label: "Bookings",  icon: CalendarDays },
+    { id: "overview", label: "Overview",        icon: LayoutDashboard },
+    { id: "users",    label: "Users",            icon: Users },
+    { id: "bookings", label: "Booking Health",   icon: CalendarDays },
   ]},
   { label: "Support", items: [
     { id: "troubleshoot", label: "Troubleshoot", icon: Wrench, badge: "New" },
@@ -53,12 +53,6 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const ALL_NAV = NAV_GROUPS.flatMap(g => g.items);
-
-// ─── Noble green palette constants ─────────────────────────────────────────────
-// Primary:  #00c853  (Noble green)
-// Dim:      #00c85320
-// Border:   #00c85330
-// Glow:     0 0 16px #00c85318
 
 const TabLoader = () => (
   <div className="flex items-center justify-center py-24">
@@ -116,10 +110,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
           />
         )}
         <span
-          style={active ? {
-            background: "rgba(0,200,83,0.12)",
-            color: "#00c853",
-          } : {}}
+          style={active ? { background: "rgba(0,200,83,0.12)", color: "#00c853" } : {}}
           className={[
             "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors",
             active ? "" : "text-white/22 group-hover:text-white/45",
@@ -178,7 +169,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
             <Zap className="w-4 h-4" style={{ color: "#00c853" }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white leading-none tracking-tight">NobleFinance</p>
+            <p className="text-sm font-bold text-white leading-none tracking-tight">NextSlot</p>
             <p
               className="text-[10px] font-medium mt-0.5 tracking-widest uppercase"
               style={{ color: "rgba(0,200,83,0.55)" }}
@@ -258,7 +249,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
           </button>
 
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-white/18 hidden sm:block text-xs">NobleFinance</span>
+            <span className="text-white/18 hidden sm:block text-xs">NextSlot</span>
             <ChevronRight className="w-3 h-3 text-white/10 hidden sm:block" />
             <span className="text-white/75 font-medium text-sm">{activeLabel}</span>
           </div>
