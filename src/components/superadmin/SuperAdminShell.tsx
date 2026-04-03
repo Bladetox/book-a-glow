@@ -3,7 +3,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Users, Building2, DollarSign, Settings,
   ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Zap,
-  ChevronRight, Loader2, Radio, CalendarDays,
+  ChevronRight, Loader2, Radio, CalendarDays, Wrench,
 } from "lucide-react";
 
 // ─── Lazy Views ────────────────────────────────────────────────────────────────
@@ -17,6 +17,7 @@ const SAFeatureFlags  = lazy(() => import("./views/SAFeatureFlags"));
 const SASettings      = lazy(() => import("./views/SASettings"));
 const SAWebhookQueue  = lazy(() => import("./views/SAWebhookQueue"));
 const SABookings      = lazy(() => import("./views/SABookings"));
+const SATroubleshoot  = lazy(() => import("./views/SATroubleshoot"));
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ViewId =
@@ -29,12 +30,14 @@ type ViewId =
   | "broadcast"
   | "webhooks"
   | "flags"
-  | "settings";
+  | "settings"
+  | "troubleshoot";
 
 interface NavItem {
   id: ViewId;
   label: string;
   icon: ElementType;
+  badge?: string;
 }
 
 interface NavGroup {
@@ -50,6 +53,12 @@ const NAV_GROUPS: NavGroup[] = [
       { id: "overview",  label: "Overview",  icon: LayoutDashboard },
       { id: "users",     label: "Users",     icon: Users            },
       { id: "bookings",  label: "Bookings",  icon: CalendarDays     },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { id: "troubleshoot", label: "Troubleshoot", icon: Wrench, badge: "New" },
     ],
   },
   {
@@ -94,21 +103,22 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
 
   const renderView = () => {
     switch (activeView) {
-      case "overview":  return <SAOverview />;
-      case "users":     return <SAUsers />;
-      case "bookings":  return <SABookings />;
-      case "revenue":   return <SARevenue />;
-      case "health":    return <SASystemHealth />;
-      case "audit":     return <SAAuditLog />;
-      case "broadcast": return <SABroadcast />;
-      case "webhooks":  return <SAWebhookQueue />;
-      case "flags":     return <SAFeatureFlags />;
-      case "settings":  return <SASettings />;
-      default:          return <SAOverview />;
+      case "overview":      return <SAOverview />;
+      case "users":         return <SAUsers />;
+      case "bookings":      return <SABookings />;
+      case "revenue":       return <SARevenue />;
+      case "health":        return <SASystemHealth />;
+      case "audit":         return <SAAuditLog />;
+      case "broadcast":     return <SABroadcast />;
+      case "webhooks":      return <SAWebhookQueue />;
+      case "flags":         return <SAFeatureFlags />;
+      case "settings":      return <SASettings />;
+      case "troubleshoot":  return <SATroubleshoot />;
+      default:              return <SAOverview />;
     }
   };
 
-  const NavItemButton = ({ id, label, icon: Icon }: NavItem) => (
+  const NavItemButton = ({ id, label, icon: Icon, badge }: NavItem) => (
     <button
       onClick={() => { setActiveView(id); setSidebarOpen(false); }}
       className={[
@@ -127,7 +137,12 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
         <Icon className="w-3.5 h-3.5" />
       </span>
       <span className="flex-1 leading-none">{label}</span>
-      {activeView === id && <ChevronRight className="w-3 h-3 text-violet-400/60 shrink-0" />}
+      {badge && (
+        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-600/30 border border-violet-500/30 text-violet-300 font-semibold uppercase tracking-wide shrink-0">
+          {badge}
+        </span>
+      )}
+      {activeView === id && !badge && <ChevronRight className="w-3 h-3 text-violet-400/60 shrink-0" />}
     </button>
   );
 
