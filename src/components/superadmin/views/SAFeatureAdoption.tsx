@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, Zap } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+// Actual DB columns: id, tenant_id, feature, action, session_id, recorded_at
 interface FeatureUsageRow {
   tenant_id: string;
-  feature_key: string;
-  used_at: string | null;
-  count: number | null;
+  feature: string;
+  recorded_at: string;
 }
 
 interface TenantRow {
@@ -25,26 +25,26 @@ interface BookingStat {
 interface FeatureSummary {
   key: string;
   label: string;
-  adoptionCount: number;       // tenants that have used it
-  adoptionPct: number;         // % of all tenants
+  adoptionCount: number;           // distinct tenants that used it
+  adoptionPct: number;             // % of all tenants
   avgBookings30d_users: number;    // avg 30d bookings for users of this feature
   avgBookings30d_nonusers: number; // avg 30d bookings for non-users
-  retentionLift: number;       // difference
+  retentionLift: number;           // difference
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  google_calendar_sync:   "Google Calendar Sync",
-  loyalty_tracker:        "Loyalty Tracker",
-  consultation_forms:     "Consultation Forms",
-  callout_bookings:       "Call-Out Bookings",
-  staff_commissions:      "Staff Commissions",
-  custom_domain:          "Custom Domain",
-  sms_reminders:          "SMS Reminders",
-  online_payments:        "Online Payments",
-  deposit_required:       "Deposits Required",
-  waitlist:               "Waitlist",
-  portfolio_gallery:      "Portfolio Gallery",
-  recurring_bookings:     "Recurring Bookings",
+  google_calendar_sync: "Google Calendar Sync",
+  loyalty_tracker:      "Loyalty Tracker",
+  consultation_forms:   "Consultation Forms",
+  callout_bookings:     "Call-Out Bookings",
+  staff_commissions:    "Staff Commissions",
+  custom_domain:        "Custom Domain",
+  sms_reminders:        "SMS Reminders",
+  online_payments:      "Online Payments",
+  deposit_required:     "Deposits Required",
+  waitlist:             "Waitlist",
+  portfolio_gallery:    "Portfolio Gallery",
+  recurring_bookings:   "Recurring Bookings",
 };
 
 function avg(nums: number[]): number {
@@ -69,12 +69,17 @@ export default function SAFeatureAdoption() {
     const thirtyAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
     const [{ data: fu }, { data: tenants }, { data: recentB }] = await Promise.all([
-      supabase.from("feature_usage").select("tenant_id,feature_key,used_at,count"),
+      // ← fixed: use actual column names (feature, recorded_at)
+      supabase.from("feature_usage").select("tenant_id,feature,recorded_at"),
       supabase.from("tenants").select("id,name,subscription_status,is_lifetime_free"),
-      supabase.from("bookings").select("tenant_id,created_at").not("tenant_id", "is", null).gte("created_at", thirtyAgo),
+      supabase
+        .from("bookings")
+        .select("tenant_id,created_at")
+        .not("tenant_id", "is", null)
+        .gte("created_at", thirtyAgo),
     ]);
 
-    const tRows: TenantRow[] = tenants ?? [];
+    const tRows: TenantRow[]      = tenants ?? [];
     const fuRows: FeatureUsageRow[] = fu ?? [];
 
     // 30d booking count per tenant
@@ -84,21 +89,26 @@ export default function SAFeatureAdoption() {
     }
     const bStats: BookingStat[] = tRows.map(t => ({ tenant_id: t.id, count_30d: b30Map[t.id] ?? 0 }));
 
-    // Discover all feature keys (from FEATURE_LABELS + actual data)
+    // Distinct tenants per feature key (using `feature` column)
+    const featureTenantMap: Record<string, Set<string>> = {};
+    for (const row of fuRows) {
+      if (!featureTenantMap[row.feature]) featureTenantMap[row.feature] = new Set();
+      featureTenantMap[row.feature].add(row.tenant_id);
+    }
+
+    // Discover all feature keys (FEATURE_LABELS + actual data)
     const allKeys = new Set<string>([
       ...Object.keys(FEATURE_LABELS),
-      ...fuRows.map(r => r.feature_key),
+      ...Object.keys(featureTenantMap),
     ]);
 
     const summaries: FeatureSummary[] = [];
 
     for (const key of allKeys) {
-      const usersSet = new Set(
-        fuRows.filter(r => r.feature_key === key && (r.count ?? 0) > 0).map(r => r.tenant_id)
-      );
+      const usersSet    = featureTenantMap[key] ?? new Set<string>();
       const nonUsersSet = new Set(tRows.map(t => t.id).filter(id => !usersSet.has(id)));
 
-      const usersB30 = bStats.filter(b => usersSet.has(b.tenant_id)).map(b => b.count_30d);
+      const usersB30    = bStats.filter(b => usersSet.has(b.tenant_id)).map(b => b.count_30d);
       const nonUsersB30 = bStats.filter(b => nonUsersSet.has(b.tenant_id)).map(b => b.count_30d);
 
       const aU = avg(usersB30);
@@ -109,7 +119,7 @@ export default function SAFeatureAdoption() {
         label: FEATURE_LABELS[key] ?? key.replace(/_/g, " "),
         adoptionCount: usersSet.size,
         adoptionPct: tRows.length > 0 ? Math.round((usersSet.size / tRows.length) * 100) : 0,
-        avgBookings30d_users: Math.round(aU * 10) / 10,
+        avgBookings30d_users:    Math.round(aU * 10) / 10,
         avgBookings30d_nonusers: Math.round(aN * 10) / 10,
         retentionLift: Math.round((aU - aN) * 10) / 10,
       });
@@ -125,7 +135,6 @@ export default function SAFeatureAdoption() {
 
   useEffect(() => { load(); }, [sortBy]);
 
-  // Top 3 by lift (positive)
   const topLift = [...features].sort((a, b) => b.retentionLift - a.retentionLift).slice(0, 3);
 
   return (
@@ -158,7 +167,9 @@ export default function SAFeatureAdoption() {
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-4 h-4" style={{ color: "#00c853" }} />
             <h2 className="text-sm font-semibold" style={{ color: "#00c853" }}>Top Retention Drivers</h2>
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>features with highest booking lift for users vs non-users</span>
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+              features with highest booking lift for users vs non-users
+            </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {topLift.filter(f => f.retentionLift > 0).slice(0, 3).map((f, i) => (
@@ -209,14 +220,18 @@ export default function SAFeatureAdoption() {
           <table className="w-full text-xs">
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                {["Feature", "Adoption", "Users", "Avg Bkgs/30d (users)", "Avg Bkgs/30d (non)", "Retention Lift"].map(h => (
+                {["Feature", "Adoption", "Tenants", "Avg Bkgs/30d (users)", "Avg Bkgs/30d (non)", "Retention Lift"].map(h => (
                   <th key={h} className="px-5 py-3.5 text-left font-medium" style={{ color: "rgba(255,255,255,0.25)" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {features.map(f => (
-                <tr key={f.key} className="hover:bg-white/[0.02] transition-colors" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                <tr
+                  key={f.key}
+                  className="hover:bg-white/[0.02] transition-colors"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}
+                >
                   <td className="px-5 py-3">
                     <p className="font-medium text-white/70">{f.label}</p>
                     <p className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>{f.key}</p>
@@ -241,7 +256,11 @@ export default function SAFeatureAdoption() {
                     <span
                       className="font-bold tabular-nums"
                       style={{
-                        color: f.retentionLift > 0 ? "#00c853" : f.retentionLift < 0 ? "#ef4444" : "rgba(255,255,255,0.2)",
+                        color: f.retentionLift > 0
+                          ? "#00c853"
+                          : f.retentionLift < 0
+                          ? "#ef4444"
+                          : "rgba(255,255,255,0.2)",
                       }}
                     >
                       {f.retentionLift > 0 ? `+${f.retentionLift}` : f.retentionLift === 0 ? "—" : f.retentionLift}
@@ -249,10 +268,10 @@ export default function SAFeatureAdoption() {
                   </td>
                 </tr>
               ))}
-              {features.length === 0 && (
+              {features.length === 0 && !loading && (
                 <tr>
                   <td colSpan={6} className="px-5 py-16 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>
-                    No feature usage data yet — check that the feature_usage table is being populated
+                    No feature usage data yet — the feature_usage table is empty
                   </td>
                 </tr>
               )}
