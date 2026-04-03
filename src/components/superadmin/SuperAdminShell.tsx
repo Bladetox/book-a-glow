@@ -3,7 +3,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Users, Building2, DollarSign, Settings,
   ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Zap,
-  ChevronRight, Loader2, Radio, CalendarDays, Wrench,
+  ChevronRight, Loader2, Radio, CalendarDays, Wrench, TrendingUp,
 } from "lucide-react";
 
 // ─── Lazy Views ────────────────────────────────────────────────────────────────
@@ -18,37 +18,39 @@ const SASettings      = lazy(() => import("./views/SASettings"));
 const SAWebhookQueue  = lazy(() => import("./views/SAWebhookQueue"));
 const SABookings      = lazy(() => import("./views/SABookings"));
 const SATroubleshoot  = lazy(() => import("./views/SATroubleshoot"));
+const SAGrowth        = lazy(() => import("./views/SAGrowth"));
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ViewId =
   | "overview" | "users" | "bookings" | "revenue"
   | "health" | "audit" | "broadcast" | "webhooks"
-  | "flags" | "settings" | "troubleshoot";
+  | "flags" | "settings" | "troubleshoot" | "growth";
 
 interface NavItem  { id: ViewId; label: string; icon: ElementType; badge?: string; }
 interface NavGroup { label: string; items: NavItem[]; }
 
 const NAV_GROUPS: NavGroup[] = [
   { label: "Operate", items: [
-    { id: "overview", label: "Overview",        icon: LayoutDashboard },
-    { id: "users",    label: "Users",            icon: Users },
-    { id: "bookings", label: "Booking Health",   icon: CalendarDays },
+    { id: "overview",  label: "Overview",          icon: LayoutDashboard },
+    { id: "growth",    label: "Growth Engine",      icon: TrendingUp, badge: "New" },
+    { id: "users",     label: "Users",              icon: Users },
+    { id: "bookings",  label: "Booking Health",     icon: CalendarDays },
   ]},
   { label: "Support", items: [
-    { id: "troubleshoot", label: "Troubleshoot", icon: Wrench, badge: "New" },
+    { id: "troubleshoot", label: "Troubleshoot",    icon: Wrench },
   ]},
   { label: "Health", items: [
-    { id: "health",   label: "Monitoring",       icon: Activity },
-    { id: "audit",    label: "Security & Audit", icon: ShieldAlert },
-    { id: "webhooks", label: "Webhook Queue",    icon: Radio },
+    { id: "health",    label: "Monitoring",         icon: Activity },
+    { id: "audit",     label: "Security & Audit",   icon: ShieldAlert },
+    { id: "webhooks",  label: "Webhook Queue",      icon: Radio },
   ]},
   { label: "Business", items: [
-    { id: "revenue",   label: "Billing & Revenue", icon: DollarSign },
-    { id: "broadcast", label: "Broadcast",         icon: Bell },
+    { id: "revenue",   label: "Billing & Revenue",  icon: DollarSign },
+    { id: "broadcast", label: "Broadcast",          icon: Bell },
   ]},
   { label: "Config", items: [
-    { id: "flags",    label: "Feature Flags", icon: Flag },
-    { id: "settings", label: "Settings",      icon: Settings },
+    { id: "flags",     label: "Feature Flags",      icon: Flag },
+    { id: "settings",  label: "Settings",           icon: Settings },
   ]},
 ];
 
@@ -72,6 +74,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
   const renderView = () => {
     switch (activeView) {
       case "overview":     return <SAOverview />;
+      case "growth":       return <SAGrowth />;
       case "users":        return <SAUsers />;
       case "bookings":     return <SABookings />;
       case "revenue":      return <SARevenue />;
