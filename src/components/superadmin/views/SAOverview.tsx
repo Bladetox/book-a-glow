@@ -8,6 +8,29 @@ import {
   ArrowUpRight, ArrowDownRight, BarChart3, Minus,
 } from "lucide-react";
 import { saLog } from "@/lib/saAudit";
+import {
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+
+// ─── Noble green tokens ────────────────────────────────────────────────────────
+const G = {
+  main:    "#00c853",
+  dim:     "rgba(0,200,83,0.10)",
+  border:  "rgba(0,200,83,0.22)",
+  glow:    "0 0 20px rgba(0,200,83,0.10)",
+  muted:   "rgba(0,200,83,0.55)",
+};
+
+// ─── Glass panel style helper ──────────────────────────────────────────────────
+const glass = (extra?: React.CSSProperties): React.CSSProperties => ({
+  background: "rgba(255,255,255,0.025)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  border: "1px solid rgba(255,255,255,0.07)",
+  borderRadius: "1rem",
+  ...extra,
+});
 
 // ─── Founder lock ──────────────────────────────────────────────────────────────
 const FOUNDER_IDS: ReadonlySet<string> = new Set(
@@ -47,6 +70,9 @@ const PLANS = ["starter", "professional", "studio", "enterprise"] as const;
 type PlanKey = typeof PLANS[number];
 const PLAN_LABELS: Record<PlanKey, string> = {
   starter: "Starter", professional: "Professional", studio: "Studio", enterprise: "Enterprise",
+};
+const PLAN_COLORS: Record<PlanKey, string> = {
+  starter: "#3b82f6", professional: "#8b5cf6", studio: G.main, enterprise: "#f59e0b",
 };
 const PLAN_STYLES: Record<PlanKey, string> = {
   starter:      "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -88,6 +114,27 @@ function pctChange(curr: number, prev: number): number | null {
   return Math.round(((curr - prev) / prev) * 100);
 }
 
+// ─── Build 7-day sparkline data from bookings ─────────────────────────────────
+function buildWeeklyData(bookings: Array<{ created_at: string | null; amount?: number | null }>) {
+  const days: Record<string, { bookings: number; revenue: number }> = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toLocaleDateString("en-ZA", { weekday: "short" });
+    days[key] = { bookings: 0, revenue: 0 };
+  }
+  for (const b of bookings) {
+    if (!b.created_at) continue;
+    const d = new Date(b.created_at);
+    const key = d.toLocaleDateString("en-ZA", { weekday: "short" });
+    if (days[key]) {
+      days[key].bookings++;
+      days[key].revenue += b.amount ?? 0;
+    }
+  }
+  return Object.entries(days).map(([name, v]) => ({ name, ...v }));
+}
+
 // ─── Trend Pill ───────────────────────────────────────────────────────────────
 function TrendPill({ curr, prev }: { curr: number; prev: number }) {
   const pct = pctChange(curr, prev);
@@ -103,27 +150,62 @@ function TrendPill({ curr, prev }: { curr: number; prev: number }) {
   );
 }
 
+// ─── Custom Recharts Tooltip ──────────────────────────────────────────────────
+const ChartTooltip = ({ active, payload, label }: {
+  active?: boolean; payload?: Array<{ value: number; name: string }>; label?: string;
+}) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: "rgba(10,10,10,0.92)",
+      border: `1px solid ${G.border}`,
+      borderRadius: "0.625rem",
+      padding: "8px 12px",
+      fontSize: "11px",
+      color: "rgba(255,255,255,0.7)",
+    }}>
+      <p style={{ color: G.main, fontWeight: 600, marginBottom: 2 }}>{label}</p>
+      {payload.map(p => (
+        <p key={p.name}>{p.name}: <strong style={{ color: "#fff" }}>{p.value}</strong></p>
+      ))}
+    </div>
+  );
+};
+
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 function KpiCard({
-  label, value, sub, icon: Icon, accent, trend,
+  label, value, sub, icon: Icon, accentColor, trend,
 }: {
   label: string; value: string; sub?: string;
-  icon: React.ElementType; accent: string;
+  icon: React.ElementType; accentColor: string;
   trend?: { curr: number; prev: number };
 }) {
   return (
-    <div className="bg-[hsl(220,13%,8%)] border border-white/[0.07] rounded-2xl p-5 flex flex-col gap-3 hover:border-white/[0.12] transition-colors">
-      <div className="flex items-start justify-between">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${accent}`}>
-          <Icon className="w-4 h-4" />
+    <div
+      style={glass({
+        padding: "1.25rem",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.75rem",
+        transition: "border-color 180ms",
+      })}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: "0.625rem",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: `${accentColor}18`,
+          border: `1px solid ${accentColor}30`,
+        }}>
+          <Icon style={{ width: 16, height: 16, color: accentColor }} />
         </div>
         {trend && <TrendPill curr={trend.curr} prev={trend.prev} />}
       </div>
       <div>
-        <p className="text-2xl font-bold text-white tabular-nums leading-none">{value}</p>
-        {sub && <p className="text-[11px] text-white/35 mt-1">{sub}</p>}
+        <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fff", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{value}</p>
+        {sub && <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.30)", marginTop: 4 }}>{sub}</p>}
       </div>
-      <p className="text-[11px] text-white/40 font-medium uppercase tracking-widest">{label}</p>
+      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600 }}>{label}</p>
     </div>
   );
 }
@@ -133,10 +215,10 @@ function SectionHeader({ icon: Icon, label, action }: {
   icon: React.ElementType; label: string; action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-white/30" />
-        <span className="text-xs font-semibold text-white/50 uppercase tracking-widest">{label}</span>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <Icon style={{ width: 15, height: 15, color: "rgba(255,255,255,0.25)" }} />
+        <span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.40)", textTransform: "uppercase", letterSpacing: "0.14em" }}>{label}</span>
       </div>
       {action}
     </div>
@@ -149,25 +231,25 @@ function SuspendModal({ tenant, onConfirm, onCancel }: {
 }) {
   const [reason, setReason] = useState("");
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-[hsl(220,13%,8%)] border border-white/[0.08] rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-4 h-4 text-red-400" />
+    <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
+      <div style={glass({ maxWidth: 360, width: "100%", padding: "1.5rem" })}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+          <div style={{ width: 40, height: 40, borderRadius: "0.75rem", background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.20)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <AlertTriangle style={{ width: 16, height: 16, color: "#f87171" }} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Suspend Tenant</p>
-            <p className="text-xs text-white/40 mt-0.5">Blocks all access for <span className="text-white/70">{tenant.name}</span></p>
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Suspend Tenant</p>
+            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.40)", marginTop: 2 }}>Blocks all access for <span style={{ color: "rgba(255,255,255,0.70)" }}>{tenant.name}</span></p>
           </div>
         </div>
-        <div>
-          <label className="text-[10px] uppercase tracking-widest text-white/30 font-semibold block mb-1.5">Reason (optional)</label>
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.14em", color: "rgba(255,255,255,0.28)", fontWeight: 600, display: "block", marginBottom: 6 }}>Reason (optional)</label>
           <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Payment overdue, abuse, etc." rows={2}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-red-500/30 resize-none" />
+            style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.75rem", padding: "0.5rem 0.75rem", fontSize: "13px", color: "rgba(255,255,255,0.70)", resize: "none", outline: "none" }} />
         </div>
-        <div className="flex gap-2">
-          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors">Cancel</button>
-          <button onClick={() => onConfirm(reason)} className="flex-1 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-sm text-red-400 hover:bg-red-500/30 transition-colors font-medium">Suspend</button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "0.625rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", background: "transparent", fontSize: "13px", color: "rgba(255,255,255,0.50)", cursor: "pointer" }}>Cancel</button>
+          <button onClick={() => onConfirm(reason)} style={{ flex: 1, padding: "0.625rem", borderRadius: "0.75rem", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.25)", fontSize: "13px", color: "#f87171", fontWeight: 600, cursor: "pointer" }}>Suspend</button>
         </div>
       </div>
     </div>
@@ -177,13 +259,13 @@ function SuspendModal({ tenant, onConfirm, onCancel }: {
 // ─── Founder badge ─────────────────────────────────────────────────────────────
 function FounderBadge() {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold shrink-0">
-      <Lock className="w-2.5 h-2.5" /> Founder
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "10px", padding: "2px 8px", borderRadius: 9999, background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.20)", color: "#fbbf24", fontWeight: 600, flexShrink: 0 }}>
+      <Lock style={{ width: 10, height: 10 }} /> Founder
     </span>
   );
 }
 
-// ─── Tenant Drawer (unchanged business logic) ─────────────────────────────────
+// ─── Tenant Drawer ─────────────────────────────────────────────────────────────
 function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
   tenant: DrawerData;
   onClose: () => void;
@@ -232,113 +314,123 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
-      <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[hsl(220,13%,7%)] border-l border-white/[0.06] flex flex-col shadow-2xl overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.05] shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-violet-600/15 border border-violet-500/15 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-violet-400" />
+      <div style={{ position: "fixed", inset: 0, zIndex: 40, background: "rgba(0,0,0,0.6)" }} onClick={onClose} />
+      <aside style={{
+        position: "fixed", inset: "0 0 0 auto", zIndex: 50,
+        width: "100%", maxWidth: 440,
+        background: "rgba(8,8,8,0.92)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderLeft: `1px solid rgba(255,255,255,0.06)`,
+        display: "flex", flexDirection: "column",
+        boxShadow: "-24px 0 64px rgba(0,0,0,0.5)",
+        overflow: "hidden",
+      }}>
+        {/* Drawer header */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem 1.25rem", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: "0.75rem", background: `${G.dim}`, border: `1px solid ${G.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Building2 style={{ width: 18, height: 18, color: G.main }} />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-white truncate">{tenant.name}</p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant.name}</p>
               {founder && <FounderBadge />}
             </div>
-            <p className="text-[11px] text-white/35 mt-0.5 truncate">{tenant.email ?? "No email"}</p>
+            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant.email ?? "No email"}</p>
           </div>
-          <span className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold uppercase tracking-wide ${PLAN_STYLES[planKey]}`}>
+          <span style={{ fontSize: "10px", padding: "3px 10px", borderRadius: 9999, border: "1px solid", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }} className={PLAN_STYLES[planKey]}>
             {PLAN_LABELS[planKey]}
           </span>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/[0.06] transition-colors ml-1">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} style={{ padding: "0.375rem", borderRadius: "0.5rem", color: "rgba(255,255,255,0.30)", background: "transparent", border: "none", cursor: "pointer", marginLeft: 4 }}>
+            <X style={{ width: 16, height: 16 }} />
           </button>
         </div>
 
         {founder && (
-          <div className="mx-5 mt-4 flex items-start gap-2.5 bg-amber-500/[0.06] border border-amber-500/15 rounded-xl px-4 py-3">
-            <Lock className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-[11px] text-amber-300/80 leading-relaxed">
-              This is a <strong className="text-amber-300">founder-protected</strong> tenant.
-              Suspension and plan changes are disabled.
+          <div style={{ margin: "1rem 1.25rem 0", display: "flex", alignItems: "flex-start", gap: 10, background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "0.75rem", padding: "0.75rem 1rem" }}>
+            <Lock style={{ width: 13, height: 13, color: "#fbbf24", marginTop: 1, flexShrink: 0 }} />
+            <p style={{ fontSize: "11px", color: "rgba(251,191,36,0.80)", lineHeight: 1.6 }}>
+              This is a <strong style={{ color: "#fbbf24" }}>founder-protected</strong> tenant. Suspension and plan changes are disabled.
             </p>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className="grid grid-cols-3 gap-3">
+        <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Stats row */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
             {[
-              { label: "Bookings", value: String(tenant.stats.bookings), icon: Calendar,    color: "violet"  },
-              { label: "Revenue",  value: fmtRand(tenant.stats.revenue), icon: DollarSign,  color: "emerald" },
-              { label: "Services", value: String(tenant.stats.services), icon: TrendingUp,  color: "blue"    },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 text-center">
-                <div className={`w-7 h-7 rounded-lg bg-${color}-500/10 flex items-center justify-center mx-auto mb-2`}>
-                  <Icon className={`w-3.5 h-3.5 text-${color}-400`} />
-                </div>
-                <p className="text-base font-bold text-white leading-none">{value}</p>
-                <p className="text-[10px] text-white/30 mt-1">{label}</p>
+              { label: "Bookings", value: String(tenant.stats.bookings), color: G.main },
+              { label: "Revenue",  value: fmtRand(tenant.stats.revenue), color: "#3b82f6" },
+              { label: "Services", value: String(tenant.stats.services), color: "#8b5cf6" },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "0.75rem", padding: "0.75rem", textAlign: "center" }}>
+                <p style={{ fontSize: "18px", fontWeight: 700, color: "#fff", lineHeight: 1 }}>{value}</p>
+                <p style={{ fontSize: "10px", color: color, marginTop: 4, fontWeight: 600 }}>{label}</p>
               </div>
             ))}
           </div>
 
+          {/* Plan selector */}
           {!founder && (
-            <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 space-y-3">
-              <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold">Subscription Plan</p>
-              <div className="flex items-center gap-2">
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "0.75rem", padding: "1rem" }}>
+              <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.14em", fontWeight: 600, marginBottom: 10 }}>Subscription Plan</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <select value={selectedPlan} onChange={e => { setSelectedPlan(e.target.value); setPlanSaved(false); }}
-                  className={`flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-violet-500/40 transition-colors ${PLAN_SELECT_STYLES[safePlanKey(selectedPlan)]}`}>
+                  style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.75rem", padding: "0.5rem 0.75rem", fontSize: "13px", fontWeight: 500, outline: "none", color: PLAN_COLORS[safePlanKey(selectedPlan)] }}
+                  className={PLAN_SELECT_STYLES[safePlanKey(selectedPlan)]}>
                   {PLANS.map(p => (
-                    <option key={p} value={p} className="bg-[hsl(220,13%,10%)] text-white">{PLAN_LABELS[p]}</option>
+                    <option key={p} value={p} style={{ background: "#0f0f0f", color: "#fff" }}>{PLAN_LABELS[p]}</option>
                   ))}
                 </select>
                 <button onClick={handlePlanSave} disabled={planSaving || selectedPlan === (tenant.stats.plan || "starter")}
-                  className={["flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors disabled:opacity-40",
-                    planSaved ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                             : "bg-violet-600/20 border-violet-500/30 text-violet-300 hover:bg-violet-600/30",
-                  ].join(" ")}>
-                  {planSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6, padding: "0.5rem 0.75rem", borderRadius: "0.75rem",
+                    fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                    background: planSaved ? G.dim : "rgba(139,92,246,0.15)",
+                    border: planSaved ? `1px solid ${G.border}` : "1px solid rgba(139,92,246,0.28)",
+                    color: planSaved ? G.main : "#a78bfa",
+                    opacity: (planSaving || selectedPlan === (tenant.stats.plan || "starter")) ? 0.4 : 1,
+                  }}>
+                  {planSaving ? <Loader2 style={{ width: 12, height: 12 }} className="animate-spin" /> : <CreditCard style={{ width: 12, height: 12 }} />}
                   {planSaved ? "Saved ✓" : "Apply"}
                 </button>
               </div>
-              {planSaved && (
-                <p className="text-[11px] text-emerald-400/70">Plan updated to <span className="font-semibold">{PLAN_LABELS[safePlanKey(selectedPlan)]}</span> and logged to audit.</p>
-              )}
             </div>
           )}
 
-          <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl divide-y divide-white/[0.04]">
+          {/* Info rows */}
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "0.75rem", overflow: "hidden" }}>
             {[
-              { label: "Tenant ID",    value: tenant.id,                                  mono: true  },
-              { label: "Phone",        value: tenant.phone ?? "—",                        mono: false },
-              { label: "Domain",       value: tenant.custom_domain ?? "Not set",          mono: true  },
-              { label: "Joined",       value: fmtDate(tenant.created_at),                mono: false },
-              { label: "Last Booking", value: timeAgo(tenant.stats.lastBooking),          mono: false },
-              { label: "Status",       value: tenant.is_active ? "Active" : "Suspended",  mono: false },
-            ].map(({ label, value, mono }) => (
-              <div key={label} className="flex items-center justify-between px-4 py-2.5 gap-4">
-                <span className="text-[11px] text-white/30 shrink-0">{label}</span>
-                <span className={`text-[11px] text-right truncate max-w-[200px] ${mono ? "font-mono text-white/50" : "text-white/60"}`}>{value}</span>
+              { label: "Tenant ID",    value: tenant.id,                                 mono: true  },
+              { label: "Phone",        value: tenant.phone ?? "—",                       mono: false },
+              { label: "Domain",       value: tenant.custom_domain ?? "Not set",         mono: true  },
+              { label: "Joined",       value: fmtDate(tenant.created_at),               mono: false },
+              { label: "Last Booking", value: timeAgo(tenant.stats.lastBooking),         mono: false },
+              { label: "Status",       value: tenant.is_active ? "Active" : "Suspended", mono: false },
+            ].map(({ label, value, mono }, i, arr) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 1rem", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none", gap: "1rem" }}>
+                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.28)", flexShrink: 0 }}>{label}</span>
+                <span style={{ fontSize: "11px", color: mono ? "rgba(255,255,255,0.50)" : "rgba(255,255,255,0.60)", fontFamily: mono ? "monospace" : undefined, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200, textAlign: "right" }}>{value}</span>
               </div>
             ))}
           </div>
 
+          {/* Recent bookings */}
           {tenant.recentBookings.length > 0 && (
             <div>
-              <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold mb-2">Recent Bookings</p>
-              <div className="space-y-1.5">
+              <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.14em", fontWeight: 600, marginBottom: 8 }}>Recent Bookings</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {tenant.recentBookings.map(b => (
-                  <div key={b.id} className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white/70 font-medium truncate">{b.client_name}</p>
-                      <p className="text-[11px] text-white/30 truncate">{b.service_name}</p>
+                  <div key={b.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", borderRadius: "0.75rem", padding: "0.625rem 0.75rem" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.70)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.client_name}</p>
+                      <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.30)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.service_name}</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] text-white/30">
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)" }}>
                         {b.start_time ? new Date(b.start_time).toLocaleDateString("en-ZA", { day: "numeric", month: "short" }) : "—"}
                       </p>
-                      <span className={`text-[10px] font-medium ${
-                        b.status === "confirmed" ? "text-emerald-400" :
-                        b.status === "cancelled" ? "text-red-400" : "text-white/40"
-                      }`}>{b.status ?? "—"}</span>
+                      <span style={{ fontSize: "10px", fontWeight: 500, color: b.status === "confirmed" ? G.main : b.status === "cancelled" ? "#f87171" : "rgba(255,255,255,0.35)" }}>{b.status ?? "—"}</span>
                     </div>
                   </div>
                 ))}
@@ -347,36 +439,36 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
           )}
         </div>
 
-        <div className="p-4 border-t border-white/[0.05] shrink-0 space-y-2">
+        {/* Drawer footer */}
+        <div style={{ padding: "1rem", borderTop: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           {bookingUrl && (
             <a href={bookingUrl} target="_blank" rel="noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.08] text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors">
-              <ExternalLink className="w-3.5 h-3.5" /> View Booking Page
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "0.625rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", fontSize: "13px", color: "rgba(255,255,255,0.50)", textDecoration: "none" }}>
+              <ExternalLink style={{ width: 14, height: 14 }} /> View Booking Page
             </a>
           )}
           <button onClick={handleResetPassword} disabled={resetting || !tenant.email}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.08] text-sm text-white/50 hover:text-blue-400 hover:border-blue-500/20 hover:bg-blue-500/[0.05] transition-colors disabled:opacity-40">
-            {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "0.625rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", background: "transparent", fontSize: "13px", color: "rgba(255,255,255,0.50)", cursor: "pointer", opacity: (resetting || !tenant.email) ? 0.4 : 1 }}>
+            {resetting ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <KeyRound style={{ width: 14, height: 14 }} />}
             {resetDone ? "Reset Email Sent ✓" : "Send Password Reset"}
           </button>
-          <div className="relative group/suspend">
-            <button onClick={() => !founder && onToggleActive(tenant.id, tenant.is_active)} disabled={founder}
-              className={["w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-colors",
-                founder ? "opacity-40 cursor-not-allowed border-white/[0.06] text-white/30 bg-white/[0.02]"
-                  : tenant.is_active
-                    ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
-                    : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20",
-              ].join(" ")}>
-              {founder ? <><Lock className="w-3.5 h-3.5" /> Protected — cannot suspend</>
-                : tenant.is_active ? <><XCircle className="w-3.5 h-3.5" /> Suspend Tenant</>
-                  : <><CheckCircle2 className="w-3.5 h-3.5" /> Activate Tenant</>}
-            </button>
-            {founder && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[hsl(220,13%,12%)] border border-white/[0.08] rounded-lg text-[11px] text-white/50 whitespace-nowrap opacity-0 group-hover/suspend:opacity-100 transition-opacity pointer-events-none shadow-xl">
-                Remove from VITE_FOUNDER_TENANT_IDS to unlock
-              </div>
-            )}
-          </div>
+          <button
+            onClick={() => !founder && onToggleActive(tenant.id, tenant.is_active)}
+            disabled={founder}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "0.625rem", borderRadius: "0.75rem", border: "1px solid",
+              fontSize: "13px", fontWeight: 600, cursor: founder ? "not-allowed" : "pointer",
+              opacity: founder ? 0.4 : 1,
+              background: founder ? "rgba(255,255,255,0.02)" : tenant.is_active ? "rgba(239,68,68,0.10)" : G.dim,
+              borderColor: founder ? "rgba(255,255,255,0.06)" : tenant.is_active ? "rgba(239,68,68,0.20)" : G.border,
+              color: founder ? "rgba(255,255,255,0.28)" : tenant.is_active ? "#f87171" : G.main,
+            }}
+          >
+            {founder ? <><Lock style={{ width: 14, height: 14 }} /> Protected — cannot suspend</>
+              : tenant.is_active ? <><XCircle style={{ width: 14, height: 14 }} /> Suspend Tenant</>
+                : <><CheckCircle2 style={{ width: 14, height: 14 }} /> Activate Tenant</>}
+          </button>
         </div>
       </aside>
     </>
@@ -385,15 +477,15 @@ function TenantDrawer({ tenant, onClose, onToggleActive, onPlanChanged }: {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function SAOverview() {
-  const [tenants,       setTenants]       = useState<Tenant[]>([]);
-  const [loading,       setLoading]       = useState(true);
+  const [tenants,        setTenants]        = useState<Tenant[]>([]);
+  const [loading,        setLoading]        = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(true);
-  const [search,        setSearch]        = useState("");
-  const [drawerData,    setDrawerData]    = useState<DrawerData | null>(null);
-  const [drawerLoading, setDrawerLoading] = useState(false);
-  const [suspendTarget, setSuspendTarget] = useState<Tenant | null>(null);
-  const [filter,        setFilter]        = useState<"all" | "active" | "inactive">("all");
-  const [metrics,       setMetrics]       = useState<DashMetrics>({
+  const [search,         setSearch]         = useState("");
+  const [drawerData,     setDrawerData]     = useState<DrawerData | null>(null);
+  const [drawerLoading,  setDrawerLoading]  = useState(false);
+  const [suspendTarget,  setSuspendTarget]  = useState<Tenant | null>(null);
+  const [filter,         setFilter]         = useState<"all" | "active" | "inactive">("all");
+  const [metrics,        setMetrics]        = useState<DashMetrics>({
     totalTenants: 0, activeTenants: 0, suspendedTenants: 0,
     todayBookings: 0, monthBookings: 0, lastMonthBookings: 0,
     totalRevenue: 0, monthRevenue: 0, lastMonthRevenue: 0,
@@ -404,13 +496,13 @@ export default function SAOverview() {
     label: string; sub: string; time: string; status?: string;
   }>>([]);
   const [suspendedList, setSuspendedList] = useState<Tenant[]>([]);
+  const [weeklyData,    setWeeklyData]    = useState<Array<{ name: string; bookings: number; revenue: number }>>([]);
 
-  // date helpers
-  const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const now            = new Date();
+  const todayStr       = now.toISOString().split("T")[0];
+  const monthStart     = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const lastMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   const fetchMetrics = useCallback(async () => {
     setMetricsLoading(true);
@@ -421,6 +513,7 @@ export default function SAOverview() {
       { data: monthPayments },
       { data: lastMonthPayments },
       { data: recentBookingsRaw },
+      { data: weekBookings },
     ] = await Promise.all([
       supabase.from("bookings").select("*", { count: "exact", head: true })
         .gte("created_at", `${todayStr}T00:00:00`),
@@ -435,9 +528,12 @@ export default function SAOverview() {
       supabase.from("bookings")
         .select("id, created_at, status, tenant_id, profiles!bookings_client_id_fkey(full_name), booking_items(service_name)")
         .order("created_at", { ascending: false }).limit(6),
+      supabase.from("bookings")
+        .select("created_at")
+        .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString()),
     ]);
 
-    const monthRev     = (monthPayments ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
+    const monthRev     = (monthPayments     ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
     const lastMonthRev = (lastMonthPayments ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -450,14 +546,15 @@ export default function SAOverview() {
       status: b.status,
     }));
     setRecentActivity(activity);
+    setWeeklyData(buildWeeklyData(weekBookings ?? []));
 
     setMetrics(m => ({
       ...m,
-      todayBookings:   todayBookings   ?? 0,
-      monthBookings:   monthBookings   ?? 0,
-      lastMonthBookings: lastMonthBookings ?? 0,
-      monthRevenue:    monthRev,
-      lastMonthRevenue: lastMonthRev,
+      todayBookings:      todayBookings      ?? 0,
+      monthBookings:      monthBookings      ?? 0,
+      lastMonthBookings:  lastMonthBookings  ?? 0,
+      monthRevenue:       monthRev,
+      lastMonthRevenue:   lastMonthRev,
     }));
     setMetricsLoading(false);
   }, [monthStart, lastMonthStart, lastMonthEnd, todayStr]);
@@ -491,9 +588,9 @@ export default function SAOverview() {
 
     setMetrics(m => ({
       ...m,
-      totalTenants: mapped.length,
-      activeTenants: active,
-      suspendedTenants: suspended.length,
+      totalTenants:        mapped.length,
+      activeTenants:       active,
+      suspendedTenants:    suspended.length,
       newTenantsThisMonth: thisMonthNew,
       newTenantsLastMonth: lastMonthNew,
     }));
@@ -584,26 +681,38 @@ export default function SAOverview() {
       t.custom_domain?.toLowerCase().includes(search.toLowerCase())
     );
 
-  // ── Plan distribution for insight bar
   const planDist = PLANS.map(p => ({
     key: p, label: PLAN_LABELS[p],
     count: tenants.filter(t => safePlanKey(t.plan) === p).length,
-    style: PLAN_STYLES[p],
+    color: PLAN_COLORS[p],
+    styleClass: PLAN_STYLES[p],
   })).filter(p => p.count > 0);
 
+  // ── Bookings area chart data alias
+  const areaData = weeklyData;
+
   return (
-    <div className="space-y-8 max-w-7xl">
+    <div style={{ display: "flex", flexDirection: "column", gap: "2rem", maxWidth: 1280 }}>
 
       {/* ── PAGE HEADER ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
         <div>
-          <h1 className="text-white font-bold text-xl leading-none">Command Centre</h1>
-          <p className="text-white/35 text-sm mt-1">Platform snapshot — {new Date().toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <h1 style={{ color: "#fff", fontWeight: 700, fontSize: "1.25rem", lineHeight: 1 }}>Command Centre</h1>
+          <p style={{ color: "rgba(255,255,255,0.32)", fontSize: "13px", marginTop: 4 }}>
+            Platform snapshot — {new Date().toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" })}
+          </p>
         </div>
-        <div className="sm:ml-auto">
-          <button onClick={() => { fetchTenants(); fetchMetrics(); }}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white/50 hover:text-white/80 transition-colors">
-            <RefreshCw className={`w-3.5 h-3.5 ${(loading || metricsLoading) ? "animate-spin" : ""}`} />
+        <div style={{ marginLeft: "auto" }}>
+          <button
+            onClick={() => { fetchTenants(); fetchMetrics(); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "0.5rem 0.875rem",
+              borderRadius: "0.75rem", background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)", fontSize: "12px",
+              color: "rgba(255,255,255,0.45)", cursor: "pointer",
+            }}
+          >
+            <RefreshCw style={{ width: 13, height: 13 }} className={(loading || metricsLoading) ? "animate-spin" : ""} />
             Refresh
           </button>
         </div>
@@ -612,29 +721,26 @@ export default function SAOverview() {
       {/* ── TIER 1: KPI CARDS ── */}
       <div>
         <SectionHeader icon={Zap} label="Platform Status" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
           <KpiCard
             label="Total Tenants"
             value={loading ? "–" : String(metrics.totalTenants)}
             sub={`${metrics.activeTenants} active · ${metrics.suspendedTenants} suspended`}
-            icon={Building2}
-            accent="bg-violet-500/10 text-violet-400"
+            icon={Building2} accentColor="#8b5cf6"
             trend={{ curr: metrics.newTenantsThisMonth, prev: metrics.newTenantsLastMonth }}
           />
           <KpiCard
             label="Bookings Today"
             value={metricsLoading ? "–" : String(metrics.todayBookings)}
             sub={`${metrics.monthBookings} this month`}
-            icon={Calendar}
-            accent="bg-blue-500/10 text-blue-400"
+            icon={Calendar} accentColor="#3b82f6"
             trend={{ curr: metrics.monthBookings, prev: metrics.lastMonthBookings }}
           />
           <KpiCard
             label="Revenue This Month"
             value={metricsLoading ? "–" : fmtRand(metrics.monthRevenue)}
             sub={`vs ${fmtRand(metrics.lastMonthRevenue)} last month`}
-            icon={DollarSign}
-            accent="bg-emerald-500/10 text-emerald-400"
+            icon={DollarSign} accentColor={G.main}
             trend={{ curr: metrics.monthRevenue, prev: metrics.lastMonthRevenue }}
           />
           <KpiCard
@@ -642,43 +748,104 @@ export default function SAOverview() {
             value={loading ? "–" : String(metrics.suspendedTenants)}
             sub={metrics.suspendedTenants > 0 ? "Requires attention" : "All tenants active"}
             icon={metrics.suspendedTenants > 0 ? ShieldAlert : CheckCircle2}
-            accent={metrics.suspendedTenants > 0 ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"}
+            accentColor={metrics.suspendedTenants > 0 ? "#ef4444" : G.main}
           />
         </div>
       </div>
 
-      {/* ── TIER 2: TRENDS ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* ── TIER 2: CHARTS ROW ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+
+        {/* Bookings — 7-day area chart */}
+        <div style={glass({ padding: "1.25rem" })}>
+          <SectionHeader icon={Activity} label="Bookings — Last 7 Days" />
+          {metricsLoading ? (
+            <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Loader2 style={{ width: 18, height: 18, color: G.muted }} className="animate-spin" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={areaData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="bookingsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={G.main} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={G.main} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.28)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "rgba(255,255,255,0.28)", fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} />
+                <Area type="monotone" dataKey="bookings" name="Bookings" stroke={G.main} strokeWidth={2} fill="url(#bookingsGrad)" dot={false} activeDot={{ r: 4, fill: G.main, strokeWidth: 0 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Plan distribution — bar chart */}
+        <div style={glass({ padding: "1.25rem" })}>
+          <SectionHeader icon={BarChart3} label="Plan Distribution" />
+          {loading ? (
+            <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Loader2 style={{ width: 18, height: 18, color: G.muted }} className="animate-spin" />
+            </div>
+          ) : planDist.length === 0 ? (
+            <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "12px", textAlign: "center", padding: "3rem 0" }}>No tenants yet</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={planDist} margin={{ top: 4, right: 4, left: -24, bottom: 0 }} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: "rgba(255,255,255,0.28)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "rgba(255,255,255,0.28)", fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="count" name="Tenants" radius={[4, 4, 0, 0]}
+                  fill={G.main}
+                  // per-bar colors via Cell would require importing Cell — keeping single green for simplicity
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          {/* plan legend */}
+          {planDist.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
+              {planDist.map(p => (
+                <span key={p.key} style={{ fontSize: "10px", padding: "2px 8px", borderRadius: 9999, border: "1px solid", fontWeight: 600 }} className={p.styleClass}>
+                  {p.label} · {p.count}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── TIER 3: ACTIVITY + SUSPENDED ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.25rem" }}>
 
         {/* Recent platform activity */}
-        <div className="lg:col-span-2 bg-[hsl(220,13%,8%)] border border-white/[0.07] rounded-2xl p-5">
+        <div style={glass({ padding: "1.25rem" })}>
           <SectionHeader icon={Activity} label="Recent Activity" />
           {metricsLoading ? (
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+                <div key={i} style={{ height: 48, borderRadius: "0.75rem", background: "rgba(255,255,255,0.03)" }} className="animate-pulse" />
               ))}
             </div>
           ) : recentActivity.length === 0 ? (
-            <p className="text-white/25 text-xs text-center py-8">No recent activity</p>
+            <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "12px", textAlign: "center", padding: "2rem 0" }}>No recent activity</p>
           ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {recentActivity.map(a => (
-                <div key={a.id} className="flex items-center gap-3 py-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
+            <div>
+              {recentActivity.map((a, i) => (
+                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.625rem 0", borderBottom: i < recentActivity.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "0.5rem", background: "rgba(59,130,246,0.10)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Calendar style={{ width: 13, height: 13, color: "#3b82f6" }} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white/70 font-medium truncate">{a.label}</p>
-                    <p className="text-[11px] text-white/30 truncate">{a.sub}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.70)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.label}</p>
+                    <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.28)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.sub}</p>
                   </div>
-                  <div className="text-right shrink-0 space-y-0.5">
-                    <span className={`block text-[10px] font-medium ${
-                      a.status === "confirmed" ? "text-emerald-400" :
-                      a.status === "cancelled" ? "text-red-400" :
-                      a.status === "pending"   ? "text-amber-400" : "text-white/30"
-                    }`}>{a.status ?? "—"}</span>
-                    <span className="block text-[10px] text-white/25">{a.time}</span>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <span style={{ display: "block", fontSize: "10px", fontWeight: 500, color: a.status === "confirmed" ? G.main : a.status === "cancelled" ? "#f87171" : a.status === "pending" ? "#fbbf24" : "rgba(255,255,255,0.28)" }}>{a.status ?? "—"}</span>
+                    <span style={{ display: "block", fontSize: "10px", color: "rgba(255,255,255,0.22)" }}>{a.time}</span>
                   </div>
                 </div>
               ))}
@@ -686,173 +853,135 @@ export default function SAOverview() {
           )}
         </div>
 
-        {/* Plan distribution */}
-        <div className="bg-[hsl(220,13%,8%)] border border-white/[0.07] rounded-2xl p-5">
-          <SectionHeader icon={BarChart3} label="Plan Mix" />
-          {loading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => <div key={i} className="h-8 rounded-lg bg-white/[0.03] animate-pulse" />)}
+        {/* Suspended tenants alert panel */}
+        <div style={glass({ padding: "1.25rem", borderColor: suspendedList.length > 0 ? "rgba(239,68,68,0.18)" : "rgba(255,255,255,0.07)" })}>
+          <SectionHeader
+            icon={ShieldAlert}
+            label="Suspended"
+            action={
+              suspendedList.length > 0 ? (
+                <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: 9999, background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171", fontWeight: 600 }}>
+                  {suspendedList.length}
+                </span>
+              ) : undefined
+            }
+          />
+          {suspendedList.length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "1.5rem 0", gap: 8 }}>
+              <CheckCircle2 style={{ width: 24, height: 24, color: G.main }} />
+              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.30)" }}>All tenants active</p>
             </div>
-          ) : planDist.length === 0 ? (
-            <p className="text-white/25 text-xs text-center py-8">No tenants yet</p>
           ) : (
-            <div className="space-y-3">
-              {planDist.map(p => {
-                const pct = metrics.totalTenants > 0 ? Math.round((p.count / metrics.totalTenants) * 100) : 0;
-                return (
-                  <div key={p.key}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${p.style}`}>{p.label}</span>
-                      <span className="text-[11px] text-white/40 tabular-nums">{p.count} · {pct}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${pct}%`,
-                          background: p.key === "enterprise" ? "#f59e0b" :
-                                      p.key === "studio"     ? "#10b981" :
-                                      p.key === "professional" ? "#8b5cf6" : "#3b82f6",
-                        }}
-                      />
-                    </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {suspendedList.slice(0, 5).map(t => (
+                <div key={t.id}
+                  onClick={() => openDrawer(t)}
+                  style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0.625rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+                >
+                  <XCircle style={{ width: 13, height: 13, color: "#f87171", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.70)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</p>
+                    <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.email ?? "No email"}</p>
                   </div>
-                );
-              })}
-              <div className="pt-2 border-t border-white/[0.05]">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-white/30">New this month</span>
-                  <span className="text-[11px] font-semibold text-white/60 tabular-nums">
-                    {metrics.newTenantsThisMonth}
-                    <TrendPill curr={metrics.newTenantsThisMonth} prev={metrics.newTenantsLastMonth} />
-                  </span>
+                  <button
+                    onClick={e => { e.stopPropagation(); if (!isFounder(t.id)) handleToggleActive(t.id, false); }}
+                    disabled={isFounder(t.id)}
+                    style={{ fontSize: "10px", padding: "3px 8px", borderRadius: "0.5rem", background: G.dim, border: `1px solid ${G.border}`, color: G.main, cursor: "pointer", fontWeight: 600, flexShrink: 0 }}
+                  >
+                    Restore
+                  </button>
                 </div>
-              </div>
+              ))}
+              {suspendedList.length > 5 && (
+                <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.22)", textAlign: "center", paddingTop: 4 }}>+{suspendedList.length - 5} more</p>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── TIER 3: ACTION QUEUES ── */}
-
-      {/* Suspended tenants needing action */}
-      {suspendedList.length > 0 && (
-        <div className="bg-[hsl(220,13%,8%)] border border-red-500/15 rounded-2xl p-5">
-          <SectionHeader
-            icon={ShieldAlert}
-            label={`Suspended Tenants — ${suspendedList.length} requiring attention`}
-            action={
-              <span className="text-[10px] px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-semibold">
-                {suspendedList.length} blocked
-              </span>
-            }
-          />
-          <div className="space-y-1.5">
-            {suspendedList.slice(0, 5).map(t => (
-              <div key={t.id}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-colors cursor-pointer"
-                onClick={() => openDrawer(t)}
-              >
-                <div className="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-                  <XCircle className="w-3.5 h-3.5 text-red-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-white/70 font-medium truncate">{t.name}</p>
-                  <p className="text-[11px] text-white/30 truncate">{t.email ?? "No email"}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${PLAN_STYLES[safePlanKey(t.plan)]}`}>
-                    {PLAN_LABELS[safePlanKey(t.plan)]}
-                  </span>
-                  <button
-                    onClick={e => { e.stopPropagation(); if (!isFounder(t.id)) handleToggleActive(t.id, false); }}
-                    disabled={isFounder(t.id)}
-                    className="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors font-medium disabled:opacity-40">
-                    Reactivate
-                  </button>
-                  <ChevronRight className="w-3.5 h-3.5 text-white/20" />
-                </div>
-              </div>
-            ))}
-            {suspendedList.length > 5 && (
-              <p className="text-[11px] text-white/25 text-center pt-1">+{suspendedList.length - 5} more suspended — use the filter below</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── TIER 3b: Tenant directory (searchable) ── */}
+      {/* ── TIER 4: TENANT DIRECTORY ── */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
           <SectionHeader icon={Users} label={`All Tenants · ${metrics.totalTenants}`} />
-          <div className="sm:ml-auto flex items-center gap-2 flex-wrap">
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             {(["all", "active", "inactive"] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
-                className={["text-xs px-3 py-1.5 rounded-lg border font-medium capitalize transition-colors",
-                  filter === f
-                    ? "bg-violet-600/20 text-violet-300 border-violet-500/30"
-                    : "bg-white/[0.03] text-white/40 border-white/[0.06] hover:text-white/60",
-                ].join(" ")}>
+                style={{
+                  fontSize: "12px", padding: "0.375rem 0.75rem", borderRadius: "0.5rem",
+                  border: "1px solid",
+                  fontWeight: 500, textTransform: "capitalize", cursor: "pointer",
+                  background: filter === f ? G.dim : "rgba(255,255,255,0.03)",
+                  borderColor: filter === f ? G.border : "rgba(255,255,255,0.06)",
+                  color: filter === f ? G.main : "rgba(255,255,255,0.38)",
+                }}
+              >
                 {f}
               </button>
             ))}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+            <div style={{ position: "relative" }}>
+              <Search style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 13, height: 13, color: "rgba(255,255,255,0.28)" }} />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tenants…"
-                className="pl-8 pr-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg text-white/70 placeholder:text-white/25 focus:outline-none focus:border-violet-500/40 w-52" />
+                style={{ paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, fontSize: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.5rem", color: "rgba(255,255,255,0.70)", outline: "none", width: 200 }} />
             </div>
           </div>
         </div>
 
-        <div className="bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+        <div style={glass({ overflow: "hidden", borderRadius: "1rem" })}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", fontSize: "13px", minWidth: 640, borderCollapse: "collapse" }}>
               <thead>
-                <tr className="border-b border-white/[0.06]">
+                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                   {["Business", "Email", "Plan", "Joined", "Status", ""].map(h => (
-                    <th key={h} className="text-left text-[11px] text-white/30 font-semibold uppercase tracking-wider px-4 py-3">{h}</th>
+                    <th key={h} style={{ textAlign: "left", fontSize: "10px", color: "rgba(255,255,255,0.28)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", padding: "0.75rem 1rem" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="text-center py-12"><Loader2 className="w-5 h-5 text-white/20 animate-spin mx-auto" /></td></tr>
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: "3rem" }}><Loader2 style={{ width: 18, height: 18, color: "rgba(255,255,255,0.18)" }} className="animate-spin mx-auto" /></td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-12">
-                    <Minus className="w-4 h-4 text-white/15 mx-auto mb-2" />
-                    <p className="text-white/25 text-xs">No tenants found</p>
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: "3rem" }}>
+                    <Minus style={{ width: 16, height: 16, color: "rgba(255,255,255,0.12)", margin: "0 auto 8px" }} />
+                    <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "12px" }}>No tenants found</p>
                   </td></tr>
-                ) : filtered.map(t => (
-                  <tr key={t.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors cursor-pointer group" onClick={() => openDrawer(t)}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-violet-600/10 border border-violet-500/10 flex items-center justify-center shrink-0">
-                          <Building2 className="w-3.5 h-3.5 text-violet-400/60" />
+                ) : filtered.map((t, i) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => openDrawer(t)}
+                    style={{ borderBottom: i < filtered.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none", cursor: "pointer" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.018)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <td style={{ padding: "0.75rem 1rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{ width: 30, height: 30, borderRadius: "0.5rem", background: G.dim, border: `1px solid ${G.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Building2 style={{ width: 13, height: 13, color: G.main }} />
                         </div>
                         <div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-white/80 font-medium text-sm">{t.name || "—"}</p>
-                            {isFounder(t.id) && <Lock className="w-3 h-3 text-amber-400/60 shrink-0" title="Founder-protected" />}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <p style={{ color: "rgba(255,255,255,0.82)", fontWeight: 500, fontSize: "13px" }}>{t.name || "—"}</p>
+                            {isFounder(t.id) && <Lock style={{ width: 11, height: 11, color: "#fbbf24" }} />}
                           </div>
-                          <p className="text-white/25 text-[10px] font-mono">{t.id.slice(0, 8)}…</p>
+                          <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "10px", fontFamily: "monospace" }}>{t.id.slice(0, 8)}…</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-white/45 text-xs">{t.email || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-[10px] px-2 py-1 rounded-md border font-medium uppercase tracking-wide ${PLAN_STYLES[safePlanKey(t.plan)]}`}>
+                    <td style={{ padding: "0.75rem 1rem", color: "rgba(255,255,255,0.40)", fontSize: "12px" }}>{t.email || "—"}</td>
+                    <td style={{ padding: "0.75rem 1rem" }}>
+                      <span style={{ fontSize: "10px", padding: "3px 8px", borderRadius: 9999, border: "1px solid", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }} className={PLAN_STYLES[safePlanKey(t.plan)]}>
                         {PLAN_LABELS[safePlanKey(t.plan)]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-white/40 text-xs">{fmtDate(t.created_at)}</td>
-                    <td className="px-4 py-3">
+                    <td style={{ padding: "0.75rem 1rem", color: "rgba(255,255,255,0.38)", fontSize: "12px" }}>{fmtDate(t.created_at)}</td>
+                    <td style={{ padding: "0.75rem 1rem" }}>
                       {t.is_active
-                        ? <span className="flex items-center gap-1.5 text-emerald-400 text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Active</span>
-                        : <span className="flex items-center gap-1.5 text-red-400 text-xs"><XCircle className="w-3.5 h-3.5" /> Suspended</span>
+                        ? <span style={{ display: "flex", alignItems: "center", gap: 6, color: G.main, fontSize: "12px" }}><CheckCircle2 style={{ width: 13, height: 13 }} /> Active</span>
+                        : <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#f87171", fontSize: "12px" }}><XCircle style={{ width: 13, height: 13 }} /> Suspended</span>
                       }
                     </td>
-                    <td className="px-4 py-3">
-                      <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
+                    <td style={{ padding: "0.75rem 1rem" }}>
+                      <ChevronRight style={{ width: 15, height: 15, color: "rgba(255,255,255,0.18)" }} />
                     </td>
                   </tr>
                 ))}
@@ -862,7 +991,7 @@ export default function SAOverview() {
         </div>
       </div>
 
-      {/* ── Drawer / Modals (unchanged) ── */}
+      {/* ── Drawer / Modals ── */}
       {drawerData && (
         <TenantDrawer
           tenant={drawerData}
@@ -872,8 +1001,8 @@ export default function SAOverview() {
         />
       )}
       {drawerLoading && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-[hsl(220,13%,10%)] border border-white/[0.08] rounded-xl text-xs text-white/50 shadow-xl">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading tenant data…
+        <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 50, display: "flex", alignItems: "center", gap: 8, padding: "0.625rem 1rem", background: "rgba(10,10,10,0.92)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.75rem", fontSize: "12px", color: "rgba(255,255,255,0.50)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+          <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" /> Loading tenant data…
         </div>
       )}
       {suspendTarget && (
