@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, MapPin, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
-  Globe, CalendarCheck,
+  Globe, CalendarCheck, Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -15,10 +15,10 @@ import {
   useUpsertAppSetting,
 } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
+import { useSupabaseServices } from "@/hooks/useSupabaseServices";
 import { toast } from "sonner";
 
-// ─── Deposit presets ──────────────────────────────────────────────────────────
-
+// ─── Deposit presets ─────────────────────────────────────────────────────
 const DEPOSIT_PRESETS = [
   { label: "30%",  value: "30"  },
   { label: "50%",  value: "50"  },
@@ -26,16 +26,14 @@ const DEPOSIT_PRESETS = [
   { label: "Full", value: "100" },
 ];
 
-// ─── Sensitive keys — never shown in clear after first save ───────────────────
-
+// ─── Sensitive keys — never shown in clear after first save ─────────────────────
 const SENSITIVE_KEYS = new Set([
   "smtp_password",
   "google_maps_api_key",
   "google_service_account_json",
 ]);
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
+// ─── Sub-components ───────────────────────────────────────────────────
 const SectionLabel = ({ label }: { label: string }) => (
   <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-white/25 px-1 pt-2">
     {label}
@@ -133,8 +131,142 @@ const SaveBtn = ({
   </button>
 );
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Suggested Add-ons Card ──────────────────────────────────────────────────
+interface SuggestedAddonsCardProps {
+  triggerIds: string[];
+  suggestIds: string[];
+  onChangeTriggers: (ids: string[]) => void;
+  onChangeSuggests: (ids: string[]) => void;
+  onSave: () => void;
+  saving: boolean;
+  saved: boolean;
+}
 
+interface ServiceOption {
+  id: string;
+  name: string;
+}
+
+const ServiceCheckList = ({
+  label,
+  hint,
+  services,
+  selected,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  services: ServiceOption[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) => {
+  const toggle = (id: string) => {
+    onChange(
+      selected.includes(id)
+        ? selected.filter((s) => s !== id)
+        : [...selected, id]
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+        {label}
+      </label>
+      <p className="text-[10px] text-white/25 -mt-1">{hint}</p>
+      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+        {services.map((s) => {
+          const checked = selected.includes(s.id);
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => toggle(s.id)}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all ${
+                checked
+                  ? "border-white/25 bg-white/[0.08] text-white/85"
+                  : "border-white/[0.06] bg-white/[0.02] text-white/40 hover:border-white/15 hover:text-white/60"
+              }`}
+            >
+              <span
+                className={`w-3.5 h-3.5 rounded shrink-0 border flex items-center justify-center transition-all ${
+                  checked ? "border-white/50 bg-white/20" : "border-white/20"
+                }`}
+              >
+                {checked && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+              </span>
+              <span className="text-xs font-medium truncate">{s.name}</span>
+            </button>
+          );
+        })}
+        {services.length === 0 && (
+          <p className="text-[10px] text-white/20 py-2 px-1">No active services found.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const SuggestedAddonsCard = ({
+  triggerIds,
+  suggestIds,
+  onChangeTriggers,
+  onChangeSuggests,
+  onSave,
+  saving,
+  saved,
+}: SuggestedAddonsCardProps) => {
+  const { data: services = [], isLoading } = useSupabaseServices();
+
+  const serviceOptions: ServiceOption[] = services.map((s) => ({
+    id: s.id,
+    name: s.name,
+  }));
+
+  return (
+    <SettingsCard title="Suggested Add-ons" icon={Zap} gradient="from-amber-500/[0.05] to-white/[0.02]">
+      <p className="text-[11px] text-white/35 leading-relaxed -mt-1">
+        When a guest selects a <strong className="text-white/50">trigger</strong> service,
+        the booking form will suggest the <strong className="text-white/50">add-on</strong> services below it.
+        Only unselected add-ons are shown.
+      </p>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-white/30 text-xs py-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading services...
+        </div>
+      ) : (
+        <>
+          <ServiceCheckList
+            label="Trigger Services"
+            hint="Selecting any of these shows the suggestion strip."
+            services={serviceOptions}
+            selected={triggerIds}
+            onChange={onChangeTriggers}
+          />
+          <ServiceCheckList
+            label="Add-on Suggestions"
+            hint="These services are shown as suggestions to the guest."
+            services={serviceOptions}
+            selected={suggestIds}
+            onChange={onChangeSuggests}
+          />
+        </>
+      )}
+
+      <div className="flex items-center gap-3">
+        <SaveBtn onClick={onSave} loading={saving} />
+        {saved && (
+          <span className="text-xs text-emerald-400 flex items-center gap-1">
+            <Check className="w-3 h-3" /> Saved
+          </span>
+        )}
+      </div>
+    </SettingsCard>
+  );
+};
+
+// ─── Main component ────────────────────────────────────────────────────────
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
@@ -157,7 +289,12 @@ const AdminSettings = () => {
   const [gcalSyncing, setGcalSyncing]       = useState(false);
   const [gcalSyncResult, setGcalSyncResult] = useState<string | null>(null);
 
-  // ── Booking URL ────────────────────────────────────────────────────────────
+  // ── Suggested add-ons state ────────────────────────────────────────────
+const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
+  const [addonSuggestIds, setAddonSuggestIds] = useState<string[]>([]);
+  const [addonSaved, setAddonSaved]           = useState(false);
+
+  // ── Booking URL ───────────────────────────────────────────────────────────
   const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
   const customDomain      = (draft.custom_domain ?? "").trim();
   const activeBookingUrl  = customDomain ? `https://${customDomain}` : defaultBookingUrl;
@@ -167,7 +304,7 @@ const AdminSettings = () => {
     toast.success("Copied to clipboard");
   };
 
-  // ── Draft initialisation ───────────────────────────────────────────────────
+  // ── Draft initialisation ─────────────────────────────────────────────────
   useEffect(() => {
     if (tenant) {
       setDraft((prev) => ({
@@ -187,13 +324,23 @@ const AdminSettings = () => {
   useEffect(() => {
     if (Object.keys(appSettings).length > 0) {
       setDraft((prev) => ({ ...prev, ...appSettings }));
+
+      // Hydrate suggested add-ons from saved JSON
+      if (appSettings.suggested_addons) {
+        try {
+          const parsed = JSON.parse(appSettings.suggested_addons);
+          setAddonTriggerIds(Array.isArray(parsed.triggerIds) ? parsed.triggerIds : []);
+          setAddonSuggestIds(Array.isArray(parsed.suggestIds) ? parsed.suggestIds : []);
+        } catch {
+          // malformed — leave empty
+        }
+      }
     }
   }, [appSettings]);
 
   const update = (field: string, value: string) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
 
-  // Extended to 3500ms for stronger Peak-End closure signal (Laws of UX)
   const flash = (section: string) => {
     setSaved(section);
     setTimeout(() => setSaved(null), 3500);
@@ -207,7 +354,7 @@ const AdminSettings = () => {
     !unmasked.has(key) &&
     !!appSettings[key];
 
-  // ── Save: tenant-table fields ──────────────────────────────────────────────
+  // ── Save: tenant-table fields ───────────────────────────────────────────────
   const saveTenantFields = (section: string, fields: string[]) => {
     const tenantUpdates: Record<string, unknown> = {};
     fields.forEach((f) => { tenantUpdates[f] = draft[f] ?? ""; });
@@ -224,7 +371,7 @@ const AdminSettings = () => {
     flash(section);
   };
 
-  // ── Save: app_settings-only fields ────────────────────────────────────────
+  // ── Save: app_settings-only fields ────────────────────────────────────────────
   const saveSettings = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => {
@@ -242,7 +389,18 @@ const AdminSettings = () => {
     flash(section);
   };
 
-  // ── Logo upload ────────────────────────────────────────────────────────────
+  // ── Save: suggested add-ons ─────────────────────────────────────────────────
+  const saveSuggestedAddons = () => {
+    const json = JSON.stringify({
+      triggerIds: addonTriggerIds,
+      suggestIds: addonSuggestIds,
+    });
+    upsertSetting.mutate({ suggested_addons: json });
+    setAddonSaved(true);
+    setTimeout(() => setAddonSaved(false), 3500);
+  };
+
+  // ── Logo upload ─────────────────────────────────────────────────────────────
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -329,7 +487,7 @@ const AdminSettings = () => {
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
 
-      {/* ── BOOKING PAGE — Serial Position: primary CTA always first ── */}
+      {/* ── BOOKING PAGE ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -385,13 +543,11 @@ const AdminSettings = () => {
 
       {/* ══════════════════════════════════════════════════════════════════════
           SECTION 1 — BUSINESS IDENTITY
-          Law of Common Region + Proximity: related fields grouped visually
       ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Business Identity" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Business Info */}
           <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.06] to-white/[0.02]">
             <SettingRow label="Business Name" placeholder="Your Business Name"
               value={draft.name} onChange={(v) => update("name", v)} />
@@ -408,7 +564,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Logo */}
           <SettingsCard title="Business Logo" icon={Image} gradient="from-white/[0.06] to-white/[0.02]">
             {draft.logo_url && (
               <div className="flex items-center gap-3">
@@ -454,13 +609,11 @@ const AdminSettings = () => {
 
       {/* ══════════════════════════════════════════════════════════════════════
           SECTION 2 — APPEARANCE & BRANDING
-          Grouped by visual concern — Chunking / Miller's Law
       ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Appearance & Branding" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Theme */}
           <SettingsCard title="Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]">
             <div className="grid grid-cols-2 gap-2">
               {businessThemes.map((t) => (
@@ -492,7 +645,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Welcome Splash */}
           <SettingsCard title="Welcome Splash" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]">
             <SettingRow label="Welcome Label" placeholder="Welcome to"
               value={draft.splash_welcome_label} onChange={(v) => update("splash_welcome_label", v)} />
@@ -516,13 +668,11 @@ const AdminSettings = () => {
 
       {/* ══════════════════════════════════════════════════════════════════════
           SECTION 3 — OPERATIONS
-          Booking rules, confirmation copy, travel — operational concerns
       ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Operations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Booking Rules */}
           <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.04] to-white/[0.01]">
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
@@ -574,7 +724,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Travel & Call-out */}
           <SettingsCard title="Travel & Call-out Fee" icon={MapPin} gradient="from-white/[0.05] to-white/[0.02]">
             <SettingRow label="Origin Address" placeholder="Your Business / Home Address"
               value={draft.fixed_origin_address} onChange={(v) => update("fixed_origin_address", v)} />
@@ -597,7 +746,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Confirmation Page Copy */}
           <SettingsCard title="Confirmation Page" icon={FileText} gradient="from-white/[0.05] to-white/[0.02]">
             <SettingRow label="Email Subject" placeholder="Your booking is confirmed"
               value={draft.confirmation_subject} onChange={(v) => update("confirmation_subject", v)} />
@@ -638,7 +786,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Custom Domain */}
           <SettingsCard title="Custom Domain" icon={Link} gradient="from-white/[0.06] to-white/[0.02]">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
@@ -672,18 +819,27 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
+          {/* ── Suggested Add-ons ── */}
+          <SuggestedAddonsCard
+            triggerIds={addonTriggerIds}
+            suggestIds={addonSuggestIds}
+            onChangeTriggers={setAddonTriggerIds}
+            onChangeSuggests={setAddonSuggestIds}
+            onSave={saveSuggestedAddons}
+            saving={upsertSetting.isPending}
+            saved={addonSaved}
+          />
+
         </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
           SECTION 4 — INTEGRATIONS
-          External services: Email, Maps, Reviews, Calendar
       ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Integrations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Email (SMTP) */}
           <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]">
             <SettingRow label="SMTP Host" placeholder="smtp.gmail.com"
               value={draft.smtp_host} onChange={(v) => update("smtp_host", v)} />
@@ -712,7 +868,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Google Maps */}
           <SettingsCard title="Google Maps" icon={MapPin} gradient="from-white/[0.04] to-white/[0.01]">
             <SettingRow
               label="Google Maps API Key"
@@ -734,7 +889,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Google Reviews */}
           <SettingsCard title="Google Reviews" icon={Globe} gradient="from-white/[0.04] to-white/[0.01]">
             <SettingRow label="Google Review Link" placeholder="https://g.page/r/..."
               value={draft.google_review_link} onChange={(v) => update("google_review_link", v)} />
@@ -749,7 +903,6 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          {/* Google Calendar Sync — conditionally rendered */}
           {appSettings["gcal_connected"] === "true" && (
             <SettingsCard title="Google Calendar" icon={CalendarCheck} gradient="from-emerald-500/[0.05] to-white/[0.02]">
               <p className="text-xs text-white/40 leading-relaxed">
@@ -771,7 +924,6 @@ const AdminSettings = () => {
 
       {/* ══════════════════════════════════════════════════════════════════════
           SECTION 5 — SECURITY
-          Rare, high-risk action last — Peak-End Rule + Serial Position
       ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Security" />
