@@ -136,11 +136,6 @@ const Onboarding = () => {
         theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
         currency: "R",
         is_active: true,
-        allow_overrun: false,
-        min_notice_hours: 2,
-        max_advance_days: 60,
-        travel_buffer_minutes: 0,
-        is_setup_complete: false,
       });
       if (tenantErr) throw new Error(`Failed to create tenant: ${tenantErr.message}`);
 
@@ -165,7 +160,6 @@ const Onboarding = () => {
           name: s.name.trim(),
           price: parseFloat(s.price) || 0,
           duration_minutes: parseInt(s.duration, 10),
-          category: businessType ?? "General",
           is_active: true,
         }));
         const { error: svcErr } = await supabase.from("services").insert(serviceRows);
@@ -204,13 +198,6 @@ const Onboarding = () => {
         const { error: availErr } = await supabase.from("staff_availability").insert(availabilityRows);
         if (availErr) throw new Error(`Failed to save availability: ${availErr.message}`);
       }
-
-      // Mark setup complete only after every write succeeds
-      const { error: setupErr } = await supabase
-        .from("tenants")
-        .update({ is_setup_complete: true })
-        .eq("id", tenantSlug);
-      if (setupErr) throw new Error(`Failed to finalise setup: ${setupErr.message}`);
 
       navigate("/admin");
     } catch (err: unknown) {
