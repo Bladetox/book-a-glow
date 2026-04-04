@@ -39,8 +39,13 @@ export function useDashboardData() {
   const prevStart    = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
   const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
 
-  // 90-day window for revenue trend — supports 7D / 30D / 90D selectors
+  // 90-day display window — used for revenueTrend rendering
   const ninetyDaysAgo = format(subDays(now, 90), "yyyy-MM-dd");
+
+  // 91-day fetch window — one extra day buffer to absorb SAST (UTC+2) timezone
+  // offset: a payment recorded at e.g. 01:00 SAST on Jan 4 has a created_at of
+  // "2026-01-03T23:00:00Z", which would be excluded by a hard "2026-01-04" cutoff.
+  const fetchFromDate = format(subDays(now, 91), "yyyy-MM-dd");
 
   // 1. Bookings — current month
   const { data: bookings = [], isLoading: l1 } = useQuery({
@@ -95,9 +100,12 @@ export function useDashboardData() {
     },
   });
 
-  // 3. Payments — extended to 90 days to support all period selectors in RevenueTrendCard
+  // 3. Payments — fetched from 91 days ago (timezone buffer) to end of today.
+  //    Upper bound is todayStr (not monthEnd) — no point fetching future dates.
+  //    The extra day in fetchFromDate ensures SAST-offset timestamps on the
+  //    90-day boundary are never accidentally excluded by UTC comparison.
   const { data: allPayments = [], isLoading: l3 } = useQuery({
-    queryKey:  ["dash-payments", tenantId, ninetyDaysAgo, monthEnd],
+    queryKey:  ["dash-payments", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -105,8 +113,8 @@ export function useDashboardData() {
         .select("amount, created_at, payment_type")
         .eq("tenant_id", tenantId)
         .eq("status", "completed")
-        .gte("created_at", ninetyDaysAgo)
-        .lte("created_at", monthEnd + "T23:59:59");
+        .gte("created_at", fetchFromDate)
+        .lte("created_at", todayStr + "T23:59:59");
       if (error) throw error;
       return data ?? [];
     },
@@ -268,8 +276,9 @@ export function useDashboardData() {
   }, [active]);
 
   // ─── revenue trend ────────────────────────────────────────────────────────
-  // Built over the full 90-day window with ISO date strings so that
-  // RevenueTrendCard's 7D / 30D / 90D selectors can filter by actual date.
+  // Built over the full 90-day display window. allPayments was fetched from
+  // fetchFromDate (91 days) so timezone-boundary payments are always included.
+  // The trendMap filter clamps to ninetyDaysAgo..todayStr for display accuracy.
   const revenueTrend = useMemo(() => {
     const trendMap: Record<string, number> = {};
     allPayments.forEach((p: any) => {
