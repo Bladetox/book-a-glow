@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useMemo } from "react";
 import {
-  format, startOfMonth, endOfMonth, subMonths, getDaysInMonth,
+  format, startOfMonth, endOfMonth, subMonths, subDays,
   eachDayOfInterval, parseISO, getDay,
 } from "date-fns";
 
@@ -38,7 +38,9 @@ export function useDashboardData() {
   const monthEnd     = format(endOfMonth(now),   "yyyy-MM-dd");
   const prevStart    = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
   const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
-  const daysInMonth  = getDaysInMonth(now);
+
+  // 90-day window for revenue trend — supports 7D / 30D / 90D selectors
+  const ninetyDaysAgo = format(subDays(now, 90), "yyyy-MM-dd");
 
   // 1. Bookings — current month
   const { data: bookings = [], isLoading: l1 } = useQuery({
@@ -93,9 +95,9 @@ export function useDashboardData() {
     },
   });
 
-  // 3. Payments
+  // 3. Payments — extended to 90 days to support all period selectors in RevenueTrendCard
   const { data: allPayments = [], isLoading: l3 } = useQuery({
-    queryKey:  ["dash-payments", tenantId, prevStart, monthEnd],
+    queryKey:  ["dash-payments", tenantId, ninetyDaysAgo, monthEnd],
     staleTime: 3 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -103,7 +105,7 @@ export function useDashboardData() {
         .select("amount, created_at, payment_type")
         .eq("tenant_id", tenantId)
         .eq("status", "completed")
-        .gte("created_at", prevStart)
+        .gte("created_at", ninetyDaysAgo)
         .lte("created_at", monthEnd + "T23:59:59");
       if (error) throw error;
       return data ?? [];
@@ -266,17 +268,25 @@ export function useDashboardData() {
   }, [active]);
 
   // ─── revenue trend ────────────────────────────────────────────────────────
+  // Built over the full 90-day window with ISO date strings so that
+  // RevenueTrendCard's 7D / 30D / 90D selectors can filter by actual date.
   const revenueTrend = useMemo(() => {
-    const trendMap: Record<number, number> = {};
-    thisMonthPayments.forEach((p: any) => {
-      const d = parseInt((p.created_at ?? "").slice(8, 10));
-      if (d) trendMap[d] = (trendMap[d] || 0) + Number(p.amount);
+    const trendMap: Record<string, number> = {};
+    allPayments.forEach((p: any) => {
+      const d = (p.created_at ?? "").slice(0, 10);
+      if (d >= ninetyDaysAgo && d <= todayStr) {
+        trendMap[d] = (trendMap[d] || 0) + Number(p.amount);
+      }
     });
-    return Array.from({ length: daysInMonth }, (_, i) => ({
-      day:   i + 1,
-      value: trendMap[i + 1] || 0,
+    return eachDayOfInterval({
+      start: parseISO(ninetyDaysAgo),
+      end:   parseISO(todayStr),
+    }).map(day => ({
+      day:   day.getDate(),
+      date:  format(day, "yyyy-MM-dd"),
+      value: trendMap[format(day, "yyyy-MM-dd")] || 0,
     }));
-  }, [thisMonthPayments, daysInMonth]);
+  }, [allPayments, ninetyDaysAgo, todayStr]);
 
   // ─── booking heatmap ──────────────────────────────────────────────────────
   const heatmap = useMemo(() => {
