@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingUp, TrendingDown, Info, X, BarChart3 } from "lucide-react";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RevenueTrendEntry {
   day: number;       // day-of-month number, e.g. 1–31
@@ -22,7 +22,7 @@ interface Props {
   loading?: boolean;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────────
 
 const PERIODS = [
   { label: "7D",  days: 7  },
@@ -38,7 +38,14 @@ const INFO_LINES: InfoLine[] = [
   { term: "Month-on-Month",   def: "Compare this to last month to see if revenue is growing." },
 ];
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// Human-readable comparison labels per period
+const PERIOD_COMPARE_LABEL: Record<PeriodLabel, string> = {
+  "7D":  "prev 7 days",
+  "30D": "prev 30 days",
+  "90D": "prev 90 days",
+};
+
+// ─── Sub-components ──────────────────────────────────────────────────────────────
 
 const Skeleton = () => (
   <div className="flex flex-col gap-3 animate-pulse">
@@ -90,7 +97,7 @@ const InfoPanel = ({ lines, onClose }: { lines: InfoLine[]; onClose: () => void 
   </motion.div>
 );
 
-// ─── Tooltip ─────────────────────────────────────────────────────────────────
+// ─── Tooltip ────────────────────────────────────────────────────────────────────
 
 interface TooltipProps {
   day: number;
@@ -123,7 +130,7 @@ const BarTooltip = ({ day, date, value, x, containerWidth }: TooltipProps) => {
   );
 };
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────────
 
 const RevenueTrendCard = ({ revenueTrend, periodRevenue, lastPeriodRevenue, loading = false }: Props) => {
   const [period, setPeriod]       = useState<PeriodLabel>("30D");
@@ -131,17 +138,17 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue, lastPeriodRevenue, load
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [containerWidth, setContainerWidth] = useState(300);
 
-  // Filter data to selected period
+  // Filter data to selected period using ISO dates (now always present from hook)
   const filtered = useMemo(() => {
     const selectedDays = PERIODS.find(p => p.label === period)?.days ?? 30;
     if (!revenueTrend.length) return [];
-    // If entries have dates, filter by actual date range
     if (revenueTrend[0]?.date) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - selectedDays);
-      return revenueTrend.filter(e => e.date && new Date(e.date) >= cutoff);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      return revenueTrend.filter(e => e.date != null && e.date >= cutoffStr);
     }
-    // Fallback: take last N entries
+    // Fallback for legacy data without date field
     return revenueTrend.slice(-selectedDays);
   }, [revenueTrend, period]);
 
@@ -151,12 +158,29 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue, lastPeriodRevenue, load
   const periodTotal = useMemo(() => filtered.reduce((s, d) => s + d.value, 0), [filtered]);
   const bestDay     = useMemo(() => filtered.reduce((best, d) => d.value > best.value ? d : best, filtered[0] ?? { day: 0, value: 0 }), [filtered]);
 
+  // Compare current period total against the equivalent prior window
   const pctChange = useMemo(() => {
-    if (lastPeriodRevenue && lastPeriodRevenue > 0) {
-      return Math.round(((periodTotal - lastPeriodRevenue) / lastPeriodRevenue) * 100);
+    if (!revenueTrend.length || !revenueTrend[0]?.date) {
+      // Fallback: use lastPeriodRevenue prop (month-level comparison)
+      if (lastPeriodRevenue && lastPeriodRevenue > 0) {
+        return Math.round(((periodTotal - lastPeriodRevenue) / lastPeriodRevenue) * 100);
+      }
+      return null;
     }
-    return null;
-  }, [periodTotal, lastPeriodRevenue]);
+    const selectedDays = PERIODS.find(p => p.label === period)?.days ?? 30;
+    const now = new Date();
+    const currentCutoff = new Date();
+    currentCutoff.setDate(now.getDate() - selectedDays);
+    const prevCutoff = new Date();
+    prevCutoff.setDate(now.getDate() - selectedDays * 2);
+    const currentCutoffStr = currentCutoff.toISOString().slice(0, 10);
+    const prevCutoffStr    = prevCutoff.toISOString().slice(0, 10);
+    const prevTotal = revenueTrend
+      .filter(e => e.date != null && e.date >= prevCutoffStr && e.date < currentCutoffStr)
+      .reduce((s, d) => s + d.value, 0);
+    if (prevTotal === 0) return null;
+    return Math.round(((periodTotal - prevTotal) / prevTotal) * 100);
+  }, [revenueTrend, period, periodTotal, lastPeriodRevenue]);
 
   const pctUp = pctChange !== null ? pctChange >= 0 : true;
 
@@ -214,7 +238,9 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue, lastPeriodRevenue, load
           {pctChange !== null ? (
             <div className={`flex items-center gap-1 mt-1.5 ${pctUp ? "text-emerald-400" : "text-red-400"}`}>
               {pctUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              <span className="text-[11px] font-semibold">{Math.abs(pctChange)}% vs last period</span>
+              <span className="text-[11px] font-semibold">
+                {Math.abs(pctChange)}% vs {PERIOD_COMPARE_LABEL[period]}
+              </span>
             </div>
           ) : (
             <p className="text-[10px] text-white/20 mt-1">No comparison data</p>
