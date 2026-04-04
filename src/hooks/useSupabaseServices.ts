@@ -87,7 +87,9 @@ export function useUpsertService() {
           .eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("services").insert(payload);
+        // Strip id (undefined) so Supabase generates its own UUID
+        const { id: _omit, ...insertPayload } = payload;
+        const { error } = await supabase.from("services").insert(insertPayload);
         if (error) throw error;
       }
     },
