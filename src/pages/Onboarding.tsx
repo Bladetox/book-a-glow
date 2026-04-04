@@ -255,8 +255,10 @@ const Onboarding = () => {
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-foreground">Business name</label>
+                  <label htmlFor="onboarding-business-name" className="block text-sm font-medium mb-1.5 text-foreground">Business name</label>
                   <input
+          id="onboarding-business-name"
+          name="business-name"
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
@@ -294,6 +296,8 @@ const Onboarding = () => {
                       )}
                     </div>
                     <input
+              id={`service-name-${i}`}
+              name={`service-name-${i}`}
                       type="text"
                       value={service.name}
                       onChange={(e) => updateService(i, "name", e.target.value)}
@@ -304,6 +308,8 @@ const Onboarding = () => {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">R</span>
                         <input
+                          id={`service-price-${i}`}
+                          name={`service-price-${i}`}
                           type="text"
                           value={service.price}
                           onChange={(e) => updateService(i, "price", e.target.value)}
@@ -314,6 +320,8 @@ const Onboarding = () => {
                       <div className="relative">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <select
+                          id={`service-duration-${i}`}
+                          name={`service-duration-${i}`}
                           value={service.duration}
                           onChange={(e) => updateService(i, "duration", e.target.value)}
                           className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all appearance-none"
@@ -381,9 +389,9 @@ const Onboarding = () => {
                           </button>
                           {!isClosed && (
                             <>
-                              <input type="time" value={timeParts[0]} onChange={(e) => { const updated = { ...schedule }; updated[day] = `${e.target.value}–${timeParts[1]}`; setSchedule(updated as typeof schedule); }} className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground w-24" />
+                              <input id={`hours-${day}-open`} name={`hours-${day}-open`} type="time" value={timeParts[0]} onChange={(e) => { const updated = { ...schedule }; updated[day] = `${e.target.value}–${timeParts[1]}`; setSchedule(updated as typeof schedule); }} className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground w-24" />
                               <span className="text-xs text-muted-foreground">–</span>
-                              <input type="time" value={timeParts[1]} onChange={(e) => { const updated = { ...schedule }; updated[day] = `${timeParts[0]}–${e.target.value}`; setSchedule(updated as typeof schedule); }} className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground w-24" />
+                              <input id={`hours-${day}-close`} name={`hours-${day}-close`} type="time" value={timeParts[1]} onChange={(e) => { const updated = { ...schedule }; updated[day] = `${timeParts[0]}–${e.target.value}`; setSchedule(updated as typeof schedule); }} className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground w-24" />
                             </>
                           )}
                         </div>

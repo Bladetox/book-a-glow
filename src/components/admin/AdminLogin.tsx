@@ -112,12 +112,12 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
                 {success && <p className="text-xs text-emerald-400 text-center">{success}</p>}
                 <form onSubmit={handleLogin} className="w-full flex flex-col gap-4">
                   <div>
-                    <label className={labelClass}>Email</label>
-                    <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} placeholder="you@example.com" className={inputClass} required />
+                    <label htmlFor="admin-login-email" className={labelClass}>Email</label>
+                    <input id="admin-login-email" name="email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} placeholder="you@example.com" className={inputClass} required />
                   </div>
                   <div>
-                    <label className={labelClass}>Password</label>
-                    <input type="password" value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} placeholder="Enter your password" className={inputClass} required />
+                    <label htmlFor="admin-login-password" className={labelClass}>Password</label>
+                    <input id="admin-login-password" name="password" type="password" value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} placeholder="Enter your password" className={inputClass} required />
                   </div>
                   {error && <p className="text-xs text-red-400 text-center">{error}</p>}
                   <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-white text-black text-sm font-semibold tracking-wider uppercase hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
@@ -140,8 +140,8 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
                 </div>
                 <form onSubmit={handleForgot} className="w-full flex flex-col gap-4">
                   <div>
-                    <label className={labelClass}>Email</label>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} required />
+                    <label htmlFor="admin-reset-email" className={labelClass}>Email</label>
+                    <input id="admin-reset-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} required />
                   </div>
                   {error && <p className="text-xs text-red-400 text-center">{error}</p>}
                   <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-white text-black text-sm font-semibold tracking-wider uppercase hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">

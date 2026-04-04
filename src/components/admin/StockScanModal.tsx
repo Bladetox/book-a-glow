@@ -325,6 +325,8 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
               </div>
             </button>
             <input
+              id="scan-camera-input"
+              name="scan-camera-input"
               ref={cameraRef}
               type="file"
               accept="image/*"
@@ -347,6 +349,8 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
               </div>
             </button>
             <input
+              id="scan-file-input"
+              name="scan-file-input"
               ref={fileRef}
               type="file"
               accept="image/*,.pdf,application/pdf"
@@ -418,18 +422,24 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
                   {rows.map((row, i) => (
                     <div key={i} className="grid grid-cols-[1fr_64px_80px_32px] gap-2 items-center">
                       <input
+                    id={`scan-row-${i}-name`}
+                    name={`scan-row-${i}-name`}
                         value={row.item_name}
                         onChange={e => updateRow(i, "item_name", e.target.value)}
                         placeholder="Item name"
                         className="w-full px-2.5 py-2 rounded-lg bg-white/[0.04] border border-white/[0.07] text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
                       />
                       <input
+                    id={`scan-row-${i}-qty`}
+                    name={`scan-row-${i}-qty`}
                         type="number" step="0.5" min="0"
                         value={row.qty}
                         onChange={e => updateRow(i, "qty", e.target.value)}
                         className="w-full px-2 py-2 rounded-lg bg-white/[0.04] border border-white/[0.07] text-xs text-white/80 text-right focus:outline-none focus:border-white/20 transition-colors"
                       />
                       <input
+                    id={`scan-row-${i}-cost`}
+                    name={`scan-row-${i}-cost`}
                         type="number" step="0.01" min="0"
                         value={row.cost}
                         onChange={e => updateRow(i, "cost", e.target.value)}

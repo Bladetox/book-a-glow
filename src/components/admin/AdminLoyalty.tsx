@@ -309,24 +309,24 @@ const EnrollModal = ({
             { label: "Phone (with country code)", value: phone, onChange: setPhone, type: "text" },
           ].map(f => (
             <div key={f.label} className="flex flex-col gap-1">
-              <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">{f.label}</label>
-              <input value={f.value} onChange={e => f.onChange(e.target.value)} type={f.type}
+              <label htmlFor={`loyalty-field-${f.label.toLowerCase().replace(/\s+/g, '-')}`} className="text-[10px] tracking-[0.1em] uppercase text-white/30">{f.label}</label>
+              <input id={`loyalty-field-${f.label.toLowerCase().replace(/\s+/g, '-')}`} name={f.label.toLowerCase().replace(/\s+/g, '-')} value={f.value} onChange={e => f.onChange(e.target.value)} type={f.type}
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
             </div>
           ))}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last Wax Date</label>
-            <input type="date" value={lastWax} onChange={e => setLastWax(e.target.value)}
+            <label htmlFor="loyalty-last-wax" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last Wax Date</label>
+            <input id="loyalty-last-wax" name="last-wax-date" type="date" value={lastWax} onChange={e => setLastWax(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Next Due Date</label>
-            <input type="date" value={nextDue} onChange={e => setNextDue(e.target.value)}
+            <label htmlFor="loyalty-next-due" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Next Due Date</label>
+            <input id="loyalty-next-due" name="next-due-date" type="date" value={nextDue} onChange={e => setNextDue(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Notes (optional)</label>
-            <input value={notes} onChange={e => setNotes(e.target.value)}
+            <label htmlFor="loyalty-notes" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Notes (optional)</label>
+            <input id="loyalty-notes" name="loyalty-notes" value={notes} onChange={e => setNotes(e.target.value)}
               placeholder="e.g. 3-pack candidate"
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40" />
           </div>
@@ -502,10 +502,12 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {fields.map(f => (
             <div key={f.key} className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/35">
+              <label htmlFor={`loyalty-setting-${f.key}`} className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/35">
                 {f.label}
               </label>
               <input
+                id={`loyalty-setting-${f.key}`}
+                name={f.key}
                 type={f.type}
                 min={f.type === "number" ? 1 : undefined}
                 value={local[f.key]}
@@ -976,6 +978,8 @@ const AdminLoyalty = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
                 <input
+                  id="loyalty-search"
+                  name="loyalty-search"
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}

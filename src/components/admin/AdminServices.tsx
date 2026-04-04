@@ -313,6 +313,8 @@ const AdminServices = () => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-white/25" />
           <input
+            id="services-search"
+            name="services-search"
             className={`${inputClass} pl-9`}
             placeholder="Search services…"
             value={search}
@@ -321,6 +323,8 @@ const AdminServices = () => {
         </div>
         <div className="relative">
           <select
+            id="services-filter-category"
+            name="services-filter-category"
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
             className={`${inputClass} pr-8 appearance-none cursor-pointer min-w-[160px]`}
@@ -347,14 +351,16 @@ const AdminServices = () => {
               {isNew ? "New Service" : "Edit Service"}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input className={inputClass} placeholder="Name *" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
-              <input className={inputClass} placeholder="Category *" value={editing.category} onChange={e => setEditing({ ...editing, category: e.target.value })} />
-              <input className={inputClass} placeholder="Price *" type="number" min="0" value={editing.price} onChange={e => setEditing({ ...editing, price: e.target.value })} />
-              <input className={inputClass} placeholder="Duration (min) *" type="number" min="0" value={editing.duration_minutes} onChange={e => setEditing({ ...editing, duration_minutes: e.target.value })} />
+              <input id="service-edit-name" name="service-name" className={inputClass} placeholder="Name *" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+              <input id="service-edit-category" name="service-category" className={inputClass} placeholder="Category *" value={editing.category} onChange={e => setEditing({ ...editing, category: e.target.value })} />
+              <input id="service-edit-price" name="service-price" className={inputClass} placeholder="Price *" type="number" min="0" value={editing.price} onChange={e => setEditing({ ...editing, price: e.target.value })} />
+              <input id="service-edit-duration" name="service-duration" className={inputClass} placeholder="Duration (min) *" type="number" min="0" value={editing.duration_minutes} onChange={e => setEditing({ ...editing, duration_minutes: e.target.value })} />
             </div>
-            <input className={inputClass} placeholder="Description" value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} />
+            <input id="service-edit-description" name="service-description" className={inputClass} placeholder="Description" value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} />
             <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
               <input
+                id="service-edit-active"
+                name="service-active"
                 type="checkbox"
                 checked={editing.is_active}
                 onChange={e => setEditing({ ...editing, is_active: e.target.checked })}

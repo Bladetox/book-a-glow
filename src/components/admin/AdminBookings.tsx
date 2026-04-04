@@ -647,6 +647,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
         <input
+          id="bookings-search"
+          name="bookings-search"
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
@@ -1065,8 +1067,10 @@ const DetailRow = ({ icon: Icon, label, value, wrap }: { icon: React.ElementType
 
 const EditField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-[10px] text-white/30">{label}</label>
+    <label htmlFor={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`} className="text-[10px] text-white/30">{label}</label>
     <input
+      id={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      name={label.toLowerCase().replace(/\s+/g, '-')}
       type="text"
       value={value}
       onChange={e => onChange(e.target.value)}

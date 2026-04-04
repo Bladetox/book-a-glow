@@ -44,8 +44,10 @@ const FormField = ({
   value: string | number; onChange: (v: string) => void; placeholder?: string;
 }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/30">{label}</label>
+    <label htmlFor={`stock-field-${label.toLowerCase().replace(/\s+/g, '-')}`} className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/30">{label}</label>
     <input
+      id={`stock-field-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      name={label.toLowerCase().replace(/\s+/g, '-')}
       type={type} step={step} placeholder={placeholder}
       value={value}
       onChange={e => onChange(e.target.value)}
@@ -281,7 +283,7 @@ const AdminStock = () => {
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-white/60 hover:bg-white/[0.09] transition-colors">
             <Upload className="w-3.5 h-3.5" /> CSV
           </button>
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCsv} />
+          <input id="stock-csv-upload" name="stock-csv-upload" ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCsv} />
           <button onClick={openAdd}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors">
             <Plus className="w-3.5 h-3.5" /> Add Item
@@ -394,6 +396,8 @@ const AdminStock = () => {
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
           <input
+            id="stock-search"
+            name="stock-search"
             type="text"
             placeholder="Search products…"
             value={search}
@@ -722,6 +726,8 @@ const AdminStock = () => {
                     </button>
                   ))}
                   <input
+                    id="consumption-custom-qty"
+                    name="consumption-custom-qty"
                     type="number" step="0.25" min="0" placeholder="Custom"
                     value={customQty}
                     onChange={e => { setCustomQty(e.target.value); setSelectedQty(null); }}

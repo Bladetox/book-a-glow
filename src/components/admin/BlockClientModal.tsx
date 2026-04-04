@@ -124,10 +124,12 @@ const BlockClientModal = ({
               {/* Reason — only shown when blocking (not unblocking) */}
               {!isBlocked && (
                 <div className="px-5 pb-4">
-                  <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 block mb-1.5">
+                  <label htmlFor="block-reason" className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 block mb-1.5">
                     Reason <span className="text-white/20 normal-case font-normal">(optional)</span>
                   </label>
                   <textarea
+                    id="block-reason"
+                    name="block-reason"
                     value={reason}
                     onChange={e => setReason(e.target.value)}
                     rows={2}

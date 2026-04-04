@@ -152,6 +152,8 @@ const AdminConsultations = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
           <input
+          id="consultations-search"
+          name="consultations-search"
             type="text"
             placeholder="Search by client name…"
             value={search}

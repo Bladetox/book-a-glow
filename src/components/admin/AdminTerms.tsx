@@ -203,8 +203,8 @@ const AdminTerms = () => {
             className="bg-white/[0.04] border border-white/[0.1] rounded-2xl p-4 flex flex-col gap-3"
           >
             <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">New Section</p>
-            <input className={inputClass} placeholder="Section title *" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-            <textarea className={`${inputClass} min-h-[100px] resize-y`} placeholder="Section content *" value={newContent} onChange={(e) => setNewContent(e.target.value)} />
+            <input id="terms-new-title" name="terms-new-title" className={inputClass} placeholder="Section title *" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+            <textarea id="terms-new-content" name="terms-new-content" className={`${inputClass} min-h-[100px] resize-y`} placeholder="Section content *" value={newContent} onChange={(e) => setNewContent(e.target.value)} />
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setIsAdding(false); setNewTitle(""); setNewContent(""); }} className="px-4 py-2 rounded-xl border border-white/[0.08] text-white/50 hover:text-white/70 text-sm transition-colors">Cancel</button>
               <motion.button whileTap={{ scale: 0.95 }} onClick={addSection} className="px-4 py-2 rounded-xl bg-white/[0.12] text-white text-sm font-medium hover:bg-white/[0.18] transition-colors flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Save</motion.button>
@@ -220,8 +220,8 @@ const AdminTerms = () => {
           <motion.div key={s.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 group">
             {editingId === s.id ? (
               <div className="flex flex-col gap-3">
-                <input className={inputClass} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Section title" />
-                <textarea className={`${inputClass} min-h-[100px] resize-y`} value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Section content" />
+                <input id="terms-edit-title" name="terms-edit-title" className={inputClass} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Section title" />
+                <textarea id="terms-edit-content" name="terms-edit-content" className={`${inputClass} min-h-[100px] resize-y`} value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Section content" />
                 <div className="flex gap-2 justify-end">
                   <button onClick={cancelEdit} className="px-4 py-2 rounded-xl border border-white/[0.08] text-white/50 hover:text-white/70 text-sm transition-colors">Cancel</button>
                   <motion.button whileTap={{ scale: 0.95 }} onClick={saveEdit} className="px-4 py-2 rounded-xl bg-white/[0.12] text-white text-sm font-medium hover:bg-white/[0.18] transition-colors flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Save</motion.button>

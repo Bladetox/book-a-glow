@@ -134,8 +134,10 @@ const ResetPassword = () => {
               </div>
               <form onSubmit={handleReset} className="w-full flex flex-col gap-4">
                 <div>
-                  <label className={labelClass}>New Password</label>
+                  <label htmlFor="new-password" className={labelClass}>New Password</label>
                   <input
+                    id="new-password"
+                    name="new-password"
                     type="password"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
@@ -145,8 +147,10 @@ const ResetPassword = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Confirm Password</label>
+                  <label htmlFor="confirm-password" className={labelClass}>Confirm Password</label>
                   <input
+                    id="confirm-password"
+                    name="confirm-password"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}

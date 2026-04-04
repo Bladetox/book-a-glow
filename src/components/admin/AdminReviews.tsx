@@ -331,7 +331,7 @@ const AdminReviews = () => {
 
               {/* C1: AI-draft hint row */}
               <div className="flex items-center justify-between gap-2">
-                <label className="text-[10px] font-semibold tracking-wider uppercase text-white/30">Your Reply</label>
+                <label htmlFor="review-reply" className="text-[10px] font-semibold tracking-wider uppercase text-white/30">Your Reply</label>
                 <button
                   onClick={() => setReplyText(generateReplyDraft(respondTo))}
                   className="flex items-center gap-1 text-[10px] text-emerald-400/80 hover:text-emerald-400 transition-colors"
@@ -343,6 +343,8 @@ const AdminReviews = () => {
               {/* C4: textarea with char count */}
               <div className="flex flex-col gap-1">
                 <textarea
+                  id="review-reply"
+                  name="review-reply"
                   rows={5}
                   maxLength={MAX_REPLY}
                   value={replyText}

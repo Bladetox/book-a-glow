@@ -67,6 +67,7 @@ const SettingsCard = ({
 
 const SettingRow = ({
   label,
+  id,
   placeholder,
   type = "text",
   value,
@@ -76,6 +77,7 @@ const SettingRow = ({
   onUnmask,
 }: {
   label: string;
+  id?: string;
   placeholder: string;
   type?: string;
   value?: string;
@@ -85,7 +87,7 @@ const SettingRow = ({
   onUnmask?: () => void;
 }) => (
   <div className="flex flex-col gap-1.5">
-    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+    <label htmlFor={id} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
       {label}
     </label>
     {masked ? (
@@ -102,6 +104,8 @@ const SettingRow = ({
       </div>
     ) : (
       <input
+        id={id}
+        name={id}
         type={type}
         placeholder={placeholder}
         value={value ?? ""}
@@ -213,10 +217,12 @@ const RuleEditor = ({ rule, index, services, usedTriggerIds, onChange, onDelete 
 
               {/* Trigger picker */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
+                <label htmlFor="addon-trigger-select" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
                   Trigger service
                 </label>
                 <select
+                  id="addon-trigger-select"
+                  name="addon-trigger"
                   value={rule.triggerId}
                   onChange={(e) => onChange({ ...rule, triggerId: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 focus:outline-none focus:border-white/20 transition-colors"
@@ -678,11 +684,11 @@ const AdminSettings = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.06] to-white/[0.02]">
-            <SettingRow label="Business Name" placeholder="Your Business Name"
+            <SettingRow id="business-name" label="Business Name" placeholder="Your Business Name"
               value={draft.name} onChange={(v) => update("name", v)} />
-            <SettingRow label="Email" placeholder="your@email.com" type="email"
+            <SettingRow id="business-email" label="Email" placeholder="your@email.com" type="email"
               value={draft.email} onChange={(v) => update("email", v)} />
-            <SettingRow label="Phone" placeholder="074 511 5725"
+            <SettingRow id="business-phone" label="Phone" placeholder="074 511 5725"
               value={draft.phone} onChange={(v) => update("phone", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -704,7 +710,7 @@ const AdminSettings = () => {
                 <span className="text-xs text-white/40 flex-1 truncate">{draft.logo_url}</span>
               </div>
             )}
-            <SettingRow label="Logo URL" placeholder="https://your-logo-url.com/logo.png"
+            <SettingRow id="logo-url" label="Logo URL" placeholder="https://your-logo-url.com/logo.png"
               value={draft.logo_url} onChange={(v) => update("logo_url", v)} />
             <p className="text-[9px] text-white/25 -mt-2">
               Or upload directly below. Recommended: square, min 200×200px.
@@ -725,6 +731,8 @@ const AdminSettings = () => {
               <SavedBadge section="logo" />
             </div>
             <input
+              id="logo-upload"
+              name="logo-upload"
               ref={logoInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp,image/svg+xml"
@@ -775,13 +783,13 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Welcome Splash" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]">
-            <SettingRow label="Welcome Label" placeholder="Welcome to"
+            <SettingRow id="welcome-label" label="Welcome Label" placeholder="Welcome to"
               value={draft.splash_welcome_label} onChange={(v) => update("splash_welcome_label", v)} />
-            <SettingRow label="Tagline Line 1" placeholder="Mobile Beauty Services"
+            <SettingRow id="tagline-1" label="Tagline Line 1" placeholder="Mobile Beauty Services"
               value={draft.splash_tagline1} onChange={(v) => update("splash_tagline1", v)} />
-            <SettingRow label="Tagline Line 2" placeholder="Premium At-Home Treatments"
+            <SettingRow id="tagline-2" label="Tagline Line 2" placeholder="Premium At-Home Treatments"
               value={draft.splash_tagline2} onChange={(v) => update("splash_tagline2", v)} />
-            <SettingRow label="CTA Button Label" placeholder="Select Your Treatment"
+            <SettingRow id="cta-button-label" label="CTA Button Label" placeholder="Select Your Treatment"
               value={draft.splash_cta_label} onChange={(v) => update("splash_cta_label", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -804,7 +812,7 @@ const AdminSettings = () => {
 
           <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.04] to-white/[0.01]">
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+              <label htmlFor="deposit-custom-percent" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
                 Deposit Percentage
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -824,6 +832,8 @@ const AdminSettings = () => {
                 ))}
               </div>
               <input
+                id="deposit-custom-percent"
+                name="deposit_percent"
                 type="number"
                 placeholder="Custom %"
                 value={draft.deposit_percent ?? ""}
@@ -838,11 +848,11 @@ const AdminSettings = () => {
                   : `Clients pay ${draft.deposit_percent ?? 50}% now, the rest on the day.`}
               </p>
             </div>
-            <SettingRow label="Min Notice (hours)" placeholder="24" type="number"
+            <SettingRow id="min-notice-hours" label="Min Notice (hours)" placeholder="24" type="number"
               value={draft.min_notice_hours} onChange={(v) => update("min_notice_hours", v)} />
-            <SettingRow label="Max Advance Booking (days)" placeholder="60" type="number"
+            <SettingRow id="max-advance-days" label="Max Advance Booking (days)" placeholder="60" type="number"
               value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
-            <SettingRow label="Booking Ref Prefix" placeholder="PB-"
+            <SettingRow id="booking-ref-prefix" label="Booking Ref Prefix" placeholder="PB-"
               value={draft.booking_ref_prefix} onChange={(v) => update("booking_ref_prefix", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -854,11 +864,11 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Travel & Call-out Fee" icon={MapPin} gradient="from-white/[0.05] to-white/[0.02]">
-            <SettingRow label="Origin Address" placeholder="Your Business / Home Address"
+            <SettingRow id="origin-address" label="Origin Address" placeholder="Your Business / Home Address"
               value={draft.fixed_origin_address} onChange={(v) => update("fixed_origin_address", v)} />
-            <SettingRow label="Rate per km" placeholder="3.60" type="number"
+            <SettingRow id="rate-per-km" label="Rate per km" placeholder="3.60" type="number"
               value={draft.rate_per_km} onChange={(v) => update("rate_per_km", v)} />
-            <SettingRow label="Currency Symbol" placeholder="R"
+            <SettingRow id="currency-symbol" label="Currency Symbol" placeholder="R"
               value={draft.currency} onChange={(v) => update("currency", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -876,15 +886,17 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Confirmation Page" icon={FileText} gradient="from-white/[0.05] to-white/[0.02]">
-            <SettingRow label="Email Subject" placeholder="Your booking is confirmed"
+            <SettingRow id="confirmation-email-subject" label="Email Subject" placeholder="Your booking is confirmed"
               value={draft.confirmation_subject} onChange={(v) => update("confirmation_subject", v)} />
-            <SettingRow label="Page Title" placeholder="A date with yourself"
+            <SettingRow id="confirmation-page-title" label="Page Title" placeholder="A date with yourself"
               value={draft.confirmation_title} onChange={(v) => update("confirmation_title", v)} />
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+              <label htmlFor="confirmation-intro" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
                 Intro Message
               </label>
               <textarea
+                id="confirmation-intro"
+                name="confirmation_intro"
                 placeholder="Your booking is confirmed..."
                 value={draft.confirmation_intro ?? ""}
                 onChange={(e) => update("confirmation_intro", e.target.value)}
@@ -893,10 +905,12 @@ const AdminSettings = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+              <label htmlFor="confirmation-outro" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
                 Outro Message
               </label>
               <textarea
+                id="confirmation-outro"
+                name="confirmation_outro"
                 placeholder="We look forward to seeing you."
                 value={draft.confirmation_outro ?? ""}
                 onChange={(e) => update("confirmation_outro", e.target.value)}
@@ -904,7 +918,7 @@ const AdminSettings = () => {
                 className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
               />
             </div>
-            <SettingRow label="Sign-off" placeholder="Toodles"
+            <SettingRow id="confirmation-signoff" label="Sign-off" placeholder="Toodles"
               value={draft.sign_off} onChange={(v) => update("sign_off", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -968,11 +982,11 @@ const AdminSettings = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]">
-            <SettingRow label="SMTP Host" placeholder="smtp.gmail.com"
+            <SettingRow id="smtp-host" label="SMTP Host" placeholder="smtp.gmail.com"
               value={draft.smtp_host} onChange={(v) => update("smtp_host", v)} />
-            <SettingRow label="SMTP Port" placeholder="587" type="number"
+            <SettingRow id="smtp-port" label="SMTP Port" placeholder="587" type="number"
               value={draft.smtp_port} onChange={(v) => update("smtp_port", v)} />
-            <SettingRow label="SMTP User (email)" placeholder="your@gmail.com"
+            <SettingRow id="smtp-user" label="SMTP User (email)" placeholder="your@gmail.com"
               value={draft.smtp_user} onChange={(v) => update("smtp_user", v)} />
             <SettingRow
               label="SMTP Password / App Password"
@@ -984,7 +998,7 @@ const AdminSettings = () => {
               onChange={(v) => update("smtp_password", v)}
               hint={!isMasked("smtp_password") ? "Use a Google App Password, not your account password." : undefined}
             />
-            <SettingRow label="From Email" placeholder="noreply@yourdomain.co.za"
+            <SettingRow id="from-email" label="From Email" placeholder="noreply@yourdomain.co.za"
               value={draft.smtp_from_email} onChange={(v) => update("smtp_from_email", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -1005,7 +1019,7 @@ const AdminSettings = () => {
               onChange={(v) => update("google_maps_api_key", v)}
               hint={!isMasked("google_maps_api_key") ? "Restrict this key to your domain in Google Cloud Console." : undefined}
             />
-            <SettingRow label="Default Distance (km)" placeholder="10" type="number"
+            <SettingRow id="default-distance" label="Default Distance (km)" placeholder="10" type="number"
               value={draft.default_distance_km} onChange={(v) => update("default_distance_km", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -1017,9 +1031,9 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Google Reviews" icon={Globe} gradient="from-white/[0.04] to-white/[0.01]">
-            <SettingRow label="Google Review Link" placeholder="https://g.page/r/..."
+            <SettingRow id="google-review-link" label="Google Review Link" placeholder="https://g.page/r/..."
               value={draft.google_review_link} onChange={(v) => update("google_review_link", v)} />
-            <SettingRow label="Google Place ID" placeholder="ChIJ..."
+            <SettingRow id="google-place-id" label="Google Place ID" placeholder="ChIJ..."
               value={draft.google_place_id} onChange={(v) => update("google_place_id", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
@@ -1057,9 +1071,9 @@ const AdminSettings = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]">
-            <SettingRow label="New Password" placeholder="Min 6 characters" type="password"
+            <SettingRow id="settings-new-password" label="New Password" placeholder="Min 6 characters" type="password"
               value={newPw} onChange={setNewPw} />
-            <SettingRow label="Confirm Password" placeholder="Confirm new password" type="password"
+            <SettingRow id="settings-confirm-password" label="Confirm Password" placeholder="Confirm new password" type="password"
               value={confirmPw} onChange={setConfirmPw} />
             {pwError   && <p className="text-xs text-red-400">{pwError}</p>}
             {pwSuccess && (

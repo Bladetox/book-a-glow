@@ -46,11 +46,13 @@ const Field = ({
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">
+      <label htmlFor={fieldKey} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">
         {label}
       </label>
       <div className="relative">
         <input
+          id={fieldKey}
+          name={fieldKey}
           type={inputType}
           disabled={isMasked && !editing}
           value={displayValue}
