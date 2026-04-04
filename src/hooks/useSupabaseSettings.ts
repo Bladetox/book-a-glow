@@ -54,6 +54,8 @@ const ALLOWED_APP_SETTING_KEYS = [
   "smtp_username",
   "smtp_password",
   "smtp_from_email",
+  // Suggested add-ons (booking flow upsell)
+  "suggested_addons",
 ] as const;
 
 // ─── Tenant fields safe to expose to the client ───────────────────────────────
