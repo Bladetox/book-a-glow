@@ -947,6 +947,7 @@ const AdminSettings = () => {
               </div>
             </div>
             <SettingRow
+              id="custom-domain"
               label="Custom Domain (optional)"
               placeholder="book.yourdomain.co.za"
               value={draft.custom_domain}
@@ -989,6 +990,7 @@ const AdminSettings = () => {
             <SettingRow id="smtp-user" label="SMTP User (email)" placeholder="your@gmail.com"
               value={draft.smtp_user} onChange={(v) => update("smtp_user", v)} />
             <SettingRow
+              id="smtp-password"
               label="SMTP Password / App Password"
               placeholder="App password from Google"
               type="password"
@@ -1011,6 +1013,7 @@ const AdminSettings = () => {
 
           <SettingsCard title="Google Maps" icon={MapPin} gradient="from-white/[0.04] to-white/[0.01]">
             <SettingRow
+              id="google-maps-api-key"
               label="Google Maps API Key"
               placeholder="AIza..."
               masked={isMasked("google_maps_api_key")}
