@@ -194,6 +194,7 @@ Deno.serve(async (req) => {
       id:                  tenantId,
       name:                business_name.trim(),
       owner_id:            user.id,
+      email:               user.email ?? "",
       theme_id:            theme_id ?? "standard",
       currency:            "R",
       is_active:           true,
