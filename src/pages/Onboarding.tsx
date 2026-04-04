@@ -40,29 +40,6 @@ function generateSlots(start: string, end: string): { slot_start_time: string; s
 }
 
 
-// ─── Unique tenant slug helper ────────────────────────────────────────────────
-const slugifyName = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 30);
-
-const getUniqueTenantSlug = async (baseName: string): Promise<string> => {
-  const baseSlug = slugifyName(baseName) || "business";
-  const { data: existing, error } = await supabase
-    .from("tenants")
-    .select("id")
-    .ilike("id", `${baseSlug}%`);
-  if (error) throw error;
-  const existingIds = new Set((existing ?? []).map((row: { id: string }) => row.id));
-  if (!existingIds.has(baseSlug)) return baseSlug;
-  let counter = 2;
-  let candidate = `${baseSlug}-${counter}`;
-  while (existingIds.has(candidate)) { counter += 1; candidate = `${baseSlug}-${counter}`; }
-  return candidate;
-};
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -123,81 +100,37 @@ const Onboarding = () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const { data: { user }, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !user) throw new Error("Not authenticated. Please sign in again.");
+      // Get the user's JWT to pass to the edge function
+      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr || !session) throw new Error("Not authenticated. Please sign in again.");
 
-      // Resolve a unique slug — prevents 409 Conflict on duplicate business names
-      const tenantSlug = await getUniqueTenantSlug(businessName.trim());
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 
-      const { error: tenantErr } = await supabase.from("tenants").insert({
-        id: tenantSlug,
-        name: businessName.trim(),
-        owner_id: user.id,
-        theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
-        currency: "R",
-        is_active: true,
+      const res = await fetch(`${supabaseUrl}/functions/v1/create-tenant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+        },
+        body: JSON.stringify({
+          business_name: businessName.trim(),
+          business_type: businessType ?? "General",
+          theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
+          services: services.filter((s) => s.name.trim()),
+          schedule,
+        }),
       });
-      if (tenantErr) throw new Error(`Failed to create tenant: ${tenantErr.message}`);
 
-      const { error: roleErr } = await supabase.from("user_roles").insert({
-        user_id: user.id,
-        tenant_id: tenantSlug,
-        role: "owner",
-      });
-      if (roleErr) throw new Error(`Failed to assign role: ${roleErr.message}`);
+      const json = await res.json();
 
-      // Profile update is critical — throw on failure so we never partially onboard
-      const { error: profileErr } = await supabase
-        .from("profiles")
-        .update({ tenant_id: tenantSlug, role: "owner" })
-        .eq("id", user.id);
-      if (profileErr) throw new Error(`Failed to update profile: ${profileErr.message}`);
-
-      const validServices = services.filter((s) => s.name.trim());
-      if (validServices.length > 0) {
-        const serviceRows = validServices.map((s) => ({
-          tenant_id: tenantSlug,
-          name: s.name.trim(),
-          price: parseFloat(s.price) || 0,
-          duration_minutes: parseInt(s.duration, 10),
-          category: businessType ?? "General",
-          is_active: true,
-        }));
-        const { error: svcErr } = await supabase.from("services").insert(serviceRows);
-        if (svcErr) throw new Error(`Failed to save services: ${svcErr.message}`);
-      }
-
-      const availabilityRows: {
-        tenant_id: string;
-        staff_id: string;
-        day_of_week: number;
-        slot_start_time: string;
-        slot_end_time: string;
-        is_available: boolean;
-        day_enabled: boolean;
-      }[] = [];
-
-      for (const day of days) {
-        const hours = schedule[day];
-        if (hours === "Closed") continue;
-        const [start, end] = hours.split("–");
-        const slots = generateSlots(start, end);
-        for (const slot of slots) {
-          availabilityRows.push({
-            tenant_id: tenantSlug,
-            staff_id: user.id,
-            day_of_week: dayOfWeekMap[day],
-            slot_start_time: slot.slot_start_time,
-            slot_end_time: slot.slot_end_time,
-            is_available: true,
-            day_enabled: true,
-          });
+      if (!res.ok) {
+        // 409 = already onboarded — just proceed to admin
+        if (res.status === 409) {
+          navigate("/admin");
+          return;
         }
-      }
-
-      if (availabilityRows.length > 0) {
-        const { error: availErr } = await supabase.from("staff_availability").insert(availabilityRows);
-        if (availErr) throw new Error(`Failed to save availability: ${availErr.message}`);
+        throw new Error(json.error ?? `Server error ${res.status}`);
       }
 
       navigate("/admin");
