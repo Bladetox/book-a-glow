@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     // 5b. user_roles
     const { error: roleErr } = await admin.from("user_roles").insert({
-      user_id: user.id, tenant_id: tenantId, role: "owner",
+      user_id: user.id, tenant_id: tenantId, role: "admin",
     });
     if (roleErr) { await rollback(); throw new Error(`user_roles: ${roleErr.message}`); }
 
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       email: user.email ?? "",
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
       tenant_id: tenantId,
-      role: "owner",
+      role: "admin",
     }, { onConflict: "id" });
     if (profileErr) { await rollback(); throw new Error(`profile: ${profileErr.message}`); }
 
