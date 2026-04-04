@@ -217,12 +217,12 @@ const RuleEditor = ({ rule, index, services, usedTriggerIds, onChange, onDelete 
 
               {/* Trigger picker */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="addon-trigger-select" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
+                <label htmlFor={`addon-trigger-select-${index}`} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
                   Trigger service
                 </label>
                 <select
-                  id="addon-trigger-select"
-                  name="addon-trigger"
+                  id={`addon-trigger-select-${index}`}
+                  name={`addon-trigger-${index}`}
                   value={rule.triggerId}
                   onChange={(e) => onChange({ ...rule, triggerId: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 focus:outline-none focus:border-white/20 transition-colors"
