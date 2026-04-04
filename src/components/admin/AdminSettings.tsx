@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, MapPin, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
-  Globe, CalendarCheck, Zap,
+  Globe, CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -16,9 +16,10 @@ import {
 } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
 import { useSupabaseServices } from "@/hooks/useSupabaseServices";
+import type { AddonRule } from "@/hooks/useSuggestedAddons";
 import { toast } from "sonner";
 
-// ─── Deposit presets ─────────────────────────────────────────────────────
+// ─── Deposit presets ────────────────────────────────────────────────────────────────
 const DEPOSIT_PRESETS = [
   { label: "30%",  value: "30"  },
   { label: "50%",  value: "50"  },
@@ -26,14 +27,14 @@ const DEPOSIT_PRESETS = [
   { label: "Full", value: "100" },
 ];
 
-// ─── Sensitive keys — never shown in clear after first save ─────────────────────
+// ─── Sensitive keys ───────────────────────────────────────────────────────────────────────────
 const SENSITIVE_KEYS = new Set([
   "smtp_password",
   "google_maps_api_key",
   "google_service_account_json",
 ]);
 
-// ─── Sub-components ───────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────────────
 const SectionLabel = ({ label }: { label: string }) => (
   <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-white/25 px-1 pt-2">
     {label}
@@ -131,87 +132,160 @@ const SaveBtn = ({
   </button>
 );
 
-// ─── Suggested Add-ons Card ──────────────────────────────────────────────────
-interface SuggestedAddonsCardProps {
-  triggerIds: string[];
-  suggestIds: string[];
-  onChangeTriggers: (ids: string[]) => void;
-  onChangeSuggests: (ids: string[]) => void;
-  onSave: () => void;
-  saving: boolean;
-  saved: boolean;
-}
+// ─── Suggested Add-ons Card (rule builder) ────────────────────────────────────────────
 
 interface ServiceOption {
   id: string;
   name: string;
 }
 
-const ServiceCheckList = ({
-  label,
-  hint,
-  services,
-  selected,
-  onChange,
-}: {
-  label: string;
-  hint: string;
+interface RuleEditorProps {
+  rule: AddonRule;
+  index: number;
   services: ServiceOption[];
-  selected: string[];
-  onChange: (ids: string[]) => void;
-}) => {
-  const toggle = (id: string) => {
-    onChange(
-      selected.includes(id)
-        ? selected.filter((s) => s !== id)
-        : [...selected, id]
-    );
+  usedTriggerIds: string[];
+  onChange: (updated: AddonRule) => void;
+  onDelete: () => void;
+}
+
+const RuleEditor = ({ rule, index, services, usedTriggerIds, onChange, onDelete }: RuleEditorProps) => {
+  const [open, setOpen] = useState(true);
+
+  const triggerService = services.find((s) => s.id === rule.triggerId);
+
+  const toggleSuggest = (id: string) => {
+    const next = rule.suggestIds.includes(id)
+      ? rule.suggestIds.filter((s) => s !== id)
+      : [...rule.suggestIds, id];
+    onChange({ ...rule, suggestIds: next });
   };
 
+  // Services that can be set as trigger: not already a trigger in another rule
+  const triggerOptions = services.filter(
+    (s) => s.id === rule.triggerId || !usedTriggerIds.includes(s.id)
+  );
+
+  // Services that can be suggested: everything except the chosen trigger itself
+  const suggestOptions = services.filter((s) => s.id !== rule.triggerId);
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-        {label}
-      </label>
-      <p className="text-[10px] text-white/25 -mt-1">{hint}</p>
-      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
-        {services.map((s) => {
-          const checked = selected.includes(s.id);
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => toggle(s.id)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all ${
-                checked
-                  ? "border-white/25 bg-white/[0.08] text-white/85"
-                  : "border-white/[0.06] bg-white/[0.02] text-white/40 hover:border-white/15 hover:text-white/60"
-              }`}
-            >
-              <span
-                className={`w-3.5 h-3.5 rounded shrink-0 border flex items-center justify-center transition-all ${
-                  checked ? "border-white/50 bg-white/20" : "border-white/20"
-                }`}
-              >
-                {checked && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-              </span>
-              <span className="text-xs font-medium truncate">{s.name}</span>
-            </button>
-          );
-        })}
-        {services.length === 0 && (
-          <p className="text-[10px] text-white/20 py-2 px-1">No active services found.</p>
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+      {/* Rule header */}
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <span className="text-[10px] font-bold text-white/20 w-4 shrink-0">#{index + 1}</span>
+        <span className="text-xs font-semibold text-white/60 flex-1 truncate">
+          {triggerService?.name ?? <span className="text-white/25 italic">no trigger selected</span>}
+        </span>
+        {rule.suggestIds.length > 0 && (
+          <span className="text-[10px] text-white/30 shrink-0">
+            {rule.suggestIds.length} add-on{rule.suggestIds.length !== 1 ? "s" : ""}
+          </span>
         )}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="p-1 text-white/30 hover:text-white/60 transition-colors"
+          aria-label={open ? "Collapse" : "Expand"}
+        >
+          {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="p-1 text-white/20 hover:text-red-400 transition-colors"
+          aria-label="Delete rule"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
       </div>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 flex flex-col gap-3 border-t border-white/[0.06] pt-3">
+
+              {/* Trigger picker */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
+                  Trigger service
+                </label>
+                <select
+                  value={rule.triggerId}
+                  onChange={(e) => onChange({ ...rule, triggerId: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 focus:outline-none focus:border-white/20 transition-colors"
+                >
+                  <option value="" className="bg-zinc-900">— pick a trigger —</option>
+                  {triggerOptions.map((s) => (
+                    <option key={s.id} value={s.id} className="bg-zinc-900">{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Add-on checklist */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
+                  Suggest these add-ons
+                </label>
+                {rule.triggerId === "" ? (
+                  <p className="text-[10px] text-white/20 italic py-1">Select a trigger first.</p>
+                ) : (
+                  <div className="flex flex-col gap-1 max-h-40 overflow-y-auto pr-1">
+                    {suggestOptions.map((s) => {
+                      const checked = rule.suggestIds.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => toggleSuggest(s.id)}
+                          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-left transition-all ${
+                            checked
+                              ? "border-amber-400/30 bg-amber-400/[0.07] text-white/85"
+                              : "border-white/[0.06] bg-white/[0.02] text-white/40 hover:border-white/15 hover:text-white/60"
+                          }`}
+                        >
+                          <span
+                            className={`w-3.5 h-3.5 rounded shrink-0 border flex items-center justify-center transition-all ${
+                              checked ? "border-amber-400/50 bg-amber-400/20" : "border-white/20"
+                            }`}
+                          >
+                            {checked && <Check className="w-2.5 h-2.5 text-amber-300" strokeWidth={3} />}
+                          </span>
+                          <span className="text-xs font-medium truncate">{s.name}</span>
+                        </button>
+                      );
+                    })}
+                    {suggestOptions.length === 0 && (
+                      <p className="text-[10px] text-white/20 italic py-1">No other services available.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
+interface SuggestedAddonsCardProps {
+  rules: AddonRule[];
+  onChangeRules: (rules: AddonRule[]) => void;
+  onSave: () => void;
+  saving: boolean;
+  saved: boolean;
+}
+
 const SuggestedAddonsCard = ({
-  triggerIds,
-  suggestIds,
-  onChangeTriggers,
-  onChangeSuggests,
+  rules,
+  onChangeRules,
   onSave,
   saving,
   saved,
@@ -223,12 +297,26 @@ const SuggestedAddonsCard = ({
     name: s.name,
   }));
 
+  const usedTriggerIds = rules.map((r) => r.triggerId).filter(Boolean);
+
+  const addRule = () => {
+    onChangeRules([...rules, { triggerId: "", suggestIds: [] }]);
+  };
+
+  const updateRule = (index: number, updated: AddonRule) => {
+    onChangeRules(rules.map((r, i) => (i === index ? updated : r)));
+  };
+
+  const deleteRule = (index: number) => {
+    onChangeRules(rules.filter((_, i) => i !== index));
+  };
+
   return (
     <SettingsCard title="Suggested Add-ons" icon={Zap} gradient="from-amber-500/[0.05] to-white/[0.02]">
       <p className="text-[11px] text-white/35 leading-relaxed -mt-1">
-        When a guest selects a <strong className="text-white/50">trigger</strong> service,
-        the booking form will suggest the <strong className="text-white/50">add-on</strong> services below it.
-        Only unselected add-ons are shown.
+        Define rules: each rule picks one <strong className="text-white/50">trigger</strong> service
+        and the <strong className="text-white/50">add-ons</strong> to suggest when a guest selects it.
+        Multiple triggers can each have their own independent add-on list.
       </p>
 
       {isLoading ? (
@@ -236,22 +324,43 @@ const SuggestedAddonsCard = ({
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading services...
         </div>
       ) : (
-        <>
-          <ServiceCheckList
-            label="Trigger Services"
-            hint="Selecting any of these shows the suggestion strip."
-            services={serviceOptions}
-            selected={triggerIds}
-            onChange={onChangeTriggers}
-          />
-          <ServiceCheckList
-            label="Add-on Suggestions"
-            hint="These services are shown as suggestions to the guest."
-            services={serviceOptions}
-            selected={suggestIds}
-            onChange={onChangeSuggests}
-          />
-        </>
+        <div className="flex flex-col gap-2">
+          <AnimatePresence>
+            {rules.map((rule, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4, height: 0 }}
+                transition={{ duration: 0.16 }}
+              >
+                <RuleEditor
+                  rule={rule}
+                  index={i}
+                  services={serviceOptions}
+                  usedTriggerIds={usedTriggerIds.filter((_, idx) => idx !== i)}
+                  onChange={(updated) => updateRule(i, updated)}
+                  onDelete={() => deleteRule(i)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {rules.length === 0 && (
+            <p className="text-[10px] text-white/20 italic py-1 px-1">
+              No rules yet. Add one to start suggesting add-ons.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={addRule}
+            disabled={serviceOptions.length === 0}
+            className="flex items-center gap-1.5 self-start px-3 py-1.5 rounded-lg border border-dashed border-white/[0.15] text-xs text-white/40 hover:text-white/70 hover:border-white/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Plus className="w-3 h-3" /> Add rule
+          </button>
+        </div>
       )}
 
       <div className="flex items-center gap-3">
@@ -266,7 +375,7 @@ const SuggestedAddonsCard = ({
   );
 };
 
-// ─── Main component ────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────────────────────
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
@@ -289,12 +398,11 @@ const AdminSettings = () => {
   const [gcalSyncing, setGcalSyncing]       = useState(false);
   const [gcalSyncResult, setGcalSyncResult] = useState<string | null>(null);
 
-  // ── Suggested add-ons state ────────────────────────────────────────────
-const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
-  const [addonSuggestIds, setAddonSuggestIds] = useState<string[]>([]);
-  const [addonSaved, setAddonSaved]           = useState(false);
+  // ── Suggested add-ons state (rules model) ───────────────────────────────────────────
+  const [addonRules, setAddonRules] = useState<AddonRule[]>([]);
+  const [addonSaved, setAddonSaved] = useState(false);
 
-  // ── Booking URL ───────────────────────────────────────────────────────────
+  // ── Booking URL ──────────────────────────────────────────────────────────────────────
   const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
   const customDomain      = (draft.custom_domain ?? "").trim();
   const activeBookingUrl  = customDomain ? `https://${customDomain}` : defaultBookingUrl;
@@ -304,7 +412,7 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
     toast.success("Copied to clipboard");
   };
 
-  // ── Draft initialisation ─────────────────────────────────────────────────
+  // ── Draft initialisation ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (tenant) {
       setDraft((prev) => ({
@@ -325,12 +433,32 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
     if (Object.keys(appSettings).length > 0) {
       setDraft((prev) => ({ ...prev, ...appSettings }));
 
-      // Hydrate suggested add-ons from saved JSON
+      // Hydrate add-on rules from saved JSON (supports both new rules[] and legacy flat shape)
       if (appSettings.suggested_addons) {
         try {
           const parsed = JSON.parse(appSettings.suggested_addons);
-          setAddonTriggerIds(Array.isArray(parsed.triggerIds) ? parsed.triggerIds : []);
-          setAddonSuggestIds(Array.isArray(parsed.suggestIds) ? parsed.suggestIds : []);
+
+          if (Array.isArray(parsed.rules)) {
+            // New shape
+            setAddonRules(
+              parsed.rules.filter(
+                (r: unknown): r is AddonRule =>
+                  !!r &&
+                  typeof r === "object" &&
+                  typeof (r as AddonRule).triggerId === "string" &&
+                  Array.isArray((r as AddonRule).suggestIds)
+              )
+            );
+          } else if (Array.isArray(parsed.triggerIds) && Array.isArray(parsed.suggestIds)) {
+            // Legacy flat shape → convert on load
+            const suggestIds: string[] = parsed.suggestIds;
+            setAddonRules(
+              (parsed.triggerIds as string[]).map((triggerId: string) => ({
+                triggerId,
+                suggestIds,
+              }))
+            );
+          }
         } catch {
           // malformed — leave empty
         }
@@ -354,7 +482,7 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
     !unmasked.has(key) &&
     !!appSettings[key];
 
-  // ── Save: tenant-table fields ───────────────────────────────────────────────
+  // ── Save: tenant-table fields ─────────────────────────────────────────────────────────────────
   const saveTenantFields = (section: string, fields: string[]) => {
     const tenantUpdates: Record<string, unknown> = {};
     fields.forEach((f) => { tenantUpdates[f] = draft[f] ?? ""; });
@@ -371,7 +499,7 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
     flash(section);
   };
 
-  // ── Save: app_settings-only fields ────────────────────────────────────────────
+  // ── Save: app_settings-only fields ──────────────────────────────────────────────────────────────
   const saveSettings = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => {
@@ -389,18 +517,19 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
     flash(section);
   };
 
-  // ── Save: suggested add-ons ─────────────────────────────────────────────────
+  // ── Save: suggested add-on rules ──────────────────────────────────────────────────────────────
   const saveSuggestedAddons = () => {
-    const json = JSON.stringify({
-      triggerIds: addonTriggerIds,
-      suggestIds: addonSuggestIds,
-    });
+    // Only persist rules that have both a trigger and at least one suggestion
+    const validRules = addonRules.filter(
+      (r) => r.triggerId !== "" && r.suggestIds.length > 0
+    );
+    const json = JSON.stringify({ rules: validRules });
     upsertSetting.mutate({ suggested_addons: json });
     setAddonSaved(true);
     setTimeout(() => setAddonSaved(false), 3500);
   };
 
-  // ── Logo upload ─────────────────────────────────────────────────────────────
+  // ── Logo upload ──────────────────────────────────────────────────────────────────────
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -426,7 +555,7 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
     }
   };
 
-  // ── Password change ────────────────────────────────────────────────────────
+  // ── Password change ─────────────────────────────────────────────────────────────────────────
   const handlePasswordChange = async () => {
     setPwError(""); setPwSuccess("");
     if (newPw.length < 6) { setPwError("Must be at least 6 characters"); return; }
@@ -437,7 +566,7 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
     setPwSuccess("Password updated successfully");
   };
 
-  // ── GCal backfill ──────────────────────────────────────────────────────────
+  // ── GCal backfill ────────────────────────────────────────────────────────────────────────
   const handleGcalBackfill = async () => {
     if (gcalSyncing) return;
     setGcalSyncing(true);
@@ -462,8 +591,8 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
       const result = `${data.created} created, ${data.skipped} skipped`;
       setGcalSyncResult(result);
       toast.success(`Calendar sync complete — ${data.created} events created`);
-    } catch (e: any) {
-      toast.error(e.message || "Sync failed");
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "Sync failed");
     } finally {
       setGcalSyncing(false);
     }
@@ -819,12 +948,10 @@ const [addonTriggerIds, setAddonTriggerIds] = useState<string[]>([]);
             </div>
           </SettingsCard>
 
-          {/* ── Suggested Add-ons ── */}
+          {/* ── Suggested Add-ons rule builder ── */}
           <SuggestedAddonsCard
-            triggerIds={addonTriggerIds}
-            suggestIds={addonSuggestIds}
-            onChangeTriggers={setAddonTriggerIds}
-            onChangeSuggests={setAddonSuggestIds}
+            rules={addonRules}
+            onChangeRules={setAddonRules}
             onSave={saveSuggestedAddons}
             saving={upsertSetting.isPending}
             saved={addonSaved}
