@@ -102,11 +102,11 @@ const Signup = () => {
                 />
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-1.5">
+                <label htmlFor="signup-email" className="block text-sm font-medium mb-1.5">
                   Email
                 </label>
                 <input
-                  id="email"
+                  id="signup-email"
                   type="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(""); }}
@@ -116,11 +116,11 @@ const Signup = () => {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1.5">
+                <label htmlFor="signup-password" className="block text-sm font-medium mb-1.5">
                   Password
                 </label>
                 <input
-                  id="password"
+                  id="signup-password"
                   type="password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}

@@ -172,7 +172,7 @@ function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) 
       </div>
       <div className="relative" onClick={loadTenants}>
         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
-        <select value={selectedId} onChange={e => { setSelectedId(e.target.value); setSaved(false); }}
+        <select id="feature-flags-tenant" name="feature-flags-tenant" value={selectedId} onChange={e => { setSelectedId(e.target.value); setSaved(false); }}
           className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-9 py-2.5 text-sm text-white/70 focus:outline-none focus:border-[rgba(0,200,83,0.30)] transition-colors appearance-none">
           <option value="" className="bg-[hsl(220,13%,10%)]">— Select a tenant —</option>
           {tenants.map(t => <option key={t.id} value={t.id} className="bg-[hsl(220,13%,10%)] text-white">{t.name}</option>)}

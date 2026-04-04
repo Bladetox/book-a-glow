@@ -313,6 +313,8 @@ export default function SATroubleshoot() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
             <input
+              id="troubleshoot-search"
+              name="troubleshoot-search"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && search()}
@@ -522,6 +524,8 @@ export default function SATroubleshoot() {
                 {/* Support note */}
                 <div className="px-5 pb-5 flex gap-3">
                   <input
+                    id="troubleshoot-note"
+                    name="troubleshoot-note"
                     value={note}
                     onChange={e => setNote(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && fix("note")}

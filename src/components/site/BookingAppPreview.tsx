@@ -890,6 +890,8 @@ const BookingAppPreview = () => {
                 <div key={f.key} className="relative">
                   <f.icon className="absolute left-3.5 top-3.5 w-4 h-4" style={S.muted} />
                   <input
+                    id={`preview-${f.key}`}
+                    name={f.key}
                     type={f.type}
                     value={form[f.key]}
                     onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}

@@ -236,9 +236,9 @@ const RuleEditor = ({ rule, index, services, usedTriggerIds, onChange, onDelete 
 
               {/* Add-on checklist */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
+                <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
                   Suggest these add-ons
-                </label>
+                </span>
                 {rule.triggerId === "" ? (
                   <p className="text-[10px] text-white/20 italic py-1">Select a trigger first.</p>
                 ) : (
@@ -634,9 +634,9 @@ const AdminSettings = () => {
         </h4>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+          <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
             {customDomain ? "Custom Domain (active)" : "Default URL (active)"}
-          </label>
+          </span>
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-emerald-500/20 min-w-0">
               <span className="text-sm text-white/80 truncate font-mono">{activeBookingUrl}</span>
@@ -660,9 +660,9 @@ const AdminSettings = () => {
 
         {customDomain && (
           <div className="flex items-center gap-2">
-            <label className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 shrink-0">
+            <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 shrink-0">
               Fallback:
-            </label>
+            </span>
             <span className="text-xs text-white/35 font-mono truncate">{defaultBookingUrl}</span>
             <button onClick={() => copyUrl(defaultBookingUrl)} className="text-white/25 hover:text-white/50 transition-colors shrink-0">
               <Copy className="w-3 h-3" />
@@ -931,9 +931,9 @@ const AdminSettings = () => {
 
           <SettingsCard title="Custom Domain" icon={Link} gradient="from-white/[0.06] to-white/[0.02]">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+              <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
                 Default URL
-              </label>
+              </span>
               <div className="flex items-center gap-2">
                 <p className="flex-1 text-xs text-white/50 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] font-mono truncate">
                   {defaultBookingUrl}

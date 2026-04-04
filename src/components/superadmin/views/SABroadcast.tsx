@@ -63,8 +63,10 @@ export default function SABroadcast() {
 
         {/* Title */}
         <div>
-          <label className="text-[10px] text-white/30 uppercase tracking-widest font-semibold block mb-1.5">Title</label>
+          <label htmlFor="broadcast-title" className="text-[10px] text-white/30 uppercase tracking-widest font-semibold block mb-1.5">Title</label>
           <input
+            id="broadcast-title"
+            name="broadcast-title"
             value={title} onChange={e => setTitle(e.target.value)}
             placeholder="e.g. Scheduled maintenance tonight"
             className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[rgba(0,200,83,0.50)] transition-colors"
@@ -73,8 +75,10 @@ export default function SABroadcast() {
 
         {/* Body */}
         <div>
-          <label className="text-[10px] text-white/30 uppercase tracking-widest font-semibold block mb-1.5">Message</label>
+          <label htmlFor="broadcast-message" className="text-[10px] text-white/30 uppercase tracking-widest font-semibold block mb-1.5">Message</label>
           <textarea
+            id="broadcast-message"
+            name="broadcast-message"
             value={body} onChange={e => setBody(e.target.value)}
             placeholder="Full message to tenants…"
             rows={4}

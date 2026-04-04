@@ -45,16 +45,20 @@ export default function SASettings() {
         <SectionHeader icon={KeyRound} title="Change Password" desc="Update your Super Admin account password." />
         <div className="p-5 space-y-4">
           <div className="space-y-1">
-            <label className="text-[11px] text-white/30 font-medium uppercase tracking-wider">New password</label>
+            <label htmlFor="sa-new-password" className="text-[11px] text-white/30 font-medium uppercase tracking-wider">New password</label>
             <input
+              id="sa-new-password"
+              name="sa-new-password"
               type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
               placeholder="Min 8 characters"
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder-white/15 outline-none focus:border-[rgba(0,200,83,0.3)] transition-colors"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Confirm password</label>
+            <label htmlFor="sa-confirm-password" className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Confirm password</label>
             <input
+              id="sa-confirm-password"
+              name="sa-confirm-password"
               type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
               placeholder="Repeat password"
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder-white/15 outline-none focus:border-[rgba(0,200,83,0.3)] transition-colors"

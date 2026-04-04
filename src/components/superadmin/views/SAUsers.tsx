@@ -46,12 +46,16 @@ export default function SAUsers() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
           <input
+            id="sa-users-search"
+            name="sa-users-search"
             value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Search name, email, ID…"
             className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl pl-9 pr-4 py-2 text-sm text-white/70 placeholder-white/20 outline-none focus:border-[rgba(0,200,83,0.3)] transition-colors"
           />
         </div>
         <select
+          id="sa-users-role-filter"
+          name="sa-users-role-filter"
           value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
           className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2 text-sm text-white/50 outline-none focus:border-[rgba(0,200,83,0.3)] transition-colors"
         >

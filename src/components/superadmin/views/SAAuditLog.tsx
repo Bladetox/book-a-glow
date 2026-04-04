@@ -73,6 +73,8 @@ export default function SAAuditLog() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
             <input
+              id="audit-search"
+              name="audit-search"
               value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search action, label, actor…"
               className="pl-8 pr-3 py-2 text-xs bg-white/[0.03] border border-white/[0.07] rounded-xl text-white/60 placeholder:text-white/20 focus:outline-none focus:border-[rgba(0,200,83,0.40)] w-56"

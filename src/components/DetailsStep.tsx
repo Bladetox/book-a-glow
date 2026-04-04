@@ -264,6 +264,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
             <div className="glass-card-service rounded-2xl p-4 flex flex-col gap-2">
               <p className="text-sm text-foreground">Have there been any changes since your last appointment?</p>
               <textarea
+                id="existing-client-notes"
+                name="existing-client-notes"
                 className={`${inputClass} min-h-[70px]`}
                 placeholder="e.g. skin sensitivity changes, new medications, preferences…"
                 value={booking.existingClientNotes}
@@ -333,6 +335,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                 </motion.div>
               ))}
               <textarea
+                id="additional-notes"
+                name="additional-notes"
                 className={`${inputClass} min-h-[60px]`}
                 placeholder="Anything else we should know? (optional)"
                 value={booking.additionalNotes}
@@ -355,6 +359,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
           <User className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
             ref={nameInputRef}
+            id="booking-full-name"
+            name="full-name"
             className={`${inputClass} pl-10 ${getValidationClass("fullName", booking.fullName)}`}
             placeholder="Full Name *"
             value={booking.fullName}
@@ -371,6 +377,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         <div className="relative">
           <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <select
+            id="booking-phone-code"
+            name="phone-code"
             className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10 [&>option]:bg-background [&>option]:text-foreground"
             value={booking.phoneCode}
             onChange={(e) => onUpdate({ phoneCode: e.target.value })}
@@ -382,6 +390,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
             ))}
           </select>
           <input
+            id="booking-phone"
+            name="phone"
             className={`${inputClass} pl-[7.5rem] ${getValidationClass("phone", booking.phone)}`}
             placeholder="e.g. 82 123 4567 *"
             type="tel"
@@ -400,6 +410,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         <div className="relative">
           <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           <input
+            id="booking-email"
+            name="email"
             className={`${inputClass} pl-10 ${getValidationClass("email", booking.email)}`}
             type="email"
             inputMode="email"
@@ -442,6 +454,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
             )}
 
             <input
+              id="booking-address"
+              name="address"
               className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
               placeholder="Home Address *"
               value={booking.address}
