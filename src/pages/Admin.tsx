@@ -65,7 +65,6 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   };
 
   return (
-    // FIX: replace min-h-dvh with min-h-screen — dvh has inconsistent support on mobile Safari < 16
     <div className="min-h-screen bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex overflow-hidden">
       <AdminSidebar
         views={views as unknown as string[]}
@@ -75,7 +74,6 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* FIX: main area uses min-h-screen not min-h-dvh; overflow-hidden prevents sidebar bleed */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-14 lg:pb-0">
         <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06] shrink-0">
           <button
@@ -119,11 +117,19 @@ const Admin = () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!user || error) { setAuthState("unauthenticated"); return; }
+
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role, tenant_id")
-        .eq("user_id", user.id);
-      const adminRole = roles?.find(r => r.role === "owner" || r.role === "admin");
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      // Prefer 'owner' first — prevents a super-admin with stale 'admin' rows on
+      // other tenants from being routed into the wrong tenant context.
+      const adminRole =
+        roles?.find(r => r.role === "owner") ??
+        roles?.find(r => r.role === "admin");
+
       if (adminRole) {
         setTenantId(adminRole.tenant_id);
         setUserId(user.id);
@@ -158,7 +164,6 @@ const Admin = () => {
 
   if (authState === "loading") {
     return (
-      // FIX: min-h-screen fallback here too
       <div className="min-h-screen bg-[hsl(0,0%,3%)] flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
       </div>
