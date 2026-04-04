@@ -1,5 +1,5 @@
 import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
-import { useSuggestedAddons } from "@/hooks/useSuggestedAddons";
+import { useSuggestedAddons, getActiveSuggestions } from "@/hooks/useSuggestedAddons";
 import { useState, useMemo } from "react";
 import { Loader2, Plus, Minus, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,23 +16,16 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
   const { data: addonsConfig } = useSuggestedAddons();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  // ── Derive suggestion strip ──────────────────────────────────────────────
+  // ── Derive suggestion strip ──────────────────────────────────────────────────────────────────
   const suggestionStrip = useMemo(() => {
-    if (!addonsConfig || !addonsConfig.triggerIds.length || !addonsConfig.suggestIds.length) {
-      return null;
-    }
+    if (!addonsConfig) return null;
 
-    // Is any trigger currently selected?
-    const triggered = selectedTreatments.some((id) =>
-      addonsConfig.triggerIds.includes(id)
-    );
-    if (!triggered) return null;
+    const suggestedIds = getActiveSuggestions(addonsConfig, selectedTreatments);
+    if (suggestedIds.length === 0) return null;
 
-    // Resolve suggested service objects, excluding ones already selected
-    const suggestions = addonsConfig.suggestIds
+    const suggestions = suggestedIds
       .map((id) => treatments.find((t) => t.id === id))
-      .filter((t): t is NonNullable<typeof t> => !!t)
-      .filter((t) => !selectedTreatments.includes(t.id));
+      .filter((t): t is NonNullable<typeof t> => !!t);
 
     return suggestions.length > 0 ? suggestions : null;
   }, [addonsConfig, selectedTreatments, treatments]);
@@ -193,7 +186,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
         </motion.div>
       </AnimatePresence>
 
-      {/* ── Add-on suggestion strip ─────────────────────────────────────────── */}
+      {/* ── Add-on suggestion strip ────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {suggestionStrip && (
           <motion.div
