@@ -43,11 +43,25 @@ const stepVariants = {
   }),
 };
 
-const PrefetchAvailability = ({ durationMinutes }: { durationMinutes: number }) => {
+/**
+ * Prefetches availability for current + next month once the tenant is resolved
+ * and the splash has been dismissed.
+ *
+ * PERF: accepts staffId (ownerId from context) so the hook can skip its own
+ * getStaffId DB round-trip. Rendered only after splash is gone so it does not
+ * compete with the critical-path queries on first load.
+ */
+const PrefetchAvailability = ({
+  durationMinutes,
+  staffId,
+}: {
+  durationMinutes: number;
+  staffId: string;
+}) => {
   const now = new Date();
-  useMonthAvailability(now.getFullYear(), now.getMonth() + 1, durationMinutes);
+  useMonthAvailability(now.getFullYear(), now.getMonth() + 1, durationMinutes, staffId);
   const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  useMonthAvailability(next.getFullYear(), next.getMonth() + 1, durationMinutes);
+  useMonthAvailability(next.getFullYear(), next.getMonth() + 1, durationMinutes, staffId);
   return null;
 };
 
@@ -67,7 +81,7 @@ const Index = () => {
     setStep,
   } = useBooking();
   const { data: treatments = [] } = usePublicServices();
-  const { tenantId, loading: tenantLoading } = usePublicTenant();
+  const { tenantId, ownerId, loading: tenantLoading } = usePublicTenant();
   const config = usePublicBusinessConfig();
   const slotHold = useSlotHold();
   const [direction, setDirection] = useState(1);
@@ -142,7 +156,14 @@ const Index = () => {
   return (
     <>
       <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-32">
-        <PrefetchAvailability durationMinutes={durationForSlots} />
+        {/*
+          Prefetch availability ONLY after:
+          1. Tenant is fully resolved (ownerId is available — skips getStaffId DB call)
+          2. Splash is dismissed (avoids competing with critical-path queries on load)
+        */}
+        {!showSplash && ownerId && (
+          <PrefetchAvailability durationMinutes={durationForSlots} staffId={ownerId} />
+        )}
 
         <div className="w-full max-w-md">
           <motion.div
