@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import { toast } from "sonner";
 
 export interface Service {
   id: string;
@@ -117,6 +118,10 @@ export function useDeleteService() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services", tenantId] });
       qc.invalidateQueries({ queryKey: ["service-categories", tenantId] });
+      toast.success("Service deleted");
+    },
+    onError: (err: Error) => {
+      toast.error(`Delete failed: ${err.message}`);
     },
   });
 }
