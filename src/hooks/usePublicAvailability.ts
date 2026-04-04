@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { getTenantSlug } from "@/lib/tenant-resolver";
 
-/** Resolve the staff/owner id for a tenant */
+/** Resolve the staff/owner id for a tenant — used only when ownerId is unavailable from context */
 async function getStaffId(tenantId: string): Promise<string> {
   const { data, error } = await supabase
     .from("tenants")
@@ -14,18 +14,31 @@ async function getStaffId(tenantId: string): Promise<string> {
   return data.owner_id;
 }
 
-export function useMonthAvailability(year: number, month: number, durationMinutes: number = 60) {
-  const { tenantId } = usePublicTenant();
+/**
+ * Fetch available slots for an entire month.
+ * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
+ */
+export function useMonthAvailability(
+  year: number,
+  month: number,
+  durationMinutes: number = 60,
+  staffId?: string
+) {
+  const { tenantId, ownerId } = usePublicTenant();
+  const resolvedStaffId = staffId || ownerId || null;
 
   return useQuery({
     queryKey: ["public-month-availability", tenantId, year, month, durationMinutes],
     enabled: !!tenantId,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    // 2-min cache — slots won't change second-to-second; avoids re-fetching on every
+    // window focus event (e.g. guest switches app on mobile and comes back)
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
-      const staffId = await getStaffId(tenantId);
+      // Use ownerId already in context; fall back to DB only if somehow missing
+      const sid = resolvedStaffId ?? await getStaffId(tenantId);
       const { data, error } = await supabase.rpc("get_month_availability", {
-        p_staff_id: staffId,
+        p_staff_id: sid,
         p_year: year,
         p_month: month,
       });
@@ -40,19 +53,29 @@ export function useMonthAvailability(year: number, month: number, durationMinute
   });
 }
 
-export function useDateSlots(date: string | null, durationMinutes: number = 60, sessionToken?: string) {
-  const { tenantId } = usePublicTenant();
+/**
+ * Fetch available slots for a specific date.
+ * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
+ */
+export function useDateSlots(
+  date: string | null,
+  durationMinutes: number = 60,
+  sessionToken?: string,
+  staffId?: string
+) {
+  const { tenantId, ownerId } = usePublicTenant();
+  const resolvedStaffId = staffId || ownerId || null;
 
   return useQuery({
     queryKey: ["public-date-slots", tenantId, date, durationMinutes],
     enabled: !!date && !!tenantId,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!date) return [];
-      const staffId = await getStaffId(tenantId);
+      const sid = resolvedStaffId ?? await getStaffId(tenantId);
       const { data, error } = await supabase.rpc("get_available_slots", {
-        p_staff_id:         staffId,
+        p_staff_id:         sid,
         p_date:             date,
         p_duration_minutes: durationMinutes,
       } as any);
