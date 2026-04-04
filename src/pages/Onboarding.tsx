@@ -160,6 +160,7 @@ const Onboarding = () => {
           name: s.name.trim(),
           price: parseFloat(s.price) || 0,
           duration_minutes: parseInt(s.duration, 10),
+          category: businessType ?? "General",
           is_active: true,
         }));
         const { error: svcErr } = await supabase.from("services").insert(serviceRows);
