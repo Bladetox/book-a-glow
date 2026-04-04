@@ -15,9 +15,6 @@ function resolveClientKey(b: any): string {
   return b.client_id || b.guest_email || b.guest_phone || b.id;
 }
 
-// Lead source values that describe client TYPE, not acquisition channel.
-// These are filtered out of the Acquisition Channels card to prevent
-// conflating "I am a returning client" with a marketing channel.
 const CLIENT_TYPE_LABELS = ["returning client", "returning", "existing client", "existing"];
 function isClientTypeLabel(src: string): boolean {
   return CLIENT_TYPE_LABELS.includes(src.toLowerCase().trim());
@@ -29,6 +26,35 @@ const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5,
 
 const STAFF_ROLES = ["owner", "admin", "staff"] as const;
 
+// ─── helper: build top-5 services from a list of bookings ───────────────────
+// Deduplicates services within a single booking (same service_name only counted
+// once per booking) and sorts by count desc, then revenue desc.
+function buildTopServices(
+  bookingRows: any[],
+  limit = 5,
+): { name: string; count: number; revenue: number }[] {
+  const svcMap = new Map<string, { count: number; revenue: number }>();
+  bookingRows.forEach((b: any) => {
+    const seen = new Set<string>();
+    [...(b.items ?? [])]
+      .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
+      .forEach((i: any) => {
+        const name = i.service_name;
+        if (!name || seen.has(name)) return;
+        seen.add(name);
+        const prev = svcMap.get(name) || { count: 0, revenue: 0 };
+        svcMap.set(name, {
+          count:   prev.count + 1,
+          revenue: prev.revenue + Number(i.price ?? 0),
+        });
+      });
+  });
+  return [...svcMap.entries()]
+    .map(([name, d]) => ({ name, ...d }))
+    .sort((a, b) => b.count - a.count || b.revenue - a.revenue)
+    .slice(0, limit);
+}
+
 // ─── main hook ──────────────────────────────────────────────────────────────
 export function useDashboardData() {
   const { tenantId } = useTenant();
@@ -39,12 +65,7 @@ export function useDashboardData() {
   const prevStart    = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
   const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
 
-  // 90-day display window — used for revenueTrend rendering
   const ninetyDaysAgo = format(subDays(now, 90), "yyyy-MM-dd");
-
-  // 91-day fetch window — one extra day buffer to absorb SAST (UTC+2) timezone
-  // offset: a payment recorded at e.g. 01:00 SAST on Jan 4 has a created_at of
-  // "2026-01-03T23:00:00Z", which would be excluded by a hard "2026-01-04" cutoff.
   const fetchFromDate = format(subDays(now, 91), "yyyy-MM-dd");
 
   // 1. Bookings — current month
@@ -83,7 +104,7 @@ export function useDashboardData() {
     },
   });
 
-  // 2. Previous month bookings — client identity fields added for retention calc
+  // 2. Previous month bookings
   const { data: prevBookings = [], isLoading: l2 } = useQuery({
     queryKey:  ["dash-bookings-prev", tenantId, prevStart],
     staleTime: 10 * 60 * 1000,
@@ -100,10 +121,7 @@ export function useDashboardData() {
     },
   });
 
-  // 3. Payments — fetched from 91 days ago (timezone buffer) to end of today.
-  //    Upper bound is todayStr (not monthEnd) — no point fetching future dates.
-  //    The extra day in fetchFromDate ensures SAST-offset timestamps on the
-  //    90-day boundary are never accidentally excluded by UTC comparison.
+  // 3. Payments — 91-day window (SAST timezone buffer)
   const { data: allPayments = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-payments", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
@@ -169,7 +187,7 @@ export function useDashboardData() {
     },
   });
 
-  // 7. All-time lead source — no date filter, used for Acquisition Channels card
+  // 7. All-time lead source
   const { data: allLeadSourceBookings = [] } = useQuery({
     queryKey:  ["dash-lead-source-all", tenantId],
     staleTime: 10 * 60 * 1000,
@@ -184,11 +202,7 @@ export function useDashboardData() {
     },
   });
 
-  // 8. 90-day bookings — for revenue trend fallback.
-  //    Many older bookings have no rows in the payments table; their revenue is
-  //    recorded directly on bookings.total_amount with final_payment_paid=true
-  //    or full_payment_received=true. We fetch these so the chart is not blank.
-  //    We only include non-cancelled, fully-paid bookings.
+  // 8. 90-day bookings — revenue trend fallback (bookings without payments rows)
   const { data: trendBookings = [], isLoading: l6 } = useQuery({
     queryKey:  ["dash-trend-bookings", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
@@ -200,6 +214,27 @@ export function useDashboardData() {
         .neq("status", "cancelled")
         .gte("booking_date", fetchFromDate)
         .lte("booking_date", todayStr);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // 9. All-time bookings (non-cancelled) with booking_items — for allTimeTopServices.
+  //    staleTime is long (15 min) because this is historical, changes infrequently.
+  //    We select only the fields needed for service aggregation.
+  const { data: allTimeBookings = [], isLoading: l7 } = useQuery({
+    queryKey:  ["dash-alltime-bookings", tenantId],
+    staleTime: 15 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(`
+          id,
+          status,
+          items:booking_items(service_name, price, sort_order)
+        `)
+        .eq("tenant_id", tenantId)
+        .neq("status", "cancelled");
       if (error) throw error;
       return data ?? [];
     },
@@ -275,53 +310,32 @@ export function useDashboardData() {
   [todayBookings, nowMins]);
   const nextAppt = upcoming[0] as any;
 
-  // ─── top services ─────────────────────────────────────────────────────────
-  const topServices = useMemo(() => {
-    const svcMap = new Map<string, { count: number; revenue: number }>();
-    active.forEach((b: any) => {
-      const seen = new Set<string>();
-      [...(b.items ?? [])]
-        .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
-        .forEach((i: any) => {
-          const name = i.service_name;
-          if (!name || seen.has(name)) return;
-          seen.add(name);
-          const prev = svcMap.get(name) || { count: 0, revenue: 0 };
-          svcMap.set(name, { count: prev.count + 1, revenue: prev.revenue + Number(i.price) });
-        });
-    });
-    return [...svcMap.entries()]
-      .map(([name, d]) => ({ name, ...d }))
-      .sort((a, b) => b.count - a.count || b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [active]);
+  // ─── top services (this month) ────────────────────────────────────────────
+  // Built from current-month non-cancelled bookings (query 1 → `active`).
+  const topServices = useMemo(
+    () => buildTopServices(active),
+    [active]
+  );
+
+  // ─── all-time top services ────────────────────────────────────────────────
+  // Built from query 9 — all non-cancelled bookings across all time.
+  // Uses the same buildTopServices helper so ranking logic is identical.
+  // Shows a loading skeleton in the UI while l7 is true.
+  const allTimeTopServices = useMemo(
+    () => buildTopServices(allTimeBookings),
+    [allTimeBookings]
+  );
 
   // ─── revenue trend ────────────────────────────────────────────────────────
-  // Strategy (two-source, no double-count):
-  //
-  // 1. Seed the trendMap from trendBookings (fully-paid bookings keyed by
-  //    booking_date). This covers the majority of historical bookings that
-  //    have no row in the payments table.
-  //
-  // 2. Build a Set of dates that ARE covered by the payments table. For those
-  //    dates, REPLACE the booking-derived total with the payments-table total
-  //    so we never double-count (some bookings may have both a payments row
-  //    AND total_amount set).
-  //
-  // Result: every revenue-generating day is represented, regardless of whether
-  // revenue was captured in the payments table or only on bookings.total_amount.
   const revenueTrend = useMemo(() => {
-    // Step 1 — seed from paid bookings (fallback source)
     const bookingMap: Record<string, number> = {};
     trendBookings.forEach((b: any) => {
       const d = (b.booking_date ?? "").slice(0, 10);
       if (!d || d < ninetyDaysAgo || d > todayStr) return;
-      // Only include if fully paid
       if (!b.final_payment_paid && !b.full_payment_received) return;
       bookingMap[d] = (bookingMap[d] || 0) + Number(b.total_amount ?? 0);
     });
 
-    // Step 2 — build payments map (authoritative source where it exists)
     const paymentsMap: Record<string, number> = {};
     allPayments.forEach((p: any) => {
       const d = (p.created_at ?? "").slice(0, 10);
@@ -330,10 +344,9 @@ export function useDashboardData() {
       }
     });
 
-    // Step 3 — merge: payments table wins for any date it covers
     const trendMap: Record<string, number> = { ...bookingMap };
     Object.entries(paymentsMap).forEach(([d, amount]) => {
-      trendMap[d] = amount; // overwrite booking-derived value entirely
+      trendMap[d] = amount;
     });
 
     return eachDayOfInterval({
@@ -380,7 +393,6 @@ export function useDashboardData() {
       countMap.set(key, (countMap.get(key) || 0) + 1);
     });
     const keySet = new Set(active.map((b: any) => resolveClientKey(b)));
-
     const retained = [...keySet].filter(k => prevKeySet.has(k)).length;
 
     return {
@@ -390,9 +402,7 @@ export function useDashboardData() {
     };
   }, [active, prevBookings]);
 
-  // ─── lead source / acquisition channel breakdown ─────────────────────────
-  // Uses ALL-TIME bookings (query 7) so history beyond current month is included.
-  // Client-type self-reports ("Returning Client", "Existing") are excluded.
+  // ─── lead source / acquisition channel breakdown ──────────────────────────
   const leadSourceBreakdown = useMemo(() => {
     const map = new Map<string, number>();
     allLeadSourceBookings.forEach((b: any) => {
@@ -484,6 +494,7 @@ export function useDashboardData() {
   return {
     coreLoading,
     staffLoading,
+    allTimeServicesLoading: l7,
     revenue: {
       month:     monthRevenue,
       today:     todayRevenue,
@@ -516,6 +527,7 @@ export function useDashboardData() {
     },
     leadSourceBreakdown,
     topServices,
+    allTimeTopServices,
     alerts,
     todayAppointments: todayBookings
       .filter((b: any) => b.status !== "cancelled")

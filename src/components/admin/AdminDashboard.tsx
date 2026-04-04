@@ -450,10 +450,13 @@ const AdminDashboard = ({
   onSelectAppointment?: (client: string) => void;
   onNavigate?: (view: string) => void;
 }) => {
-  const [visibility, setVisibility]       = useState(getVisibility);
-  const [showCustomize, setShowCustomize] = useState(false);
-  const [showHeatInfo, setShowHeatInfo]   = useState(false);
-  const [expandedCard, setExpandedCard]   = useState<ExpandedCard | null>(null);
+  const [visibility, setVisibility]         = useState(getVisibility);
+  const [showCustomize, setShowCustomize]   = useState(false);
+  const [showHeatInfo, setShowHeatInfo]     = useState(false);
+  const [expandedCard, setExpandedCard]     = useState<ExpandedCard | null>(null);
+  // "month" = this month's bookings | "alltime" = all-time bookings
+  const [servicesPeriod, setServicesPeriod] = useState<"month" | "alltime">("month");
+
   const data = useDashboardData();
 
   const toggle = (key: SectionKey) => {
@@ -490,9 +493,14 @@ const AdminDashboard = ({
   const retentionRate  = data.clients?.retentionRate ?? 0;
   const revenueTrend   = data.revenueTrend ?? [];
   const stockAlerts    = data.stockAlerts ?? [];
-  const topServices    = data.topServices ?? [];
   const alerts         = data.alerts ?? [];
   const leadSourceBreakdown: { channel: string; count: number }[] = data.leadSourceBreakdown ?? [];
+
+  // Pick the correct services list based on the toggle
+  const displayedServices =
+    servicesPeriod === "alltime"
+      ? (data.allTimeTopServices ?? [])
+      : (data.topServices ?? []);
 
   const hasLastMonth = lastMonthRev > 0;
   const pctChange    = hasLastMonth
@@ -630,12 +638,47 @@ const AdminDashboard = ({
       {/* ── TOP SERVICES ── */}
       {visibility.topServices && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.08 }}>
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Top Services</p>
+          {/* Header row: label + pill toggle */}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Top Services</p>
+            <div className="flex items-center gap-0.5 rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
+              <button
+                onClick={() => setServicesPeriod("month")}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                  servicesPeriod === "month"
+                    ? "bg-white/[0.10] text-white/80"
+                    : "text-white/30 hover:text-white/55"
+                }`}
+              >
+                This Month
+              </button>
+              <button
+                onClick={() => setServicesPeriod("alltime")}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                  servicesPeriod === "alltime"
+                    ? "bg-white/[0.10] text-white/80"
+                    : "text-white/30 hover:text-white/55"
+                }`}
+              >
+                All Time
+              </button>
+            </div>
+          </div>
+
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
-            {topServices.length === 0 ? (
+            {/* Loading state for all-time while query 9 resolves */}
+            {servicesPeriod === "alltime" && data.allTimeServicesLoading ? (
+              <div className="flex flex-col gap-2 p-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-8 rounded-lg bg-white/[0.04] animate-pulse" />
+                ))}
+              </div>
+            ) : displayedServices.length === 0 ? (
               <div className="py-10 flex flex-col items-center gap-2">
                 <Star className="w-5 h-5 text-white/10" />
-                <p className="text-xs text-white/25">No bookings yet this month</p>
+                <p className="text-xs text-white/25">
+                  {servicesPeriod === "month" ? "No bookings yet this month" : "No booking data found"}
+                </p>
               </div>
             ) : (
               <table className="w-full text-xs">
@@ -648,7 +691,7 @@ const AdminDashboard = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {topServices.slice(0, 5).map((s: any, i: number) => (
+                  {displayedServices.map((s: any, i: number) => (
                     <tr key={s.name} className="border-t border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3 text-white/25">{i + 1}</td>
                       <td className="px-4 py-3 text-white/75 font-medium">{s.name}</td>
@@ -689,16 +732,16 @@ const AdminDashboard = ({
       )}
 
       {/* ── REVENUE TREND ── */}
-{visibility.revenueGraph && (
-  <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
-    <RevenueTrendCard
-      revenueTrend={revenueTrend}
-      periodRevenue={monthRevenue}
-      lastPeriodRevenue={lastMonthRev}
-      loading={data.coreLoading}
-    />
-  </motion.section>
-)}
+      {visibility.revenueGraph && (
+        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
+          <RevenueTrendCard
+            revenueTrend={revenueTrend}
+            periodRevenue={monthRevenue}
+            lastPeriodRevenue={lastMonthRev}
+            loading={data.coreLoading}
+          />
+        </motion.section>
+      )}
 
       {/* ── HEATMAP ── */}
       {visibility.heatmap && (
