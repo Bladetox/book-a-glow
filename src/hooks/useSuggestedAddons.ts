@@ -2,15 +2,65 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
-// Shape stored in app_settings as JSON string under key "suggested_addons"
-export interface SuggestedAddonsConfig {
-  // Service IDs that trigger the suggestion strip when selected
-  triggerIds: string[];
-  // Service IDs to suggest when any trigger is active
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/**
+ * A single rule: when `triggerId` is selected, suggest `suggestIds`.
+ */
+export interface AddonRule {
+  triggerId: string;
   suggestIds: string[];
 }
 
-const EMPTY: SuggestedAddonsConfig = { triggerIds: [], suggestIds: [] };
+/**
+ * New shape stored as JSON under app_settings key "suggested_addons".
+ *
+ * Backward-compat: if the stored value still contains the OLD flat shape
+ * { triggerIds, suggestIds } we normalise it into rules on read so existing
+ * data is never broken.
+ */
+export interface SuggestedAddonsConfig {
+  rules: AddonRule[];
+}
+
+const EMPTY: SuggestedAddonsConfig = { rules: [] };
+
+// ─── Normalise legacy flat shape ──────────────────────────────────────────────
+
+function normaliseParsed(parsed: unknown): SuggestedAddonsConfig {
+  if (!parsed || typeof parsed !== "object") return EMPTY;
+
+  const p = parsed as Record<string, unknown>;
+
+  // New shape: { rules: [...] }
+  if (Array.isArray(p.rules)) {
+    const rules: AddonRule[] = p.rules
+      .filter(
+        (r): r is AddonRule =>
+          !!r &&
+          typeof r === "object" &&
+          typeof (r as AddonRule).triggerId === "string" &&
+          Array.isArray((r as AddonRule).suggestIds)
+      )
+      .map((r) => ({ triggerId: r.triggerId, suggestIds: r.suggestIds }));
+    return { rules };
+  }
+
+  // Legacy flat shape: { triggerIds: string[], suggestIds: string[] }
+  // Convert each legacy triggerId into its own rule sharing the same suggestIds
+  if (Array.isArray(p.triggerIds) && Array.isArray(p.suggestIds)) {
+    const suggestIds = p.suggestIds as string[];
+    const rules: AddonRule[] = (p.triggerIds as string[]).map((triggerId) => ({
+      triggerId,
+      suggestIds,
+    }));
+    return { rules };
+  }
+
+  return EMPTY;
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useSuggestedAddons() {
   const { tenantId } = usePublicTenant();
@@ -31,14 +81,35 @@ export function useSuggestedAddons() {
       if (!data?.value) return EMPTY;
 
       try {
-        const parsed = JSON.parse(data.value) as SuggestedAddonsConfig;
-        return {
-          triggerIds: Array.isArray(parsed.triggerIds) ? parsed.triggerIds : [],
-          suggestIds: Array.isArray(parsed.suggestIds) ? parsed.suggestIds : [],
-        };
+        return normaliseParsed(JSON.parse(data.value));
       } catch {
         return EMPTY;
       }
     },
   });
+}
+
+// ─── Selector helper (used in booking components) ─────────────────────────────
+
+/**
+ * Given the current config and the set of currently-selected service IDs,
+ * returns the deduplicated list of add-on IDs to suggest (excluding already-
+ * selected services).
+ */
+export function getActiveSuggestions(
+  config: SuggestedAddonsConfig,
+  selectedIds: string[]
+): string[] {
+  const selectedSet = new Set(selectedIds);
+  const suggested = new Set<string>();
+
+  for (const rule of config.rules) {
+    if (selectedSet.has(rule.triggerId)) {
+      for (const id of rule.suggestIds) {
+        if (!selectedSet.has(id)) suggested.add(id);
+      }
+    }
+  }
+
+  return Array.from(suggested);
 }
