@@ -98,13 +98,16 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                     <span className="block text-sm font-semibold text-foreground leading-snug">
                       {t.name}
                     </span>
-                    <span className="block text-[10px] text-muted-foreground truncate leading-snug mt-0.5">
-                      {t.description
-                        ? `${t.description}${t.duration > 0 ? ` · ${t.duration} min` : ""}`
-                        : t.duration > 0
-                        ? `${t.duration} min`
-                        : ""}
-                    </span>
+                    {t.description && (
+                      <span className="block text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                        {t.description}
+                      </span>
+                    )}
+                    {t.duration > 0 && (
+                      <span className="block text-[10px] text-muted-foreground/60 leading-snug mt-0.5">
+                        {t.duration} min
+                      </span>
+                    )}
                   </div>
 
                   {/* Price */}
