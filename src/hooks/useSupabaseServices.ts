@@ -107,10 +107,12 @@ export function useDeleteService() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // Tenant guard on delete — belt AND suspenders alongside RLS
+      // Soft-delete: set is_active = false instead of hard-deleting.
+      // Hard DELETE fails with 409 Conflict when booking_items still
+      // reference this service via FK (no ON DELETE CASCADE).
       const { error } = await supabase
         .from("services")
-        .delete()
+        .update({ is_active: false })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -118,10 +120,10 @@ export function useDeleteService() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services", tenantId] });
       qc.invalidateQueries({ queryKey: ["service-categories", tenantId] });
-      toast.success("Service deleted");
+      toast.success("Service deactivated");
     },
     onError: (err: Error) => {
-      toast.error(`Delete failed: ${err.message}`);
+      toast.error(`Failed to deactivate service: ${err.message}`);
     },
   });
 }

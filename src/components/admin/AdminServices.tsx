@@ -107,7 +107,7 @@ const SortableServiceRow = ({
 
       <div className="flex gap-1 shrink-0">
         {confirmDelete ? (
-          // ── Confirm delete UI ──
+          // ── Confirm deactivate UI ──
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -115,17 +115,17 @@ const SortableServiceRow = ({
             transition={{ duration: 0.12 }}
             className="flex items-center gap-1.5"
           >
-            <span className="text-[11px] text-red-400/80 font-medium mr-1">Delete "{service.name}"?</span>
+            <span className="text-[11px] text-red-400/80 font-medium mr-1">Deactivate "{service.name}"?</span>
             <button
               onClick={() => { onDelete(service.id); setConfirmDelete(false); }}
               className="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
             >
-              Delete
+              Deactivate
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
               className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
-              aria-label="Cancel delete"
+              aria-label="Cancel"
             >
               <X className="w-3.5 h-3.5" />
             </button>
