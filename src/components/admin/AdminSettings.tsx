@@ -87,9 +87,13 @@ const SettingRow = ({
   onUnmask?: () => void;
 }) => (
   <div className="flex flex-col gap-1.5">
-    <label htmlFor={masked ? undefined : id} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-      {label}
-    </label>
+    {masked ? (
+      <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">{label}</span>
+    ) : (
+      <label htmlFor={id} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+        {label}
+      </label>
+    )}
     {masked ? (
       <div className="flex items-center gap-2">
         <div className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/30 font-mono tracking-widest select-none">
