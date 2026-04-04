@@ -16,15 +16,10 @@ function buildAdminUrl(tenantId: string): string {
   const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost");
 
   if (isLocalhost) {
-    // Dev fallback: use query param so tenant resolver picks it up
     return `${window.location.origin}/admin?tenant=${tenantId}`;
   }
 
-  // Production: redirect to tenant's subdomain — works for both nextslot.co.za and nextslot.app
   const parts = hostname.split(".");
-  // Strip any existing subdomain to get the root domain (e.g. "nextslot.co.za")
-  // nextslot.co.za → ["nextslot", "co", "za"] → keep last 3 parts
-  // nextslot.app   → ["nextslot", "app"]        → keep last 2 parts
   const rootDomain = parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
@@ -59,7 +54,8 @@ const Login = () => {
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("role, tenant_id")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (rolesError || !roles || roles.length === 0) {
         await supabase.auth.signOut();
@@ -67,14 +63,18 @@ const Login = () => {
         return;
       }
 
-      const adminRole = roles.find((r) => r.role === "owner" || r.role === "admin");
+      // Prefer 'owner' first — prevents a super-admin with 'admin' rows on other
+      // tenants from being routed to the wrong dashboard.
+      const adminRole =
+        roles.find((r) => r.role === "owner") ??
+        roles.find((r) => r.role === "admin");
+
       if (!adminRole) {
         await supabase.auth.signOut();
         setError("This login is for business dashboard users only. Please use your booking link to make a booking.");
         return;
       }
 
-      // Hard redirect to the tenant's subdomain admin panel
       const adminUrl = buildAdminUrl(adminRole.tenant_id);
       window.location.href = adminUrl;
     } catch {
@@ -126,6 +126,7 @@ const Login = () => {
             <label htmlFor="login-email" className="block text-sm font-medium mb-1.5">Email</label>
             <input
               id="login-email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setError(""); }}
@@ -140,6 +141,7 @@ const Login = () => {
               <label htmlFor="login-password" className="block text-sm font-medium mb-1.5">Password</label>
               <input
                 id="login-password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(""); }}
