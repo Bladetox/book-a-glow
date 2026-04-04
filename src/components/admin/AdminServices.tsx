@@ -1,7 +1,7 @@
 // C5 — Drag-to-reorder services list via @dnd-kit (persists display_order to Supabase)
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, Check, Search, ChevronDown, Loader2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Search, ChevronDown, Loader2, GripVertical, X } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -60,6 +60,8 @@ const SortableServiceRow = ({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: service.id });
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -103,19 +105,48 @@ const SortableServiceRow = ({
         </div>
       </div>
 
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
-          onClick={() => onEdit(service)}
-          className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => onDelete(service.id)}
-          className="p-2 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+      <div className="flex gap-1 shrink-0">
+        {confirmDelete ? (
+          // ── Confirm delete UI ──
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.12 }}
+            className="flex items-center gap-1.5"
+          >
+            <span className="text-[11px] text-red-400/80 font-medium mr-1">Delete "{service.name}"?</span>
+            <button
+              onClick={() => { onDelete(service.id); setConfirmDelete(false); }}
+              className="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
+              aria-label="Cancel delete"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        ) : (
+          // ── Normal action buttons ──
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => onEdit(service)}
+              className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="p-2 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
