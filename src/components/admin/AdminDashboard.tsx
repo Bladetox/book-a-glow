@@ -452,7 +452,6 @@ const AdminDashboard = ({
 }) => {
   const [visibility, setVisibility]       = useState(getVisibility);
   const [showCustomize, setShowCustomize] = useState(false);
-  const [showTrendInfo, setShowTrendInfo] = useState(false);
   const [showHeatInfo, setShowHeatInfo]   = useState(false);
   const [expandedCard, setExpandedCard]   = useState<ExpandedCard | null>(null);
   const data = useDashboardData();
@@ -490,7 +489,6 @@ const AdminDashboard = ({
   const returningCount = data.clients?.returning ?? 0;
   const retentionRate  = data.clients?.retentionRate ?? 0;
   const revenueTrend   = data.revenueTrend ?? [];
-  const maxTrend       = Math.max(...revenueTrend.map((x: any) => x.value ?? 0), 1);
   const stockAlerts    = data.stockAlerts ?? [];
   const topServices    = data.topServices ?? [];
   const alerts         = data.alerts ?? [];
@@ -691,43 +689,16 @@ const AdminDashboard = ({
       )}
 
       {/* ── REVENUE TREND ── */}
-      {visibility.revenueGraph && (
-        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Revenue Trend</p>
-            <button onClick={() => setShowTrendInfo(v => !v)} className="text-white/20 hover:text-white/50 transition-colors">
-              <Info className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          {showTrendInfo && <SectionInfoPanel lines={METRIC_COPY.revenueTrend} />}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            {revenueTrend.length === 0 ? (
-              <div className="h-24 flex items-center justify-center">
-                <p className="text-xs text-white/20">No revenue data yet</p>
-              </div>
-            ) : (
-              <div className="flex items-end gap-0.5 h-24 overflow-x-auto">
-                {revenueTrend.map((d: any, i: number) => {
-                  const h = Math.max((d.value / maxTrend) * 100, d.value > 0 ? 4 : 1);
-                  return (
-                    <div
-                      key={i}
-                      title={`Day ${d.day}: R ${d.value}`}
-                      className="flex-1 min-w-[6px] rounded-sm transition-all"
-                      style={{
-                        height: `${h}%`,
-                        backgroundColor: d.value > 0
-                          ? `rgba(52,211,153,${0.3 + (h / 100) * 0.6})`
-                          : "rgba(255,255,255,0.04)"
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </motion.section>
-      )}
+{visibility.revenueGraph && (
+  <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
+    <RevenueTrendCard
+      revenueTrend={revenueTrend}
+      periodRevenue={monthRevenue}
+      lastPeriodRevenue={lastMonthRev}
+      loading={data.coreLoading}
+    />
+  </motion.section>
+)}
 
       {/* ── HEATMAP ── */}
       {visibility.heatmap && (
