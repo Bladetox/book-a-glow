@@ -104,14 +104,12 @@ const Onboarding = () => {
       const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
       if (sessionErr || !session) throw new Error("Not authenticated. Please sign in again.");
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-
-      const res = await fetch(`${supabaseUrl}/functions/v1/create-tenant`, {
+      const res = await fetch("https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session.access_token}`,
-          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+          "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE",
         },
         body: JSON.stringify({
           business_name: businessName.trim(),
