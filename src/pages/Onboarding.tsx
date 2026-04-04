@@ -39,6 +39,31 @@ function generateSlots(start: string, end: string): { slot_start_time: string; s
   return slots;
 }
 
+
+// ─── Unique tenant slug helper ────────────────────────────────────────────────
+const slugifyName = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30);
+
+const getUniqueTenantSlug = async (baseName: string): Promise<string> => {
+  const baseSlug = slugifyName(baseName) || "business";
+  const { data: existing, error } = await supabase
+    .from("tenants")
+    .select("id")
+    .ilike("id", `${baseSlug}%`);
+  if (error) throw error;
+  const existingIds = new Set((existing ?? []).map((row: { id: string }) => row.id));
+  if (!existingIds.has(baseSlug)) return baseSlug;
+  let counter = 2;
+  let candidate = `${baseSlug}-${counter}`;
+  while (existingIds.has(candidate)) { counter += 1; candidate = `${baseSlug}-${counter}`; }
+  return candidate;
+};
+
 const Onboarding = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -101,29 +126,42 @@ const Onboarding = () => {
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
       if (userErr || !user) throw new Error("Not authenticated. Please sign in again.");
 
+      // Resolve a unique slug — prevents 409 Conflict on duplicate business names
+      const tenantSlug = await getUniqueTenantSlug(businessName.trim());
+
       const { error: tenantErr } = await supabase.from("tenants").insert({
-        id: slug,
+        id: tenantSlug,
         name: businessName.trim(),
         owner_id: user.id,
         theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
         currency: "R",
         is_active: true,
+        allow_overrun: false,
+        min_notice_hours: 2,
+        max_advance_days: 60,
+        travel_buffer_minutes: 0,
+        is_setup_complete: false,
       });
       if (tenantErr) throw new Error(`Failed to create tenant: ${tenantErr.message}`);
 
       const { error: roleErr } = await supabase.from("user_roles").insert({
         user_id: user.id,
-        tenant_id: slug,
+        tenant_id: tenantSlug,
         role: "owner",
       });
       if (roleErr) throw new Error(`Failed to assign role: ${roleErr.message}`);
 
-      await supabase.from("profiles").update({ tenant_id: slug, role: "owner" }).eq("id", user.id);
+      // Profile update is critical — throw on failure so we never partially onboard
+      const { error: profileErr } = await supabase
+        .from("profiles")
+        .update({ tenant_id: tenantSlug, role: "owner" })
+        .eq("id", user.id);
+      if (profileErr) throw new Error(`Failed to update profile: ${profileErr.message}`);
 
       const validServices = services.filter((s) => s.name.trim());
       if (validServices.length > 0) {
         const serviceRows = validServices.map((s) => ({
-          tenant_id: slug,
+          tenant_id: tenantSlug,
           name: s.name.trim(),
           price: parseFloat(s.price) || 0,
           duration_minutes: parseInt(s.duration, 10),
@@ -151,7 +189,7 @@ const Onboarding = () => {
         const slots = generateSlots(start, end);
         for (const slot of slots) {
           availabilityRows.push({
-            tenant_id: slug,
+            tenant_id: tenantSlug,
             staff_id: user.id,
             day_of_week: dayOfWeekMap[day],
             slot_start_time: slot.slot_start_time,
@@ -166,6 +204,13 @@ const Onboarding = () => {
         const { error: availErr } = await supabase.from("staff_availability").insert(availabilityRows);
         if (availErr) throw new Error(`Failed to save availability: ${availErr.message}`);
       }
+
+      // Mark setup complete only after every write succeeds
+      const { error: setupErr } = await supabase
+        .from("tenants")
+        .update({ is_setup_complete: true })
+        .eq("id", tenantSlug);
+      if (setupErr) throw new Error(`Failed to finalise setup: ${setupErr.message}`);
 
       navigate("/admin");
     } catch (err: unknown) {
@@ -446,7 +491,7 @@ const Onboarding = () => {
             {step < totalSteps ? (
               <button
                 onClick={() => setStep(step + 1)}
-                disabled={!canProceed() || step === 1}
+                disabled={!canProceed()}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue<ArrowRight className="h-4 w-4" />
