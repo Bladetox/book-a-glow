@@ -9,6 +9,8 @@ import {
   Trash2,
   Clock,
   Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,8 +23,6 @@ const availabilityPresets = [
 
 const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 type DayKey = typeof days[number];
-const dayLabels: Record<DayKey, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
-const dayOfWeekMap: Record<DayKey, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 
 interface Service { name: string; price: string; duration: string; }
 
@@ -39,19 +39,25 @@ function generateSlots(start: string, end: string): { slot_start_time: string; s
   return slots;
 }
 
-
-
 const Onboarding = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [step2Error, setStep2Error] = useState<string | null>(null);
+  const [step2Loading, setStep2Loading] = useState(false);
   const [services, setServices] = useState<Service[]>([{ name: "", price: "", duration: "30" }]);
-  const [selectedPreset, setSelectedPreset] = useState<number | null>(0);
-  const [schedule, setSchedule] = useState(availabilityPresets[0].schedule);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Always use default schedule (Standard Work Week) — editable in admin later
+  const schedule = availabilityPresets[0].schedule;
 
   const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 30);
   const bookingUrl = slug ? `${slug}.nextslot.app` : "yourbusiness.nextslot.app";
@@ -66,9 +72,18 @@ const Onboarding = () => {
     return getThemeCssVars(activeTheme) as CSSProperties;
   }, [activeTheme]);
 
+  const passwordsMatch = password === confirmPassword;
+  const passwordValid = password.length >= 8;
+
   const canProceed = () => {
     if (step === 1) return !!businessType;
-    if (step === 2) return businessName.trim().length >= 2;
+    // Step 2 proceed is handled by handleStep2Continue — button disabled based on field validity
+    if (step === 2) return (
+      businessName.trim().length >= 2 &&
+      email.trim().includes("@") &&
+      passwordValid &&
+      passwordsMatch
+    );
     if (step === 3) return services.some((s) => s.name.trim());
     return true;
   };
@@ -80,6 +95,27 @@ const Onboarding = () => {
       setServices(theme.suggestedServices.map((s) => ({ ...s })));
     }
     setTimeout(() => setStep(2), 300);
+  };
+
+  // Called when user clicks Continue on Step 2
+  const handleStep2Continue = async () => {
+    setStep2Error(null);
+    setStep2Loading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { business_name: businessName.trim() },
+        },
+      });
+      if (error) throw error;
+      setStep(3);
+    } catch (err: unknown) {
+      setStep2Error(err instanceof Error ? err.message : "Sign up failed. Please try again.");
+    } finally {
+      setStep2Loading(false);
+    }
   };
 
   const addService = () => setServices([...services, { name: "", price: "", duration: "30" }]);
@@ -100,7 +136,6 @@ const Onboarding = () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      // Get the user's JWT to pass to the edge function
       const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
       if (sessionErr || !session) throw new Error("Not authenticated. Please sign in again.");
 
@@ -123,7 +158,6 @@ const Onboarding = () => {
       const json = await res.json();
 
       if (!res.ok) {
-        // 409 = already onboarded — just proceed to admin
         if (res.status === 409) {
           navigate("/admin");
           return;
@@ -139,7 +173,7 @@ const Onboarding = () => {
     }
   };
 
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   return (
     <div className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground" style={themeStyle}>
@@ -177,10 +211,11 @@ const Onboarding = () => {
       <div className="flex-1 flex items-start justify-center pt-12 pb-20 px-4">
         <div className="w-full max-w-lg">
 
+          {/* ── STEP 1: Business type ── */}
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Let’s set up your booking page</h1>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Let's set up your booking page</h1>
                 <p className="text-muted-foreground text-sm">Select your business type, and the page will adapt to your vibe. This will be your customer-facing app.</p>
               </div>
               <div className="space-y-2">
@@ -211,42 +246,119 @@ const Onboarding = () => {
             </div>
           )}
 
+          {/* ── STEP 2: Business name + account creation ── */}
           {step === 2 && (
             <div className="space-y-8 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">What’s your business called?</h1>
-                <p className="text-muted-foreground text-sm">This will appear on your booking page.</p>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Set up your account</h1>
+                <p className="text-muted-foreground text-sm">Name your business and create your login — you can always update these later.</p>
               </div>
               <div className="space-y-4">
+                {/* Business name */}
                 <div>
                   <label htmlFor="onboarding-business-name" className="block text-sm font-medium mb-1.5 text-foreground">Business name</label>
                   <input
-          id="onboarding-business-name"
-          name="business-name"
+                    id="onboarding-business-name"
+                    name="business-name"
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
-                    placeholder=""
+                    placeholder="e.g. Glow by Tash"
                     autoFocus
                   />
+                  {businessName.trim() && (
+                    <p className="text-xs text-muted-foreground mt-1.5 font-mono">{bookingUrl}</p>
+                  )}
                 </div>
-                {businessName.trim() && (
-                  <div className="gradient-card rounded-xl p-4 animate-fade-in border border-border shadow-soft">
-                    <p className="text-xs text-muted-foreground mb-1">Your booking page will be:</p>
-                    <p className="text-sm font-mono font-semibold">{bookingUrl}</p>
-                    <p className="text-xs text-muted-foreground mt-2">You can connect your own domain later.</p>
+
+                {/* Email */}
+                <div>
+                  <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">Email address</label>
+                  <input
+                    id="onboarding-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
+                    placeholder="you@example.com"
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label htmlFor="onboarding-password" className="block text-sm font-medium mb-1.5 text-foreground">Password</label>
+                  <div className="relative">
+                    <input
+                      id="onboarding-password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
+                      placeholder="Minimum 8 characters"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {password && !passwordValid && (
+                    <p className="text-xs text-destructive mt-1.5">Password must be at least 8 characters</p>
+                  )}
+                </div>
+
+                {/* Confirm password */}
+                <div>
+                  <label htmlFor="onboarding-confirm-password" className="block text-sm font-medium mb-1.5 text-foreground">Confirm password</label>
+                  <div className="relative">
+                    <input
+                      id="onboarding-confirm-password"
+                      name="confirm-password"
+                      type={showConfirm ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
+                      placeholder="Re-enter your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showConfirm ? "Hide password" : "Show password"}
+                    >
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && !passwordsMatch && (
+                    <p className="text-xs text-destructive mt-1.5">Passwords don't match</p>
+                  )}
+                </div>
+
+                {/* Auth error */}
+                {step2Error && (
+                  <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {step2Error}
                   </div>
                 )}
               </div>
             </div>
           )}
 
+          {/* ── STEP 3: Services (was step 3 — unchanged) ── */}
           {step === 3 && (
             <div className="space-y-8 animate-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Your services</h1>
-                <p className="text-muted-foreground text-sm">We’ve pre-filled these based on your business type — edit prices and times to match yours.</p>
+                <p className="text-muted-foreground text-sm">We've pre-filled these based on your business type — edit prices and times to match yours.</p>
               </div>
               <div className="space-y-3">
                 {services.map((service, i) => (
@@ -260,8 +372,8 @@ const Onboarding = () => {
                       )}
                     </div>
                     <input
-              id={`service-name-${i}`}
-              name={`service-name-${i}`}
+                      id={`service-name-${i}`}
+                      name={`service-name-${i}`}
                       type="text"
                       value={service.name}
                       onChange={(e) => updateService(i, "name", e.target.value)}
@@ -313,66 +425,11 @@ const Onboarding = () => {
             </div>
           )}
 
+          {/* ── STEP 4: Summary + complete (was step 5) ── */}
           {step === 4 && (
             <div className="space-y-8 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Set your availability</h1>
-                <p className="text-muted-foreground text-sm">When can clients book you?</p>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {availabilityPresets.map((preset, i) => (
-                  <button
-                    key={preset.label}
-                    onClick={() => { setSelectedPreset(i); setSchedule(preset.schedule); }}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      selectedPreset === i ? "border-primary gradient-card shadow-elevated" : "border-border hover:border-foreground/20 hover:shadow-soft"
-                    }`}
-                  >
-                    <p className="text-xs font-semibold mb-0.5 text-foreground">{preset.label}</p>
-                    <p className="text-[10px] text-muted-foreground">{preset.desc}</p>
-                  </button>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                {days.map((day) => {
-                  const isCustom = selectedPreset === 2;
-                  const isClosed = schedule[day] === "Closed";
-                  const timeParts = !isClosed ? schedule[day].split("–") : ["09:00", "17:00"];
-                  return (
-                    <div key={day} className="flex items-center justify-between gradient-surface rounded-lg px-4 py-2.5 border border-border/50 gap-2">
-                      <span className="text-sm font-medium w-24 text-foreground shrink-0">{dayLabels[day]}</span>
-                      {isCustom ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => { const updated = { ...schedule }; updated[day] = isClosed ? "09:00–17:00" : "Closed"; setSchedule(updated as typeof schedule); }}
-                            className={`text-xs px-2 py-1 rounded-md border transition-colors ${
-                              isClosed ? "border-border text-muted-foreground" : "border-primary text-primary bg-primary/10"
-                            }`}
-                          >
-                            {isClosed ? "Closed" : "Open"}
-                          </button>
-                          {!isClosed && (
-                            <>
-                              <input id={`hours-${day}-open`} name={`hours-${day}-open`} type="time" value={timeParts[0]} onChange={(e) => { const updated = { ...schedule }; updated[day] = `${e.target.value}–${timeParts[1]}`; setSchedule(updated as typeof schedule); }} className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground w-24" />
-                              <span className="text-xs text-muted-foreground">–</span>
-                              <input id={`hours-${day}-close`} name={`hours-${day}-close`} type="time" value={timeParts[1]} onChange={(e) => { const updated = { ...schedule }; updated[day] = `${timeParts[0]}–${e.target.value}`; setSchedule(updated as typeof schedule); }} className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground w-24" />
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <span className={`text-sm ml-auto ${isClosed ? "text-muted-foreground" : "text-foreground font-medium"}`}>{schedule[day]}</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="space-y-8 animate-fade-in">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">You’re all set! 🎉</h1>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">You're all set! 🎉</h1>
                 <p className="text-muted-foreground text-sm">Your booking page is ready. Share it with your clients.</p>
               </div>
               <div className="gradient-card rounded-xl p-5 border border-border shadow-soft space-y-3">
@@ -390,6 +447,7 @@ const Onboarding = () => {
                 <p className="text-sm text-foreground"><span className="text-muted-foreground">Business: </span>{businessName}</p>
                 <p className="text-sm text-foreground"><span className="text-muted-foreground">Type: </span>{businessType}</p>
                 <p className="text-sm text-foreground"><span className="text-muted-foreground">Services: </span>{services.filter(s => s.name.trim()).length} added</p>
+                <p className="text-sm text-foreground"><span className="text-muted-foreground">Account: </span>{email}</p>
               </div>
               {submitError && (
                 <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>
@@ -397,17 +455,30 @@ const Onboarding = () => {
             </div>
           )}
 
+          {/* ── NAV BUTTONS ── */}
           <div className="mt-8 flex items-center justify-between gap-3">
             {step > 1 ? (
               <button
                 onClick={() => setStep(step - 1)}
-                disabled={submitting}
+                disabled={submitting || step2Loading}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
               >
                 <ArrowLeft className="h-4 w-4" />Back
               </button>
             ) : <div />}
-            {step < totalSteps ? (
+
+            {step === 2 ? (
+              // Step 2 has its own async Continue handler
+              <button
+                onClick={handleStep2Continue}
+                disabled={!canProceed() || step2Loading}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {step2Loading
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Creating account...</>
+                  : <>Continue<ArrowRight className="h-4 w-4" /></>}
+              </button>
+            ) : step < totalSteps ? (
               <button
                 onClick={() => setStep(step + 1)}
                 disabled={!canProceed()}
