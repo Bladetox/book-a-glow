@@ -184,7 +184,28 @@ export function useDashboardData() {
     },
   });
 
-  const coreLoading  = l1 || l2 || l3;
+  // 8. 90-day bookings — for revenue trend fallback.
+  //    Many older bookings have no rows in the payments table; their revenue is
+  //    recorded directly on bookings.total_amount with final_payment_paid=true
+  //    or full_payment_received=true. We fetch these so the chart is not blank.
+  //    We only include non-cancelled, fully-paid bookings.
+  const { data: trendBookings = [], isLoading: l6 } = useQuery({
+    queryKey:  ["dash-trend-bookings", tenantId, fetchFromDate, todayStr],
+    staleTime: 3 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("booking_date, total_amount, final_payment_paid, full_payment_received, status")
+        .eq("tenant_id", tenantId)
+        .neq("status", "cancelled")
+        .gte("booking_date", fetchFromDate)
+        .lte("booking_date", todayStr);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const coreLoading  = l1 || l2 || l3 || l6;
   const staffLoading = l4 || l5;
 
   // ─── payment slices ──────────────────────────────────────────────────────
@@ -276,17 +297,45 @@ export function useDashboardData() {
   }, [active]);
 
   // ─── revenue trend ────────────────────────────────────────────────────────
-  // Built over the full 90-day display window. allPayments was fetched from
-  // fetchFromDate (91 days) so timezone-boundary payments are always included.
-  // The trendMap filter clamps to ninetyDaysAgo..todayStr for display accuracy.
+  // Strategy (two-source, no double-count):
+  //
+  // 1. Seed the trendMap from trendBookings (fully-paid bookings keyed by
+  //    booking_date). This covers the majority of historical bookings that
+  //    have no row in the payments table.
+  //
+  // 2. Build a Set of dates that ARE covered by the payments table. For those
+  //    dates, REPLACE the booking-derived total with the payments-table total
+  //    so we never double-count (some bookings may have both a payments row
+  //    AND total_amount set).
+  //
+  // Result: every revenue-generating day is represented, regardless of whether
+  // revenue was captured in the payments table or only on bookings.total_amount.
   const revenueTrend = useMemo(() => {
-    const trendMap: Record<string, number> = {};
+    // Step 1 — seed from paid bookings (fallback source)
+    const bookingMap: Record<string, number> = {};
+    trendBookings.forEach((b: any) => {
+      const d = (b.booking_date ?? "").slice(0, 10);
+      if (!d || d < ninetyDaysAgo || d > todayStr) return;
+      // Only include if fully paid
+      if (!b.final_payment_paid && !b.full_payment_received) return;
+      bookingMap[d] = (bookingMap[d] || 0) + Number(b.total_amount ?? 0);
+    });
+
+    // Step 2 — build payments map (authoritative source where it exists)
+    const paymentsMap: Record<string, number> = {};
     allPayments.forEach((p: any) => {
       const d = (p.created_at ?? "").slice(0, 10);
       if (d >= ninetyDaysAgo && d <= todayStr) {
-        trendMap[d] = (trendMap[d] || 0) + Number(p.amount);
+        paymentsMap[d] = (paymentsMap[d] || 0) + Number(p.amount);
       }
     });
+
+    // Step 3 — merge: payments table wins for any date it covers
+    const trendMap: Record<string, number> = { ...bookingMap };
+    Object.entries(paymentsMap).forEach(([d, amount]) => {
+      trendMap[d] = amount; // overwrite booking-derived value entirely
+    });
+
     return eachDayOfInterval({
       start: parseISO(ninetyDaysAgo),
       end:   parseISO(todayStr),
@@ -295,7 +344,7 @@ export function useDashboardData() {
       date:  format(day, "yyyy-MM-dd"),
       value: trendMap[format(day, "yyyy-MM-dd")] || 0,
     }));
-  }, [allPayments, ninetyDaysAgo, todayStr]);
+  }, [allPayments, trendBookings, ninetyDaysAgo, todayStr]);
 
   // ─── booking heatmap ──────────────────────────────────────────────────────
   const heatmap = useMemo(() => {
