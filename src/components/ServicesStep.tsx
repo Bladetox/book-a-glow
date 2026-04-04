@@ -16,7 +16,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
   const { data: addonsConfig } = useSuggestedAddons();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  // ── Derive suggestion strip ──────────────────────────────────────────────────────────────────
+  // ── Derive suggestion strip ──────────────────────────────────────────────
   const suggestionStrip = useMemo(() => {
     if (!addonsConfig) return null;
 
@@ -83,6 +83,68 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
           })}
         </div>
       )}
+
+      {/* ── Add-on suggestion strip — sits RIGHT above the service list ─────── */}
+      <AnimatePresence initial={false}>
+        {suggestionStrip && (
+          <motion.div
+            key="addon-strip"
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: "auto", marginBottom: 0 }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            {/* Inner wrapper keeps padding outside the height animation */}
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5">
+              {/* Strip header */}
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-primary shrink-0" />
+                <span className="text-[10px] font-semibold tracking-[0.18em] uppercase text-primary">
+                  Recommended add-ons
+                </span>
+              </div>
+
+              {suggestionStrip.map((s, i) => (
+                <motion.div
+                  key={s.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.18, delay: i * 0.06 }}
+                  className="flex items-center gap-3 w-full"
+                >
+                  {/* Name + duration */}
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold text-foreground leading-snug">
+                      {s.name}
+                    </span>
+                    {s.duration > 0 && (
+                      <span className="block text-[10px] text-muted-foreground/60 leading-snug mt-0.5">
+                        {s.duration} min
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Price */}
+                  <span className="shrink-0 text-sm font-bold text-foreground">
+                    R{s.price}
+                  </span>
+
+                  {/* Add button */}
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => onAdd(s.id)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/25 transition-colors shrink-0"
+                    aria-label={`Add ${s.name}`}
+                  >
+                    <Plus className="w-3 h-3" strokeWidth={2.5} />
+                  </motion.button>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Services for active category */}
       <AnimatePresence mode="wait">
@@ -184,62 +246,6 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
             })
           )}
         </motion.div>
-      </AnimatePresence>
-
-      {/* ── Add-on suggestion strip ────────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {suggestionStrip && (
-          <motion.div
-            key="addon-strip"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.22 }}
-            className="flex flex-col gap-2 pt-1"
-          >
-            {/* Strip header */}
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-primary" />
-              <span className="text-[10px] font-semibold tracking-[0.18em] uppercase text-primary">
-                Recommended add-ons
-              </span>
-            </div>
-
-            {suggestionStrip.map((s) => (
-              <motion.div
-                key={s.id}
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.16 }}
-                className="glass-card-service rounded-xl px-4 py-3 flex items-center gap-3 w-full border border-primary/20 bg-primary/5"
-              >
-                <div className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-foreground leading-snug">
-                    {s.name}
-                  </span>
-                  {s.duration > 0 && (
-                    <span className="block text-[10px] text-muted-foreground/60 leading-snug mt-0.5">
-                      {s.duration} min
-                    </span>
-                  )}
-                </div>
-
-                <span className="shrink-0 text-sm font-bold text-foreground">
-                  R{s.price}
-                </span>
-
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  onClick={() => onAdd(s.id)}
-                  className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/25 transition-colors shrink-0"
-                  aria-label={`Add ${s.name}`}
-                >
-                  <Plus className="w-3 h-3" strokeWidth={2.5} />
-                </motion.button>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );
