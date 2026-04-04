@@ -7,6 +7,7 @@ import {
   XCircle, Package, Bell, Clock, Info, X, Megaphone
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
+import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 const ALL_SECTIONS = [
