@@ -1,6 +1,7 @@
 import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
-import { useState } from "react";
-import { Loader2, Plus, Minus } from "lucide-react";
+import { useSuggestedAddons } from "@/hooks/useSuggestedAddons";
+import { useState, useMemo } from "react";
+import { Loader2, Plus, Minus, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ServicesStepProps {
@@ -12,7 +13,29 @@ interface ServicesStepProps {
 const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps) => {
   const { data: treatments = [], isLoading: loadingServices } = usePublicServices();
   const { data: categories = [], isLoading: loadingCats } = usePublicCategories();
+  const { data: addonsConfig } = useSuggestedAddons();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  // ── Derive suggestion strip ──────────────────────────────────────────────
+  const suggestionStrip = useMemo(() => {
+    if (!addonsConfig || !addonsConfig.triggerIds.length || !addonsConfig.suggestIds.length) {
+      return null;
+    }
+
+    // Is any trigger currently selected?
+    const triggered = selectedTreatments.some((id) =>
+      addonsConfig.triggerIds.includes(id)
+    );
+    if (!triggered) return null;
+
+    // Resolve suggested service objects, excluding ones already selected
+    const suggestions = addonsConfig.suggestIds
+      .map((id) => treatments.find((t) => t.id === id))
+      .filter((t): t is NonNullable<typeof t> => !!t)
+      .filter((t) => !selectedTreatments.includes(t.id));
+
+    return suggestions.length > 0 ? suggestions : null;
+  }, [addonsConfig, selectedTreatments, treatments]);
 
   if (loadingServices || loadingCats) {
     return (
@@ -168,6 +191,62 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
             })
           )}
         </motion.div>
+      </AnimatePresence>
+
+      {/* ── Add-on suggestion strip ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {suggestionStrip && (
+          <motion.div
+            key="addon-strip"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.22 }}
+            className="flex flex-col gap-2 pt-1"
+          >
+            {/* Strip header */}
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span className="text-[10px] font-semibold tracking-[0.18em] uppercase text-primary">
+                Recommended add-ons
+              </span>
+            </div>
+
+            {suggestionStrip.map((s) => (
+              <motion.div
+                key={s.id}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.16 }}
+                className="glass-card-service rounded-xl px-4 py-3 flex items-center gap-3 w-full border border-primary/20 bg-primary/5"
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="block text-sm font-semibold text-foreground leading-snug">
+                    {s.name}
+                  </span>
+                  {s.duration > 0 && (
+                    <span className="block text-[10px] text-muted-foreground/60 leading-snug mt-0.5">
+                      {s.duration} min
+                    </span>
+                  )}
+                </div>
+
+                <span className="shrink-0 text-sm font-bold text-foreground">
+                  R{s.price}
+                </span>
+
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
+                  onClick={() => onAdd(s.id)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/25 transition-colors shrink-0"
+                  aria-label={`Add ${s.name}`}
+                >
+                  <Plus className="w-3 h-3" strokeWidth={2.5} />
+                </motion.button>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
