@@ -1,5 +1,5 @@
-import { useState, useMemo, type CSSProperties } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useMemo, useRef, useEffect, type CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   ArrowLeft,
@@ -12,8 +12,11 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
+
+const HCAPTCHA_SITE_KEY = "0dd0e842-7d24-4fba-9fd0-59a61b6ab782";
 
 const availabilityPresets = [
   { label: "Standard Work Week", desc: "Mon–Fri, 09:00–17:00", schedule: { mon: "09:00–17:00", tue: "09:00–17:00", wed: "09:00–17:00", thu: "09:00–17:00", fri: "09:00–17:00", sat: "Closed", sun: "Closed" } },
@@ -25,6 +28,46 @@ const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 type DayKey = typeof days[number];
 
 interface Service { name: string; price: string; duration: string; }
+
+/**
+ * Builds the correct admin URL after tenant creation — mirrors Login.tsx logic exactly.
+ * - localhost / dev  → same origin with ?tenant= param
+ * - production       → hard redirect to {tenantId}.{rootDomain}/admin
+ */
+function buildAdminUrl(tenantId: string): string {
+  const hostname = window.location.hostname;
+  const isLocalhost =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".localhost");
+
+  if (isLocalhost) {
+    return `${window.location.origin}/admin?tenant=${tenantId}`;
+  }
+
+  const parts = hostname.split(".");
+  const rootDomain =
+    parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
+  return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
+}
+
+/**
+ * Polls supabase.auth.getSession() until a valid session is returned.
+ * Retries up to `maxRetries` times with `delayMs` between each attempt.
+ * Needed because the session JWT may not be hydrated in memory immediately
+ * after a fresh signUp() call on slow connections.
+ */
+async function waitForSession(
+  maxRetries = 5,
+  delayMs = 600
+): Promise<string> {
+  for (let i = 0; i < maxRetries; i++) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) return session.access_token;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error("Session not ready. Please try again.");
+}
 
 function generateSlots(start: string, end: string): { slot_start_time: string; slot_end_time: string }[] {
   const slots: { slot_start_time: string; slot_end_time: string }[] = [];
@@ -40,7 +83,6 @@ function generateSlots(start: string, end: string): { slot_start_time: string; s
 }
 
 const Onboarding = () => {
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("");
@@ -49,12 +91,13 @@ const Onboarding = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [step2Error, setStep2Error] = useState<string | null>(null);
-  const [step2Loading, setStep2Loading] = useState(false);
   const [services, setServices] = useState<Service[]>([{ name: "", price: "", duration: "30" }]);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
+  const captchaRef = useRef<HCaptcha>(null);
 
   // Always use default schedule (Standard Work Week) — editable in admin later
   const schedule = availabilityPresets[0].schedule;
@@ -75,9 +118,37 @@ const Onboarding = () => {
   const passwordsMatch = password === confirmPassword;
   const passwordValid = password.length >= 8;
 
+  // ── Mount guard ────────────────────────────────────────────────────────────
+  // If the user already has a valid session + user_roles row (e.g. they
+  // refreshed mid-onboarding after a previous completion), skip the wizard
+  // and redirect them straight to their dashboard.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+
+        const adminRole =
+          roles?.find((r) => r.role === "owner") ??
+          roles?.find((r) => r.role === "admin");
+
+        if (adminRole?.tenant_id) {
+          window.location.href = buildAdminUrl(adminRole.tenant_id);
+        }
+      } catch {
+        // No session or error — let the wizard render normally
+      }
+    })();
+  }, []);
+
   const canProceed = () => {
     if (step === 1) return !!businessType;
-    // Step 2 proceed is handled by handleStep2Continue — button disabled based on field validity
     if (step === 2) return (
       businessName.trim().length >= 2 &&
       email.trim().includes("@") &&
@@ -85,7 +156,8 @@ const Onboarding = () => {
       passwordsMatch
     );
     if (step === 3) return services.some((s) => s.name.trim());
-    return true;
+    // Step 4: captcha must be verified before submit is enabled
+    return !!captchaToken;
   };
 
   const handleSelectBusinessType = (label: string) => {
@@ -97,25 +169,10 @@ const Onboarding = () => {
     setTimeout(() => setStep(2), 300);
   };
 
-  // Called when user clicks Continue on Step 2
-  const handleStep2Continue = async () => {
-    setStep2Error(null);
-    setStep2Loading(true);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: { business_name: businessName.trim() },
-        },
-      });
-      if (error) throw error;
-      setStep(3);
-    } catch (err: unknown) {
-      setStep2Error(err instanceof Error ? err.message : "Sign up failed. Please try again.");
-    } finally {
-      setStep2Loading(false);
-    }
+  // Step 2 is now pure local validation — no server call.
+  // signUp() happens atomically in handleComplete alongside create-tenant.
+  const handleStep2Next = () => {
+    if (canProceed()) setStep(3);
   };
 
   const addService = () => setServices([...services, { name: "", price: "", duration: "30" }]);
@@ -132,42 +189,102 @@ const Onboarding = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // ── handleComplete ─────────────────────────────────────────────────────────
+  // Single atomic commit: signUp → poll session → create-tenant → redirect.
+  // Nothing hits the server until this point, so there are zero ghost users
+  // from abandoned flows.
   const handleComplete = async () => {
+    if (!captchaToken) {
+      setSubmitError("Please complete the CAPTCHA verification.");
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
-    try {
-      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr || !session) throw new Error("Not authenticated. Please sign in again.");
 
-      const res = await fetch("https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-          "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE",
+    try {
+      // 1. Create the Supabase auth user (with captcha for bot protection)
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { business_name: businessName.trim() },
+          captchaToken,
         },
-        body: JSON.stringify({
-          business_name: businessName.trim(),
-          business_type: businessType ?? "General",
-          theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
-          services: services.filter((s) => s.name.trim()),
-          schedule,
-        }),
       });
+
+      if (signUpError) {
+        // User already registered — they may have completed onboarding before.
+        // Try to sign them in and redirect if they already have a tenant.
+        if (signUpError.message.toLowerCase().includes("already registered")) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+          if (!signInError) {
+            const token = await waitForSession();
+            const { data: roles } = await supabase
+              .from("user_roles")
+              .select("role, tenant_id")
+              .eq("user_id", (await supabase.auth.getUser()).data.user!.id)
+              .order("created_at", { ascending: false });
+            const adminRole =
+              roles?.find((r) => r.role === "owner") ??
+              roles?.find((r) => r.role === "admin");
+            if (adminRole?.tenant_id) {
+              window.location.href = buildAdminUrl(adminRole.tenant_id);
+              return;
+            }
+          }
+        }
+        throw signUpError;
+      }
+
+      // 2. Poll until the JWT session is ready in memory
+      const accessToken = await waitForSession();
+
+      // 3. Create the tenant (business + services + schedule + user_roles row)
+      const res = await fetch(
+        "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE",
+          },
+          body: JSON.stringify({
+            business_name: businessName.trim(),
+            business_type: businessType ?? "General",
+            theme_id:
+              activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
+            services: services.filter((s) => s.name.trim()),
+            schedule,
+          }),
+        }
+      );
 
       const json = await res.json();
 
       if (!res.ok) {
-        if (res.status === 409) {
-          navigate("/admin");
+        // 409 = tenant already exists for this user → just redirect
+        if (res.status === 409 && json.tenant_id) {
+          window.location.href = buildAdminUrl(json.tenant_id);
           return;
         }
         throw new Error(json.error ?? `Server error ${res.status}`);
       }
 
-      navigate("/admin");
+      // 4. Hard redirect to the correct subdomain admin URL
+      window.location.href = buildAdminUrl(json.tenant_id);
     } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setSubmitError(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      );
+      // Reset captcha so the user can retry without refreshing
+      captchaRef.current?.resetCaptcha();
+      setCaptchaToken(null);
     } finally {
       setSubmitting(false);
     }
@@ -176,7 +293,10 @@ const Onboarding = () => {
   const totalSteps = 4;
 
   return (
-    <div className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground" style={themeStyle}>
+    <div
+      className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground"
+      style={themeStyle}
+    >
       <div className="border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
@@ -194,8 +314,14 @@ const Onboarding = () => {
             </span>
           </Link>
           <div className="flex items-center gap-3">
-            {activeTheme && <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-accent/20 text-accent-foreground transition-colors duration-500">{activeTheme.vibe}</span>}
-            <span className="text-xs text-muted-foreground">Step {step} of {totalSteps}</span>
+            {activeTheme && (
+              <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-accent/20 text-accent-foreground transition-colors duration-500">
+                {activeTheme.vibe}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              Step {step} of {totalSteps}
+            </span>
           </div>
         </div>
       </div>
@@ -203,7 +329,12 @@ const Onboarding = () => {
       <div className="max-w-2xl mx-auto px-4 w-full mt-6">
         <div className="flex gap-1.5">
           {Array.from({ length: totalSteps }).map((_, i) => (
-            <div key={i} className={`h-1 flex-1 rounded-full transition-colors duration-500 ${i < step ? "bg-primary" : "bg-border"}`} />
+            <div
+              key={i}
+              className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
+                i < step ? "bg-primary" : "bg-border"
+              }`}
+            />
           ))}
         </div>
       </div>
@@ -215,8 +346,12 @@ const Onboarding = () => {
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Let's set up your booking page</h1>
-                <p className="text-muted-foreground text-sm">Select your business type, and the page will adapt to your vibe. This will be your customer-facing app.</p>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
+                  Let's set up your booking page
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Select your business type, and the page will adapt to your vibe. This will be your customer-facing app.
+                </p>
               </div>
               <div className="space-y-2">
                 {businessThemes.map((type) => (
@@ -229,34 +364,51 @@ const Onboarding = () => {
                         : "border-border hover:border-foreground/20 hover:shadow-soft gradient-surface"
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-300 ${
-                      businessType === type.label ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                    }`}>
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-300 ${
+                        businessType === type.label
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
                       <type.icon className="h-5 w-5" />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-foreground">{type.label}</p>
                       <p className="text-xs text-muted-foreground">{type.desc}</p>
                     </div>
-                    <span className="text-[10px] text-muted-foreground hidden sm:block">{type.vibe}</span>
-                    {businessType === type.label && <Check className="h-4 w-4 text-primary" />}
+                    <span className="text-[10px] text-muted-foreground hidden sm:block">
+                      {type.vibe}
+                    </span>
+                    {businessType === type.label && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── STEP 2: Business name + account creation ── */}
+          {/* ── STEP 2: Business name + credentials (local only — no server call) ── */}
           {step === 2 && (
             <div className="space-y-8 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Set up your account</h1>
-                <p className="text-muted-foreground text-sm">Name your business and create your login — you can always update these later.</p>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
+                  Set up your account
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Name your business and create your login — you can always update these later.
+                </p>
               </div>
               <div className="space-y-4">
                 {/* Business name */}
                 <div>
-                  <label htmlFor="onboarding-business-name" className="block text-sm font-medium mb-1.5 text-foreground">Business name</label>
+                  <label
+                    htmlFor="onboarding-business-name"
+                    className="block text-sm font-medium mb-1.5 text-foreground"
+                  >
+                    Business name
+                  </label>
                   <input
                     id="onboarding-business-name"
                     name="business-name"
@@ -268,13 +420,20 @@ const Onboarding = () => {
                     autoFocus
                   />
                   {businessName.trim() && (
-                    <p className="text-xs text-muted-foreground mt-1.5 font-mono">{bookingUrl}</p>
+                    <p className="text-xs text-muted-foreground mt-1.5 font-mono">
+                      {bookingUrl}
+                    </p>
                   )}
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">Email address</label>
+                  <label
+                    htmlFor="onboarding-email"
+                    className="block text-sm font-medium mb-1.5 text-foreground"
+                  >
+                    Email address
+                  </label>
                   <input
                     id="onboarding-email"
                     name="email"
@@ -289,7 +448,12 @@ const Onboarding = () => {
 
                 {/* Password */}
                 <div>
-                  <label htmlFor="onboarding-password" className="block text-sm font-medium mb-1.5 text-foreground">Password</label>
+                  <label
+                    htmlFor="onboarding-password"
+                    className="block text-sm font-medium mb-1.5 text-foreground"
+                  >
+                    Password
+                  </label>
                   <div className="relative">
                     <input
                       id="onboarding-password"
@@ -307,17 +471,28 @@ const Onboarding = () => {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   {password && !passwordValid && (
-                    <p className="text-xs text-destructive mt-1.5">Password must be at least 8 characters</p>
+                    <p className="text-xs text-destructive mt-1.5">
+                      Password must be at least 8 characters
+                    </p>
                   )}
                 </div>
 
                 {/* Confirm password */}
                 <div>
-                  <label htmlFor="onboarding-confirm-password" className="block text-sm font-medium mb-1.5 text-foreground">Confirm password</label>
+                  <label
+                    htmlFor="onboarding-confirm-password"
+                    className="block text-sm font-medium mb-1.5 text-foreground"
+                  >
+                    Confirm password
+                  </label>
                   <div className="relative">
                     <input
                       id="onboarding-confirm-password"
@@ -335,38 +510,49 @@ const Onboarding = () => {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       aria-label={showConfirm ? "Hide password" : "Show password"}
                     >
-                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirm ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   {confirmPassword && !passwordsMatch && (
-                    <p className="text-xs text-destructive mt-1.5">Passwords don't match</p>
+                    <p className="text-xs text-destructive mt-1.5">
+                      Passwords don't match
+                    </p>
                   )}
                 </div>
-
-                {/* Auth error */}
-                {step2Error && (
-                  <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                    {step2Error}
-                  </div>
-                )}
               </div>
             </div>
           )}
 
-          {/* ── STEP 3: Services (was step 3 — unchanged) ── */}
+          {/* ── STEP 3: Services ── */}
           {step === 3 && (
             <div className="space-y-8 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">Your services</h1>
-                <p className="text-muted-foreground text-sm">We've pre-filled these based on your business type — edit prices and times to match yours.</p>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
+                  Your services
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  We've pre-filled these based on your business type — edit prices and times to match yours.
+                </p>
               </div>
               <div className="space-y-3">
                 {services.map((service, i) => (
-                  <div key={i} className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft">
+                  <div
+                    key={i}
+                    className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Service {i + 1}</span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Service {i + 1}
+                      </span>
                       {services.length > 1 && (
-                        <button onClick={() => removeService(i)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <button
+                          onClick={() => removeService(i)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -382,7 +568,9 @@ const Onboarding = () => {
                     />
                     <div className="grid grid-cols-2 gap-3">
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">R</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                          R
+                        </span>
                         <input
                           id={`service-price-${i}`}
                           name={`service-price-${i}`}
@@ -425,32 +613,68 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* ── STEP 4: Summary + complete (was step 5) ── */}
+          {/* ── STEP 4: Summary + captcha + complete ── */}
           {step === 4 && (
             <div className="space-y-8 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">You're all set! 🎉</h1>
-                <p className="text-muted-foreground text-sm">Your booking page is ready. Share it with your clients.</p>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
+                  You're all set! 🎉
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Your booking page is ready. Share it with your clients.
+                </p>
               </div>
               <div className="gradient-card rounded-xl p-5 border border-border shadow-soft space-y-3">
                 <p className="text-xs text-muted-foreground">Your booking link</p>
                 <div className="flex items-center gap-2">
-                  <span className="flex-1 text-sm font-mono font-semibold text-foreground truncate">{bookingUrl}</span>
-                  <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                    {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span className="flex-1 text-sm font-mono font-semibold text-foreground truncate">
+                    {bookingUrl}
+                  </span>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-primary" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
                     {copied ? "Copied!" : "Copy"}
                   </button>
                 </div>
               </div>
               <div className="gradient-surface rounded-xl p-4 border border-border/50 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground mb-3">Summary</p>
-                <p className="text-sm text-foreground"><span className="text-muted-foreground">Business: </span>{businessName}</p>
-                <p className="text-sm text-foreground"><span className="text-muted-foreground">Type: </span>{businessType}</p>
-                <p className="text-sm text-foreground"><span className="text-muted-foreground">Services: </span>{services.filter(s => s.name.trim()).length} added</p>
-                <p className="text-sm text-foreground"><span className="text-muted-foreground">Account: </span>{email}</p>
+                <p className="text-sm text-foreground">
+                  <span className="text-muted-foreground">Business: </span>{businessName}
+                </p>
+                <p className="text-sm text-foreground">
+                  <span className="text-muted-foreground">Type: </span>{businessType}
+                </p>
+                <p className="text-sm text-foreground">
+                  <span className="text-muted-foreground">Services: </span>
+                  {services.filter((s) => s.name.trim()).length} added
+                </p>
+                <p className="text-sm text-foreground">
+                  <span className="text-muted-foreground">Account: </span>{email}
+                </p>
               </div>
+
+              {/* hCaptcha — required before "Go to Dashboard" is enabled */}
+              <div className="flex justify-center">
+                <HCaptcha
+                  ref={captchaRef}
+                  sitekey={HCAPTCHA_SITE_KEY}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  theme="light"
+                />
+              </div>
+
               {submitError && (
-                <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>
+                <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {submitError}
+                </div>
               )}
             </div>
           )}
@@ -460,23 +684,22 @@ const Onboarding = () => {
             {step > 1 ? (
               <button
                 onClick={() => setStep(step - 1)}
-                disabled={submitting || step2Loading}
+                disabled={submitting}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
               >
                 <ArrowLeft className="h-4 w-4" />Back
               </button>
-            ) : <div />}
+            ) : (
+              <div />
+            )}
 
             {step === 2 ? (
-              // Step 2 has its own async Continue handler
               <button
-                onClick={handleStep2Continue}
-                disabled={!canProceed() || step2Loading}
+                onClick={handleStep2Next}
+                disabled={!canProceed()}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {step2Loading
-                  ? <><Loader2 className="h-4 w-4 animate-spin" />Creating account...</>
-                  : <>Continue<ArrowRight className="h-4 w-4" /></>}
+                Continue<ArrowRight className="h-4 w-4" />
               </button>
             ) : step < totalSteps ? (
               <button
@@ -489,10 +712,14 @@ const Onboarding = () => {
             ) : (
               <button
                 onClick={handleComplete}
-                disabled={submitting}
+                disabled={submitting || !captchaToken}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</> : <>Go to Dashboard<ArrowRight className="h-4 w-4" /></>}
+                {submitting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
+                ) : (
+                  <>Go to Dashboard<ArrowRight className="h-4 w-4" /></>
+                )}
               </button>
             )}
           </div>
