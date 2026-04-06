@@ -224,9 +224,9 @@ Deno.serve(async (req) => {
     }, { onConflict: "id" });
     if (profileErr) { await rollback(); throw new Error(`profile: ${profileErr.message}`); }
 
-    // ── 5d. Insert services ────────────────────────────────────────────────
-    // services.category CHECK: facial | massage | nails | waxing | makeup |
-    // lashes | threading | tinting | manicure_pedicure | extensions | extras | other
+    // ── 5d. Upsert services ────────────────────────────────────────────────
+    // Uses upsert on (tenant_id, name, category) to satisfy the
+    // unique_service_name_category constraint and be safe on retries.
     const category = mapCategory(business_type);
     const validServices = (services as any[]).filter((s: any) => s.name?.trim());
 
@@ -239,7 +239,9 @@ Deno.serve(async (req) => {
         category:         category,
         is_active:        true,
       }));
-      const { error: svcErr } = await admin.from("services").insert(rows);
+      const { error: svcErr } = await admin
+        .from("services")
+        .upsert(rows, { onConflict: "tenant_id,name,category", ignoreDuplicates: false });
       if (svcErr) { await rollback(); throw new Error(`services: ${svcErr.message}`); }
     }
 
