@@ -3,7 +3,10 @@
 -- Covers: services_step_heading, client_type_existing_label,
 --         client_type_new_label, client_type_existing_notes_placeholder
 -- Run in: Supabase Dashboard → SQL Editor → Run
--- Safe to run multiple times (uses upsert ON CONFLICT)
+--
+-- CONFLICT STRATEGY:
+--   makeup_artist → DO NOTHING  (preserves Phenomebeauty's custom copy)
+--   all others    → DO UPDATE   (safe to re-run, idempotent)
 -- ================================================================
 
 DO $$
@@ -11,26 +14,30 @@ BEGIN
 
 -- ────────────────────────────────────────────────────────────────
 -- MAKEUP ARTIST  (theme_id = makeup_artist)
+-- Strategy: DO NOTHING — existing rows (e.g. Phenomebeauty's
+-- "Existing Diva" / "New Diva" / "Select treatments") are
+-- intentionally preserved. Only NEW makeup_artist tenants with
+-- no rows yet will receive these defaults.
 -- ────────────────────────────────────────────────────────────────
 INSERT INTO app_settings (tenant_id, key, value)
 SELECT id, 'services_step_heading',                   'Select a look'
 FROM   tenants WHERE theme_id = 'makeup_artist'
-ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
+ON CONFLICT (tenant_id, key) DO NOTHING;
 
 INSERT INTO app_settings (tenant_id, key, value)
-SELECT id, 'client_type_existing_label',              'Returning Glam'
+SELECT id, 'client_type_existing_label',              'Existing Diva'
 FROM   tenants WHERE theme_id = 'makeup_artist'
-ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
+ON CONFLICT (tenant_id, key) DO NOTHING;
 
 INSERT INTO app_settings (tenant_id, key, value)
-SELECT id, 'client_type_new_label',                   'New Client'
+SELECT id, 'client_type_new_label',                   'New Diva'
 FROM   tenants WHERE theme_id = 'makeup_artist'
-ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
+ON CONFLICT (tenant_id, key) DO NOTHING;
 
 INSERT INTO app_settings (tenant_id, key, value)
-SELECT id, 'client_type_existing_notes_placeholder',  'e.g. skin changes, new allergies, look preferences…'
+SELECT id, 'client_type_existing_notes_placeholder',  'e.g. skin sensitivity changes, new medications, preferences…'
 FROM   tenants WHERE theme_id = 'makeup_artist'
-ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
+ON CONFLICT (tenant_id, key) DO NOTHING;
 
 -- ────────────────────────────────────────────────────────────────
 -- BEAUTICIAN  (theme_id = beautician)
@@ -87,7 +94,7 @@ FROM   tenants WHERE theme_id = 'lash_tech'
 ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
 
 INSERT INTO app_settings (tenant_id, key, value)
-SELECT id, 'client_type_existing_label',              'I'm a regular'
+SELECT id, 'client_type_existing_label',              'I''m a regular'
 FROM   tenants WHERE theme_id = 'lash_tech'
 ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
 
@@ -133,7 +140,7 @@ FROM   tenants WHERE theme_id = 'nail_tech'
 ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
 
 INSERT INTO app_settings (tenant_id, key, value)
-SELECT id, 'client_type_existing_label',              'I'm a regular'
+SELECT id, 'client_type_existing_label',              'I''m a regular'
 FROM   tenants WHERE theme_id = 'nail_tech'
 ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
 
@@ -170,6 +177,6 @@ SELECT id, 'client_type_existing_notes_placeholder',  'e.g. any changes since yo
 FROM   tenants WHERE theme_id = 'standard'
 ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value;
 
-RAISE NOTICE 'Theme copy keys upserted for all 7 themes across all existing tenants.';
+RAISE NOTICE 'Done. makeup_artist rows skipped if already set (Phenomebeauty protected). All other themes upserted.';
 
 END $$;
