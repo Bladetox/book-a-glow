@@ -4,7 +4,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
-  Copy,
   Plus,
   Trash2,
   Clock,
@@ -88,7 +87,6 @@ const Onboarding = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [services, setServices] = useState<Service[]>([{ name: "", price: "", duration: "30" }]);
-  const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -98,9 +96,6 @@ const Onboarding = () => {
 
   // Always use default schedule (Standard Work Week) — editable in admin later
   const schedule = availabilityPresets[0].schedule;
-
-  const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 30);
-  const bookingUrl = slug ? `${slug}.nextslot.app` : "yourbusiness.nextslot.app";
 
   const activeTheme = useMemo(() => {
     if (!businessType) return null;
@@ -115,7 +110,7 @@ const Onboarding = () => {
   const passwordsMatch = password === confirmPassword;
   const passwordValid = password.length >= 8;
 
-  // ── Mount guard ────────────────────────────────────────────────────────────
+  // ── Mount guard ──────────────────────────────────────────────────────────
   // If the user already has a valid session + user_roles row (e.g. they
   // refreshed mid-onboarding after a previous completion), skip the wizard.
   useEffect(() => {
@@ -174,13 +169,7 @@ const Onboarding = () => {
     setServices(updated);
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`https://${bookingUrl}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  // ── handleComplete ─────────────────────────────────────────────────────────
+  // ── handleComplete ────────────────────────────────────────────────────────
   const handleComplete = async () => {
     // Honeypot check — bots fill hidden fields, humans don't
     if (honeypot) return;
@@ -395,15 +384,13 @@ const Onboarding = () => {
                     placeholder="e.g. Glow by Tash"
                     autoFocus
                   />
-                  {businessName.trim() && (
-                    <p className="text-xs text-muted-foreground mt-1.5 font-mono">{bookingUrl}</p>
-                  )}
                 </div>
 
                 <div>
                   <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">
                     Email address
                   </label>
+
                   <input
                     id="onboarding-email"
                     name="email"
@@ -561,23 +548,8 @@ const Onboarding = () => {
                   You're all set! 🎉
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  Your booking page is ready. Share it with your clients.
+                  Review your details below, then launch your dashboard.
                 </p>
-              </div>
-              <div className="gradient-card rounded-xl p-5 border border-border shadow-soft space-y-3">
-                <p className="text-xs text-muted-foreground">Your booking link</p>
-                <div className="flex items-center gap-2">
-                  <span className="flex-1 text-sm font-mono font-semibold text-foreground truncate">
-                    {bookingUrl}
-                  </span>
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied ? "Copied!" : "Copy"}
-                  </button>
-                </div>
               </div>
               <div className="gradient-surface rounded-xl p-4 border border-border/50 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground mb-3">Summary</p>
