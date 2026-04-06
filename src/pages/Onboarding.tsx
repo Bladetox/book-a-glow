@@ -69,19 +69,6 @@ async function waitForSession(
   throw new Error("Session not ready. Please try again.");
 }
 
-function generateSlots(start: string, end: string): { slot_start_time: string; slot_end_time: string }[] {
-  const slots: { slot_start_time: string; slot_end_time: string }[] = [];
-  const toMins = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
-  const toTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-  let cur = toMins(start);
-  const endMins = toMins(end);
-  while (cur + 30 <= endMins) {
-    slots.push({ slot_start_time: toTime(cur), slot_end_time: toTime(cur + 30) });
-    cur += 30;
-  }
-  return slots;
-}
-
 const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
@@ -148,7 +135,6 @@ const Onboarding = () => {
   }, []);
 
   const canProceed = () => {
-    if (step === 1) return !!businessType;
     if (step === 2) return (
       businessName.trim().length >= 2 &&
       email.trim().includes("@") &&
@@ -160,6 +146,7 @@ const Onboarding = () => {
     return !!captchaToken;
   };
 
+  // Step 1: selecting a type auto-advances — no Continue button shown.
   const handleSelectBusinessType = (label: string) => {
     const theme = businessThemes.find((t) => t.label === label);
     setBusinessType(label);
@@ -169,7 +156,7 @@ const Onboarding = () => {
     setTimeout(() => setStep(2), 300);
   };
 
-  // Step 2 is now pure local validation — no server call.
+  // Step 2 is pure local validation — no server call.
   // signUp() happens atomically in handleComplete alongside create-tenant.
   const handleStep2Next = () => {
     if (canProceed()) setStep(3);
@@ -193,6 +180,14 @@ const Onboarding = () => {
   // Single atomic commit: signUp → poll session → create-tenant → redirect.
   // Nothing hits the server until this point, so there are zero ghost users
   // from abandoned flows.
+  //
+  // NOTE: captchaToken is intentionally NOT passed to supabase.auth.signUp().
+  // The Supabase project does not have hCaptcha enforcement enabled at the
+  // auth level. Passing the token caused Supabase to forward it to hCaptcha
+  // for server-side validation, which returned 401 (site key / secret mismatch),
+  // causing signUp() to fail before a session was created. The captcha widget
+  // still protects this form as a client-side gate (button stays disabled
+  // until verified).
   const handleComplete = async () => {
     if (!captchaToken) {
       setSubmitError("Please complete the CAPTCHA verification.");
@@ -203,13 +198,12 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      // 1. Create the Supabase auth user (with captcha for bot protection)
+      // 1. Create the Supabase auth user
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           data: { business_name: businessName.trim() },
-          captchaToken,
         },
       });
 
@@ -342,7 +336,7 @@ const Onboarding = () => {
       <div className="flex-1 flex items-start justify-center pt-12 pb-20 px-4">
         <div className="w-full max-w-lg">
 
-          {/* ── STEP 1: Business type ── */}
+          {/* ── STEP 1: Business type — tap to select, auto-advances, no Continue button ── */}
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
               <div>
@@ -660,7 +654,8 @@ const Onboarding = () => {
                 </p>
               </div>
 
-              {/* hCaptcha — required before "Go to Dashboard" is enabled */}
+              {/* hCaptcha — UX gate: button disabled until verified.
+                  Token is NOT forwarded to Supabase signUp() — see handleComplete. */}
               <div className="flex justify-center">
                 <HCaptcha
                   ref={captchaRef}
@@ -680,8 +675,10 @@ const Onboarding = () => {
           )}
 
           {/* ── NAV BUTTONS ── */}
-          <div className="mt-8 flex items-center justify-between gap-3">
-            {step > 1 ? (
+          {/* Step 1 has NO footer buttons — selection auto-advances.           */}
+          {/* Steps 2-4 show Back on the left and Continue/Submit on the right. */}
+          {step > 1 && (
+            <div className="mt-8 flex items-center justify-between gap-3">
               <button
                 onClick={() => setStep(step - 1)}
                 disabled={submitting}
@@ -689,40 +686,38 @@ const Onboarding = () => {
               >
                 <ArrowLeft className="h-4 w-4" />Back
               </button>
-            ) : (
-              <div />
-            )}
 
-            {step === 2 ? (
-              <button
-                onClick={handleStep2Next}
-                disabled={!canProceed()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Continue<ArrowRight className="h-4 w-4" />
-              </button>
-            ) : step < totalSteps ? (
-              <button
-                onClick={() => setStep(step + 1)}
-                disabled={!canProceed()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Continue<ArrowRight className="h-4 w-4" />
-              </button>
-            ) : (
-              <button
-                onClick={handleComplete}
-                disabled={submitting || !captchaToken}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
-                ) : (
-                  <>Go to Dashboard<ArrowRight className="h-4 w-4" /></>
-                )}
-              </button>
-            )}
-          </div>
+              {step === 2 ? (
+                <button
+                  onClick={handleStep2Next}
+                  disabled={!canProceed()}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue<ArrowRight className="h-4 w-4" />
+                </button>
+              ) : step < totalSteps ? (
+                <button
+                  onClick={() => setStep(step + 1)}
+                  disabled={!canProceed()}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue<ArrowRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleComplete}
+                  disabled={submitting || !captchaToken}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
+                  ) : (
+                    <>Go to Dashboard<ArrowRight className="h-4 w-4" /></>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
 
         </div>
       </div>
