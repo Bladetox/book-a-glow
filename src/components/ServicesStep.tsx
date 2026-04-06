@@ -1,5 +1,6 @@
 import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
 import { useSuggestedAddons, getActiveSuggestions } from "@/hooks/useSuggestedAddons";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useState, useMemo } from "react";
 import { Loader2, Plus, Minus, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +15,12 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
   const { data: treatments = [], isLoading: loadingServices } = usePublicServices();
   const { data: categories = [], isLoading: loadingCats } = usePublicCategories();
   const { data: addonsConfig } = useSuggestedAddons();
+  const config = usePublicBusinessConfig();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  // ── Derive the step-1 heading from app_settings or fall back to a neutral label ──
+  const servicesHeading: string =
+    (config as Record<string, string>)["services_step_heading"] ?? "Select a service";
 
   // ── Derive suggestion strip ──────────────────────────────────────────────
   const suggestionStrip = useMemo(() => {
@@ -54,7 +60,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
       {/* Title row */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-          Select treatments
+          {servicesHeading}
         </h3>
         {totalSelected > 0 && (
           <span className="text-[10px] font-semibold text-primary">

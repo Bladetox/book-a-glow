@@ -50,6 +50,16 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
+  // ── Theme-aware client-type button labels ──────────────────────────────────
+  // Falls back to neutral copy if the key is not set in app_settings
+  const existingClientLabel: string =
+    (config as Record<string, string>)["client_type_existing_label"] ?? "Returning Client";
+  const newClientLabel: string =
+    (config as Record<string, string>)["client_type_new_label"] ?? "New Client";
+  const existingClientNotesPlaceholder: string =
+    (config as Record<string, string>)["client_type_existing_notes_placeholder"] ??
+    "e.g. any changes since your last visit, preferences…";
+
   useEffect(() => {
     const t = setTimeout(() => {
       requestAnimationFrame(() => {
@@ -227,8 +237,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         <p className="text-sm text-foreground mb-3">Have you booked with us before?</p>
         <div className="flex gap-3">
           {[
-            { label: "Existing Diva", value: true, icon: Star },
-            { label: "New Diva", value: false, icon: Sparkles },
+            { label: existingClientLabel, value: true, icon: Star },
+            { label: newClientLabel, value: false, icon: Sparkles },
           ].map((opt) => (
             <motion.button
               key={String(opt.value)}
@@ -267,7 +277,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                 id="existing-client-notes"
                 name="existing-client-notes"
                 className={`${inputClass} min-h-[70px]`}
-                placeholder="e.g. skin sensitivity changes, new medications, preferences…"
+                placeholder={existingClientNotesPlaceholder}
                 value={booking.existingClientNotes}
                 onChange={(e) => onUpdate({ existingClientNotes: e.target.value })}
               />
