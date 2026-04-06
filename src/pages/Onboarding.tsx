@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, type CSSProperties } from "react";
+import { useState, useMemo, useEffect, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
