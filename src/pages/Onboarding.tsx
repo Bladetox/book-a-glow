@@ -155,33 +155,45 @@ const Onboarding = () => {
         // Pre-fill email from session so Step 2 feels seamless, then skip
         // them to Step 2. They must still go through Step 3 (services) so
         // their service list is populated before the final submit.
-        // NOTE: businessType + services from Step 1 will be at their default
-        // values (null / [BLANK_SERVICE]) since the page was reloaded. The
-        // user will re-select their business type on Step 1 which seeds the
-        // suggested services, or they can edit them freely in Step 3.
         if (session.user.email) {
           setEmail(session.user.email);
         }
         // Stay on Step 1 so they re-pick their business type (which seeds
         // the suggested services list). handleSelectBusinessType auto-advances
         // to Step 2 after selection — at that point email is pre-filled.
-        // This is the safest path: services are always seeded from their
-        // chosen business type before they reach Step 3.
       } catch {
         // No session or network error — let the wizard render normally
       }
     })();
   }, []);
 
+  // ── Validation ───────────────────────────────────────────────────────────
+  // canProceed() is checked on every Continue / Go to Dashboard button.
+  // Each step independently validates only the fields it collected.
+  // Step 4 re-validates ALL fields as a final safety net — if a user somehow
+  // skips earlier steps via URL manipulation, the submit is still blocked.
   const canProceed = () => {
     if (step === 2) return (
+      // Also guard businessType — blocks URL-hacked arrival at step 2
+      // without having selected a business type in step 1.
+      !!businessType &&
       businessName.trim().length >= 2 &&
       email.trim().includes("@") &&
       passwordValid &&
       passwordsMatch
     );
     if (step === 3) return services.some((s) => s.name.trim());
-    return true; // Step 4 summary: always allow submit (honeypot handles bots)
+    if (step === 4) return (
+      // Final re-validation of all required fields before calling the API.
+      // "Go to Dashboard" is disabled until these all pass.
+      !!businessType &&
+      businessName.trim().length >= 2 &&
+      email.trim().includes("@") &&
+      passwordValid &&
+      passwordsMatch &&
+      services.some((s) => s.name.trim())
+    );
+    return true;
   };
 
   // Step 1: selecting a type auto-advances — no Continue button shown.
@@ -212,6 +224,13 @@ const Onboarding = () => {
   const handleComplete = async () => {
     // Honeypot check — bots fill hidden fields, humans don't
     if (honeypot) return;
+
+    // Hard re-validation before touching the API — canProceed() disables the
+    // button, but this is the last line of defence against any bypass.
+    if (!canProceed()) {
+      setSubmitError("Please complete all required fields before continuing.");
+      return;
+    }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -358,7 +377,7 @@ const Onboarding = () => {
 
           {/* ── STEP 1: Business type — tap to select, auto-advances ── */}
           {step === 1 && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-8 onboarding-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
                   Let's set up your booking page
@@ -405,7 +424,7 @@ const Onboarding = () => {
 
           {/* ── STEP 2: Business name + credentials ── */}
           {step === 2 && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-8 onboarding-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
                   Set up your account
@@ -511,7 +530,7 @@ const Onboarding = () => {
 
           {/* ── STEP 3: Services ── */}
           {step === 3 && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-8 onboarding-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
                   Your services
@@ -587,7 +606,7 @@ const Onboarding = () => {
 
           {/* ── STEP 4: Summary + complete ── */}
           {step === 4 && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-8 onboarding-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
                   You're all set! 🎉
@@ -645,7 +664,7 @@ const Onboarding = () => {
               ) : (
                 <button
                   onClick={handleComplete}
-                  disabled={submitting}
+                  disabled={submitting || !canProceed()}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? (

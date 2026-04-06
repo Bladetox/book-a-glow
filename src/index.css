@@ -653,3 +653,37 @@ html:not(.dark) .tenant-logo-img {
   background: var(--gradient-glow);
   pointer-events: none;
 }
+
+/*
+  ===== ONBOARDING STEP FADE-IN ANIMATION =====
+  Each step's container uses .onboarding-fade-in to animate in from
+  slightly below with an opacity fade. This replaces the missing
+  animate-fade-in class that was referenced but never defined, which
+  caused steps to appear instantly with no transition.
+
+  Duration: 280ms — fast enough to feel snappy, slow enough to read.
+  Easing: ease-out — starts fast (feels responsive), decelerates into place.
+  Respects prefers-reduced-motion: collapses to an instant opacity-only
+  fade so users sensitive to motion still get a state-change cue.
+*/
+@keyframes onboarding-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.onboarding-fade-in {
+  animation: onboarding-fade-up 280ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-fade-in {
+    animation: none;
+    opacity: 1;
+  }
+}
