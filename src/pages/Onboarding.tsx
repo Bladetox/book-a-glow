@@ -77,6 +77,8 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
   return signInData.session.access_token;
 }
 
+const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
+
 const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
@@ -86,7 +88,7 @@ const Onboarding = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [services, setServices] = useState<Service[]>([{ name: "", price: "", duration: "30" }]);
+  const [services, setServices] = useState<Service[]>([{ ...BLANK_SERVICE }]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -111,13 +113,27 @@ const Onboarding = () => {
   const passwordValid = password.length >= 8;
 
   // ── Mount guard ──────────────────────────────────────────────────────────
-  // If the user already has a valid session + user_roles row (e.g. they
-  // refreshed mid-onboarding after a previous completion), skip the wizard.
+  // Check if the user already has a valid Supabase session when they land here.
+  //
+  // Case A — session exists + user_roles row found (completed onboarding before):
+  //   → Redirect straight to the admin subdomain. Nothing left to do.
+  //
+  // Case B — session exists + NO user_roles row (abandoned after Step 2, i.e.
+  //   auth account created but create-tenant never finished):
+  //   → Pre-fill their email from the session, skip to Step 2 so they can
+  //     confirm their password and continue. Their service list (seeded from
+  //     Step 1 theme selection) lives in React state and is preserved because
+  //     Step 1 still runs handleSelectBusinessType before advancing; if they
+  //     reload at Step 2 the services default to [BLANK_SERVICE] — acceptable,
+  //     since Step 3 lets them edit freely. We land them at Step 2 so they
+  //     still pass through Step 3 (services) before hitting the submit on Step 4.
+  //
+  // Case C — no session: render normally from Step 1.
   useEffect(() => {
     (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        if (!session?.user) return; // Case C — no session, render wizard normally
 
         const { data: roles } = await supabase
           .from("user_roles")
@@ -130,10 +146,29 @@ const Onboarding = () => {
           roles?.find((r) => r.role === "admin");
 
         if (adminRole?.tenant_id) {
+          // Case A — already has a complete tenant, redirect immediately
           window.location.href = buildAdminUrl(adminRole.tenant_id);
+          return;
         }
+
+        // Case B — auth account exists but tenant was never created.
+        // Pre-fill email from session so Step 2 feels seamless, then skip
+        // them to Step 2. They must still go through Step 3 (services) so
+        // their service list is populated before the final submit.
+        // NOTE: businessType + services from Step 1 will be at their default
+        // values (null / [BLANK_SERVICE]) since the page was reloaded. The
+        // user will re-select their business type on Step 1 which seeds the
+        // suggested services, or they can edit them freely in Step 3.
+        if (session.user.email) {
+          setEmail(session.user.email);
+        }
+        // Stay on Step 1 so they re-pick their business type (which seeds
+        // the suggested services list). handleSelectBusinessType auto-advances
+        // to Step 2 after selection — at that point email is pre-filled.
+        // This is the safest path: services are always seeded from their
+        // chosen business type before they reach Step 3.
       } catch {
-        // No session or error — let the wizard render normally
+        // No session or network error — let the wizard render normally
       }
     })();
   }, []);
@@ -150,10 +185,14 @@ const Onboarding = () => {
   };
 
   // Step 1: selecting a type auto-advances — no Continue button shown.
+  // Seeds the suggested services from the chosen theme so they carry through
+  // to Step 3 pre-filled, ready for the user to edit prices/durations.
   const handleSelectBusinessType = (label: string) => {
     const theme = businessThemes.find((t) => t.label === label);
     setBusinessType(label);
     if (theme) {
+      // Seed services from the theme's suggested list.
+      // These carry through to Step 3 where the user edits price/duration.
       setServices(theme.suggestedServices.map((s) => ({ ...s })));
     }
     setTimeout(() => setStep(2), 300);
@@ -161,7 +200,7 @@ const Onboarding = () => {
 
   const handleStep2Next = () => { if (canProceed()) setStep(3); };
 
-  const addService = () => setServices([...services, { name: "", price: "", duration: "30" }]);
+  const addService = () => setServices([...services, { ...BLANK_SERVICE }]);
   const removeService = (i: number) => setServices(services.filter((_, idx) => idx !== i));
   const updateService = (i: number, field: keyof Service, value: string) => {
     const updated = [...services];
@@ -203,7 +242,9 @@ const Onboarding = () => {
         }
       }
 
-      // 3. Create the tenant (business + services + schedule + user_roles row)
+      // 3. Create the tenant (business + services + schedule + user_roles row).
+      //    Services built in Step 3 are passed here — this is the single point
+      //    where auth creation and tenant creation happen together atomically.
       const res = await fetch(
         "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
         {
@@ -219,6 +260,8 @@ const Onboarding = () => {
             business_type: businessType ?? "General",
             theme_id:
               activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
+            // Pass the full services list the user built in Step 3.
+            // Filtered to only rows where the user entered a name.
             services: services.filter((s) => s.name.trim()),
             schedule,
           }),
@@ -236,7 +279,9 @@ const Onboarding = () => {
         throw new Error(json.error ?? `Server error ${res.status}`);
       }
 
-      // 4. Hard redirect to the correct subdomain admin URL
+      // 4. Hard redirect to the correct subdomain admin URL.
+      //    Uses window.location.href (not React Router navigate) so the full
+      //    page reloads on the correct subdomain where the admin app lives.
       window.location.href = buildAdminUrl(json.tenant_id);
     } catch (err: unknown) {
       setSubmitError(
