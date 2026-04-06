@@ -56,7 +56,7 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
   const { error: signUpError } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { business_name: businessName } },
+    options: { data: { full_name: businessName } },
   });
 
   // If already registered, that's fine — we'll sign them in below.
@@ -252,8 +252,7 @@ const Onboarding = () => {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             business_name: businessName.trim(),
