@@ -183,6 +183,7 @@ Deno.serve(async (req) => {
 
     // ── Rollback helper ────────────────────────────────────────────────────
     const rollback = async () => {
+      await admin.from("app_settings").delete().eq("tenant_id", tenantId);
       await admin.from("staff_availability").delete().eq("tenant_id", tenantId);
       await admin.from("services").delete().eq("tenant_id", tenantId);
       await admin.from("user_roles").delete().eq("tenant_id", tenantId);
@@ -269,6 +270,97 @@ Deno.serve(async (req) => {
     if (availRows.length > 0) {
       const { error: availErr } = await admin.from("staff_availability").insert(availRows);
       if (availErr) { await rollback(); throw new Error(`availability: ${availErr.message}`); }
+    }
+
+    // ── 5g. Seed default app_settings ─────────────────────────────────────
+    // Every new tenant gets a full baseline of settings so the booking page
+    // and admin panel render correctly out of the box.
+    // Sensitive keys (Yoco, SMTP, GCal, Maps) are seeded empty — the owner
+    // must fill them in via the admin Settings panel.
+    const abbrev = business_name.trim().replace(/[^a-zA-Z]/g, "").substring(0, 2).toUpperCase() || "BZ";
+    const defaultSettings: { key: string; value: string; description: string | null }[] = [
+      // ── Identity
+      { key: "business_name",               value: business_name.trim(),           description: null },
+      { key: "abbreviation",                value: abbrev,                          description: null },
+      { key: "tagline",                     value: "beauty services",               description: null },
+      { key: "subtitle",                    value: "Book your appointment",         description: null },
+      { key: "sign_off",                    value: "See you soon.",                 description: null },
+      // ── Booking rules
+      { key: "requires_deposit",            value: "false",                         description: null },
+      { key: "deposit_percent",             value: "50",                            description: null },
+      { key: "min_notice_hours",            value: "24",                            description: null },
+      { key: "max_advance_days",            value: "60",                            description: null },
+      { key: "booking_ref_prefix",          value: "",                              description: null },
+      // ── Mobile service
+      { key: "mobile_service_enabled",      value: "false",                         description: null },
+      { key: "default_distance_km",         value: "10",                            description: null },
+      { key: "rate_per_km",                 value: "3.5",                           description: null },
+      { key: "fixed_origin_address",        value: "",                              description: "Fixed origin for distance calculations" },
+      // ── Client labels
+      { key: "client_label_new",            value: "New Client",                    description: null },
+      { key: "client_label_existing",       value: "Existing Client",               description: null },
+      // ── Booking page copy
+      { key: "cta_label",                   value: "Select your services",          description: null },
+      { key: "confirmation_title",          value: "Your booking is confirmed",      description: null },
+      { key: "confirmation_intro",          value: "Your space in the calendar is held.", description: null },
+      { key: "confirmation_outro",          value: "Looking forward to seeing you.", description: null },
+      // ── Deposit success page
+      { key: "success_deposit_title",       value: "Deposit received",              description: null },
+      { key: "success_deposit_tagline",     value: "You're all booked.",            description: null },
+      { key: "success_deposit_body",        value: "Your deposit has been received and your appointment is confirmed.", description: null },
+      { key: "success_deposit_intent",      value: "See you soon.",                 description: null },
+      { key: "success_deposit_closing",     value: "Thank you for booking with us.", description: null },
+      { key: "success_deposit_signoff",     value: "See you soon.",                 description: null },
+      // ── Final success page (no deposit)
+      { key: "success_final_title",         value: "Thank you!",                    description: null },
+      { key: "success_final_body",          value: "We appreciate your business.",  description: null },
+      { key: "success_final_rebook",        value: "We'd love to see you again.",   description: null },
+      { key: "success_final_review_cta",    value: "Share your experience",         description: null },
+      { key: "success_final_signoff",       value: "See you soon.",                 description: null },
+      // ── Plan
+      { key: "plan",                        value: "\"free\"",                      description: null },
+      // ── Admin / notifications
+      { key: "admin_email",                 value: user.email ?? "",               description: "Admin email for notifications" },
+      { key: "app_base_url",               value: "",                              description: "Base URL of the application" },
+      // ── SMTP (blank — configure in admin)
+      { key: "smtp_host",                   value: "",                              description: "SMTP server host" },
+      { key: "smtp_port",                   value: "587",                           description: "SMTP server port" },
+      { key: "smtp_user",                   value: "",                              description: "SMTP username" },
+      { key: "smtp_password",               value: "",                              description: null },
+      { key: "smtp_from_email",             value: user.email ?? "",               description: null },
+      // ── Yoco payments (blank — configure in admin)
+      { key: "yoco_public_key",             value: "",                              description: null },
+      { key: "yoco_secret_key",             value: "",                              description: "Yoco secret key for payment API" },
+      { key: "yoco_webhook_secret",         value: "",                              description: "Yoco webhook signature verification secret" },
+      // ── Google integrations (blank — configure in admin)
+      { key: "google_maps_api_key",         value: "",                              description: "Google Maps API key for distance calculation" },
+      { key: "google_calendar_id",          value: "",                              description: "Google Calendar ID for bookings" },
+      { key: "google_place_id",             value: "",                              description: null },
+      { key: "google_review_link",          value: "",                              description: null },
+      { key: "google_review_url",           value: "",                              description: null },
+      { key: "gcal_connected",              value: "false",                         description: null },
+      { key: "gmb_connected",              value: "false",                         description: null },
+      // ── Loyalty (blank — configure in admin)
+      { key: "loyalty_qualifying_service",  value: "",                              description: "Loyalty: loyalty_qualifying_service" },
+      { key: "loyalty_min_bookings",        value: "3",                             description: "Loyalty: loyalty_min_bookings" },
+      { key: "loyalty_lookback_days",       value: "90",                            description: "Loyalty: loyalty_lookback_days" },
+      { key: "loyalty_reminder_weeks",      value: "5",                             description: "Loyalty: loyalty_reminder_weeks" },
+    ];
+
+    const settingsRows = defaultSettings.map((s) => ({
+      key:         s.key,
+      value:       s.value,
+      description: s.description,
+      tenant_id:   tenantId,
+    }));
+
+    const { error: settingsErr } = await admin
+      .from("app_settings")
+      .insert(settingsRows);
+
+    if (settingsErr) {
+      await rollback();
+      throw new Error(`app_settings: ${settingsErr.message}`);
     }
 
     // ── 5f. Mark onboarding complete ───────────────────────────────────────
