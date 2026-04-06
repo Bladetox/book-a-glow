@@ -12,20 +12,14 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
-
-const HCAPTCHA_SITE_KEY = "0dd0e842-7d24-4fba-9fd0-59a61b6ab782";
 
 const availabilityPresets = [
   { label: "Standard Work Week", desc: "Mon–Fri, 09:00–17:00", schedule: { mon: "09:00–17:00", tue: "09:00–17:00", wed: "09:00–17:00", thu: "09:00–17:00", fri: "09:00–17:00", sat: "Closed", sun: "Closed" } },
   { label: "Weekend Business", desc: "Thu–Sun, 09:00–18:00", schedule: { mon: "Closed", tue: "Closed", wed: "Closed", thu: "09:00–18:00", fri: "09:00–18:00", sat: "09:00–18:00", sun: "09:00–15:00" } },
   { label: "Custom Schedule", desc: "Set your own hours", schedule: { mon: "09:00–18:00", tue: "09:00–18:00", wed: "Closed", thu: "09:00–18:00", fri: "09:00–19:00", sat: "09:00–15:00", sun: "Closed" } },
 ];
-
-const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-type DayKey = typeof days[number];
 
 interface Service { name: string; price: string; duration: string; }
 
@@ -52,21 +46,36 @@ function buildAdminUrl(tenantId: string): string {
 }
 
 /**
- * Polls supabase.auth.getSession() until a valid session is returned.
- * Retries up to `maxRetries` times with `delayMs` between each attempt.
- * Needed because the session JWT may not be hydrated in memory immediately
- * after a fresh signUp() call on slow connections.
+ * Signs up, then immediately signs in to guarantee a real session token.
+ *
+ * Why: when Supabase has email confirmation enabled, auth.signUp() returns
+ * { user, session: null }. Polling for a session that never arrives caused
+ * the 'Session not ready' error. signInWithPassword() always returns a
+ * live session regardless of email confirmation state.
  */
-async function waitForSession(
-  maxRetries = 5,
-  delayMs = 600
-): Promise<string> {
-  for (let i = 0; i < maxRetries; i++) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) return session.access_token;
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
+async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
+  const { error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { business_name: businessName } },
+  });
+
+  // If already registered, that's fine — we'll sign them in below.
+  // Any other signup error is a real failure.
+  if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
+    throw signUpError;
   }
-  throw new Error("Session not ready. Please try again.");
+
+  // Always sign in after signup to get a guaranteed session token.
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) throw signInError;
+  if (!signInData.session?.access_token) throw new Error("Could not establish session. Please try again.");
+
+  return signInData.session.access_token;
 }
 
 const Onboarding = () => {
@@ -82,9 +91,10 @@ const Onboarding = () => {
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
-  const captchaRef = useRef<HCaptcha>(null);
+  // Invisible honeypot — bots fill hidden fields; humans never see or touch it.
+  // If this field has any value when the form is submitted, silently block it.
+  const [honeypot, setHoneypot] = useState("");
 
   // Always use default schedule (Standard Work Week) — editable in admin later
   const schedule = availabilityPresets[0].schedule;
@@ -107,8 +117,7 @@ const Onboarding = () => {
 
   // ── Mount guard ────────────────────────────────────────────────────────────
   // If the user already has a valid session + user_roles row (e.g. they
-  // refreshed mid-onboarding after a previous completion), skip the wizard
-  // and redirect them straight to their dashboard.
+  // refreshed mid-onboarding after a previous completion), skip the wizard.
   useEffect(() => {
     (async () => {
       try {
@@ -142,8 +151,7 @@ const Onboarding = () => {
       passwordsMatch
     );
     if (step === 3) return services.some((s) => s.name.trim());
-    // Step 4: captcha must be verified before submit is enabled
-    return !!captchaToken;
+    return true; // Step 4 summary: always allow submit (honeypot handles bots)
   };
 
   // Step 1: selecting a type auto-advances — no Continue button shown.
@@ -156,11 +164,7 @@ const Onboarding = () => {
     setTimeout(() => setStep(2), 300);
   };
 
-  // Step 2 is pure local validation — no server call.
-  // signUp() happens atomically in handleComplete alongside create-tenant.
-  const handleStep2Next = () => {
-    if (canProceed()) setStep(3);
-  };
+  const handleStep2Next = () => { if (canProceed()) setStep(3); };
 
   const addService = () => setServices([...services, { name: "", price: "", duration: "30" }]);
   const removeService = (i: number) => setServices(services.filter((_, idx) => idx !== i));
@@ -177,65 +181,38 @@ const Onboarding = () => {
   };
 
   // ── handleComplete ─────────────────────────────────────────────────────────
-  // Single atomic commit: signUp → poll session → create-tenant → redirect.
-  // Nothing hits the server until this point, so there are zero ghost users
-  // from abandoned flows.
-  //
-  // NOTE: captchaToken is intentionally NOT passed to supabase.auth.signUp().
-  // The Supabase project does not have hCaptcha enforcement enabled at the
-  // auth level. Passing the token caused Supabase to forward it to hCaptcha
-  // for server-side validation, which returned 401 (site key / secret mismatch),
-  // causing signUp() to fail before a session was created. The captcha widget
-  // still protects this form as a client-side gate (button stays disabled
-  // until verified).
   const handleComplete = async () => {
-    if (!captchaToken) {
-      setSubmitError("Please complete the CAPTCHA verification.");
-      return;
-    }
+    // Honeypot check — bots fill hidden fields, humans don't
+    if (honeypot) return;
 
     setSubmitting(true);
     setSubmitError(null);
 
     try {
-      // 1. Create the Supabase auth user
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
+      // 1. Sign up + immediately sign in to get a guaranteed session token.
+      //    See signUpAndGetToken() above for why signIn is always called.
+      const accessToken = await signUpAndGetToken(
+        email.trim(),
         password,
-        options: {
-          data: { business_name: businessName.trim() },
-        },
-      });
+        businessName.trim()
+      );
 
-      if (signUpError) {
-        // User already registered — they may have completed onboarding before.
-        // Try to sign them in and redirect if they already have a tenant.
-        if (signUpError.message.toLowerCase().includes("already registered")) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
-          });
-          if (!signInError) {
-            const token = await waitForSession();
-            const { data: roles } = await supabase
-              .from("user_roles")
-              .select("role, tenant_id")
-              .eq("user_id", (await supabase.auth.getUser()).data.user!.id)
-              .order("created_at", { ascending: false });
-            const adminRole =
-              roles?.find((r) => r.role === "owner") ??
-              roles?.find((r) => r.role === "admin");
-            if (adminRole?.tenant_id) {
-              window.location.href = buildAdminUrl(adminRole.tenant_id);
-              return;
-            }
-          }
+      // 2. Check if this user already has a tenant (re-submit edge case)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        const adminRole =
+          roles?.find((r) => r.role === "owner") ??
+          roles?.find((r) => r.role === "admin");
+        if (adminRole?.tenant_id) {
+          window.location.href = buildAdminUrl(adminRole.tenant_id);
+          return;
         }
-        throw signUpError;
       }
-
-      // 2. Poll until the JWT session is ready in memory
-      const accessToken = await waitForSession();
 
       // 3. Create the tenant (business + services + schedule + user_roles row)
       const res = await fetch(
@@ -276,9 +253,6 @@ const Onboarding = () => {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong. Please try again."
       );
-      // Reset captcha so the user can retry without refreshing
-      captchaRef.current?.resetCaptcha();
-      setCaptchaToken(null);
     } finally {
       setSubmitting(false);
     }
@@ -291,6 +265,18 @@ const Onboarding = () => {
       className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground"
       style={themeStyle}
     >
+      {/* Invisible honeypot — hidden from all users, visible to bots */}
+      <input
+        type="text"
+        name="website"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+        aria-hidden="true"
+        tabIndex={-1}
+        autoComplete="off"
+        style={{ display: "none" }}
+      />
+
       <div className="border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
@@ -336,7 +322,7 @@ const Onboarding = () => {
       <div className="flex-1 flex items-start justify-center pt-12 pb-20 px-4">
         <div className="w-full max-w-lg">
 
-          {/* ── STEP 1: Business type — tap to select, auto-advances, no Continue button ── */}
+          {/* ── STEP 1: Business type — tap to select, auto-advances ── */}
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
               <div>
@@ -383,7 +369,7 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* ── STEP 2: Business name + credentials (local only — no server call) ── */}
+          {/* ── STEP 2: Business name + credentials ── */}
           {step === 2 && (
             <div className="space-y-8 animate-fade-in">
               <div>
@@ -395,12 +381,8 @@ const Onboarding = () => {
                 </p>
               </div>
               <div className="space-y-4">
-                {/* Business name */}
                 <div>
-                  <label
-                    htmlFor="onboarding-business-name"
-                    className="block text-sm font-medium mb-1.5 text-foreground"
-                  >
+                  <label htmlFor="onboarding-business-name" className="block text-sm font-medium mb-1.5 text-foreground">
                     Business name
                   </label>
                   <input
@@ -414,18 +396,12 @@ const Onboarding = () => {
                     autoFocus
                   />
                   {businessName.trim() && (
-                    <p className="text-xs text-muted-foreground mt-1.5 font-mono">
-                      {bookingUrl}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1.5 font-mono">{bookingUrl}</p>
                   )}
                 </div>
 
-                {/* Email */}
                 <div>
-                  <label
-                    htmlFor="onboarding-email"
-                    className="block text-sm font-medium mb-1.5 text-foreground"
-                  >
+                  <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">
                     Email address
                   </label>
                   <input
@@ -440,12 +416,8 @@ const Onboarding = () => {
                   />
                 </div>
 
-                {/* Password */}
                 <div>
-                  <label
-                    htmlFor="onboarding-password"
-                    className="block text-sm font-medium mb-1.5 text-foreground"
-                  >
+                  <label htmlFor="onboarding-password" className="block text-sm font-medium mb-1.5 text-foreground">
                     Password
                   </label>
                   <div className="relative">
@@ -465,26 +437,16 @@ const Onboarding = () => {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   {password && !passwordValid && (
-                    <p className="text-xs text-destructive mt-1.5">
-                      Password must be at least 8 characters
-                    </p>
+                    <p className="text-xs text-destructive mt-1.5">Password must be at least 8 characters</p>
                   )}
                 </div>
 
-                {/* Confirm password */}
                 <div>
-                  <label
-                    htmlFor="onboarding-confirm-password"
-                    className="block text-sm font-medium mb-1.5 text-foreground"
-                  >
+                  <label htmlFor="onboarding-confirm-password" className="block text-sm font-medium mb-1.5 text-foreground">
                     Confirm password
                   </label>
                   <div className="relative">
@@ -504,17 +466,11 @@ const Onboarding = () => {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       aria-label={showConfirm ? "Hide password" : "Show password"}
                     >
-                      {showConfirm ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   {confirmPassword && !passwordsMatch && (
-                    <p className="text-xs text-destructive mt-1.5">
-                      Passwords don't match
-                    </p>
+                    <p className="text-xs text-destructive mt-1.5">Passwords don't match</p>
                   )}
                 </div>
               </div>
@@ -534,19 +490,11 @@ const Onboarding = () => {
               </div>
               <div className="space-y-3">
                 {services.map((service, i) => (
-                  <div
-                    key={i}
-                    className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft"
-                  >
+                  <div key={i} className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Service {i + 1}
-                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">Service {i + 1}</span>
                       {services.length > 1 && (
-                        <button
-                          onClick={() => removeService(i)}
-                          className="text-muted-foreground hover:text-destructive transition-colors"
-                        >
+                        <button onClick={() => removeService(i)} className="text-muted-foreground hover:text-destructive transition-colors">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -562,9 +510,7 @@ const Onboarding = () => {
                     />
                     <div className="grid grid-cols-2 gap-3">
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-                          R
-                        </span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">R</span>
                         <input
                           id={`service-price-${i}`}
                           name={`service-price-${i}`}
@@ -607,7 +553,7 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* ── STEP 4: Summary + captcha + complete ── */}
+          {/* ── STEP 4: Summary + complete ── */}
           {step === 4 && (
             <div className="space-y-8 animate-fade-in">
               <div>
@@ -628,42 +574,20 @@ const Onboarding = () => {
                     onClick={handleCopy}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {copied ? (
-                      <Check className="h-3.5 w-3.5 text-primary" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
+                    {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
                     {copied ? "Copied!" : "Copy"}
                   </button>
                 </div>
               </div>
               <div className="gradient-surface rounded-xl p-4 border border-border/50 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground mb-3">Summary</p>
-                <p className="text-sm text-foreground">
-                  <span className="text-muted-foreground">Business: </span>{businessName}
-                </p>
-                <p className="text-sm text-foreground">
-                  <span className="text-muted-foreground">Type: </span>{businessType}
-                </p>
+                <p className="text-sm text-foreground"><span className="text-muted-foreground">Business: </span>{businessName}</p>
+                <p className="text-sm text-foreground"><span className="text-muted-foreground">Type: </span>{businessType}</p>
                 <p className="text-sm text-foreground">
                   <span className="text-muted-foreground">Services: </span>
                   {services.filter((s) => s.name.trim()).length} added
                 </p>
-                <p className="text-sm text-foreground">
-                  <span className="text-muted-foreground">Account: </span>{email}
-                </p>
-              </div>
-
-              {/* hCaptcha — UX gate: button disabled until verified.
-                  Token is NOT forwarded to Supabase signUp() — see handleComplete. */}
-              <div className="flex justify-center">
-                <HCaptcha
-                  ref={captchaRef}
-                  sitekey={HCAPTCHA_SITE_KEY}
-                  onVerify={(token) => setCaptchaToken(token)}
-                  onExpire={() => setCaptchaToken(null)}
-                  theme="light"
-                />
+                <p className="text-sm text-foreground"><span className="text-muted-foreground">Account: </span>{email}</p>
               </div>
 
               {submitError && (
@@ -675,8 +599,6 @@ const Onboarding = () => {
           )}
 
           {/* ── NAV BUTTONS ── */}
-          {/* Step 1 has NO footer buttons — selection auto-advances.           */}
-          {/* Steps 2-4 show Back on the left and Continue/Submit on the right. */}
           {step > 1 && (
             <div className="mt-8 flex items-center justify-between gap-3">
               <button
@@ -706,7 +628,7 @@ const Onboarding = () => {
               ) : (
                 <button
                   onClick={handleComplete}
-                  disabled={submitting || !captchaToken}
+                  disabled={submitting}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
