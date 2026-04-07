@@ -117,7 +117,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   useEffect(() => {
     const email = booking.email.trim();
     const phone = booking.phone.trim().replace(/\s/g, "");
-    const name  = booking.fullName.trim();
+    const name = booking.fullName.trim();
 
     // Need at least email OR phone to fire — avoids spamming on first keystrokes
     const hasEnough = validators.email(email) || validators.phone(phone);
@@ -159,12 +159,10 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
       justSelectedRef.current = false;
       return;
     }
-
     if (booking.addressVerified) {
       setShowSuggestions(false);
       return;
     }
-
     if (query.length < 3) {
       setAddressSuggestions([]);
       setShowSuggestions(false);
@@ -199,8 +197,10 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     setShowSuggestions(false);
     setAddressSuggestions([]);
     setTouched((prev) => ({ ...prev, address: true }));
+
     const origin = config.address;
     if (!origin) return;
+
     try {
       const data = await callPlacesFunction({ input: description, origin });
       if (data?.distanceKm != null) onUpdate({ distanceKm: data.distanceKm });
@@ -309,6 +309,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                   Answer all questions honestly. Your information is strictly confidential.
                 </p>
               </div>
+
               {safetyQuestions.map((q, i) => (
                 <motion.div
                   key={q.id}
@@ -342,8 +343,34 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                       </motion.button>
                     ))}
                   </div>
+
+                  {/* Free-text detail field when Yes is selected */}
+                  <AnimatePresence>
+                    {booking.safetyAnswers[q.id] === true && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden mt-1"
+                      >
+                        <textarea
+                          className={`${inputClass} min-h-[50px] text-xs py-2`}
+                          placeholder="Please provide details..."
+                          value={booking.safetyAnswerDetails[q.id] || ""}
+                          onChange={(e) => onUpdate({
+                            safetyAnswerDetails: {
+                              ...booking.safetyAnswerDetails,
+                              [q.id]: e.target.value
+                            }
+                          })}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               ))}
+
               <textarea
                 id="additional-notes"
                 name="additional-notes"
@@ -444,11 +471,9 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         <div>
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-
             {addressLoading && !booking.addressVerified && (
               <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
             )}
-
             {booking.address.length > 0 && !addressLoading && (
               <button
                 type="button"
@@ -462,7 +487,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
-
             <input
               id="booking-address"
               name="address"
