@@ -22,10 +22,11 @@ export type BookingState = {
   phoneCode: string;
   email: string;
   address: string;
-  addressVerified: boolean;  // true only when address was selected from Google Places
+  addressVerified: boolean; // true only when address was selected from Google Places
   distanceKm: number | null;
   referralSource: string;
   safetyAnswers: Record<number, boolean | null>;
+  safetyAnswerDetails: Record<number, string>; // free-text detail captured when answer is Yes
   additionalNotes: string;
   existingClientNotes: string;
 };
@@ -44,6 +45,7 @@ export const initialBookingState: BookingState = {
   distanceKm: null,
   referralSource: "",
   safetyAnswers: {},
+  safetyAnswerDetails: {},
   additionalNotes: "",
   existingClientNotes: "",
 };
