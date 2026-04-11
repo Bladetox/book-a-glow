@@ -27,7 +27,7 @@ const Demo = () => {
             </h1>
             <p className="text-muted-foreground max-w-lg mx-auto text-sm leading-relaxed">
               This is a fully interactive demo using fictional data for a mock barbershop called{" "}
-              <span className="font-semibold text-foreground">Blade &amp; Co.</span> — no real tenant, no real data, no account required.
+              <span className="font-semibold text-foreground">Blade &amp; Co.</span> no account required.
             </p>
           </div>
 
@@ -124,7 +124,7 @@ const Demo = () => {
         <section className="bg-secondary/40 border-t border-border py-16 md:py-20 text-center">
           <div className="max-w-xl mx-auto px-4 space-y-5">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Ready to set this up for your business?</h2>
-            <p className="text-muted-foreground text-sm">Get your own booking page live in minutes. No credit card required.</p>
+            <p className="text-muted-foreground text-sm">Get your own booking page live in minutes. No payment required.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 to="/onboarding"
