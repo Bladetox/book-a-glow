@@ -26,7 +26,7 @@ export const LaptopFrame = ({ children, interactive = true }: DeviceFrameProps) 
 );
 
 export const MobileFrame = ({ children, interactive = true }: DeviceFrameProps) => (
-  <div className="relative mx-auto w-full" style={{ filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.25)) drop-shadow(0 8px 16px rgba(0,0,0,0.15))" }}>
+  <div className="relative mx-auto w-full">
     <div className="rounded-[22%/8%] border-[2px] border-[#3a3a3a] bg-[#1a1a1a] p-[3px]">
       <div className="absolute left-[-2.5px] top-[20%] w-[2.5px] h-[8%] rounded-l-sm bg-[#3a3a3a]" />
       <div className="absolute left-[-2.5px] top-[30%] w-[2.5px] h-[12%] rounded-l-sm bg-[#3a3a3a]" />
