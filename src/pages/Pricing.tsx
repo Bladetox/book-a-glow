@@ -126,6 +126,11 @@ const faqs = [
   },
 ];
 
+/* Trial checklist items -- shown in hero right column.
+   UX: Zeigarnik Effect: visitor sees unchecked items and feels compelled
+   to start the trial to complete the loop. Anchoring: free-trial framing
+   appears before any price is shown, so free is the reference point.
+*/
 const trialBuilds = [
   "Know which channel drives your bookings",
   "See which services generate the most revenue per hour",
@@ -150,7 +155,11 @@ const Pricing = () => {
       <SiteHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* HERO */}
+        {/* HERO -- 2-col split
+            LEFT:  free-trial headline + primary CTA (Anchoring: free before price)
+            RIGHT: trial-value checklist (Zeigarnik: open loops invite action)
+            UX: Serial Position -- strongest value prop in first visible region.
+        */}
         <section className="py-16 md:py-24">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
@@ -513,6 +522,14 @@ const Pricing = () => {
             Sign up in minutes. Your first 30 days are completely free.
             NextSlot learns your business patterns and delivers a personalised growth strategy built on your real data.
           </p>
+          <Link
+            to="/onboarding"
+            className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
+          >
+            Start Your Free Trial
+            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+          <p className="text-xs text-primary-foreground/40 pt-1">No credit card required. Cancel anytime. POPIA compliant.</p>
         </div>
       </section>
 
