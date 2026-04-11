@@ -4,23 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════════════════════════════════════════════════════
-   SHIMMER KEYFRAMES
-   A 135-degree bright stripe sweeps left-to-right, creating the
-   mirror/reflection effect on text and surfaces.
-   Duration is slow (3.5 s) so it feels premium not gimmicky.
-═══════════════════════════════════════════════════════════════ */
-@keyframes shimmer-sweep {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
-}
-
-@keyframes shimmer-card-sweep {
-  0%   { opacity: 0; transform: translateX(-100%) skewX(-12deg); }
-  40%  { opacity: 1; }
-  100% { opacity: 0; transform: translateX(200%) skewX(-12deg); }
-}
-
 @layer base {
   :root {
     --background: 0 0% 97%;
@@ -167,189 +150,31 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SHIMMER TEXT
-   Apply to bold headings and CTA button labels for the mirror sheen.
-   Uses background-clip:text so only the letterforms catch the light.
-═══════════════════════════════════════════════════════════════ */
-.shimmer-text {
-  background-image: linear-gradient(
-    135deg,
-    hsl(var(--foreground)) 0%,
-    hsl(var(--foreground)) 35%,
-    hsl(0 0% 100% / 0.55) 50%,
-    hsl(var(--foreground)) 65%,
-    hsl(var(--foreground)) 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer-sweep 4s linear infinite;
-  /* prevent layout shift on mobile by keeping display inline-block */
-  display: inline-block;
-  width: 100%;
-}
-
-/* On the dark case-study section, headings are light -- invert the shimmer */
-.shimmer-text-light {
-  background-image: linear-gradient(
-    135deg,
-    hsl(0 0% 100%) 0%,
-    hsl(0 0% 100%) 35%,
-    hsl(0 0% 70% / 0.7) 50%,
-    hsl(0 0% 100%) 65%,
-    hsl(0 0% 100%) 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer-sweep 4s linear infinite;
-  display: inline-block;
-  width: 100%;
-}
-
-/* CTA button label shimmer (white text on dark button) */
-.shimmer-btn {
-  background-image: linear-gradient(
-    135deg,
-    hsl(0 0% 100%) 0%,
-    hsl(0 0% 100%) 38%,
-    hsl(0 0% 85% / 0.75) 50%,
-    hsl(0 0% 100%) 62%,
-    hsl(0 0% 100%) 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer-sweep 3.5s linear infinite;
-  display: inline-block;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   SHIMMER CARD
-   A thin pseudo-element stripe sweeps across the card on hover
-   giving it a reflective, glass-like feel without changing colour.
-   Add class="shimmer-card" to any card element.
-═══════════════════════════════════════════════════════════════ */
-.shimmer-card {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Top-edge highlight -- always visible, very subtle */
-.shimmer-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 5%,
-    hsl(0 0% 100% / 0.65) 35%,
-    hsl(0 0% 100% / 0.30) 65%,
-    transparent 95%
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Sweep stripe -- fires on hover */
-.shimmer-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 40%,
-    hsl(0 0% 100% / 0.18) 50%,
-    transparent 60%
-  );
-  transform: translateX(-100%) skewX(-12deg);
-  pointer-events: none;
-  z-index: 1;
-  transition: none;
-}
-
-.shimmer-card:hover::after {
-  animation: shimmer-card-sweep 0.65s ease-out forwards;
-}
-
-/* ═══════════════════════════════════════════════════════════════
    PAIN POINT CARD
-   White background, shimmer surface, red border + glow.
-   Dark mode: near-white dark-adapted surface.
 ═══════════════════════════════════════════════════════════════ */
 .pain-point-card {
   position: relative;
   overflow: hidden;
   background: hsl(0 0% 100%);
-  border: 1.5px solid hsl(0 84% 60% / 0.55);
+  border: 1.5px solid hsl(0 84% 60% / 0.35);
   border-radius: 1rem;
   box-shadow:
-    0 0 0 1px hsl(0 84% 60% / 0.08),
-    0 4px 20px -4px hsl(0 84% 60% / 0.18),
+    0 4px 20px -4px hsl(0 84% 60% / 0.12),
     0 1px 3px hsl(0 0% 0% / 0.04);
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .dark .pain-point-card {
   background: hsl(0 0% 8%);
-  border-color: hsl(0 84% 60% / 0.45);
+  border-color: hsl(0 84% 60% / 0.35);
 }
 
-/* Top shimmer edge on pain point cards */
-.pain-point-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 5%,
-    hsl(0 84% 60% / 0.35) 40%,
-    hsl(0 0% 100% / 0.50) 50%,
-    hsl(0 84% 60% / 0.35) 60%,
-    transparent 95%
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Hover: deepen red glow, scale up */
 .pain-point-card:hover {
-  border-color: hsl(0 84% 60% / 0.80);
+  border-color: hsl(0 84% 60% / 0.70);
   box-shadow:
-    0 0 0 1px hsl(0 84% 60% / 0.14),
-    0 8px 28px -6px hsl(0 84% 60% / 0.30),
+    0 8px 28px -6px hsl(0 84% 60% / 0.25),
     0 2px 8px hsl(0 0% 0% / 0.06);
   transform: translateY(-2px) scale(1.015);
-}
-
-/* Sweep stripe on hover */
-.pain-point-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 40%,
-    hsl(0 0% 100% / 0.14) 50%,
-    transparent 60%
-  );
-  transform: translateX(-100%) skewX(-12deg);
-  pointer-events: none;
-  z-index: 1;
-  transition: none;
-}
-
-.pain-point-card:hover::after {
-  animation: shimmer-card-sweep 0.65s ease-out forwards;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -762,60 +587,50 @@ html:not(.dark) .tenant-logo-img {
 
 /* ═══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE OVERRIDES
-   Targets xs screens (max 639px = below Tailwind's sm breakpoint).
-   Complements Tailwind responsive classes already in components.
 ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 639px) {
-  /* Reduce hero h1 so it never overflows on small phones */
   .nextslot-theme h1 {
     font-size: clamp(1.75rem, 7vw, 2.5rem);
     line-height: 1.1;
   }
 
-  /* Stat anchor row: stack vertically on xs */
   .hero-stat-bar {
     grid-template-columns: 1fr !important;
   }
 
-  /* Pain point grid: single column on xs */
   .pain-point-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* Feature showcase grid: single column on xs */
   .showcase-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* Tighter horizontal padding on xs */
   .nextslot-theme section > .max-w-7xl {
     padding-left: 1rem;
     padding-right: 1rem;
   }
 
-  /* CTA buttons: full width on xs */
   .nextslot-theme .hero-cta-row {
     flex-direction: column;
     width: 100%;
   }
 
-  .nextslot-theme .hero-cta-row > a {
+  .nextslot-theme .hero-cta-row > a,
+  .nextslot-theme .hero-cta-row > button {
     width: 100%;
     justify-content: center;
   }
 
-  /* Pricing tier cards: ensure they don't overflow on xs */
   .nextslot-theme .tier-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* Section headings: prevent overflow on very small screens */
   .nextslot-theme h2 {
     font-size: clamp(1.35rem, 5.5vw, 1.875rem);
     line-height: 1.15;
   }
 
-  /* Step cards: full-width on xs */
   .nextslot-theme .step-grid {
     grid-template-columns: 1fr !important;
   }

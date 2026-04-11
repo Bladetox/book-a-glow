@@ -3,15 +3,17 @@ import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import StickyCtaBar from "@/components/site/StickyCtaBar";
 import TrustBadges from "@/components/site/TrustBadges";
+import PainPointCarousel from "@/components/site/PainPointCarousel";
+import { LiquidButton } from "@/components/ui/liquid-button";
 import {
-  ArrowRight, Check, MessageSquare, CalendarX, AlertTriangle,
+  ArrowRight, Check,
   CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2,
   Star, SlidersHorizontal, ChevronLeft, ChevronRight,
   Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck, PaintBucket
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-/* ─── Below-fold sections: lazy-loaded ─────────────────────────── */
+/* ─── Below-fold sections: lazy-loaded ─────────────────────── */
 const DashboardPreview       = lazy(() => import("@/components/site/DashboardPreview"));
 const MobileDashboardPreview = lazy(() => import("@/components/site/MobileDashboardPreview"));
 const LaptopFrame            = lazy(() =>
@@ -23,7 +25,7 @@ const MobileFrame            = lazy(() =>
 const PhoneShowcaseSection   = lazy(() => import("@/components/site/PhoneShowcaseSection"));
 const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSection"));
 
-/* ─── DATA ──────────────────────────────────────────────────────── */
+/* ─── DATA ──────────────────────────────────────────────────── */
 
 const industries = [
   { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles    },
@@ -34,13 +36,6 @@ const industries = [
   { label: "Hairdressers",       desc: "Cuts, colour & styling",             icon: Zap         },
   { label: "Image Consultants",  desc: "Styling, wardrobe & personal brand", icon: UserCheck   },
   { label: "Nail Technicians",   desc: "Gel, acrylics & nail art",           icon: PaintBucket },
-];
-
-const problems = [
-  { icon: MessageSquare, title: "WhatsApp messages",      desc: "Clients message at all hours. You lose track of who wants what and when." },
-  { icon: CalendarX,     title: "Manual scheduling",      desc: "Pen and paper or memory. Neither scales when business picks up." },
-  { icon: AlertTriangle, title: "Double bookings",        desc: "Two clients, same slot. Someone is unhappy and you look unprofessional." },
-  { icon: BarChart2,     title: "Data without direction", desc: "You have the numbers but you are not sure what to do with them. NextSlot turns your data into decisions." },
 ];
 
 const steps = [
@@ -139,10 +134,7 @@ const caseStudyCards = [
   },
 ];
 
-/* ─── INDUSTRY CARDS ────────────────────────────────────────────
-   Single shared IntersectionObserver for all 8 cards.
-──────────────────────────────────────────────────────────────── */
-
+/* ─── INDUSTRY GRID ─────────────────────────────────────────── */
 const IndustryGrid = () => {
   const [visibleSet, setVisibleSet] = useState<Set<number>>(new Set());
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -165,7 +157,6 @@ const IndustryGrid = () => {
       },
       { threshold: 0.12 }
     );
-
     itemRefs.current.forEach((el) => { if (el) observer.observe(el); });
     return () => observer.disconnect();
   }, []);
@@ -177,7 +168,6 @@ const IndustryGrid = () => {
         const visible = visibleSet.has(index);
         const fromLeft = index % 2 === 0;
         const hiddenTransform = fromLeft ? "translateX(-40px)" : "translateX(40px)";
-
         return (
           <div
             key={ind.label}
@@ -191,20 +181,12 @@ const IndustryGrid = () => {
               opacity: visible ? 1 : 0,
               transform: visible ? "translateX(0)" : hiddenTransform,
             }}
-            className={[
-              "shimmer-card group cursor-default",
-              "rounded-2xl border border-border/60 bg-background",
-              "p-5 flex flex-col items-center text-center gap-3",
-              "shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)]",
-              "hover:border-accent/50",
-            ].join(" ")}
+            className="group cursor-default rounded-2xl border border-border/60 bg-background p-5 flex flex-col items-center text-center gap-3 shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)] hover:border-accent/50 transition-all duration-300 relative overflow-hidden"
           >
             <div
               aria-hidden="true"
               className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
-              style={{
-                background: "radial-gradient(ellipse at 50% 0%, hsl(var(--accent)/0.12) 0%, transparent 70%)",
-              }}
+              style={{ background: "radial-gradient(ellipse at 50% 0%, hsl(var(--accent)/0.12) 0%, transparent 70%)" }}
             />
             <div className="relative z-10 w-12 h-12 rounded-xl bg-accent/15 border border-accent/25 flex items-center justify-center group-hover:bg-accent/25 group-hover:border-accent/45 transition-all duration-300">
               <Icon className="h-5 w-5 text-accent" strokeWidth={2} />
@@ -221,11 +203,7 @@ const IndustryGrid = () => {
 };
 
 /* ─── CASE STUDY CAROUSEL ───────────────────────────────────── */
-
-type CarouselProps = {
-  active: number;
-  setActive: (i: number) => void;
-};
+type CarouselProps = { active: number; setActive: (i: number) => void; };
 
 const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
   const touchStartX = useRef<number>(0);
@@ -239,20 +217,16 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
     touchStartX.current = e.changedTouches[0].clientX;
     touchStartY.current = e.changedTouches[0].clientY;
   };
-
   const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = touchStartX.current - e.changedTouches[0].clientX;
     const dy = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
-    if (Math.abs(dx) > 40 && Math.abs(dx) > dy) {
-      dx > 0 ? next() : prev();
-    }
+    if (Math.abs(dx) > 40 && Math.abs(dx) > dy) { dx > 0 ? next() : prev(); }
   };
 
   const prevRef = useRef(prev);
   const nextRef = useRef(next);
   useEffect(() => { prevRef.current = prev; }, [active]);
   useEffect(() => { nextRef.current = next; }, [active]);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") nextRef.current();
@@ -264,13 +238,9 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
 
   return (
     <div className="relative w-full select-none">
-      <div
-        className="overflow-hidden rounded-3xl"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="overflow-hidden rounded-3xl" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <div
-          className="flex items-stretch transition-transform duration-500 ease-smooth-slide"
+          className="flex items-stretch transition-transform duration-500"
           style={{ transform: `translateX(-${active * 100}%)` }}
         >
           {caseStudyCards.map((card, i) => {
@@ -279,11 +249,8 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
               <div key={card.step} className="w-full shrink-0" aria-hidden={!isActive}>
                 <div
                   className={[
-                    "shimmer-card relative h-full rounded-3xl p-7 md:p-10",
-                    "flex flex-col transition-all duration-500",
-                    card.isFinal
-                      ? "bg-accent/15"
-                      : "bg-primary-foreground/5",
+                    "relative h-full rounded-3xl p-7 md:p-10 flex flex-col transition-all duration-500",
+                    card.isFinal ? "bg-accent/15" : "bg-primary-foreground/5",
                     isActive ? "opacity-100 scale-100" : "opacity-30 scale-[0.98]",
                   ].join(" ")}
                   style={{
@@ -297,7 +264,7 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
                 >
                   <span
                     aria-hidden="true"
-                    className="absolute -right-3 -bottom-5 text-[9rem] md:text-[12rem] font-black leading-none pointer-events-none"
+                    className="absolute -right-3 -bottom-5 text-[9rem] md:text-[12rem] font-black leading-none pointer-events-none select-none"
                     style={{ color: card.isFinal ? "hsl(var(--accent)/0.10)" : "hsl(var(--primary-foreground)/0.05)" }}
                   >
                     {card.step}
@@ -336,7 +303,7 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
         <div className="flex items-center gap-2">
           {caseStudyCards.map((_, i) => (
             <button key={i} onClick={() => setActive(i)} aria-label={`Go to slide ${i + 1}`}
-              className={["rounded-full transition-all duration-300", i === active ? "w-6 h-2 bg-accent shadow-[0_0_8px_2px_hsl(var(--accent)/0.5)]" : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50"].join(" ")}
+              className={["rounded-full transition-all duration-300", i === active ? "w-6 h-2 bg-accent" : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50"].join(" ")}
             />
           ))}
         </div>
@@ -344,7 +311,6 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
           <ChevronRight className="h-4 w-4 text-primary-foreground/70" />
         </button>
       </div>
-
       <p className="mt-4 text-center text-[10px] text-primary-foreground/25 tracking-wider uppercase md:hidden">Swipe to continue</p>
     </div>
   );
@@ -355,10 +321,8 @@ const SectionShell = ({ height = 500 }: { height?: number }) => (
   <div style={{ minHeight: height }} className="w-full" aria-hidden="true" />
 );
 
-/* ─── PAGE ──────────────────────────────────────────────────────── */
-
+/* ─── PAGE ───────────────────────────────────────────────────── */
 const Index = () => {
-  const [hoveredProblem, setHoveredProblem] = useState<number | null>(null);
   const [caseActive, setCaseActive] = useState(0);
   const total = caseStudyCards.length;
 
@@ -379,26 +343,22 @@ const Index = () => {
                 Built for South African service businesses
               </div>
 
-              {/* Headline -- shimmer on the bold dark line */}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.08] tracking-tight">
-                <span className="shimmer-text block">Run your bookings.</span>
+                Run your bookings.<br />
                 <span className="text-muted-foreground">Not your messages.</span>
               </h1>
 
-              {/* Subheadline */}
               <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
                 NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artists and mobile service providers.
               </p>
 
-              {/* CTAs -- hero-cta-row enables xs full-width stacking via CSS */}
               <div className="hero-cta-row flex flex-col sm:flex-row items-start gap-4 pt-2">
-                <Link
-                  to="/onboarding"
-                  className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200"
-                >
-                  <span className="shimmer-btn">Create Your Booking Page</span>
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
+                <LiquidButton asChild size="lg">
+                  <Link to="/onboarding" className="flex items-center gap-2">
+                    Create Your Booking Page
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </LiquidButton>
                 <Link
                   to="/product"
                   className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-3.5"
@@ -407,7 +367,6 @@ const Index = () => {
                 </Link>
               </div>
 
-              {/* Accent callout */}
               <div className="border-l-2 border-accent pl-4 space-y-1">
                 <p className="text-sm font-semibold">Finally know where your clients are actually coming from.</p>
                 <p className="text-xs text-muted-foreground">
@@ -416,11 +375,9 @@ const Index = () => {
                 </p>
               </div>
 
-              {/* Trust badges */}
               <div className="pt-4 border-t border-border">
                 <TrustBadges />
               </div>
-
             </div>
 
             {/* Hero device frames */}
@@ -441,12 +398,12 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── CASE STUDY — moved here: trust proof immediately after hero ── */}
+        {/* ── CASE STUDY — immediately after hero ── */}
         <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Real Story. Real Business.</p>
-              <h2 className="shimmer-text-light text-3xl md:text-4xl tracking-tight mb-4" style={{ fontFamily: "'Abril Fatface', serif" }}>
+              <h2 className="text-3xl md:text-4xl tracking-tight mb-4 font-semibold" style={{ fontFamily: "'Abril Fatface', serif" }}>
                 PhenomeBeauty
               </h2>
               <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
@@ -461,7 +418,7 @@ const Index = () => {
               </div>
               <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-accent rounded-full transition-all duration-500 ease-smooth-slide"
+                  className="h-full bg-accent rounded-full transition-all duration-500"
                   style={{ width: `${(caseActive / (total - 1)) * 100}%` }}
                 />
               </div>
@@ -472,13 +429,12 @@ const Index = () => {
             </div>
 
             <div className="text-center mt-14">
-              <Link
-                to="/onboarding"
-                className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
-              >
-                <span className="shimmer-btn">Start your own story</span>
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
+              <LiquidButton asChild size="lg" className="bg-primary-foreground text-primary">
+                <Link to="/onboarding" className="flex items-center gap-2">
+                  Start your own story
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </LiquidButton>
             </div>
           </div>
         </section>
@@ -486,7 +442,7 @@ const Index = () => {
         {/* ── INDUSTRIES ── */}
         <section className="bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
               Built for modern service businesses
             </h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
@@ -496,34 +452,15 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── PAIN POINTS ── */}
+        {/* ── PAIN POINTS — carousel ── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
-            Most service-based businesses manage bookings like this when starting.
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+            Most service businesses manage bookings like this when starting.
           </h2>
-          <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">Sound familiar?</p>
-
-          {/* pain-point-grid enables xs 1-col layout via CSS override */}
-          <div className="pain-point-grid grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
-            {problems.map((p, i) => (
-              <div
-                key={p.title}
-                className={[
-                  "pain-point-card p-7 cursor-default transition-all duration-300",
-                  hoveredProblem === i ? "scale-[1.03]" : "",
-                ].join(" ")}
-                onMouseEnter={() => setHoveredProblem(i)}
-                onMouseLeave={() => setHoveredProblem(null)}
-              >
-                <p.icon className="h-7 w-7 mb-4 text-red-600 dark:text-red-400" strokeWidth={1.5} />
-                <h3 className="text-base font-semibold mb-2">{p.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center">
-            <div className="shimmer-card inline-flex items-center gap-3 bg-primary text-primary-foreground rounded-2xl px-8 py-4 ring-1 ring-accent shadow-[0_6px_24px_-6px_hsl(var(--accent)/0.4)]">
+          <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-12">Sound familiar?</p>
+          <PainPointCarousel />
+          <div className="text-center mt-10">
+            <div className="inline-flex items-center gap-3 bg-primary text-primary-foreground rounded-2xl px-8 py-4 ring-1 ring-accent shadow-[0_6px_24px_-6px_hsl(var(--accent)/0.4)]">
               <Check className="h-5 w-5 shrink-0" />
               <p className="text-base font-medium">NextSlot replaces all of it with one system.</p>
             </div>
@@ -548,11 +485,11 @@ const Index = () => {
                 Next<span className="text-accent">Slot</span>
               </span>
             </div>
-            <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">How NextSlot works</h2>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">How NextSlot works</h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-16">Three steps. Real results.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
               {steps.map((step) => (
-                <div key={step.num} className="shimmer-card relative group rounded-2xl border border-border/40 bg-background p-7">
+                <div key={step.num} className="relative group rounded-2xl border border-border/40 bg-background p-7">
                   <div className="space-y-4">
                     <div className="w-12 h-12 rounded-2xl bg-accent/30 flex items-center justify-center text-sm font-bold group-hover:bg-accent/50 transition-colors duration-300 border border-black">
                       {step.num}
@@ -569,7 +506,7 @@ const Index = () => {
 
         {/* ── FEATURES ── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
             Everything you need. Nothing you don't.
           </h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
@@ -580,12 +517,11 @@ const Index = () => {
               <PhoneShowcaseSection />
             </Suspense>
           </div>
-          {/* showcase-grid enables xs 1-col layout via CSS override */}
           <div className="showcase-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {showcaseCards.map((card) => (
               <div
                 key={card.title}
-                className="shimmer-card group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
+                className="group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
               >
                 <div className="relative z-10 w-11 h-11 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center mb-5 group-hover:bg-accent/30 group-hover:border-accent/50 transition-all duration-300">
                   <card.icon className="h-5 w-5 text-accent" strokeWidth={2} />
