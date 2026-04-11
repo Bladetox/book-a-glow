@@ -1,9 +1,10 @@
-import { Shield, XCircle, MapPin } from "lucide-react";
+import { Shield, XCircle, MapPin, CalendarCheck } from "lucide-react";
 
 const badges = [
-  { icon: Shield, label: "POPIA Compliant" },
-  { icon: XCircle, label: "Cancel Anytime" },
-  { icon: MapPin, label: "Built for South Africa" },
+  { icon: CalendarCheck, label: "30-Day Free Trial" },
+  { icon: Shield,        label: "POPIA Compliant" },
+  { icon: XCircle,       label: "Cancel Anytime" },
+  { icon: MapPin,        label: "Built for South Africa" },
 ];
 
 const TrustBadges = () => (
