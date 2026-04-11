@@ -7,7 +7,7 @@ import PainPointCarousel from "@/components/site/PainPointCarousel";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import {
   ArrowRight, Check,
-  CalendarCheck, MapPin, Users, LayoutDashboard, BarChart2,
+  CalendarCheck, MapPin, Users, LayoutDashboard,
   Star, SlidersHorizontal, ChevronLeft, ChevronRight,
   Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck, PaintBucket
 } from "lucide-react";
@@ -60,76 +60,74 @@ const steps = [
 ];
 
 const showcaseCards = [
-  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                                icon: CalendarCheck },
-  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                          icon: MapPin },
-  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                                             icon: SlidersHorizontal },
-  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",                        icon: Star },
-  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                                      icon: Users },
-  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                               icon: LayoutDashboard },
+  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                           icon: CalendarCheck },
+  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                     icon: MapPin },
+  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                                        icon: SlidersHorizontal },
+  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",                   icon: Star },
+  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                                 icon: Users },
+  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                          icon: LayoutDashboard },
 ];
 
 const caseStudyCards = [
   {
     step: "01",
     label: "Where it started",
-    version: "v1",
+    version: "The reality",
     isFinal: false,
     points: [
-      "PhenomeBeauty ran all bookings through WhatsApp conversations.",
-      "Every confirmation, reminder, and deposit was handled manually.",
-      "Messages came in at all hours, often after 10pm when clients finally replied.",
-      "There was no structure, no record, and no way to see the business clearly.",
+      "Bookings came through WhatsApp — at all hours, from multiple conversations, with no clear system.",
+      "Every confirmation, deposit request, and reminder was typed out manually, one client at a time.",
+      "Messages piled up overnight. Mornings started with an inbox to untangle before any work could begin.",
+      "There was no record of who booked what, no way to see how the business was actually doing.",
     ],
   },
   {
     step: "02",
-    label: "First attempt at structure",
-    version: "v2",
+    label: "Trying to fix it",
+    version: "The workaround",
     isFinal: false,
     points: [
-      "Added a Google Form to capture booking details and client data more consistently.",
-      "Added a Google Sheet to have more structured data and create a more autonomous workflow.",
-      "Linked a Google Calendar and added a travel distance calculator for call-out jobs.",
-      "There was still no payment gateway. PhenomeBeauty had to send banking details manually and rely on proof of payment as confirmation to secure a booking.",
+      "A Google Form was added to collect booking info. A spreadsheet to track it. A calendar to manage time.",
+      "It was better than nothing — but it still required constant manual work to keep it all in sync.",
+      "Payments still meant sending banking details, waiting for proof of payment, then manually confirming.",
+      "The tools were patched together. Nothing spoke to each other. It was a job on top of the actual job.",
     ],
   },
   {
     step: "03",
-    label: "The shift",
-    version: "v3",
+    label: "The moment everything changed",
+    version: "The shift",
     isFinal: false,
     points: [
-      "PhenomeBeauty moved to a professional booking system with a real payment gateway integrated from day one.",
-      "Clients could now book themselves: choosing their service, selecting a time slot, and paying a deposit upfront without a single message exchanged.",
-      "Proof of payment was gone. The deposit was collected automatically. A booking was only confirmed once payment cleared.",
-      "The booking link went into the TikTok bio, Instagram bio, and WhatsApp status. Within days, confirmed bookings started arriving on their own.",
+      "A professional booking system with a real payment gateway. Clients book, choose a time, and pay a deposit — without a single message.",
+      "Proof of payment gone. A booking is only confirmed once payment clears. Automatically.",
+      "The link went into the TikTok bio, Instagram bio, and WhatsApp status. Bookings started arriving on their own.",
       "For the first time, the business felt like it was running itself.",
     ],
   },
   {
     step: "04",
-    label: "What the dashboard revealed",
-    version: "v3 insight",
+    label: "What the numbers revealed",
+    version: "The insight",
     isFinal: false,
     points: [
-      "Most new clients were coming from TikTok, not WhatsApp or Instagram as originally assumed. Marketing spend shifted immediately.",
-      "Certain services generated far more revenue per hour than others. Pricing and promotion changed as a result.",
-      "Specific time slots filled fastest, revealing real peak demand patterns the owner had never seen before.",
-      "Several clients had not rebooked in over a month. The dashboard surfaced them automatically, making follow-up obvious and timely.",
-      "Decisions that used to be guesses became clear and data-backed.",
+      "Most new clients were coming from TikTok — not Instagram or WhatsApp as assumed. Marketing changed immediately.",
+      "Some services made far more per hour than others. Pricing and promotion followed the data.",
+      "Certain time slots always filled first. Real demand patterns became visible for the first time.",
+      "Clients who hadn't rebooked in a month surfaced automatically. Follow-up became obvious, not guesswork.",
     ],
   },
   {
     step: "05",
-    label: "The result",
-    version: "today",
+    label: "Where it is now",
+    version: "The result",
     isFinal: true,
     points: [
-      "PhenomeBeauty did not just get a booking tool. They got a business advisor that works in the background every single day.",
-      "No more manual payment chasing, no more proof of payments, no more spreadsheet rows that go stale.",
-      "The dashboard reflects exactly what is happening inside the business in real time.",
-      "It surfaces the insights that matter, not generic advice. That is the difference between data you collect and data you can actually use.",
-      "Every iteration taught the business something. NextSlot is what happens when all of those lessons are built into one system.",
+      "PhenomeBeauty didn't just get a booking tool. They got a system that runs the business and advises the owner every day.",
+      "No more chasing payments. No more proof of payments. No more spreadsheets going stale.",
+      "The dashboard shows exactly what is happening in real time — and surfaces what to do next.",
+      "This is why NextSlot exists. Every lesson from building it for a real business is built into the product.",
+      "If you run a service business in South Africa, this was built for you.",
     ],
   },
 ];
@@ -238,7 +236,7 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
 
   return (
     <div className="relative w-full select-none">
-      <div className="overflow-hidden rounded-3xl" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="overflow-hidden rounded-2xl" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <div
           className="flex items-stretch transition-transform duration-500"
           style={{ transform: `translateX(-${active * 100}%)` }}
@@ -246,46 +244,59 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
           {caseStudyCards.map((card, i) => {
             const isActive = i === active;
             return (
-              <div key={card.step} className="w-full shrink-0" aria-hidden={!isActive}>
+              <div key={card.step} className="w-full shrink-0 px-1" aria-hidden={!isActive}>
                 <div
                   className={[
-                    "relative h-full rounded-3xl p-7 md:p-10 flex flex-col transition-all duration-500",
-                    card.isFinal ? "bg-accent/15" : "bg-primary-foreground/5",
-                    isActive ? "opacity-100 scale-100" : "opacity-30 scale-[0.98]",
+                    "relative h-full rounded-2xl p-6 sm:p-8 flex flex-col transition-all duration-500 min-h-[280px]",
+                    card.isFinal
+                      ? "bg-accent/10 border border-accent/50"
+                      : "bg-foreground/[0.03] border border-foreground/10",
+                    isActive ? "opacity-100" : "opacity-20",
                   ].join(" ")}
-                  style={{
-                    border: card.isFinal
-                      ? "1px solid hsl(var(--accent) / 0.75)"
-                      : "1px solid hsl(var(--accent) / 0.28)",
-                    boxShadow: card.isFinal
-                      ? "0 0 0 1px hsl(var(--accent)/0.15), inset 0 1px 0 hsl(var(--accent)/0.25), 0 8px 32px -8px hsl(var(--accent)/0.35)"
-                      : "0 0 0 1px hsl(var(--accent)/0.06), inset 0 1px 0 hsl(var(--accent)/0.10)",
-                  }}
                 >
+                  {/* Watermark step number */}
                   <span
                     aria-hidden="true"
-                    className="absolute -right-3 -bottom-5 text-[9rem] md:text-[12rem] font-black leading-none pointer-events-none select-none"
-                    style={{ color: card.isFinal ? "hsl(var(--accent)/0.10)" : "hsl(var(--primary-foreground)/0.05)" }}
+                    className="absolute right-4 bottom-4 text-[5rem] sm:text-[7rem] font-black leading-none pointer-events-none select-none"
+                    style={{ color: card.isFinal ? "hsl(var(--accent)/0.12)" : "hsl(var(--foreground)/0.04)" }}
                   >
                     {card.step}
                   </span>
-                  <div className="flex items-start justify-between gap-4 mb-6 relative z-10">
+
+                  {/* Card header */}
+                  <div className="flex items-center justify-between gap-3 mb-5 relative z-10">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-1">{card.label}</p>
-                      <p className="text-[10px] text-primary-foreground/30 font-medium uppercase tracking-wider">{card.version}</p>
+                      <p className={["text-xs font-bold uppercase tracking-widest mb-0.5", card.isFinal ? "text-accent" : "text-foreground/50"].join(" ")}>
+                        {card.label}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                        {card.version}
+                      </p>
                     </div>
                     <span className={[
-                      "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold",
-                      card.isFinal ? "bg-accent text-primary ring-1 ring-accent" : "bg-primary-foreground/10 text-accent ring-1 ring-accent/30",
+                      "shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold",
+                      card.isFinal
+                        ? "bg-accent text-foreground ring-1 ring-accent/60"
+                        : "bg-foreground/8 text-foreground/50 ring-1 ring-foreground/10",
                     ].join(" ")}>
                       {parseInt(card.step)}
                     </span>
                   </div>
-                  <ul className="relative z-10 flex-1 flex flex-col justify-start space-y-3">
+
+                  {/* Points */}
+                  <ul className="relative z-10 flex-1 flex flex-col justify-start space-y-2.5">
                     {card.points.map((pt, pi) => (
-                      <li key={pi} className="flex items-start gap-3">
-                        <span className={["mt-[6px] w-1.5 h-1.5 rounded-full shrink-0", card.isFinal ? "bg-accent" : "bg-primary-foreground/30"].join(" ")} />
-                        <span className={["text-sm leading-relaxed", card.isFinal ? "text-primary-foreground/90" : "text-primary-foreground/65"].join(" ")}>{pt}</span>
+                      <li key={pi} className="flex items-start gap-2.5">
+                        <span
+                          className={["mt-[7px] w-1.5 h-1.5 rounded-full shrink-0",
+                            card.isFinal ? "bg-accent" : "bg-foreground/25",
+                          ].join(" ")}
+                        />
+                        <span className={["text-sm leading-relaxed",
+                          card.isFinal ? "text-foreground/85" : "text-foreground/60",
+                        ].join(" ")}>
+                          {pt}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -296,22 +307,39 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
         </div>
       </div>
 
-      <div className="mt-8 flex items-center justify-center gap-6">
-        <button onClick={prev} aria-label="Previous slide" className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
-          <ChevronLeft className="h-4 w-4 text-primary-foreground/70" />
+      {/* Controls */}
+      <div className="mt-6 flex items-center justify-center gap-5">
+        <button
+          onClick={prev}
+          aria-label="Previous slide"
+          className="w-9 h-9 rounded-full bg-foreground/8 hover:bg-foreground/15 ring-1 ring-foreground/10 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+        >
+          <ChevronLeft className="h-4 w-4 text-foreground/50" />
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {caseStudyCards.map((_, i) => (
-            <button key={i} onClick={() => setActive(i)} aria-label={`Go to slide ${i + 1}`}
-              className={["rounded-full transition-all duration-300", i === active ? "w-6 h-2 bg-accent" : "w-2 h-2 bg-primary-foreground/25 hover:bg-primary-foreground/50"].join(" ")}
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`Go to slide ${i + 1}`}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: i === active ? 24 : 8,
+                height: 8,
+                background: i === active ? "hsl(var(--accent))" : "hsl(var(--foreground)/0.15)",
+              }}
             />
           ))}
         </div>
-        <button onClick={next} aria-label="Next slide" className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 ring-1 ring-primary-foreground/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
-          <ChevronRight className="h-4 w-4 text-primary-foreground/70" />
+        <button
+          onClick={next}
+          aria-label="Next slide"
+          className="w-9 h-9 rounded-full bg-foreground/8 hover:bg-foreground/15 ring-1 ring-foreground/10 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+        >
+          <ChevronRight className="h-4 w-4 text-foreground/50" />
         </button>
       </div>
-      <p className="mt-4 text-center text-[10px] text-primary-foreground/25 tracking-wider uppercase md:hidden">Swipe to continue</p>
+      <p className="mt-3 text-center text-[10px] text-muted-foreground tracking-wider uppercase md:hidden">Swipe to continue</p>
     </div>
   );
 };
@@ -336,22 +364,17 @@ const Index = () => {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-8 animate-fade-in">
-
-              {/* Status badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 text-xs font-medium border border-foreground/80 shadow-[0_4px_16px_-4px_hsl(var(--foreground)/0.25)]">
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse border-2 border-solid bg-emerald-600" />
                 Built for South African service businesses
               </div>
-
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.08] tracking-tight">
                 Run your bookings.<br />
                 <span className="text-muted-foreground">Not your messages.</span>
               </h1>
-
               <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
                 NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artists and mobile service providers.
               </p>
-
               <div className="hero-cta-row flex flex-col sm:flex-row items-start gap-4 pt-2">
                 <LiquidButton asChild size="lg">
                   <Link to="/onboarding" className="flex items-center gap-2">
@@ -366,7 +389,6 @@ const Index = () => {
                   See how it works
                 </Link>
               </div>
-
               <div className="border-l-2 border-accent pl-4 space-y-1">
                 <p className="text-sm font-semibold">Finally know where your clients are actually coming from.</p>
                 <p className="text-xs text-muted-foreground">
@@ -374,13 +396,11 @@ const Index = () => {
                   Your dashboard shows exactly which channel drives your business, so you stop guessing and start investing in what works.
                 </p>
               </div>
-
               <div className="pt-4 border-t border-border">
                 <TrustBadges />
               </div>
             </div>
 
-            {/* Hero device frames */}
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-square rounded-full opacity-30 blur-3xl pointer-events-none -z-0"
@@ -398,25 +418,51 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── CASE STUDY — immediately after hero ── */}
-        <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Real Story. Real Business.</p>
-              <h2 className="text-3xl md:text-4xl tracking-tight mb-4 font-semibold" style={{ fontFamily: "'Abril Fatface', serif" }}>
-                PhenomeBeauty
-              </h2>
-              <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
-                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
+        {/* ── CASE STUDY ── */}
+        <section className="bg-secondary/50 border-y border-border/50 py-14 sm:py-20 md:py-24 overflow-hidden">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+
+            {/* Header */}
+            <div className="mb-10 sm:mb-12">
+              {/* Origin label */}
+              <p className="text-xs font-bold uppercase tracking-widest text-accent mb-4">
+                Where NextSlot came from
               </p>
+
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-4">
+                It all started with{" "}
+                <span style={{ fontFamily: "'Abril Fatface', serif" }}>PhenomeBeauty.</span>
+              </h2>
+
+              <p className="text-base text-muted-foreground leading-relaxed max-w-xl">
+                A mobile beauty studio owner doing everything alone — bookings on WhatsApp, deposits via EFT, schedules in her head.
+                Sound familiar? This is her journey. And why NextSlot exists.
+              </p>
+
+              {/* Subtle identity reinforcement */}
+              <div className="mt-5 flex flex-wrap gap-2">
+                {["Solo operator", "Mobile business", "No staff", "WhatsApp bookings", "Proof of payment chaos"].map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 rounded-full text-[11px] font-medium bg-foreground/5 border border-foreground/10 text-foreground/50"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            <div className="max-w-lg mx-auto mb-10">
+            {/* Progress bar */}
+            <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseStudyCards[caseActive].label}</span>
-                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseActive + 1} / {total}</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {caseStudyCards[caseActive].label}
+                </span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {caseActive + 1} / {total}
+                </span>
               </div>
-              <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
+              <div className="h-0.5 bg-foreground/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-accent rounded-full transition-all duration-500"
                   style={{ width: `${(caseActive / (total - 1)) * 100}%` }}
@@ -424,23 +470,27 @@ const Index = () => {
               </div>
             </div>
 
-            <div className="max-w-2xl mx-auto">
-              <CaseStudyCarousel active={caseActive} setActive={setCaseActive} />
-            </div>
+            {/* Carousel */}
+            <CaseStudyCarousel active={caseActive} setActive={setCaseActive} />
 
-            <div className="text-center mt-14">
-              <LiquidButton asChild size="lg" className="bg-primary-foreground text-primary">
+            {/* CTA */}
+            <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
+              <LiquidButton asChild size="lg">
                 <Link to="/onboarding" className="flex items-center gap-2">
-                  Start your own story
+                  Build your system now
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </LiquidButton>
+              <p className="text-xs text-muted-foreground text-center sm:text-left">
+                Set up in minutes. No tech experience needed.
+              </p>
             </div>
+
           </div>
         </section>
 
         {/* ── INDUSTRIES ── */}
-        <section className="bg-secondary/40 py-20 md:py-28">
+        <section className="bg-background py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
               Built for modern service businesses
@@ -452,23 +502,25 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── PAIN POINTS — carousel ── */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
-            Most service businesses manage bookings like this when starting.
-          </h2>
-          <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-12">Sound familiar?</p>
-          <PainPointCarousel />
-          <div className="text-center mt-10">
-            <div className="inline-flex items-center gap-3 bg-primary text-primary-foreground rounded-2xl px-8 py-4 ring-1 ring-accent shadow-[0_6px_24px_-6px_hsl(var(--accent)/0.4)]">
-              <Check className="h-5 w-5 shrink-0" />
-              <p className="text-base font-medium">NextSlot replaces all of it with one system.</p>
+        {/* ── PAIN POINTS ── */}
+        <section className="bg-secondary/40 py-20 md:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+              Most service businesses manage bookings like this when starting.
+            </h2>
+            <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-12">Sound familiar?</p>
+            <PainPointCarousel />
+            <div className="text-center mt-10">
+              <div className="inline-flex items-center gap-3 bg-foreground text-background rounded-2xl px-6 py-4 ring-1 ring-accent shadow-[0_6px_24px_-6px_hsl(var(--accent)/0.4)]">
+                <Check className="h-5 w-5 shrink-0" />
+                <p className="text-sm font-medium">NextSlot replaces all of it with one system.</p>
+              </div>
             </div>
           </div>
         </section>
 
         {/* ── HOW IT WORKS ── */}
-        <section className="bg-secondary/40 py-16 md:py-20">
+        <section className="bg-background py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center gap-3 mb-8">
               <img
@@ -505,36 +557,38 @@ const Index = () => {
         </section>
 
         {/* ── FEATURES ── */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
-            Everything you need. Nothing you don't.
-          </h2>
-          <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
-            Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
-          </p>
-          <div className="max-w-3xl mx-auto mb-14">
-            <Suspense fallback={<SectionShell height={500} />}>
-              <PhoneShowcaseSection />
-            </Suspense>
-          </div>
-          <div className="showcase-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {showcaseCards.map((card) => (
-              <div
-                key={card.title}
-                className="group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
-              >
-                <div className="relative z-10 w-11 h-11 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center mb-5 group-hover:bg-accent/30 group-hover:border-accent/50 transition-all duration-300">
-                  <card.icon className="h-5 w-5 text-accent" strokeWidth={2} />
+        <section className="bg-secondary/30 py-20 md:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+              Everything you need. Nothing you don't.
+            </h2>
+            <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
+              Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
+            </p>
+            <div className="max-w-3xl mx-auto mb-14">
+              <Suspense fallback={<SectionShell height={500} />}>
+                <PhoneShowcaseSection />
+              </Suspense>
+            </div>
+            <div className="showcase-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {showcaseCards.map((card) => (
+                <div
+                  key={card.title}
+                  className="group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
+                >
+                  <div className="relative z-10 w-11 h-11 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center mb-5 group-hover:bg-accent/30 group-hover:border-accent/50 transition-all duration-300">
+                    <card.icon className="h-5 w-5 text-accent" strokeWidth={2} />
+                  </div>
+                  <h3 className="relative z-10 text-lg font-semibold mb-3">{card.title}</h3>
+                  <p className="relative z-10 text-sm text-muted-foreground leading-relaxed">{card.desc}</p>
                 </div>
-                <h3 className="relative z-10 text-lg font-semibold mb-3">{card.title}</h3>
-                <p className="relative z-10 text-sm text-muted-foreground leading-relaxed">{card.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-10">
-            <Link to="/product" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-foreground transition-colors">
-              See the full feature list <ArrowRight className="h-4 w-4" />
-            </Link>
+              ))}
+            </div>
+            <div className="text-center mt-10">
+              <Link to="/product" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-foreground transition-colors">
+                See the full feature list <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
 
