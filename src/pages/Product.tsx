@@ -274,7 +274,7 @@ const Product = () => (
             </Link>
           </div>
           <p className="text-xs" style={{ color: "hsl(0 0% 100% / 0.25)" }}>
-            30-day free trial · No credit card · Set up in 20 minutes
+            Let your bookings run themselves. Try free for 30 days. No payment required.
           </p>
         </div>
       </section>
