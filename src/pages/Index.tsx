@@ -73,9 +73,9 @@ const caseStudyCards = [
     isFinal: false,
     points: [
       "Bookings came through WhatsApp at all hours, from multiple conversations, with no clear system.",
-      "Every confirmation, deposit request, and reminder was typed out manually, one client at a time.",
+      "Every confirmation, deposit request, and reminder had to be sent manually, one client at a time.",
       "Messages piled up overnight. Mornings started with an inbox to untangle before any work could begin.",
-      "There was no record of who booked what, no way to see how the business was actually doing.",
+      "Records had to be created manually, shifting focus away from how the business was actually doing.",
     ],
   },
   {
@@ -98,7 +98,7 @@ const caseStudyCards = [
     points: [
       "A professional booking system with a real payment gateway. Clients book, choose a time, and pay a deposit without a single message.",
       "Proof of payment gone. A booking is only confirmed once payment clears. Automatically.",
-      "The link went into the TikTok bio, Instagram bio, and WhatsApp status. Bookings started arriving on their own.",
+      "The link went into the TikTok bio, Instagram bio, and WhatsApp Businesss. Bookings started arriving on their own.",
       "For the first time, the business felt like it was running itself.",
     ],
   },
@@ -350,7 +350,7 @@ const Index = () => {
                 <span className="text-muted-foreground">Not your messages.</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
-                NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artists and mobile service providers.
+                NextSlot is the booking system built for beauticians, independent barbers, photographers, tattoo artists and mobile service providers.
               </p>
               <div className="hero-cta-row flex flex-col sm:flex-row items-start gap-4 pt-2">
                 <LiquidButton asChild size="lg">
