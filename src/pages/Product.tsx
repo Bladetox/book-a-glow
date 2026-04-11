@@ -6,8 +6,8 @@ import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import { Link } from "react-router-dom";
 import {
   CalendarDays, Users, LayoutDashboard, Clock, BarChart3, Shield, ArrowRight,
-  Eye, Package, Star, Link2, Gem, CreditCard, Bell, TrendingUp, MapPin,
-  Sparkles, Instagram, SlidersHorizontal, MessageSquare
+  Package, Star, Link2, Gem, Bell, TrendingUp, MapPin,
+  Sparkles, Instagram, SlidersHorizontal, MessageSquare, BadgeCheck
 } from "lucide-react";
 import barberImg from "@/assets/barber.jpg";
 import beauticianImg from "@/assets/beautician.jpg";
@@ -85,9 +85,9 @@ const features = [
     desc: "Connect Yoco payments, Google Calendar, Google Maps for callout fees, and Gmail for automated booking notifications.",
   },
   {
-    icon: CreditCard,
-    title: "Payment Gateways",
-    desc: "Yoco, Stripe, PayStack, PayFast, Flutterwave, Square, Razorpay, Mollie, PayPal, and Peach Payments all supported.",
+    icon: BadgeCheck,
+    title: "Deposit Protection",
+    desc: "Collect a deposit at the point of booking. No deposit, no confirmed slot. No-shows drop, your calendar stays clean, and every appointment on your books is backed by real commitment.",
   },
   {
     icon: Gem,
@@ -107,13 +107,15 @@ const features = [
 ];
 
 /* Stat items shown in the hero anchor row.
-   UX: Anchoring (Cognitive Bias) -- value numbers set expectation before
-   the user scrolls to pricing. Von Restorff isolates the centre stat.
+   UX: Anchoring -- value numbers set expectation before the user scrolls
+   to pricing. Von Restorff isolates the centre stat. Third stat anchors
+   the free-trial offer so 'free' is the mental reference point before
+   any price is encountered.
 */
 const heroStats = [
   { value: "18+", label: "Features included" },
   { value: "20 min", label: "Average setup time", highlight: true },
-  { value: "10+", label: "Payment gateways" },
+  { value: "30 days", label: "Free trial, no card" },
 ];
 
 const Product = () => (
