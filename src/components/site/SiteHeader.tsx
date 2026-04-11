@@ -35,7 +35,7 @@ const SiteHeader = () => {
               to="/onboarding"
               className="inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity"
             >
-              Create Your Booking Page
+              Try Free for 30 Days
             </Link>
           </div>
 
@@ -57,7 +57,7 @@ const SiteHeader = () => {
                 className="inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Create Your Booking Page
+                Try Free for 30 Days
               </Link>
             </nav>
           </div>
