@@ -441,6 +441,48 @@ const Index = () => {
           </div>
         </section>
 
+        {/* ── CASE STUDY — moved here: trust proof immediately after hero ── */}
+        <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10">
+              <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Real Story. Real Business.</p>
+              <h2 className="shimmer-text-light text-3xl md:text-4xl tracking-tight mb-4" style={{ fontFamily: "'Abril Fatface', serif" }}>
+                PhenomeBeauty
+              </h2>
+              <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
+                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
+              </p>
+            </div>
+
+            <div className="max-w-lg mx-auto mb-10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseStudyCards[caseActive].label}</span>
+                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseActive + 1} / {total}</span>
+              </div>
+              <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-accent rounded-full transition-all duration-500 ease-smooth-slide"
+                  style={{ width: `${(caseActive / (total - 1)) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="max-w-2xl mx-auto">
+              <CaseStudyCarousel active={caseActive} setActive={setCaseActive} />
+            </div>
+
+            <div className="text-center mt-14">
+              <Link
+                to="/onboarding"
+                className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
+              >
+                <span className="shimmer-btn">Start your own story</span>
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* ── INDUSTRIES ── */}
         <section className="bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -564,48 +606,6 @@ const Index = () => {
         <Suspense fallback={<SectionShell height={400} />}>
           <LiveDemoSection />
         </Suspense>
-
-        {/* ── CASE STUDY ── */}
-        <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Case Study</p>
-              <h2 className="shimmer-text-light text-3xl md:text-4xl tracking-tight mb-4" style={{ fontFamily: "'Abril Fatface', serif" }}>
-                PhenomeBeauty
-              </h2>
-              <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
-                A mobile beauty studio's journey from WhatsApp chaos to a system that runs the business, secures payments, and advises the owner.
-              </p>
-            </div>
-
-            <div className="max-w-lg mx-auto mb-10">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseStudyCards[caseActive].label}</span>
-                <span className="text-[10px] text-primary-foreground/30 uppercase tracking-widest">{caseActive + 1} / {total}</span>
-              </div>
-              <div className="h-px bg-primary-foreground/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-accent rounded-full transition-all duration-500 ease-smooth-slide"
-                  style={{ width: `${(caseActive / (total - 1)) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="max-w-2xl mx-auto">
-              <CaseStudyCarousel active={caseActive} setActive={setCaseActive} />
-            </div>
-
-            <div className="text-center mt-14">
-              <Link
-                to="/onboarding"
-                className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
-              >
-                <span className="shimmer-btn">Start your own story</span>
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </div>
-          </div>
-        </section>
 
       </main>
       <SiteFooter />
