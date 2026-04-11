@@ -1,7 +1,11 @@
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { Link } from "react-router-dom";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
+
+/* TikTok brand red -- used only as a contained accent on the Just Start
+   card so it does not pollute the site palette elsewhere. */
+const TK_RED = "#fe2c55";
 
 const About = () => (
   <div className="min-h-screen nextslot-theme bg-background">
@@ -114,9 +118,9 @@ const About = () => (
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { label: "Booking types", value: "Any service" },
-                    { label: "Built for", value: "South Africa" },
-                    { label: "Setup time", value: "20 min" },
-                    { label: "Trial", value: "30 days free" },
+                    { label: "Built for",     value: "South Africa" },
+                    { label: "Setup time",    value: "20 min" },
+                    { label: "Trial",         value: "30 days free" },
                   ].map((item) => (
                     <div key={item.label}>
                       <p
@@ -228,18 +232,85 @@ const About = () => (
             extraordinary things from ordinary beginnings.
           </p>
           <p className="text-base text-foreground/80 leading-relaxed">
-            This philosophy is reflected in his broader creative work and personal brand, built around a
-            message he returns to often:
+            This philosophy is reflected in his broader creative work and personal brand, centred on one
+            belief he returns to constantly:
           </p>
+
+          {/* JUST START -- standalone showcase card
+              UX: Von Restorff Effect -- the TikTok red border makes this the
+              only element on the page with that colour, so it is impossible
+              to scroll past without registering it.
+          */}
           <a
             href="https://www.tiktok.com/@chasing_dweams?_r=1&_t=ZS-94gSp7To9iS"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-base font-bold text-foreground hover:text-accent transition-colors group"
+            className="group block relative overflow-hidden rounded-2xl transition-all duration-300 no-underline"
+            style={{
+              background: "var(--gradient-card)",
+              border: `1px solid ${TK_RED}44`,
+              boxShadow: `0 0 0 1px ${TK_RED}18, var(--shadow-soft)`,
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.borderColor = `${TK_RED}88`;
+              el.style.boxShadow = `0 0 28px 0 ${TK_RED}22, var(--shadow-elevated)`;
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.borderColor = `${TK_RED}44`;
+              el.style.boxShadow = `0 0 0 1px ${TK_RED}18, var(--shadow-soft)`;
+            }}
           >
-            Just Start.
-            <ExternalLink className="h-4 w-4 opacity-60 group-hover:opacity-100 transition-opacity" />
+            {/* Subtle red radial bleed top-right */}
+            <div
+              className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full"
+              style={{ background: `radial-gradient(circle, ${TK_RED}18 0%, transparent 70%)` }}
+            />
+
+            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-7 md:p-8">
+              {/* Left: phrase + context */}
+              <div className="space-y-2">
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-widest"
+                  style={{ color: TK_RED }}
+                >
+                  Personal brand / TikTok
+                </p>
+                <p className="text-3xl md:text-4xl font-semibold tracking-tight leading-none">
+                  Just Start.
+                </p>
+                <p
+                  className="text-sm leading-relaxed max-w-xs"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Creativity, entrepreneurship, and the courage to begin. Follow the journey on TikTok.
+                </p>
+                <p
+                  className="text-xs font-medium"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  @chasing_dweams
+                </p>
+              </div>
+
+              {/* Right: CTA button */}
+              <div className="shrink-0">
+                <span
+                  className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 group-hover:gap-3"
+                  style={{
+                    background: `${TK_RED}18`,
+                    border: `1px solid ${TK_RED}55`,
+                    color: "hsl(var(--foreground))",
+                  }}
+                >
+                  Watch on TikTok
+                  <ArrowUpRight className="h-4 w-4" style={{ color: TK_RED }} />
+                </span>
+              </div>
+            </div>
           </a>
+
           <p className="text-base text-foreground/80 leading-relaxed">
             NextSlot is a practical extension of that mindset, a tool created to help everyday business
             owners take the next step, make better decisions, and grow with confidence.
