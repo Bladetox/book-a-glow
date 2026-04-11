@@ -4,6 +4,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   SHIMMER KEYFRAMES
+   A 135-degree bright stripe sweeps left-to-right, creating the
+   mirror/reflection effect on text and surfaces.
+   Duration is slow (3.5 s) so it feels premium not gimmicky.
+═══════════════════════════════════════════════════════════════ */
+@keyframes shimmer-sweep {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes shimmer-card-sweep {
+  0%   { opacity: 0; transform: translateX(-100%) skewX(-12deg); }
+  40%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(200%) skewX(-12deg); }
+}
+
 @layer base {
   :root {
     --background: 0 0% 97%;
@@ -50,7 +67,6 @@
     --sidebar-border: 0 0% 85%;
     --sidebar-ring: 0 0% 9%;
 
-    /* ── Keyboard / viewport CSS vars (set by useViewportFix.ts on iOS) ── */
     --keyboard-height: 0px;
     --visual-viewport-height: 100dvh;
   }
@@ -107,13 +123,6 @@
     -webkit-touch-callout: none;
   }
 
-  /*
-  FOCUS STYLES
-  ─────────────────────────────────────────────────────────────────────────
-  Native apps show no focus ring on tap — only keyboard navigation gets one.
-  :focus-visible is the correct modern approach. This replaces the old
-  "outline: none on everything" anti-pattern that breaks accessibility.
-  */
   *:focus:not(:focus-visible) {
     outline: none;
   }
@@ -127,12 +136,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
-    /*
-    scroll-padding-bottom: keeps focused inputs visible above the sticky
-    bottom bar when the browser auto-scrolls to a focused field.
-    Without this the input snaps under the bar and the user can't see it.
-    110px = bar height (~72px) + safe-area buffer (~38px).
-    */
     scroll-padding-bottom: 110px;
   }
 
@@ -144,44 +147,208 @@
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  html.dark body {
-    background: hsl(var(--background));
-  }
+  html.dark body   { background: hsl(var(--background)); }
+  html:not(.dark) body { background: hsl(var(--background)); }
 
-  html:not(.dark) body {
-    background: hsl(var(--background));
-  }
-
-  /* Safe area insets for notched phones */
   body {
     padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
 
-  /*
-  INPUT FONT SIZE FLOOR — prevents iOS Safari auto-zoom
-  ─────────────────────────────────────────────────────────────────────────
-  iOS Safari zooms the entire viewport when a focused input's font-size
-  is below 16px. Tailwind's text-sm = 14px — every input tap zooms the page.
-  This is the primary "screen resizes" complaint from clients.
-
-  We set a floor of 16px using max() so inputs are never below 16px
-  regardless of whatever Tailwind class is applied.
-  The visual design is preserved — only the computed size is clamped.
-  */
   input,
   select,
   textarea,
   [contenteditable] {
     font-size: max(16px, 1em);
-    /* Remove iOS default inner shadow / rounded appearance */
     -webkit-appearance: none;
     appearance: none;
   }
 }
 
-/* ===== TENANT LOGO — seamless blend across all pages ===== */
+/* ═══════════════════════════════════════════════════════════════
+   SHIMMER TEXT
+   Apply to bold headings and CTA button labels for the mirror sheen.
+   Uses background-clip:text so only the letterforms catch the light.
+═══════════════════════════════════════════════════════════════ */
+.shimmer-text {
+  background-image: linear-gradient(
+    135deg,
+    hsl(var(--foreground)) 0%,
+    hsl(var(--foreground)) 35%,
+    hsl(0 0% 100% / 0.55) 50%,
+    hsl(var(--foreground)) 65%,
+    hsl(var(--foreground)) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-sweep 4s linear infinite;
+}
+
+/* On the dark case-study section, headings are light — invert the shimmer */
+.shimmer-text-light {
+  background-image: linear-gradient(
+    135deg,
+    hsl(0 0% 100%) 0%,
+    hsl(0 0% 100%) 35%,
+    hsl(0 0% 70% / 0.7) 50%,
+    hsl(0 0% 100%) 65%,
+    hsl(0 0% 100%) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-sweep 4s linear infinite;
+}
+
+/* CTA button label shimmer (white text on dark button) */
+.shimmer-btn {
+  background-image: linear-gradient(
+    135deg,
+    hsl(0 0% 100%) 0%,
+    hsl(0 0% 100%) 38%,
+    hsl(0 0% 85% / 0.75) 50%,
+    hsl(0 0% 100%) 62%,
+    hsl(0 0% 100%) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-sweep 3.5s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SHIMMER CARD
+   A thin pseudo-element stripe sweeps across the card on hover
+   giving it a reflective, glass-like feel without changing colour.
+   Add class="shimmer-card" to any card element.
+═══════════════════════════════════════════════════════════════ */
+.shimmer-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top-edge highlight — always visible, very subtle */
+.shimmer-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 5%,
+    hsl(0 0% 100% / 0.65) 35%,
+    hsl(0 0% 100% / 0.30) 65%,
+    transparent 95%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Sweep stripe — fires on hover */
+.shimmer-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    hsl(0 0% 100% / 0.18) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%) skewX(-12deg);
+  pointer-events: none;
+  z-index: 1;
+  transition: none;
+}
+
+.shimmer-card:hover::after {
+  animation: shimmer-card-sweep 0.65s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAIN POINT CARD
+   White background, shimmer surface, red border + glow.
+   Dark mode: near-white dark-adapted surface.
+═══════════════════════════════════════════════════════════════ */
+.pain-point-card {
+  position: relative;
+  overflow: hidden;
+  background: hsl(0 0% 100%);
+  border: 1.5px solid hsl(0 84% 60% / 0.55);
+  border-radius: 1rem;
+  box-shadow:
+    0 0 0 1px hsl(0 84% 60% / 0.08),
+    0 4px 20px -4px hsl(0 84% 60% / 0.18),
+    0 1px 3px hsl(0 0% 0% / 0.04);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.dark .pain-point-card {
+  background: hsl(0 0% 8%);
+  border-color: hsl(0 84% 60% / 0.45);
+}
+
+/* Top shimmer edge on pain point cards */
+.pain-point-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 5%,
+    hsl(0 84% 60% / 0.35) 40%,
+    hsl(0 0% 100% / 0.50) 50%,
+    hsl(0 84% 60% / 0.35) 60%,
+    transparent 95%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Hover: deepen red glow, scale up */
+.pain-point-card:hover {
+  border-color: hsl(0 84% 60% / 0.80);
+  box-shadow:
+    0 0 0 1px hsl(0 84% 60% / 0.14),
+    0 8px 28px -6px hsl(0 84% 60% / 0.30),
+    0 2px 8px hsl(0 0% 0% / 0.06);
+  transform: translateY(-2px) scale(1.015);
+}
+
+/* Sweep stripe on hover */
+.pain-point-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    hsl(0 0% 100% / 0.14) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%) skewX(-12deg);
+  pointer-events: none;
+  z-index: 1;
+  transition: none;
+}
+
+.pain-point-card:hover::after {
+  animation: shimmer-card-sweep 0.65s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TENANT LOGO
+═══════════════════════════════════════════════════════════════ */
 .tenant-logo img,
 .tenant-logo-img {
   mix-blend-mode: multiply;
@@ -345,13 +512,7 @@ html:not(.dark) .tenant-logo-img {
       0 1px 0 hsl(var(--glass-highlight) / 0.08) inset,
       0 0 0 0.5px hsl(var(--glass-highlight) / 0.04) inset;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    /*
-    Explicit font-size on .glass-input as a second line of defence.
-    The @layer base rule above catches all inputs globally, but this
-    ensures the class itself also enforces the 16px floor in case of
-    specificity edge cases with Tailwind utilities.
-    */
-    font-size: max(16px, 0.875rem); /* 0.875rem = text-sm, floored at 16px */
+    font-size: max(16px, 0.875rem);
   }
 
   .glass-input:focus,
@@ -368,7 +529,6 @@ html:not(.dark) .tenant-logo-img {
     );
   }
 
-  /* ===== VALIDATION GLOW ===== */
   .glass-input.valid {
     border-color: hsl(142 76% 36% / 0.5);
     box-shadow:
@@ -412,39 +572,24 @@ html:not(.dark) .tenant-logo-img {
   }
 
   .step-indicator.active {
-    background: linear-gradient(
-      145deg,
-      hsl(var(--primary)),
-      hsl(var(--primary) / 0.85)
-    );
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
     color: hsl(var(--primary-foreground));
-    box-shadow:
-      0 0 24px hsl(var(--primary) / 0.3),
-      0 1px 0 hsl(0 0% 100% / 0.1) inset;
+    box-shadow: 0 0 24px hsl(var(--primary) / 0.3), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
   }
 
   .step-indicator.completed {
-    background: linear-gradient(
-      145deg,
-      hsl(var(--primary)),
-      hsl(var(--primary) / 0.85)
-    );
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
     color: hsl(var(--primary-foreground));
     box-shadow: 0 1px 0 hsl(0 0% 100% / 0.08) inset;
   }
 
   .step-indicator.upcoming {
-    background: linear-gradient(
-      145deg,
-      hsl(var(--glass-bg) / 0.5),
-      hsl(var(--glass-bg) / 0.25)
-    );
+    background: linear-gradient(145deg, hsl(var(--glass-bg) / 0.5), hsl(var(--glass-bg) / 0.25));
     color: hsl(var(--muted-foreground));
     border: 1px solid hsl(var(--glass-border) / 0.12);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    box-shadow:
-      0 1px 0 hsl(var(--glass-highlight) / 0.06) inset;
+    box-shadow: 0 1px 0 hsl(var(--glass-highlight) / 0.06) inset;
   }
 
   /* ===== BUTTONS ===== */
@@ -455,39 +600,27 @@ html:not(.dark) .tenant-logo-img {
     background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
     color: hsl(var(--primary-foreground));
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow:
-      0 4px 16px hsl(var(--primary) / 0.2),
-      0 1px 0 hsl(0 0% 100% / 0.1) inset;
+    box-shadow: 0 4px 16px hsl(var(--primary) / 0.2), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
   }
 
   .btn-next::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     height: 50%;
-    background: linear-gradient(
-      to bottom,
-      hsl(0 0% 100% / 0.08),
-      transparent
-    );
+    background: linear-gradient(to bottom, hsl(0 0% 100% / 0.08), transparent);
     pointer-events: none;
     border-radius: inherit;
   }
 
   .btn-next:hover:not(:disabled) {
-    box-shadow:
-      0 6px 28px hsl(var(--primary) / 0.3),
-      0 1px 0 hsl(0 0% 100% / 0.12) inset;
+    box-shadow: 0 6px 28px hsl(var(--primary) / 0.3), 0 1px 0 hsl(0 0% 100% / 0.12) inset;
     transform: translateY(-1px);
   }
 
   .btn-next:active:not(:disabled) {
     transform: scale(0.98);
-    box-shadow:
-      0 2px 8px hsl(var(--primary) / 0.2),
-      0 1px 0 hsl(0 0% 100% / 0.05) inset;
+    box-shadow: 0 2px 8px hsl(var(--primary) / 0.2), 0 1px 0 hsl(0 0% 100% / 0.05) inset;
   }
 
   .btn-next:disabled {
@@ -499,33 +632,21 @@ html:not(.dark) .tenant-logo-img {
     @apply w-full py-3.5 rounded-2xl font-semibold tracking-wider uppercase text-sm;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(
-      145deg,
-      hsl(var(--glass-bg) / 0.5),
-      hsl(var(--glass-bg) / 0.25)
-    );
+    background: linear-gradient(145deg, hsl(var(--glass-bg) / 0.5), hsl(var(--glass-bg) / 0.25));
     color: hsl(var(--muted-foreground));
     backdrop-filter: blur(16px) saturate(1.4);
     -webkit-backdrop-filter: blur(16px) saturate(1.4);
     border: 1px solid hsl(var(--glass-border) / 0.15);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow:
-      0 2px 8px hsl(0 0% 0% / 0.08),
-      0 1px 0 hsl(var(--glass-highlight) / 0.08) inset;
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.08), 0 1px 0 hsl(var(--glass-highlight) / 0.08) inset;
   }
 
   .btn-back::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     height: 50%;
-    background: linear-gradient(
-      to bottom,
-      hsl(var(--glass-highlight) / 0.06),
-      transparent
-    );
+    background: linear-gradient(to bottom, hsl(var(--glass-highlight) / 0.06), transparent);
     pointer-events: none;
     border-radius: inherit;
   }
@@ -535,19 +656,13 @@ html:not(.dark) .tenant-logo-img {
     color: hsl(var(--foreground));
   }
 
-  .btn-back:active {
-    transform: scale(0.98);
-  }
+  .btn-back:active { transform: scale(0.98); }
 
   /* ===== SELECTION CIRCLE ===== */
   .selection-circle {
     @apply w-5 h-5 rounded-full border-2 flex items-center justify-center;
     border-color: hsl(var(--glass-border) / 0.3);
-    background: linear-gradient(
-      145deg,
-      hsl(var(--glass-bg) / 0.4),
-      hsl(var(--glass-bg) / 0.15)
-    );
+    background: linear-gradient(145deg, hsl(var(--glass-bg) / 0.4), hsl(var(--glass-bg) / 0.15));
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     box-shadow: 0 1px 0 hsl(var(--glass-highlight) / 0.06) inset;
@@ -556,14 +671,8 @@ html:not(.dark) .tenant-logo-img {
 
   .selection-circle.checked {
     border-color: hsl(var(--primary) / 0.8);
-    background: linear-gradient(
-      145deg,
-      hsl(var(--primary)),
-      hsl(var(--primary) / 0.85)
-    );
-    box-shadow:
-      0 0 12px hsl(var(--primary) / 0.25),
-      0 1px 0 hsl(0 0% 100% / 0.1) inset;
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.25), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
   }
 
   /* ===== STICKY BOTTOM BAR ===== */
@@ -576,26 +685,19 @@ html:not(.dark) .tenant-logo-img {
     padding-bottom: env(safe-area-inset-bottom);
     background: hsl(var(--background));
     border-top: 1px solid hsl(var(--border) / 0.5);
-    /*
-    iOS keyboard fix: on Android, interactive-widget=resizes-content moves
-    the bar up automatically. On iOS, useViewportFix.ts sets --keyboard-height
-    and StickyBottomBar.tsx applies translateY(-var(--keyboard-height)) via
-    inline style. The transition here makes the lift smooth.
-    */
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Hide scrollbar utility */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
 }
 
-/* ===== NEXTSLOT SITE THEME ===== */
+/* ═══════════════════════════════════════════════════════════════
+   NEXTSLOT SITE THEME
+═══════════════════════════════════════════════════════════════ */
 .nextslot-theme {
   --background: 0 0% 100%;
   --foreground: 0 0% 7%;
@@ -633,23 +735,66 @@ html:not(.dark) .tenant-logo-img {
   color: hsl(var(--foreground));
 }
 
-.nextslot-theme {
-  color-scheme: light;
-}
+.nextslot-theme { color-scheme: light; }
 
-.nextslot-theme .gradient-hero { background: var(--gradient-hero); }
-.nextslot-theme .gradient-section { background: var(--gradient-section); }
-.nextslot-theme .gradient-card { background: var(--gradient-card); }
-.nextslot-theme .gradient-dark { background: var(--gradient-dark-section); }
-.nextslot-theme .gradient-surface { background: var(--gradient-surface); }
-.nextslot-theme .shadow-soft { box-shadow: var(--shadow-soft); }
-.nextslot-theme .shadow-elevated { box-shadow: var(--shadow-elevated); }
-.nextslot-theme .shadow-glow { box-shadow: var(--shadow-glow); }
-.nextslot-theme .glow-overlay { position: relative; }
+.nextslot-theme .gradient-hero    { background: var(--gradient-hero); }
+.nextslot-theme .gradient-section  { background: var(--gradient-section); }
+.nextslot-theme .gradient-card     { background: var(--gradient-card); }
+.nextslot-theme .gradient-dark     { background: var(--gradient-dark-section); }
+.nextslot-theme .gradient-surface  { background: var(--gradient-surface); }
+.nextslot-theme .shadow-soft       { box-shadow: var(--shadow-soft); }
+.nextslot-theme .shadow-elevated   { box-shadow: var(--shadow-elevated); }
+.nextslot-theme .shadow-glow       { box-shadow: var(--shadow-glow); }
+.nextslot-theme .glow-overlay      { position: relative; }
 .nextslot-theme .glow-overlay::before {
   content: '';
   position: absolute;
   inset: 0;
   background: var(--gradient-glow);
   pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDES
+   Targets xs screens (max 639px = below Tailwind's sm breakpoint).
+   Complements Tailwind responsive classes already in components.
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 639px) {
+  /* Reduce hero h1 so it never overflows on small phones */
+  .nextslot-theme h1 {
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
+    line-height: 1.1;
+  }
+
+  /* Stat anchor row: stack vertically on xs */
+  .hero-stat-bar {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Pain point grid: single column on xs */
+  .pain-point-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Feature showcase grid: single column on xs */
+  .showcase-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tighter horizontal padding on xs */
+  .nextslot-theme section > .max-w-7xl {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* CTA buttons: full width on xs */
+  .nextslot-theme .hero-cta-row {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .nextslot-theme .hero-cta-row > a {
+    width: 100%;
+    justify-content: center;
+  }
 }
