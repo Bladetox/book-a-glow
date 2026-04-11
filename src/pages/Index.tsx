@@ -286,10 +286,18 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
                     "relative h-full overflow-hidden rounded-3xl p-7 md:p-10",
                     "flex flex-col transition-all duration-500",
                     card.isFinal
-                      ? "bg-accent/15 ring-2 ring-accent/50"
-                      : "bg-primary-foreground/5 ring-1 ring-primary-foreground/10",
+                      ? "bg-accent/15"
+                      : "bg-primary-foreground/5",
                     isActive ? "opacity-100 scale-100" : "opacity-30 scale-[0.98]",
                   ].join(" ")}
+                  style={{
+                    border: card.isFinal
+                      ? "1px solid hsl(var(--accent) / 0.75)"
+                      : "1px solid hsl(var(--accent) / 0.28)",
+                    boxShadow: card.isFinal
+                      ? "0 0 0 1px hsl(var(--accent)/0.15), inset 0 1px 0 hsl(var(--accent)/0.25), 0 8px 32px -8px hsl(var(--accent)/0.35)"
+                      : "0 0 0 1px hsl(var(--accent)/0.06), inset 0 1px 0 hsl(var(--accent)/0.10)",
+                  }}
                 >
                   <span
                     aria-hidden="true"
