@@ -593,7 +593,7 @@ const Index = () => {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </LiquidButton>
-              <p className="mt-3 text-xs text-white/35">30-day free trial. No credit card required.</p>
+              <p className="mt-3 text-xs text-white/35">Let your bookings run themselves. Try free for 30 days. No payment required.</p>
             </div>
           </div>
         </section>
