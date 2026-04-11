@@ -38,7 +38,7 @@ const articles: Article[] = [
     readTime: "6 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/sole-proprietor-vs-pty-ltd-in-south-africa-which-one-fits-your-next-5-years-f5e10847ccc9",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*4y1EyPtlUmgZSJJcgiIEQ@2x.jpeg",
+    image: "https://miro.medium.com/v2/resize:fit:1200/1*4y1EyPtlU_mgZSJJcgiIEQ@2x.jpeg",
   },
   {
     title: "Why Your SSME Needs a Delivery Strategy, Not a Delivery Hope",
