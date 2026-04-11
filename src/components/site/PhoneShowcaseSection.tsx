@@ -36,31 +36,7 @@ const STYLE = `
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0);    }
 }
-@keyframes ns-hand-enter {
-  0%   { opacity: 0; transform: translateY(50px); }
-  100% { opacity: 1; transform: translateY(0);    }
-}
 `;
-
-/* ─── Hand SVG ──────────────────────────────────────────────── */
-const HandSVG = () => (
-  <svg viewBox="0 0 160 220" fill="none" xmlns="http://www.w3.org/2000/svg"
-    className="w-full h-full" aria-hidden="true">
-    <path d="M55 220 Q50 170 60 140 Q65 120 75 110 L85 108 Q95 118 100 140 Q110 170 105 220Z"
-      fill="hsl(var(--foreground)/0.08)" />
-    <ellipse cx="80" cy="115" rx="26" ry="20" fill="hsl(var(--foreground)/0.12)" />
-    <rect x="56" y="72" width="12" height="50" rx="6" fill="hsl(var(--foreground)/0.10)" />
-    <rect x="70" y="64" width="12" height="54" rx="6" fill="hsl(var(--foreground)/0.12)" />
-    <rect x="84" y="64" width="12" height="54" rx="6" fill="hsl(var(--foreground)/0.12)" />
-    <rect x="98" y="70" width="12" height="48" rx="6" fill="hsl(var(--foreground)/0.10)" />
-    <ellipse cx="52" cy="98" rx="8" ry="14" fill="hsl(var(--foreground)/0.10)"
-      transform="rotate(-20 52 98)" />
-    <ellipse cx="62" cy="75" rx="4" ry="2" fill="hsl(var(--foreground)/0.06)" />
-    <ellipse cx="76" cy="67" rx="4" ry="2" fill="hsl(var(--foreground)/0.06)" />
-    <ellipse cx="90" cy="67" rx="4" ry="2" fill="hsl(var(--foreground)/0.06)" />
-    <ellipse cx="104" cy="73" rx="4" ry="2" fill="hsl(var(--foreground)/0.06)" />
-  </svg>
-);
 
 /* ─── Badge data ──────────────────────────────────────────────── */
 const badges = [
@@ -125,26 +101,6 @@ const PhoneShowcaseSection = () => {
               : "none",
           }}
         >
-          {/* Hand (independent layer, no transform conflict) */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              bottom: "-44px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: 130,
-              height: 130,
-              willChange: "transform, opacity",
-              animation: vis
-                ? "ns-hand-enter 1s cubic-bezier(0.22,1,0.36,1) 0.25s both"
-                : "none",
-              zIndex: 0,
-            }}
-          >
-            <HandSVG />
-          </div>
-
           {/* 2. Float wrapper */}
           <div
             style={{
@@ -242,7 +198,7 @@ const PhoneShowcaseSection = () => {
             margin: "0 auto",
             lineHeight: 1.6,
           }}>
-            Toggle on or off the data you want to see — your dashboard shows exactly what matters to your business, nothing more.
+            Toggle on or off the data you want to see. Your dashboard shows exactly what matters to your business, nothing more.
           </p>
         </div>
       </div>
