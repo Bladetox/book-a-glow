@@ -126,6 +126,19 @@ const faqs = [
   },
 ];
 
+/* Trial checklist items -- shown in hero right column.
+   UX: Zeigarnik Effect: visitor sees unchecked items and feels compelled
+   to start the trial to complete the loop. Anchoring: free-trial framing
+   appears before any price is shown, so free is the reference point.
+*/
+const trialBuilds = [
+  "Know which channel drives your bookings",
+  "See which services generate the most revenue per hour",
+  "Identify your fastest-filling time slots",
+  "Spot clients who have not rebooked",
+  "Get a growth strategy built from your real data",
+];
+
 const CellValue = ({ value }: { value: boolean | string }) => {
   if (typeof value === "string") return <span className="text-xs text-foreground/80">{value}</span>;
   return value
@@ -142,29 +155,133 @@ const Pricing = () => {
       <SiteHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* HERO */}
-        <section className="py-16 md:py-24 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Pricing</p>
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
-            Try it free for 30 days.
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-lg mx-auto mb-6">
-            No credit card required. Sign up, run your bookings, and let NextSlot learn how your business works.
-            After 30 days, pick the plan that fits.
-          </p>
+        {/* HERO -- 2-col split
+            LEFT:  free-trial headline + primary CTA (Anchoring: free before price)
+            RIGHT: trial-value checklist (Zeigarnik: open loops invite action)
+            UX: Serial Position -- strongest value prop in first visible region.
+        */}
+        <section className="py-16 md:py-24">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
-          {/* Trial value prop pill */}
-          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-accent/15 border border-accent/30 text-sm font-medium text-foreground mb-10">
-            <Zap className="h-4 w-4 text-accent shrink-0" />
-            Your first 30 days build a personalised growth strategy for your business
+            {/* LEFT */}
+            <div>
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
+                style={{
+                  background: "hsl(var(--accent)/0.12)",
+                  border: "1px solid hsl(var(--accent)/0.30)",
+                  color: "hsl(var(--foreground))",
+                }}
+              >
+                <Zap className="h-3.5 w-3.5" style={{ color: "hsl(var(--accent))" }} />
+                30 days completely free
+              </div>
+              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.08] mb-5">
+                Try it free.
+                <br />
+                <span style={{ color: "hsl(var(--accent))" }}>No card needed.</span>
+              </h1>
+              <p
+                className="text-base leading-relaxed max-w-md mb-8"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
+                Sign up, run your bookings, and let NextSlot learn how your business works.
+                After 30 days, pick the plan that fits. Starter from R399 per month.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  to="/onboarding"
+                  className="group inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px] transition-all duration-200"
+                  style={{
+                    background: "hsl(var(--foreground))",
+                    color: "hsl(var(--background))",
+                    boxShadow: "var(--shadow-elevated)",
+                  }}
+                >
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+                <a
+                  href="#plans"
+                  className="inline-flex items-center justify-center text-sm font-medium px-7 py-3.5 rounded-[10px] transition-all duration-200"
+                  style={{
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--muted-foreground))",
+                  }}
+                >
+                  See plans
+                </a>
+              </div>
+              <p
+                className="text-xs mt-3"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
+                No credit card required. Cancel anytime. POPIA compliant.
+              </p>
+            </div>
+
+            {/* RIGHT: Zeigarnik checklist card */}
+            <div
+              className="rounded-2xl p-8 relative overflow-hidden"
+              style={{
+                background: "var(--gradient-card)",
+                border: "1px solid hsl(var(--accent)/0.28)",
+                boxShadow: "var(--shadow-elevated)",
+              }}
+            >
+              <div
+                className="pointer-events-none absolute -top-10 -right-10 w-52 h-52 rounded-full"
+                style={{
+                  background: "radial-gradient(circle, hsl(var(--accent)/0.10) 0%, transparent 70%)",
+                }}
+              />
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-5"
+                style={{ color: "hsl(var(--accent))" }}
+              >
+                What your 30 days builds
+              </p>
+              <ul className="space-y-4">
+                {trialBuilds.map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    {/* Hollow circle -- Zeigarnik open loop */}
+                    <span
+                      className="mt-0.5 h-4 w-4 rounded-full shrink-0 flex items-center justify-center"
+                      style={{
+                        border: "1.5px solid hsl(var(--accent)/0.55)",
+                        background: "hsl(var(--accent)/0.08)",
+                      }}
+                    />
+                    <span
+                      className="text-sm leading-relaxed"
+                      style={{ color: "hsl(var(--foreground)/0.85)" }}
+                    >
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div
+                className="mt-7 pt-5"
+                style={{ borderTop: "1px solid hsl(var(--accent)/0.18)" }}
+              >
+                <p
+                  className="text-xs"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  These insights unlock once your trial data is in. Start free to see yours.
+                </p>
+              </div>
+            </div>
+
           </div>
 
-          {/* 3-step trial journey */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+          {/* 3-step journey -- kept below split, still above tier cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mt-14">
             {[
-              { num: "01", label: "Sign up free",         sub: "No card. Live in minutes." },
-              { num: "02", label: "Run your bookings",    sub: "NextSlot learns your business patterns." },
-              { num: "03", label: "Get your strategy",   sub: "Personalised insights after 30 days." },
+              { num: "01", label: "Sign up free",      sub: "No card. Live in minutes." },
+              { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
+              { num: "03", label: "Get your strategy", sub: "Personalised insights after 30 days." },
             ].map((step) => (
               <div key={step.num} className="flex flex-col items-center gap-2 p-5 rounded-2xl border border-border/60 bg-secondary/20">
                 <span className="text-xs font-bold text-accent tracking-widest">{step.num}</span>
@@ -176,7 +293,7 @@ const Pricing = () => {
         </section>
 
         {/* TIER CARDS */}
-        <section className="pb-10">
+        <section id="plans" className="pb-10">
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {tiers.map((tier) => (
               <div
@@ -187,7 +304,6 @@ const Pricing = () => {
                     : "border border-border gradient-surface shadow-soft"
                 }`}
               >
-                {/* Card header */}
                 <div className={`px-8 pt-8 pb-6 ${ tier.featured ? "border-b border-foreground/10" : "border-b border-border/50" }`}>
                   {tier.featured && (
                     <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-accent mb-3">Most Popular</span>
@@ -199,8 +315,6 @@ const Pricing = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">{tier.description}</p>
                 </div>
-
-                {/* Features */}
                 <div className="px-8 py-6 flex-1">
                   <ul className="space-y-3">
                     {tier.features.map((f) => (
@@ -217,8 +331,6 @@ const Pricing = () => {
                     ))}
                   </ul>
                 </div>
-
-                {/* CTA */}
                 <div className="px-8 pb-8">
                   <Link
                     to="/onboarding"
@@ -237,7 +349,6 @@ const Pricing = () => {
             ))}
           </div>
 
-          {/* Enterprise */}
           <div className="max-w-4xl mx-auto mt-6 border border-border rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-4 gradient-surface shadow-soft">
             <div>
               <h3 className="text-lg font-semibold mb-1">Enterprise</h3>
@@ -252,7 +363,7 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* COMPARISON TABLE — progressive disclosure */}
+        {/* COMPARISON TABLE */}
         <section className="pb-16 md:pb-20 max-w-4xl mx-auto">
           <div className="flex justify-center">
             <button
@@ -266,7 +377,6 @@ const Pricing = () => {
                 : <ChevronDown className="h-4 w-4" />}
             </button>
           </div>
-
           {showComparison && (
             <div className="mt-6 overflow-x-auto rounded-2xl border border-border shadow-soft">
               <table className="w-full text-sm">

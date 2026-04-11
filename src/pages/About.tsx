@@ -7,27 +7,140 @@ const About = () => (
   <div className="min-h-screen nextslot-theme bg-background">
     <SiteHeader />
     <main>
-      {/* HERO */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12 md:pt-28 md:pb-16 text-center">
-        <div className="flex justify-center mb-8">
-          <img
-            src="/web-app-manifest-192x192.png"
-            alt="NextSlot"
-            width={96}
-            height={96}
-            loading="lazy"
-            decoding="async"
-            className="h-20 md:h-24 w-auto object-contain rounded-2xl shadow-md"
-          />
+
+      {/* HERO -- split: left manifesto, right signature quote card
+          UX: Serial Position Effect (strong first impression) +
+              Aesthetic-Usability Effect (premium visual = perceived trust)
+      */}
+      <section
+        className="relative overflow-hidden"
+        style={{ background: "var(--gradient-hero)" }}
+      >
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "var(--gradient-glow)" }}
+        />
+        {/* Decorative vertical accent line */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-px hidden lg:block"
+          style={{ background: "linear-gradient(180deg, transparent, hsl(var(--accent)/0.18), transparent)" }}
+        />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-14 md:pt-24 md:pb-20">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+
+            {/* LEFT */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <img
+                  src="/web-app-manifest-192x192.png"
+                  alt="NextSlot"
+                  width={44}
+                  height={44}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-11 w-11 rounded-xl object-contain"
+                  style={{ boxShadow: "var(--shadow-soft)" }}
+                />
+                <p
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "hsl(var(--accent))" }}
+                >
+                  About NextSlot
+                </p>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.08] mb-6">
+                Built from real problems.
+                <br />
+                <span style={{ color: "hsl(var(--accent))" }}>Not a boardroom.</span>
+              </h1>
+              <p
+                className="text-base leading-relaxed max-w-md mb-8"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
+                NextSlot is a booking and business intelligence platform built for South African service businesses.
+                Designed with the reality of this market in mind, not a generic global template.
+              </p>
+              <Link
+                to="/onboarding"
+                className="group inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200"
+                style={{
+                  background: "hsl(var(--foreground))",
+                  color: "hsl(var(--background))",
+                  boxShadow: "var(--shadow-elevated)",
+                }}
+              >
+                Create Your Booking Page
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+
+            {/* RIGHT: signature quote card */}
+            <div
+              className="rounded-2xl p-8 md:p-10 relative overflow-hidden"
+              style={{
+                background: "var(--gradient-card)",
+                border: "1px solid hsl(var(--accent)/0.30)",
+                boxShadow: "var(--shadow-elevated)",
+              }}
+            >
+              {/* Radial accent glow inside card */}
+              <div
+                className="pointer-events-none absolute -top-10 -right-10 w-48 h-48 rounded-full"
+                style={{
+                  background: "radial-gradient(circle, hsl(var(--accent)/0.12) 0%, transparent 70%)",
+                }}
+              />
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-6"
+                style={{ color: "hsl(var(--accent))" }}
+              >
+                The Founder's Belief
+              </p>
+              <blockquote className="space-y-4 relative">
+                <p className="text-xl md:text-2xl font-semibold tracking-tight leading-snug">
+                  "Sometimes the biggest barrier to progress is waiting too long to start."
+                </p>
+                <footer
+                  className="text-sm"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Arshad Segal, Founder of NextSlot
+                </footer>
+              </blockquote>
+              <div
+                className="mt-8 pt-6"
+                style={{ borderTop: "1px solid hsl(var(--accent)/0.20)" }}
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: "Booking types", value: "Any service" },
+                    { label: "Built for", value: "South Africa" },
+                    { label: "Setup time", value: "20 min" },
+                    { label: "Trial", value: "30 days free" },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <p
+                        className="text-[11px] uppercase tracking-widest mb-0.5"
+                        style={{ color: "hsl(var(--muted-foreground))" }}
+                      >
+                        {item.label}
+                      </p>
+                      <p className="text-sm font-semibold">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">About</p>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.1] mb-6">
-          NextSlot
-        </h1>
-        <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-          NextSlot was not built in a boardroom. It was built from real problems.
-        </p>
       </section>
+
+      {/* Accent rule */}
+      <div
+        className="h-px w-full"
+        style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }}
+      />
 
       {/* ORIGIN */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
@@ -151,7 +264,7 @@ const About = () => (
         </p>
       </section>
 
-      {/* FOOTER TAG + CTA */}
+      {/* FOOTER CTA */}
       <section className="bg-primary text-primary-foreground py-16 md:py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">NextSlot</p>
@@ -167,6 +280,7 @@ const About = () => (
           </Link>
         </div>
       </section>
+
     </main>
     <SiteFooter />
   </div>

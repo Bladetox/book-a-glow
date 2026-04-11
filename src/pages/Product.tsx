@@ -106,21 +106,91 @@ const features = [
   },
 ];
 
+/* Stat items shown in the hero anchor row.
+   UX: Anchoring (Cognitive Bias) -- value numbers set expectation before
+   the user scrolls to pricing. Von Restorff isolates the centre stat.
+*/
+const heroStats = [
+  { value: "18+", label: "Features included" },
+  { value: "20 min", label: "Average setup time", highlight: true },
+  { value: "10+", label: "Payment gateways" },
+];
+
 const Product = () => (
   <div className="min-h-screen nextslot-theme bg-background">
     <SiteHeader />
     <main>
+
+      {/* HERO
+          UX: Von Restorff on centre stat + Goal-Gradient via device preview
+          pulling the eye downward toward features.
+      */}
       <section className="gradient-hero glow-overlay relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-0 md:pt-24 text-center relative z-10">
+
+          {/* Eyebrow */}
+          <p
+            className="text-xs font-semibold uppercase tracking-widest mb-5"
+            style={{ color: "hsl(var(--accent))" }}
+          >
+            The Product
+          </p>
+
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
             One dashboard. Full control.
           </h1>
-          <p className="text-lg text-muted-foreground max-w-lg mx-auto mb-4">
+          <p
+            className="text-lg max-w-lg mx-auto mb-4"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
             Everything you need to run your appointment-based business, without the complexity.
           </p>
-          <p className="text-sm text-accent font-medium mb-14">
+          <p
+            className="text-sm font-medium mb-10"
+            style={{ color: "hsl(var(--accent))" }}
+          >
             Fully customisable. You only see what matters to your business.
           </p>
+
+          {/* Stat anchor row */}
+          <div className="inline-grid grid-cols-3 gap-px rounded-2xl overflow-hidden mb-14 mx-auto"
+            style={{
+              border: "1px solid hsl(var(--accent)/0.25)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            {heroStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="px-8 py-5 flex flex-col items-center gap-1"
+                style={{
+                  background: stat.highlight
+                    ? "hsl(var(--accent)/0.12)"
+                    : "hsl(var(--secondary)/0.50)",
+                  borderRight: "1px solid hsl(var(--accent)/0.18)",
+                }}
+              >
+                <span
+                  className="text-2xl font-semibold tracking-tight"
+                  style={{
+                    color: stat.highlight
+                      ? "hsl(var(--accent))"
+                      : "hsl(var(--foreground))",
+                  }}
+                >
+                  {stat.value}
+                </span>
+                <span
+                  className="text-[11px] uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  {stat.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Device mockup */}
           <div className="max-w-5xl mx-auto flex items-end gap-6 justify-center">
             <div className="flex-1 max-w-[680px]">
               <LaptopFrame><DashboardPreview /></LaptopFrame>
@@ -196,6 +266,7 @@ const Product = () => (
           </div>
         </div>
       </section>
+
     </main>
     <SiteFooter />
   </div>
