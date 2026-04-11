@@ -106,16 +106,10 @@ const features = [
   },
 ];
 
-/* Stat items shown in the hero anchor row.
-   UX: Anchoring -- value numbers set expectation before the user scrolls
-   to pricing. Von Restorff isolates the centre stat. Third stat anchors
-   the free-trial offer so 'free' is the mental reference point before
-   any price is encountered.
-*/
 const heroStats = [
   { value: "18+", label: "Features included" },
-  { value: "20 min", label: "Average setup time", highlight: true },
-  { value: "30 days", label: "Free trial, no card" },
+  { value: "20 min", label: "Avg. setup time", highlight: true },
+  { value: "30 days", label: "Free trial" },
 ];
 
 const Product = () => (
@@ -123,57 +117,50 @@ const Product = () => (
     <SiteHeader />
     <main>
 
-      {/* HERO
-          UX: Von Restorff on centre stat + Goal-Gradient via device preview
-          pulling the eye downward toward features.
-      */}
+      {/* HERO */}
       <section className="gradient-hero glow-overlay relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-0 md:pt-24 text-center relative z-10">
 
-          {/* Eyebrow */}
-          <p
-            className="text-xs font-semibold uppercase tracking-widest mb-5"
-            style={{ color: "hsl(var(--accent))" }}
-          >
+          <p className="text-xs font-semibold uppercase tracking-widest mb-5" style={{ color: "hsl(var(--accent))" }}>
             The Product
           </p>
-
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
             One dashboard. Full control.
           </h1>
-          <p
-            className="text-lg max-w-lg mx-auto mb-4"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
+          <p className="text-lg max-w-lg mx-auto mb-4" style={{ color: "hsl(var(--muted-foreground))" }}>
             Everything you need to run your appointment-based business, without the complexity.
           </p>
-          <p
-            className="text-sm font-medium mb-10"
-            style={{ color: "hsl(var(--accent))" }}
-          >
+          <p className="text-sm font-medium mb-10" style={{ color: "hsl(var(--accent))" }}>
             Fully customisable. You only see what matters to your business.
           </p>
 
-          {/* Stat anchor row */}
-          <div className="inline-grid grid-cols-3 gap-px rounded-2xl overflow-hidden mb-14 mx-auto"
-            style={{
-              border: "1px solid hsl(var(--accent)/0.25)",
-              boxShadow: "var(--shadow-soft)",
-            }}
-          >
+          {/*
+            STAT ANCHOR ROW
+            Fix: replaced the shared inline-grid with borderRight on each cell
+            (which caused text to bleed visually across boundaries on mobile)
+            with three fully isolated cards that each have their own border,
+            background, shadow and padding. They now lift off the page
+            independently like physical tiles instead of a flat fused row.
+          */}
+          <div className="flex flex-wrap justify-center gap-4 mb-14 mx-auto">
             {heroStats.map((stat) => (
               <div
                 key={stat.label}
-                className="px-8 py-5 flex flex-col items-center gap-1"
+                className="flex flex-col items-center gap-1.5 px-8 py-5 rounded-2xl min-w-[130px]"
                 style={{
                   background: stat.highlight
-                    ? "hsl(var(--accent)/0.12)"
-                    : "hsl(var(--secondary)/0.50)",
-                  borderRight: "1px solid hsl(var(--accent)/0.18)",
+                    ? "hsl(var(--accent)/0.14)"
+                    : "hsl(var(--secondary)/0.60)",
+                  border: stat.highlight
+                    ? "1px solid hsl(var(--accent)/0.45)"
+                    : "1px solid hsl(var(--accent)/0.18)",
+                  boxShadow: stat.highlight
+                    ? "0 4px 24px -6px hsl(var(--accent)/0.35), 0 1px 3px hsl(var(--accent)/0.12)"
+                    : "0 4px 16px -6px hsl(var(--foreground)/0.10), 0 1px 2px hsl(var(--foreground)/0.06)",
                 }}
               >
                 <span
-                  className="text-2xl font-semibold tracking-tight"
+                  className="text-2xl font-semibold tracking-tight leading-none"
                   style={{
                     color: stat.highlight
                       ? "hsl(var(--accent))"
@@ -183,7 +170,7 @@ const Product = () => (
                   {stat.value}
                 </span>
                 <span
-                  className="text-[11px] uppercase tracking-widest whitespace-nowrap"
+                  className="text-[11px] uppercase tracking-widest text-center"
                   style={{ color: "hsl(var(--muted-foreground))" }}
                 >
                   {stat.label}
@@ -204,6 +191,7 @@ const Product = () => (
         </div>
       </section>
 
+      {/* PHOTO PAIR */}
       <section className="gradient-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
@@ -217,6 +205,7 @@ const Product = () => (
         </div>
       </section>
 
+      {/* FEATURES GRID */}
       <section className="glow-overlay relative">
         <div id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 border-t border-border relative z-10">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -246,26 +235,47 @@ const Product = () => (
         </div>
       </section>
 
-      <section className="gradient-dark text-primary-foreground py-20 md:py-28 text-center">
-        <div className="max-w-xl mx-auto space-y-6 px-4">
-          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">Ready to simplify your day?</h2>
-          <p className="text-primary-foreground/60">Join service providers across South Africa already using NextSlot.</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+      {/*
+        COMBINED FOOTER CTA
+        Was: two side-by-side buttons (Create booking page + Try demo) both
+        styled as near-equals fighting for the same click.
+        Now: single dark section, one solid primary action, one soft ghost
+        secondary beneath it. One decision, clear hierarchy.
+      */}
+      <section style={{ background: "hsl(220 20% 8%)" }} className="py-20 md:py-28 text-center">
+        <div className="max-w-xl mx-auto px-4 space-y-6">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-white">
+            Ready to simplify your day?
+          </h2>
+          <p style={{ color: "hsl(0 0% 100% / 0.55)" }} className="text-base leading-relaxed">
+            Join service providers across South Africa already using NextSlot.
+          </p>
+          <div className="flex flex-col items-center gap-3 pt-2">
             <Link
               to="/onboarding"
-              className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] shadow-elevated hover:shadow-glow transition-all duration-200"
+              className="group inline-flex items-center justify-center gap-2 text-sm font-semibold px-8 py-4 rounded-[10px] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.45)] hover:scale-[1.02]"
+              style={{
+                background: "hsl(var(--foreground))",
+                color: "hsl(var(--background))",
+              }}
             >
               Create Your Booking Page
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link
               to="/demo"
-              className="inline-flex items-center justify-center text-primary-foreground/60 hover:text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] border border-primary-foreground/20 hover:border-primary-foreground/40 transition-all duration-200"
+              className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+              style={{ color: "hsl(0 0% 100% / 0.40)" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "hsl(0 0% 100% / 0.75)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "hsl(0 0% 100% / 0.40)"; }}
             >
-              Try the Interactive Demo
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Or try the live demo first
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
+          <p className="text-xs" style={{ color: "hsl(0 0% 100% / 0.25)" }}>
+            30-day free trial · No credit card · Set up in 20 minutes
+          </p>
         </div>
       </section>
 
