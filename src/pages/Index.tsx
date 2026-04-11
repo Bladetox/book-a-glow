@@ -581,11 +581,10 @@ const Index = () => {
             <p className="text-xs font-bold uppercase tracking-widest text-accent">Ready to start?</p>
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-white leading-tight">
               Your booking page is{" "}
-              <span style={{ color: "hsl(var(--accent))" }}>20 minutes away.</span>
+              <span style={{ color: "hsl(var(--accent))" }}>waiting for you.</span>
             </h2>
             <p className="text-base text-white/55 leading-relaxed">
-              No agency. No developer. No tech experience needed.
-              Set up your services, connect your payment gateway, and share the link. Clients book themselves from that moment on.
+              Set up your services, connect your payment gateway, and share the link. Clients book themselves from that moment on and your business starts working for you.
             </p>
             <div className="pt-2">
               <LiquidButton asChild size="lg">
