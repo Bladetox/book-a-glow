@@ -27,7 +27,7 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/you-dont-own-your-marketplace-sales-and-that-s-the-problem-efcc7da7b47a",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*ecSZfaS4k95AOE1VTQ1UYA==.jpeg",
+    image: "https://miro.medium.com/v2/resize:fit:1200/1*ecSZfaS4k95AOE1VTQ1UYA@2x.jpeg",
     featured: true,
   },
   {
@@ -38,7 +38,7 @@ const articles: Article[] = [
     readTime: "6 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/sole-proprietor-vs-pty-ltd-in-south-africa-which-one-fits-your-next-5-years-f5e10847ccc9",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*4y1EyPtlUmgZSJJcgiIEQ==.jpeg",
+    image: "https://miro.medium.com/v2/resize:fit:1200/1*4y1EyPtlUmgZSJJcgiIEQ@2x.jpeg",
   },
   {
     title: "Why Your SSME Needs a Delivery Strategy, Not a Delivery Hope",
