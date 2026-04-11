@@ -45,6 +45,7 @@ const SiteFooter = () => (
           <Link to="/product"  className="text-xs text-muted-foreground hover:text-foreground transition-colors">Product</Link>
           <Link to="/pricing"  className="text-xs text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
           <Link to="/about"    className="text-xs text-muted-foreground hover:text-foreground transition-colors">About</Link>
+          <Link to="/blog"     className="text-xs text-muted-foreground hover:text-foreground transition-colors">Blog</Link>
           <Link to="/privacy"  className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
           <Link to="/terms"    className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
         </nav>

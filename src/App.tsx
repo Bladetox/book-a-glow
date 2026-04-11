@@ -18,6 +18,7 @@ const About         = lazy(() => import("./pages/About"));
 const Book          = lazy(() => import("./pages/Book"));
 const Product       = lazy(() => import("./pages/Product"));
 const Pricing       = lazy(() => import("./pages/Pricing"));
+const Blog          = lazy(() => import("./pages/Blog"));
 const Login         = lazy(() => import("./pages/Login"));
 const Onboarding    = lazy(() => import("./pages/Onboarding"));
 const Signup        = lazy(() => import("./pages/Signup"));
@@ -66,6 +67,7 @@ const MarketingRoutes = () => (
         <Route path="/about" element={<About />} />
         <Route path="/product" element={<Product />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/blog" element={<Blog />} />
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/signup" element={<Signup />} />
