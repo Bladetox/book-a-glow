@@ -11,12 +11,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-/* ─── Below-fold sections: lazy-loaded ───────────────────────────
-   These components are heavy (animations, SVGs, device frames).
-   They are NOT needed for first paint — load them only when the
-   browser is idle / user scrolls near them.
-──────────────────────────────────────────────────────────────── */
-const DashboardPreview      = lazy(() => import("@/components/site/DashboardPreview"));
+/* ─── Below-fold sections: lazy-loaded ─────────────────────────── */
+const DashboardPreview       = lazy(() => import("@/components/site/DashboardPreview"));
 const MobileDashboardPreview = lazy(() => import("@/components/site/MobileDashboardPreview"));
 const LaptopFrame            = lazy(() =>
   import("@/components/site/DeviceFrames").then(m => ({ default: m.LaptopFrame }))
@@ -30,14 +26,14 @@ const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSect
 /* ─── DATA ──────────────────────────────────────────────────────── */
 
 const industries = [
-  { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles     },
-  { label: "Barbers",            desc: "Haircuts, fades & grooming",         icon: Scissors     },
-  { label: "Massage Therapists", desc: "Mobile & in-studio sessions",        icon: Wind         },
-  { label: "Photographers",      desc: "Portraits, events & products",       icon: Camera       },
-  { label: "Tattoo Artists",     desc: "Studio & custom ink work",           icon: HandMetal    },
-  { label: "Hairdressers",       desc: "Cuts, colour & styling",             icon: Zap          },
-  { label: "Image Consultants",  desc: "Styling, wardrobe & personal brand", icon: UserCheck    },
-  { label: "Nail Technicians",   desc: "Gel, acrylics & nail art",           icon: PaintBucket  },
+  { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles    },
+  { label: "Barbers",            desc: "Haircuts, fades & grooming",         icon: Scissors    },
+  { label: "Massage Therapists", desc: "Mobile & in-studio sessions",        icon: Wind        },
+  { label: "Photographers",      desc: "Portraits, events & products",       icon: Camera      },
+  { label: "Tattoo Artists",     desc: "Studio & custom ink work",           icon: HandMetal   },
+  { label: "Hairdressers",       desc: "Cuts, colour & styling",             icon: Zap         },
+  { label: "Image Consultants",  desc: "Styling, wardrobe & personal brand", icon: UserCheck   },
+  { label: "Nail Technicians",   desc: "Gel, acrylics & nail art",           icon: PaintBucket },
 ];
 
 const problems = [
@@ -196,7 +192,7 @@ const IndustryGrid = () => {
               transform: visible ? "translateX(0)" : hiddenTransform,
             }}
             className={[
-              "group relative overflow-hidden cursor-default",
+              "shimmer-card group cursor-default",
               "rounded-2xl border border-border/60 bg-background",
               "p-5 flex flex-col items-center text-center gap-3",
               "shadow-sm hover:shadow-[0_8px_28px_-6px_hsl(var(--accent)/0.22)]",
@@ -283,7 +279,7 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
               <div key={card.step} className="w-full shrink-0" aria-hidden={!isActive}>
                 <div
                   className={[
-                    "relative h-full overflow-hidden rounded-3xl p-7 md:p-10",
+                    "shimmer-card relative h-full rounded-3xl p-7 md:p-10",
                     "flex flex-col transition-all duration-500",
                     card.isFinal
                       ? "bg-accent/15"
@@ -354,7 +350,7 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
   );
 };
 
-/* ─── Lazy section shell — prevents layout shift while loading ── */
+/* ─── Lazy section shell ─────────────────────────────────────── */
 const SectionShell = ({ height = 500 }: { height?: number }) => (
   <div style={{ minHeight: height }} className="w-full" aria-hidden="true" />
 );
@@ -372,7 +368,7 @@ const Index = () => {
       <StickyCtaBar />
       <main>
 
-        {/* HERO */}
+        {/* ── HERO ── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-8 animate-fade-in">
@@ -383,9 +379,9 @@ const Index = () => {
                 Built for South African service businesses
               </div>
 
-              {/* Headline */}
+              {/* Headline -- shimmer on the bold dark line */}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.08] tracking-tight">
-                Run your bookings.<br />
+                <span className="shimmer-text block">Run your bookings.</span>
                 <span className="text-muted-foreground">Not your messages.</span>
               </h1>
 
@@ -394,13 +390,13 @@ const Index = () => {
                 NextSlot is the booking system built for independent barbers, beauticians, photographers, tattoo artists and mobile service providers.
               </p>
 
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
+              {/* CTAs -- hero-cta-row enables xs full-width stacking via CSS */}
+              <div className="hero-cta-row flex flex-col sm:flex-row items-start gap-4 pt-2">
                 <Link
                   to="/onboarding"
                   className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] hover:shadow-[0_8px_30px_-4px_hsl(var(--accent)/0.45)] transition-all duration-200"
                 >
-                  Create Your Booking Page
+                  <span className="shimmer-btn">Create Your Booking Page</span>
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
                 <Link
@@ -427,7 +423,7 @@ const Index = () => {
 
             </div>
 
-            {/* Hero device frames — lazy loaded, not needed for LCP text */}
+            {/* Hero device frames */}
             <div className="animate-slide-up flex items-end gap-5 relative">
               <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-square rounded-full opacity-30 blur-3xl pointer-events-none -z-0"
@@ -445,32 +441,34 @@ const Index = () => {
           </div>
         </section>
 
-        {/* INDUSTRIES */}
+        {/* ── INDUSTRIES ── */}
         <section className="bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Built for modern service businesses</h2>
-            <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">If your business runs on appointments, NextSlot runs your schedule.</p>
+            <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+              Built for modern service businesses
+            </h2>
+            <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
+              If your business runs on appointments, NextSlot runs your schedule.
+            </p>
             <IndustryGrid />
           </div>
         </section>
 
-        {/* PAIN POINTS */}
+        {/* ── PAIN POINTS ── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+          <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
             Most service-based businesses manage bookings like this when starting.
           </h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">Sound familiar?</p>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
+
+          {/* pain-point-grid enables xs 1-col layout via CSS override */}
+          <div className="pain-point-grid grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
             {problems.map((p, i) => (
               <div
                 key={p.title}
                 className={[
-                  "relative bg-red-50 dark:bg-red-950/30 border border-red-400 dark:border-red-700",
-                  "rounded-2xl p-7 transition-all duration-300 cursor-default",
-                  "shadow-md shadow-red-200/50 dark:shadow-red-900/40",
-                  hoveredProblem === i
-                    ? "scale-[1.03] shadow-lg shadow-red-300/60 dark:shadow-red-800/50 border-red-500 dark:border-red-600"
-                    : "hover:scale-[1.01] hover:shadow-lg hover:border-red-500/80",
+                  "pain-point-card p-7 cursor-default transition-all duration-300",
+                  hoveredProblem === i ? "scale-[1.03]" : "",
                 ].join(" ")}
                 onMouseEnter={() => setHoveredProblem(i)}
                 onMouseLeave={() => setHoveredProblem(null)}
@@ -481,15 +479,16 @@ const Index = () => {
               </div>
             ))}
           </div>
+
           <div className="text-center">
-            <div className="inline-flex items-center gap-3 bg-primary text-primary-foreground rounded-2xl px-8 py-4 ring-1 ring-accent shadow-[0_6px_24px_-6px_hsl(var(--accent)/0.4)]">
-              <Check className="h-5 w-5" />
+            <div className="shimmer-card inline-flex items-center gap-3 bg-primary text-primary-foreground rounded-2xl px-8 py-4 ring-1 ring-accent shadow-[0_6px_24px_-6px_hsl(var(--accent)/0.4)]">
+              <Check className="h-5 w-5 shrink-0" />
               <p className="text-base font-medium">NextSlot replaces all of it with one system.</p>
             </div>
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
+        {/* ── HOW IT WORKS ── */}
         <section className="bg-secondary/40 py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center gap-3 mb-8">
@@ -507,11 +506,11 @@ const Index = () => {
                 Next<span className="text-accent">Slot</span>
               </span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">How NextSlot works</h2>
+            <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">How NextSlot works</h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-16">Three steps. Real results.</p>
-            <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
               {steps.map((step) => (
-                <div key={step.num} className="relative group">
+                <div key={step.num} className="shimmer-card relative group rounded-2xl border border-border/40 bg-background p-7">
                   <div className="space-y-4">
                     <div className="w-12 h-12 rounded-2xl bg-accent/30 flex items-center justify-center text-sm font-bold group-hover:bg-accent/50 transition-colors duration-300 border border-black">
                       {step.num}
@@ -526,9 +525,11 @@ const Index = () => {
           </div>
         </section>
 
-        {/* FEATURES */}
+        {/* ── FEATURES ── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">Everything you need. Nothing you don't.</h2>
+          <h2 className="shimmer-text text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
+            Everything you need. Nothing you don't.
+          </h2>
           <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
             Built lean so you can focus on your craft. And your dashboard? Fully customisable. You only see what matters to your business.
           </p>
@@ -537,17 +538,18 @@ const Index = () => {
               <PhoneShowcaseSection />
             </Suspense>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* showcase-grid enables xs 1-col layout via CSS override */}
+          <div className="showcase-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {showcaseCards.map((card) => (
               <div
                 key={card.title}
-                className="group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
+                className="shimmer-card group border border-border rounded-2xl p-8 hover:border-accent/40 hover:shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.2)] transition-all duration-300 shadow-lg bg-background"
               >
-                <div className="w-11 h-11 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center mb-5 group-hover:bg-accent/30 group-hover:border-accent/50 transition-all duration-300">
+                <div className="relative z-10 w-11 h-11 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center mb-5 group-hover:bg-accent/30 group-hover:border-accent/50 transition-all duration-300">
                   <card.icon className="h-5 w-5 text-accent" strokeWidth={2} />
                 </div>
-                <h3 className="text-lg font-semibold mb-3">{card.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{card.desc}</p>
+                <h3 className="relative z-10 text-lg font-semibold mb-3">{card.title}</h3>
+                <p className="relative z-10 text-sm text-muted-foreground leading-relaxed">{card.desc}</p>
               </div>
             ))}
           </div>
@@ -558,17 +560,17 @@ const Index = () => {
           </div>
         </section>
 
-        {/* LIVE DEMO */}
+        {/* ── LIVE DEMO ── */}
         <Suspense fallback={<SectionShell height={400} />}>
           <LiveDemoSection />
         </Suspense>
 
-        {/* CASE STUDY */}
+        {/* ── CASE STUDY ── */}
         <section className="bg-primary text-primary-foreground py-20 md:py-28 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Case Study</p>
-              <h2 className="text-3xl md:text-4xl tracking-tight mb-4" style={{ fontFamily: "'Abril Fatface', serif" }}>
+              <h2 className="shimmer-text-light text-3xl md:text-4xl tracking-tight mb-4" style={{ fontFamily: "'Abril Fatface', serif" }}>
                 PhenomeBeauty
               </h2>
               <p className="text-primary-foreground/60 leading-relaxed text-base max-w-xl mx-auto">
@@ -598,7 +600,7 @@ const Index = () => {
                 to="/onboarding"
                 className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
               >
-                Start your own story
+                <span className="shimmer-btn">Start your own story</span>
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>

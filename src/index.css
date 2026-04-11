@@ -185,9 +185,12 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shimmer-sweep 4s linear infinite;
+  /* prevent layout shift on mobile by keeping display inline-block */
+  display: inline-block;
+  width: 100%;
 }
 
-/* On the dark case-study section, headings are light — invert the shimmer */
+/* On the dark case-study section, headings are light -- invert the shimmer */
 .shimmer-text-light {
   background-image: linear-gradient(
     135deg,
@@ -202,6 +205,8 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shimmer-sweep 4s linear infinite;
+  display: inline-block;
+  width: 100%;
 }
 
 /* CTA button label shimmer (white text on dark button) */
@@ -219,6 +224,7 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shimmer-sweep 3.5s linear infinite;
+  display: inline-block;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -232,7 +238,7 @@
   overflow: hidden;
 }
 
-/* Top-edge highlight — always visible, very subtle */
+/* Top-edge highlight -- always visible, very subtle */
 .shimmer-card::before {
   content: '';
   position: absolute;
@@ -251,7 +257,7 @@
   z-index: 1;
 }
 
-/* Sweep stripe — fires on hover */
+/* Sweep stripe -- fires on hover */
 .shimmer-card::after {
   content: '';
   position: absolute;
@@ -796,5 +802,21 @@ html:not(.dark) .tenant-logo-img {
   .nextslot-theme .hero-cta-row > a {
     width: 100%;
     justify-content: center;
+  }
+
+  /* Pricing tier cards: ensure they don't overflow on xs */
+  .nextslot-theme .tier-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Section headings: prevent overflow on very small screens */
+  .nextslot-theme h2 {
+    font-size: clamp(1.35rem, 5.5vw, 1.875rem);
+    line-height: 1.15;
+  }
+
+  /* Step cards: full-width on xs */
+  .nextslot-theme .step-grid {
+    grid-template-columns: 1fr !important;
   }
 }
