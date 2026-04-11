@@ -2,17 +2,19 @@ import { useState } from "react";
 import {
   LayoutDashboard, CalendarCheck, Sparkles, Clock,
   Package, Star, Link2, Settings, Gem,
-  Bell, Search, LogOut, Headphones
+  Bell, Search, LogOut, Headphones, Scissors
 } from "lucide-react";
 import {
   DashboardContent, BookingsContent, ConsultationsContent,
   AvailabilityContent, StockContent, ReviewsContent,
-  IntegrationsContent, SettingsContent, LoyaltyContent
+  IntegrationsContent, SettingsContent, LoyaltyContent,
+  ServicesContent
 } from "./DashboardViews";
 
 const sidebarNav = [
   { icon: LayoutDashboard, label: "Dashboard" },
   { icon: CalendarCheck,   label: "Bookings" },
+  { icon: Scissors,        label: "Services" },
   { icon: Sparkles,        label: "Consultations" },
   { icon: Clock,           label: "Availability" },
   { icon: Package,         label: "Stock" },
@@ -35,6 +37,7 @@ const DashboardPreview = () => {
   const renderContent = () => {
     switch (activeItem) {
       case "Bookings":      return <BookingsContent />;
+      case "Services":      return <ServicesContent />;
       case "Consultations": return <ConsultationsContent />;
       case "Availability":  return <AvailabilityContent />;
       case "Stock":         return <StockContent />;
@@ -69,7 +72,6 @@ const DashboardPreview = () => {
         <div className="w-14 border-r border-white/[0.06] bg-[hsl(0,0%,5%)] py-4 hidden sm:flex flex-col items-center justify-between shrink-0">
           <div className="space-y-1">
             <div className="mb-4">
-              {/* New logo — served from public/, no Vite asset import needed */}
               <img
                 src="/web-app-manifest-192x192.png"
                 alt="NextSlot"

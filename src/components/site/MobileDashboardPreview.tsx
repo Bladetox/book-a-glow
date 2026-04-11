@@ -1,17 +1,19 @@
 import { useState } from "react";
 import {
   LayoutDashboard, CalendarCheck, Sparkles, Clock,
-  Package, Star, Link2, Settings, Gem, Menu, X
+  Package, Star, Link2, Settings, Gem, Menu, X, Scissors
 } from "lucide-react";
 import {
   DashboardContent, BookingsContent, ConsultationsContent,
   AvailabilityContent, StockContent, ReviewsContent,
-  IntegrationsContent, SettingsContent, LoyaltyContent
+  IntegrationsContent, SettingsContent, LoyaltyContent,
+  ServicesContent
 } from "./DashboardViews";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard" },
   { icon: CalendarCheck,   label: "Bookings" },
+  { icon: Scissors,        label: "Services" },
   { icon: Sparkles,        label: "Consultations" },
   { icon: Clock,           label: "Availability" },
   { icon: Package,         label: "Stock" },
@@ -35,6 +37,7 @@ const MobileDashboardPreview = () => {
   const renderContent = () => {
     switch (activeItem) {
       case "Bookings":      return <BookingsContent />;
+      case "Services":      return <ServicesContent />;
       case "Consultations": return <ConsultationsContent />;
       case "Availability":  return <AvailabilityContent />;
       case "Stock":         return <StockContent />;
@@ -47,10 +50,7 @@ const MobileDashboardPreview = () => {
   };
 
   return (
-    <div
-      className="relative overflow-hidden w-full h-full bg-[hsl(0,0%,4%)] text-white flex flex-col"
-      style={{ minHeight: 520 }}
-    >
+    <div className="relative overflow-hidden w-full h-full bg-[hsl(0,0%,4%)] text-white flex flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06] bg-[hsl(0,0%,5%)] shrink-0 z-10">
         <button
@@ -105,9 +105,11 @@ const MobileDashboardPreview = () => {
         </div>
       )}
 
-      {/* Content scroll area */}
-      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="animate-fade-in" key={activeItem}>
+      {/* Content — flex-1 so it fills remaining height, overflow-hidden prevents it
+          from ever pushing the container taller than the MobileFrame allows.
+          The inner animate-fade-in wrapper is keyed per view for the crossfade. */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-fade-in" key={activeItem}>
           {renderContent()}
         </div>
       </div>

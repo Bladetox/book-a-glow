@@ -3,7 +3,7 @@ import {
   UserPlus, UserCheck, Percent, Instagram, Search as SearchIcon,
   Share2, Smartphone, Package, Bell, Star,
   CircleDollarSign, Clock, Ban,
-  Mail, Calendar, Gem
+  Mail, Calendar, Gem, Scissors, Check, ArrowRight
 } from "lucide-react";
 
 const mockRevenue = { month: 31400, today: 4200, lastMonth: 26800 };
@@ -51,6 +51,15 @@ const heatmapData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => ({
   slots: heatmapSlots.map(() => Math.round(Math.random() * 5)),
 }));
 
+const mockServices = [
+  { name: "Signature Fade", duration: "45 min", price: 500, deposit: 250, active: true },
+  { name: "Hot Towel Shave", duration: "45 min", price: 450, deposit: 225, active: true },
+  { name: "Beard Sculpt", duration: "30 min", price: 350, deposit: 175, active: true },
+  { name: "Kids Cut", duration: "30 min", price: 280, deposit: 140, active: true },
+  { name: "Shape-up", duration: "20 min", price: 200, deposit: 100, active: true },
+  { name: "Full Groom Package", duration: "90 min", price: 950, deposit: 475, active: false },
+];
+
 const card = "rounded-xl border border-white/[0.10] bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";
 const label = "text-[8px] tracking-[0.12em] uppercase text-white/30";
 const labelLg = "text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2.5";
@@ -71,29 +80,22 @@ const RevenueTrendChart = () => {
   const min = Math.min(...values);
   const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
   const peakIdx = values.indexOf(max);
-  const todayIdx = 18; // day 19 = index 18
+  const todayIdx = 18;
   const fmt = (v: number) => v >= 1000 ? `R${(v / 1000).toFixed(1)}k` : `R${v}`;
 
   return (
     <div className={`${card} p-3`}>
-      {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <p className={labelLg}>Revenue Trend</p>
         <span className="text-[7px] text-white/20">Last 30 days</span>
       </div>
-
-      {/* Y-axis labels + chart */}
       <div className="flex gap-1.5">
-        {/* Y-axis */}
         <div className="flex flex-col justify-between pb-4 shrink-0">
           <span className="text-[6px] text-white/20">{fmt(max)}</span>
           <span className="text-[6px] text-white/20">{fmt(Math.round((max + min) / 2))}</span>
           <span className="text-[6px] text-white/20">{fmt(min)}</span>
         </div>
-
-        {/* Bars + week labels */}
         <div className="flex-1 min-w-0">
-          {/* Peak value label */}
           <div className="relative h-3 mb-0.5">
             <span
               className="absolute text-[6px] text-emerald-400/70 -translate-x-1/2 whitespace-nowrap"
@@ -102,56 +104,35 @@ const RevenueTrendChart = () => {
               ↑ {fmt(max)}
             </span>
           </div>
-
-          {/* Bar chart */}
           <div className="h-20 flex items-end gap-[1.5px]">
             {mockRevenueTrend.map((d, i) => {
               const heightPct = Math.max(((d.value - min) / (max - min)) * 100, 4);
               const isPeak = i === peakIdx;
               const isToday = i === todayIdx;
-              const barColor = isPeak
-                ? "bg-emerald-400/70"
-                : isToday
-                ? "bg-amber-400/60"
-                : "bg-emerald-400/20";
+              const barColor = isPeak ? "bg-emerald-400/70" : isToday ? "bg-amber-400/60" : "bg-emerald-400/20";
               return (
                 <div key={d.day} className="flex-1 flex flex-col justify-end">
-                  {/* week separator gap */}
-                  {i > 0 && i % 7 === 0 && (
-                    <div className="absolute" />
-                  )}
-                  <div
-                    className={`${barColor} rounded-t transition-colors w-full ${
-                      i > 0 && i % 7 === 0 ? "ml-[2px]" : ""
-                    }`}
-                    style={{ height: `${heightPct}%` }}
-                  />
+                  <div className={`${barColor} rounded-t transition-colors w-full`} style={{ height: `${heightPct}%` }} />
                 </div>
               );
             })}
           </div>
-
-          {/* Week labels below bars */}
           <div className="flex mt-1">
-            {["W1", "W2", "W3", "W4"].map((w, i) => (
+            {["W1", "W2", "W3", "W4"].map((w) => (
               <div key={w} className="flex-1 text-center">
                 <span className="text-[6px] text-white/20">{w}</span>
               </div>
             ))}
-            <div className="w-[7px]" />{/* spacer for last 2 days */}
+            <div className="w-[7px]" />
           </div>
         </div>
       </div>
-
-      {/* Today marker label */}
       <div className="flex items-center gap-1 mt-1 mb-2">
         <span className="inline-block w-2 h-1.5 rounded-sm bg-amber-400/60" />
         <span className="text-[6px] text-amber-400/60">Today (day 19)</span>
         <span className="inline-block w-2 h-1.5 rounded-sm bg-emerald-400/70 ml-2" />
         <span className="text-[6px] text-emerald-400/60">Peak day</span>
       </div>
-
-      {/* Summary row */}
       <div className="grid grid-cols-3 gap-1 pt-2 border-t border-white/[0.06]">
         <div className="text-center">
           <p className="text-[8px] font-bold text-emerald-400">{fmt(max)}</p>
@@ -174,7 +155,6 @@ export const DashboardContent = () => {
   const pctChange = Math.round(((mockRevenue.month - mockRevenue.lastMonth) / mockRevenue.lastMonth) * 100);
   return (
     <div className="flex-1 p-4 overflow-y-auto overflow-x-hidden space-y-3 scrollbar-hide">
-      {/* Revenue hero card */}
       <div className="rounded-2xl border border-white/[0.12] bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
         <p className={label}>Monthly Revenue</p>
         <p className="text-2xl font-bold text-white tracking-tight mt-0.5">R {mockRevenue.month.toLocaleString()}</p>
@@ -192,7 +172,6 @@ export const DashboardContent = () => {
         </div>
       </div>
 
-      {/* Health metric cards */}
       <div className="grid grid-cols-4 gap-2">
         {[{ icon: BarChart3, l: "Fill Rate", v: `${mockHealth.fillRate}%`, color: "text-emerald-400" }, { icon: ShoppingBag, l: "Avg Basket", v: `R ${mockHealth.avgBasket.toLocaleString()}`, color: "text-white/80" }, { icon: CalendarCheck, l: "Appointments", v: String(mockHealth.totalAppointments), color: "text-white/80" }, { icon: XCircle, l: "Cancellations", v: `${mockHealth.cancellationRate}%`, color: "text-red-400" }].map(m => (
           <div key={m.l} className={`${card} p-2.5 flex flex-col gap-1`}>
@@ -203,7 +182,6 @@ export const DashboardContent = () => {
         ))}
       </div>
 
-      {/* Top services + client insights */}
       <div className="grid grid-cols-2 gap-2">
         <div className={`${card} p-3`}>
           <p className={labelLg}>Top Services</p>
@@ -240,7 +218,6 @@ export const DashboardContent = () => {
         </div>
       </div>
 
-      {/* Alerts */}
       <div className={`${card} p-3`}>
         <p className={`${labelLg} flex items-center gap-1.5`}><Bell className="w-3 h-3" /> Alerts</p>
         <div className="space-y-1.5">
@@ -256,10 +233,8 @@ export const DashboardContent = () => {
         </div>
       </div>
 
-      {/* Revenue Trend — redesigned */}
       <RevenueTrendChart />
 
-      {/* Booking Heatmap */}
       <div className={`${card} p-3`}>
         <p className={labelLg}>Booking Heatmap</p>
         <div className="w-full overflow-hidden">
@@ -273,7 +248,7 @@ export const DashboardContent = () => {
                 <th className="text-[6px] text-white/15 text-left pb-1" />
                 {heatmapSlots.map(s => (
                   <th key={s} className="text-[6px] text-white/15 text-center pb-1 px-0.5 truncate">
-                    {s.replace("-", "–")}
+                    {s.replace("-", "\u2013")}
                   </th>
                 ))}
               </tr>
@@ -297,7 +272,6 @@ export const DashboardContent = () => {
         </div>
       </div>
 
-      {/* Today's appointments */}
       <div className={`${card} p-3`}>
         <p className={labelLg}>Today's Appointments</p>
         <table className="w-full text-[9px]">
@@ -373,6 +347,56 @@ export const BookingsContent = () => (
           </div>
         </div>
       ))}
+    </div>
+  </div>
+);
+
+/* SERVICES */
+export const ServicesContent = () => (
+  <div className="flex-1 p-4 overflow-y-auto overflow-x-hidden space-y-3 scrollbar-hide">
+    <div className="flex items-center justify-between mb-1">
+      <p className="text-[10px] font-semibold text-white/80">Services ({mockServices.length})</p>
+      <button className="flex items-center gap-1 text-[8px] font-semibold text-white/50 border border-white/[0.12] px-2 py-1 rounded-lg hover:bg-white/[0.04] transition-colors">
+        + Add Service
+      </button>
+    </div>
+    <div className="space-y-1.5">
+      {mockServices.map((s) => (
+        <div key={s.name} className={`${card} p-3 flex items-center gap-3`}>
+          <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0">
+            <Scissors className="w-3.5 h-3.5 text-white/30" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-medium text-white/80 truncate">{s.name}</p>
+            <p className="text-[7px] text-white/30">{s.duration} · Deposit: R{s.deposit}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-[10px] font-bold text-white/70">R{s.price}</span>
+            <span className={`text-[7px] font-medium px-1.5 py-0.5 rounded-full ${
+              s.active ? "bg-emerald-500/10 text-emerald-400" : "bg-white/[0.05] text-white/25"
+            }`}>
+              {s.active ? "active" : "hidden"}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+    <div className={`${card} p-3 mt-2`}>
+      <p className="text-[8px] text-white/25 mb-2 uppercase tracking-widest">Service stats</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center">
+          <p className="text-[11px] font-bold text-white/70">{mockServices.filter(s => s.active).length}</p>
+          <p className="text-[7px] text-white/25">Active</p>
+        </div>
+        <div className="text-center border-x border-white/[0.06]">
+          <p className="text-[11px] font-bold text-white/70">R{Math.round(mockServices.filter(s=>s.active).reduce((a,s)=>a+s.price,0)/mockServices.filter(s=>s.active).length)}</p>
+          <p className="text-[7px] text-white/25">Avg price</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[11px] font-bold text-white/70">{mockServices.filter(s => !s.active).length}</p>
+          <p className="text-[7px] text-white/25">Hidden</p>
+        </div>
+      </div>
     </div>
   </div>
 );
