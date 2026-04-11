@@ -140,7 +140,7 @@ const Pricing = () => {
         {/* HERO */}
         <section className="py-16 md:py-24 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Pricing</p>
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">Simple, honest pricing.</h1>
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">Simple, clear pricing.</h1>
           <p className="text-lg text-muted-foreground max-w-md mx-auto">
             No hidden fees. No annual lock-in. Start with a plan that fits where you are now, and grow from there.
           </p>
