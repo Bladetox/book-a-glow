@@ -285,7 +285,7 @@ const About = () => (
             Built for the people behind the chair, the studio, and the craft.
           </h2>
           <p className="text-sm text-white/55 leading-relaxed">
-            30-day free trial. No credit card. Set up in 20 minutes.
+            Let your bookings run themselves. Try free for 30 days. No payment required.
           </p>
           <div className="flex flex-col items-center gap-3 pt-2">
             <Link
