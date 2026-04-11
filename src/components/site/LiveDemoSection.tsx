@@ -14,7 +14,7 @@ const LiveDemoSection = () => (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
 
-        {/* ── Copy (unchanged) ── */}
+        {/* Copy */}
         <div className="space-y-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">Live Demo</p>
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">See what your clients will experience</h2>
@@ -29,19 +29,14 @@ const LiveDemoSection = () => (
             <li className="flex items-start gap-2">
               <Palette className="mt-0.5 w-3.5 h-3.5 text-accent shrink-0" />
               <span>
-                <span className="font-semibold text-foreground">Multiple themes available.</span> Choose a look that feels like your brand, not a generic tool.
+                <span className="font-semibold text-foreground">Multiple themes available.</span>{" "}
+                Choose a look that feels like your brand, not a generic tool.
               </span>
             </li>
           </ul>
-          <Link
-            to="/onboarding"
-            className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-7 py-3.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] transition-all duration-200"
-          >
-            Create yours now <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
         </div>
 
-        {/* ── CTA card (replaces embedded demo) ── */}
+        {/* CTA card */}
         <div className="flex justify-center">
           <div className="w-full max-w-sm rounded-3xl border border-border bg-background shadow-[0_8px_40px_-12px_hsl(var(--accent)/0.25)] overflow-hidden">
 
@@ -58,7 +53,7 @@ const LiveDemoSection = () => (
               </p>
             </div>
 
-            {/* Theme swatches preview */}
+            {/* Theme swatches */}
             <div className="px-7 py-5 border-b border-border">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-3">Available themes</p>
               <div className="flex items-center gap-2.5">
@@ -71,7 +66,12 @@ const LiveDemoSection = () => (
               </div>
             </div>
 
-            {/* CTA */}
+            {/* COMBINED CTA
+                Was: "Launch Demo" button + separate "Create yours now" button
+                in the copy column — two competing primary actions.
+                Now: one primary + one soft secondary, both in the card,
+                copy column has no standalone button cluttering the layout.
+            */}
             <div className="px-7 py-6 space-y-3">
               <Link
                 to="/demo"
@@ -79,8 +79,15 @@ const LiveDemoSection = () => (
               >
                 Launch Demo <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
+              <Link
+                to="/onboarding"
+                className="group w-full inline-flex items-center justify-center text-sm font-medium px-6 py-3 rounded-[10px] border border-border hover:border-accent/50 hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+              >
+                Create your booking page <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
               <p className="text-center text-xs text-muted-foreground">No account required &middot; 100% mock data</p>
             </div>
+
           </div>
         </div>
 

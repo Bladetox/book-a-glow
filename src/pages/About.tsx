@@ -3,8 +3,6 @@ import SiteFooter from "@/components/site/SiteFooter";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 
-/* TikTok brand red -- used only as a contained accent on the Just Start
-   card so it does not pollute the site palette elsewhere. */
 const TK_RED = "#fe2c55";
 
 const About = () => (
@@ -12,19 +10,12 @@ const About = () => (
     <SiteHeader />
     <main>
 
-      {/* HERO -- split: left manifesto, right signature quote card
-          UX: Serial Position Effect (strong first impression) +
-              Aesthetic-Usability Effect (premium visual = perceived trust)
-      */}
+      {/* HERO */}
       <section
         className="relative overflow-hidden"
         style={{ background: "var(--gradient-hero)" }}
       >
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: "var(--gradient-glow)" }}
-        />
-        {/* Decorative vertical accent line */}
+        <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-glow)" }} />
         <div
           className="pointer-events-none absolute left-1/2 top-0 bottom-0 w-px hidden lg:block"
           style={{ background: "linear-gradient(180deg, transparent, hsl(var(--accent)/0.18), transparent)" }}
@@ -45,10 +36,7 @@ const About = () => (
                   className="h-11 w-11 rounded-xl object-contain"
                   style={{ boxShadow: "var(--shadow-soft)" }}
                 />
-                <p
-                  className="text-xs font-semibold uppercase tracking-widest"
-                  style={{ color: "hsl(var(--accent))" }}
-                >
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--accent))" }}>
                   About NextSlot
                 </p>
               </div>
@@ -57,10 +45,7 @@ const About = () => (
                 <br />
                 <span style={{ color: "hsl(var(--accent))" }}>Not a boardroom.</span>
               </h1>
-              <p
-                className="text-base leading-relaxed max-w-md mb-8"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
+              <p className="text-base leading-relaxed max-w-md mb-8" style={{ color: "hsl(var(--muted-foreground))" }}>
                 NextSlot is a booking and business intelligence platform built for South African service businesses.
                 Designed with the reality of this market in mind, not a generic global template.
               </p>
@@ -87,34 +72,22 @@ const About = () => (
                 boxShadow: "var(--shadow-elevated)",
               }}
             >
-              {/* Radial accent glow inside card */}
               <div
                 className="pointer-events-none absolute -top-10 -right-10 w-48 h-48 rounded-full"
-                style={{
-                  background: "radial-gradient(circle, hsl(var(--accent)/0.12) 0%, transparent 70%)",
-                }}
+                style={{ background: "radial-gradient(circle, hsl(var(--accent)/0.12) 0%, transparent 70%)" }}
               />
-              <p
-                className="text-xs font-semibold uppercase tracking-widest mb-6"
-                style={{ color: "hsl(var(--accent))" }}
-              >
+              <p className="text-xs font-semibold uppercase tracking-widest mb-6" style={{ color: "hsl(var(--accent))" }}>
                 The Founder's Belief
               </p>
               <blockquote className="space-y-4 relative">
                 <p className="text-xl md:text-2xl font-semibold tracking-tight leading-snug">
                   "Sometimes the biggest barrier to progress is waiting too long to start."
                 </p>
-                <footer
-                  className="text-sm"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
+                <footer className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Arshad Segal, Founder of NextSlot
                 </footer>
               </blockquote>
-              <div
-                className="mt-8 pt-6"
-                style={{ borderTop: "1px solid hsl(var(--accent)/0.20)" }}
-              >
+              <div className="mt-8 pt-6" style={{ borderTop: "1px solid hsl(var(--accent)/0.20)" }}>
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { label: "Booking types", value: "Any service" },
@@ -123,12 +96,7 @@ const About = () => (
                     { label: "Trial",         value: "30 days free" },
                   ].map((item) => (
                     <div key={item.label}>
-                      <p
-                        className="text-[11px] uppercase tracking-widest mb-0.5"
-                        style={{ color: "hsl(var(--muted-foreground))" }}
-                      >
-                        {item.label}
-                      </p>
+                      <p className="text-[11px] uppercase tracking-widest mb-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>{item.label}</p>
                       <p className="text-sm font-semibold">{item.value}</p>
                     </div>
                   ))}
@@ -140,11 +108,7 @@ const About = () => (
         </div>
       </section>
 
-      {/* Accent rule */}
-      <div
-        className="h-px w-full"
-        style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }}
-      />
+      <div className="h-px w-full" style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }} />
 
       {/* ORIGIN */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
@@ -197,9 +161,7 @@ const About = () => (
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 space-y-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-accent">A Platform Built for Creatives</p>
         <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Relationships matter. Community matters. Reputation matters.</h2>
-        <p className="text-base text-foreground/80 leading-relaxed">
-          Creative service businesses are deeply human. NextSlot respects that.
-        </p>
+        <p className="text-base text-foreground/80 leading-relaxed">Creative service businesses are deeply human. NextSlot respects that.</p>
         <p className="text-base text-foreground/80 leading-relaxed">
           The platform is designed to feel familiar and supportive rather than cold or overly technical.
           It fits naturally into the way creative professionals already run their businesses, helping them
@@ -236,11 +198,7 @@ const About = () => (
             belief he returns to constantly:
           </p>
 
-          {/* JUST START -- standalone showcase card
-              UX: Von Restorff Effect -- the TikTok red border makes this the
-              only element on the page with that colour, so it is impossible
-              to scroll past without registering it.
-          */}
+          {/* Just Start card */}
           <a
             href="https://www.tiktok.com/@chasing_dweams?_r=1&_t=ZS-94gSp7To9iS"
             target="_blank"
@@ -262,39 +220,19 @@ const About = () => (
               el.style.boxShadow = `0 0 0 1px ${TK_RED}18, var(--shadow-soft)`;
             }}
           >
-            {/* Subtle red radial bleed top-right */}
             <div
               className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full"
               style={{ background: `radial-gradient(circle, ${TK_RED}18 0%, transparent 70%)` }}
             />
-
             <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-7 md:p-8">
-              {/* Left: phrase + context */}
               <div className="space-y-2">
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-widest"
-                  style={{ color: TK_RED }}
-                >
-                  Personal brand / TikTok
-                </p>
-                <p className="text-3xl md:text-4xl font-semibold tracking-tight leading-none">
-                  Just Start.
-                </p>
-                <p
-                  className="text-sm leading-relaxed max-w-xs"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: TK_RED }}>Personal brand / TikTok</p>
+                <p className="text-3xl md:text-4xl font-semibold tracking-tight leading-none">Just Start.</p>
+                <p className="text-sm leading-relaxed max-w-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Creativity, entrepreneurship, and the courage to begin. Follow the journey on TikTok.
                 </p>
-                <p
-                  className="text-xs font-medium"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  @chasing_dweams
-                </p>
+                <p className="text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>@chasing_dweams</p>
               </div>
-
-              {/* Right: CTA button */}
               <div className="shrink-0">
                 <span
                   className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 group-hover:gap-3"
@@ -335,20 +273,40 @@ const About = () => (
         </p>
       </section>
 
-      {/* FOOTER CTA */}
-      <section className="bg-primary text-primary-foreground py-16 md:py-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+      {/* COMBINED FOOTER CTA
+          Was: two separate buttons (Create page + try demo) fighting for attention.
+          Now: one dark section, primary action front and centre,
+          secondary action as a soft ghost link beneath it.
+      */}
+      <section style={{ background: "hsl(220 20% 8%)" }} className="py-16 md:py-20">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">NextSlot</p>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
             Built for the people behind the chair, the studio, and the craft.
           </h2>
-          <Link
-            to="/onboarding"
-            className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
-          >
-            Create Your Booking Page
-            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+          <p className="text-sm text-white/55 leading-relaxed">
+            30-day free trial. No credit card. Set up in 20 minutes.
+          </p>
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <Link
+              to="/onboarding"
+              className="group inline-flex items-center justify-center gap-2 text-sm font-semibold px-8 py-4 rounded-[10px] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.45)] hover:scale-[1.02]"
+              style={{
+                background: "hsl(var(--foreground))",
+                color: "hsl(var(--background))",
+              }}
+            >
+              Create Your Booking Page
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+            <Link
+              to="/demo"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-white/45 hover:text-white/80 transition-colors"
+            >
+              Or try the live demo first
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       </section>
 

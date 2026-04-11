@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowRight, ArrowUpRight, Clock } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
+import { Link } from "react-router-dom";
 
 /* TYPE */
 type Category = "All" | "Business" | "Operations" | "Finance";
@@ -13,20 +14,10 @@ type Article = {
   readTime: string;
   date: string;
   url: string;
-  /**
-   * Paste the article cover image URL here.
-   * How to get it: open the Medium article, right-click the hero image,
-   * "Copy image address" -- use that full URL.
-   * If left empty the card falls back to a branded gradient band.
-   */
   image?: string;
   featured?: boolean;
 };
 
-/* ARTICLES
-   Add new articles at the TOP. Set featured: true on the lead piece.
-   Paste the actual Medium cover image URL into the image field.
-*/
 const articles: Article[] = [
   {
     title: "You Don't Own Your Marketplace Sales and That's the Problem",
@@ -36,7 +27,6 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/you-dont-own-your-marketplace-sales-and-that-s-the-problem-efcc7da7b47a",
-    // PASTE the Medium article cover image URL below (right-click hero image on Medium -> Copy image address)
     image: "",
     featured: true,
   },
@@ -48,7 +38,6 @@ const articles: Article[] = [
     readTime: "6 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/sole-proprietor-vs-pty-ltd-in-south-africa-which-one-fits-your-next-5-years-f5e10847ccc9",
-    // PASTE the Medium article cover image URL below
     image: "",
   },
   {
@@ -59,7 +48,6 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/why-your-ssme-needs-a-delivery-strategy-not-a-delivery-hope-0acf3cfb99ea",
-    // PASTE the Medium article cover image URL below
     image: "",
   },
   {
@@ -70,14 +58,12 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/why-south-african-smes-need-to-act-now-on-digital-payments-2025-2026-0a68b755ec79",
-    // PASTE the Medium article cover image URL below
     image: "",
   },
 ];
 
 const categories: Category[] = ["All", "Business", "Operations", "Finance"];
 
-/* COVER BAND -- shown when image is absent */
 const FallbackBand = ({ tall = false }: { tall?: boolean }) => (
   <div
     className={`w-full shrink-0 flex items-center justify-center ${tall ? "h-44 md:h-56" : "h-32"}`}
@@ -86,16 +72,10 @@ const FallbackBand = ({ tall = false }: { tall?: boolean }) => (
       borderBottom: "1px solid hsl(var(--accent)/0.12)",
     }}
   >
-    <span
-      className="text-3xl font-semibold tracking-tighter select-none"
-      style={{ color: "hsl(var(--accent)/0.25)" }}
-    >
-      NS
-    </span>
+    <span className="text-3xl font-semibold tracking-tighter select-none" style={{ color: "hsl(var(--accent)/0.25)" }}>NS</span>
   </div>
 );
 
-/* COVER IMAGE -- renders actual photo if url provided, else fallback */
 const CoverImage = ({ src, alt, tall = false }: { src?: string; alt: string; tall?: boolean }) => {
   if (!src) return <FallbackBand tall={tall} />;
   return (
@@ -131,59 +111,28 @@ const Blog = () => {
       <SiteHeader />
       <main>
 
-        {/* HERO -- split layout: left text, right featured-article preview */}
-        <section
-          className="relative overflow-hidden"
-          style={{ background: "var(--gradient-hero)" }}
-        >
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: "var(--gradient-glow)" }}
-          />
+        {/* HERO */}
+        <section className="relative overflow-hidden" style={{ background: "var(--gradient-hero)" }}>
+          <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-glow)" }} />
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-14 md:pt-24 md:pb-20">
             <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
 
-              {/* LEFT: headline + meta */}
+              {/* LEFT */}
               <div>
-                <p
-                  className="text-xs font-semibold uppercase tracking-widest mb-5"
-                  style={{ color: "hsl(var(--accent))" }}
-                >
-                  The NextSlot Blog
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-widest mb-5" style={{ color: "hsl(var(--accent))" }}>The NextSlot Blog</p>
                 <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.08] mb-5">
                   Practical thinking for South African service businesses.
                 </h1>
-                <p
-                  className="text-base leading-relaxed max-w-md mb-8"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
+                <p className="text-base leading-relaxed max-w-md mb-8" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Business structure, operations, payments, and growth. Written by Arshad Segal, founder of NextSlot.
                 </p>
-                <div className="flex items-center gap-4">
-                  <span
-                    className="inline-flex items-center gap-1.5 text-sm"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                  >
-                    <span
-                      className="inline-block w-1.5 h-1.5 rounded-full"
-                      style={{ background: "hsl(var(--accent))" }}
-                    />
-                    {articles.length} articles published
-                  </span>
-                  <a
-                    href="https://medium.com/@arshadsegal"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200"
-                    style={{ color: "hsl(var(--accent))" }}
-                  >
-                    Follow on Medium <ArrowUpRight className="h-3.5 w-3.5" />
-                  </a>
-                </div>
+                <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "hsl(var(--accent))" }} />
+                  {articles.length} articles published
+                </span>
               </div>
 
-              {/* RIGHT: featured article mini-card preview */}
+              {/* RIGHT: featured article mini-card */}
               {featured && (
                 <a
                   href={featured.url}
@@ -208,24 +157,15 @@ const Blog = () => {
                   <div className="p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <CategoryChip category={featured.category} small />
-                      <span
-                        className="text-[11px] flex items-center gap-1"
-                        style={{ color: "hsl(var(--muted-foreground))" }}
-                      >
+                      <span className="text-[11px] flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                         <Clock className="h-3 w-3" />{featured.readTime} read
                       </span>
                     </div>
-                    <h2
-                      className="text-sm font-semibold leading-snug mb-3"
-                      style={{ color: "hsl(var(--foreground))" }}
-                    >
+                    <h2 className="text-sm font-semibold leading-snug mb-3" style={{ color: "hsl(var(--foreground))" }}>
                       {featured.title}
                     </h2>
-                    <span
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold group-hover:gap-2.5 transition-all duration-200"
-                      style={{ color: "hsl(var(--accent))" }}
-                    >
-                      Read on Medium <ArrowUpRight className="h-3.5 w-3.5" />
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold group-hover:gap-2.5 transition-all duration-200" style={{ color: "hsl(var(--accent))" }}>
+                      Read article <ArrowUpRight className="h-3.5 w-3.5" />
                     </span>
                   </div>
                 </a>
@@ -234,11 +174,7 @@ const Blog = () => {
           </div>
         </section>
 
-        {/* Accent rule */}
-        <div
-          className="h-px w-full"
-          style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }}
-        />
+        <div className="h-px w-full" style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }} />
 
         {/* FILTER BAR */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -251,27 +187,14 @@ const Blog = () => {
                 className="px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200"
                 style={
                   activeCategory === cat
-                    ? {
-                        background: "hsl(var(--foreground))",
-                        color: "hsl(var(--background))",
-                        borderColor: "hsl(var(--foreground))",
-                      }
-                    : {
-                        background: "transparent",
-                        color: "hsl(var(--muted-foreground))",
-                        borderColor: "hsl(var(--border))",
-                      }
+                    ? { background: "hsl(var(--foreground))", color: "hsl(var(--background))", borderColor: "hsl(var(--foreground))" }
+                    : { background: "transparent", color: "hsl(var(--muted-foreground))", borderColor: "hsl(var(--border))" }
                 }
               >
                 {cat}
               </button>
             ))}
-            <span
-              className="ml-auto text-xs"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
-              {articles.length} articles
-            </span>
+            <span className="ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{articles.length} articles</span>
           </div>
         </section>
 
@@ -301,33 +224,19 @@ const Blog = () => {
               <div className="p-8 md:p-10">
                 <div className="flex items-center gap-3 mb-4">
                   <CategoryChip category={featured.category} />
-                  <span
-                    className="text-xs flex items-center gap-1"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                  >
+                  <span className="text-xs flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                     <Clock className="h-3 w-3" />{featured.readTime} read
                   </span>
-                  <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {featured.date}
-                  </span>
+                  <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{featured.date}</span>
                 </div>
-                <h2
-                  className="text-2xl md:text-3xl font-semibold tracking-tight mb-3 leading-snug"
-                  style={{ color: "hsl(var(--foreground))" }}
-                >
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3 leading-snug" style={{ color: "hsl(var(--foreground))" }}>
                   {featured.title}
                 </h2>
-                <p
-                  className="text-sm leading-relaxed max-w-2xl mb-6"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
+                <p className="text-sm leading-relaxed max-w-2xl mb-6" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {featured.excerpt}
                 </p>
-                <span
-                  className="inline-flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all duration-200"
-                  style={{ color: "hsl(var(--accent))" }}
-                >
-                  Read on Medium <ArrowUpRight className="h-4 w-4" />
+                <span className="inline-flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all duration-200" style={{ color: "hsl(var(--accent))" }}>
+                  Read article <ArrowUpRight className="h-4 w-4" />
                 </span>
               </div>
             </a>
@@ -363,33 +272,19 @@ const Blog = () => {
                   <div className="flex flex-col flex-1 p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <CategoryChip category={article.category} small />
-                      <span
-                        className="text-[11px] flex items-center gap-1"
-                        style={{ color: "hsl(var(--muted-foreground))" }}
-                      >
+                      <span className="text-[11px] flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                         <Clock className="h-3 w-3" />{article.readTime}
                       </span>
                     </div>
-                    <h3
-                      className="text-base font-semibold leading-snug mb-2"
-                      style={{ color: "hsl(var(--foreground))" }}
-                    >
+                    <h3 className="text-base font-semibold leading-snug mb-2" style={{ color: "hsl(var(--foreground))" }}>
                       {article.title}
                     </h3>
-                    <p
-                      className="text-sm leading-relaxed flex-1"
-                      style={{ color: "hsl(var(--muted-foreground))" }}
-                    >
+                    <p className="text-sm leading-relaxed flex-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {article.excerpt}
                     </p>
                     <div className="mt-4 flex items-center justify-between">
-                      <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                        {article.date}
-                      </span>
-                      <span
-                        className="inline-flex items-center gap-1 text-xs font-semibold group-hover:gap-2 transition-all duration-200"
-                        style={{ color: "hsl(var(--accent))" }}
-                      >
+                      <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{article.date}</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold group-hover:gap-2 transition-all duration-200" style={{ color: "hsl(var(--accent))" }}>
                         Read <ArrowUpRight className="h-3.5 w-3.5" />
                       </span>
                     </div>
@@ -399,59 +294,54 @@ const Blog = () => {
             </div>
           ) : (
             <div className="py-20 text-center">
-              <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-                No articles in this category yet.
-              </p>
+              <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No articles in this category yet.</p>
             </div>
           )}
         </section>
 
-        {/* AUTHOR STRIP */}
-        <section
-          style={{
-            borderTop: "1px solid hsl(var(--border))",
-            background: "var(--gradient-section)",
-          }}
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-            <div className="max-w-xl mx-auto text-center space-y-4">
-              <p
-                className="text-xs font-semibold uppercase tracking-widest"
-                style={{ color: "hsl(var(--accent))" }}
+        {/* AUTHOR STRIP + COMBINED CTA
+            Previously: "Follow on Medium" button stood alone — readers
+            could mistake it as a Medium subscription prompt.
+            Now: author context is kept but the primary CTA drives back to
+            NextSlot. Medium is listed as a plain attributed link, not a button,
+            so its purpose (read more articles) is clear without confusion.
+        */}
+        <section style={{ borderTop: "1px solid hsl(var(--border))", background: "hsl(220 20% 8%)" }}>
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 text-center space-y-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-accent">Written by</p>
+            <h2 className="text-xl font-semibold tracking-tight text-white">Arshad Segal</h2>
+            <p className="text-sm leading-relaxed text-white/55">
+              Founder of NextSlot. Writing about what actually works for independent service businesses in South Africa.
+              Structure, systems, payments, and the decisions that compound over time.
+            </p>
+
+            {/* Primary CTA: back to NextSlot */}
+            <div className="pt-2">
+              <Link
+                to="/onboarding"
+                className="group inline-flex items-center justify-center gap-2 text-sm font-semibold px-8 py-4 rounded-[10px] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.45)] hover:scale-[1.02]"
+                style={{
+                  background: "hsl(var(--foreground))",
+                  color: "hsl(var(--background))",
+                }}
               >
-                Written by
-              </p>
-              <h2 className="text-xl font-semibold tracking-tight">Arshad Segal</h2>
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                Founder of NextSlot. Writing about what actually works for independent service businesses in South Africa.
-                Structure, systems, payments, and the decisions that compound over time.
-              </p>
+                Try NextSlot Free
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+
+            {/* Secondary: explicit Medium attribution — not a signup */}
+            <p className="text-xs text-white/35">
+              More articles on{" "}
               <a
                 href="https://medium.com/@arshadsegal"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group inline-flex items-center justify-center gap-2 text-sm font-medium px-6 py-3 rounded-[10px] transition-all duration-200"
-                style={{
-                  border: "1px solid hsl(var(--accent)/0.45)",
-                  color: "hsl(var(--foreground))",
-                  background: "transparent",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "hsl(var(--secondary))";
-                  (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.7)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
-                  (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.45)";
-                }}
+                className="underline underline-offset-2 hover:text-white/60 transition-colors"
               >
-                Follow on Medium
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                medium.com/@arshadsegal
               </a>
-            </div>
+            </p>
           </div>
         </section>
 
@@ -461,26 +351,15 @@ const Blog = () => {
   );
 };
 
-/* CATEGORY CHIP
-   Three tiers of accent opacity: Business 80%, Operations 55%, Finance 35%.
-*/
 const categoryOpacity: Record<Exclude<Category, "All">, string> = {
   Business:   "0.80",
   Operations: "0.55",
   Finance:    "0.35",
 };
 
-const CategoryChip = ({
-  category,
-  small = false,
-}: {
-  category: Exclude<Category, "All">;
-  small?: boolean;
-}) => (
+const CategoryChip = ({ category, small = false }: { category: Exclude<Category, "All">; small?: boolean }) => (
   <span
-    className={`inline-flex items-center rounded-full font-semibold border ${
-      small ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-0.5 text-[11px]"
-    }`}
+    className={`inline-flex items-center rounded-full font-semibold border ${small ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-0.5 text-[11px]"}`}
     style={{
       background: `hsl(var(--accent) / ${categoryOpacity[category]})`,
       color: "hsl(var(--foreground))",
