@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-/* ─── Below-fold sections: lazy-loaded ─────────────────────── */
 const DashboardPreview       = lazy(() => import("@/components/site/DashboardPreview"));
 const MobileDashboardPreview = lazy(() => import("@/components/site/MobileDashboardPreview"));
 const LaptopFrame            = lazy(() =>
@@ -25,17 +24,15 @@ const MobileFrame            = lazy(() =>
 const PhoneShowcaseSection   = lazy(() => import("@/components/site/PhoneShowcaseSection"));
 const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSection"));
 
-/* ─── DATA ──────────────────────────────────────────────────── */
-
 const industries = [
-  { label: "Beauticians",        desc: "Nails, facials & skincare",         icon: Sparkles    },
-  { label: "Barbers",            desc: "Haircuts, fades & grooming",         icon: Scissors    },
-  { label: "Massage Therapists", desc: "Mobile & in-studio sessions",        icon: Wind        },
-  { label: "Photographers",      desc: "Portraits, events & products",       icon: Camera      },
-  { label: "Tattoo Artists",     desc: "Studio & custom ink work",           icon: HandMetal   },
-  { label: "Hairdressers",       desc: "Cuts, colour & styling",             icon: Zap         },
-  { label: "Image Consultants",  desc: "Styling, wardrobe & personal brand", icon: UserCheck   },
-  { label: "Nail Technicians",   desc: "Gel, acrylics & nail art",           icon: PaintBucket },
+  { label: "Beauticians",        desc: "Nails, facials and skincare",        icon: Sparkles    },
+  { label: "Barbers",            desc: "Haircuts, fades and grooming",        icon: Scissors    },
+  { label: "Massage Therapists", desc: "Mobile and in-studio sessions",       icon: Wind        },
+  { label: "Photographers",      desc: "Portraits, events and products",      icon: Camera      },
+  { label: "Tattoo Artists",     desc: "Studio and custom ink work",          icon: HandMetal   },
+  { label: "Hairdressers",       desc: "Cuts, colour and styling",            icon: Zap         },
+  { label: "Image Consultants",  desc: "Styling, wardrobe and personal brand",icon: UserCheck   },
+  { label: "Nail Technicians",   desc: "Gel, acrylics and nail art",          icon: PaintBucket },
 ];
 
 const steps = [
@@ -75,7 +72,7 @@ const caseStudyCards = [
     version: "The reality",
     isFinal: false,
     points: [
-      "Bookings came through WhatsApp — at all hours, from multiple conversations, with no clear system.",
+      "Bookings came through WhatsApp at all hours, from multiple conversations, with no clear system.",
       "Every confirmation, deposit request, and reminder was typed out manually, one client at a time.",
       "Messages piled up overnight. Mornings started with an inbox to untangle before any work could begin.",
       "There was no record of who booked what, no way to see how the business was actually doing.",
@@ -88,7 +85,7 @@ const caseStudyCards = [
     isFinal: false,
     points: [
       "A Google Form was added to collect booking info. A spreadsheet to track it. A calendar to manage time.",
-      "It was better than nothing — but it still required constant manual work to keep it all in sync.",
+      "It was better than nothing, but it still required constant manual work to keep it all in sync.",
       "Payments still meant sending banking details, waiting for proof of payment, then manually confirming.",
       "The tools were patched together. Nothing spoke to each other. It was a job on top of the actual job.",
     ],
@@ -99,7 +96,7 @@ const caseStudyCards = [
     version: "The shift",
     isFinal: false,
     points: [
-      "A professional booking system with a real payment gateway. Clients book, choose a time, and pay a deposit — without a single message.",
+      "A professional booking system with a real payment gateway. Clients book, choose a time, and pay a deposit without a single message.",
       "Proof of payment gone. A booking is only confirmed once payment clears. Automatically.",
       "The link went into the TikTok bio, Instagram bio, and WhatsApp status. Bookings started arriving on their own.",
       "For the first time, the business felt like it was running itself.",
@@ -111,10 +108,10 @@ const caseStudyCards = [
     version: "The insight",
     isFinal: false,
     points: [
-      "Most new clients were coming from TikTok — not Instagram or WhatsApp as assumed. Marketing changed immediately.",
+      "Most new clients were coming from TikTok, not Instagram or WhatsApp as assumed. Marketing changed immediately.",
       "Some services made far more per hour than others. Pricing and promotion followed the data.",
       "Certain time slots always filled first. Real demand patterns became visible for the first time.",
-      "Clients who hadn't rebooked in a month surfaced automatically. Follow-up became obvious, not guesswork.",
+      "Clients who had not rebooked in a month surfaced automatically. Follow-up became obvious, not guesswork.",
     ],
   },
   {
@@ -123,16 +120,15 @@ const caseStudyCards = [
     version: "The result",
     isFinal: true,
     points: [
-      "PhenomeBeauty didn't just get a booking tool. They got a system that runs the business and advises the owner every day.",
+      "PhenomeBeauty did not just get a booking tool. They got a system that runs the business and advises the owner every day.",
       "No more chasing payments. No more proof of payments. No more spreadsheets going stale.",
-      "The dashboard shows exactly what is happening in real time — and surfaces what to do next.",
+      "The dashboard shows exactly what is happening in real time and surfaces what to do next.",
       "This is why NextSlot exists. Every lesson from building it for a real business is built into the product.",
       "If you run a service business in South Africa, this was built for you.",
     ],
   },
 ];
 
-/* ─── INDUSTRY GRID ─────────────────────────────────────────── */
 const IndustryGrid = () => {
   const [visibleSet, setVisibleSet] = useState<Set<number>>(new Set());
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -200,7 +196,6 @@ const IndustryGrid = () => {
   );
 };
 
-/* ─── CASE STUDY CAROUSEL ───────────────────────────────────── */
 type CarouselProps = { active: number; setActive: (i: number) => void; };
 
 const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
@@ -250,26 +245,25 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
                     "relative h-full rounded-2xl p-6 sm:p-8 flex flex-col transition-all duration-500 min-h-[280px]",
                     card.isFinal
                       ? "bg-accent/10 border border-accent/50"
-                      : "bg-foreground/[0.03] border border-foreground/10",
+                      : "bg-white/5 border border-white/10",
                     isActive ? "opacity-100" : "opacity-20",
                   ].join(" ")}
                 >
-                  {/* Watermark step number */}
                   <span
                     aria-hidden="true"
                     className="absolute right-4 bottom-4 text-[5rem] sm:text-[7rem] font-black leading-none pointer-events-none select-none"
-                    style={{ color: card.isFinal ? "hsl(var(--accent)/0.12)" : "hsl(var(--foreground)/0.04)" }}
+                    style={{ color: card.isFinal ? "hsl(var(--accent)/0.15)" : "rgba(255,255,255,0.06)" }}
                   >
                     {card.step}
                   </span>
 
-                  {/* Card header */}
                   <div className="flex items-center justify-between gap-3 mb-5 relative z-10">
                     <div>
-                      <p className={["text-xs font-bold uppercase tracking-widest mb-0.5", card.isFinal ? "text-accent" : "text-foreground/50"].join(" ")}>
+                      <p className={["text-xs font-bold uppercase tracking-widest mb-0.5",
+                        card.isFinal ? "text-accent" : "text-white/50"].join(" ")}>
                         {card.label}
                       </p>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                      <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">
                         {card.version}
                       </p>
                     </div>
@@ -277,24 +271,19 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
                       "shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold",
                       card.isFinal
                         ? "bg-accent text-foreground ring-1 ring-accent/60"
-                        : "bg-foreground/8 text-foreground/50 ring-1 ring-foreground/10",
+                        : "bg-white/10 text-white/50 ring-1 ring-white/10",
                     ].join(" ")}>
                       {parseInt(card.step)}
                     </span>
                   </div>
 
-                  {/* Points */}
                   <ul className="relative z-10 flex-1 flex flex-col justify-start space-y-2.5">
                     {card.points.map((pt, pi) => (
                       <li key={pi} className="flex items-start gap-2.5">
-                        <span
-                          className={["mt-[7px] w-1.5 h-1.5 rounded-full shrink-0",
-                            card.isFinal ? "bg-accent" : "bg-foreground/25",
-                          ].join(" ")}
-                        />
+                        <span className={["mt-[7px] w-1.5 h-1.5 rounded-full shrink-0",
+                          card.isFinal ? "bg-accent" : "bg-white/25"].join(" ")} />
                         <span className={["text-sm leading-relaxed",
-                          card.isFinal ? "text-foreground/85" : "text-foreground/60",
-                        ].join(" ")}>
+                          card.isFinal ? "text-white/90" : "text-white/60"].join(" ")}>
                           {pt}
                         </span>
                       </li>
@@ -307,49 +296,37 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="mt-6 flex items-center justify-center gap-5">
-        <button
-          onClick={prev}
-          aria-label="Previous slide"
-          className="w-9 h-9 rounded-full bg-foreground/8 hover:bg-foreground/15 ring-1 ring-foreground/10 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-        >
-          <ChevronLeft className="h-4 w-4 text-foreground/50" />
+        <button onClick={prev} aria-label="Previous slide"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 ring-1 ring-white/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
+          <ChevronLeft className="h-4 w-4 text-white/60" />
         </button>
         <div className="flex items-center gap-1.5">
           {caseStudyCards.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setActive(i)}
-              aria-label={`Go to slide ${i + 1}`}
+            <button key={i} onClick={() => setActive(i)} aria-label={`Go to slide ${i + 1}`}
               className="rounded-full transition-all duration-300"
               style={{
                 width: i === active ? 24 : 8,
                 height: 8,
-                background: i === active ? "hsl(var(--accent))" : "hsl(var(--foreground)/0.15)",
+                background: i === active ? "hsl(var(--accent))" : "rgba(255,255,255,0.2)",
               }}
             />
           ))}
         </div>
-        <button
-          onClick={next}
-          aria-label="Next slide"
-          className="w-9 h-9 rounded-full bg-foreground/8 hover:bg-foreground/15 ring-1 ring-foreground/10 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-        >
-          <ChevronRight className="h-4 w-4 text-foreground/50" />
+        <button onClick={next} aria-label="Next slide"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 ring-1 ring-white/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
+          <ChevronRight className="h-4 w-4 text-white/60" />
         </button>
       </div>
-      <p className="mt-3 text-center text-[10px] text-muted-foreground tracking-wider uppercase md:hidden">Swipe to continue</p>
+      <p className="mt-3 text-center text-[10px] text-white/30 tracking-wider uppercase md:hidden">Swipe to continue</p>
     </div>
   );
 };
 
-/* ─── Lazy section shell ─────────────────────────────────────── */
 const SectionShell = ({ height = 500 }: { height?: number }) => (
   <div style={{ minHeight: height }} className="w-full" aria-hidden="true" />
 );
 
-/* ─── PAGE ───────────────────────────────────────────────────── */
 const Index = () => {
   const [caseActive, setCaseActive] = useState(0);
   const total = caseStudyCards.length;
@@ -360,7 +337,7 @@ const Index = () => {
       <StickyCtaBar />
       <main>
 
-        {/* ── HERO ── */}
+        {/* HERO */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-8 animate-fade-in">
@@ -418,33 +395,44 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── CASE STUDY ── */}
-        <section className="bg-secondary/50 border-y border-border/50 py-14 sm:py-20 md:py-24 overflow-hidden">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+        {/* CASE STUDY */}
+        <section
+          className="relative overflow-hidden py-14 sm:py-20 md:py-24"
+          style={{ background: "hsl(220 20% 8%)" }}
+        >
+          {/* Ambient glow top-right */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full opacity-20 blur-[120px]"
+            style={{ background: "hsl(var(--accent))" }}
+          />
+          {/* Accent left edge bar */}
+          <div
+            aria-hidden="true"
+            className="absolute left-0 top-0 bottom-0 w-1 rounded-r-full"
+            style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--accent)), transparent)" }}
+          />
+
+          <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6">
 
             {/* Header */}
             <div className="mb-10 sm:mb-12">
-              {/* Origin label */}
               <p className="text-xs font-bold uppercase tracking-widest text-accent mb-4">
                 Where NextSlot came from
               </p>
-
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-4 text-white">
                 It all started with{" "}
                 <span style={{ fontFamily: "'Abril Fatface', serif" }}>PhenomeBeauty.</span>
               </h2>
-
-              <p className="text-base text-muted-foreground leading-relaxed max-w-xl">
-                A mobile beauty studio owner doing everything alone — bookings on WhatsApp, deposits via EFT, schedules in her head.
-                Sound familiar? This is her journey. And why NextSlot exists.
+              <p className="text-base text-white/55 leading-relaxed max-w-xl">
+                A mobile beauty studio owner doing everything alone. Bookings on WhatsApp, deposits via EFT, schedules in her head.
+                Sound familiar? This is her journey and why NextSlot exists.
               </p>
-
-              {/* Subtle identity reinforcement */}
               <div className="mt-5 flex flex-wrap gap-2">
                 {["Solo operator", "Mobile business", "No staff", "WhatsApp bookings", "Proof of payment chaos"].map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 rounded-full text-[11px] font-medium bg-foreground/5 border border-foreground/10 text-foreground/50"
+                    className="px-3 py-1 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-white/40"
                   >
                     {tag}
                   </span>
@@ -455,14 +443,14 @@ const Index = () => {
             {/* Progress bar */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                <span className="text-[10px] text-white/30 uppercase tracking-widest">
                   {caseStudyCards[caseActive].label}
                 </span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                <span className="text-[10px] text-white/30 uppercase tracking-widest">
                   {caseActive + 1} / {total}
                 </span>
               </div>
-              <div className="h-0.5 bg-foreground/10 rounded-full overflow-hidden">
+              <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-accent rounded-full transition-all duration-500"
                   style={{ width: `${(caseActive / (total - 1)) * 100}%` }}
@@ -481,15 +469,14 @@ const Index = () => {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </LiquidButton>
-              <p className="text-xs text-muted-foreground text-center sm:text-left">
+              <p className="text-xs text-white/35 text-center sm:text-left">
                 Set up in minutes. No tech experience needed.
               </p>
             </div>
-
           </div>
         </section>
 
-        {/* ── INDUSTRIES ── */}
+        {/* INDUSTRIES */}
         <section className="bg-background py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -502,7 +489,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── PAIN POINTS ── */}
+        {/* PAIN POINTS */}
         <section className="bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -519,7 +506,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── HOW IT WORKS ── */}
+        {/* HOW IT WORKS */}
         <section className="bg-background py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center gap-3 mb-8">
@@ -556,7 +543,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── FEATURES ── */}
+        {/* FEATURES */}
         <section className="bg-secondary/30 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -592,7 +579,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── LIVE DEMO ── */}
+        {/* LIVE DEMO */}
         <Suspense fallback={<SectionShell height={400} />}>
           <LiveDemoSection />
         </Suspense>
