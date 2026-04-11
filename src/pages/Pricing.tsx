@@ -191,11 +191,19 @@ const Pricing = () => {
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
                   to="/onboarding"
-                  className="group inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px] transition-all duration-200"
+                  className="group inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
                   style={{
                     background: "hsl(var(--foreground))",
                     color: "hsl(var(--background))",
-                    boxShadow: "var(--shadow-elevated)",
+                    boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.boxShadow =
+                      "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.40)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.boxShadow =
+                      "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)";
                   }}
                 >
                   Start Free Trial
@@ -203,10 +211,20 @@ const Pricing = () => {
                 </Link>
                 <a
                   href="#plans"
-                  className="inline-flex items-center justify-center text-sm font-medium px-7 py-3.5 rounded-[10px] transition-all duration-200"
+                  className="inline-flex items-center justify-center text-sm font-medium px-7 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.01]"
                   style={{
                     border: "1px solid hsl(var(--border))",
                     color: "hsl(var(--muted-foreground))",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
+                    (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--muted-foreground))";
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
                   }}
                 >
                   See plans
@@ -244,7 +262,6 @@ const Pricing = () => {
               <ul className="space-y-4">
                 {trialBuilds.map((item) => (
                   <li key={item} className="flex items-start gap-3">
-                    {/* Hollow circle -- Zeigarnik open loop */}
                     <span
                       className="mt-0.5 h-4 w-4 rounded-full shrink-0 flex items-center justify-center"
                       style={{
@@ -276,7 +293,7 @@ const Pricing = () => {
 
           </div>
 
-          {/* 3-step journey -- kept below split, still above tier cards */}
+          {/* 3-step journey */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mt-14">
             {[
               { num: "01", label: "Sign up free",      sub: "No card. Live in minutes." },
@@ -334,14 +351,42 @@ const Pricing = () => {
                 <div className="px-8 pb-8">
                   <Link
                     to="/onboarding"
-                    className={`w-full inline-flex items-center justify-center text-sm font-medium px-5 py-3 rounded-[10px] transition-all ${
+                    className={`group w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] ${
                       tier.featured
-                        ? "bg-primary text-primary-foreground hover:opacity-90 shadow-elevated"
-                        : "border border-border hover:bg-secondary hover:shadow-soft"
+                        ? "hover:scale-[1.02]"
+                        : "hover:scale-[1.01]"
                     }`}
+                    style={tier.featured ? {
+                      background: "hsl(var(--foreground))",
+                      color: "hsl(var(--background))",
+                      boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)",
+                    } : {
+                      border: "1px solid hsl(var(--border))",
+                      color: "hsl(var(--foreground)/0.75)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (tier.featured) {
+                        (e.currentTarget as HTMLElement).style.boxShadow =
+                          "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.38)";
+                      } else {
+                        (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
+                        (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
+                        (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (tier.featured) {
+                        (e.currentTarget as HTMLElement).style.boxShadow =
+                          "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)";
+                      } else {
+                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                        (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
+                        (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
+                      }
+                    }}
                   >
                     {tier.cta}
-                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                    <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                   <p className="text-center text-[11px] text-muted-foreground mt-2">Free for 30 days. No card required.</p>
                 </div>
