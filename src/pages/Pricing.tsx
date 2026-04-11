@@ -97,8 +97,8 @@ const faqs = [
     a: "You get full access to the plan you choose. During this time, NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised growth strategies waiting for you.",
   },
   {
-    q: "Do I need a credit card to start?",
-    a: "No. Sign up is completely free. No credit card required to start your 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
+    q: "Do I payment to start?",
+    a: "No. Sign up is completely free. No payment is required to start your 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
   },
   {
     q: "Is there a contract or lock-in?",
@@ -179,7 +179,7 @@ const Pricing = () => {
               <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.08] mb-5">
                 Try it free.
                 <br />
-                <span style={{ color: "hsl(var(--accent))" }}>No card needed.</span>
+                <span style={{ color: "hsl(var(--accent))" }}>No payment required.</span>
               </h1>
               <p
                 className="text-base leading-relaxed max-w-md mb-8"
@@ -529,7 +529,7 @@ const Pricing = () => {
             Start Your Free Trial
             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
           </Link>
-          <p className="text-xs text-primary-foreground/40 pt-1">No credit card required. Cancel anytime. POPIA compliant.</p>
+          <p className="text-xs text-primary-foreground/40 pt-1">No payment required. Try free for 30 days. Cancel anytime.</p>
         </div>
       </section>
 
