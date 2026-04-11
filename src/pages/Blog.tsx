@@ -27,7 +27,7 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/you-dont-own-your-marketplace-sales-and-that-s-the-problem-efcc7da7b47a",
-    image: "",
+    image: "https://miro.medium.com/v2/resize:fit:1200/1*ecSZfaS4k95AOE1VTQ1UYA==.jpeg",
     featured: true,
   },
   {
@@ -38,7 +38,7 @@ const articles: Article[] = [
     readTime: "6 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/sole-proprietor-vs-pty-ltd-in-south-africa-which-one-fits-your-next-5-years-f5e10847ccc9",
-    image: "",
+    image: "https://miro.medium.com/v2/resize:fit:1200/1*4y1EyPtlUmgZSJJcgiIEQ==.jpeg",
   },
   {
     title: "Why Your SSME Needs a Delivery Strategy, Not a Delivery Hope",
@@ -48,7 +48,7 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/why-your-ssme-needs-a-delivery-strategy-not-a-delivery-hope-0acf3cfb99ea",
-    image: "",
+    image: "https://miro.medium.com/v2/resize:fit:1400/1*WnlZmve6pYPhgYXQ39OiWA.png",
   },
   {
     title: "Why South African SMEs Need to Act Now on Digital Payments (2025 to 2026)",
@@ -58,7 +58,7 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/why-south-african-smes-need-to-act-now-on-digital-payments-2025-2026-0a68b755ec79",
-    image: "",
+    image: "https://miro.medium.com/v2/resize:fit:1400/1*Zn7_--DsP_XvtRjHTPLqnA@2x.jpeg",
   },
 ];
 
@@ -299,13 +299,7 @@ const Blog = () => {
           )}
         </section>
 
-        {/* AUTHOR STRIP + COMBINED CTA
-            Previously: "Follow on Medium" button stood alone — readers
-            could mistake it as a Medium subscription prompt.
-            Now: author context is kept but the primary CTA drives back to
-            NextSlot. Medium is listed as a plain attributed link, not a button,
-            so its purpose (read more articles) is clear without confusion.
-        */}
+        {/* AUTHOR STRIP */}
         <section style={{ borderTop: "1px solid hsl(var(--border))", background: "hsl(220 20% 8%)" }}>
           <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 text-center space-y-5">
             <p className="text-xs font-semibold uppercase tracking-widest text-accent">Written by</p>
@@ -314,8 +308,6 @@ const Blog = () => {
               Founder of NextSlot. Writing about what actually works for independent service businesses in South Africa.
               Structure, systems, payments, and the decisions that compound over time.
             </p>
-
-            {/* Primary CTA: back to NextSlot */}
             <div className="pt-2">
               <Link
                 to="/onboarding"
@@ -329,8 +321,6 @@ const Blog = () => {
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
-
-            {/* Secondary: explicit Medium attribution — not a signup */}
             <p className="text-xs text-white/35">
               More articles on{" "}
               <a
