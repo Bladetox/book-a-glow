@@ -1,5 +1,5 @@
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY!;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 
 export const config = {
