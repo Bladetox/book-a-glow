@@ -6,10 +6,6 @@ interface TenantHeadOptions {
   loading: boolean;
 }
 
-/**
- * Patches <head> metadata to reflect the current tenant rather than NextSlot.
- * Called once inside Book.tsx after config has resolved.
- */
 export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
   useEffect(() => {
     if (loading || !name) return;
@@ -17,7 +13,6 @@ export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
     const title = `${name} | Book Online`;
     const description = `Book your appointment with ${name}. Powered by NextSlot.`;
     const image = logoUrl ?? "";
-
     const prevTitle = document.title;
 
     const setMeta = (selector: string, attr: string, value: string) => {
@@ -29,54 +24,16 @@ export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
 
     setMeta('meta[name="description"]',                "content", description);
     setMeta('meta[name="apple-mobile-web-app-title"]', "content", name);
-
     setMeta('meta[property="og:title"]',               "content", title);
     setMeta('meta[property="og:description"]',         "content", description);
     setMeta('meta[property="og:site_name"]',           "content", name);
     if (image) setMeta('meta[property="og:image"]',    "content", image);
-
     setMeta('meta[name="twitter:title"]',              "content", title);
     setMeta('meta[name="twitter:description"]',        "content", description);
     if (image) setMeta('meta[name="twitter:image"]',   "content", image);
 
-    // Detect correct mime type from file extension
-    const mimeType = image.endsWith(".webp")
-      ? "image/webp"
-      : image.endsWith(".svg")
-      ? "image/svg+xml"
-      : image.endsWith(".jpg") || image.endsWith(".jpeg")
-      ? "image/jpeg"
-      : "image/png";
-
-    // Swap the PWA manifest to a data URI so the "Add to Home Screen" prompt
-    // shows the tenant name and logo instead of NextSlot.
-    const manifestPayload: Record<string, unknown> = {
-      name,
-      short_name: name,
-      description,
-      start_url: "/",
-      display: "standalone",
-      background_color: "#080808",
-      theme_color: "#080808",
-    };
-
-    if (image) {
-      manifestPayload.icons = [
-        { src: image, sizes: "192x192", type: mimeType, purpose: "any" },
-        { src: image, sizes: "512x512", type: mimeType, purpose: "any maskable" },
-      ];
-    }
-
-    const blob = new Blob([JSON.stringify(manifestPayload)], { type: "application/json" });
-    const blobUrl = URL.createObjectURL(blob);
-    const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
-    const prevManifest = manifestLink?.href ?? null;
-    if (manifestLink) manifestLink.href = blobUrl;
-
     return () => {
       document.title = prevTitle;
-      URL.revokeObjectURL(blobUrl);
-      if (manifestLink && prevManifest) manifestLink.href = prevManifest;
     };
   }, [name, logoUrl, loading]);
 }
