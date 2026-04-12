@@ -71,7 +71,8 @@ export default async function middleware(request: Request): Promise<Response> {
     html = patchMetaProp(html, "og:url", canonicalUrl);
     html = patchMetaProp(html, "og:site_name", name);
     if (logoUrl) html = patchMetaProp(html, "og:image", logoUrl);
-
+    html = patchMetaProp(html, "og:image:alt", name);
+    
     // Patch canonical
     html = html.replace(
       /(<link\s+rel="canonical"\s+href=")[^"]*(")/,
