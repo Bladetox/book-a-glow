@@ -20,6 +20,11 @@ export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
       if (el) el.setAttribute(attr, value);
     };
 
+    const swapIcon = (selector: string) => {
+      const el = document.querySelector(selector) as HTMLLinkElement | null;
+      if (el) el.href = image;
+    };
+
     document.title = title;
 
     setMeta('meta[name="description"]',                "content", description);
@@ -31,6 +36,14 @@ export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
     setMeta('meta[name="twitter:title"]',              "content", title);
     setMeta('meta[name="twitter:description"]',        "content", description);
     if (image) setMeta('meta[name="twitter:image"]',   "content", image);
+
+    // Swap favicon and apple touch icon to tenant logo
+    if (image) {
+      swapIcon('link[rel="icon"][type="image/png"]');
+      swapIcon('link[rel="icon"][type="image/svg+xml"]');
+      swapIcon('link[rel="shortcut icon"]');
+      swapIcon('link[rel="apple-touch-icon"]');
+    }
 
     return () => {
       document.title = prevTitle;
