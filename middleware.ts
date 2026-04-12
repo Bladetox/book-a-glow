@@ -19,13 +19,20 @@ export default async function middleware(request: Request): Promise<Response> {
     }
   }
 
+  // No tenant — marketing site, pass through untouched
   if (!tenantId) return fetch(request);
 
   const accept = request.headers.get("accept") ?? "";
-  if (!accept.includes("text/html")) return fetch(request);
+  const path = url.pathname;
+
+  // Only intercept HTML and manifest requests
+  const isHtml = accept.includes("text/html");
+  const isManifest = path === "/site.webmanifest" || path === "/manifest.json" || path === "/manifest.webmanifest";
+
+  if (!isHtml && !isManifest) return fetch(request);
 
   try {
-    // Query by id — the subdomain IS the tenant id
+    // Fetch tenant row from Supabase
     const tenantRes = await fetch(
       `${SUPABASE_URL}/rest/v1/tenants?id=eq.${encodeURIComponent(tenantId)}&select=name,logo_url&limit=1`,
       {
@@ -48,32 +55,67 @@ export default async function middleware(request: Request): Promise<Response> {
     const description = `Book your appointment with ${name}. Powered by NextSlot.`;
     const canonicalUrl = `https://${hostname}/`;
 
-    // Fetch static index.html
+    // ── Serve dynamic manifest for this tenant ────────────────────────────
+    if (isManifest) {
+      const mimeType = logoUrl.endsWith(".webp")
+        ? "image/webp"
+        : logoUrl.endsWith(".svg")
+        ? "image/svg+xml"
+        : logoUrl.endsWith(".jpg") || logoUrl.endsWith(".jpeg")
+        ? "image/jpeg"
+        : "image/png";
+
+      const manifest: Record<string, unknown> = {
+        name,
+        short_name: name,
+        description,
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
+        background_color: "#080808",
+        theme_color: "#080808",
+        orientation: "portrait",
+        icons: logoUrl
+          ? [
+              { src: logoUrl, sizes: "192x192", type: mimeType, purpose: "any" },
+              { src: logoUrl, sizes: "512x512", type: mimeType, purpose: "any maskable" },
+            ]
+          : [
+              { src: "/web-app-manifest-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+              { src: "/web-app-manifest-512x512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+            ],
+      };
+
+      return new Response(JSON.stringify(manifest, null, 2), {
+        headers: {
+          "content-type": "application/manifest+json",
+          "cache-control": "public, max-age=300, stale-while-revalidate=60",
+        },
+      });
+    }
+
+    // ── Patch static index.html ───────────────────────────────────────────
     const indexUrl = new URL(request.url);
     indexUrl.pathname = "/";
     const htmlRes = await fetch(indexUrl.toString(), { headers: { accept: "text/html" } });
     if (!htmlRes.ok) return fetch(request);
     let html = await htmlRes.text();
 
-    // Patch <title>
     html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`);
 
-    // Patch meta name tags
     html = patchMetaName(html, "description", description);
     html = patchMetaName(html, "apple-mobile-web-app-title", name);
     html = patchMetaName(html, "twitter:title", title);
     html = patchMetaName(html, "twitter:description", description);
     if (logoUrl) html = patchMetaName(html, "twitter:image", logoUrl);
 
-    // Patch Open Graph
     html = patchMetaProp(html, "og:title", title);
     html = patchMetaProp(html, "og:description", description);
     html = patchMetaProp(html, "og:url", canonicalUrl);
     html = patchMetaProp(html, "og:site_name", name);
     if (logoUrl) html = patchMetaProp(html, "og:image", logoUrl);
     html = patchMetaProp(html, "og:image:alt", name);
-    
-    // Patch canonical
+
     html = html.replace(
       /(<link\s+rel="canonical"\s+href=")[^"]*(")/,
       `$1${esc(canonicalUrl)}$2`
