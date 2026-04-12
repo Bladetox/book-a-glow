@@ -66,7 +66,7 @@ const steps = [
 const showcaseCards = [
   { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                       icon: CalendarCheck    },
   { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                    icon: MapPin           },
-  { title: "Fully Customisable Dashboard", desc: "Switch dashboard cards on or off anytime. Keep only the numbers that matter to your business — bookings, revenue, stock alerts, or client retention.",                         icon: SlidersHorizontal },
+  { title: "Fully Customisable Dashboard", desc: "Switch dashboard cards on or off anytime. Keep only the numbers that matter to your business; bookings, revenue, stock alerts, or client retention.",                         icon: SlidersHorizontal },
   { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",                   icon: Star             },
   { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                                   icon: Users            },
   { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                             icon: LayoutDashboard  },
@@ -81,7 +81,7 @@ const dashboardCustomisationPoints = [
   {
     icon: LayoutGrid,
     title: "Prioritise what matters most",
-    desc: "Keep your top metrics front and centre. Revenue, bookings, clients — in the order that works for you.",
+    desc: "Keep your top metrics front and centre. Revenue, bookings, clients, in the order that works for you.",
   },
   {
     icon: TrendingUp,
@@ -349,7 +349,7 @@ const DashboardCustomisationCallout = () => (
         <p className="text-sm font-semibold text-foreground">Your dashboard, your way</p>
       </div>
       <p className="text-sm text-muted-foreground sm:border-l sm:border-border/60 sm:pl-4">
-        Switch any dashboard card on or off at any time — so you only ever see the numbers that matter to your business.
+        Switch any dashboard card on or off at any time, so you only ever see the numbers that matter to your business.
       </p>
     </div>
     {/* Three points */}
