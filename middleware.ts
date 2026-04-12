@@ -10,26 +10,24 @@ export default async function middleware(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const hostname = url.hostname;
 
-  // Resolve tenant slug from subdomain
-  let slug: string | null = null;
+  // Resolve tenant id from subdomain
+  let tenantId: string | null = null;
   for (const domain of MAIN_DOMAINS) {
     if (hostname.endsWith(`.${domain}`)) {
       const sub = hostname.slice(0, -(domain.length + 1));
-      if (sub && sub !== "www") { slug = sub; break; }
+      if (sub && sub !== "www") { tenantId = sub; break; }
     }
   }
 
-  // No tenant — marketing site, pass through
-  if (!slug) return fetch(request);
+  if (!tenantId) return fetch(request);
 
-  // Only rewrite document requests, not assets/api
   const accept = request.headers.get("accept") ?? "";
   if (!accept.includes("text/html")) return fetch(request);
 
   try {
-    // Fetch tenant row from Supabase REST
+    // Query by id — the subdomain IS the tenant id
     const tenantRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/tenants?slug=eq.${encodeURIComponent(slug)}&select=name,logo_url&limit=1`,
+      `${SUPABASE_URL}/rest/v1/tenants?id=eq.${encodeURIComponent(tenantId)}&select=name,logo_url&limit=1`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -50,22 +48,17 @@ export default async function middleware(request: Request): Promise<Response> {
     const description = `Book your appointment with ${name}. Powered by NextSlot.`;
     const canonicalUrl = `https://${hostname}/`;
 
-    // Fetch the static index.html
+    // Fetch static index.html
     const indexUrl = new URL(request.url);
     indexUrl.pathname = "/";
-    const htmlRes = await fetch(indexUrl.toString(), {
-      headers: { accept: "text/html" },
-    });
+    const htmlRes = await fetch(indexUrl.toString(), { headers: { accept: "text/html" } });
     if (!htmlRes.ok) return fetch(request);
     let html = await htmlRes.text();
 
     // Patch <title>
-    html = html.replace(
-      /<title>[^<]*<\/title>/,
-      `<title>${esc(title)}</title>`
-    );
+    html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`);
 
-    // Patch meta description
+    // Patch meta name tags
     html = patchMetaName(html, "description", description);
     html = patchMetaName(html, "apple-mobile-web-app-title", name);
     html = patchMetaName(html, "twitter:title", title);
@@ -95,8 +88,6 @@ export default async function middleware(request: Request): Promise<Response> {
     return fetch(request);
   }
 }
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function esc(s: string): string {
   return s
