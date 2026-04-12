@@ -124,7 +124,7 @@ const Blog = () => {
                   Practical thinking for South African service businesses.
                 </h1>
                 <p className="text-base leading-relaxed max-w-md mb-8" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  Business structure, operations, payments, and growth. Written by Arshad Segal, founder of NextSlot.
+                  Business structure, operations, payments, and growth.
                 </p>
                 <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "hsl(var(--accent))" }} />
