@@ -97,7 +97,7 @@ const faqs = [
     a: "You get full access to the plan you choose. During this time, NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised growth strategies waiting for you.",
   },
   {
-    q: "Do I payment to start?",
+    q: "Do I need payment to start?",
     a: "No. Sign up is completely free. No payment is required to start your 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
   },
   {
