@@ -10,7 +10,7 @@ import {
   CalendarCheck, MapPin, Users, LayoutDashboard,
   Star, SlidersHorizontal, ChevronLeft, ChevronRight,
   Scissors, Sparkles, HandMetal, Camera, Zap, Wind, UserCheck, PaintBucket,
-  Play
+  Play, EyeOff, LayoutGrid, TrendingUp
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -26,7 +26,7 @@ const PhoneShowcaseSection   = lazy(() => import("@/components/site/PhoneShowcas
 const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSection"));
 
 const HERO_IMAGE =
- "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1400&q=80";
+  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1400&q=80";
 
 const FEATURES_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
@@ -58,18 +58,36 @@ const steps = [
   {
     num: "03",
     title: "Your dashboard does the rest",
-    desc: "Track bookings, revenue, clients, and inventory. Fully customisable so you only see what matters to your business.",
+    desc: "Track bookings, revenue, clients, and inventory. Hide the cards you do not need so you only see what matters to your business.",
     highlight: "Insights that actually help.",
   },
 ];
 
 const showcaseCards = [
-  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                icon: CalendarCheck    },
-  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                            icon: MapPin           },
-  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                 icon: SlidersHorizontal },
-  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings.",             icon: Star             },
-  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",          icon: Users            },
-  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                    icon: LayoutDashboard  },
+  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                       icon: CalendarCheck    },
+  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                    icon: MapPin           },
+  { title: "Fully Customisable Dashboard", desc: "Switch dashboard cards on or off anytime. Keep only the numbers that matter to your business — bookings, revenue, stock alerts, or client retention.",                         icon: SlidersHorizontal },
+  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",                   icon: Star             },
+  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                                   icon: Users            },
+  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                             icon: LayoutDashboard  },
+];
+
+const dashboardCustomisationPoints = [
+  {
+    icon: EyeOff,
+    title: "Hide cards you do not use",
+    desc: "Not tracking inventory? Turn that card off. Only show what is relevant to your day.",
+  },
+  {
+    icon: LayoutGrid,
+    title: "Prioritise what matters most",
+    desc: "Keep your top metrics front and centre. Revenue, bookings, clients — in the order that works for you.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Built around your business",
+    desc: "Every business is different. Your dashboard should reflect that, not somebody else's setup.",
+  },
 ];
 
 const caseStudyCards = [
@@ -136,7 +154,7 @@ const caseStudyCards = [
   },
 ];
 
-/* ─── Industry grid ─── */
+/* ─── Industry grid with staggered slide-in animation ─── */
 const IndustryGrid = () => {
   const [visibleSet, setVisibleSet] = useState<Set<number>>(new Set());
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -319,12 +337,59 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
   );
 };
 
+/* ─── Dashboard customisation callout ─── */
+const DashboardCustomisationCallout = () => (
+  <div className="max-w-5xl mx-auto mb-10">
+    {/* Teaching banner */}
+    <div className="rounded-2xl border border-accent/30 bg-accent/8 px-5 py-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex items-center gap-2.5 shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/30 flex items-center justify-center">
+          <SlidersHorizontal className="h-4 w-4 text-accent" strokeWidth={2} />
+        </div>
+        <p className="text-sm font-semibold text-foreground">Your dashboard, your way</p>
+      </div>
+      <p className="text-sm text-muted-foreground sm:border-l sm:border-border/60 sm:pl-4">
+        Switch any dashboard card on or off at any time — so you only ever see the numbers that matter to your business.
+      </p>
+    </div>
+    {/* Three points */}
+    <div className="grid gap-3 sm:grid-cols-3">
+      {dashboardCustomisationPoints.map((pt) => {
+        const Icon = pt.icon;
+        return (
+          <div
+            key={pt.title}
+            className="flex items-start gap-3 rounded-2xl border border-border/50 bg-secondary/30 px-4 py-4"
+          >
+            <div className="shrink-0 mt-0.5 w-8 h-8 rounded-lg bg-accent/15 border border-accent/20 flex items-center justify-center">
+              <Icon className="h-4 w-4 text-accent" strokeWidth={2} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold leading-snug mb-0.5">{pt.title}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{pt.desc}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
 const SectionShell = ({ height = 500 }: { height?: number }) => (
   <div style={{ minHeight: height }} className="w-full" aria-hidden="true" />
 );
 
 /* ═══════════════════════════════════════════════════
    PAGE
+   Guided-tour flow:
+   1. HERO          — Hook: who this is for + the core promise
+   2. PAIN POINTS   — Empathy: "this is your life right now"
+   3. CASE STUDY    — Aspirational anchor: PhenomeBeauty transformation
+   4. HOW IT WORKS  — Clarity: 3 steps to go from chaos to control
+   5. INDUSTRIES    — Fit: show them their tribe
+   6. FEATURES      — Proof: what you actually get + dashboard reveal
+   7. DEMO CTA      — Try before you commit
+   8. FINAL CTA     — One clear ask
 ═══════════════════════════════════════════════════ */
 const Index = () => {
   const [caseActive, setCaseActive] = useState(0);
@@ -336,7 +401,7 @@ const Index = () => {
       <StickyCtaBar />
       <main>
 
-        {/* ── 1. HERO ──────────────────────────────────────────────────── */}
+        {/* ── 1. HERO ────────────────────────────────────────────────────── */}
         <section className="relative w-full min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
@@ -405,7 +470,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 2. PAIN POINTS ───────────────────────────────────────────── */}
+        {/* ── 2. PAIN POINTS ─────────────────────────────────────────────── */}
         <section className="w-full bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -424,7 +489,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 3. CASE STUDY ────────────────────────────────────────────── */}
+        {/* ── 3. CASE STUDY ──────────────────────────────────────────────── */}
         <section
           className="relative overflow-hidden py-14 sm:py-20 md:py-24"
           style={{ background: "hsl(220 20% 8%)" }}
@@ -464,7 +529,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 4. HOW IT WORKS ──────────────────────────────────────────── */}
+        {/* ── 4. HOW IT WORKS ──────────────────────────────────────────────── */}
         <section className="w-full bg-background py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center gap-3 mb-8">
@@ -499,7 +564,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 5. INDUSTRIES ────────────────────────────────────────────── */}
+        {/* ── 5. INDUSTRIES ────────────────────────────────────────────────── */}
         <section className="w-full bg-secondary/30 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -512,7 +577,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 6. FEATURES + DASHBOARD REVEAL ──────────────────────────── */}
+        {/* ── 6. FEATURES + DASHBOARD REVEAL ────────────────────────────── */}
         <section className="w-full bg-background py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -520,7 +585,7 @@ const Index = () => {
               Everything you need. Nothing you don't.
             </h2>
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
-              Built lean so you can focus on your craft. Your dashboard is fully customisable. You only see what matters to your business.
+              Built lean so you can focus on your craft.
             </p>
 
             {/* Priming image strip */}
@@ -535,8 +600,7 @@ const Index = () => {
               <div
                 className="absolute inset-0"
                 style={{
-                  background:
-                    "linear-gradient(to bottom, transparent 30%, hsl(var(--background)/0.85) 100%)",
+                  background: "linear-gradient(to bottom, transparent 30%, hsl(var(--background)/0.85) 100%)",
                 }}
               />
               <div className="absolute bottom-6 left-6 right-6 md:right-auto md:max-w-sm">
@@ -570,22 +634,49 @@ const Index = () => {
               </Suspense>
             </div>
 
-            {/* Dashboard reveal */}
+            {/* Dashboard section heading */}
             <div className="mb-8 text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The dashboard</p>
-              <h3 className="text-xl md:text-2xl font-semibold tracking-tight mb-2">This is what you will log into every day.</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Fully interactive. Every number is live. Every section is toggleable. Your business at a glance.
+              <h3 className="text-xl md:text-2xl font-semibold tracking-tight mb-2">
+                This is what you will log into every day.
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+                Hide the cards you do not need. Keep only the numbers that matter.
+                Your dashboard shapes itself around how your business actually runs.
               </p>
             </div>
-            <Suspense fallback={<SectionShell height={400} />}>
-              <div className="flex items-end gap-4 justify-center overflow-hidden">
-                <div className="flex-1 max-w-[760px] min-w-0">
-                  <LaptopFrame interactive={false}><DashboardPreview /></LaptopFrame>
+
+            {/* Dashboard customisation education */}
+            <DashboardCustomisationCallout />
+
+            {/* Dashboard preview — mobile shows single phone, desktop shows laptop + phone */}
+            <Suspense fallback={<SectionShell height={420} />}>
+              <div className="mx-auto max-w-6xl">
+
+                {/* Mobile: single readable phone preview */}
+                <div className="md:hidden max-w-[300px] mx-auto">
+                  <MobileFrame interactive={false}>
+                    <MobileDashboardPreview />
+                  </MobileFrame>
+                  <p className="text-center text-xs text-muted-foreground mt-4">
+                    Toggle cards on or off directly from your dashboard.
+                  </p>
                 </div>
-                <div className="hidden md:block w-[120px] shrink-0 -mb-1">
-                  <MobileFrame interactive={false}><MobileDashboardPreview /></MobileFrame>
+
+                {/* Desktop: laptop + phone side-by-side */}
+                <div className="hidden md:flex items-end gap-4 justify-center overflow-hidden">
+                  <div className="flex-1 max-w-[780px] min-w-0">
+                    <LaptopFrame interactive={false}>
+                      <DashboardPreview />
+                    </LaptopFrame>
+                  </div>
+                  <div className="w-[130px] shrink-0 -mb-1">
+                    <MobileFrame interactive={false}>
+                      <MobileDashboardPreview />
+                    </MobileFrame>
+                  </div>
                 </div>
+
               </div>
             </Suspense>
 
@@ -601,12 +692,12 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 7. LIVE DEMO ─────────────────────────────────────────────── */}
+        {/* ── 7. LIVE DEMO ─────────────────────────────────────────────────── */}
         <Suspense fallback={<SectionShell height={400} />}>
           <LiveDemoSection />
         </Suspense>
 
-        {/* ── 8. FINAL CTA ─────────────────────────────────────────────── */}
+        {/* ── 8. FINAL CTA ─────────────────────────────────────────────────── */}
         <section className="relative w-full py-20 md:py-28" style={{ background: "hsl(220 20% 8%)" }}>
           <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }} />
           <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center space-y-6">
