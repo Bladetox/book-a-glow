@@ -25,6 +25,18 @@ const MobileFrame            = lazy(() =>
 const PhoneShowcaseSection   = lazy(() => import("@/components/site/PhoneShowcaseSection"));
 const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSection"));
 
+/* ─── Priming images ─────────────────────────────────────────────────────────
+   All sourced from Unsplash (free, no attribution required).
+   Swap any of these for your own photography at any time.
+────────────────────────────────────────────────────────────────────────────── */
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1400&q=80";
+// Beautician working on a client — warm studio lighting, professional feel
+
+const FEATURES_IMAGE =
+  "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
+// Hairdresser with client — mirrors, salon environment, high energy
+
 const industries = [
   { label: "Beauticians",        desc: "Nails, facials and skincare",         icon: Sparkles    },
   { label: "Barbers",            desc: "Haircuts, fades and grooming",         icon: Scissors    },
@@ -310,15 +322,6 @@ const SectionShell = ({ height = 500 }: { height?: number }) => (
 
 /* ═══════════════════════════════════════════════════
    PAGE
-   Guided-tour flow:
-   1. HERO          — Hook: who this is for + the core promise
-   2. PAIN POINTS   — Empathy: "this is your life right now"
-   3. CASE STUDY    — Aspirational anchor: PhenomeBeauty transformation
-   4. HOW IT WORKS  — Clarity: 3 steps to go from chaos to control
-   5. INDUSTRIES    — Fit: show them their tribe
-   6. FEATURES      — Proof: what you actually get + dashboard reveal
-   7. DEMO CTA      — Try before you commit
-   8. FINAL CTA     — One clear ask
 ═══════════════════════════════════════════════════ */
 const Index = () => {
   const [caseActive, setCaseActive] = useState(0);
@@ -331,62 +334,83 @@ const Index = () => {
       <main>
 
         {/* ── 1. HERO ────────────────────────────────────────────────────
-            Hook: the promise + trust badges.
-            Dashboard mockup removed — it belongs at step 6 (Features)
-            where it has context and purpose.
+            Priming image: full-bleed photo behind headline.
+            The visitor sees a real person doing real work before
+            they read a single word — instant identity match.
         ─────────────────────────────────────────────────────────────── */}
-        <section className="w-full px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="max-w-7xl mx-auto">
-            <div className="max-w-2xl mx-auto text-center space-y-7 animate-fade-in">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 text-xs font-medium border border-foreground/80 shadow-[0_4px_16px_-4px_hsl(var(--foreground)/0.25)]">
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse border-2 border-solid bg-emerald-600" />
-                Built for South African service businesses
-              </div>
+        <section className="relative w-full min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.08] tracking-tight">
-                Run your bookings.<br />
-                <span className="text-muted-foreground">Not your messages.</span>
-              </h1>
+          {/* Background photo */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src={HERO_IMAGE}
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
+              className="w-full h-full object-cover object-center"
+            />
+            {/* Dark gradient overlay so text stays legible */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(105deg, hsl(var(--background)/0.92) 0%, hsl(var(--background)/0.80) 45%, hsl(var(--background)/0.30) 100%)",
+              }}
+            />
+          </div>
 
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                NextSlot is the booking and business management system built for independent beauticians, barbers, photographers, tattoo artists and mobile service providers.
-              </p>
+          {/* Content */}
+          <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+            <div className="max-w-7xl mx-auto">
+              <div className="max-w-xl space-y-7 animate-fade-in">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 text-xs font-medium border border-foreground/80 shadow-[0_4px_16px_-4px_hsl(var(--foreground)/0.25)]">
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse border-2 border-solid bg-emerald-600" />
+                  Built for South African service businesses
+                </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                <LiquidButton asChild size="lg">
-                  <Link to="/onboarding" className="flex items-center gap-2">
-                    Create Your Booking Page
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </LiquidButton>
-                <Link
-                  to="/demo"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-3.5"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  See a live demo
-                </Link>
-              </div>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.08] tracking-tight">
+                  Run your bookings.<br />
+                  <span className="text-muted-foreground">Not your messages.</span>
+                </h1>
 
-              <div className="border-l-2 border-accent pl-4 text-left max-w-sm mx-auto space-y-1">
-                <p className="text-sm font-semibold">Finally know where your clients are actually coming from.</p>
-                <p className="text-xs text-muted-foreground">
-                  Every booking captures the source: TikTok, Instagram, Google, WhatsApp, or referral.
-                  Your dashboard shows which channel drives revenue so you invest where it works.
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  NextSlot is the booking and business management system built for independent beauticians, barbers, photographers, tattoo artists and mobile service providers.
                 </p>
-              </div>
 
-              <div className="pt-2">
-                <TrustBadges />
+                <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
+                  <LiquidButton asChild size="lg">
+                    <Link to="/onboarding" className="flex items-center gap-2">
+                      Create Your Booking Page
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </LiquidButton>
+                  <Link
+                    to="/demo"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-3.5"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    See a live demo
+                  </Link>
+                </div>
+
+                <div className="border-l-2 border-accent pl-4 space-y-1">
+                  <p className="text-sm font-semibold">Finally know where your clients are actually coming from.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Every booking captures the source: TikTok, Instagram, Google, WhatsApp, or referral.
+                    Your dashboard shows which channel drives revenue so you invest where it works.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <TrustBadges />
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── 2. PAIN POINTS ─────────────────────────────────────────────
-            Empathy before aspiration. The visitor needs to feel seen
-            before they are ready to believe in a solution.
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 2. PAIN POINTS ─────────────────────────────────────────────── */}
         <section className="w-full bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -405,9 +429,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 3. CASE STUDY (aspirational anchor) ────────────────────────
-            Now they recognise their pain, show them the transformation.
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 3. CASE STUDY ──────────────────────────────────────────────── */}
         <section
           className="relative overflow-hidden py-14 sm:py-20 md:py-24"
           style={{ background: "hsl(220 20% 8%)" }}
@@ -447,10 +469,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 4. HOW IT WORKS ────────────────────────────────────────────
-            Clarity: now they believe a solution exists, show them
-            how simple it is to get started.
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 4. HOW IT WORKS ────────────────────────────────────────────── */}
         <section className="w-full bg-background py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center gap-3 mb-8">
@@ -485,9 +504,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 5. INDUSTRIES ──────────────────────────────────────────────
-            Belonging: confirm "this is built for someone like me".
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 5. INDUSTRIES ──────────────────────────────────────────────── */}
         <section className="w-full bg-secondary/30 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -501,10 +518,9 @@ const Index = () => {
         </section>
 
         {/* ── 6. FEATURES + DASHBOARD REVEAL ─────────────────────────────
-            Proof: now they know it is for them, show what they get.
-            Dashboard lives here — it has earned its place by this point
-            in the journey. The visitor can see exactly what they will
-            be looking at after they sign up.
+            Priming image: full-bleed lifestyle photo used as a
+            section divider between the industry grid and feature cards.
+            Resets the viewer's visual attention before the product proof.
         ─────────────────────────────────────────────────────────────── */}
         <section className="w-full bg-background py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -514,6 +530,32 @@ const Index = () => {
             <p className="text-center text-muted-foreground text-sm max-w-md mx-auto mb-14">
               Built lean so you can focus on your craft. Your dashboard is fully customisable. You only see what matters to your business.
             </p>
+
+            {/* ── Priming image strip ── */}
+            <div className="relative w-full h-52 md:h-72 rounded-3xl overflow-hidden mb-14 shadow-[0_16px_48px_-12px_hsl(var(--accent)/0.25)]">
+              <img
+                src={FEATURES_IMAGE}
+                alt="Service professional at work"
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover object-center"
+              />
+              {/* Scrim so it blends cleanly into the section */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, transparent 30%, hsl(var(--background)/0.85) 100%)",
+                }}
+              />
+              {/* Floating pull-quote anchored bottom-left */}
+              <div className="absolute bottom-6 left-6 right-6 md:right-auto md:max-w-sm">
+                <p className="text-sm font-semibold text-white leading-snug drop-shadow-md">
+                  "For the first time, the business felt like it was running itself."
+                </p>
+                <p className="text-xs text-white/55 mt-1">— PhenomeBeauty, NextSlot customer</p>
+              </div>
+            </div>
 
             {/* Feature cards */}
             <div className="showcase-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-14">
@@ -538,7 +580,7 @@ const Index = () => {
               </Suspense>
             </div>
 
-            {/* Dashboard reveal — now in context after features */}
+            {/* Dashboard reveal */}
             <div className="mb-8 text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">The dashboard</p>
               <h3 className="text-xl md:text-2xl font-semibold tracking-tight mb-2">This is what you will log into every day.</h3>
@@ -565,16 +607,12 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 7. LIVE DEMO ───────────────────────────────────────────────
-            Try before you commit. Lets sceptics experience it risk-free.
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 7. LIVE DEMO ───────────────────────────────────────────────── */}
         <Suspense fallback={<SectionShell height={400} />}>
           <LiveDemoSection />
         </Suspense>
 
-        {/* ── 8. FINAL CTA ───────────────────────────────────────────────
-            One ask. One button. No competing links.
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 8. FINAL CTA ───────────────────────────────────────────────── */}
         <section className="w-full py-20 md:py-28" style={{ background: "hsl(220 20% 8%)" }}>
           <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }} />
           <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center space-y-6">
