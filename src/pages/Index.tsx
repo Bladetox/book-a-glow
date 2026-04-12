@@ -26,7 +26,7 @@ const PhoneShowcaseSection   = lazy(() => import("@/components/site/PhoneShowcas
 const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSection"));
 
 const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1400&q=80";
+ "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1400&q=80";
 
 const FEATURES_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
