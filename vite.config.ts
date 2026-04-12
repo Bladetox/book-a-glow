@@ -42,14 +42,15 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: "NextSlot - Smart Booking for Service Businesses",
-        short_name: "NextSlot",
-        description: "Smart online booking for South African service businesses",
+        name: "Book Online",
+        short_name: "Book Now",
+        description: "Online booking powered by NextSlot.",
         theme_color: "#0a0a0a",
         background_color: "#0a0a0a",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
+        scope: "/",
         icons: [
           { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
           { src: "/pwa-512.png", sizes: "512x512", type: "image/png" },
