@@ -25,7 +25,6 @@ export default async function middleware(request: Request): Promise<Response> {
   const accept = request.headers.get("accept") ?? "";
   const path = url.pathname;
 
-  // Only intercept HTML and manifest requests
   const isHtml = accept.includes("text/html");
   const isManifest = path === "/site.webmanifest" || path === "/manifest.json" || path === "/manifest.webmanifest";
 
@@ -81,8 +80,8 @@ export default async function middleware(request: Request): Promise<Response> {
               { src: logoUrl, sizes: "512x512", type: mimeType, purpose: "any maskable" },
             ]
           : [
-              { src: "/web-app-manifest-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-              { src: "/web-app-manifest-512x512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+              { src: "/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+              { src: "/pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
             ],
       };
 
@@ -120,6 +119,26 @@ export default async function middleware(request: Request): Promise<Response> {
       /(<link\s+rel="canonical"\s+href=")[^"]*(")/,
       `$1${esc(canonicalUrl)}$2`
     );
+
+    // Patch favicon and apple touch icon to tenant logo
+    if (logoUrl) {
+      html = html.replace(
+        /(<link\s+rel="icon"\s+type="image\/png"\s+href=")[^"]*(")/,
+        `$1${esc(logoUrl)}$2`
+      );
+      html = html.replace(
+        /(<link\s+rel="icon"\s+type="image\/svg\+xml"\s+href=")[^"]*(")/,
+        `$1${esc(logoUrl)}$2`
+      );
+      html = html.replace(
+        /(<link\s+rel="shortcut icon"\s+href=")[^"]*(")/,
+        `$1${esc(logoUrl)}$2`
+      );
+      html = html.replace(
+        /(<link\s+rel="apple-touch-icon"\s+sizes="180x180"\s+href=")[^"]*(")/,
+        `$1${esc(logoUrl)}$2`
+      );
+    }
 
     return new Response(html, {
       headers: {
