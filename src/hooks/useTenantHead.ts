@@ -32,11 +32,21 @@ export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
 
     setMeta('meta[property="og:title"]',               "content", title);
     setMeta('meta[property="og:description"]',         "content", description);
+    setMeta('meta[property="og:site_name"]',           "content", name);
     if (image) setMeta('meta[property="og:image"]',    "content", image);
 
     setMeta('meta[name="twitter:title"]',              "content", title);
     setMeta('meta[name="twitter:description"]',        "content", description);
     if (image) setMeta('meta[name="twitter:image"]',   "content", image);
+
+    // Detect correct mime type from file extension
+    const mimeType = image.endsWith(".webp")
+      ? "image/webp"
+      : image.endsWith(".svg")
+      ? "image/svg+xml"
+      : image.endsWith(".jpg") || image.endsWith(".jpeg")
+      ? "image/jpeg"
+      : "image/png";
 
     // Swap the PWA manifest to a data URI so the "Add to Home Screen" prompt
     // shows the tenant name and logo instead of NextSlot.
@@ -49,10 +59,11 @@ export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
       background_color: "#080808",
       theme_color: "#080808",
     };
+
     if (image) {
       manifestPayload.icons = [
-        { src: image, sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: image, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+        { src: image, sizes: "192x192", type: mimeType, purpose: "any" },
+        { src: image, sizes: "512x512", type: mimeType, purpose: "any maskable" },
       ];
     }
 
