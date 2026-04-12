@@ -340,7 +340,6 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
 /* ─── Dashboard customisation callout ─── */
 const DashboardCustomisationCallout = () => (
   <div className="max-w-5xl mx-auto mb-10">
-    {/* Teaching banner */}
     <div className="rounded-2xl border border-accent/30 bg-accent/8 px-5 py-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex items-center gap-2.5 shrink-0">
         <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/30 flex items-center justify-center">
@@ -352,7 +351,6 @@ const DashboardCustomisationCallout = () => (
         Switch any dashboard card on or off at any time, so you only ever see the numbers that matter to your business.
       </p>
     </div>
-    {/* Three points */}
     <div className="grid gap-3 sm:grid-cols-3">
       {dashboardCustomisationPoints.map((pt) => {
         const Icon = pt.icon;
@@ -375,22 +373,50 @@ const DashboardCustomisationCallout = () => (
   </div>
 );
 
-const SectionShell = ({ height = 500 }: { height?: number }) => (
-  <div style={{ minHeight: height }} className="w-full" aria-hidden="true" />
+/* ─── Stable skeleton shells with locked aspect ratios ─────────────────────
+   Each shell mirrors the real component's natural proportions so the page
+   does not reflow when the lazy bundle resolves. We use padding-bottom
+   percentage trick to hold the aspect ratio without knowing the pixel height.
+   ─────────────────────────────────────────────────────────────────────── */
+
+/** Phone showcase: roughly 1:1 on mobile, 16:9 landscape on desktop */
+const PhoneShowcaseSkeleton = () => (
+  <div className="w-full" style={{ aspectRatio: "16 / 7", minHeight: 260 }}>
+    <div className="w-full h-full rounded-3xl bg-secondary/40 animate-pulse" />
+  </div>
+);
+
+/** Live demo section: typically a tall banner */
+const LiveDemoSkeleton = () => (
+  <div className="w-full" style={{ minHeight: 380 }}>
+    <div className="w-full h-full rounded-3xl bg-secondary/40 animate-pulse" style={{ minHeight: 380 }} />
+  </div>
+);
+
+/** Dashboard area: laptop + phone side by side on desktop, single phone on mobile.
+    We reserve the space BEFORE the lazy frames load using an aspect-ratio wrapper
+    that matches the rendered output as closely as possible. */
+const DashboardSkeleton = () => (
+  <>
+    {/* Mobile skeleton */}
+    <div className="md:hidden max-w-[300px] mx-auto" style={{ aspectRatio: "9 / 19.5" }}>
+      <div className="w-full h-full rounded-[2.5rem] bg-secondary/40 animate-pulse" />
+    </div>
+    {/* Desktop skeleton */}
+    <div className="hidden md:flex items-end gap-4 justify-center">
+      <div className="flex-1 max-w-[780px]" style={{ aspectRatio: "16 / 10" }}>
+        <div className="w-full h-full rounded-2xl bg-secondary/40 animate-pulse" />
+      </div>
+      <div style={{ width: 130, aspectRatio: "9 / 19.5" }}>
+        <div className="w-full h-full rounded-[2.5rem] bg-secondary/40 animate-pulse" />
+      </div>
+    </div>
+  </>
 );
 
 /* ═══════════════════════════════════════════════════
    PAGE
-   Guided-tour flow:
-   1. HERO          — Hook: who this is for + the core promise
-   2. PAIN POINTS   — Empathy: "this is your life right now"
-   3. CASE STUDY    — Aspirational anchor: PhenomeBeauty transformation
-   4. HOW IT WORKS  — Clarity: 3 steps to go from chaos to control
-   5. INDUSTRIES    — Fit: show them their tribe
-   6. FEATURES      — Proof: what you actually get + dashboard reveal
-   7. DEMO CTA      — Try before you commit
-   8. FINAL CTA     — One clear ask
-═══════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 const Index = () => {
   const [caseActive, setCaseActive] = useState(0);
   const total = caseStudyCards.length;
@@ -607,7 +633,7 @@ const Index = () => {
                 <p className="text-sm font-semibold text-black leading-snug drop-shadow-md">
                   "For the first time, the business felt like it was running itself."
                 </p>
-                <p className="text-xs text-black/60 mt-1">— PhenomeBeauty, NextSlot customer</p>
+                <p className="text-xs text-black/60 mt-1">PhenomeBeauty, NextSlot customer</p>
               </div>
             </div>
 
@@ -627,9 +653,9 @@ const Index = () => {
               ))}
             </div>
 
-            {/* Phone showcase */}
+            {/* Phone showcase — skeleton holds space so the section below never jumps */}
             <div className="max-w-3xl mx-auto mb-16">
-              <Suspense fallback={<SectionShell height={500} />}>
+              <Suspense fallback={<PhoneShowcaseSkeleton />}>
                 <PhoneShowcaseSection />
               </Suspense>
             </div>
@@ -649,36 +675,61 @@ const Index = () => {
             {/* Dashboard customisation education */}
             <DashboardCustomisationCallout />
 
-            {/* Dashboard preview — mobile shows single phone, desktop shows laptop + phone */}
-            <Suspense fallback={<SectionShell height={420} />}>
-              <div className="mx-auto max-w-6xl">
+            {/*
+              Dashboard preview.
 
-                {/* Mobile: single readable phone preview */}
-                <div className="md:hidden max-w-[300px] mx-auto">
+              FIX: Each lazy import gets its OWN Suspense boundary with a skeleton
+              that locks the aspect ratio. This prevents the entire block from
+              collapsing and re-expanding when any single lazy chunk resolves.
+              The mobile and desktop views are rendered conditionally via CSS so
+              only one tree exists in the DOM at a time, eliminating the
+              hidden/flex reflow that caused the original jitter.
+            */}
+            <div className="mx-auto max-w-6xl">
+
+              {/* Mobile: single phone — skeleton + real component share the same aspect-ratio wrapper */}
+              <div className="md:hidden max-w-[300px] mx-auto">
+                <Suspense
+                  fallback={
+                    <div style={{ aspectRatio: "9 / 19.5" }} className="w-full rounded-[2.5rem] bg-secondary/40 animate-pulse" />
+                  }
+                >
                   <MobileFrame interactive={false}>
                     <MobileDashboardPreview />
                   </MobileFrame>
-                  <p className="text-center text-xs text-muted-foreground mt-4">
-                    Toggle cards on or off directly from your dashboard.
-                  </p>
-                </div>
+                </Suspense>
+                <p className="text-center text-xs text-muted-foreground mt-4">
+                  Toggle cards on or off directly from your dashboard.
+                </p>
+              </div>
 
-                {/* Desktop: laptop + phone side-by-side */}
-                <div className="hidden md:flex items-end gap-4 justify-center overflow-hidden">
-                  <div className="flex-1 max-w-[780px] min-w-0">
+              {/* Desktop: laptop + phone side by side — each frame gets its own boundary */}
+              <div className="hidden md:flex items-end gap-4 justify-center overflow-hidden">
+                <div className="flex-1 max-w-[780px] min-w-0">
+                  <Suspense
+                    fallback={
+                      <div style={{ aspectRatio: "16 / 10" }} className="w-full rounded-2xl bg-secondary/40 animate-pulse" />
+                    }
+                  >
                     <LaptopFrame interactive={false}>
                       <DashboardPreview />
                     </LaptopFrame>
-                  </div>
-                  <div className="w-[130px] shrink-0 -mb-1">
+                  </Suspense>
+                </div>
+                <div className="w-[130px] shrink-0 -mb-1">
+                  <Suspense
+                    fallback={
+                      <div style={{ width: 130, aspectRatio: "9 / 19.5" }} className="rounded-[2.5rem] bg-secondary/40 animate-pulse" />
+                    }
+                  >
                     <MobileFrame interactive={false}>
                       <MobileDashboardPreview />
                     </MobileFrame>
-                  </div>
+                  </Suspense>
                 </div>
-
               </div>
-            </Suspense>
+
+            </div>
 
             <div className="text-center mt-10">
               <Link
@@ -693,7 +744,7 @@ const Index = () => {
         </section>
 
         {/* ── 7. LIVE DEMO ─────────────────────────────────────────────────── */}
-        <Suspense fallback={<SectionShell height={400} />}>
+        <Suspense fallback={<LiveDemoSkeleton />}>
           <LiveDemoSection />
         </Suspense>
 
