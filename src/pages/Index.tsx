@@ -25,17 +25,11 @@ const MobileFrame            = lazy(() =>
 const PhoneShowcaseSection   = lazy(() => import("@/components/site/PhoneShowcaseSection"));
 const LiveDemoSection        = lazy(() => import("@/components/site/LiveDemoSection"));
 
-/* ─── Priming images ─────────────────────────────────────────────────────────
-   All sourced from Unsplash (free, no attribution required).
-   Swap any of these for your own photography at any time.
-────────────────────────────────────────────────────────────────────────────── */
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1400&q=80";
-// Beautician working on a client — warm studio lighting, professional feel
 
 const FEATURES_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
-// Hairdresser with client — mirrors, salon environment, high energy
 
 const industries = [
   { label: "Beauticians",        desc: "Nails, facials and skincare",         icon: Sparkles    },
@@ -70,12 +64,12 @@ const steps = [
 ];
 
 const showcaseCards = [
-  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                                       icon: CalendarCheck },
-  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                                                 icon: MapPin },
-  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                                    icon: SlidersHorizontal },
-  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings for your business.",               icon: Star },
-  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",                             icon: Users },
-  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                                      icon: LayoutDashboard },
+  { title: "Smart Scheduling",             desc: "Only available slots are shown. No double bookings. No confusion. Clients pick their time and you are confirmed instantly.",                                icon: CalendarCheck    },
+  { title: "Client Source Tracking",       desc: "Know exactly where your clients come from: TikTok, Instagram, Google, WhatsApp, or referrals. Market smarter, not harder.",                            icon: MapPin           },
+  { title: "Fully Customisable Dashboard", desc: "Your business is unique. Your dashboard should be too. Show only what you need: revenue, bookings, stock alerts, or client retention.",                 icon: SlidersHorizontal },
+  { title: "Google Review Requests",       desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request. More reviews means higher Google rankings.",             icon: Star             },
+  { title: "Client History and Loyalty",   desc: "Know who your regulars are, track visit frequency, and identify your VIP clients. Build deeper relationships that keep clients coming back.",          icon: Users            },
+  { title: "Business Analytics",           desc: "Revenue trends, fill rates, top services, cancellation rates. A dashboard built to act like an advisor, based on your real data.",                    icon: LayoutDashboard  },
 ];
 
 const caseStudyCards = [
@@ -142,7 +136,7 @@ const caseStudyCards = [
   },
 ];
 
-/* ─── Industry grid with staggered slide-in animation ─── */
+/* ─── Industry grid ─── */
 const IndustryGrid = () => {
   const [visibleSet, setVisibleSet] = useState<Set<number>>(new Set());
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -294,20 +288,29 @@ const CaseStudyCarousel = ({ active, setActive }: CarouselProps) => {
         </div>
       </div>
       <div className="mt-6 flex items-center justify-center gap-5">
-        <button onClick={prev} aria-label="Previous slide"
-          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 ring-1 ring-white/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
+        <button
+          onClick={prev}
+          aria-label="Previous slide"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 ring-1 ring-white/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+        >
           <ChevronLeft className="h-4 w-4 text-white/60" />
         </button>
         <div className="flex items-center gap-1.5">
           {caseStudyCards.map((_, i) => (
-            <button key={i} onClick={() => setActive(i)} aria-label={`Go to slide ${i + 1}`}
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`Go to slide ${i + 1}`}
               className="rounded-full transition-all duration-300"
               style={{ width: i === active ? 24 : 8, height: 8, background: i === active ? "hsl(var(--accent))" : "rgba(255,255,255,0.2)" }}
             />
           ))}
         </div>
-        <button onClick={next} aria-label="Next slide"
-          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 ring-1 ring-white/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95">
+        <button
+          onClick={next}
+          aria-label="Next slide"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 ring-1 ring-white/15 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+        >
           <ChevronRight className="h-4 w-4 text-white/60" />
         </button>
       </div>
@@ -333,14 +336,8 @@ const Index = () => {
       <StickyCtaBar />
       <main>
 
-        {/* ── 1. HERO ────────────────────────────────────────────────────
-            Priming image: full-bleed photo behind headline.
-            The visitor sees a real person doing real work before
-            they read a single word — instant identity match.
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 1. HERO ──────────────────────────────────────────────────── */}
         <section className="relative w-full min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
-
-          {/* Background photo */}
           <div className="absolute inset-0 z-0">
             <img
               src={HERO_IMAGE}
@@ -350,7 +347,6 @@ const Index = () => {
               decoding="async"
               className="w-full h-full object-cover object-center"
             />
-            {/* Dark gradient overlay so text stays legible */}
             <div
               className="absolute inset-0"
               style={{
@@ -360,7 +356,6 @@ const Index = () => {
             />
           </div>
 
-          {/* Content */}
           <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-20 md:py-28">
             <div className="max-w-7xl mx-auto">
               <div className="max-w-xl space-y-7 animate-fade-in">
@@ -410,7 +405,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 2. PAIN POINTS ─────────────────────────────────────────────── */}
+        {/* ── 2. PAIN POINTS ───────────────────────────────────────────── */}
         <section className="w-full bg-secondary/40 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -429,7 +424,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 3. CASE STUDY ──────────────────────────────────────────────── */}
+        {/* ── 3. CASE STUDY ────────────────────────────────────────────── */}
         <section
           className="relative overflow-hidden py-14 sm:py-20 md:py-24"
           style={{ background: "hsl(220 20% 8%)" }}
@@ -469,7 +464,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 4. HOW IT WORKS ────────────────────────────────────────────── */}
+        {/* ── 4. HOW IT WORKS ──────────────────────────────────────────── */}
         <section className="w-full bg-background py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center gap-3 mb-8">
@@ -504,7 +499,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 5. INDUSTRIES ──────────────────────────────────────────────── */}
+        {/* ── 5. INDUSTRIES ────────────────────────────────────────────── */}
         <section className="w-full bg-secondary/30 py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
@@ -517,13 +512,10 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 6. FEATURES + DASHBOARD REVEAL ─────────────────────────────
-            Priming image: full-bleed lifestyle photo used as a
-            section divider between the industry grid and feature cards.
-            Resets the viewer's visual attention before the product proof.
-        ─────────────────────────────────────────────────────────────── */}
+        {/* ── 6. FEATURES + DASHBOARD REVEAL ──────────────────────────── */}
         <section className="w-full bg-background py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-4">
               Everything you need. Nothing you don't.
             </h2>
@@ -531,7 +523,7 @@ const Index = () => {
               Built lean so you can focus on your craft. Your dashboard is fully customisable. You only see what matters to your business.
             </p>
 
-            {/* ── Priming image strip ── */}
+            {/* Priming image strip */}
             <div className="relative w-full h-52 md:h-72 rounded-3xl overflow-hidden mb-14 shadow-[0_16px_48px_-12px_hsl(var(--accent)/0.25)]">
               <img
                 src={FEATURES_IMAGE}
@@ -540,7 +532,6 @@ const Index = () => {
                 decoding="async"
                 className="w-full h-full object-cover object-center"
               />
-              {/* Scrim so it blends cleanly into the section */}
               <div
                 className="absolute inset-0"
                 style={{
@@ -548,16 +539,16 @@ const Index = () => {
                     "linear-gradient(to bottom, transparent 30%, hsl(var(--background)/0.85) 100%)",
                 }}
               />
-              {/* Floating pull-quote anchored bottom-left */}
-                  <div className="absolute bottom-6 left-6 right-6 md:right-auto md:max-w-sm">
+              <div className="absolute bottom-6 left-6 right-6 md:right-auto md:max-w-sm">
                 <p className="text-sm font-semibold text-black leading-snug drop-shadow-md">
                   "For the first time, the business felt like it was running itself."
                 </p>
                 <p className="text-xs text-black/60 mt-1">— PhenomeBeauty, NextSlot customer</p>
-                  </div>
+              </div>
+            </div>
 
             {/* Feature cards */}
-            <div className="showcase-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-14">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-14">
               {showcaseCards.map((card) => (
                 <div
                   key={card.title}
@@ -599,20 +590,24 @@ const Index = () => {
             </Suspense>
 
             <div className="text-center mt-10">
-              <Link to="/product" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-foreground transition-colors">
+              <Link
+                to="/product"
+                className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-foreground transition-colors"
+              >
                 See all 18+ features <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
+
           </div>
         </section>
 
-        {/* ── 7. LIVE DEMO ───────────────────────────────────────────────── */}
+        {/* ── 7. LIVE DEMO ─────────────────────────────────────────────── */}
         <Suspense fallback={<SectionShell height={400} />}>
           <LiveDemoSection />
         </Suspense>
 
-        {/* ── 8. FINAL CTA ───────────────────────────────────────────────── */}
-        <section className="w-full py-20 md:py-28" style={{ background: "hsl(220 20% 8%)" }}>
+        {/* ── 8. FINAL CTA ─────────────────────────────────────────────── */}
+        <section className="relative w-full py-20 md:py-28" style={{ background: "hsl(220 20% 8%)" }}>
           <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, hsl(var(--accent)/0.4), transparent)" }} />
           <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center space-y-6">
             <p className="text-xs font-bold uppercase tracking-widest text-accent">Ready to start?</p>
