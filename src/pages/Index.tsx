@@ -549,13 +549,12 @@ const Index = () => {
                 }}
               />
               {/* Floating pull-quote anchored bottom-left */}
-              <div className="absolute bottom-6 left-6 right-6 md:right-auto md:max-w-sm">
-                <p className="text-sm font-semibold text-white leading-snug drop-shadow-md">
+                  <div className="absolute bottom-6 left-6 right-6 md:right-auto md:max-w-sm">
+                <p className="text-sm font-semibold text-black leading-snug drop-shadow-md">
                   "For the first time, the business felt like it was running itself."
                 </p>
-                <p className="text-xs text-white/55 mt-1">— PhenomeBeauty, NextSlot customer</p>
-              </div>
-            </div>
+                <p className="text-xs text-black/60 mt-1">— PhenomeBeauty, NextSlot customer</p>
+                  </div>
 
             {/* Feature cards */}
             <div className="showcase-grid grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-14">
