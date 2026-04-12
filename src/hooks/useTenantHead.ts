@@ -44,7 +44,7 @@ export function useTenantHead({ name, logoUrl, loading }: TenantHeadOptions) {
       name,
       short_name: name,
       description,
-      start_url: window.location.pathname,
+      start_url: "/",
       display: "standalone",
       background_color: "#080808",
       theme_color: "#080808",
