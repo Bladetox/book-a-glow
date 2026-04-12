@@ -108,7 +108,7 @@ const features = [
 
 const heroStats = [
   { value: "18+", label: "Features included" },
-  { value: "20 min", label: "Avg. setup time", highlight: true },
+  { value: "10 min", label: "Avg. setup time", highlight: true },
   { value: "30 days", label: "Free trial" },
 ];
 
@@ -248,7 +248,7 @@ const Product = () => (
             Ready to simplify your day?
           </h2>
           <p style={{ color: "hsl(0 0% 100% / 0.55)" }} className="text-base leading-relaxed">
-            Join service providers across South Africa already using NextSlot.
+            Join NextSlot and see your business work for you.
           </p>
           <div className="flex flex-col items-center gap-3 pt-2">
             <Link
