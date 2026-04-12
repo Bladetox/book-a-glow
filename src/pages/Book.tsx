@@ -12,6 +12,7 @@ import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useMonthAvailability } from "@/hooks/usePublicAvailability";
 import { useSlotHold } from "@/hooks/useSlotHold";
+import { useTenantHead } from "@/hooks/useTenantHead";   // ← NEW
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useCallback } from "react";
 
@@ -43,14 +44,6 @@ const stepVariants = {
   }),
 };
 
-/**
- * Prefetches availability for current + next month once the tenant is resolved
- * and the splash has been dismissed.
- *
- * PERF: accepts staffId (ownerId from context) so the hook can skip its own
- * getStaffId DB round-trip. Rendered only after splash is gone so it does not
- * compete with the critical-path queries on first load.
- */
 const PrefetchAvailability = ({
   durationMinutes,
   staffId,
@@ -86,6 +79,9 @@ const Index = () => {
   const slotHold = useSlotHold();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
+
+  // Patch <head> with the tenant's name, logo, and metadata.        // ← NEW
+  useTenantHead({ name: config.name, logoUrl: config.logoUrl, loading: config.loading }); // ← NEW
 
   const canProceed = useCallback(() => {
     switch (step) {
@@ -156,11 +152,6 @@ const Index = () => {
   return (
     <>
       <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-32">
-        {/*
-          Prefetch availability ONLY after:
-          1. Tenant is fully resolved (ownerId is available — skips getStaffId DB call)
-          2. Splash is dismissed (avoids competing with critical-path queries on load)
-        */}
         {!showSplash && ownerId && (
           <PrefetchAvailability durationMinutes={durationForSlots} staffId={ownerId} />
         )}
@@ -290,8 +281,7 @@ const Index = () => {
             key="splash"
             className="fixed inset-0 z-[100]"
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            exit={{ opacity: 0, transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } }}
           >
             <SplashScreen
               onComplete={handleSplashComplete}
