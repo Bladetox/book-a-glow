@@ -14,6 +14,9 @@ const DashboardPreview = lazy(() => import("@/components/site/DashboardPreview")
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1400&q=80";
 
+const HOW_IMAGE =
+  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80";
+
 const GOLD = "hsl(38 40% 58%)";
 const RED  = "hsl(0 72% 51%)";
 
@@ -55,9 +58,27 @@ const painPoints = [
 ];
 
 const trustBadges = [
-  { Icon: Clock,    label: "Try free for 30 days. No payment required." },
-  { Icon: Shield,   label: "POPIA ready." },
+  { Icon: Clock,     label: "Try free for 30 days. No payment required." },
+  { Icon: Shield,    label: "POPIA ready." },
   { Icon: MapPinned, label: "Proudly made in South Africa." },
+];
+
+const howSteps = [
+  {
+    num: "01",
+    title: "Create your booking page",
+    desc: "Set your services, prices and availability. Your page is live and taking real bookings in minutes.",
+  },
+  {
+    num: "02",
+    title: "Share your booking link",
+    desc: "Drop it in your Instagram bio, TikTok bio or WhatsApp status. Clients book themselves.",
+  },
+  {
+    num: "03",
+    title: "Your dashboard does the rest",
+    desc: "Track bookings, revenue, clients and trends. Always know what to do next.",
+  },
 ];
 
 const Index = () => {
@@ -198,7 +219,6 @@ const Index = () => {
               </p>
             </div>
 
-            {/* Pain point cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {painPoints.map(({ Icon, heading, body }) => (
                 <div
@@ -225,7 +245,6 @@ const Index = () => {
               ))}
             </div>
 
-            {/* Resolution — plain text, not a button */}
             <div className="flex justify-center pt-2">
               <p className="flex items-center gap-2 text-sm font-medium text-white/70">
                 <Check className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
@@ -261,8 +280,8 @@ const Index = () => {
 
             {[
               { Icon: TrendingUp, title: "Know what drives revenue", body: "See which services and actions actually grow your business." },
-              { Icon: Users, title: "Understand your best clients", body: "Identify who spends the most and how to get more like them." },
-              { Icon: MapPin, title: "Track where bookings come from", body: "Stop wasting money on marketing that doesn't work." },
+              { Icon: Users,      title: "Understand your best clients", body: "Identify who spends the most and how to get more like them." },
+              { Icon: MapPin,     title: "Track where bookings come from", body: "Stop wasting money on marketing that doesn't work." },
             ].map(({ Icon, title, body }) => (
               <div
                 key={title}
@@ -280,27 +299,92 @@ const Index = () => {
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
-        <section className="py-20 px-6">
-          <div className="max-w-5xl mx-auto text-center space-y-12">
+        {/* HOW IT WORKS — 2-col with image */}
+        <section className="py-20 px-6 overflow-hidden">
+          <div className="max-w-6xl mx-auto">
 
-            <h2 className="text-3xl font-semibold">How it works</h2>
+            <div className="grid md:grid-cols-2 gap-12 items-center">
 
-            <div className="grid md:grid-cols-3 gap-8 text-left">
-              <div>
-                <h3 className="font-semibold mb-2">1. Take bookings</h3>
-                <p className="text-sm text-muted-foreground">Clients book and pay deposits automatically.</p>
+              {/* Left: steps */}
+              <div className="space-y-10">
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>Simple by design</p>
+                  <h2 className="text-3xl font-semibold leading-tight">How it works</h2>
+                  <p className="text-muted-foreground text-sm max-w-sm">
+                    From signup to your first automated booking in under 10 minutes.
+                  </p>
+                </div>
+
+                <ol className="space-y-8">
+                  {howSteps.map((step, i) => (
+                    <li key={step.num} className="flex gap-5">
+                      <div className="shrink-0 flex flex-col items-center">
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{
+                            background: "hsl(38 40% 58% / 0.12)",
+                            border: "1.5px solid hsl(38 40% 58% / 0.45)",
+                            color: GOLD,
+                          }}
+                        >
+                          {step.num}
+                        </div>
+                        {i < howSteps.length - 1 && (
+                          <div
+                            className="w-px flex-1 mt-2"
+                            style={{ background: "hsl(38 40% 58% / 0.20)", minHeight: "32px" }}
+                          />
+                        )}
+                      </div>
+                      <div className="pb-2">
+                        <h3 className="font-semibold mb-1">{step.title}</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+
+                <Link
+                  to="/onboarding"
+                  className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+                  style={{ color: GOLD }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.75"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                >
+                  Get started in minutes
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
-              <div>
-                <h3 className="font-semibold mb-2">2. Track everything</h3>
-                <p className="text-sm text-muted-foreground">Every booking becomes insight about your business.</p>
+
+              {/* Right: image */}
+              <div className="relative rounded-2xl overflow-hidden aspect-[4/5] md:aspect-auto md:h-[500px] shadow-2xl">
+                <img
+                  src={HOW_IMAGE}
+                  alt="Business owner reviewing their booking dashboard"
+                  decoding="async"
+                  className="w-full h-full object-cover object-center"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(to top, hsl(var(--background)/0.75) 0%, transparent 55%)",
+                  }}
+                />
+                {/* Floating stat */}
+                <div
+                  className="absolute bottom-5 left-5 right-5 rounded-xl px-5 py-4"
+                  style={{
+                    background: "hsl(var(--background)/0.88)",
+                    border: "1px solid hsl(38 40% 58% / 0.30)",
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  <p className="text-xs text-muted-foreground mb-0.5">Time from signup to first booking</p>
+                  <p className="text-2xl font-bold" style={{ color: GOLD }}>Under 10 min</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-2">3. Grow with clarity</h3>
-                <p className="text-sm text-muted-foreground">Your dashboard shows exactly what to do next.</p>
-              </div>
+
             </div>
-
           </div>
         </section>
 
@@ -383,23 +467,55 @@ const Index = () => {
 
             </div>
 
-            {/* QUOTE */}
-            <div className="border-l-2 border-accent pl-4 text-left max-w-xl mx-auto">
-              <p className="text-sm font-medium">
-                "For the first time, the business felt like it was running itself."
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                PhenomeBeauty, NextSlot customer
-              </p>
+            {/* PULL QUOTE — bold statement */}
+            <div className="py-4">
+              <div
+                className="mx-auto max-w-xl py-8 px-6 rounded-2xl text-center"
+                style={{
+                  background: "hsl(38 40% 58% / 0.06)",
+                  border: "1px solid hsl(38 40% 58% / 0.25)",
+                }}
+              >
+                <div className="flex justify-center mb-4">
+                  <div className="h-px w-10" style={{ background: GOLD }} />
+                </div>
+                <p className="text-xl sm:text-2xl font-semibold leading-snug italic">
+                  "For the first time, the business felt like it was running itself."
+                </p>
+                <p className="mt-4 text-sm font-medium" style={{ color: GOLD }}>
+                  PhenomeBeauty &mdash; NextSlot customer
+                </p>
+                <div className="flex justify-center mt-4">
+                  <div className="h-px w-10" style={{ background: GOLD }} />
+                </div>
+              </div>
             </div>
 
-            <div className="pt-4">
+            {/* CASE STUDY CTA — inviting card */}
+            <div className="pt-2">
               <Link
                 to="/case-study/phenomebeauty"
-                className="inline-flex items-center gap-2 text-sm text-accent hover:text-foreground transition-colors"
+                className="group inline-flex flex-col items-center gap-1 rounded-2xl px-8 py-5 text-center transition-all duration-200 hover:scale-[1.02]"
+                style={{
+                  background: "hsl(var(--background))",
+                  border: "1.5px solid hsl(38 40% 58% / 0.40)",
+                  boxShadow: "0 4px 20px hsl(38 40% 58% / 0.10)",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px hsl(38 40% 58% / 0.22)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "hsl(38 40% 58% / 0.65)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px hsl(38 40% 58% / 0.10)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "hsl(38 40% 58% / 0.40)";
+                }}
               >
-                Read the full story
-                <ArrowRight className="h-4 w-4" />
+                <span className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>PhenomeBeauty</span>
+                <span className="text-base font-semibold">See exactly how it happened, step by step</span>
+                <span className="text-sm text-muted-foreground">The full story: from WhatsApp chaos to a business that runs itself.</span>
+                <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold group-hover:gap-2.5 transition-all" style={{ color: GOLD }}>
+                  Read the full story <ArrowRight className="h-4 w-4" />
+                </span>
               </Link>
             </div>
 
