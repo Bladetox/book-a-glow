@@ -2,7 +2,11 @@ import { useState, lazy, Suspense } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import StickyCtaBar from "@/components/site/StickyCtaBar";
-import { ArrowRight, Play, TrendingUp, Users, MapPin, AlertTriangle, Check } from "lucide-react";
+import {
+  ArrowRight, Play, TrendingUp, Users, MapPin, Check,
+  MessageCircle, CreditCard, BarChart2, CalendarX,
+  Clock, Shield, MapPinned,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 const DashboardPreview = lazy(() => import("@/components/site/DashboardPreview"));
@@ -11,6 +15,8 @@ const HERO_IMAGE =
   "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1400&q=80";
 
 const GOLD = "hsl(38 40% 58%)";
+const RED  = "hsl(0 72% 51%)";
+
 const cardBase: React.CSSProperties = {
   border: "1px solid hsl(38 40% 58% / 0.55)",
   boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)",
@@ -27,25 +33,31 @@ const cardLeave = (el: HTMLDivElement) => {
 
 const painPoints = [
   {
-    icon: "📱",
+    Icon: MessageCircle,
     heading: "Bookings scattered across WhatsApp",
     body: "Managing 10 conversations at once, trying to remember who confirmed and who didn't.",
   },
   {
-    icon: "💸",
+    Icon: CreditCard,
     heading: "Chasing deposits manually",
     body: "Sending banking details, waiting for proof of payment, following up — every single booking.",
   },
   {
-    icon: "📊",
+    Icon: BarChart2,
     heading: "No idea what's actually working",
     body: "You don't know which services make the most money or where your best clients come from.",
   },
   {
-    icon: "🗓️",
+    Icon: CalendarX,
     heading: "Double bookings and no-shows",
     body: "Without a real system, gaps in your schedule cost you money and your clients' trust.",
   },
+];
+
+const trustBadges = [
+  { Icon: Clock,    label: "Try free for 30 days. No payment required." },
+  { Icon: Shield,   label: "POPIA ready." },
+  { Icon: MapPinned, label: "Proudly made in South Africa." },
 ];
 
 const Index = () => {
@@ -60,7 +72,6 @@ const Index = () => {
 
         {/* HERO */}
         <section className="relative min-h-[580px] md:min-h-[660px] flex items-center overflow-hidden">
-          {/* Background image */}
           <div className="absolute inset-0 z-0">
             <img
               src={HERO_IMAGE}
@@ -127,9 +138,20 @@ const Index = () => {
                   </Link>
                 </div>
 
-                <div className="pt-2 text-sm text-muted-foreground">
-                  Most businesses don't know where their clients come from.
-                  <span className="text-foreground font-medium"> You will.</span>
+                {/* "You will." + trust badges */}
+                <div className="pt-2 space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Most businesses don't know where their clients come from.
+                    <span className="text-foreground font-medium"> You will.</span>
+                  </p>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+                    {trustBadges.map(({ Icon, label }) => (
+                      <div key={label} className="flex items-center gap-2">
+                        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: GOLD }} />
+                        <span className="text-xs text-muted-foreground">{label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
               </div>
@@ -160,26 +182,12 @@ const Index = () => {
           </div>
         </section>
 
-        {/* PAIN POINTS — "Most service businesses are busy" */}
+        {/* PAIN POINTS */}
         <section
           className="py-20 px-6"
           style={{ background: "hsl(220 20% 6%)" }}
         >
           <div className="max-w-4xl mx-auto space-y-8">
-
-            {/* Badge */}
-            <div className="flex justify-center">
-              <div
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
-                style={{
-                  background: "hsl(0 72% 51% / 0.12)",
-                  border: "1px solid hsl(0 72% 51% / 0.35)",
-                }}
-              >
-                <AlertTriangle className="h-3.5 w-3.5" style={{ color: "hsl(0 72% 51%)" }} />
-                <span className="text-xs font-semibold" style={{ color: "hsl(0 72% 51%)" }}>Sound familiar?</span>
-              </div>
-            </div>
 
             <div className="text-center space-y-3">
               <h2 className="text-2xl md:text-3xl font-semibold text-white">
@@ -192,9 +200,9 @@ const Index = () => {
 
             {/* Pain point cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {painPoints.map((p) => (
+              {painPoints.map(({ Icon, heading, body }) => (
                 <div
-                  key={p.heading}
+                  key={heading}
                   className="rounded-2xl p-5 flex flex-col gap-3"
                   style={{
                     background: "hsl(0 0% 100% / 0.03)",
@@ -202,26 +210,27 @@ const Index = () => {
                     boxShadow: "0 4px 20px hsl(0 72% 51% / 0.08)",
                   }}
                 >
-                  <span className="text-2xl">{p.icon}</span>
-                  <h3 className="text-sm font-semibold text-white/90 leading-snug">{p.heading}</h3>
-                  <p className="text-xs text-white/45 leading-relaxed">{p.body}</p>
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                    style={{
+                      background: "hsl(0 72% 51% / 0.12)",
+                      border: "1px solid hsl(0 72% 51% / 0.25)",
+                    }}
+                  >
+                    <Icon className="h-4.5 w-4.5" style={{ color: RED }} strokeWidth={2} />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white/90 leading-snug">{heading}</h3>
+                  <p className="text-xs text-white/45 leading-relaxed">{body}</p>
                 </div>
               ))}
             </div>
 
-            {/* Resolution pill */}
+            {/* Resolution — plain text, not a button */}
             <div className="flex justify-center pt-2">
-              <div
-                className="inline-flex items-center gap-3 rounded-2xl px-6 py-4"
-                style={{
-                  background: "hsl(var(--foreground))",
-                  color: "hsl(var(--background))",
-                  boxShadow: "0 6px 24px -6px hsl(38 40% 58% / 0.4)",
-                }}
-              >
-                <Check className="h-5 w-5 shrink-0" />
-                <p className="text-sm font-medium">NextSlot replaces all of it with one system.</p>
-              </div>
+              <p className="flex items-center gap-2 text-sm font-medium text-white/70">
+                <Check className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
+                NextSlot replaces all of it with one system.
+              </p>
             </div>
 
           </div>
@@ -311,7 +320,6 @@ const Index = () => {
               This is exactly what happens when a service business switches to NextSlot.
             </p>
 
-            {/* BEFORE / AFTER */}
             <div className="grid md:grid-cols-2 gap-6 text-left">
 
               {/* BEFORE */}
