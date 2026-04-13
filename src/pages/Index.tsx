@@ -194,7 +194,7 @@ const Index = () => {
                 Most service businesses are busy. But not growing.
               </h2>
               <p className="text-white/50 text-sm max-w-md mx-auto">
-                These aren't minor inconveniences. They're costing you clients, revenue, and peace of mind every single day.
+                These aren't minor inconveniences. They're costing you clients, revenue, and eating away at your precious hours, every single day.
               </p>
             </div>
 
