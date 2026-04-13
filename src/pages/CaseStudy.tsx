@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 const FEATURES_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
 
-const GOLD = "hsl(var(--accent))";
+const GOLD = "hsl(38 40% 58%)";
 
 const timeline = [
   {
@@ -107,12 +107,11 @@ const CaseStudy = () => (
             Where NextSlot came from
           </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight tracking-tight mb-4">
-            It all started with{" "}
-            <span style={{ fontFamily: "'Abril Fatface', serif" }}>PhenomeBeauty.</span>
+            It all started with PhenomeBeauty.
           </h1>
           <p className="text-base text-muted-foreground max-w-xl leading-relaxed">
             A mobile beauty studio owner doing everything alone. Bookings on WhatsApp, deposits via EFT, schedules in her head.
-            This is her journey — and the reason NextSlot exists.
+            This is her journey and the reason NextSlot exists.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {["Solo operator", "Mobile business", "No staff", "WhatsApp bookings", "Proof of payment chaos"].map((tag) => (
@@ -120,9 +119,9 @@ const CaseStudy = () => (
                 key={tag}
                 className="px-3 py-1 rounded-full text-[11px] font-medium"
                 style={{
-                  background: "hsl(var(--accent) / 0.10)",
-                  border: "1px solid hsl(var(--accent) / 0.25)",
-                  color: "hsl(var(--accent))",
+                  background: "hsl(38 40% 58% / 0.10)",
+                  border: "1px solid hsl(38 40% 58% / 0.30)",
+                  color: GOLD,
                 }}
               >{tag}</span>
             ))}
@@ -136,9 +135,9 @@ const CaseStudy = () => (
           <blockquote
             className="rounded-2xl px-8 py-7"
             style={{
-              background: "hsl(var(--accent) / 0.07)",
-              border: "1.5px solid hsl(var(--accent) / 0.35)",
-              boxShadow: "0 4px 24px hsl(var(--accent) / 0.10)",
+              background: "hsl(38 40% 58% / 0.07)",
+              border: "1.5px solid hsl(38 40% 58% / 0.40)",
+              boxShadow: "0 4px 24px hsl(38 40% 58% / 0.10)",
             }}
           >
             <p className="text-lg sm:text-xl font-medium leading-relaxed mb-3">
@@ -157,19 +156,18 @@ const CaseStudy = () => (
               key={card.step}
               className="relative rounded-2xl p-6 sm:p-8"
               style={card.isFinal ? {
-                background: "hsl(var(--accent) / 0.08)",
-                border: "1.5px solid hsl(var(--accent) / 0.60)",
-                boxShadow: "0 4px 24px hsl(var(--accent) / 0.15)",
+                background: "hsl(38 40% 58% / 0.07)",
+                border: "1.5px solid hsl(38 40% 58% / 0.65)",
+                boxShadow: "0 4px 24px hsl(38 40% 58% / 0.15)",
               } : {
                 background: "hsl(var(--secondary) / 0.40)",
                 border: "1px solid hsl(var(--border))",
               }}
             >
-              {/* Ghost step number */}
               <span
                 aria-hidden="true"
                 className="absolute right-5 bottom-4 text-[5rem] font-black leading-none pointer-events-none select-none"
-                style={{ color: card.isFinal ? "hsl(var(--accent)/0.12)" : "hsl(var(--foreground)/0.04)" }}
+                style={{ color: card.isFinal ? "hsl(38 40% 58% / 0.12)" : "hsl(var(--foreground)/0.04)" }}
               >
                 {card.step}
               </span>
@@ -216,14 +214,11 @@ const CaseStudy = () => (
       </section>
 
       {/* Final CTA */}
-      <section
-        className="py-20 px-4 sm:px-6 text-center"
-        style={{ background: "hsl(220 20% 8%)" }}
-      >
+      <section className="py-20 px-4 sm:px-6 text-center bg-black">
         <div className="max-w-xl mx-auto space-y-5">
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>This is why NextSlot exists</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
-            If you run a service business in South Africa,<br />this was built for you.
+            If you run a service business in South Africa, this was built for you.
           </h2>
           <p className="text-sm text-white/55 leading-relaxed">
             Every lesson from building NextSlot for a real business is inside the product.
@@ -236,18 +231,18 @@ const CaseStudy = () => (
               style={{
                 background: "hsl(var(--foreground))",
                 color: "hsl(var(--background))",
-                boxShadow: "0 0 0 1.5px hsl(var(--accent) / 0.70), 0 6px 20px -2px hsl(var(--accent) / 0.40)",
+                boxShadow: "0 0 0 1.5px hsl(38 40% 58% / 0.70), 0 6px 20px -2px hsl(38 40% 58% / 0.40)",
               }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.boxShadow =
-                  "0 0 0 2px hsl(var(--accent) / 0.90), 0 8px 28px -2px hsl(var(--accent) / 0.55)";
+                  "0 0 0 2px hsl(38 40% 58% / 0.90), 0 8px 28px -2px hsl(38 40% 58% / 0.55)";
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLElement).style.boxShadow =
-                  "0 0 0 1.5px hsl(var(--accent) / 0.70), 0 6px 20px -2px hsl(var(--accent) / 0.40)";
+                  "0 0 0 1.5px hsl(38 40% 58% / 0.70), 0 6px 20px -2px hsl(38 40% 58% / 0.40)";
               }}
             >
-              Create Your Booking Page
+              Start Free Trial
               <ArrowRight className="h-4 w-4" />
             </Link>
             <p className="mt-3 text-xs text-white/35">Try free for 30 days. No payment required.</p>
