@@ -35,12 +35,12 @@ const painPoints = [
   {
     Icon: MessageCircle,
     heading: "Bookings scattered across WhatsApp",
-    body: "Managing 10 conversations at once, trying to remember who confirmed and who didn't.",
+    body: "Managing multiple conversations. No structured client history, trying to remember who confirmed and who didn't.",
   },
   {
     Icon: CreditCard,
     heading: "Chasing deposits manually",
-    body: "Sending banking details, waiting for proof of payment, following up — every single booking.",
+    body: "Sending banking details, waiting for proof of payment, following up, manually.",
   },
   {
     Icon: BarChart2,
@@ -50,7 +50,7 @@ const painPoints = [
   {
     Icon: CalendarX,
     heading: "Double bookings and no-shows",
-    body: "Without a real system, gaps in your schedule cost you money and your clients' trust.",
+    body: "Without a real system, gaps in your schedule cost you money, your clients' trust and steal your time.",
   },
 ];
 
