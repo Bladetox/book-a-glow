@@ -18,11 +18,11 @@ const Index = () => {
 
       <main>
 
-        {/* ───────── HERO ───────── */}
+        {/* HERO */}
         <section className="py-24 md:py-32 px-6">
           <div className="max-w-6xl mx-auto text-center space-y-8">
 
-            <p className="text-xs uppercase tracking-widest text-accent">
+            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: "hsl(38 40% 58%)" }}>
               Built for service businesses
             </p>
 
@@ -31,8 +31,8 @@ const Index = () => {
             </h1>
 
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              NextSlot shows you what’s actually driving your bookings, revenue,
-              and clients—so you always know what to do next.
+              NextSlot shows you what's actually driving your bookings, revenue,
+              and clients. You will always know what to do next.
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
@@ -54,14 +54,14 @@ const Index = () => {
 
             {/* Core insight hook */}
             <div className="pt-6 text-sm text-muted-foreground">
-              Most businesses don’t know where their clients come from.
+              Most businesses don't know where their clients come from.
               <span className="text-foreground font-medium"> You will.</span>
             </div>
 
           </div>
         </section>
 
-        {/* ───────── DASHBOARD PREVIEW (EARLY) ───────── */}
+        {/* DASHBOARD PREVIEW */}
         <section className="px-6 pb-24">
           <div className="max-w-5xl mx-auto text-center space-y-10">
 
@@ -70,7 +70,7 @@ const Index = () => {
             </h2>
 
             <p className="text-muted-foreground max-w-xl mx-auto">
-              See what’s working, what’s not, and what to do next—all in one place.
+              See what's working, what's not, and what to do next. All in one place.
             </p>
 
             <Suspense
@@ -84,25 +84,25 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ───────── PROBLEM ───────── */}
+        {/* PROBLEM */}
         <section className="py-20 px-6 bg-secondary/30">
           <div className="max-w-4xl mx-auto text-center space-y-8">
 
             <h2 className="text-2xl md:text-3xl font-semibold">
-              Most service businesses are busy—but not growing.
+              Most service businesses are busy. But not growing.
             </h2>
 
             <ul className="text-left max-w-md mx-auto space-y-4 text-muted-foreground">
-              <li>• You don’t know which services actually make you money</li>
-              <li>• You’re guessing where your best clients come from</li>
-              <li>• You’re fully booked—but revenue feels inconsistent</li>
+              <li>• You don't know which services actually make you money</li>
+              <li>• You're guessing where your best clients come from</li>
+              <li>• You're fully booked but revenue feels inconsistent</li>
               <li>• You rely on gut feel instead of real data</li>
             </ul>
 
           </div>
         </section>
 
-        {/* ───────── REFRAME ───────── */}
+        {/* REFRAME */}
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto text-center space-y-6">
 
@@ -115,17 +115,32 @@ const Index = () => {
             </h3>
 
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Not just bookings—but insight. Not just data—but direction.
+              Not just bookings. Not just data. Actual direction.
             </p>
 
           </div>
         </section>
 
-        {/* ───────── VALUE CARDS ───────── */}
+        {/* VALUE CARDS */}
         <section className="py-20 px-6 bg-secondary/30">
           <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
 
-            <div className="p-6 border rounded-2xl">
+            <div
+              className="p-6 rounded-2xl bg-background"
+              style={{
+                border: "1px solid hsl(38 40% 58% / 0.55)",
+                boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)",
+                transition: "box-shadow 0.2s, transform 0.2s",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px hsl(38 40% 58% / 0.22), 0 20px 48px hsl(0 0% 0% / 0.10)";
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)";
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+              }}
+            >
               <TrendingUp className="mb-4 text-accent" />
               <h3 className="font-semibold mb-2">Know what drives revenue</h3>
               <p className="text-sm text-muted-foreground">
@@ -133,26 +148,56 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="p-6 border rounded-2xl">
+            <div
+              className="p-6 rounded-2xl bg-background"
+              style={{
+                border: "1px solid hsl(38 40% 58% / 0.55)",
+                boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)",
+                transition: "box-shadow 0.2s, transform 0.2s",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px hsl(38 40% 58% / 0.22), 0 20px 48px hsl(0 0% 0% / 0.10)";
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)";
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+              }}
+            >
               <Users className="mb-4 text-accent" />
               <h3 className="font-semibold mb-2">Understand your best clients</h3>
               <p className="text-sm text-muted-foreground">
-                Identify who spends the most—and how to get more like them.
+                Identify who spends the most and how to get more like them.
               </p>
             </div>
 
-            <div className="p-6 border rounded-2xl">
+            <div
+              className="p-6 rounded-2xl bg-background"
+              style={{
+                border: "1px solid hsl(38 40% 58% / 0.55)",
+                boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)",
+                transition: "box-shadow 0.2s, transform 0.2s",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px hsl(38 40% 58% / 0.22), 0 20px 48px hsl(0 0% 0% / 0.10)";
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)";
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+              }}
+            >
               <MapPin className="mb-4 text-accent" />
               <h3 className="font-semibold mb-2">Track where bookings come from</h3>
               <p className="text-sm text-muted-foreground">
-                Stop wasting money on marketing that doesn’t work.
+                Stop wasting money on marketing that doesn't work.
               </p>
             </div>
 
           </div>
         </section>
 
-        {/* ───────── HOW IT WORKS ───────── */}
+        {/* HOW IT WORKS */}
         <section className="py-20 px-6">
           <div className="max-w-5xl mx-auto text-center space-y-12">
 
@@ -186,11 +231,11 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ───────── CASE STUDY (OPTIMISED) ───────── */}
+        {/* CASE STUDY */}
         <section className="py-20 px-6 bg-secondary/20">
           <div className="max-w-4xl mx-auto space-y-10 text-center">
 
-            <p className="text-xs uppercase tracking-widest text-accent">
+            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: "hsl(38 40% 58%)" }}>
               Real business. Real results.
             </p>
 
@@ -205,7 +250,22 @@ const Index = () => {
             {/* BEFORE / AFTER */}
             <div className="grid md:grid-cols-2 gap-6 text-left">
 
-              <div className="p-6 rounded-2xl border bg-background">
+              <div
+                className="p-6 rounded-2xl bg-background"
+                style={{
+                  border: "1px solid hsl(38 40% 58% / 0.55)",
+                  boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)",
+                  transition: "box-shadow 0.2s, transform 0.2s",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px hsl(38 40% 58% / 0.22), 0 20px 48px hsl(0 0% 0% / 0.10)";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                }}
+              >
                 <h3 className="font-semibold mb-4 text-sm text-muted-foreground uppercase">
                   Before NextSlot
                 </h3>
@@ -213,11 +273,26 @@ const Index = () => {
                   <li>• Bookings scattered across WhatsApp</li>
                   <li>• Deposits manually requested and tracked</li>
                   <li>• No idea which marketing actually worked</li>
-                  <li>• Fully booked… but inconsistent income</li>
+                  <li>• Fully booked but inconsistent income</li>
                 </ul>
               </div>
 
-              <div className="p-6 rounded-2xl border bg-background">
+              <div
+                className="p-6 rounded-2xl bg-background"
+                style={{
+                  border: "1px solid hsl(38 40% 58% / 0.55)",
+                  boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)",
+                  transition: "box-shadow 0.2s, transform 0.2s",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px hsl(38 40% 58% / 0.22), 0 20px 48px hsl(0 0% 0% / 0.10)";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                }}
+              >
                 <h3 className="font-semibold mb-4 text-sm text-accent uppercase">
                   After 30 Days
                 </h3>
@@ -234,7 +309,7 @@ const Index = () => {
             {/* RESULT */}
             <div className="border-l-2 border-accent pl-4 text-left max-w-xl mx-auto">
               <p className="text-sm font-medium">
-                “For the first time, the business felt like it was running itself.”
+                "For the first time, the business felt like it was running itself."
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 PhenomeBeauty, NextSlot customer
@@ -255,7 +330,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ───────── FINAL CTA ───────── */}
+        {/* FINAL CTA */}
         <section className="py-24 px-6 bg-black text-white text-center">
           <div className="max-w-2xl mx-auto space-y-6">
 
