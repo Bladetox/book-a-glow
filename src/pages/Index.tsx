@@ -186,6 +186,75 @@ const Index = () => {
           </div>
         </section>
 
+        {/* ───────── CASE STUDY (OPTIMISED) ───────── */}
+        <section className="py-20 px-6 bg-secondary/20">
+          <div className="max-w-4xl mx-auto space-y-10 text-center">
+
+            <p className="text-xs uppercase tracking-widest text-accent">
+              Real business. Real results.
+            </p>
+
+            <h2 className="text-2xl md:text-3xl font-semibold">
+              From chaos to clarity in 30 days
+            </h2>
+
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              This is exactly what happens when a service business switches to NextSlot.
+            </p>
+
+            {/* BEFORE / AFTER */}
+            <div className="grid md:grid-cols-2 gap-6 text-left">
+
+              <div className="p-6 rounded-2xl border bg-background">
+                <h3 className="font-semibold mb-4 text-sm text-muted-foreground uppercase">
+                  Before NextSlot
+                </h3>
+                <ul className="space-y-3 text-sm text-muted-foreground">
+                  <li>• Bookings scattered across WhatsApp</li>
+                  <li>• Deposits manually requested and tracked</li>
+                  <li>• No idea which marketing actually worked</li>
+                  <li>• Fully booked… but inconsistent income</li>
+                </ul>
+              </div>
+
+              <div className="p-6 rounded-2xl border bg-background">
+                <h3 className="font-semibold mb-4 text-sm text-accent uppercase">
+                  After 30 Days
+                </h3>
+                <ul className="space-y-3 text-sm">
+                  <li>• Clients book and pay automatically</li>
+                  <li>• Dashboard shows where revenue comes from</li>
+                  <li>• Top services identified instantly</li>
+                  <li>• Clear next steps every single week</li>
+                </ul>
+              </div>
+
+            </div>
+
+            {/* RESULT */}
+            <div className="border-l-2 border-accent pl-4 text-left max-w-xl mx-auto">
+              <p className="text-sm font-medium">
+                “For the first time, the business felt like it was running itself.”
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                PhenomeBeauty, NextSlot customer
+              </p>
+            </div>
+
+            {/* LINK TO FULL STORY */}
+            <div className="pt-4">
+              <Link
+                to="/case-study/phenomebeauty"
+                className="inline-flex items-center gap-2 text-sm text-accent hover:text-foreground transition-colors"
+              >
+                Read the full story
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+          </div>
+        </section>
+
         {/* ───────── FINAL CTA ───────── */}
         <section className="py-24 px-6 bg-black text-white text-center">
           <div className="max-w-2xl mx-auto space-y-6">
