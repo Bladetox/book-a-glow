@@ -6,8 +6,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, MessageCircle, Search, X, UserPlus,
   Sparkles, Clock, CheckCircle, AlertCircle,
-  Download, Eye, Pencil, Check, StickyNote, Settings2, Save,
-  Users, CalendarCheck, Send, ChevronDown,
+  Download, Pencil, Check, StickyNote, Settings2, Save,
+  Users, CalendarCheck, Send, ChevronDown, Info,
 } from "lucide-react";
 import { format, subDays, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import { toast } from "sonner";
@@ -82,25 +82,38 @@ function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO 
   return "UNKNOWN";
 }
 
+// ─── effectiveStatus ───
+// FIX: Always compute next-due from liveLastDate+reminderWeeks when available,
+// regardless of whether stored next_due_date exists. This ensures clients whose
+// stored status is UNKNOWN/empty are still evaluated correctly against live data.
+// TIME TO BOOK window: due within the next 14 days (widened from 7 so clients
+// don't silently stay "ON TRACK" until the last week).
 function effectiveStatus(
   r: LoyaltyRow,
   liveLastDate?: string | null,
   reminderWeeks?: number
 ): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
   const stored = normaliseStatus(r.status);
-  const nextDueIso = liveLastDate && reminderWeeks
-    ? format(addDays(new Date(liveLastDate), reminderWeeks * 7), "yyyy-MM-dd")
+
+  // Prefer live-computed next due over stored value
+  const nextDueIso = (liveLastDate && reminderWeeks)
+    ? format(addDays(new Date(liveLastDate + "T00:00:00"), reminderWeeks * 7), "yyyy-MM-dd")
     : excelToISO(r.next_due_date);
+
   if (nextDueIso) {
-    const due = startOfDay(parseISO(nextDueIso));
+    const due   = startOfDay(parseISO(nextDueIso));
     const today = startOfDay(new Date());
     if (isAfter(today, due)) return "OVERDUE";
     const daysUntil = differenceInDays(due, today);
-    if (daysUntil <= 7) return "TIME TO BOOK";
+    // Widened window: 14 days to catch clients earlier
+    if (daysUntil <= 14) return "TIME TO BOOK";
+    return "ON TRACK";
   }
-  if (stored === "OVERDUE") return "OVERDUE";
+
+  // No date info at all — fall back to stored
+  if (stored === "OVERDUE")      return "OVERDUE";
   if (stored === "TIME TO BOOK") return "TIME TO BOOK";
-  if (stored === "ON TRACK") return "ON TRACK";
+  if (stored === "ON TRACK")     return "ON TRACK";
   return "UNKNOWN";
 }
 
@@ -113,14 +126,7 @@ const STATUS_STYLE: Record<string, string> = {
   "UNKNOWN":      "bg-white/[0.06] text-white/40",
 };
 
-const STATUS_ICON: Record<string, React.ElementType> = {
-  "ON TRACK":     CheckCircle,
-  "TIME TO BOOK": Clock,
-  "OVERDUE":      AlertCircle,
-  "UNKNOWN":      Clock,
-};
-
-// ─── WA message builder ───
+// ─── WA helpers ───
 function buildWaMessage(
   name: string, status: string, businessName: string,
   serviceLabel: string, templates: { overdue: string; timeToBook: string; onTrack: string }
@@ -139,75 +145,33 @@ function waLink(phone: string, msg: string): string {
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
-// ─── WA Preview ───
-// UX: WA button uses distinct #25D366/20 so it doesn't blend with status emerald (Von Restorff)
-const WaPreview = ({
+// ─── WaButton ───
+// Fix #1: Eye/preview removed. Just the WA send button — tapping opens WhatsApp directly.
+// Von Restorff: distinct #25D366 green so it stands apart from emerald status badges.
+const WaButton = ({
   name, status, phone, businessName, serviceLabel, templates,
 }: {
   name: string; status: string; phone: string;
   businessName: string; serviceLabel: string;
   templates: { overdue: string; timeToBook: string; onTrack: string };
 }) => {
-  const [show, setShow] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const [above, setAbove] = useState(false);
   const msg = buildWaMessage(name, status, businessName, serviceLabel, templates);
-
-  useEffect(() => {
-    if (show && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setAbove(rect.bottom + 180 > window.innerHeight);
-    }
-  }, [show]);
-
   return (
-    <div className="relative inline-flex items-center gap-1">
-      {/* Von Restorff: WA green distinct from status emerald */}
-      <a
-        href={waLink(phone, msg)}
-        target="_blank" rel="noopener noreferrer"
-        onClick={e => e.stopPropagation()}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors"
-        style={{ background: "rgba(37,211,102,0.13)", color: "#25D366" }}
-      >
-        <MessageCircle className="w-3 h-3" /> WA
-      </a>
-      {/* Eye preview — only show on hover (progressive disclosure) */}
-      <button
-        ref={btnRef}
-        onClick={e => { e.stopPropagation(); setShow(s => !s); }}
-        className="p-1 rounded text-white/20 hover:text-white/50 transition-colors"
-      >
-        <Eye className="w-3 h-3" />
-      </button>
-      <AnimatePresence>
-        {show && (
-          <>
-            <div className="fixed inset-0 z-20" onClick={() => setShow(false)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: above ? -4 : 4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: above ? -4 : 4 }}
-              className={`absolute ${above ? "bottom-full mb-2" : "top-full mt-2"} left-0 z-30 w-[min(288px,90vw)] rounded-xl border border-white/[0.12] bg-[#161616] shadow-xl p-3`}
-            >
-              <p className="text-[10px] tracking-widest uppercase text-white/30 mb-1.5">WA Preview</p>
-              <p className="text-[12px] text-white/70 leading-relaxed">{msg}</p>
-              <button onClick={() => setShow(false)} className="absolute top-2 right-2 text-white/20 hover:text-white/60">
-                <X className="w-3 h-3" />
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+    <a
+      href={waLink(phone, msg)}
+      target="_blank" rel="noopener noreferrer"
+      onClick={e => e.stopPropagation()}
+      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-opacity hover:opacity-80"
+      style={{ background: "rgba(37,211,102,0.13)", color: "#25D366" }}
+    >
+      <MessageCircle className="w-3 h-3" /> WA
+    </a>
   );
 };
 
 const STATUS_OPTIONS = ["ON TRACK", "TIME TO BOOK", "OVERDUE"] as const;
 
 // ─── InlineStatusEditor ───
-// UX: Pencil only visible on hover (Jakob's Law — show controls when needed)
-// UX: Optimistic update — local state updates immediately (Doherty Threshold <400ms)
 const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onOptimisticUpdate, onUpdated }: {
   rowId: string; current: string; effectiveNorm: string; tenantId: string;
   onOptimisticUpdate: (newStatus: string) => void;
@@ -219,7 +183,6 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onOptimis
 
   const handleSelect = async (newStatus: string) => {
     if (newStatus === normaliseStatus(current)) { setOpen(false); return; }
-    // Optimistic update — instant UI response (Doherty Threshold)
     onOptimisticUpdate(newStatus);
     setOpen(false);
     setSaving(true);
@@ -247,7 +210,6 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onOptimis
       >
         {saving && <Loader2 className="w-3 h-3 animate-spin" />}
         {displayNorm}
-        {/* Pencil only visible on hover — progressive disclosure */}
         <Pencil className={`w-2.5 h-2.5 transition-opacity ${hovered ? "opacity-50" : "opacity-0"}`} />
       </button>
       <AnimatePresence>
@@ -272,7 +234,6 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onOptimis
 };
 
 // ─── InlineNotesEditor ───
-// UX: Optimistic — note value updates locally before server confirms (Doherty Threshold)
 const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
   rowId: string; current: string | null; tenantId: string; onUpdated: () => void;
 }) => {
@@ -318,7 +279,6 @@ const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
 };
 
 // ─── EnrollModal ───
-// UX: 3-step progress bar (Goal Gradient Effect) + Peak-End celebration on success
 const ENROLL_STEPS = ["Client Info", "Dates", "Confirm"] as const;
 
 const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
@@ -336,7 +296,6 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
   const [nextDue, setNextDue]         = useState(candidate.nextDueDate ?? "");
 
   const canNext0 = name.trim().length > 0;
-  const canNext1 = true; // dates optional
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -348,7 +307,6 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
         className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-white/[0.1] bg-[#0f0f0f] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-white/80">Enroll in Loyalty Tracker</p>
           <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors">
@@ -356,11 +314,11 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
           </button>
         </div>
 
-        {/* Goal Gradient: 3-step progress bar */}
+        {/* Progress bar */}
         <div className="flex items-center gap-1">
           {ENROLL_STEPS.map((label, idx) => (
             <div key={label} className="flex items-center gap-1 flex-1">
-              <div className={`flex items-center gap-1.5 flex-1`}>
+              <div className="flex items-center gap-1.5 flex-1">
                 <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${idx <= step ? "bg-emerald-500/70" : "bg-white/[0.08]"}`} />
               </div>
               {idx < ENROLL_STEPS.length - 1 && (
@@ -373,12 +331,10 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
           Step {step + 1} of {ENROLL_STEPS.length} — {ENROLL_STEPS[step]}
         </p>
 
-        {/* Stats summary */}
         <div className="rounded-lg bg-emerald-400/[0.06] border border-emerald-400/[0.12] px-3 py-2.5 text-[11px] text-emerald-400/80">
           {candidate.bookingCount} bookings · R {candidate.totalSpend.toLocaleString()} total · last booked {candidate.daysSinceLastBooking}d ago
         </div>
 
-        {/* Step 0: Client Info */}
         {step === 0 && (
           <div className="flex flex-col gap-3">
             {[
@@ -399,7 +355,6 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
           </div>
         )}
 
-        {/* Step 1: Dates */}
         {step === 1 && (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
@@ -415,7 +370,6 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
           </div>
         )}
 
-        {/* Step 2: Confirm */}
         {step === 2 && (
           <div className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
             {[
@@ -433,7 +387,6 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
           </div>
         )}
 
-        {/* Navigation */}
         <div className="flex gap-2">
           {step > 0 && (
             <button onClick={() => setStep(s => s - 1)}
@@ -460,8 +413,7 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
   );
 };
 
-// ─── EnrollSuccessCelebration — Peak-End Rule ───
-// A brief sparkle celebration shown after successful enroll
+// ─── EnrollSuccessCelebration ───
 const EnrollSuccessCelebration = ({ name, onDone }: { name: string; onDone: () => void }) => {
   useEffect(() => { const t = setTimeout(onDone, 2200); return () => clearTimeout(t); }, [onDone]);
   return (
@@ -480,6 +432,67 @@ const EnrollSuccessCelebration = ({ name, onDone }: { name: string; onDone: () =
         <p className="text-base font-bold text-white/90">{name} added!</p>
         <p className="text-[12px] text-white/40">Welcome to your loyalty programme 💚</p>
       </div>
+    </motion.div>
+  );
+};
+
+// ─── MessagingHowTo ─── Fix #3
+// Dismissible tip card that explains single + bulk WA messaging.
+// Stored in sessionStorage so it only shows once per session.
+const MessagingHowTo = ({ tenantId }: { tenantId: string }) => {
+  const KEY = `loyalty_msg_tip_dismissed_${tenantId}`;
+  const [visible, setVisible] = useState(() => {
+    try { return !sessionStorage.getItem(KEY); } catch { return true; }
+  });
+
+  const dismiss = () => {
+    try { sessionStorage.setItem(KEY, "1"); } catch {}
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+      className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.04] p-4 flex gap-3"
+    >
+      <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-semibold text-sky-400 mb-1.5">How to send WhatsApp reminders</p>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-start gap-2">
+            {/* Single message */}
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 mt-0.5"
+              style={{ background: "rgba(37,211,102,0.15)", color: "#25D366" }}>
+              <MessageCircle className="w-2.5 h-2.5" /> WA
+            </span>
+            <p className="text-[11px] text-white/45 leading-relaxed">
+              <span className="text-white/65 font-medium">Single message:</span> Tap the{" "}
+              <span className="font-semibold" style={{ color: "#25D366" }}>WA</span> button on any client card.
+              WhatsApp opens with the correct reminder already typed — just hit send.
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            {/* Bulk message */}
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 shrink-0 mt-0.5">
+              ☑ Bulk
+            </span>
+            <p className="text-[11px] text-white/45 leading-relaxed">
+              <span className="text-white/65 font-medium">Bulk messages:</span> Tick the checkbox on each client row (or filter first, then tap{" "}
+              <span className="text-white/65 font-medium">All</span>), then tap{" "}
+              <span className="font-semibold" style={{ color: "#25D366" }}>Send WA</span> in the bar that appears.
+              Each client gets their own personalised message opened in WhatsApp.
+            </p>
+          </div>
+          <p className="text-[10px] text-white/25 leading-relaxed mt-0.5">
+            💡 Messages are personalised per status — Overdue clients get a different message to On Track clients. Edit templates in <span className="text-white/40 font-medium">Settings → WhatsApp Message Templates</span>.
+          </p>
+        </div>
+      </div>
+      <button onClick={dismiss} className="text-white/20 hover:text-white/50 transition-colors shrink-0 mt-0.5">
+        <X className="w-3.5 h-3.5" />
+      </button>
     </motion.div>
   );
 };
@@ -544,7 +557,6 @@ const SETTING_DEFAULTS = {
 type SettingKey = keyof typeof SETTING_DEFAULTS;
 
 // ─── Settings panel ───
-// UX: Split into 2 collapsible sections (Cognitive Load — progressive disclosure)
 const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
   const qc = useQueryClient();
   const [tplOpen, setTplOpen] = useState(false);
@@ -602,7 +614,6 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Step 1: Programme basics */}
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5 flex flex-col gap-5">
         <div className="flex items-center gap-2">
           <Settings2 className="w-4 h-4 text-white/40" />
@@ -621,7 +632,6 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
         </div>
       </div>
 
-      {/* Step 2: WA templates — collapsed by default (Cognitive Load) */}
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
         <button
           onClick={() => setTplOpen(o => !o)}
@@ -683,10 +693,6 @@ const MAIN_TABS = ["Tracker", "Settings"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
 // ─── ClientRow ───
-// UX fixes:
-//   - Miller's Law: detail strip collapsed behind accordion (tap card to expand)
-//   - Proximity: dates grouped together, comms section separated with border
-//   - Live badge uses sky-400 not emerald (Law of Similarity — emerald = status system only)
 const ClientRow = ({
   r, i, tenantId, businessName, serviceLabel, templates,
   enrichment, reminderWeeks, selected, onToggleSelect, onUpdated,
@@ -715,11 +721,7 @@ const ClientRow = ({
     liveDate && (!storedISO || liveDate > storedISO) ? liveDate : storedISO
   );
 
-  // Use optimistic status override if set (Doherty Threshold)
-  const effectiveRow = optimisticStatus
-    ? { ...r, status: optimisticStatus }
-    : r;
-
+  const effectiveRow = optimisticStatus ? { ...r, status: optimisticStatus } : r;
   const norm = effectiveStatus(effectiveRow, displayLastDate, reminderWeeks);
 
   const rowAccent =
@@ -732,8 +734,8 @@ const ClientRow = ({
   const upcomingDate = enrich?.upcomingDate ?? null;
 
   const nextDueDisplay = (() => {
-    if (liveDate && reminderWeeks) {
-      return isoToDisplay(format(addDays(new Date(liveDate), reminderWeeks * 7), "yyyy-MM-dd"));
+    if (displayLastDate && reminderWeeks) {
+      return isoToDisplay(format(addDays(new Date(displayLastDate + "T00:00:00"), reminderWeeks * 7), "yyyy-MM-dd"));
     }
     return r.next_due_date ? excelToDate(r.next_due_date) : null;
   })();
@@ -744,7 +746,7 @@ const ClientRow = ({
       transition={{ delay: Math.min(i * 0.03, 0.3) }}
       className={`rounded-xl border border-white/[0.06] bg-white/[0.02] transition-colors ${rowAccent} overflow-hidden ${selected ? "ring-1 ring-emerald-500/30" : ""}`}
     >
-      {/* Headline row — always visible (Miller's Law: only 3 focal items) */}
+      {/* Headline row */}
       <div
         className="flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
         onClick={() => setExpanded(e => !e)}
@@ -775,7 +777,7 @@ const ClientRow = ({
           </p>
         </div>
 
-        {/* Status badge — primary focal item */}
+        {/* Status badge */}
         <div className="shrink-0" onClick={e => e.stopPropagation()}>
           <InlineStatusEditor
             rowId={r.id}
@@ -787,10 +789,10 @@ const ClientRow = ({
           />
         </div>
 
-        {/* WA button — Von Restorff: distinct green, rightmost (Serial Position) */}
+        {/* WA button — no eye icon (Fix #1) */}
         <div className="shrink-0" onClick={e => e.stopPropagation()}>
           {r.phone
-            ? <WaPreview name={r.client_name} status={norm} phone={r.phone} businessName={businessName} serviceLabel={svcLabel} templates={templates} />
+            ? <WaButton name={r.client_name} status={norm} phone={r.phone} businessName={businessName} serviceLabel={svcLabel} templates={templates} />
             : <span className="text-white/20 text-xs">—</span>
           }
         </div>
@@ -799,7 +801,7 @@ const ClientRow = ({
         <ChevronDown className={`w-3.5 h-3.5 text-white/20 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </div>
 
-      {/* Detail strip — accordion (Miller's Law: hide until needed) */}
+      {/* Detail strip — accordion */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -807,14 +809,12 @@ const ClientRow = ({
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            {/* Dates section (Proximity: grouped together) */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 px-3 pb-3 border-t border-white/[0.04] pt-2.5">
               <div className="flex flex-col gap-0.5">
                 <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last {svcLabel}</span>
                 <span className="text-[11px] text-white/55">
                   {displayLastDate
                     ? <>{isoToDisplay(displayLastDate)} {liveDate && liveDate !== storedISO && (
-                        // sky-400 for live data — distinct from emerald status system (Law of Similarity)
                         <span className="text-[9px] text-sky-400/70 ml-1">(live)</span>
                       )}</>
                     : <span className="text-white/20 italic">Not set</span>
@@ -840,7 +840,6 @@ const ClientRow = ({
               )}
             </div>
 
-            {/* Comms section — separated by border (Proximity: distinct from dates) */}
             <div className="px-3 pb-3 border-t border-white/[0.04] pt-2.5 flex flex-col gap-2">
               {r.last_contacted_at && (
                 <div className="flex flex-col gap-0.5">
@@ -867,8 +866,6 @@ const AdminLoyalty = () => {
   const [enrolling, setEnrolling]   = useState<EnrollCandidate | null>(null);
   const [celebrateName, setCelebrateName] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  // Optimistic status map: rowId → temporary status string (Doherty Threshold)
   const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string>>({});
 
   const ENROLL_SAVED_KEY = `loyalty_enroll_saved_${tenantId}`;
@@ -978,15 +975,15 @@ const AdminLoyalty = () => {
         if (phoneKey) setEntry(phoneKey, bDate);
         if (nameKey)  setEntry(nameKey, bDate);
       } else {
-        const prev = map[phoneKey] ?? { liveLastDate: "", upcomingDate: null };
-        map[phoneKey] = prev;
+        // Non-qualifying booking: ensure key exists but don't update liveLastDate
+        if (phoneKey && !map[phoneKey]) map[phoneKey] = { liveLastDate: "", upcomingDate: null };
       }
     });
 
     return map;
   }, [allBookings, settings.qualifyingService]);
 
-  // ─── 4. Enroll mutation — Peak-End: trigger celebration on success ───
+  // ─── 4. Enroll mutation ───
   const { mutate: enroll, isPending: enrollPending } = useMutation({
     mutationFn: async ({ name, phone, notes, lastBooking, nextDue }: {
       name: string; phone: string; notes: string; lastBooking: string; nextDue: string;
@@ -1003,7 +1000,6 @@ const AdminLoyalty = () => {
       qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
       if (enrolling) addEnrollSaved(enrolling.client_name + enrolling.phone);
       setEnrolling(null);
-      // Peak-End Rule: celebrate the enroll
       setCelebrateName(name);
     },
     onError: (err: any) => toast.error(err?.code === "23505" ? "Client already enrolled." : "Failed to enroll client."),
@@ -1015,9 +1011,9 @@ const AdminLoyalty = () => {
 
   // ─── Recommendation engine ───
   const candidates = useMemo(() => {
-    const keyword = settings.qualifyingService;
-    const cutoff  = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
-    const today   = new Date();
+    const keyword  = settings.qualifyingService;
+    const cutoff   = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
+    const today    = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
     const map = new Map<string, { name: string; phone: string; count: number; spend: number; lastBookingDate: string; }>();
     allBookings.forEach((b: any) => {
@@ -1027,10 +1023,10 @@ const AdminLoyalty = () => {
         const items: any[] = b.booking_items ?? [];
         if (!items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))) return;
       }
-      const key  = resolveKey(b);
-      const name = resolveName(b);
+      const key   = resolveKey(b);
+      const name  = resolveName(b);
       const phone = resolvePhone(b);
-      const prev = map.get(key) ?? { name, phone, count: 0, spend: 0, lastBookingDate: "" };
+      const prev  = map.get(key) ?? { name, phone, count: 0, spend: 0, lastBookingDate: "" };
       map.set(key, { name, phone, count: prev.count + 1, spend: prev.spend + Number(b.total_amount ?? 0), lastBookingDate: bDate > prev.lastBookingDate ? bDate : prev.lastBookingDate });
     });
     return [...map.entries()]
@@ -1039,7 +1035,7 @@ const AdminLoyalty = () => {
       .filter(([, v]) => !trackedNames.has(v.name.trim().toLowerCase()))
       .filter(([, v]) => !enrollSaved.includes(v.name + v.phone))
       .map(([, v]) => {
-        const lbd = v.lastBookingDate;
+        const lbd     = v.lastBookingDate;
         const nextDue = lbd ? format(addDays(new Date(lbd), settings.reminderWeeks * 7), "yyyy-MM-dd") : "";
         const daysSince = lbd ? differenceInDays(today, new Date(lbd)) : 0;
         return { client_name: v.name, phone: v.phone, bookingCount: v.count, totalSpend: v.spend, lastBookingDate: lbd, nextDueDate: nextDue, daysSinceLastBooking: daysSince } as EnrollCandidate;
@@ -1049,27 +1045,24 @@ const AdminLoyalty = () => {
   }, [allBookings, trackedPhones, trackedNames, enrollSaved, settings]);
 
   // ─── Sort + filter ───
+  const getEffectiveRow = (r: LoyaltyRow) => optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r;
+  const getLiveDate = (r: LoyaltyRow) => {
+    const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase();
+    return (enrichment[k] ?? enrichment[n])?.liveLastDate ?? null;
+  };
+
   const sortedRows = useMemo(() => {
     const seen = new Set<string>();
     return [...rows]
       .filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
-      .sort((a, b) => {
-        const phoneKeyA = normPhone(a.phone); const nameKeyA = (a.client_name ?? "").trim().toLowerCase();
-        const phoneKeyB = normPhone(b.phone); const nameKeyB = (b.client_name ?? "").trim().toLowerCase();
-        const liveA = (enrichment[phoneKeyA] ?? enrichment[nameKeyA])?.liveLastDate ?? null;
-        const liveB = (enrichment[phoneKeyB] ?? enrichment[nameKeyB])?.liveLastDate ?? null;
-        const rowA = optimisticStatuses[a.id] ? { ...a, status: optimisticStatuses[a.id] } : a;
-        const rowB = optimisticStatuses[b.id] ? { ...b, status: optimisticStatuses[b.id] } : b;
-        return (STATUS_ORDER[effectiveStatus(rowA, liveA, settings.reminderWeeks)] ?? 3) -
-               (STATUS_ORDER[effectiveStatus(rowB, liveB, settings.reminderWeeks)] ?? 3);
-      });
+      .sort((a, b) =>
+        (STATUS_ORDER[effectiveStatus(getEffectiveRow(a), getLiveDate(a), settings.reminderWeeks)] ?? 3) -
+        (STATUS_ORDER[effectiveStatus(getEffectiveRow(b), getLiveDate(b), settings.reminderWeeks)] ?? 3)
+      );
   }, [rows, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
   const filteredRows = useMemo(() => sortedRows.filter(r => {
-    const phoneKey = normPhone(r.phone); const nameKey = (r.client_name ?? "").trim().toLowerCase();
-    const liveDate = (enrichment[phoneKey] ?? enrichment[nameKey])?.liveLastDate ?? null;
-    const effectiveRow = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r;
-    const st = effectiveStatus(effectiveRow, liveDate, settings.reminderWeeks);
+    const st = effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks);
     const matchFilter =
       filter === "All" ||
       (filter === "On Track"     && st === "ON TRACK") ||
@@ -1081,28 +1074,23 @@ const AdminLoyalty = () => {
 
   const counts = useMemo(() => ({
     total:    rows.length,
-    onTrack:  rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); const row = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r; return effectiveStatus(row, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "ON TRACK"; }).length,
-    timeBook: rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); const row = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r; return effectiveStatus(row, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "TIME TO BOOK"; }).length,
-    overdue:  rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); const row = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r; return effectiveStatus(row, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "OVERDUE"; }).length,
+    onTrack:  rows.filter(r => effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks) === "ON TRACK").length,
+    timeBook: rows.filter(r => effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks) === "TIME TO BOOK").length,
+    overdue:  rows.filter(r => effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks) === "OVERDUE").length,
   }), [rows, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
   const isLoading = loadingRows || loadingBookings;
 
   // ─── Bulk WA ───
-  const toggleSelect = (id: string) => setSelectedIds(prev => {
-    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
-  });
-  const selectAll = () => setSelectedIds(new Set(filteredRows.map(r => r.id)));
+  const toggleSelect  = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAll     = () => setSelectedIds(new Set(filteredRows.map(r => r.id)));
   const clearSelection = () => setSelectedIds(new Set());
 
   const openBulkWA = () => {
     const selected = filteredRows.filter(r => selectedIds.has(r.id) && r.phone);
     if (!selected.length) { toast.error("No clients with phone numbers selected."); return; }
     selected.forEach(r => {
-      const phoneKey = normPhone(r.phone); const nameKey = (r.client_name ?? "").trim().toLowerCase();
-      const liveDate = (enrichment[phoneKey] ?? enrichment[nameKey])?.liveLastDate ?? null;
-      const effectiveRow = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r;
-      const norm = effectiveStatus(effectiveRow, liveDate, settings.reminderWeeks);
+      const norm = effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks);
       const msg  = buildWaMessage(r.client_name, norm, settings.businessName, settings.serviceLabel, settings.templates);
       window.open(waLink(r.phone!, msg), "_blank");
     });
@@ -1110,12 +1098,8 @@ const AdminLoyalty = () => {
     clearSelection();
   };
 
-  // ─── Stat card filter shortcut (Hick's Law) ───
   const STAT_FILTER_MAP: Record<string, Filter> = {
-    "On Track": "On Track",
-    "Time to Book": "Time to Book",
-    "Overdue": "Overdue",
-    "Total": "All",
+    "On Track": "On Track", "Time to Book": "Time to Book", "Overdue": "Overdue", "Total": "All",
   };
 
   return (
@@ -1145,13 +1129,16 @@ const AdminLoyalty = () => {
         {activeTab === "Tracker" && (
           <motion.div key="tracker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-4">
 
-            {/* Stat cards — tappable to set filter (Hick's Law shortcut) */}
+            {/* How-to tip — Fix #3 */}
+            <MessagingHowTo tenantId={tenantId} />
+
+            {/* Stat cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
               {[
-                { label: "Total",        value: counts.total,    pct: null,                                                         color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
-                { label: "On Track",     value: counts.onTrack,  pct: counts.total ? Math.round(counts.onTrack / counts.total * 100) : null,  color: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle, iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
+                { label: "Total",        value: counts.total,    pct: null,                                                                  color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
+                { label: "On Track",     value: counts.onTrack,  pct: counts.total ? Math.round(counts.onTrack  / counts.total * 100) : null, color: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle, iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
                 { label: "Time to Book", value: counts.timeBook, pct: counts.total ? Math.round(counts.timeBook / counts.total * 100) : null, color: "text-amber-400",   border: "border-amber-500/20",   icon: Clock,       iconColor: "text-amber-500/40",   bg: "bg-amber-500/[0.03]" },
-                { label: "Overdue",      value: counts.overdue,  pct: counts.total ? Math.round(counts.overdue / counts.total * 100) : null,  color: "text-red-400",     border: "border-red-500/20",     icon: AlertCircle, iconColor: "text-red-500/40",     bg: "bg-red-500/[0.03]" },
+                { label: "Overdue",      value: counts.overdue,  pct: counts.total ? Math.round(counts.overdue  / counts.total * 100) : null, color: "text-red-400",     border: "border-red-500/20",     icon: AlertCircle, iconColor: "text-red-500/40",     bg: "bg-red-500/[0.03]" },
               ].map((s, idx) => {
                 const Icon = s.icon;
                 const targetFilter = STAT_FILTER_MAP[s.label];
@@ -1166,10 +1153,7 @@ const AdminLoyalty = () => {
                     <div>
                       <p className="text-[9px] sm:text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-1">{s.label}</p>
                       <p className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</p>
-                      {/* Pareto: show % to frame urgency proportionally */}
-                      {s.pct !== null && (
-                        <p className="text-[9px] text-white/25 mt-0.5">{s.pct}% of clients</p>
-                      )}
+                      {s.pct !== null && <p className="text-[9px] text-white/25 mt-0.5">{s.pct}% of clients</p>}
                     </div>
                     <Icon className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${s.iconColor}`} />
                   </motion.button>
@@ -1177,7 +1161,7 @@ const AdminLoyalty = () => {
               })}
             </div>
 
-            {/* Recommendations — collapsed into a drawer (Cognitive Load) */}
+            {/* Recommendations */}
             <AnimatePresence>
               {!isLoading && candidates.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
@@ -1206,7 +1190,7 @@ const AdminLoyalty = () => {
                           {c.nextDueDate && <p className="text-[10px] text-white/25">Next due: {format(new Date(c.nextDueDate), "dd MMM yyyy")}</p>}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 mt-1 sm:mt-0">
-                          {c.phone && <WaPreview name={c.client_name} status="TIME TO BOOK" phone={c.phone} businessName={settings.businessName} serviceLabel={settings.serviceLabel} templates={settings.templates} />}
+                          {c.phone && <WaButton name={c.client_name} status="TIME TO BOOK" phone={c.phone} businessName={settings.businessName} serviceLabel={settings.serviceLabel} templates={settings.templates} />}
                           <button onClick={() => skipCandidate(c)} title="Dismiss"
                             className="p-1.5 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.05] transition-colors">
                             <X className="w-3 h-3" />
@@ -1253,12 +1237,11 @@ const AdminLoyalty = () => {
                 </button>
               </div>
 
-              {/* Bulk action bar — Cancel LEFT, Send WA RIGHT (Serial Position Effect) */}
+              {/* Bulk action bar */}
               <AnimatePresence>
                 {selectedIds.size > 0 && (
                   <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20">
-                    {/* Cancel — leftmost (Serial Position) */}
                     <button onClick={clearSelection} className="text-white/25 hover:text-white/60 transition-colors shrink-0">
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1269,7 +1252,6 @@ const AdminLoyalty = () => {
                       className="text-[11px] text-white/40 hover:text-white/70 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.05]">
                       All ({filteredRows.length})
                     </button>
-                    {/* Send WA — rightmost primary action (Serial Position) */}
                     <button onClick={openBulkWA}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
                       style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)", color: "#25D366" }}>
@@ -1286,7 +1268,6 @@ const AdminLoyalty = () => {
             ) : filteredRows.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center flex flex-col items-center gap-3">
-                {/* Empty state: Sparkles + UserPlus instead of Star (correct semantic) */}
                 <div className="w-12 h-12 rounded-full bg-emerald-500/[0.07] flex items-center justify-center mb-1">
                   <Sparkles className="w-6 h-6 text-emerald-400/40" />
                 </div>
@@ -1294,15 +1275,7 @@ const AdminLoyalty = () => {
                   {rows.length === 0 ? "No clients enrolled yet." : "No clients match this filter."}
                 </p>
                 {rows.length === 0 ? (
-                  <button
-                    onClick={() => {
-                      // Scroll to recommendations if available
-                      document.querySelector("[data-recommendations]")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" /> Enroll your first client
-                  </button>
+                  <p className="text-xs text-white/20">Use the Recommended section above to enroll your first clients.</p>
                 ) : (
                   <p className="text-xs text-white/20">Try a different filter or search term.</p>
                 )}
@@ -1320,7 +1293,6 @@ const AdminLoyalty = () => {
                     selected={selectedIds.has(r.id)}
                     onToggleSelect={() => toggleSelect(r.id)}
                     onUpdated={() => {
-                      // Clear optimistic override once server confirms
                       setOptimisticStatuses(prev => { const n = { ...prev }; delete n[r.id]; return n; });
                       qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
                     }}
