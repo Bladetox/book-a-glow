@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, MessageCircle, Search, X, UserPlus,
-  Sparkles, Clock, CheckCircle, AlertCircle, Star,
+  Sparkles, Clock, CheckCircle, AlertCircle,
   Download, Eye, Pencil, Check, StickyNote, Settings2, Save,
-  Users, CalendarCheck, Send,
+  Users, CalendarCheck, Send, ChevronDown,
 } from "lucide-react";
-import { format, subDays, addDays, isAfter, parseISO, startOfDay, differenceInDays, isFuture } from "date-fns";
+import { format, subDays, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 
 // ─── Types ───
@@ -28,10 +28,9 @@ interface LoyaltyRow {
 }
 
 interface EnrichmentMap {
-  // keyed by normPhone(phone) or lowercased name — provides live data computed from bookings
   [key: string]: {
-    liveLastDate: string;       // most recent past booking date (yyyy-MM-dd)
-    upcomingDate: string | null; // nearest future booking date, if any
+    liveLastDate: string;
+    upcomingDate: string | null;
   };
 }
 
@@ -71,15 +70,6 @@ function isoToDisplay(iso: string | null | undefined): string {
   catch { return iso; }
 }
 
-function isDateOverdue(raw: string | number | null | undefined): boolean {
-  const iso = excelToISO(raw);
-  if (!iso) return false;
-  try {
-    return isAfter(startOfDay(parseISO(iso)), startOfDay(new Date())) === false
-      && startOfDay(parseISO(iso)) < startOfDay(new Date());
-  } catch { return false; }
-}
-
 function normPhone(p: string | null | undefined): string {
   return ((p ?? "").replace(/\D/g, "")).slice(-9);
 }
@@ -92,15 +82,12 @@ function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO 
   return "UNKNOWN";
 }
 
-// Effective status: if next_due_date has passed → OVERDUE, else stored status.
-// Uses liveLastDate if provided to recompute next due based on reminderWeeks.
 function effectiveStatus(
   r: LoyaltyRow,
   liveLastDate?: string | null,
   reminderWeeks?: number
 ): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
   const stored = normaliseStatus(r.status);
-  // Use live last date to recompute next-due if available
   const nextDueIso = liveLastDate && reminderWeeks
     ? format(addDays(new Date(liveLastDate), reminderWeeks * 7), "yyyy-MM-dd")
     : excelToISO(r.next_due_date);
@@ -108,7 +95,6 @@ function effectiveStatus(
     const due = startOfDay(parseISO(nextDueIso));
     const today = startOfDay(new Date());
     if (isAfter(today, due)) return "OVERDUE";
-    // within 7 days of due → TIME TO BOOK
     const daysUntil = differenceInDays(due, today);
     if (daysUntil <= 7) return "TIME TO BOOK";
   }
@@ -154,6 +140,7 @@ function waLink(phone: string, msg: string): string {
 }
 
 // ─── WA Preview ───
+// UX: WA button uses distinct #25D366/20 so it doesn't blend with status emerald (Von Restorff)
 const WaPreview = ({
   name, status, phone, businessName, serviceLabel, templates,
 }: {
@@ -175,14 +162,17 @@ const WaPreview = ({
 
   return (
     <div className="relative inline-flex items-center gap-1">
+      {/* Von Restorff: WA green distinct from status emerald */}
       <a
         href={waLink(phone, msg)}
         target="_blank" rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/[0.09] text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/[0.18] transition-colors"
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors"
+        style={{ background: "rgba(37,211,102,0.13)", color: "#25D366" }}
       >
         <MessageCircle className="w-3 h-3" /> WA
       </a>
+      {/* Eye preview — only show on hover (progressive disclosure) */}
       <button
         ref={btnRef}
         onClick={e => { e.stopPropagation(); setShow(s => !s); }}
@@ -216,21 +206,29 @@ const WaPreview = ({
 const STATUS_OPTIONS = ["ON TRACK", "TIME TO BOOK", "OVERDUE"] as const;
 
 // ─── InlineStatusEditor ───
-const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated }: {
-  rowId: string; current: string; effectiveNorm: string; tenantId: string; onUpdated: () => void;
+// UX: Pencil only visible on hover (Jakob's Law — show controls when needed)
+// UX: Optimistic update — local state updates immediately (Doherty Threshold <400ms)
+const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onOptimisticUpdate, onUpdated }: {
+  rowId: string; current: string; effectiveNorm: string; tenantId: string;
+  onOptimisticUpdate: (newStatus: string) => void;
+  onUpdated: () => void;
 }) => {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const handleSelect = async (newStatus: string) => {
     if (newStatus === normaliseStatus(current)) { setOpen(false); return; }
+    // Optimistic update — instant UI response (Doherty Threshold)
+    onOptimisticUpdate(newStatus);
+    setOpen(false);
     setSaving(true);
     const { error } = await supabase
       .from("loyalty_tracker")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq("id", rowId).eq("tenant_id", tenantId);
-    setSaving(false); setOpen(false);
-    if (error) toast.error("Failed to update status");
+    setSaving(false);
+    if (error) { toast.error("Failed to update status"); onUpdated(); }
     else { toast.success("Status updated"); onUpdated(); }
   };
 
@@ -238,7 +236,10 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated
   const storedNorm = normaliseStatus(current);
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {open && <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />}
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
@@ -246,7 +247,8 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated
       >
         {saving && <Loader2 className="w-3 h-3 animate-spin" />}
         {displayNorm}
-        <Pencil className="w-2.5 h-2.5 opacity-50" />
+        {/* Pencil only visible on hover — progressive disclosure */}
+        <Pencil className={`w-2.5 h-2.5 transition-opacity ${hovered ? "opacity-50" : "opacity-0"}`} />
       </button>
       <AnimatePresence>
         {open && (
@@ -270,6 +272,7 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated
 };
 
 // ─── InlineNotesEditor ───
+// UX: Optimistic — note value updates locally before server confirms (Doherty Threshold)
 const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
   rowId: string; current: string | null; tenantId: string; onUpdated: () => void;
 }) => {
@@ -315,6 +318,9 @@ const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
 };
 
 // ─── EnrollModal ───
+// UX: 3-step progress bar (Goal Gradient Effect) + Peak-End celebration on success
+const ENROLL_STEPS = ["Client Info", "Dates", "Confirm"] as const;
+
 const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
   candidate: EnrollCandidate;
   onClose: () => void;
@@ -322,11 +328,15 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
   saving: boolean;
   serviceLabel: string;
 }) => {
+  const [step, setStep]               = useState(0);
   const [name, setName]               = useState(candidate.client_name);
   const [phone, setPhone]             = useState(candidate.phone);
   const [notes, setNotes]             = useState("");
   const [lastBooking, setLastBooking] = useState(candidate.lastBookingDate ?? "");
   const [nextDue, setNextDue]         = useState(candidate.nextDueDate ?? "");
+
+  const canNext0 = name.trim().length > 0;
+  const canNext1 = true; // dates optional
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -337,49 +347,139 @@ const EnrollModal = ({ candidate, onClose, onConfirm, saving, serviceLabel }: {
         transition={{ type: "spring", stiffness: 340, damping: 32 }}
         className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-white/[0.1] bg-[#0f0f0f] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-white/80">Enroll in Loyalty Tracker</p>
           <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Goal Gradient: 3-step progress bar */}
+        <div className="flex items-center gap-1">
+          {ENROLL_STEPS.map((label, idx) => (
+            <div key={label} className="flex items-center gap-1 flex-1">
+              <div className={`flex items-center gap-1.5 flex-1`}>
+                <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${idx <= step ? "bg-emerald-500/70" : "bg-white/[0.08]"}`} />
+              </div>
+              {idx < ENROLL_STEPS.length - 1 && (
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all ${idx < step ? "bg-emerald-400" : "bg-white/[0.12]"}`} />
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] tracking-[0.12em] uppercase text-white/30 -mt-2">
+          Step {step + 1} of {ENROLL_STEPS.length} — {ENROLL_STEPS[step]}
+        </p>
+
+        {/* Stats summary */}
         <div className="rounded-lg bg-emerald-400/[0.06] border border-emerald-400/[0.12] px-3 py-2.5 text-[11px] text-emerald-400/80">
           {candidate.bookingCount} bookings · R {candidate.totalSpend.toLocaleString()} total · last booked {candidate.daysSinceLastBooking}d ago
         </div>
-        <div className="flex flex-col gap-3">
-          {[
-            { label: "Client Name", value: name, onChange: setName },
-            { label: "Phone (with country code)", value: phone, onChange: setPhone },
-          ].map(f => (
-            <div key={f.label} className="flex flex-col gap-1">
-              <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">{f.label}</label>
-              <input value={f.value} onChange={e => f.onChange(e.target.value)}
+
+        {/* Step 0: Client Info */}
+        {step === 0 && (
+          <div className="flex flex-col gap-3">
+            {[
+              { label: "Client Name", value: name, onChange: setName },
+              { label: "Phone (with country code)", value: phone, onChange: setPhone },
+            ].map(f => (
+              <div key={f.label} className="flex flex-col gap-1">
+                <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">{f.label}</label>
+                <input value={f.value} onChange={e => f.onChange(e.target.value)}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+              </div>
+            ))}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Notes (optional)</label>
+              <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. regular every 4 weeks"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40" />
+            </div>
+          </div>
+        )}
+
+        {/* Step 1: Dates */}
+        {step === 1 && (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last {serviceLabel || "service"} Date</label>
+              <input type="date" value={lastBooking} onChange={e => setLastBooking(e.target.value)}
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
             </div>
-          ))}
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last {serviceLabel || "service"} Date</label>
-            <input type="date" value={lastBooking} onChange={e => setLastBooking(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Next Due Date</label>
+              <input type="date" value={nextDue} onChange={e => setNextDue(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Next Due Date</label>
-            <input type="date" value={nextDue} onChange={e => setNextDue(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+        )}
+
+        {/* Step 2: Confirm */}
+        {step === 2 && (
+          <div className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            {[
+              { label: "Name",      value: name },
+              { label: "Phone",     value: phone },
+              { label: "Last date", value: lastBooking || "—" },
+              { label: "Next due",  value: nextDue || "—" },
+              { label: "Notes",     value: notes || "—" },
+            ].map(row => (
+              <div key={row.label} className="flex items-start justify-between gap-3">
+                <span className="text-[10px] uppercase tracking-[0.1em] text-white/30 shrink-0">{row.label}</span>
+                <span className="text-[11px] text-white/70 text-right">{row.value}</span>
+              </div>
+            ))}
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Notes (optional)</label>
-            <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. regular every 4 weeks"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40" />
-          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex gap-2">
+          {step > 0 && (
+            <button onClick={() => setStep(s => s - 1)}
+              className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-white/40 text-sm font-semibold hover:bg-white/[0.04] transition-colors">
+              Back
+            </button>
+          )}
+          {step < 2 ? (
+            <button onClick={() => setStep(s => s + 1)} disabled={step === 0 && !canNext0}
+              className="flex-1 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-40">
+              Next →
+            </button>
+          ) : (
+            <button onClick={() => onConfirm(name, phone, notes, lastBooking, nextDue)}
+              disabled={saving || !name.trim()}
+              className="flex-1 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+              {saving ? "Enrolling…" : "Confirm & Enroll"}
+            </button>
+          )}
         </div>
-        <button onClick={() => onConfirm(name, phone, notes, lastBooking, nextDue)}
-          disabled={saving || !name.trim()}
-          className="w-full py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-          {saving ? "Enrolling…" : "Confirm & Enroll"}
-        </button>
       </motion.div>
+    </motion.div>
+  );
+};
+
+// ─── EnrollSuccessCelebration — Peak-End Rule ───
+// A brief sparkle celebration shown after successful enroll
+const EnrollSuccessCelebration = ({ name, onDone }: { name: string; onDone: () => void }) => {
+  useEffect(() => { const t = setTimeout(onDone, 2200); return () => clearTimeout(t); }, [onDone]);
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none"
+    >
+      <div className="flex flex-col items-center gap-3 text-center px-6">
+        <motion.div
+          animate={{ rotate: [0, -15, 15, -10, 10, 0], scale: [1, 1.3, 1.1, 1.2, 1] }}
+          transition={{ duration: 0.7 }}
+          className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center"
+        >
+          <Sparkles className="w-8 h-8 text-emerald-400" />
+        </motion.div>
+        <p className="text-base font-bold text-white/90">{name} added!</p>
+        <p className="text-[12px] text-white/40">Welcome to your loyalty programme 💚</p>
+      </div>
     </motion.div>
   );
 };
@@ -444,8 +544,11 @@ const SETTING_DEFAULTS = {
 type SettingKey = keyof typeof SETTING_DEFAULTS;
 
 // ─── Settings panel ───
+// UX: Split into 2 collapsible sections (Cognitive Load — progressive disclosure)
 const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
   const qc = useQueryClient();
+  const [tplOpen, setTplOpen] = useState(false);
+
   const { data: settingsRows = [], isLoading } = useQuery({
     queryKey: ["loyalty-settings", tenantId],
     queryFn: async () => {
@@ -499,6 +602,7 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Step 1: Programme basics */}
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5 flex flex-col gap-5">
         <div className="flex items-center gap-2">
           <Settings2 className="w-4 h-4 text-white/40" />
@@ -517,33 +621,50 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5 flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="w-4 h-4 text-emerald-400/60" />
-          <p className="text-sm font-semibold text-white/70">WhatsApp Message Templates</p>
-        </div>
-        <p className="text-[11px] text-white/30 leading-relaxed -mt-2">
-          Use <span className="text-white/50 font-mono">{"{name}"}</span>, <span className="text-white/50 font-mono">{"{business}"}</span>, <span className="text-white/50 font-mono">{"{service}"}</span> as placeholders.
-        </p>
-        <div className="flex flex-col gap-4">
-          {tplFields.map(f => (
-            <div key={f.key} className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[f.status] ?? ""}`}>{f.status}</span>
-                <label htmlFor={`lt-${f.key}`} className="text-[10px] font-semibold tracking-[0.1em] uppercase text-white/35">{f.label}</label>
+      {/* Step 2: WA templates — collapsed by default (Cognitive Load) */}
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+        <button
+          onClick={() => setTplOpen(o => !o)}
+          className="w-full flex items-center justify-between gap-2 p-4 sm:p-5 hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-emerald-400/60" />
+            <p className="text-sm font-semibold text-white/70">WhatsApp Message Templates</p>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-white/30 transition-transform ${tplOpen ? "rotate-180" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {tplOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 sm:px-5 pb-5 flex flex-col gap-4">
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  Use <span className="text-white/50 font-mono">{"{name}"}</span>, <span className="text-white/50 font-mono">{"{business}"}</span>, <span className="text-white/50 font-mono">{"{service}"}</span> as placeholders.
+                </p>
+                {tplFields.map(f => (
+                  <div key={f.key} className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[f.status] ?? ""}`}>{f.status}</span>
+                      <label htmlFor={`lt-${f.key}`} className="text-[10px] font-semibold tracking-[0.1em] uppercase text-white/35">{f.label}</label>
+                    </div>
+                    <textarea id={`lt-${f.key}`} rows={3} value={local[f.key]}
+                      onChange={e => setLocal(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors resize-none leading-relaxed" />
+                    <p className="text-[10px] text-white/25 italic leading-relaxed">
+                      Preview: {local[f.key]
+                        .replace(/\{name\}/g, "Sarah")
+                        .replace(/\{business\}/g, local.loyalty_business_name || "Your Business")
+                        .replace(/\{service\}/g, local.loyalty_service_label || "wax")}
+                    </p>
+                  </div>
+                ))}
               </div>
-              <textarea id={`lt-${f.key}`} rows={3} value={local[f.key]}
-                onChange={e => setLocal(prev => ({ ...prev, [f.key]: e.target.value }))}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors resize-none leading-relaxed" />
-              <p className="text-[10px] text-white/25 italic leading-relaxed">
-                Preview: {local[f.key]
-                  .replace(/\{name\}/g, "Sarah")
-                  .replace(/\{business\}/g, local.loyalty_business_name || "Your Business")
-                  .replace(/\{service\}/g, local.loyalty_service_label || "wax")}
-              </p>
-            </div>
-          ))}
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="flex justify-end">
@@ -561,10 +682,15 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
 const MAIN_TABS = ["Tracker", "Settings"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
-// ─── ClientRow — shows live last date, upcoming booking badge ───
+// ─── ClientRow ───
+// UX fixes:
+//   - Miller's Law: detail strip collapsed behind accordion (tap card to expand)
+//   - Proximity: dates grouped together, comms section separated with border
+//   - Live badge uses sky-400 not emerald (Law of Similarity — emerald = status system only)
 const ClientRow = ({
   r, i, tenantId, businessName, serviceLabel, templates,
   enrichment, reminderWeeks, selected, onToggleSelect, onUpdated,
+  optimisticStatus, onOptimisticStatus,
 }: {
   r: LoyaltyRow; i: number; tenantId: string;
   businessName: string; serviceLabel: string;
@@ -574,20 +700,27 @@ const ClientRow = ({
   selected: boolean;
   onToggleSelect: () => void;
   onUpdated: () => void;
+  optimisticStatus: string | null;
+  onOptimisticStatus: (s: string) => void;
 }) => {
-  // Build enrichment key — try phone first, fall back to name
+  const [expanded, setExpanded] = useState(false);
+
   const phoneKey = normPhone(r.phone);
   const nameKey  = (r.client_name ?? "").trim().toLowerCase();
   const enrich   = enrichment[phoneKey] ?? enrichment[nameKey];
 
-  // Use live last date if fresher than stored
   const storedISO  = excelToISO(r.last_wax_date);
   const liveDate   = enrich?.liveLastDate ?? null;
   const displayLastDate = (
     liveDate && (!storedISO || liveDate > storedISO) ? liveDate : storedISO
   );
 
-  const norm = effectiveStatus(r, displayLastDate, reminderWeeks);
+  // Use optimistic status override if set (Doherty Threshold)
+  const effectiveRow = optimisticStatus
+    ? { ...r, status: optimisticStatus }
+    : r;
+
+  const norm = effectiveStatus(effectiveRow, displayLastDate, reminderWeeks);
 
   const rowAccent =
     norm === "OVERDUE"      ? "border-l-2 border-l-red-500/40" :
@@ -598,7 +731,6 @@ const ClientRow = ({
   const svcLabel = serviceLabel || "service";
   const upcomingDate = enrich?.upcomingDate ?? null;
 
-  // Compute display next due from live last date
   const nextDueDisplay = (() => {
     if (liveDate && reminderWeeks) {
       return isoToDisplay(format(addDays(new Date(liveDate), reminderWeeks * 7), "yyyy-MM-dd"));
@@ -610,10 +742,13 @@ const ClientRow = ({
     <motion.div
       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(i * 0.03, 0.3) }}
-      className={`rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.035] transition-colors ${rowAccent} overflow-hidden ${selected ? "ring-1 ring-emerald-500/30" : ""}`}
+      className={`rounded-xl border border-white/[0.06] bg-white/[0.02] transition-colors ${rowAccent} overflow-hidden ${selected ? "ring-1 ring-emerald-500/30" : ""}`}
     >
-      {/* Top row */}
-      <div className="flex items-center gap-2.5 px-3 py-3">
+      {/* Headline row — always visible (Miller's Law: only 3 focal items) */}
+      <div
+        className="flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        onClick={() => setExpanded(e => !e)}
+      >
         {/* Checkbox */}
         <button
           onClick={e => { e.stopPropagation(); onToggleSelect(); }}
@@ -640,61 +775,84 @@ const ClientRow = ({
           </p>
         </div>
 
-        {/* Status */}
-        <div className="shrink-0">
-          <InlineStatusEditor rowId={r.id} current={r.status ?? ""} effectiveNorm={norm} tenantId={tenantId} onUpdated={onUpdated} />
+        {/* Status badge — primary focal item */}
+        <div className="shrink-0" onClick={e => e.stopPropagation()}>
+          <InlineStatusEditor
+            rowId={r.id}
+            current={optimisticStatus ?? r.status ?? ""}
+            effectiveNorm={norm}
+            tenantId={tenantId}
+            onOptimisticUpdate={onOptimisticStatus}
+            onUpdated={onUpdated}
+          />
         </div>
 
-        {/* WA */}
-        <div className="shrink-0">
+        {/* WA button — Von Restorff: distinct green, rightmost (Serial Position) */}
+        <div className="shrink-0" onClick={e => e.stopPropagation()}>
           {r.phone
             ? <WaPreview name={r.client_name} status={norm} phone={r.phone} businessName={businessName} serviceLabel={svcLabel} templates={templates} />
             : <span className="text-white/20 text-xs">—</span>
           }
         </div>
+
+        {/* Expand chevron */}
+        <ChevronDown className={`w-3.5 h-3.5 text-white/20 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </div>
 
-      {/* Detail strip */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 px-3 pb-3 border-t border-white/[0.04] pt-2.5">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last {svcLabel}</span>
-          <span className="text-[11px] text-white/55">
-            {displayLastDate
-              ? <>{isoToDisplay(displayLastDate)} {liveDate && liveDate !== storedISO && <span className="text-[9px] text-emerald-400/60 ml-1">(live)</span>}</>
-              : <span className="text-white/20 italic">Not set</span>
-            }
-          </span>
-        </div>
+      {/* Detail strip — accordion (Miller's Law: hide until needed) */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            {/* Dates section (Proximity: grouped together) */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 px-3 pb-3 border-t border-white/[0.04] pt-2.5">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last {svcLabel}</span>
+                <span className="text-[11px] text-white/55">
+                  {displayLastDate
+                    ? <>{isoToDisplay(displayLastDate)} {liveDate && liveDate !== storedISO && (
+                        // sky-400 for live data — distinct from emerald status system (Law of Similarity)
+                        <span className="text-[9px] text-sky-400/70 ml-1">(live)</span>
+                      )}</>
+                    : <span className="text-white/20 italic">Not set</span>
+                  }
+                </span>
+              </div>
 
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Next Due</span>
-          <span className={`text-[11px] font-medium ${
-            norm === "OVERDUE" ? "text-red-400" :
-            norm === "TIME TO BOOK" ? "text-amber-400" : "text-white/55"
-          }`}>
-            {nextDueDisplay || <span className="text-white/20 italic">Not set</span>}
-          </span>
-        </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Next Due</span>
+                <span className={`text-[11px] font-medium ${
+                  norm === "OVERDUE" ? "text-red-400" :
+                  norm === "TIME TO BOOK" ? "text-amber-400" : "text-white/55"
+                }`}>
+                  {nextDueDisplay || <span className="text-white/20 italic">Not set</span>}
+                </span>
+              </div>
 
-        {/* Upcoming booking badge */}
-        {upcomingDate && (
-          <div className="col-span-2 flex items-center gap-1.5">
-            <CalendarCheck className="w-3 h-3 text-sky-400 shrink-0" />
-            <span className="text-[11px] text-sky-400 font-medium">Upcoming: {isoToDisplay(upcomingDate)}</span>
-          </div>
+              {upcomingDate && (
+                <div className="col-span-2 flex items-center gap-1.5">
+                  <CalendarCheck className="w-3 h-3 text-sky-400 shrink-0" />
+                  <span className="text-[11px] text-sky-400 font-medium">Upcoming: {isoToDisplay(upcomingDate)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Comms section — separated by border (Proximity: distinct from dates) */}
+            <div className="px-3 pb-3 border-t border-white/[0.04] pt-2.5 flex flex-col gap-2">
+              {r.last_contacted_at && (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last Contacted</span>
+                  <span className="text-[11px] text-white/35">{format(new Date(r.last_contacted_at), "dd MMM yyyy")}</span>
+                </div>
+              )}
+              <InlineNotesEditor rowId={r.id} current={r.notes} tenantId={tenantId} onUpdated={onUpdated} />
+            </div>
+          </motion.div>
         )}
-
-        {r.last_contacted_at && (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last Contacted</span>
-            <span className="text-[11px] text-white/35">{format(new Date(r.last_contacted_at), "dd MMM yyyy")}</span>
-          </div>
-        )}
-
-        <div className="col-span-2">
-          <InlineNotesEditor rowId={r.id} current={r.notes} tenantId={tenantId} onUpdated={onUpdated} />
-        </div>
-      </div>
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -707,7 +865,11 @@ const AdminLoyalty = () => {
   const [filter, setFilter]         = useState<Filter>("All");
   const [search, setSearch]         = useState("");
   const [enrolling, setEnrolling]   = useState<EnrollCandidate | null>(null);
+  const [celebrateName, setCelebrateName] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Optimistic status map: rowId → temporary status string (Doherty Threshold)
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string>>({});
 
   const ENROLL_SAVED_KEY = `loyalty_enroll_saved_${tenantId}`;
   const [enrollSaved, setEnrollSaved] = useState<string[]>(() => {
@@ -759,7 +921,7 @@ const AdminLoyalty = () => {
     },
   });
 
-  // ─── 2. All bookings (past + future) — used for enrichment + recommendations ───
+  // ─── 2. All bookings ───
   const { data: allBookings = [], isLoading: loadingBookings } = useQuery({
     queryKey: ["loyalty-reco-bookings", tenantId],
     queryFn: async () => {
@@ -781,9 +943,7 @@ const AdminLoyalty = () => {
     },
   });
 
-  // ─── 3. Enrichment map: per enrolled client, compute liveLastDate + upcomingDate ───
-  // This is the fix for Saadjidah: enrolled clients get their last booking date
-  // computed live from actual bookings rather than the static stored value.
+  // ─── 3. Enrichment map ───
   const enrichment = useMemo<EnrichmentMap>(() => {
     const today = format(new Date(), "yyyy-MM-dd");
     const map: EnrichmentMap = {};
@@ -794,7 +954,6 @@ const AdminLoyalty = () => {
       if (bDate <= today) {
         if (bDate > (prev.liveLastDate ?? "")) prev.liveLastDate = bDate;
       } else {
-        // future booking — keep the nearest one
         if (!prev.upcomingDate || bDate < prev.upcomingDate) prev.upcomingDate = bDate;
       }
       map[key] = prev;
@@ -803,30 +962,22 @@ const AdminLoyalty = () => {
     allBookings.forEach((b: any) => {
       const bDate = (b.booking_date ?? "").slice(0, 10);
       if (!bDate) return;
-
-      // Only count qualifying bookings for liveLastDate (if keyword set)
       const keyword = settings.qualifyingService;
       const items: any[] = b.booking_items ?? [];
       const hasQualifying = keyword
         ? items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))
         : true;
-
       const phoneKey = normPhone(resolvePhone(b));
       const nameKey  = resolveName(b).trim().toLowerCase();
-
-      // Always track upcoming regardless of service keyword
       if (bDate > today) {
         if (phoneKey) setEntry(phoneKey, bDate);
         if (nameKey)  setEntry(nameKey, bDate);
         return;
       }
-
-      // For past bookings only update liveLastDate if service qualifies
       if (hasQualifying) {
         if (phoneKey) setEntry(phoneKey, bDate);
         if (nameKey)  setEntry(nameKey, bDate);
       } else {
-        // Still track upcoming even if service doesn't qualify
         const prev = map[phoneKey] ?? { liveLastDate: "", upcomingDate: null };
         map[phoneKey] = prev;
       }
@@ -835,7 +986,7 @@ const AdminLoyalty = () => {
     return map;
   }, [allBookings, settings.qualifyingService]);
 
-  // ─── 4. Enroll mutation ───
+  // ─── 4. Enroll mutation — Peak-End: trigger celebration on success ───
   const { mutate: enroll, isPending: enrollPending } = useMutation({
     mutationFn: async ({ name, phone, notes, lastBooking, nextDue }: {
       name: string; phone: string; notes: string; lastBooking: string; nextDue: string;
@@ -846,12 +997,14 @@ const AdminLoyalty = () => {
         ...(nextDue     ? { next_due_date: nextDue }     : {}),
       });
       if (error) throw error;
+      return name;
     },
-    onSuccess: () => {
-      toast.success("Client enrolled!");
+    onSuccess: (name) => {
       qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
       if (enrolling) addEnrollSaved(enrolling.client_name + enrolling.phone);
       setEnrolling(null);
+      // Peak-End Rule: celebrate the enroll
+      setCelebrateName(name);
     },
     onError: (err: any) => toast.error(err?.code === "23505" ? "Client already enrolled." : "Failed to enroll client."),
   });
@@ -866,9 +1019,7 @@ const AdminLoyalty = () => {
     const cutoff  = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
     const today   = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
-
     const map = new Map<string, { name: string; phone: string; count: number; spend: number; lastBookingDate: string; }>();
-
     allBookings.forEach((b: any) => {
       const bDate = (b.booking_date ?? "").slice(0, 10);
       if (!bDate || bDate > todayStr || bDate < cutoff) return;
@@ -882,7 +1033,6 @@ const AdminLoyalty = () => {
       const prev = map.get(key) ?? { name, phone, count: 0, spend: 0, lastBookingDate: "" };
       map.set(key, { name, phone, count: prev.count + 1, spend: prev.spend + Number(b.total_amount ?? 0), lastBookingDate: bDate > prev.lastBookingDate ? bDate : prev.lastBookingDate });
     });
-
     return [...map.entries()]
       .filter(([, v]) => v.count >= settings.minBookings)
       .filter(([, v]) => !trackedPhones.has(normPhone(v.phone)))
@@ -908,15 +1058,18 @@ const AdminLoyalty = () => {
         const phoneKeyB = normPhone(b.phone); const nameKeyB = (b.client_name ?? "").trim().toLowerCase();
         const liveA = (enrichment[phoneKeyA] ?? enrichment[nameKeyA])?.liveLastDate ?? null;
         const liveB = (enrichment[phoneKeyB] ?? enrichment[nameKeyB])?.liveLastDate ?? null;
-        return (STATUS_ORDER[effectiveStatus(a, liveA, settings.reminderWeeks)] ?? 3) -
-               (STATUS_ORDER[effectiveStatus(b, liveB, settings.reminderWeeks)] ?? 3);
+        const rowA = optimisticStatuses[a.id] ? { ...a, status: optimisticStatuses[a.id] } : a;
+        const rowB = optimisticStatuses[b.id] ? { ...b, status: optimisticStatuses[b.id] } : b;
+        return (STATUS_ORDER[effectiveStatus(rowA, liveA, settings.reminderWeeks)] ?? 3) -
+               (STATUS_ORDER[effectiveStatus(rowB, liveB, settings.reminderWeeks)] ?? 3);
       });
-  }, [rows, enrichment, settings.reminderWeeks]);
+  }, [rows, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
   const filteredRows = useMemo(() => sortedRows.filter(r => {
     const phoneKey = normPhone(r.phone); const nameKey = (r.client_name ?? "").trim().toLowerCase();
     const liveDate = (enrichment[phoneKey] ?? enrichment[nameKey])?.liveLastDate ?? null;
-    const st = effectiveStatus(r, liveDate, settings.reminderWeeks);
+    const effectiveRow = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r;
+    const st = effectiveStatus(effectiveRow, liveDate, settings.reminderWeeks);
     const matchFilter =
       filter === "All" ||
       (filter === "On Track"     && st === "ON TRACK") ||
@@ -924,14 +1077,14 @@ const AdminLoyalty = () => {
       (filter === "Overdue"      && st === "OVERDUE");
     const matchSearch = !search || (r.client_name ?? "").toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
-  }), [sortedRows, filter, search, enrichment, settings.reminderWeeks]);
+  }), [sortedRows, filter, search, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
   const counts = useMemo(() => ({
     total:    rows.length,
-    onTrack:  rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); return effectiveStatus(r, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "ON TRACK"; }).length,
-    timeBook: rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); return effectiveStatus(r, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "TIME TO BOOK"; }).length,
-    overdue:  rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); return effectiveStatus(r, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "OVERDUE"; }).length,
-  }), [rows, enrichment, settings.reminderWeeks]);
+    onTrack:  rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); const row = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r; return effectiveStatus(row, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "ON TRACK"; }).length,
+    timeBook: rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); const row = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r; return effectiveStatus(row, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "TIME TO BOOK"; }).length,
+    overdue:  rows.filter(r => { const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase(); const row = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r; return effectiveStatus(row, (enrichment[k] ?? enrichment[n])?.liveLastDate, settings.reminderWeeks) === "OVERDUE"; }).length,
+  }), [rows, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
   const isLoading = loadingRows || loadingBookings;
 
@@ -948,12 +1101,21 @@ const AdminLoyalty = () => {
     selected.forEach(r => {
       const phoneKey = normPhone(r.phone); const nameKey = (r.client_name ?? "").trim().toLowerCase();
       const liveDate = (enrichment[phoneKey] ?? enrichment[nameKey])?.liveLastDate ?? null;
-      const norm = effectiveStatus(r, liveDate, settings.reminderWeeks);
+      const effectiveRow = optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r;
+      const norm = effectiveStatus(effectiveRow, liveDate, settings.reminderWeeks);
       const msg  = buildWaMessage(r.client_name, norm, settings.businessName, settings.serviceLabel, settings.templates);
       window.open(waLink(r.phone!, msg), "_blank");
     });
     toast.success(`Opened ${selected.length} WhatsApp chat${selected.length > 1 ? "s" : ""}`);
     clearSelection();
+  };
+
+  // ─── Stat card filter shortcut (Hick's Law) ───
+  const STAT_FILTER_MAP: Record<string, Filter> = {
+    "On Track": "On Track",
+    "Time to Book": "Time to Book",
+    "Overdue": "Overdue",
+    "Total": "All",
   };
 
   return (
@@ -983,29 +1145,39 @@ const AdminLoyalty = () => {
         {activeTab === "Tracker" && (
           <motion.div key="tracker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-4">
 
-            {/* Stat cards */}
+            {/* Stat cards — tappable to set filter (Hick's Law shortcut) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
               {[
-                { label: "Total",        value: counts.total,    color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
-                { label: "On Track",     value: counts.onTrack,  color: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle, iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
-                { label: "Time to Book", value: counts.timeBook, color: "text-amber-400",   border: "border-amber-500/20",   icon: Clock,       iconColor: "text-amber-500/40",   bg: "bg-amber-500/[0.03]" },
-                { label: "Overdue",      value: counts.overdue,  color: "text-red-400",     border: "border-red-500/20",     icon: AlertCircle, iconColor: "text-red-500/40",     bg: "bg-red-500/[0.03]" },
+                { label: "Total",        value: counts.total,    pct: null,                                                         color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
+                { label: "On Track",     value: counts.onTrack,  pct: counts.total ? Math.round(counts.onTrack / counts.total * 100) : null,  color: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle, iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
+                { label: "Time to Book", value: counts.timeBook, pct: counts.total ? Math.round(counts.timeBook / counts.total * 100) : null, color: "text-amber-400",   border: "border-amber-500/20",   icon: Clock,       iconColor: "text-amber-500/40",   bg: "bg-amber-500/[0.03]" },
+                { label: "Overdue",      value: counts.overdue,  pct: counts.total ? Math.round(counts.overdue / counts.total * 100) : null,  color: "text-red-400",     border: "border-red-500/20",     icon: AlertCircle, iconColor: "text-red-500/40",     bg: "bg-red-500/[0.03]" },
               ].map((s, idx) => {
                 const Icon = s.icon;
+                const targetFilter = STAT_FILTER_MAP[s.label];
+                const isActive = filter === targetFilter;
                 return (
-                  <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
-                    className={`rounded-2xl border ${s.bg || "bg-white/[0.02]"} ${s.border} p-3 sm:p-4 flex items-start justify-between gap-2`}>
+                  <motion.button
+                    key={s.label}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
+                    onClick={() => { setFilter(targetFilter); setActiveTab("Tracker"); }}
+                    className={`rounded-2xl border ${s.bg || "bg-white/[0.02]"} ${s.border} p-3 sm:p-4 flex items-start justify-between gap-2 text-left transition-all hover:opacity-90 active:scale-[0.98] ${isActive ? "ring-1 ring-white/20" : ""}`}
+                  >
                     <div>
                       <p className="text-[9px] sm:text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-1">{s.label}</p>
                       <p className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</p>
+                      {/* Pareto: show % to frame urgency proportionally */}
+                      {s.pct !== null && (
+                        <p className="text-[9px] text-white/25 mt-0.5">{s.pct}% of clients</p>
+                      )}
                     </div>
                     <Icon className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${s.iconColor}`} />
-                  </motion.div>
+                  </motion.button>
                 );
               })}
             </div>
 
-            {/* Recommendations */}
+            {/* Recommendations — collapsed into a drawer (Cognitive Load) */}
             <AnimatePresence>
               {!isLoading && candidates.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
@@ -1049,15 +1221,6 @@ const AdminLoyalty = () => {
                   </div>
                 </motion.div>
               )}
-              {!isLoading && candidates.length === 0 && allBookings.length > 0 && rows.length === 0 && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 flex items-center gap-3">
-                  <Sparkles className="w-4 h-4 text-white/20 shrink-0" />
-                  <p className="text-[11px] text-white/30 leading-relaxed">
-                    No clients qualify yet. Try lowering minimum bookings or updating the service keyword in Settings.
-                  </p>
-                </motion.div>
-              )}
             </AnimatePresence>
 
             {/* Toolbar */}
@@ -1090,24 +1253,27 @@ const AdminLoyalty = () => {
                 </button>
               </div>
 
-              {/* Bulk action bar — appears when rows are selected */}
+              {/* Bulk action bar — Cancel LEFT, Send WA RIGHT (Serial Position Effect) */}
               <AnimatePresence>
                 {selectedIds.size > 0 && (
                   <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20">
+                    {/* Cancel — leftmost (Serial Position) */}
+                    <button onClick={clearSelection} className="text-white/25 hover:text-white/60 transition-colors shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                     <span className="text-[11px] font-semibold text-emerald-400 flex-1">
                       {selectedIds.size} selected
                     </span>
                     <button onClick={selectAll}
                       className="text-[11px] text-white/40 hover:text-white/70 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.05]">
-                      Select all ({filteredRows.length})
+                      All ({filteredRows.length})
                     </button>
+                    {/* Send WA — rightmost primary action (Serial Position) */}
                     <button onClick={openBulkWA}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/30 transition-colors">
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                      style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)", color: "#25D366" }}>
                       <Send className="w-3 h-3" /> Send WA
-                    </button>
-                    <button onClick={clearSelection} className="text-white/25 hover:text-white/60 transition-colors">
-                      <X className="w-3.5 h-3.5" />
                     </button>
                   </motion.div>
                 )}
@@ -1120,15 +1286,26 @@ const AdminLoyalty = () => {
             ) : filteredRows.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-white/[0.04] flex items-center justify-center mb-1">
-                  <Star className="w-6 h-6 text-white/20" />
+                {/* Empty state: Sparkles + UserPlus instead of Star (correct semantic) */}
+                <div className="w-12 h-12 rounded-full bg-emerald-500/[0.07] flex items-center justify-center mb-1">
+                  <Sparkles className="w-6 h-6 text-emerald-400/40" />
                 </div>
                 <p className="text-sm font-medium text-white/40">
                   {rows.length === 0 ? "No clients enrolled yet." : "No clients match this filter."}
                 </p>
-                <p className="text-xs text-white/20">
-                  {rows.length === 0 ? "Enroll clients using the recommendations above." : "Try a different filter or search term."}
-                </p>
+                {rows.length === 0 ? (
+                  <button
+                    onClick={() => {
+                      // Scroll to recommendations if available
+                      document.querySelector("[data-recommendations]")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" /> Enroll your first client
+                  </button>
+                ) : (
+                  <p className="text-xs text-white/20">Try a different filter or search term.</p>
+                )}
               </motion.div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -1142,7 +1319,13 @@ const AdminLoyalty = () => {
                     reminderWeeks={settings.reminderWeeks}
                     selected={selectedIds.has(r.id)}
                     onToggleSelect={() => toggleSelect(r.id)}
-                    onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty", tenantId] })}
+                    onUpdated={() => {
+                      // Clear optimistic override once server confirms
+                      setOptimisticStatuses(prev => { const n = { ...prev }; delete n[r.id]; return n; });
+                      qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
+                    }}
+                    optimisticStatus={optimisticStatuses[r.id] ?? null}
+                    onOptimisticStatus={(s) => setOptimisticStatuses(prev => ({ ...prev, [r.id]: s }))}
                   />
                 ))}
               </div>
@@ -1151,6 +1334,7 @@ const AdminLoyalty = () => {
         )}
       </AnimatePresence>
 
+      {/* Enroll modal */}
       <AnimatePresence>
         {enrolling && (
           <EnrollModal
@@ -1158,6 +1342,13 @@ const AdminLoyalty = () => {
             onConfirm={(name, phone, notes, lastBooking, nextDue) => enroll({ name, phone, notes, lastBooking, nextDue })}
             saving={enrollPending} serviceLabel={settings.serviceLabel}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Peak-End celebration */}
+      <AnimatePresence>
+        {celebrateName && (
+          <EnrollSuccessCelebration name={celebrateName} onDone={() => setCelebrateName(null)} />
         )}
       </AnimatePresence>
     </div>
