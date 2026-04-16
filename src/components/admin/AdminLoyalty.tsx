@@ -7,9 +7,9 @@ import {
   Loader2, MessageCircle, Search, X, UserPlus,
   Sparkles, Clock, CheckCircle, AlertCircle, Star,
   Download, Eye, Pencil, Check, StickyNote, Settings2, Save,
-  Users, Phone,
+  Users,
 } from "lucide-react";
-import { format, subDays, addDays, isAfter, parseISO, startOfDay } from "date-fns";
+import { format, subDays, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 
 // ─── Types ───
@@ -21,7 +21,6 @@ interface LoyaltyRow {
   status: string | null;
   last_wax_date: string | number | null;
   next_due_date: string | number | null;
-  pack_progress: string | number | null;
   notes: string | null;
   last_contacted_at: string | null;
   updated_by: string | null;
@@ -33,11 +32,12 @@ interface EnrollCandidate {
   phone:        string;
   bookingCount: number;
   totalSpend:   number;
-  lastWaxDate?: string;
+  lastBookingDate: string;
   nextDueDate?: string;
+  daysSinceLastBooking: number;
 }
 
-// ─── Excel serial date → ISO string (yyyy-MM-dd) ───
+// ─── Excel serial date → ISO string ───
 function excelToISO(serial: number | string | null | undefined): string | null {
   if (!serial) return null;
   const str = String(serial).trim();
@@ -103,16 +103,25 @@ const STATUS_ICON: Record<string, React.ElementType> = {
   "UNKNOWN":      Clock,
 };
 
-// ─── WA message uses tenant business name + configurable service label ───
-function waMessage(name: string, status: string, businessName: string, serviceLabel: string): string {
+// ─── WA message builder — uses saved templates with variable substitution ───
+function buildWaMessage(
+  name: string,
+  status: string,
+  businessName: string,
+  serviceLabel: string,
+  templates: { overdue: string; timeToBook: string; onTrack: string }
+): string {
   const biz = businessName || "us";
   const svc = serviceLabel || "appointment";
-  if (status === "OVERDUE") {
-    return `Hi ${name}! ✨ We miss you at ${biz}. You're overdue for your ${svc} — let's get you booked in! Reply to grab a slot.`;
-  } else if (status === "TIME TO BOOK") {
-    return `Hi ${name}! 📅 It's time to book your next ${svc} at ${biz}. Reply and we'll sort out the perfect time for you!`;
-  }
-  return `Hi ${name}! Just a friendly reminder from ${biz} — looking forward to seeing you soon! 💖`;
+  const substitute = (tpl: string) =>
+    tpl
+      .replace(/\{name\}/g, name)
+      .replace(/\{business\}/g, biz)
+      .replace(/\{service\}/g, svc);
+
+  if (status === "OVERDUE")      return substitute(templates.overdue);
+  if (status === "TIME TO BOOK") return substitute(templates.timeToBook);
+  return substitute(templates.onTrack);
 }
 
 function waLink(phone: string, msg: string): string {
@@ -123,50 +132,23 @@ function waLink(phone: string, msg: string): string {
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
-function parsePackProgress(raw: string | number | null | undefined, defaultTotal = 10): { used: number; total: number } | null {
-  if (!raw || String(raw).toLowerCase().includes("no pack")) return null;
-  const str = String(raw);
-  const match = str.match(/(\d+)\s*\/\s*(\d+)/);
-  if (match) return { used: parseInt(match[1]), total: parseInt(match[2]) };
-  const n = parseInt(str);
-  if (!isNaN(n)) return { used: n, total: defaultTotal };
-  return null;
-}
-
-// ─── PackPill ───
-const PackPill = ({ raw, defaultTotal = 10 }: { raw: string | number | null | undefined; defaultTotal?: number }) => {
-  const pack = parsePackProgress(raw, defaultTotal);
-  if (!pack) return <span className="text-white/25 text-xs">—</span>;
-  const pct = Math.min((pack.used / pack.total) * 100, 100);
-  const color = pct >= 80 ? "bg-emerald-400" : pct >= 50 ? "bg-amber-400/80" : "bg-white/30";
-  return (
-    <div className="flex flex-col gap-1 min-w-[72px]">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-white/50">{pack.used}/{pack.total}</span>
-        <span className="text-[10px] text-white/30">{Math.round(pct)}%</span>
-      </div>
-      <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-};
-
 // ─── WA Preview — safe viewport positioning ───
 const WaPreview = ({
-  name, status, phone, businessName, serviceLabel,
+  name, status, phone, businessName, serviceLabel, templates,
 }: {
-  name: string; status: string; phone: string; businessName: string; serviceLabel: string;
+  name: string; status: string; phone: string;
+  businessName: string; serviceLabel: string;
+  templates: { overdue: string; timeToBook: string; onTrack: string };
 }) => {
   const [show, setShow] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [above, setAbove] = useState(false);
-  const msg = waMessage(name, status, businessName, serviceLabel);
+  const msg = buildWaMessage(name, status, businessName, serviceLabel, templates);
 
   useEffect(() => {
     if (show && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setAbove(rect.bottom + 160 > window.innerHeight);
+      setAbove(rect.bottom + 180 > window.innerHeight);
     }
   }, [show]);
 
@@ -199,7 +181,7 @@ const WaPreview = ({
               initial={{ opacity: 0, scale: 0.92, y: above ? -4 : 4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: above ? -4 : 4 }}
-              className={`absolute ${above ? "bottom-full mb-2" : "top-full mt-2"} left-0 z-30 w-72 rounded-xl border border-white/[0.12] bg-[#161616] shadow-xl p-3`}
+              className={`absolute ${above ? "bottom-full mb-2" : "top-full mt-2"} left-0 z-30 w-[min(288px,90vw)] rounded-xl border border-white/[0.12] bg-[#161616] shadow-xl p-3`}
             >
               <p className="text-[10px] tracking-widest uppercase text-white/30 mb-1.5">WA Message Preview</p>
               <p className="text-[12px] text-white/70 leading-relaxed">{msg}</p>
@@ -293,14 +275,15 @@ const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
       .eq("id", rowId)
       .eq("tenant_id", tenantId);
     setSaving(false);
-    if (error) { toast.error("Failed to save notes"); } else { toast.success("Notes saved"); setEditing(false); onUpdated(); }
+    if (error) { toast.error("Failed to save notes"); }
+    else { toast.success("Notes saved"); setEditing(false); onUpdated(); }
   };
 
   if (!editing) {
     return (
       <button
         onClick={e => { e.stopPropagation(); setValue(current ?? ""); setEditing(true); }}
-        className="flex items-start gap-1 max-w-[220px] group"
+        className="flex items-start gap-1 w-full group text-left"
         title="Edit notes"
       >
         <StickyNote className="w-3 h-3 mt-0.5 shrink-0 text-white/25 group-hover:text-white/50 transition-colors" />
@@ -312,105 +295,54 @@ const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
   }
 
   return (
-    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+    <div className="flex items-center gap-1.5 w-full" onClick={e => e.stopPropagation()}>
       <input
         autoFocus
         value={value}
         onChange={e => setValue(e.target.value)}
         onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
-        className="text-[11px] bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-white/80 focus:outline-none focus:border-emerald-400/40 w-48"
+        className="text-[11px] bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-white/80 focus:outline-none focus:border-emerald-400/40 flex-1 min-w-0"
         placeholder="Add notes…"
       />
-      <button onClick={save} disabled={saving} className="text-emerald-400 hover:text-emerald-300 transition-colors">
+      <button onClick={save} disabled={saving} className="text-emerald-400 hover:text-emerald-300 transition-colors shrink-0">
         {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
       </button>
-      <button onClick={() => setEditing(false)} className="text-white/25 hover:text-white/60 transition-colors">
+      <button onClick={() => setEditing(false)} className="text-white/25 hover:text-white/60 transition-colors shrink-0">
         <X className="w-3 h-3" />
       </button>
     </div>
   );
 };
 
-// ─── InlinePackEditor ───
-const InlinePackEditor = ({ rowId, current, tenantId, onUpdated }: {
-  rowId: string; current: string | number | null; tenantId: string; onUpdated: () => void;
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(current ? String(current) : "");
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from("loyalty_tracker")
-      .update({ pack_progress: value, updated_at: new Date().toISOString() })
-      .eq("id", rowId)
-      .eq("tenant_id", tenantId);
-    setSaving(false);
-    if (error) { toast.error("Failed to update pack"); } else { toast.success("Pack updated"); setEditing(false); onUpdated(); }
-  };
-
-  if (!editing) {
-    return (
-      <button
-        onClick={e => { e.stopPropagation(); setValue(current ? String(current) : ""); setEditing(true); }}
-        className="group"
-        title="Edit pack progress"
-      >
-        <span className="text-[10px] text-white/25 group-hover:text-white/50 italic transition-colors">
-          {current && !String(current).toLowerCase().includes("no pack") ? String(current) : "No pack"}
-        </span>
-        <Pencil className="inline w-2.5 h-2.5 ml-1 opacity-0 group-hover:opacity-50 transition-opacity" />
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-      <input
-        autoFocus
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
-        className="text-[11px] bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-white/80 focus:outline-none focus:border-emerald-400/40 w-20"
-        placeholder="e.g. 3/10"
-      />
-      <button onClick={save} disabled={saving} className="text-emerald-400 hover:text-emerald-300 transition-colors">
-        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-      </button>
-      <button onClick={() => setEditing(false)} className="text-white/25 hover:text-white/60 transition-colors">
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-  );
-};
-
+// ─── EnrollModal ───
 const EnrollModal = ({
   candidate, onClose, onConfirm, saving, serviceLabel,
 }: {
   candidate: EnrollCandidate;
   onClose: () => void;
-  onConfirm: (name: string, phone: string, notes: string, lastWax: string, nextDue: string) => void;
+  onConfirm: (name: string, phone: string, notes: string, lastBooking: string, nextDue: string) => void;
   saving: boolean;
   serviceLabel: string;
 }) => {
-  const [name, setName]       = useState(candidate.client_name);
-  const [phone, setPhone]     = useState(candidate.phone);
-  const [notes, setNotes]     = useState("");
-  const [lastWax, setLastWax] = useState(candidate.lastWaxDate ?? "");
-  const [nextDue, setNextDue] = useState(candidate.nextDueDate ?? "");
+  const [name, setName]         = useState(candidate.client_name);
+  const [phone, setPhone]       = useState(candidate.phone);
+  const [notes, setNotes]       = useState("");
+  const [lastBooking, setLastBooking] = useState(candidate.lastBookingDate ?? "");
+  const [nextDue, setNextDue]   = useState(candidate.nextDueDate ?? "");
   const svcLabel = serviceLabel || "service";
 
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 340, damping: 28 }}
-        className="w-full max-w-sm rounded-2xl border border-white/[0.1] bg-[#0f0f0f] p-5 flex flex-col gap-4"
+        initial={{ y: "100%", opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: "100%", opacity: 0 }}
+        transition={{ type: "spring", stiffness: 340, damping: 32 }}
+        className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-white/[0.1] bg-[#0f0f0f] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -420,7 +352,7 @@ const EnrollModal = ({
           </button>
         </div>
         <div className="rounded-lg bg-emerald-400/[0.06] border border-emerald-400/[0.12] px-3 py-2.5 text-[11px] text-emerald-400/80">
-          {candidate.bookingCount} bookings · R {candidate.totalSpend.toLocaleString()} total spend
+          {candidate.bookingCount} bookings · R {candidate.totalSpend.toLocaleString()} total spend · Last booked {candidate.daysSinceLastBooking}d ago
         </div>
         <div className="flex flex-col gap-3">
           {[
@@ -434,8 +366,8 @@ const EnrollModal = ({
             </div>
           ))}
           <div className="flex flex-col gap-1">
-            <label htmlFor="loyalty-last-wax" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last {svcLabel} Date</label>
-            <input id="loyalty-last-wax" name="last-wax-date" type="date" value={lastWax} onChange={e => setLastWax(e.target.value)}
+            <label htmlFor="loyalty-last-booking" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last {svcLabel} Date</label>
+            <input id="loyalty-last-booking" name="last-booking-date" type="date" value={lastBooking} onChange={e => setLastBooking(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
           </div>
           <div className="flex flex-col gap-1">
@@ -446,12 +378,12 @@ const EnrollModal = ({
           <div className="flex flex-col gap-1">
             <label htmlFor="loyalty-notes" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Notes (optional)</label>
             <input id="loyalty-notes" name="loyalty-notes" value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder={`e.g. 3-pack candidate`}
+              placeholder="e.g. regular every 4 weeks"
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40" />
           </div>
         </div>
         <button
-          onClick={() => onConfirm(name, phone, notes, lastWax, nextDue)}
+          onClick={() => onConfirm(name, phone, notes, lastBooking, nextDue)}
           disabled={saving || !name.trim()}
           className="w-full py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
         >
@@ -481,11 +413,10 @@ function resolvePhone(b: any): string {
 const FILTERS = ["All", "On Track", "Time to Book", "Overdue"] as const;
 type Filter = typeof FILTERS[number];
 
-// ─── CSV export — includes tenant slug in filename ───
 function exportCSV(rows: LoyaltyRow[], tenantSlug: string, serviceLabel: string) {
   if (!rows.length) return;
   const svcLabel = serviceLabel || "service";
-  const headers = ["Client Name", "Phone", "Status", `Last ${svcLabel} Date`, "Next Due Date", "Pack Progress", "Notes", "Last Contacted"];
+  const headers = ["Client Name", "Phone", "Status", `Last ${svcLabel} Date`, "Next Due Date", "Notes", "Last Contacted"];
   const lines = [
     headers.join(","),
     ...rows.map(r => [
@@ -494,7 +425,6 @@ function exportCSV(rows: LoyaltyRow[], tenantSlug: string, serviceLabel: string)
       `"${effectiveStatus(r)}"`,
       `"${r.last_wax_date ?? ""}"`,
       `"${r.next_due_date ?? ""}"`,
-      `"${r.pack_progress ?? ""}"`,
       `"${(r.notes ?? "").replace(/"/g, '""')}"`,
       `"${r.last_contacted_at ?? ""}"`,
     ].join(",")),
@@ -509,14 +439,20 @@ function exportCSV(rows: LoyaltyRow[], tenantSlug: string, serviceLabel: string)
 }
 
 // ─── Default setting values ───
+const DEFAULT_TPL_OVERDUE   = "Hi {name}! ✨ We miss you at {business}. You're overdue for your {service} — let's get you booked in! Reply to grab a slot.";
+const DEFAULT_TPL_TIMEBOOK  = "Hi {name}! 📅 It's time to book your next {service} at {business}. Reply and we'll sort out the perfect time for you!";
+const DEFAULT_TPL_ONTRACK   = "Hi {name}! Just a friendly reminder from {business} — looking forward to seeing you soon! 💖";
+
 const SETTING_DEFAULTS = {
-  loyalty_qualifying_service: "hollywood",
-  loyalty_min_bookings:       "2",
-  loyalty_reminder_weeks:     "4",
-  loyalty_lookback_days:      "365",
-  loyalty_service_label:      "wax",
-  loyalty_pack_size:          "10",
-  loyalty_business_name:      "",
+  loyalty_qualifying_service:  "hollywood",
+  loyalty_min_bookings:        "2",
+  loyalty_reminder_weeks:      "4",
+  loyalty_lookback_days:       "365",
+  loyalty_service_label:       "wax",
+  loyalty_business_name:       "",
+  loyalty_tpl_overdue:         DEFAULT_TPL_OVERDUE,
+  loyalty_tpl_timebook:        DEFAULT_TPL_TIMEBOOK,
+  loyalty_tpl_ontrack:         DEFAULT_TPL_ONTRACK,
 };
 
 type SettingKey = keyof typeof SETTING_DEFAULTS;
@@ -547,7 +483,6 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
   const [local, setLocal] = useState<Record<SettingKey, string>>(initialValues);
   useMemo(() => setLocal(initialValues), [initialValues]);
 
-  // ─── Batch upsert — single round-trip instead of sequential loop ───
   const { mutate: saveSettings, isPending: saving } = useMutation({
     mutationFn: async (vals: Record<SettingKey, string>) => {
       const { error } = await supabase
@@ -564,56 +499,56 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Loyalty settings saved");
+      toast.success("Settings saved");
       qc.invalidateQueries({ queryKey: ["loyalty-settings", tenantId] });
-      qc.invalidateQueries({ queryKey: ["loyalty-reco-bookings"] });
+      qc.invalidateQueries({ queryKey: ["loyalty-reco-bookings", tenantId] });
     },
     onError: () => toast.error("Failed to save settings"),
   });
 
-  const fields: { key: SettingKey; label: string; hint: string; type: "text" | "number" }[] = [
+  const coreFields: { key: SettingKey; label: string; hint: string; type: "text" | "number" }[] = [
     {
       key: "loyalty_business_name",
       label: "Business Name",
-      hint: "Used in WhatsApp messages sent to clients. E.g. \"Phenome Beauty\". Leave blank to fall back to your account name.",
+      hint: "Used in WA messages as {business}. E.g. \"Phenome Beauty\".",
       type: "text",
     },
     {
       key: "loyalty_service_label",
       label: "Service Label",
-      hint: "The word used for the service in messages and column headers. E.g. \"wax\", \"cut\", \"treatment\".",
+      hint: "Used in WA messages as {service}. E.g. \"wax\", \"cut\", \"facial\".",
       type: "text",
     },
     {
       key: "loyalty_qualifying_service",
       label: "Qualifying Service Keyword",
-      hint: "Only clients who booked a service containing this keyword will be recommended. Case-insensitive. E.g. \"hollywood\"",
+      hint: "Keyword to match service names when scanning bookings. Case-insensitive.",
       type: "text",
     },
     {
       key: "loyalty_min_bookings",
-      label: "Minimum Bookings to Qualify",
-      hint: "Clients with at least this many qualifying bookings in the lookback window will be suggested for enrollment.",
+      label: "Min Bookings to Qualify",
+      hint: "Minimum number of qualifying bookings before a client is recommended.",
       type: "number",
     },
     {
       key: "loyalty_reminder_weeks",
       label: "Reminder Interval (weeks)",
-      hint: "How many weeks after the last service to set the suggested next due date.",
+      hint: "Weeks after last booking to suggest next due date.",
       type: "number",
     },
     {
       key: "loyalty_lookback_days",
-      label: "Recommendation Lookback (days)",
-      hint: "How far back to scan bookings when generating enrollment recommendations.",
+      label: "Lookback Window (days)",
+      hint: "How far back to scan bookings for recommendations.",
       type: "number",
     },
-    {
-      key: "loyalty_pack_size",
-      label: "Default Pack Size",
-      hint: "Fallback total when pack progress is stored as a single number (e.g. \"3\" → \"3/10\"). E.g. 5, 8, 10.",
-      type: "number",
-    },
+  ];
+
+  const tplFields: { key: SettingKey; label: string; status: string }[] = [
+    { key: "loyalty_tpl_overdue",  label: "Overdue Message",      status: "OVERDUE" },
+    { key: "loyalty_tpl_timebook", label: "Time to Book Message",  status: "TIME TO BOOK" },
+    { key: "loyalty_tpl_ontrack",  label: "On Track Message",      status: "ON TRACK" },
   ];
 
   if (isLoading) {
@@ -626,17 +561,14 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 flex flex-col gap-5">
-        <div className="flex items-center gap-2 mb-1">
+      {/* Core settings */}
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5 flex flex-col gap-5">
+        <div className="flex items-center gap-2">
           <Settings2 className="w-4 h-4 text-white/40" />
-          <p className="text-sm font-semibold text-white/70">Loyalty Programme Settings</p>
+          <p className="text-sm font-semibold text-white/70">Programme Settings</p>
         </div>
-        <p className="text-[11px] text-white/30 leading-relaxed -mt-3">
-          These settings control how the recommendation engine surfaces clients, how due-date reminders are calculated, and how WhatsApp messages are personalised for your business.
-        </p>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {fields.map(f => (
+          {coreFields.map(f => (
             <div key={f.key} className="flex flex-col gap-1.5">
               <label htmlFor={`loyalty-setting-${f.key}`} className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/35">
                 {f.label}
@@ -654,41 +586,55 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
             </div>
           ))}
         </div>
-
-        <div className="flex justify-end pt-1">
-          <button
-            onClick={() => saveSettings(local)}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-colors disabled:opacity-40"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? "Saving…" : "Save Settings"}
-          </button>
-        </div>
       </div>
 
-      {/* Live preview */}
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 flex flex-col gap-3">
-        <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">Live Preview</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Business name",  value: local.loyalty_business_name || "(not set)" },
-            { label: "Service label",  value: local.loyalty_service_label || "wax" },
-            { label: "Service filter", value: `"${local.loyalty_qualifying_service}"` },
-            { label: "Min bookings",   value: `${local.loyalty_min_bookings}+` },
-            { label: "Reminder every", value: `${local.loyalty_reminder_weeks} wks` },
-            { label: "Scan last",      value: `${local.loyalty_lookback_days} days` },
-            { label: "Default pack",   value: `/${local.loyalty_pack_size}` },
-          ].map(p => (
-            <div key={p.label} className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 flex flex-col gap-1">
-              <p className="text-[9px] tracking-[0.12em] uppercase text-white/25">{p.label}</p>
-              <p className="text-sm font-bold text-white/70 truncate">{p.value}</p>
+      {/* WhatsApp templates */}
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="w-4 h-4 text-emerald-400/60" />
+          <p className="text-sm font-semibold text-white/70">WhatsApp Message Templates</p>
+        </div>
+        <p className="text-[11px] text-white/30 leading-relaxed -mt-2">
+          Use <span className="text-white/50 font-mono">{"{name}"}</span>, <span className="text-white/50 font-mono">{"{business}"}</span>, and <span className="text-white/50 font-mono">{"{service}"}</span> as placeholders — they are replaced automatically when sending.
+        </p>
+        <div className="flex flex-col gap-4">
+          {tplFields.map(f => (
+            <div key={f.key} className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[f.status] ?? ""}`}>{f.status}</span>
+                <label htmlFor={`loyalty-tpl-${f.key}`} className="text-[10px] font-semibold tracking-[0.1em] uppercase text-white/35">{f.label}</label>
+              </div>
+              <textarea
+                id={`loyalty-tpl-${f.key}`}
+                name={f.key}
+                rows={3}
+                value={local[f.key]}
+                onChange={e => setLocal(prev => ({ ...prev, [f.key]: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors resize-none leading-relaxed"
+              />
+              {/* Live preview */}
+              <p className="text-[10px] text-white/25 italic leading-relaxed">
+                Preview: {
+                  local[f.key]
+                    .replace(/\{name\}/g, "Sarah")
+                    .replace(/\{business\}/g, local.loyalty_business_name || "Your Business")
+                    .replace(/\{service\}/g, local.loyalty_service_label || "wax")
+                }
+              </p>
             </div>
           ))}
         </div>
-        <p className="text-[10px] text-white/20 leading-relaxed">
-          Clients who booked a service matching <span className="text-white/40">"{local.loyalty_qualifying_service}"</span> at least <span className="text-white/40">{local.loyalty_min_bookings} times</span> in the last <span className="text-white/40">{local.loyalty_lookback_days} days</span> will be recommended. Next due date is set <span className="text-white/40">{local.loyalty_reminder_weeks} weeks</span> after the last qualifying booking. WA messages will reference <span className="text-white/40">"{local.loyalty_business_name || "your business"}"</span> and the word <span className="text-white/40">"{local.loyalty_service_label || "wax"}"</span>.
-        </p>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => saveSettings(local)}
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-colors disabled:opacity-40"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {saving ? "Saving…" : "Save Settings"}
+        </button>
       </div>
     </div>
   );
@@ -698,12 +644,13 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
 const MAIN_TABS = ["Tracker", "Settings"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
-// ─── Client card row ───
+// ─── Client card row — mobile-first ───
 const ClientRow = ({
-  r, i, tenantId, businessName, serviceLabel, packSize, onUpdated,
+  r, i, tenantId, businessName, serviceLabel, templates, onUpdated,
 }: {
   r: LoyaltyRow; i: number; tenantId: string;
-  businessName: string; serviceLabel: string; packSize: number;
+  businessName: string; serviceLabel: string;
+  templates: { overdue: string; timeToBook: string; onTrack: string };
   onUpdated: () => void;
 }) => {
   const norm = effectiveStatus(r);
@@ -712,8 +659,7 @@ const ClientRow = ({
     norm === "TIME TO BOOK" ? "border-l-2 border-l-amber-500/40" :
     norm === "ON TRACK"     ? "border-l-2 border-l-emerald-500/30" :
     "border-l-2 border-l-white/[0.04]";
-
-  const svcLabel = serviceLabel || "wax";
+  const svcLabel = serviceLabel || "service";
 
   return (
     <motion.div
@@ -722,8 +668,8 @@ const ClientRow = ({
       transition={{ delay: Math.min(i * 0.03, 0.3) }}
       className={`rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.035] transition-colors ${rowAccent} overflow-hidden`}
     >
-      {/* ── Main row ── */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      {/* ── Top row: avatar + name + status + WA ── */}
+      <div className="flex items-center gap-2.5 px-3 py-3">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold
           ${norm === "OVERDUE" ? "bg-red-500/10 text-red-400" :
             norm === "TIME TO BOOK" ? "bg-amber-500/10 text-amber-400" :
@@ -731,14 +677,15 @@ const ClientRow = ({
           {(r.client_name ?? "?")[0].toUpperCase()}
         </div>
 
+        {/* Name + phone */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white/85 truncate">{r.client_name}</p>
-          {r.phone
-            ? <p className="text-[10px] text-white/30 truncate">{r.phone}</p>
-            : <p className="text-[10px] text-white/20 italic">No phone on file</p>
-          }
+          <p className="text-sm font-semibold text-white/85 truncate leading-tight">{r.client_name}</p>
+          <p className="text-[10px] text-white/30 truncate">
+            {r.phone || <span className="italic text-white/20">No phone</span>}
+          </p>
         </div>
 
+        {/* Status pill */}
         <div className="shrink-0">
           <InlineStatusEditor
             rowId={r.id}
@@ -749,6 +696,7 @@ const ClientRow = ({
           />
         </div>
 
+        {/* WA button */}
         <div className="shrink-0">
           {r.phone
             ? <WaPreview
@@ -757,14 +705,15 @@ const ClientRow = ({
                 phone={r.phone}
                 businessName={businessName}
                 serviceLabel={svcLabel}
+                templates={templates}
               />
             : <span className="text-white/20 text-xs">—</span>
           }
         </div>
       </div>
 
-      {/* ── Detail strip ── */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 pb-3 border-t border-white/[0.04] pt-2.5">
+      {/* ── Detail strip — 2-col grid on mobile ── */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 px-3 pb-3 border-t border-white/[0.04] pt-2.5">
         <div className="flex flex-col gap-0.5">
           <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last {svcLabel}</span>
           <span className="text-[11px] text-white/55">
@@ -783,15 +732,6 @@ const ClientRow = ({
           </span>
         </div>
 
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Pack</span>
-          <div className="flex items-center gap-1.5">
-            <PackPill raw={r.pack_progress} defaultTotal={packSize} />
-            <InlinePackEditor rowId={r.id} current={r.pack_progress} tenantId={tenantId} onUpdated={onUpdated} />
-          </div>
-        </div>
-
-        {/* Last contacted */}
         {r.last_contacted_at && (
           <div className="flex flex-col gap-0.5">
             <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last Contacted</span>
@@ -801,8 +741,8 @@ const ClientRow = ({
           </div>
         )}
 
-        {/* Inline notes editor */}
-        <div className="flex items-start gap-1 max-w-[240px]">
+        {/* Notes — full width */}
+        <div className="col-span-2">
           <InlineNotesEditor rowId={r.id} current={r.notes} tenantId={tenantId} onUpdated={onUpdated} />
         </div>
       </div>
@@ -819,7 +759,6 @@ const AdminLoyalty = () => {
   const [search, setSearch]       = useState("");
   const [enrolling, setEnrolling] = useState<EnrollCandidate | null>(null);
 
-  // ─── Tenant-scoped sessionStorage key — prevents cross-tenant bleed ───
   const ENROLL_SAVED_KEY = `loyalty_enroll_saved_${tenantId}`;
 
   const [enrollSaved, setEnrollSaved] = useState<string[]>(() => {
@@ -837,11 +776,9 @@ const AdminLoyalty = () => {
     });
   };
 
-  const skipCandidate = (c: EnrollCandidate) => {
-    addEnrollSaved(c.client_name + c.phone);
-  };
+  const skipCandidate = (c: EnrollCandidate) => addEnrollSaved(c.client_name + c.phone);
 
-  // ─── Load loyalty settings ───
+  // ─── Load settings ───
   const { data: settingsRows = [] } = useQuery({
     queryKey: ["loyalty-settings", tenantId],
     queryFn: async () => {
@@ -864,8 +801,12 @@ const AdminLoyalty = () => {
       reminderWeeks:     Math.max(1, parseInt(map.loyalty_reminder_weeks) || 4),
       lookbackDays:      Math.max(7, parseInt(map.loyalty_lookback_days) || 365),
       serviceLabel:      map.loyalty_service_label || "wax",
-      packSize:          Math.max(1, parseInt(map.loyalty_pack_size) || 10),
       businessName:      map.loyalty_business_name || "",
+      templates: {
+        overdue:    map.loyalty_tpl_overdue   || DEFAULT_TPL_OVERDUE,
+        timeToBook: map.loyalty_tpl_timebook  || DEFAULT_TPL_TIMEBOOK,
+        onTrack:    map.loyalty_tpl_ontrack   || DEFAULT_TPL_ONTRACK,
+      },
     };
   }, [settingsRows]);
 
@@ -883,10 +824,14 @@ const AdminLoyalty = () => {
     },
   });
 
-  // ─── 2. Bookings for recommendation engine ───
+  // ─── 2. All bookings for recommendation engine ───
+  // FIX: no keyword filter at DB level — we apply it in JS so keyword being empty
+  // doesn't accidentally return zero rows. Also fetches ALL non-cancelled bookings
+  // within the lookback window so the engine always has data.
   const { data: recentBookings = [], isLoading: loadingBookings } = useQuery({
     queryKey: ["loyalty-reco-bookings", tenantId],
     queryFn: async () => {
+      const cutoffDate = format(subDays(new Date(), 365), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
         .select(`
@@ -898,6 +843,7 @@ const AdminLoyalty = () => {
         `)
         .eq("tenant_id", tenantId)
         .neq("status", "cancelled")
+        .gte("booking_date", cutoffDate)
         .order("booking_date", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -906,18 +852,17 @@ const AdminLoyalty = () => {
 
   // ─── 3. Enroll mutation ───
   const { mutate: enroll, isPending: enrollPending } = useMutation({
-    mutationFn: async ({ name, phone, notes, lastWax, nextDue }: {
-      name: string; phone: string; notes: string; lastWax: string; nextDue: string;
+    mutationFn: async ({ name, phone, notes, lastBooking, nextDue }: {
+      name: string; phone: string; notes: string; lastBooking: string; nextDue: string;
     }) => {
       const { error } = await supabase.from("loyalty_tracker").insert({
-        tenant_id:     tenantId,
-        client_name:   name,
+        tenant_id:   tenantId,
+        client_name: name,
         phone,
-        status:        "ON TRACK",
-        pack_progress: "No Pack Purchased",
+        status:      "ON TRACK",
         notes,
-        ...(lastWax ? { last_wax_date: lastWax } : {}),
-        ...(nextDue ? { next_due_date: nextDue } : {}),
+        ...(lastBooking ? { last_wax_date: lastBooking } : {}),
+        ...(nextDue     ? { next_due_date: nextDue }     : {}),
       });
       if (error) throw error;
     },
@@ -928,41 +873,49 @@ const AdminLoyalty = () => {
       setEnrolling(null);
     },
     onError: (err: any) => {
-      // Handle unique constraint violation gracefully
       if (err?.code === "23505") {
-        toast.error("This client is already enrolled (duplicate phone or name).");
+        toast.error("Client already enrolled.");
       } else {
         toast.error("Failed to enroll client.");
       }
     },
   });
 
-  // ─── Tracked phones/names for deduplication ───
-  const trackedPhones = useMemo(() => new Set(rows.map((r) => normPhone(r.phone))), [rows]);
-  const trackedNames  = useMemo(() => new Set(rows.map((r) => (r.client_name ?? "").trim().toLowerCase())), [rows]);
+  // ─── Deduplication sets ───
+  const trackedPhones = useMemo(() => new Set(rows.map(r => normPhone(r.phone))), [rows]);
+  const trackedNames  = useMemo(() => new Set(rows.map(r => (r.client_name ?? "").trim().toLowerCase())), [rows]);
 
   // ─── Recommendation engine ───
+  // Scans all bookings, groups by client key, finds latest booking date per client.
+  // A client qualifies if they have minBookings+ (matching keyword if set) within
+  // the lookback window AND haven't been enrolled yet.
   const candidates = useMemo(() => {
     const keyword = settings.qualifyingService;
     const cutoff  = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
+    const today   = new Date();
 
     const map = new Map<string, {
       name: string; phone: string; count: number; spend: number; lastBookingDate: string;
     }>();
 
     recentBookings.forEach((b: any) => {
-      if ((b.booking_date ?? "") < cutoff) return;
-      const items: any[] = b.booking_items ?? [];
-      const hasQualifying = keyword
-        ? items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))
-        : true;
-      if (!hasQualifying) return;
+      const bDate = b.booking_date ?? "";
+      if (bDate < cutoff) return;
+
+      // Apply keyword filter only when a keyword is configured
+      if (keyword) {
+        const items: any[] = b.booking_items ?? [];
+        const hasQualifying = items.some(
+          (it: any) => (it.service_name ?? "").toLowerCase().includes(keyword)
+        );
+        if (!hasQualifying) return;
+      }
 
       const key   = resolveKey(b);
       const name  = resolveName(b);
       const phone = resolvePhone(b);
-      const prev  = map.get(key) || { name, phone, count: 0, spend: 0, lastBookingDate: "" };
-      const bDate = b.booking_date ?? "";
+      const prev  = map.get(key) ?? { name, phone, count: 0, spend: 0, lastBookingDate: "" };
+
       map.set(key, {
         name,
         phone,
@@ -978,35 +931,39 @@ const AdminLoyalty = () => {
       .filter(([, v]) => !trackedNames.has(v.name.trim().toLowerCase()))
       .filter(([, v]) => !enrollSaved.includes(v.name + v.phone))
       .map(([, v]) => {
-        const lastWaxDate = v.lastBookingDate ?? "";
-        const nextDueSuggestion = lastWaxDate
-          ? format(addDays(new Date(lastWaxDate), settings.reminderWeeks * 7), "yyyy-MM-dd")
+        const lastBookingDate = v.lastBookingDate ?? "";
+        const nextDueSuggestion = lastBookingDate
+          ? format(addDays(new Date(lastBookingDate), settings.reminderWeeks * 7), "yyyy-MM-dd")
           : "";
+        const daysSince = lastBookingDate
+          ? differenceInDays(today, new Date(lastBookingDate))
+          : 0;
         return {
-          client_name:  v.name,
-          phone:        v.phone,
-          bookingCount: v.count,
-          totalSpend:   v.spend,
-          lastWaxDate,
-          nextDueDate:  nextDueSuggestion,
+          client_name:          v.name,
+          phone:                v.phone,
+          bookingCount:         v.count,
+          totalSpend:           v.spend,
+          lastBookingDate,
+          nextDueDate:          nextDueSuggestion,
+          daysSinceLastBooking: daysSince,
         } as EnrollCandidate;
       })
-      .sort((a, b) => b.bookingCount - a.bookingCount || b.totalSpend - a.totalSpend)
+      .sort((a, b) => b.daysSinceLastBooking - a.daysSinceLastBooking || b.bookingCount - a.bookingCount)
       .slice(0, 20);
   }, [recentBookings, trackedPhones, trackedNames, enrollSaved, settings]);
 
-  // ─── Sort tracker rows ───
+  // ─── Sort + filter tracker rows ───
   const sortedRows = useMemo(() => {
     const seen = new Set<string>();
     return [...rows]
-      .filter((r) => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
+      .filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
       .sort((a, b) =>
         (STATUS_ORDER[effectiveStatus(a)] ?? 3) - (STATUS_ORDER[effectiveStatus(b)] ?? 3)
       );
   }, [rows]);
 
   const filteredRows = useMemo(() =>
-    sortedRows.filter((r) => {
+    sortedRows.filter(r => {
       const st = effectiveStatus(r);
       const matchFilter =
         filter === "All" ||
@@ -1019,15 +976,15 @@ const AdminLoyalty = () => {
 
   const counts = useMemo(() => ({
     total:    rows.length,
-    onTrack:  rows.filter((r) => effectiveStatus(r) === "ON TRACK").length,
-    timeBook: rows.filter((r) => effectiveStatus(r) === "TIME TO BOOK").length,
-    overdue:  rows.filter((r) => effectiveStatus(r) === "OVERDUE").length,
+    onTrack:  rows.filter(r => effectiveStatus(r) === "ON TRACK").length,
+    timeBook: rows.filter(r => effectiveStatus(r) === "TIME TO BOOK").length,
+    overdue:  rows.filter(r => effectiveStatus(r) === "OVERDUE").length,
   }), [rows]);
 
   const isLoading = loadingRows || loadingBookings;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
 
       {/* ── Tab switcher ── */}
       <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] self-start">
@@ -1035,7 +992,7 @@ const AdminLoyalty = () => {
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all ${
               activeTab === t
                 ? "bg-white/[0.1] text-white border border-white/[0.12]"
                 : "text-white/35 hover:text-white/60"
@@ -1056,15 +1013,15 @@ const AdminLoyalty = () => {
         )}
 
         {activeTab === "Tracker" && (
-          <motion.div key="tracker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-5">
+          <motion.div key="tracker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-4">
 
-            {/* ── Summary stat cards ── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* ── Stat cards — 2 col on mobile, 4 on md ── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
               {[
-                { label: "Total Clients", value: counts.total,    color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
-                { label: "On Track",      value: counts.onTrack,  color: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle, iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
-                { label: "Time to Book",  value: counts.timeBook, color: "text-amber-400",   border: "border-amber-500/20",   icon: Clock,       iconColor: "text-amber-500/40",   bg: "bg-amber-500/[0.03]" },
-                { label: "Overdue",       value: counts.overdue,  color: "text-red-400",     border: "border-red-500/20",     icon: AlertCircle, iconColor: "text-red-500/40",     bg: "bg-red-500/[0.03]" },
+                { label: "Total",        value: counts.total,    color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
+                { label: "On Track",     value: counts.onTrack,  color: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle, iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
+                { label: "Time to Book", value: counts.timeBook, color: "text-amber-400",   border: "border-amber-500/20",   icon: Clock,       iconColor: "text-amber-500/40",   bg: "bg-amber-500/[0.03]" },
+                { label: "Overdue",      value: counts.overdue,  color: "text-red-400",     border: "border-red-500/20",     icon: AlertCircle, iconColor: "text-red-500/40",     bg: "bg-red-500/[0.03]" },
               ].map((s, idx) => {
                 const Icon = s.icon;
                 return (
@@ -1073,43 +1030,49 @@ const AdminLoyalty = () => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.04 }}
-                    className={`rounded-2xl border ${s.bg || "bg-white/[0.02]"} ${s.border} p-4 flex items-start justify-between gap-2`}
+                    className={`rounded-2xl border ${s.bg || "bg-white/[0.02]"} ${s.border} p-3 sm:p-4 flex items-start justify-between gap-2`}
                   >
                     <div>
-                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-1.5">{s.label}</p>
-                      <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                      <p className="text-[9px] sm:text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-1">{s.label}</p>
+                      <p className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</p>
                     </div>
-                    <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${s.iconColor}`} />
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${s.iconColor}`} />
                   </motion.div>
                 );
               })}
             </div>
 
-            {/* ── Recommendations banner ── */}
+            {/* ── Recommendations ── */}
             <AnimatePresence>
               {!isLoading && candidates.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 sm:p-5"
+                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                     <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-emerald-400/80">
-                      Recommended for Loyalty ({candidates.length})
+                      Recommended to Enroll ({candidates.length})
                     </p>
                   </div>
-                  <p className="text-[11px] text-white/35 mb-4 leading-relaxed">
-                    Clients with {settings.minBookings}+ qualifying "{settings.qualifyingService}" bookings in the last {settings.lookbackDays} days, not yet enrolled.
+                  <p className="text-[11px] text-white/35 mb-3 leading-relaxed">
+                    Clients with {settings.minBookings}+ {settings.qualifyingService ? `"${settings.qualifyingService}" ` : ""}bookings in the last {settings.lookbackDays} days, not yet enrolled. Sorted by most overdue.
                   </p>
                   <div className="flex flex-col gap-2">
                     {candidates.map(c => (
                       <div key={c.client_name + c.phone}
-                        className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
+                        className="flex items-start sm:items-center justify-between gap-2 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5"
+                      >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-white/80 truncate">{c.client_name}</p>
-                          <p className="text-[10px] text-white/35">{c.bookingCount} bookings · R{c.totalSpend.toLocaleString()}</p>
+                          <p className="text-[10px] text-white/35 leading-relaxed">
+                            {c.bookingCount} bookings · R{c.totalSpend.toLocaleString()} · last booked <span className={c.daysSinceLastBooking >= (settings.reminderWeeks * 7) ? "text-amber-400" : "text-white/40"}>{c.daysSinceLastBooking}d ago</span>
+                          </p>
+                          {c.nextDueDate && (
+                            <p className="text-[10px] text-white/25">Next due: {format(new Date(c.nextDueDate), "dd MMM yyyy")}</p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0 mt-1 sm:mt-0">
                           {c.phone && (
                             <WaPreview
                               name={c.client_name}
@@ -1117,18 +1080,19 @@ const AdminLoyalty = () => {
                               phone={c.phone}
                               businessName={settings.businessName}
                               serviceLabel={settings.serviceLabel}
+                              templates={settings.templates}
                             />
                           )}
                           <button
                             onClick={() => skipCandidate(c)}
-                            title="Dismiss this suggestion"
+                            title="Dismiss"
                             className="p-1.5 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.05] transition-colors"
                           >
                             <X className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => setEnrolling(c)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-colors"
+                            className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-colors whitespace-nowrap"
                           >
                             <UserPlus className="w-3 h-3" /> Enroll
                           </button>
@@ -1138,11 +1102,25 @@ const AdminLoyalty = () => {
                   </div>
                 </motion.div>
               )}
+
+              {/* No recommendations message when bookings exist but none qualify */}
+              {!isLoading && candidates.length === 0 && recentBookings.length > 0 && rows.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 flex items-center gap-3"
+                >
+                  <Sparkles className="w-4 h-4 text-white/20 shrink-0" />
+                  <p className="text-[11px] text-white/30 leading-relaxed">
+                    No clients qualify for recommendations yet. Try lowering the minimum bookings threshold or updating the qualifying service keyword in Settings.
+                  </p>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* ── Toolbar ── */}
-            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <div className="relative flex-1">
+            <div className="flex flex-col gap-2">
+              {/* Search */}
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
                 <input
                   id="loyalty-search"
@@ -1160,31 +1138,33 @@ const AdminLoyalty = () => {
                 )}
               </div>
 
-              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
-                {FILTERS.map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all
-                      ${filter === f
-                        ? "bg-white/[0.1] text-white border border-white/[0.18] shadow-sm"
-                        : "text-white/35 border border-white/[0.06] hover:text-white/60 hover:bg-white/[0.04]"
-                      }`}
-                  >
-                    {f}
-                  </button>
-                ))}
+              {/* Filters + export row */}
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1">
+                  {FILTERS.map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all
+                        ${filter === f
+                          ? "bg-white/[0.1] text-white border border-white/[0.18] shadow-sm"
+                          : "text-white/35 border border-white/[0.06] hover:text-white/60 hover:bg-white/[0.04]"
+                        }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => exportCSV(filteredRows, tenantId, settings.serviceLabel)}
+                  disabled={filteredRows.length === 0}
+                  title="Export to CSV"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.06] text-xs font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.05] transition-colors disabled:opacity-30 shrink-0"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
               </div>
-
-              <button
-                onClick={() => exportCSV(filteredRows, tenantId, settings.serviceLabel)}
-                disabled={filteredRows.length === 0}
-                title="Export to CSV"
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/[0.06] text-xs font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.05] transition-colors disabled:opacity-30 shrink-0"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Export CSV</span>
-              </button>
             </div>
 
             {/* ── Client list ── */}
@@ -1194,7 +1174,7 @@ const AdminLoyalty = () => {
               </div>
             ) : filteredRows.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-12 text-center flex flex-col items-center gap-3">
+                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-white/[0.04] flex items-center justify-center mb-1">
                   <Star className="w-6 h-6 text-white/20" />
                 </div>
@@ -1202,7 +1182,7 @@ const AdminLoyalty = () => {
                   {rows.length === 0 ? "No clients enrolled yet." : "No clients match this filter."}
                 </p>
                 <p className="text-xs text-white/20">
-                  {rows.length === 0 ? "Enroll your first client using the recommendations above." : "Try a different filter or search term."}
+                  {rows.length === 0 ? "Enroll clients using the recommendations above." : "Try a different filter or search term."}
                 </p>
               </motion.div>
             ) : (
@@ -1215,7 +1195,7 @@ const AdminLoyalty = () => {
                     tenantId={tenantId}
                     businessName={settings.businessName}
                     serviceLabel={settings.serviceLabel}
-                    packSize={settings.packSize}
+                    templates={settings.templates}
                     onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty", tenantId] })}
                   />
                 ))}
@@ -1232,8 +1212,8 @@ const AdminLoyalty = () => {
           <EnrollModal
             candidate={enrolling}
             onClose={() => setEnrolling(null)}
-            onConfirm={(name, phone, notes, lastWax, nextDue) =>
-              enroll({ name, phone, notes, lastWax, nextDue })
+            onConfirm={(name, phone, notes, lastBooking, nextDue) =>
+              enroll({ name, phone, notes, lastBooking, nextDue })
             }
             saving={enrollPending}
             serviceLabel={settings.serviceLabel}
