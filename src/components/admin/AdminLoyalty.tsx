@@ -7,10 +7,35 @@ import {
   Loader2, MessageCircle, Search, X, UserPlus,
   Sparkles, Clock, CheckCircle, AlertCircle, Star,
   Download, Eye, Pencil, Check, StickyNote, Settings2, Save,
-  Users,
+  Users, Phone,
 } from "lucide-react";
 import { format, subDays, addDays, isAfter, parseISO, startOfDay } from "date-fns";
 import { toast } from "sonner";
+
+// ─── Types ───
+interface LoyaltyRow {
+  id: string;
+  tenant_id: string;
+  client_name: string;
+  phone: string | null;
+  status: string | null;
+  last_wax_date: string | number | null;
+  next_due_date: string | number | null;
+  pack_progress: string | number | null;
+  notes: string | null;
+  last_contacted_at: string | null;
+  updated_by: string | null;
+  updated_at: string | null;
+}
+
+interface EnrollCandidate {
+  client_name:  string;
+  phone:        string;
+  bookingCount: number;
+  totalSpend:   number;
+  lastWaxDate?: string;
+  nextDueDate?: string;
+}
 
 // ─── Excel serial date → ISO string (yyyy-MM-dd) ───
 function excelToISO(serial: number | string | null | undefined): string | null {
@@ -25,7 +50,6 @@ function excelToISO(serial: number | string | null | undefined): string | null {
   return format(d, "yyyy-MM-dd");
 }
 
-// ─── Excel serial date → readable string ───
 function excelToDate(serial: number | string | null | undefined): string {
   const iso = excelToISO(serial);
   if (!iso) return "—";
@@ -33,14 +57,13 @@ function excelToDate(serial: number | string | null | undefined): string {
   catch { return iso; }
 }
 
-// ─── Determine if a next_due_date is overdue (strictly past today) ───
 function isDateOverdue(raw: string | number | null | undefined): boolean {
   const iso = excelToISO(raw);
   if (!iso) return false;
   try {
     const due = startOfDay(parseISO(iso));
     const today = startOfDay(new Date());
-    return isAfter(today, due); // today is AFTER due → overdue
+    return isAfter(today, due);
   } catch { return false; }
 }
 
@@ -57,8 +80,7 @@ function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO 
   return "UNKNOWN";
 }
 
-// ─── Compute effective status: if stored status isn't OVERDUE but next_due_date is past → force OVERDUE ───
-function effectiveStatus(r: any): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
+function effectiveStatus(r: LoyaltyRow): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
   const stored = normaliseStatus(r.status);
   if (stored === "OVERDUE") return "OVERDUE";
   if (isDateOverdue(r.next_due_date)) return "OVERDUE";
@@ -81,13 +103,16 @@ const STATUS_ICON: Record<string, React.ElementType> = {
   "UNKNOWN":      Clock,
 };
 
-function waMessage(name: string, status: string): string {
+// ─── WA message uses tenant business name + configurable service label ───
+function waMessage(name: string, status: string, businessName: string, serviceLabel: string): string {
+  const biz = businessName || "us";
+  const svc = serviceLabel || "appointment";
   if (status === "OVERDUE") {
-    return `Hi ${name}! ✨ We miss you at PhenomeBeauty. You're overdue for your wax — let's get you booked in! Reply to grab a slot.`;
+    return `Hi ${name}! ✨ We miss you at ${biz}. You're overdue for your ${svc} — let's get you booked in! Reply to grab a slot.`;
   } else if (status === "TIME TO BOOK") {
-    return `Hi ${name}! 📅 It's time to book your next wax at PhenomeBeauty. Reply and we'll sort out the perfect time for you!`;
+    return `Hi ${name}! 📅 It's time to book your next ${svc} at ${biz}. Reply and we'll sort out the perfect time for you!`;
   }
-  return `Hi ${name}! Just a friendly reminder from PhenomeBeauty — looking forward to seeing you soon! 💖`;
+  return `Hi ${name}! Just a friendly reminder from ${biz} — looking forward to seeing you soon! 💖`;
 }
 
 function waLink(phone: string, msg: string): string {
@@ -98,19 +123,19 @@ function waLink(phone: string, msg: string): string {
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
-function parsePackProgress(raw: string | number | null | undefined): { used: number; total: number } | null {
+function parsePackProgress(raw: string | number | null | undefined, defaultTotal = 10): { used: number; total: number } | null {
   if (!raw || String(raw).toLowerCase().includes("no pack")) return null;
   const str = String(raw);
   const match = str.match(/(\d+)\s*\/\s*(\d+)/);
   if (match) return { used: parseInt(match[1]), total: parseInt(match[2]) };
   const n = parseInt(str);
-  if (!isNaN(n)) return { used: n, total: 10 };
+  if (!isNaN(n)) return { used: n, total: defaultTotal };
   return null;
 }
 
-// ─── PackPill — thicker bar + percentage ───
-const PackPill = ({ raw }: { raw: string | number | null | undefined }) => {
-  const pack = parsePackProgress(raw);
+// ─── PackPill ───
+const PackPill = ({ raw, defaultTotal = 10 }: { raw: string | number | null | undefined; defaultTotal?: number }) => {
+  const pack = parsePackProgress(raw, defaultTotal);
   if (!pack) return <span className="text-white/25 text-xs">—</span>;
   const pct = Math.min((pack.used / pack.total) * 100, 100);
   const color = pct >= 80 ? "bg-emerald-400" : pct >= 50 ? "bg-amber-400/80" : "bg-white/30";
@@ -121,21 +146,22 @@ const PackPill = ({ raw }: { raw: string | number | null | undefined }) => {
         <span className="text-[10px] text-white/30">{Math.round(pct)}%</span>
       </div>
       <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${color}`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 };
 
-// ─── WA Preview — safe positioning via ref ───
-const WaPreview = ({ name, status, phone }: { name: string; status: string; phone: string }) => {
+// ─── WA Preview — safe viewport positioning ───
+const WaPreview = ({
+  name, status, phone, businessName, serviceLabel,
+}: {
+  name: string; status: string; phone: string; businessName: string; serviceLabel: string;
+}) => {
   const [show, setShow] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [above, setAbove] = useState(false);
-  const msg = waMessage(name, status);
+  const msg = waMessage(name, status, businessName, serviceLabel);
 
   useEffect(() => {
     if (show && btnRef.current) {
@@ -191,10 +217,6 @@ const WaPreview = ({ name, status, phone }: { name: string; status: string; phon
 const STATUS_OPTIONS = ["ON TRACK", "TIME TO BOOK", "OVERDUE"] as const;
 
 // ─── InlineStatusEditor ───
-// FIX: accepts effectiveNorm (computed from effectiveStatus) for display styling,
-// while current (raw DB value) is used only for the edit dropdown highlight and save.
-// This ensures a client whose next_due_date is past shows the OVERDUE pill correctly
-// even if the stored DB status is still "ON TRACK".
 const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated }: {
   rowId: string; current: string; effectiveNorm: string; tenantId: string; onUpdated: () => void;
 }) => {
@@ -202,11 +224,11 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated
   const [saving, setSaving] = useState(false);
 
   const handleSelect = async (newStatus: string) => {
-    if (newStatus === current) { setOpen(false); return; }
+    if (newStatus === normaliseStatus(current)) { setOpen(false); return; }
     setSaving(true);
     const { error } = await supabase
       .from("loyalty_tracker")
-      .update({ status: newStatus })
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq("id", rowId)
       .eq("tenant_id", tenantId);
     setSaving(false);
@@ -214,18 +236,14 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated
     if (error) { toast.error("Failed to update status"); } else { toast.success("Status updated"); onUpdated(); }
   };
 
-  // Use effectiveNorm for the pill display style so overdue-by-date shows correctly
   const displayNorm = (effectiveNorm as keyof typeof STATUS_STYLE) in STATUS_STYLE
     ? (effectiveNorm as keyof typeof STATUS_STYLE)
     : "UNKNOWN";
-  // Use stored normalised value for the dropdown checkmark
   const storedNorm = normaliseStatus(current);
 
   return (
     <div className="relative inline-block">
-      {open && (
-        <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-      )}
+      {open && <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />}
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
         className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-all ${STATUS_STYLE[displayNorm] ?? STATUS_STYLE["UNKNOWN"]} hover:opacity-80`}
@@ -259,28 +277,129 @@ const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onUpdated
   );
 };
 
-interface EnrollCandidate {
-  client_name:  string;
-  phone:        string;
-  bookingCount: number;
-  totalSpend:   number;
-  lastWaxDate?: string;
-  nextDueDate?: string;
-}
+// ─── InlineNotesEditor ───
+const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
+  rowId: string; current: string | null; tenantId: string; onUpdated: () => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(current ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .update({ notes: value, updated_at: new Date().toISOString() })
+      .eq("id", rowId)
+      .eq("tenant_id", tenantId);
+    setSaving(false);
+    if (error) { toast.error("Failed to save notes"); } else { toast.success("Notes saved"); setEditing(false); onUpdated(); }
+  };
+
+  if (!editing) {
+    return (
+      <button
+        onClick={e => { e.stopPropagation(); setValue(current ?? ""); setEditing(true); }}
+        className="flex items-start gap-1 max-w-[220px] group"
+        title="Edit notes"
+      >
+        <StickyNote className="w-3 h-3 mt-0.5 shrink-0 text-white/25 group-hover:text-white/50 transition-colors" />
+        <span className="text-[11px] text-white/40 leading-snug line-clamp-2 group-hover:text-white/60 transition-colors">
+          {current || <span className="italic text-white/20">Add notes…</span>}
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+      <input
+        autoFocus
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+        className="text-[11px] bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-white/80 focus:outline-none focus:border-emerald-400/40 w-48"
+        placeholder="Add notes…"
+      />
+      <button onClick={save} disabled={saving} className="text-emerald-400 hover:text-emerald-300 transition-colors">
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+      </button>
+      <button onClick={() => setEditing(false)} className="text-white/25 hover:text-white/60 transition-colors">
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+};
+
+// ─── InlinePackEditor ───
+const InlinePackEditor = ({ rowId, current, tenantId, onUpdated }: {
+  rowId: string; current: string | number | null; tenantId: string; onUpdated: () => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(current ? String(current) : "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .update({ pack_progress: value, updated_at: new Date().toISOString() })
+      .eq("id", rowId)
+      .eq("tenant_id", tenantId);
+    setSaving(false);
+    if (error) { toast.error("Failed to update pack"); } else { toast.success("Pack updated"); setEditing(false); onUpdated(); }
+  };
+
+  if (!editing) {
+    return (
+      <button
+        onClick={e => { e.stopPropagation(); setValue(current ? String(current) : ""); setEditing(true); }}
+        className="group"
+        title="Edit pack progress"
+      >
+        <span className="text-[10px] text-white/25 group-hover:text-white/50 italic transition-colors">
+          {current && !String(current).toLowerCase().includes("no pack") ? String(current) : "No pack"}
+        </span>
+        <Pencil className="inline w-2.5 h-2.5 ml-1 opacity-0 group-hover:opacity-50 transition-opacity" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+      <input
+        autoFocus
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+        className="text-[11px] bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-white/80 focus:outline-none focus:border-emerald-400/40 w-20"
+        placeholder="e.g. 3/10"
+      />
+      <button onClick={save} disabled={saving} className="text-emerald-400 hover:text-emerald-300 transition-colors">
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+      </button>
+      <button onClick={() => setEditing(false)} className="text-white/25 hover:text-white/60 transition-colors">
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+};
 
 const EnrollModal = ({
-  candidate, onClose, onConfirm, saving,
+  candidate, onClose, onConfirm, saving, serviceLabel,
 }: {
   candidate: EnrollCandidate;
   onClose: () => void;
   onConfirm: (name: string, phone: string, notes: string, lastWax: string, nextDue: string) => void;
   saving: boolean;
+  serviceLabel: string;
 }) => {
   const [name, setName]       = useState(candidate.client_name);
   const [phone, setPhone]     = useState(candidate.phone);
   const [notes, setNotes]     = useState("");
   const [lastWax, setLastWax] = useState(candidate.lastWaxDate ?? "");
   const [nextDue, setNextDue] = useState(candidate.nextDueDate ?? "");
+  const svcLabel = serviceLabel || "service";
 
   return (
     <motion.div
@@ -315,7 +434,7 @@ const EnrollModal = ({
             </div>
           ))}
           <div className="flex flex-col gap-1">
-            <label htmlFor="loyalty-last-wax" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last Wax Date</label>
+            <label htmlFor="loyalty-last-wax" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Last {svcLabel} Date</label>
             <input id="loyalty-last-wax" name="last-wax-date" type="date" value={lastWax} onChange={e => setLastWax(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
           </div>
@@ -327,7 +446,7 @@ const EnrollModal = ({
           <div className="flex flex-col gap-1">
             <label htmlFor="loyalty-notes" className="text-[10px] tracking-[0.1em] uppercase text-white/30">Notes (optional)</label>
             <input id="loyalty-notes" name="loyalty-notes" value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder="e.g. 3-pack candidate"
+              placeholder={`e.g. 3-pack candidate`}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40" />
           </div>
         </div>
@@ -362,9 +481,11 @@ function resolvePhone(b: any): string {
 const FILTERS = ["All", "On Track", "Time to Book", "Overdue"] as const;
 type Filter = typeof FILTERS[number];
 
-function exportCSV(rows: any[]) {
+// ─── CSV export — includes tenant slug in filename ───
+function exportCSV(rows: LoyaltyRow[], tenantSlug: string, serviceLabel: string) {
   if (!rows.length) return;
-  const headers = ["Client Name", "Phone", "Status", "Last Wax Date", "Next Due Date", "Pack Progress", "Notes"];
+  const svcLabel = serviceLabel || "service";
+  const headers = ["Client Name", "Phone", "Status", `Last ${svcLabel} Date`, "Next Due Date", "Pack Progress", "Notes", "Last Contacted"];
   const lines = [
     headers.join(","),
     ...rows.map(r => [
@@ -375,27 +496,27 @@ function exportCSV(rows: any[]) {
       `"${r.next_due_date ?? ""}"`,
       `"${r.pack_progress ?? ""}"`,
       `"${(r.notes ?? "").replace(/"/g, '""')}"`,
+      `"${r.last_contacted_at ?? ""}"`,
     ].join(",")),
   ];
   const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `loyalty-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.download = `loyalty-${tenantSlug || "export"}-${format(new Date(), "yyyy-MM-dd")}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-const ENROLL_SAVED_KEY = "loyalty_enroll_saved";
-
 // ─── Default setting values ───
-// FIX: lookback changed from 90 → 365 days so clients with Hollywood bookings
-// spread across the past year are captured by the recommendation engine.
 const SETTING_DEFAULTS = {
   loyalty_qualifying_service: "hollywood",
   loyalty_min_bookings:       "2",
   loyalty_reminder_weeks:     "4",
   loyalty_lookback_days:      "365",
+  loyalty_service_label:      "wax",
+  loyalty_pack_size:          "10",
+  loyalty_business_name:      "",
 };
 
 type SettingKey = keyof typeof SETTING_DEFAULTS;
@@ -426,24 +547,21 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
   const [local, setLocal] = useState<Record<SettingKey, string>>(initialValues);
   useMemo(() => setLocal(initialValues), [initialValues]);
 
+  // ─── Batch upsert — single round-trip instead of sequential loop ───
   const { mutate: saveSettings, isPending: saving } = useMutation({
     mutationFn: async (vals: Record<SettingKey, string>) => {
-      for (const key of Object.keys(vals) as SettingKey[]) {
-        const existing = settingsRows.find((r: any) => r.key === key);
-        if (existing) {
-          const { error } = await supabase
-            .from("app_settings")
-            .update({ value: vals[key], updated_at: new Date().toISOString() })
-            .eq("tenant_id", tenantId)
-            .eq("key", key);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from("app_settings")
-            .insert({ tenant_id: tenantId, key, value: vals[key], description: `Loyalty: ${key}` });
-          if (error) throw error;
-        }
-      }
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert(
+          Object.entries(vals).map(([key, value]) => ({
+            tenant_id: tenantId,
+            key,
+            value,
+            updated_at: new Date().toISOString(),
+          })),
+          { onConflict: "tenant_id,key" }
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Loyalty settings saved");
@@ -454,6 +572,18 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
   });
 
   const fields: { key: SettingKey; label: string; hint: string; type: "text" | "number" }[] = [
+    {
+      key: "loyalty_business_name",
+      label: "Business Name",
+      hint: "Used in WhatsApp messages sent to clients. E.g. \"Phenome Beauty\". Leave blank to fall back to your account name.",
+      type: "text",
+    },
+    {
+      key: "loyalty_service_label",
+      label: "Service Label",
+      hint: "The word used for the service in messages and column headers. E.g. \"wax\", \"cut\", \"treatment\".",
+      type: "text",
+    },
     {
       key: "loyalty_qualifying_service",
       label: "Qualifying Service Keyword",
@@ -469,13 +599,19 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
     {
       key: "loyalty_reminder_weeks",
       label: "Reminder Interval (weeks)",
-      hint: "How many weeks after the last wax to set the suggested next due date. E.g. 4 = every 4 weeks.",
+      hint: "How many weeks after the last service to set the suggested next due date.",
       type: "number",
     },
     {
       key: "loyalty_lookback_days",
       label: "Recommendation Lookback (days)",
       hint: "How far back to scan bookings when generating enrollment recommendations.",
+      type: "number",
+    },
+    {
+      key: "loyalty_pack_size",
+      label: "Default Pack Size",
+      hint: "Fallback total when pack progress is stored as a single number (e.g. \"3\" → \"3/10\"). E.g. 5, 8, 10.",
       type: "number",
     },
   ];
@@ -496,7 +632,7 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
           <p className="text-sm font-semibold text-white/70">Loyalty Programme Settings</p>
         </div>
         <p className="text-[11px] text-white/30 leading-relaxed -mt-3">
-          These settings control how the recommendation engine surfaces clients for enrollment and how due-date reminders are calculated.
+          These settings control how the recommendation engine surfaces clients, how due-date reminders are calculated, and how WhatsApp messages are personalised for your business.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -536,19 +672,22 @@ const LoyaltySettings = ({ tenantId }: { tenantId: string }) => {
         <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">Live Preview</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Service filter",   value: `"${local.loyalty_qualifying_service}"` },
-            { label: "Min bookings",     value: `${local.loyalty_min_bookings}+` },
-            { label: "Reminder every",   value: `${local.loyalty_reminder_weeks} wks` },
-            { label: "Scan last",        value: `${local.loyalty_lookback_days} days` },
+            { label: "Business name",  value: local.loyalty_business_name || "(not set)" },
+            { label: "Service label",  value: local.loyalty_service_label || "wax" },
+            { label: "Service filter", value: `"${local.loyalty_qualifying_service}"` },
+            { label: "Min bookings",   value: `${local.loyalty_min_bookings}+` },
+            { label: "Reminder every", value: `${local.loyalty_reminder_weeks} wks` },
+            { label: "Scan last",      value: `${local.loyalty_lookback_days} days` },
+            { label: "Default pack",   value: `/${local.loyalty_pack_size}` },
           ].map(p => (
             <div key={p.label} className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 flex flex-col gap-1">
               <p className="text-[9px] tracking-[0.12em] uppercase text-white/25">{p.label}</p>
-              <p className="text-sm font-bold text-white/70">{p.value}</p>
+              <p className="text-sm font-bold text-white/70 truncate">{p.value}</p>
             </div>
           ))}
         </div>
         <p className="text-[10px] text-white/20 leading-relaxed">
-          Clients who booked a service matching <span className="text-white/40">"{local.loyalty_qualifying_service}"</span> at least <span className="text-white/40">{local.loyalty_min_bookings} times</span> in the last <span className="text-white/40">{local.loyalty_lookback_days} days</span> will be recommended. Next due date is set <span className="text-white/40">{local.loyalty_reminder_weeks} weeks</span> after the last qualifying booking.
+          Clients who booked a service matching <span className="text-white/40">"{local.loyalty_qualifying_service}"</span> at least <span className="text-white/40">{local.loyalty_min_bookings} times</span> in the last <span className="text-white/40">{local.loyalty_lookback_days} days</span> will be recommended. Next due date is set <span className="text-white/40">{local.loyalty_reminder_weeks} weeks</span> after the last qualifying booking. WA messages will reference <span className="text-white/40">"{local.loyalty_business_name || "your business"}"</span> and the word <span className="text-white/40">"{local.loyalty_service_label || "wax"}"</span>.
         </p>
       </div>
     </div>
@@ -561,19 +700,20 @@ type MainTab = typeof MAIN_TABS[number];
 
 // ─── Client card row ───
 const ClientRow = ({
-  r, i, tenantId, onUpdated,
+  r, i, tenantId, businessName, serviceLabel, packSize, onUpdated,
 }: {
-  r: any; i: number; tenantId: string; onUpdated: () => void;
+  r: LoyaltyRow; i: number; tenantId: string;
+  businessName: string; serviceLabel: string; packSize: number;
+  onUpdated: () => void;
 }) => {
-  // effectiveStatus drives ALL visual treatment — colour, icon, sort, and pill
   const norm = effectiveStatus(r);
-  const StatusIcon = STATUS_ICON[norm] ?? Clock;
-
   const rowAccent =
     norm === "OVERDUE"      ? "border-l-2 border-l-red-500/40" :
     norm === "TIME TO BOOK" ? "border-l-2 border-l-amber-500/40" :
     norm === "ON TRACK"     ? "border-l-2 border-l-emerald-500/30" :
     "border-l-2 border-l-white/[0.04]";
+
+  const svcLabel = serviceLabel || "wax";
 
   return (
     <motion.div
@@ -584,7 +724,6 @@ const ClientRow = ({
     >
       {/* ── Main row ── */}
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* Avatar initial */}
         <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold
           ${norm === "OVERDUE" ? "bg-red-500/10 text-red-400" :
             norm === "TIME TO BOOK" ? "bg-amber-500/10 text-amber-400" :
@@ -592,7 +731,6 @@ const ClientRow = ({
           {(r.client_name ?? "?")[0].toUpperCase()}
         </div>
 
-        {/* Name + phone */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white/85 truncate">{r.client_name}</p>
           {r.phone
@@ -601,7 +739,6 @@ const ClientRow = ({
           }
         </div>
 
-        {/* Status pill — FIX: passes effectiveNorm so pill reflects date-driven overdue */}
         <div className="shrink-0">
           <InlineStatusEditor
             rowId={r.id}
@@ -612,10 +749,15 @@ const ClientRow = ({
           />
         </div>
 
-        {/* WA */}
         <div className="shrink-0">
           {r.phone
-            ? <WaPreview name={r.client_name} status={norm} phone={r.phone} />
+            ? <WaPreview
+                name={r.client_name}
+                status={norm}
+                phone={r.phone}
+                businessName={businessName}
+                serviceLabel={svcLabel}
+              />
             : <span className="text-white/20 text-xs">—</span>
           }
         </div>
@@ -623,15 +765,13 @@ const ClientRow = ({
 
       {/* ── Detail strip ── */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 pb-3 border-t border-white/[0.04] pt-2.5">
-        {/* Last wax */}
         <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last Wax</span>
+          <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last {svcLabel}</span>
           <span className="text-[11px] text-white/55">
             {r.last_wax_date ? excelToDate(r.last_wax_date) : <span className="text-white/20 italic">Not set</span>}
           </span>
         </div>
 
-        {/* Next due */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Next Due</span>
           <span className={`text-[11px] font-medium ${
@@ -643,19 +783,28 @@ const ClientRow = ({
           </span>
         </div>
 
-        {/* Pack */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Pack</span>
-          <PackPill raw={r.pack_progress} />
+          <div className="flex items-center gap-1.5">
+            <PackPill raw={r.pack_progress} defaultTotal={packSize} />
+            <InlinePackEditor rowId={r.id} current={r.pack_progress} tenantId={tenantId} onUpdated={onUpdated} />
+          </div>
         </div>
 
-        {/* Notes */}
-        {r.notes && (
-          <div className="flex items-start gap-1 max-w-[220px]">
-            <StickyNote className="w-3 h-3 mt-0.5 shrink-0 text-white/25" />
-            <span className="text-[11px] text-white/40 leading-snug line-clamp-2">{r.notes}</span>
+        {/* Last contacted */}
+        {r.last_contacted_at && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last Contacted</span>
+            <span className="text-[11px] text-white/35">
+              {format(new Date(r.last_contacted_at), "dd MMM yyyy")}
+            </span>
           </div>
         )}
+
+        {/* Inline notes editor */}
+        <div className="flex items-start gap-1 max-w-[240px]">
+          <InlineNotesEditor rowId={r.id} current={r.notes} tenantId={tenantId} onUpdated={onUpdated} />
+        </div>
       </div>
     </motion.div>
   );
@@ -670,9 +819,12 @@ const AdminLoyalty = () => {
   const [search, setSearch]       = useState("");
   const [enrolling, setEnrolling] = useState<EnrollCandidate | null>(null);
 
+  // ─── Tenant-scoped sessionStorage key — prevents cross-tenant bleed ───
+  const ENROLL_SAVED_KEY = `loyalty_enroll_saved_${tenantId}`;
+
   const [enrollSaved, setEnrollSaved] = useState<string[]>(() => {
     try {
-      const stored = sessionStorage.getItem(ENROLL_SAVED_KEY);
+      const stored = sessionStorage.getItem(`loyalty_enroll_saved_${tenantId}`);
       return stored ? (JSON.parse(stored) as string[]) : [];
     } catch { return []; }
   });
@@ -711,6 +863,9 @@ const AdminLoyalty = () => {
       minBookings:       Math.max(1, parseInt(map.loyalty_min_bookings) || 2),
       reminderWeeks:     Math.max(1, parseInt(map.loyalty_reminder_weeks) || 4),
       lookbackDays:      Math.max(7, parseInt(map.loyalty_lookback_days) || 365),
+      serviceLabel:      map.loyalty_service_label || "wax",
+      packSize:          Math.max(1, parseInt(map.loyalty_pack_size) || 10),
+      businessName:      map.loyalty_business_name || "",
     };
   }, [settingsRows]);
 
@@ -724,7 +879,7 @@ const AdminLoyalty = () => {
         .eq("tenant_id", tenantId)
         .order("next_due_date");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as LoyaltyRow[];
     },
   });
 
@@ -767,29 +922,36 @@ const AdminLoyalty = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      toast.success("Client enrolled!");
       qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
       if (enrolling) addEnrollSaved(enrolling.client_name + enrolling.phone);
       setEnrolling(null);
     },
+    onError: (err: any) => {
+      // Handle unique constraint violation gracefully
+      if (err?.code === "23505") {
+        toast.error("This client is already enrolled (duplicate phone or name).");
+      } else {
+        toast.error("Failed to enroll client.");
+      }
+    },
   });
 
-  // ─── Tracked phones/names for deduplication against already-enrolled ───
-  const trackedPhones = useMemo(() => new Set(rows.map((r: any) => normPhone(r.phone))), [rows]);
-  const trackedNames  = useMemo(() => new Set(rows.map((r: any) => (r.client_name ?? "").trim().toLowerCase())), [rows]);
+  // ─── Tracked phones/names for deduplication ───
+  const trackedPhones = useMemo(() => new Set(rows.map((r) => normPhone(r.phone))), [rows]);
+  const trackedNames  = useMemo(() => new Set(rows.map((r) => (r.client_name ?? "").trim().toLowerCase())), [rows]);
 
   // ─── Recommendation engine ───
   const candidates = useMemo(() => {
-    const keyword    = settings.qualifyingService;
-    const cutoff     = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
+    const keyword = settings.qualifyingService;
+    const cutoff  = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
 
     const map = new Map<string, {
       name: string; phone: string; count: number; spend: number; lastBookingDate: string;
     }>();
 
     recentBookings.forEach((b: any) => {
-      // Apply lookback filter in JS
       if ((b.booking_date ?? "") < cutoff) return;
-
       const items: any[] = b.booking_items ?? [];
       const hasQualifying = keyword
         ? items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))
@@ -812,10 +974,8 @@ const AdminLoyalty = () => {
 
     return [...map.entries()]
       .filter(([, v]) => v.count >= settings.minBookings)
-      // Exclude if already tracked by phone OR by name
       .filter(([, v]) => !trackedPhones.has(normPhone(v.phone)))
       .filter(([, v]) => !trackedNames.has(v.name.trim().toLowerCase()))
-      // Exclude if manually dismissed this session
       .filter(([, v]) => !enrollSaved.includes(v.name + v.phone))
       .map(([, v]) => {
         const lastWaxDate = v.lastBookingDate ?? "";
@@ -835,18 +995,18 @@ const AdminLoyalty = () => {
       .slice(0, 20);
   }, [recentBookings, trackedPhones, trackedNames, enrollSaved, settings]);
 
-  // ─── Sort tracker rows — overdue (by date OR stored) floats to top ───
+  // ─── Sort tracker rows ───
   const sortedRows = useMemo(() => {
     const seen = new Set<string>();
     return [...rows]
-      .filter((r: any) => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
-      .sort((a: any, b: any) =>
+      .filter((r) => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
+      .sort((a, b) =>
         (STATUS_ORDER[effectiveStatus(a)] ?? 3) - (STATUS_ORDER[effectiveStatus(b)] ?? 3)
       );
   }, [rows]);
 
   const filteredRows = useMemo(() =>
-    sortedRows.filter((r: any) => {
+    sortedRows.filter((r) => {
       const st = effectiveStatus(r);
       const matchFilter =
         filter === "All" ||
@@ -857,12 +1017,11 @@ const AdminLoyalty = () => {
       return matchFilter && matchSearch;
     }), [sortedRows, filter, search]);
 
-  // ─── Counts use effectiveStatus so overdue-by-date is reflected ───
   const counts = useMemo(() => ({
     total:    rows.length,
-    onTrack:  rows.filter((r: any) => effectiveStatus(r) === "ON TRACK").length,
-    timeBook: rows.filter((r: any) => effectiveStatus(r) === "TIME TO BOOK").length,
-    overdue:  rows.filter((r: any) => effectiveStatus(r) === "OVERDUE").length,
+    onTrack:  rows.filter((r) => effectiveStatus(r) === "ON TRACK").length,
+    timeBook: rows.filter((r) => effectiveStatus(r) === "TIME TO BOOK").length,
+    overdue:  rows.filter((r) => effectiveStatus(r) === "OVERDUE").length,
   }), [rows]);
 
   const isLoading = loadingRows || loadingBookings;
@@ -902,10 +1061,10 @@ const AdminLoyalty = () => {
             {/* ── Summary stat cards ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Total Clients", value: counts.total,    color: "text-white/80",    border: "border-white/[0.07]",      icon: Users,         iconColor: "text-white/25",    bg: "" },
-                { label: "On Track",      value: counts.onTrack,  color: "text-emerald-400", border: "border-emerald-500/20",    icon: CheckCircle,   iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
-                { label: "Time to Book",  value: counts.timeBook, color: "text-amber-400",   border: "border-amber-500/20",      icon: Clock,         iconColor: "text-amber-500/40",  bg: "bg-amber-500/[0.03]" },
-                { label: "Overdue",       value: counts.overdue,  color: "text-red-400",     border: "border-red-500/20",        icon: AlertCircle,   iconColor: "text-red-500/40",    bg: "bg-red-500/[0.03]" },
+                { label: "Total Clients", value: counts.total,    color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
+                { label: "On Track",      value: counts.onTrack,  color: "text-emerald-400", border: "border-emerald-500/20", icon: CheckCircle, iconColor: "text-emerald-500/40", bg: "bg-emerald-500/[0.03]" },
+                { label: "Time to Book",  value: counts.timeBook, color: "text-amber-400",   border: "border-amber-500/20",   icon: Clock,       iconColor: "text-amber-500/40",   bg: "bg-amber-500/[0.03]" },
+                { label: "Overdue",       value: counts.overdue,  color: "text-red-400",     border: "border-red-500/20",     icon: AlertCircle, iconColor: "text-red-500/40",     bg: "bg-red-500/[0.03]" },
               ].map((s, idx) => {
                 const Icon = s.icon;
                 return (
@@ -951,7 +1110,15 @@ const AdminLoyalty = () => {
                           <p className="text-[10px] text-white/35">{c.bookingCount} bookings · R{c.totalSpend.toLocaleString()}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {c.phone && <WaPreview name={c.client_name} status="TIME TO BOOK" phone={c.phone} />}
+                          {c.phone && (
+                            <WaPreview
+                              name={c.client_name}
+                              status="TIME TO BOOK"
+                              phone={c.phone}
+                              businessName={settings.businessName}
+                              serviceLabel={settings.serviceLabel}
+                            />
+                          )}
                           <button
                             onClick={() => skipCandidate(c)}
                             title="Dismiss this suggestion"
@@ -973,7 +1140,7 @@ const AdminLoyalty = () => {
               )}
             </AnimatePresence>
 
-            {/* ── Unified toolbar ── */}
+            {/* ── Toolbar ── */}
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
@@ -1010,7 +1177,7 @@ const AdminLoyalty = () => {
               </div>
 
               <button
-                onClick={() => exportCSV(filteredRows)}
+                onClick={() => exportCSV(filteredRows, tenantId, settings.serviceLabel)}
                 disabled={filteredRows.length === 0}
                 title="Export to CSV"
                 className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/[0.06] text-xs font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.05] transition-colors disabled:opacity-30 shrink-0"
@@ -1032,9 +1199,7 @@ const AdminLoyalty = () => {
                   <Star className="w-6 h-6 text-white/20" />
                 </div>
                 <p className="text-sm font-medium text-white/40">
-                  {rows.length === 0
-                    ? "No clients enrolled yet."
-                    : "No clients match this filter."}
+                  {rows.length === 0 ? "No clients enrolled yet." : "No clients match this filter."}
                 </p>
                 <p className="text-xs text-white/20">
                   {rows.length === 0 ? "Enroll your first client using the recommendations above." : "Try a different filter or search term."}
@@ -1042,12 +1207,15 @@ const AdminLoyalty = () => {
               </motion.div>
             ) : (
               <div className="flex flex-col gap-2">
-                {filteredRows.map((r: any, i: number) => (
+                {filteredRows.map((r, i) => (
                   <ClientRow
                     key={r.id}
                     r={r}
                     i={i}
                     tenantId={tenantId}
+                    businessName={settings.businessName}
+                    serviceLabel={settings.serviceLabel}
+                    packSize={settings.packSize}
                     onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty", tenantId] })}
                   />
                 ))}
@@ -1068,6 +1236,7 @@ const AdminLoyalty = () => {
               enroll({ name, phone, notes, lastWax, nextDue })
             }
             saving={enrollPending}
+            serviceLabel={settings.serviceLabel}
           />
         )}
       </AnimatePresence>
