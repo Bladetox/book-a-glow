@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { Menu, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo, lazy, Suspense, Component } from "react";
+import type { ReactNode, ErrorInfo } from "react";
+import { Menu, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TenantProvider } from "@/contexts/TenantContext";
 import AdminLogin     from "@/components/admin/AdminLogin";
@@ -18,6 +19,42 @@ const AdminIntegrations  = lazy(() => import("@/components/admin/AdminIntegratio
 const AdminSettings      = lazy(() => import("@/components/admin/AdminSettings"));
 const AdminLoyalty       = lazy(() => import("@/components/admin/AdminLoyalty"));
 const AdminTerms         = lazy(() => import("@/components/admin/AdminTerms"));
+
+// ── Error boundary ──────────────────────────────────────────────────────────
+// Catches lazy-load / render errors so they show a visible card rather than a
+// silent blank screen (especially noticeable on mobile after nav tap).
+interface EBState { hasError: boolean; message: string }
+class ViewErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+  static getDerivedStateFromError(err: Error): EBState {
+    return { hasError: true, message: err?.message ?? "Unknown error" };
+  }
+  componentDidCatch(err: Error, info: ErrorInfo) {
+    console.error("[ViewErrorBoundary]", err, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <AlertTriangle className="w-6 h-6 text-red-400/60" />
+          <p className="text-sm text-white/50">Something went wrong loading this view.</p>
+          <p className="text-xs text-white/25 max-w-xs break-words">{this.state.message}</p>
+          <button
+            onClick={() => this.setState({ hasError: false, message: "" })}
+            className="mt-2 text-xs text-white/40 hover:text-white/70 border border-white/[0.08] rounded-lg px-3 py-1.5 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 const TabLoader = () => (
   <div className="flex items-center justify-center py-20">
@@ -65,7 +102,10 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex overflow-hidden">
+    // FIX: was overflow-hidden — clips the content scroll area to 0 height on
+    // mobile (Safari / Chrome). Use overflow-x-hidden instead so horizontal
+    // overflow is still contained but the column can grow to full viewport height.
+    <div className="h-screen bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex overflow-x-hidden">
       <AdminSidebar
         views={views as unknown as string[]}
         activeView={activeView}
@@ -74,7 +114,10 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-14 lg:pb-0">
+      {/* FIX: was min-h-screen — inside a flex parent that is h-screen this
+          resolves to an ambiguous height. Use h-full so flex-1 on the scroll
+          area gets a concrete pixel height on all mobile browsers. */}
+      <div className="flex-1 flex flex-col h-full min-w-0 pb-14 lg:pb-0">
         <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06] shrink-0">
           <button
             className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
@@ -93,9 +136,12 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <Suspense fallback={<TabLoader />}>
-            {renderView()}
-          </Suspense>
+          {/* ViewErrorBoundary key=activeView resets error state on every nav tap */}
+          <ViewErrorBoundary key={activeView}>
+            <Suspense fallback={<TabLoader />}>
+              {renderView()}
+            </Suspense>
+          </ViewErrorBoundary>
         </div>
       </div>
 
