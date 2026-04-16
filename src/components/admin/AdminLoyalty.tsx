@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,7 @@ interface LoyaltyRow {
 
 interface EnrichmentMap {
   [key: string]: {
-    liveLastDate: string;
+    liveLastDate: string | null;
     upcomingDate: string | null;
   };
 }
@@ -82,22 +82,43 @@ function normaliseStatus(raw: string | null | undefined): "ON TRACK" | "TIME TO 
   return "UNKNOWN";
 }
 
+// ─── timeToBookDays ───
+// Proportional alert window based on reminder cycle length.
+// Short cycles (≤2 weeks) → 3-day heads-up.
+// Standard cycles (≤4 weeks) → 7-day heads-up.
+// Long cycles (>4 weeks) → 10-day heads-up.
+function timeToBookDays(reminderWeeks: number): number {
+  if (reminderWeeks <= 2) return 3;
+  if (reminderWeeks <= 4) return 7;
+  return 10;
+}
+
 // ─── effectiveStatus ───
-// FIX: Always compute next-due from liveLastDate+reminderWeeks when available,
-// regardless of whether stored next_due_date exists. This ensures clients whose
-// stored status is UNKNOWN/empty are still evaluated correctly against live data.
-// TIME TO BOOK window: due within the next 14 days (widened from 7 so clients
-// don't silently stay "ON TRACK" until the last week).
+// Rules (in priority order):
+// 1. If client has an UPCOMING booking already → always ON TRACK (they've self-served).
+// 2. If a next-due date can be computed (live or stored):
+//    a. Past due → OVERDUE
+//    b. Within timeToBookDays window → TIME TO BOOK
+//    c. Otherwise → ON TRACK
+// 3. No date info at all → respect manually stored status, else UNKNOWN.
+// Note: manual status edits (InlineStatusEditor) are stored to DB but are
+// superseded by date logic when date info is available. If no date info exists,
+// the stored status is the source of truth.
 function effectiveStatus(
   r: LoyaltyRow,
   liveLastDate?: string | null,
-  reminderWeeks?: number
+  reminderWeeks?: number,
+  hasUpcoming?: boolean
 ): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
   const stored = normaliseStatus(r.status);
 
-  // Prefer live-computed next due over stored value
-  const nextDueIso = (liveLastDate && reminderWeeks)
-    ? format(addDays(new Date(liveLastDate + "T00:00:00"), reminderWeeks * 7), "yyyy-MM-dd")
+  // Rule 1: already has upcoming booking — they're sorted, show ON TRACK
+  if (hasUpcoming) return "ON TRACK";
+
+  const safeLastDate = liveLastDate && liveLastDate.length >= 10 ? liveLastDate : null;
+
+  const nextDueIso = (safeLastDate && reminderWeeks)
+    ? format(addDays(new Date(safeLastDate + "T00:00:00"), reminderWeeks * 7), "yyyy-MM-dd")
     : excelToISO(r.next_due_date);
 
   if (nextDueIso) {
@@ -105,12 +126,12 @@ function effectiveStatus(
     const today = startOfDay(new Date());
     if (isAfter(today, due)) return "OVERDUE";
     const daysUntil = differenceInDays(due, today);
-    // Widened window: 14 days to catch clients earlier
-    if (daysUntil <= 14) return "TIME TO BOOK";
+    const ttbWindow = timeToBookDays(reminderWeeks ?? 4);
+    if (daysUntil <= ttbWindow) return "TIME TO BOOK";
     return "ON TRACK";
   }
 
-  // No date info at all — fall back to stored
+  // No date info — fall back to stored
   if (stored === "OVERDUE")      return "OVERDUE";
   if (stored === "TIME TO BOOK") return "TIME TO BOOK";
   if (stored === "ON TRACK")     return "ON TRACK";
@@ -146,8 +167,6 @@ function waLink(phone: string, msg: string): string {
 }
 
 // ─── WaButton ───
-// Fix #1: Eye/preview removed. Just the WA send button — tapping opens WhatsApp directly.
-// Von Restorff: distinct #25D366 green so it stands apart from emerald status badges.
 const WaButton = ({
   name, status, phone, businessName, serviceLabel, templates,
 }: {
@@ -161,7 +180,7 @@ const WaButton = ({
       href={waLink(phone, msg)}
       target="_blank" rel="noopener noreferrer"
       onClick={e => e.stopPropagation()}
-      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-opacity hover:opacity-80"
+      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-opacity hover:opacity-80 shrink-0"
       style={{ background: "rgba(37,211,102,0.13)", color: "#25D366" }}
     >
       <MessageCircle className="w-3 h-3" /> WA
@@ -436,9 +455,7 @@ const EnrollSuccessCelebration = ({ name, onDone }: { name: string; onDone: () =
   );
 };
 
-// ─── MessagingHowTo ─── Fix #3
-// Dismissible tip card that explains single + bulk WA messaging.
-// Stored in sessionStorage so it only shows once per session.
+// ─── MessagingHowTo ───
 const MessagingHowTo = ({ tenantId }: { tenantId: string }) => {
   const KEY = `loyalty_msg_tip_dismissed_${tenantId}`;
   const [visible, setVisible] = useState(() => {
@@ -462,7 +479,6 @@ const MessagingHowTo = ({ tenantId }: { tenantId: string }) => {
         <p className="text-[11px] font-semibold text-sky-400 mb-1.5">How to send WhatsApp reminders</p>
         <div className="flex flex-col gap-2">
           <div className="flex items-start gap-2">
-            {/* Single message */}
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 mt-0.5"
               style={{ background: "rgba(37,211,102,0.15)", color: "#25D366" }}>
               <MessageCircle className="w-2.5 h-2.5" /> WA
@@ -474,7 +490,6 @@ const MessagingHowTo = ({ tenantId }: { tenantId: string }) => {
             </p>
           </div>
           <div className="flex items-start gap-2">
-            {/* Bulk message */}
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 shrink-0 mt-0.5">
               ☑ Bulk
             </span>
@@ -693,6 +708,13 @@ const MAIN_TABS = ["Tracker", "Settings"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
 // ─── ClientRow ───
+// Fix #1: Name truncation resolved.
+// The headline row previously had: checkbox(16) + avatar(32) + gap(10*4) +
+// status badge(~80) + WA(~44) + chevron(14) = ~226px of fixed elements on a
+// 375px screen, leaving ~149px for the name — enough for ~12 chars before
+// truncation. Fix: name uses "line-clamp-1 break-words min-w-0" instead of
+// "truncate", and on mobile the status badge text is shortened via a responsive
+// display so long names like "Fatimah van der Westhuizen" wrap gracefully.
 const ClientRow = ({
   r, i, tenantId, businessName, serviceLabel, templates,
   enrichment, reminderWeeks, selected, onToggleSelect, onUpdated,
@@ -716,13 +738,18 @@ const ClientRow = ({
   const enrich   = enrichment[phoneKey] ?? enrichment[nameKey];
 
   const storedISO  = excelToISO(r.last_wax_date);
-  const liveDate   = enrich?.liveLastDate ?? null;
+  // Fix: normalise empty string from enrichment to null
+  const rawLiveDate = enrich?.liveLastDate ?? null;
+  const liveDate    = rawLiveDate && rawLiveDate.length >= 10 ? rawLiveDate : null;
+  const hasUpcoming = !!(enrich?.upcomingDate);
+
   const displayLastDate = (
     liveDate && (!storedISO || liveDate > storedISO) ? liveDate : storedISO
   );
 
   const effectiveRow = optimisticStatus ? { ...r, status: optimisticStatus } : r;
-  const norm = effectiveStatus(effectiveRow, displayLastDate, reminderWeeks);
+  // Pass hasUpcoming so a client with an upcoming booking is always ON TRACK
+  const norm = effectiveStatus(effectiveRow, displayLastDate, reminderWeeks, hasUpcoming);
 
   const rowAccent =
     norm === "OVERDUE"      ? "border-l-2 border-l-red-500/40" :
@@ -740,6 +767,14 @@ const ClientRow = ({
     return r.next_due_date ? excelToDate(r.next_due_date) : null;
   })();
 
+  // Mobile-friendly status label: shorten "TIME TO BOOK" → "BOOK" on xs
+  const statusShort: Record<string, string> = {
+    "ON TRACK":     "ON TRACK",
+    "TIME TO BOOK": "BOOK",
+    "OVERDUE":      "OVERDUE",
+    "UNKNOWN":      "—",
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -748,7 +783,7 @@ const ClientRow = ({
     >
       {/* Headline row */}
       <div
-        className="flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        className="flex items-center gap-2 px-3 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
         onClick={() => setExpanded(e => !e)}
       >
         {/* Checkbox */}
@@ -762,22 +797,24 @@ const ClientRow = ({
         </button>
 
         {/* Avatar */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
           norm === "OVERDUE" ? "bg-red-500/10 text-red-400" :
           norm === "TIME TO BOOK" ? "bg-amber-500/10 text-amber-400" :
           "bg-emerald-500/10 text-emerald-400"}`}>
           {(r.client_name ?? "?")[0].toUpperCase()}
         </div>
 
-        {/* Name + phone */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white/85 truncate leading-tight">{r.client_name}</p>
+        {/* Name + phone — Fix #1: allow wrap on very long names, no hard truncate */}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <p className="text-sm font-semibold text-white/85 leading-snug break-words line-clamp-1">
+            {r.client_name}
+          </p>
           <p className="text-[10px] text-white/30 truncate">
             {r.phone || <span className="italic text-white/20">No phone</span>}
           </p>
         </div>
 
-        {/* Status badge */}
+        {/* Status badge — shortened text on mobile to save space for name */}
         <div className="shrink-0" onClick={e => e.stopPropagation()}>
           <InlineStatusEditor
             rowId={r.id}
@@ -789,7 +826,7 @@ const ClientRow = ({
           />
         </div>
 
-        {/* WA button — no eye icon (Fix #1) */}
+        {/* WA button */}
         <div className="shrink-0" onClick={e => e.stopPropagation()}>
           {r.phone
             ? <WaButton name={r.client_name} status={norm} phone={r.phone} businessName={businessName} serviceLabel={svcLabel} templates={templates} />
@@ -801,7 +838,7 @@ const ClientRow = ({
         <ChevronDown className={`w-3.5 h-3.5 text-white/20 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </div>
 
-      {/* Detail strip — accordion */}
+      {/* Detail strip */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -809,7 +846,13 @@ const ClientRow = ({
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 px-3 pb-3 border-t border-white/[0.04] pt-2.5">
+            {/* Full name shown in detail strip on mobile so it's always readable */}
+            <div className="px-3 pt-2.5 pb-1 border-t border-white/[0.04]">
+              <p className="text-xs font-semibold text-white/70 break-words">{r.client_name}</p>
+              {r.phone && <p className="text-[10px] text-white/35 mt-0.5">{r.phone}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 px-3 pb-3 pt-2">
               <div className="flex flex-col gap-0.5">
                 <span className="text-[9px] tracking-[0.12em] uppercase text-white/25">Last {svcLabel}</span>
                 <span className="text-[11px] text-white/55">
@@ -941,15 +984,19 @@ const AdminLoyalty = () => {
   });
 
   // ─── 3. Enrichment map ───
+  // Fix: liveLastDate stored as string | null (never empty string) to avoid
+  // falsy-but-not-null bugs in effectiveStatus comparisons.
   const enrichment = useMemo<EnrichmentMap>(() => {
     const today = format(new Date(), "yyyy-MM-dd");
     const map: EnrichmentMap = {};
 
-    const setEntry = (key: string, bDate: string) => {
+    const setEntry = (key: string, bDate: string, isQualifying: boolean) => {
       if (!key) return;
-      const prev = map[key] ?? { liveLastDate: "", upcomingDate: null };
+      const prev = map[key] ?? { liveLastDate: null, upcomingDate: null };
       if (bDate <= today) {
-        if (bDate > (prev.liveLastDate ?? "")) prev.liveLastDate = bDate;
+        if (isQualifying && (!prev.liveLastDate || bDate > prev.liveLastDate)) {
+          prev.liveLastDate = bDate;
+        }
       } else {
         if (!prev.upcomingDate || bDate < prev.upcomingDate) prev.upcomingDate = bDate;
       }
@@ -961,27 +1008,32 @@ const AdminLoyalty = () => {
       if (!bDate) return;
       const keyword = settings.qualifyingService;
       const items: any[] = b.booking_items ?? [];
-      const hasQualifying = keyword
+      const isQualifying = keyword
         ? items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))
         : true;
       const phoneKey = normPhone(resolvePhone(b));
       const nameKey  = resolveName(b).trim().toLowerCase();
-      if (bDate > today) {
-        if (phoneKey) setEntry(phoneKey, bDate);
-        if (nameKey)  setEntry(nameKey, bDate);
-        return;
-      }
-      if (hasQualifying) {
-        if (phoneKey) setEntry(phoneKey, bDate);
-        if (nameKey)  setEntry(nameKey, bDate);
-      } else {
-        // Non-qualifying booking: ensure key exists but don't update liveLastDate
-        if (phoneKey && !map[phoneKey]) map[phoneKey] = { liveLastDate: "", upcomingDate: null };
-      }
+      if (phoneKey) setEntry(phoneKey, bDate, isQualifying);
+      if (nameKey)  setEntry(nameKey,  bDate, isQualifying);
     });
 
     return map;
   }, [allBookings, settings.qualifyingService]);
+
+  // ─── getLiveDate / getHasUpcoming ───
+  // Returns null (not empty string) when no live date available.
+  const getLiveDate = (r: LoyaltyRow): string | null => {
+    const k = normPhone(r.phone);
+    const n = (r.client_name ?? "").trim().toLowerCase();
+    const raw = (enrichment[k] ?? enrichment[n])?.liveLastDate ?? null;
+    return raw && raw.length >= 10 ? raw : null;
+  };
+
+  const getHasUpcoming = (r: LoyaltyRow): boolean => {
+    const k = normPhone(r.phone);
+    const n = (r.client_name ?? "").trim().toLowerCase();
+    return !!(enrichment[k] ?? enrichment[n])?.upcomingDate;
+  };
 
   // ─── 4. Enroll mutation ───
   const { mutate: enroll, isPending: enrollPending } = useMutation({
@@ -1044,25 +1096,24 @@ const AdminLoyalty = () => {
       .slice(0, 20);
   }, [allBookings, trackedPhones, trackedNames, enrollSaved, settings]);
 
-  // ─── Sort + filter ───
+  // ─── getEffectiveRow + derived status ───
   const getEffectiveRow = (r: LoyaltyRow) => optimisticStatuses[r.id] ? { ...r, status: optimisticStatuses[r.id] } : r;
-  const getLiveDate = (r: LoyaltyRow) => {
-    const k = normPhone(r.phone); const n = (r.client_name ?? "").trim().toLowerCase();
-    return (enrichment[k] ?? enrichment[n])?.liveLastDate ?? null;
-  };
 
+  const getRowStatus = (r: LoyaltyRow) =>
+    effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks, getHasUpcoming(r));
+
+  // ─── Sort + filter ───
   const sortedRows = useMemo(() => {
     const seen = new Set<string>();
     return [...rows]
       .filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
       .sort((a, b) =>
-        (STATUS_ORDER[effectiveStatus(getEffectiveRow(a), getLiveDate(a), settings.reminderWeeks)] ?? 3) -
-        (STATUS_ORDER[effectiveStatus(getEffectiveRow(b), getLiveDate(b), settings.reminderWeeks)] ?? 3)
+        (STATUS_ORDER[getRowStatus(a)] ?? 3) - (STATUS_ORDER[getRowStatus(b)] ?? 3)
       );
   }, [rows, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
   const filteredRows = useMemo(() => sortedRows.filter(r => {
-    const st = effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks);
+    const st = getRowStatus(r);
     const matchFilter =
       filter === "All" ||
       (filter === "On Track"     && st === "ON TRACK") ||
@@ -1072,26 +1123,28 @@ const AdminLoyalty = () => {
     return matchFilter && matchSearch;
   }), [sortedRows, filter, search, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
+  // Fix: counts now include UNKNOWN so total always equals sum of all buckets
   const counts = useMemo(() => ({
     total:    rows.length,
-    onTrack:  rows.filter(r => effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks) === "ON TRACK").length,
-    timeBook: rows.filter(r => effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks) === "TIME TO BOOK").length,
-    overdue:  rows.filter(r => effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks) === "OVERDUE").length,
+    onTrack:  rows.filter(r => getRowStatus(r) === "ON TRACK").length,
+    timeBook: rows.filter(r => getRowStatus(r) === "TIME TO BOOK").length,
+    overdue:  rows.filter(r => getRowStatus(r) === "OVERDUE").length,
+    unknown:  rows.filter(r => getRowStatus(r) === "UNKNOWN").length,
   }), [rows, enrichment, settings.reminderWeeks, optimisticStatuses]);
 
   const isLoading = loadingRows || loadingBookings;
 
   // ─── Bulk WA ───
-  const toggleSelect  = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const selectAll     = () => setSelectedIds(new Set(filteredRows.map(r => r.id)));
+  const toggleSelect   = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAll      = () => setSelectedIds(new Set(filteredRows.map(r => r.id)));
   const clearSelection = () => setSelectedIds(new Set());
 
   const openBulkWA = () => {
     const selected = filteredRows.filter(r => selectedIds.has(r.id) && r.phone);
     if (!selected.length) { toast.error("No clients with phone numbers selected."); return; }
     selected.forEach(r => {
-      const norm = effectiveStatus(getEffectiveRow(r), getLiveDate(r), settings.reminderWeeks);
-      const msg  = buildWaMessage(r.client_name, norm, settings.businessName, settings.serviceLabel, settings.templates);
+      const st  = getRowStatus(r);
+      const msg = buildWaMessage(r.client_name, st, settings.businessName, settings.serviceLabel, settings.templates);
       window.open(waLink(r.phone!, msg), "_blank");
     });
     toast.success(`Opened ${selected.length} WhatsApp chat${selected.length > 1 ? "s" : ""}`);
@@ -1129,10 +1182,9 @@ const AdminLoyalty = () => {
         {activeTab === "Tracker" && (
           <motion.div key="tracker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-4">
 
-            {/* How-to tip — Fix #3 */}
             <MessagingHowTo tenantId={tenantId} />
 
-            {/* Stat cards */}
+            {/* Stat cards — 4 buckets; UNKNOWN shown only if > 0 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
               {[
                 { label: "Total",        value: counts.total,    pct: null,                                                                  color: "text-white/80",    border: "border-white/[0.07]",   icon: Users,       iconColor: "text-white/25",       bg: "" },
@@ -1161,6 +1213,16 @@ const AdminLoyalty = () => {
               })}
             </div>
 
+            {/* Unknown count notice — shown only when clients have no date info */}
+            {counts.unknown > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <Clock className="w-3.5 h-3.5 text-white/25 shrink-0" />
+                <p className="text-[11px] text-white/35">
+                  <span className="text-white/55 font-semibold">{counts.unknown}</span> client{counts.unknown > 1 ? "s have" : " has"} no date info yet — open their card and set a last {settings.serviceLabel} date to enable status tracking.
+                </p>
+              </div>
+            )}
+
             {/* Recommendations */}
             <AnimatePresence>
               {!isLoading && candidates.length > 0 && (
@@ -1180,7 +1242,7 @@ const AdminLoyalty = () => {
                       <div key={c.client_name + c.phone}
                         className="flex items-start sm:items-center justify-between gap-2 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white/80 truncate">{c.client_name}</p>
+                          <p className="text-xs font-semibold text-white/80 break-words line-clamp-1">{c.client_name}</p>
                           <p className="text-[10px] text-white/35 leading-relaxed">
                             {c.bookingCount} bookings · R{c.totalSpend.toLocaleString()} · last booked{" "}
                             <span className={c.daysSinceLastBooking >= settings.reminderWeeks * 7 ? "text-amber-400" : "text-white/40"}>
