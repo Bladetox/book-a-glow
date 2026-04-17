@@ -771,11 +771,11 @@ const AdminDashboard = ({
             </div>
           )}
         </motion.section>
-      )}      }
+      )}
           </div>
         </motion.section>
       {/* ── REVENUE TREND ── */}
-      {visibility.revenueGraph && (
+      {visibilty.revenueGraph && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
           <RevenueTrendCard
             revenueTrend={revenueTrend}
