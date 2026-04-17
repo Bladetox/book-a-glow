@@ -8,7 +8,7 @@ import {
   Sparkles, Clock, CheckCircle, AlertCircle,
   Download, Pencil, Check, StickyNote, Settings2, Save,
   Users, CalendarCheck, Send, ChevronDown, Info,
- Trash2,} from "lucide-react";
+} from "lucide-react";
 import { format, subDays, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 
@@ -190,78 +190,6 @@ const WaButton = ({
 
 const STATUS_OPTIONS = ["ON TRACK", "TIME TO BOOK", "OVERDUE"] as const;
 
-// ─── InlineClientEditor ───
-const InlineClientEditor = ({ rowId, name, phone, tenantId, onUpdated }: { 
-  rowId: string; 
-  name: string; 
-  phone: string | null; 
-  tenantId: string; 
-  onUpdated: () => void; 
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [localName, setLocalName] = useState(name);
-  const [localPhone, setLocalPhone] = useState(phone ?? "");
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from("loyalty_tracker")
-      .update({ 
-        client_name: localName, 
-        phone: localPhone,
-        updated_at: new Date().toISOString() 
-      })
-      .eq("id", rowId).eq("tenant_id", tenantId);
-    setSaving(false);
-    if (error) {
-      toast.error("Failed to update client info");
-    } else {
-      toast.success("Client info updated");
-      setEditing(false);
-      onUpdated();
-    }
-  };
-
-  if (!editing) return (
-    <div className="flex-1 min-w-0 overflow-hidden cursor-pointer group" onClick={(e) => { e.stopPropagation(); setEditing(true); }}>
-      <p className="text-sm font-semibold text-white/85 leading-snug break-words line-clamp-1 group-hover:text-emerald-400 transition-colors">
-        {name}
-      </p>
-      <p className="text-[10px] text-white/30 truncate flex items-center gap-1">
-        {phone || <span className="italic text-white/20">No phone</span>}
-        <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-      </p>
-    </div>
-  );
-
-  return (
-    <div className="flex-1 min-w-0 flex flex-col gap-1" onClick={e => e.stopPropagation()}>
-      <input
-        autoFocus
-        value={localName}
-        onChange={e => setLocalName(e.target.value)}
-        className="text-xs font-semibold bg-white/[0.06] border border-white/[0.12] rounded px-1.5 py-0.5 text-white/90 focus:outline-none focus:border-emerald-400/40"
-      />
-      <div className="flex items-center gap-1">
-        <input
-          value={localPhone}
-          onChange={e => setLocalPhone(e.target.value)}
-          placeholder="Phone"
-          className="text-[10px] bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5 text-white/60 focus:outline-none focus:border-emerald-400/40 flex-1"
-        />
-        <button onClick={save} disabled={saving} className="text-emerald-400 hover:text-emerald-300">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-3 h-3" />}
-        </button>
-        <button onClick={() => setEditing(false)} className="text-white/20 hover:text-white/50">
-          <X className="w-3 h-3" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
 // ─── InlineStatusEditor ───
 const InlineStatusEditor = ({ rowId, current, effectiveNorm, tenantId, onOptimisticUpdate, onUpdated }: {
   rowId: string; current: string; effectiveNorm: string; tenantId: string;
@@ -369,55 +297,164 @@ const InlineNotesEditor = ({ rowId, current, tenantId, onUpdated }: {
   );
 };
 
+
+// ─── InlineClientEditor ───
+const InlineClientEditor = ({ rowId, name, phone, tenantId, onUpdated }: {
+  rowId: string; name: string; phone: string | null; tenantId: string; onUpdated: () => void;
+}) => {
+  const [editingField, setEditingField] = useState<'name' | 'phone' | null>(null);
+  const [nameValue, setNameValue] = useState(name);
+  const [phoneValue, setPhoneValue] = useState(phone ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const saveName = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .update({ client_name: nameValue, updated_at: new Date().toISOString() })
+      .eq("id", rowId).eq("tenant_id", tenantId);
+    setSaving(false);
+    if (error) toast.error("Failed to update name");
+    else { toast.success("Name updated"); setEditingField(null); onUpdated(); }
+  };
+
+  const savePhone = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .update({ phone: phoneValue, updated_at: new Date().toISOString() })
+      .eq("id", rowId).eq("tenant_id", tenantId);
+    setSaving(false);
+    if (error) toast.error("Failed to update phone");
+    else { toast.success("Phone updated"); setEditingField(null); onUpdated(); }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {/* Name editor */}
+      {editingField === 'name' ? (
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          <input
+            autoFocus
+            value={nameValue}
+            onChange={e => setNameValue(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingField(null); }}
+            className="text-[11px] bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-white/80 focus:outline-none focus:border-emerald-400/40 flex-1 min-w-0"
+            placeholder="Client name"
+          />
+          {saving ? <Loader2 className="w-3 h-3 text-white/30 animate-spin shrink-0" /> : (
+            <>
+              <button onClick={saveName} className="text-emerald-400 hover:text-emerald-300 transition-colors shrink-0">
+                <Check className="w-3 h-3" />
+              </button>
+              <button onClick={() => { setNameValue(name); setEditingField(null); }} className="text-white/25 hover:text-white/60 transition-colors shrink-0">
+                <X className="w-3 h-3" />
+              </button>
+            </>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={e => { e.stopPropagation(); setEditingField('name'); }}
+          className="text-left text-sm font-semibold text-white/85 hover:text-white transition-colors group flex items-center gap-1"
+        >
+          {name}
+          <Pencil className="w-2.5 h-2.5 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+      )}
+
+      {/* Phone editor */}
+      {editingField === 'phone' ? (
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          <input
+            autoFocus
+            value={phoneValue}
+            onChange={e => setPhoneValue(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") savePhone(); if (e.key === "Escape") setEditingField(null); }}
+            className="text-[10px] bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-white/80 focus:outline-none focus:border-emerald-400/40 flex-1 min-w-0"
+            placeholder="Phone number"
+          />
+          {saving ? <Loader2 className="w-3 h-3 text-white/30 animate-spin shrink-0" /> : (
+            <>
+              <button onClick={savePhone} className="text-emerald-400 hover:text-emerald-300 transition-colors shrink-0">
+                <Check className="w-3 h-3" />
+              </button>
+              <button onClick={() => { setPhoneValue(phone ?? ""); setEditingField(null); }} className="text-white/25 hover:text-white/60 transition-colors shrink-0">
+                <X className="w-3 h-3" />
+              </button>
+            </>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={e => { e.stopPropagation(); setEditingField('phone'); }}
+          className="text-left text-[10px] text-white/30 hover:text-white/50 transition-colors group flex items-center gap-1"
+        >
+          {phone || <span className="italic text-white/20">No phone</span>}
+          <Pencil className="w-2 h-2 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 // ─── UnregisterButton ───
 const UnregisterButton = ({ rowId, clientName, tenantId, onDeleted }: {
-    rowId: string;
-    clientName: string;
-    tenantId: string;
-    onDeleted: () => void;
-  }) => {
-    const [confirming, setConfirming] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    const handleDelete = async () => {
-          setDeleting(true);
-          const { error } = await supabase
-            .from("loyalty_tracker")
-            .delete()
-            .eq("id", rowId)
-            .eq("tenant_id", tenantId);
-          setDeleting(false);
-          if (error) toast.error("Failed to remove client");
-          else { toast.success(`${clientName} removed from tracker`); onDeleted(); }
-        };
-    if (!confirming) return (
-          <button
-                  onClick={e => { e.stopPropagation(); setConfirming(true); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-white/25 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
-                  title="Remove from tracker"
-                >
-                  <Trash2 className="w-3 h-3" /> Unregister
-                </button>
-        );
-    return (
-          <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                  <span className="text-[10px] text-red-400/80">Remove {clientName}?</span>
-                  <button
-                            onClick={handleDelete}
-                            disabled={deleting}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition-colors disabled:opacity-40"
-                          >
-                            {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                            Yes
-                          </button>
-                  <button
-                            onClick={() => setConfirming(false)}
-                            className="px-2 py-1 rounded-lg text-[10px] text-white/30 hover:text-white/60 border border-white/[0.06] hover:bg-white/[0.04] transition-colors"
-                          >
-                            Cancel
-                          </button>
-                </div>
-        );
+  rowId: string; clientName: string; tenantId: string; onDeleted: () => void;
+}) => {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .delete()
+      .eq("id", rowId)
+      .eq("tenant_id", tenantId);
+    setDeleting(false);
+    if (error) {
+      toast.error("Failed to remove client");
+    } else {
+      toast.success(`${clientName} removed from tracker`);
+      setConfirming(false);
+      onDeleted();
+    }
   };
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30" onClick={e => e.stopPropagation()}>
+        <span className="text-[10px] text-red-400 font-medium">Remove?</span>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-[10px] text-red-400 hover:text-red-300 font-semibold transition-colors disabled:opacity-40"
+        >
+          {deleting ? "..." : "Yes"}
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          className="text-[10px] text-white/40 hover:text-white/70 font-semibold transition-colors"
+        >
+          No
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); setConfirming(true); }}
+      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-white/30 hover:text-red-400 hover:bg-red-500/5 transition-colors"
+      title="Remove from tracker"
+    >
+      <Trash2 className="w-3 h-3" />
+      <span>Remove</span>
+    </button>
+  );
+};
+
 // ─── EnrollModal ───
 const ENROLL_STEPS = ["Client Info", "Dates", "Confirm"] as const;
 
@@ -868,21 +905,6 @@ const ClientRow = ({
   onOptimisticStatus: (s: string) => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
-  
-  const { mutate: unregister, isPending: unregistering } = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("loyalty_tracker")
-        .delete()
-        .eq("id", r.id).eq("tenant_id", tenantId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Client removed from loyalty tracker");
-      onUpdated();
-    },
-    onError: () => toast.error("Failed to remove client"),
-  });
 
   const phoneKey = normPhone(r.phone);
   const nameKey  = (r.client_name ?? "").trim().toLowerCase();
@@ -955,14 +977,14 @@ const ClientRow = ({
           {(r.client_name ?? "?")[0].toUpperCase()}
         </div>
 
-{/* Name + phone — now editable inline */}
-          <InlineClientEditor
-            rowId={r.id}
-            name={r.client_name}
-            phone={r.phone}
-            tenantId={tenantId}
-            onUpdated={onUpdated}
-          />
+        {/* Name + phone — Fix #1: allow wrap on very long names, no hard truncate */}
+<InlineClientEditor
+              rowId={r.id}
+              name={r.client_name}
+              phone={r.phone}
+              tenantId={tenantId}
+              onUpdated={onUpdated}
+            />
         {/* Status badge — shortened text on mobile to save space for name */}
         <div className="shrink-0" onClick={e => e.stopPropagation()}>
           <InlineStatusEditor
@@ -1039,19 +1061,16 @@ const ClientRow = ({
                   <span className="text-[11px] text-white/35">{format(new Date(r.last_contacted_at), "dd MMM yyyy")}</span>
                 </div>
               )}
-              <InlineClientEditor rowId={r.id} name={r.client_name} phone={r.phone} tenantId={tenantId} onUpdated={onUpdated} />
-              <InlineNotesEditor rowId={r.id} current={r.notes} tenantId={tenantId} onUpdated={onUpdated} />
+              
+            <UnregisterButton
+              rowId={r.id}
+              clientName={r.client_name}
+              tenantId={tenantId}
+              onDeleted={() => {
+                qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
+              }}
+            /> rowId={r.id} current={r.notes} tenantId={tenantId} onUpdated={onUpdated} />
             </div>
-                          <div className="flex justify-end mt-2">
-                <button
-                  onClick={e => { e.stopPropagation(); if (window.confirm(`Remove ${r.client_name} from loyalty tracker?`)) unregister(); }}
-                  disabled={unregistering}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.07] transition-colors"
-                >
-                  {unregistering ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                  Unregister
-                </button>
-              </div>
           </motion.div>
         )}
       </AnimatePresence>
