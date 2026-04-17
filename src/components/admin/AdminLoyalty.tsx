@@ -530,6 +530,21 @@ function resolvePhone(b: any): string {
 const FILTERS = ["All", "On Track", "Time to Book", "Overdue"] as const;
 type Filter = typeof FILTERS[number];
 
+
+function resolveEmailKey(b: any): string {
+  const email = b.guest_email || (b.client && b.client.email) || "";
+  return email.trim().toLowerCase();
+}
+
+function resolveAddressKey(b: any): string {
+  const addr = b.client_address || b.guest_address || (b.client && b.client.address) || "";
+  return addr.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function resolveFirstName(b: any): string {
+  const fullName = resolveName(b);
+  return fullName.split(/\s+/)[0].toLowerCase();
+}
 function exportCSV(rows: LoyaltyRow[], tenantSlug: string, serviceLabel: string) {
   if (!rows.length) return;
   const svcLabel = serviceLabel || "service";
@@ -1011,10 +1026,18 @@ const AdminLoyalty = () => {
       const isQualifying = keyword
         ? items.some((it: any) => (it.service_name ?? "").toLowerCase().includes(keyword))
         : true;
-      const phoneKey = normPhone(resolvePhone(b));
-      const nameKey  = resolveName(b).trim().toLowerCase();
-      if (phoneKey) setEntry(phoneKey, bDate, isQualifying);
-      if (nameKey)  setEntry(nameKey,  bDate, isQualifying);
+const phoneKey = normPhone(resolvePhone(b));
+    const fullNameKey = resolveName(b).trim().toLowerCase();
+    const firstNameKey = resolveFirstName(b);
+    const emailKey = resolveEmailKey(b);
+    const addressKey = resolveAddressKey(b);
+    
+    // Index under all 5 signals for robust matching
+    if (phoneKey) setEntry(phoneKey, bDate, isQualifying);
+    if (fullNameKey) setEntry(fullNameKey, bDate, isQualifying);
+    if (firstNameKey && firstNameKey !== fullNameKey) setEntry(firstNameKey, bDate, isQualifying);
+    if (emailKey) setEntry(emailKey, bDate, isQualifying);
+    if (addressKey) setEntry(addressKey, bDate, isQualifying);
     });
 
     return map;
@@ -1023,17 +1046,27 @@ const AdminLoyalty = () => {
   // ─── getLiveDate / getHasUpcoming ───
   // Returns null (not empty string) when no live date available.
   const getLiveDate = (r: LoyaltyRow): string | null => {
-    const k = normPhone(r.phone);
-    const n = (r.client_name ?? "").trim().toLowerCase();
-    const raw = (enrichment[k] ?? enrichment[n])?.liveLastDate ?? null;
-    return raw && raw.length >= 10 ? raw : null;
-  };
+  const phoneKey = normPhone(r.phone);
+  const fullNameKey = (r.client_name ?? "").trim().toLowerCase();
+  const firstNameKey = r.client_name ? r.client_name.split(/\s+/)[0].toLowerCase() : "";
+  
+  // Try all signals in priority order
+  const raw = enrichment[phoneKey]?.liveLastDate 
+    ?? enrichment[fullNameKey]?.liveLastDate
+    ?? enrichment[firstNameKey]?.liveLastDate
+    ?? null;
+  return raw && raw.length >= 10 ? raw : null;
+};
 
-  const getHasUpcoming = (r: LoyaltyRow): boolean => {
-    const k = normPhone(r.phone);
-    const n = (r.client_name ?? "").trim().toLowerCase();
-    return !!(enrichment[k] ?? enrichment[n])?.upcomingDate;
-  };
+const getHasUpcoming = (r: LoyaltyRow): boolean => {
+  const phoneKey = normPhone(r.phone);
+  const fullNameKey = (r.client_name ?? "").trim().toLowerCase();
+  const firstNameKey = r.client_name ? r.client_name.split(/\s+/)[0].toLowerCase() : "";
+  
+  return !!(enrichment[phoneKey]?.upcomingDate 
+    ?? enrichment[fullNameKey]?.upcomingDate
+    ?? enrichment[firstNameKey]?.upcomingDate);
+};
 
   // ─── 4. Enroll mutation ───
   const { mutate: enroll, isPending: enrollPending } = useMutation({
