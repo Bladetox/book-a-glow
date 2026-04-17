@@ -7,7 +7,7 @@ import {
   Loader2, MessageCircle, Search, X, UserPlus,
   Sparkles, Clock, CheckCircle, AlertCircle,
   Download, Pencil, Check, StickyNote, Settings2, Save,
-  Users, CalendarCheck, Send, ChevronDown, Info,
+  Users, CalendarCheck, Send, ChevronDown, Info, Trash2,
 } from "lucide-react";
 import { format, subDays, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import { toast } from "sonner";
