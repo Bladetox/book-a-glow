@@ -1,7 +1,7 @@
 // C5 — Drag-to-reorder services list via @dnd-kit (persists display_order to Supabase)
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, Check, Search, ChevronDown, Loader2, GripVertical, X, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Search, ChevronDown, ChevronUp, Loader2, GripVertical, X, Sparkles } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove, } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
