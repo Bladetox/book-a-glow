@@ -460,6 +460,9 @@ const AdminDashboard = ({
   const [servicesPeriod, setServicesPeriod] = useState<"month" | "alltime">("month");
 
   const data = useDashboardData();
+    const { overdueClients, inactiveClients, loading: alertsLoading } = useClientAlerts();
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
