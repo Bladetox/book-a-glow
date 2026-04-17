@@ -1055,7 +1055,7 @@ const phoneKey = normPhone(resolvePhone(b));
     ?? enrichment[fullNameKey]?.liveLastDate
     ?? enrichment[firstNameKey]?.liveLastDate
     ?? null;
-  return raw && raw.length >= 10 ? raw : null;
+  const liveDate = raw && raw.length >= 10 ? raw : null;   const storedISO = excelToISO(r.last_wax_date);   if (liveDate && storedISO) return liveDate > storedISO ? liveDate : storedISO;   return liveDate ?? storedISO ?? null;
 };
 
 const getHasUpcoming = (r: LoyaltyRow): boolean => {
