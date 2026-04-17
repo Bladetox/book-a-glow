@@ -1069,7 +1069,13 @@ const ClientRow = ({
               onDeleted={() => {
                 qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
               }}
-            /> rowId={r.id} current={r.notes} tenantId={tenantId} onUpdated={onUpdated} />
+            />
+                          <InlineNotesEditor
+              rowId={r.id}
+              current={r.notes}
+              tenantId={tenantId}
+              onUpdated={onUpdated}
+            />
             </div>
           </motion.div>
         )}
