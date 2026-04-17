@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
+import { useClientAlerts } from "@/hooks/useClientAlerts";
+import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 const ALL_SECTIONS = [
@@ -462,6 +464,9 @@ const AdminDashboard = ({
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
     setVisibility(next);
+      const { overdueClients, inactiveClients, loading: alertsLoading } = useClientAlerts();
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
     saveVisibility(next);
   };
 
@@ -538,6 +543,13 @@ const AdminDashboard = ({
   return (
     <div className="flex flex-col gap-6">
       <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
+            <ClientAlertsModal
+        isOpen={alertModalOpen}
+        onClose={() => setAlertModalOpen(false)}
+        alertType={alertModalType}
+        overdueClients={overdueClients}
+        inactiveClients={inactiveClients}
+      />
 
       {/* Customize toggle */}
       <div className="flex items-center justify-end">
@@ -707,26 +719,59 @@ const AdminDashboard = ({
       )}
 
       {/* ── ALERTS ── */}
-      {visibility.alerts && alerts.length > 0 && (
+      {visibility.alerts && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.1 }}>
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Alerts</p>
-          <div className="flex flex-col gap-2">
-            {alerts.map((alert: any, i: number) => {
-              const Icon = alertIcons[alert.type] ?? AlertTriangle;
-              return (
-                <div key={i} className={`rounded-xl border px-4 py-3 flex items-start gap-3 ${
-                  alert.type === "danger"  ? "border-red-500/20 bg-red-500/[0.04]" :
-                  alert.type === "warning" ? "border-amber-500/20 bg-amber-500/[0.04]" :
-                  "border-white/[0.06] bg-white/[0.02]"
-                }`}>
-                  <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
-                    alert.type === "danger"  ? "text-red-400" :
-                    alert.type === "warning" ? "text-amber-400" : "text-white/30"
-                  }`} />
-                  <p className="text-xs text-white/60 leading-relaxed">{alert.text}</p>
+          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">General Alerts</p>
+          
+          {alertsLoading ? (
+            <div className="flex flex-col gap-2">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="rounded-xl border px-4 py-3 flex items-start gap-3 animate-pulse bg-white/[0.03] border-white/[0.06]" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {/* Overdue Loyalty Clients Alert */}
+              {overdueClients.length > 0 && (
+                <div
+                  onClick={() => {
+                    setAlertModalType("overdue_loyalty");
+                    setAlertModalOpen(true);
+                  }}
+                  className="rounded-xl border border-red-500/20 bg-red-500/[0.04] px-4 py-3 flex items-start gap-3 cursor-pointer hover:border-red-500/30 hover:bg-red-500/[0.06] transition-colors"
+                >
+                  <CalendarCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-400" />
+                  <p className="text-xs text-white/60 leading-relaxed flex-1">
+                    {overdueClients.length} client{overdueClients.length !== 1 ? 's' : ''} with overdue loyalty appointments
+                  </p>
                 </div>
-              );
-            })}
+              )}
+
+              {/* Inactive 90+ Days Clients Alert */}
+              {inactiveClients.length > 0 && (
+                <div
+                  onClick={() => {
+                    setAlertModalType("inactive_90_days");
+                    setAlertModalOpen(true);
+                  }}
+                  className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 flex items-start gap-3 cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/[0.06] transition-colors"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
+                  <p className="text-xs text-white/60 leading-relaxed flex-1">
+                    {inactiveClients.length} client{inactiveClients.length !== 1 ? 's' : ''} haven't booked in 90+ days
+                  </p>
+                </div>
+              )}
+
+              {overdueClients.length === 0 && inactiveClients.length === 0 && (
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+                  <p className="text-xs text-white/40 text-center">No alerts at this time</p>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.section>
+      )}      })}
           </div>
         </motion.section>
       )}
