@@ -200,3 +200,17 @@ export const TermsIcon = ({ className, ...props }: IconProps) => (
     <path d="M15.5 3 Q17.5 2 18.5 4 Q16.5 5.5 15.5 3Z" strokeWidth="1.1" />
   </svg>
 );
+
+/** Client Management — two profile silhouettes with a lash-curl accent top-right */
+export const ClientManagementIcon = ({ className, ...props }: IconProps) => (
+  <svg {...defaults} className={className} {...props}>
+    {/* back person silhouette */}
+    <circle cx="9" cy="7" r="3" />
+    <path d="M2 20c0-3.3 3.1-6 7-6" />
+    {/* front person silhouette */}
+    <circle cx="16" cy="9" r="3.5" />
+    <path d="M9.5 21c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5" />
+    {/* lash-curl accent top-right */}
+    <path d="M19 3 Q21 1 22 3" strokeWidth="1.1" opacity="0.6" />
+  </svg>
+);
