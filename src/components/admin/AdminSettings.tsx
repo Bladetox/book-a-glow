@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, MapPin, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
-  Globe, CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp,
-  ShieldBan, ShieldCheck,
+  Globe, CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -18,7 +17,7 @@ import {
 import { useTenant } from "@/contexts/TenantContext";
 import { useSupabaseServices } from "@/hooks/useSupabaseServices";
 import type { AddonRule } from "@/hooks/useSuggestedAddons";
-import BlockClientModal from "@/components/admin/BlockClientModal";
+
 import { toast } from "sonner";
 
 // ─── Deposit presets ────────────────────────────────────────────────────────────────
@@ -36,16 +35,6 @@ const SENSITIVE_KEYS = new Set([
   "google_service_account_json",
 ]);
 
-interface BlockedClientRow {
-  id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  reason: string | null;
-  created_at?: string | null;
-  is_active?: boolean | null;
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────────────
 const SectionLabel = ({ label }: { label: string }) => (
@@ -180,14 +169,6 @@ const AdminSettings = () => {
   const [gcalSyncing, setGcalSyncing] = useState(false);
   const [gcalSyncResult, setGcalSyncResult] = useState<string | null>(null);
 
-  const [blockedClients, setBlockedClients] = useState<BlockedClientRow[]>([]);
-  const [blockedLoading, setBlockedLoading] = useState(false);
-  const [blockModalOpen, setBlockModalOpen] = useState(false);
-  const [selectedBlockedClient, setSelectedBlockedClient] = useState<BlockedClientRow | null>(null);
-
-  // ── Booking URL ──────────────────────────────────────────────────────────────────────
-  const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
-  const customDomain = (draft.custom_domain ?? "").trim();
   const activeBookingUrl = customDomain ? `https://${customDomain}` : defaultBookingUrl;
 
   const copyUrl = (url: string) => {
@@ -195,29 +176,6 @@ const AdminSettings = () => {
     toast.success("Copied to clipboard");
   };
 
-  const loadBlockedClients = async () => {
-    if (!tenantId) return;
-    setBlockedLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("blocked_clients")
-        .select("id, name, email, phone, address, reason, created_at, is_active")
-        .eq("tenant_id", tenantId)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setBlockedClients((data as BlockedClientRow[]) ?? []);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to load blocked clients");
-    } finally {
-      setBlockedLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadBlockedClients();
-  }, [tenantId]);
 
   // ── Draft initialisation ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -389,20 +347,6 @@ const AdminSettings = () => {
 
   return (
     <div className="flex flex-col gap-8 pb-12">
-      <BlockClientModal
-        open={blockModalOpen}
-        clientName={selectedBlockedClient?.name ?? ""}
-        clientEmail={selectedBlockedClient?.email ?? ""}
-        clientPhone={selectedBlockedClient?.phone ?? ""}
-        clientAddress={selectedBlockedClient?.address ?? ""}
-        existingBlockId={selectedBlockedClient?.id ?? null}
-        onClose={() => {
-          setBlockModalOpen(false);
-          setSelectedBlockedClient(null);
-        }}
-        onSuccess={() => {
-          loadBlockedClients();
-        }}
       />
 
       {/* ── BOOKING PAGE ── */}
@@ -447,7 +391,7 @@ const AdminSettings = () => {
             {!customDomain && " Add a custom domain below to use your own URL."}
           </p>
         </div>
-      </section>
+        
 
       <section className="flex flex-col gap-3">
         <SectionLabel label="Identity" />
@@ -676,41 +620,6 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <SectionLabel label="Client Management" />
-        <div className="grid grid-cols-1 gap-4">
-          <SettingsCard title="Blocked Clients" icon={ShieldBan} gradient="from-red-500/[0.06] to-white/[0.02]">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-white/35 leading-relaxed">
-                Active client blocks are managed here. Unblocking a client allows them to book again while keeping the audit trail intact.
-              </p>
-              <button
-                onClick={loadBlockedClients}
-                disabled={blockedLoading}
-                className="shrink-0 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/50 hover:text-white/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {blockedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
-                Refresh
-              </button>
-            </div>
-
-            {blockedLoading ? (
-              <div className="flex flex-col gap-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-16 rounded-2xl bg-white/[0.03] border border-white/[0.05] animate-pulse" />
-                ))}
-              </div>
-            ) : blockedClients.length === 0 ? (
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-8 flex flex-col items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-400/50" />
-                <p className="text-sm font-semibold text-white/75">No blocked clients</p>
-                <p className="text-xs text-white/30 text-center">When a client is blocked, they will appear here and can be unblocked at any time.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {blockedClients.map((client) => (
-                  <div
-                    key={client.id}
                     className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                   >
                     <div className="min-w-0 flex-1">
