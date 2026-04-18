@@ -170,7 +170,7 @@ const AdminSettings = () => {
   const [gcalSyncResult, setGcalSyncResult] = useState<string | null>(null);
 
   const customDomain = draft.custom_domain ?? "";
-  const defaultBookingUrl = `https://book-a-glow.vercel.app/${tenantId}`;
+  const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
   const activeBookingUrl = customDomain ? `https://${customDomain}` : defaultBookingUrl;
 
   const copyUrl = (url: string) => {
