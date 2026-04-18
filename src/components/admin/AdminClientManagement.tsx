@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminSharedUI";
 
 const AdminLoyalty        = lazy(() => import("@/components/admin/AdminLoyalty"));
 const AdminBlockedClients = lazy(() => import("@/components/admin/AdminBlockedClients"));
@@ -20,24 +21,30 @@ const AdminClientManagement = () => {
 
   const renderTab = () => {
     switch (activeTab) {
-      case "Loyalty":        return <AdminLoyalty />;
+      case "Loyalty":         return <AdminLoyalty />;
       case "Blocked Clients": return <AdminBlockedClients />;
-      case "Consultations":  return <AdminConsultations />;
-      case "Reviews":        return <AdminReviews />;
+      case "Consultations":   return <AdminConsultations />;
+      case "Reviews":         return <AdminReviews />;
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 md:px-8">
+    <div className="flex flex-col gap-8 pb-12">
+
+      <AdminPageHeader
+        title="Client Management"
+        subtitle="Manage loyalty programmes, blocked clients, consultation requests, and client reviews."
+      />
+
       {/* Tab bar */}
       <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06] self-start flex-wrap">
         {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
               activeTab === tab
-                ? "bg-white/[0.1] text-white"
+                ? "bg-white/[0.12] text-white border border-white/[0.1]"
                 : "text-white/40 hover:text-white/70"
             }`}
           >
