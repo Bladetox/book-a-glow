@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Check, RotateCcw, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { Plus, Trash2, Check, RotateCcw, ChevronUp, ChevronDown, Loader2, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import {
+  AdminCard,
+  AdminPageHeader,
+  SectionLabel,
+  SaveButton,
+  EmptyState,
+} from "@/components/admin/AdminSharedUI";
 
 interface TermsSection {
   id: string;
@@ -65,6 +72,8 @@ function useSaveTerms() {
   });
 }
 
+const inputClass = "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors";
+
 const AdminTerms = () => {
   const { data: savedSections, isLoading, isError } = useTermsSettings();
   const saveMutation = useSaveTerms();
@@ -78,9 +87,7 @@ const AdminTerms = () => {
   const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
-    if (savedSections) {
-      setSections(savedSections);
-    }
+    if (savedSections) setSections(savedSections);
   }, [savedSections]);
 
   const persist = (next: TermsSection[]) => {
@@ -138,8 +145,6 @@ const AdminTerms = () => {
     cancelEdit();
   };
 
-  const inputClass = "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors";
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -153,96 +158,177 @@ const AdminTerms = () => {
   }
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-white/90">Terms & Conditions</h3>
-          <p className="text-xs text-white/40 mt-0.5">
-            {sections.length} section{sections.length !== 1 ? "s" : ""} — displayed to clients before payment
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleReset}
-            disabled={saveMutation.isPending}
-            className={`text-xs px-3 py-2 rounded-xl border transition-colors flex items-center gap-1.5 disabled:opacity-50 ${
-              confirmReset
-                ? "border-red-500/40 text-red-400 bg-red-500/10"
-                : "border-white/[0.08] text-white/40 hover:text-white/60 hover:bg-white/[0.04]"
-            }`}
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            {confirmReset ? "Confirm Reset" : "Reset"}
-          </button>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsAdding(true)}
-            className="text-xs px-4 py-2 rounded-xl bg-white/[0.1] text-white hover:bg-white/[0.15] transition-colors flex items-center gap-1.5 font-medium"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Section
-          </motion.button>
-        </div>
-      </div>
+    <div className="flex flex-col gap-8 pb-12 max-w-3xl">
 
-      {/* Saving indicator */}
-      {saveMutation.isPending && (
-        <div className="flex items-center gap-2 text-xs text-white/40">
-          <Loader2 className="w-3 h-3 animate-spin" /> Saving...
-        </div>
-      )}
+      {/* ── Header ── */}
+      <AdminPageHeader
+        title="Terms & Conditions"
+        subtitle={`${sections.length} section${
+          sections.length !== 1 ? "s" : ""
+        } — displayed to clients before payment`}
+        action={
+          <div className="flex items-center gap-2">
+            {saveMutation.isPending && (
+              <span className="flex items-center gap-1.5 text-[10px] text-white/30">
+                <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+              </span>
+            )}
+            <SaveButton
+              label={confirmReset ? "Confirm Reset" : "Reset"}
+              variant={confirmReset ? "danger" : "secondary"}
+              onClick={handleReset}
+              loading={saveMutation.isPending}
+            />
+            <SaveButton
+              label="Add Section"
+              variant="secondary"
+              onClick={() => setIsAdding(true)}
+            />
+          </div>
+        }
+      />
 
-      {/* Add new section form */}
+      {/* ── Add new section ── */}
       <AnimatePresence>
         {isAdding && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="bg-white/[0.04] border border-white/[0.1] rounded-2xl p-4 flex flex-col gap-3"
           >
-            <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">New Section</p>
-            <input id="terms-new-title" name="terms-new-title" className={inputClass} placeholder="Section title *" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-            <textarea id="terms-new-content" name="terms-new-content" className={`${inputClass} min-h-[100px] resize-y`} placeholder="Section content *" value={newContent} onChange={(e) => setNewContent(e.target.value)} />
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => { setIsAdding(false); setNewTitle(""); setNewContent(""); }} className="px-4 py-2 rounded-xl border border-white/[0.08] text-white/50 hover:text-white/70 text-sm transition-colors">Cancel</button>
-              <motion.button whileTap={{ scale: 0.95 }} onClick={addSection} className="px-4 py-2 rounded-xl bg-white/[0.12] text-white text-sm font-medium hover:bg-white/[0.18] transition-colors flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Save</motion.button>
-            </div>
+            <AdminCard title="New Section" icon={FileText} gradient="from-white/[0.06] to-white/[0.02]">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Section Title *</label>
+                  <input
+                    id="terms-new-title"
+                    name="terms-new-title"
+                    className={inputClass}
+                    placeholder="e.g. 1. Cancellation Policy"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Content *</label>
+                  <textarea
+                    id="terms-new-content"
+                    name="terms-new-content"
+                    className={`${inputClass} min-h-[100px] resize-y`}
+                    placeholder="Section content…"
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <SaveButton
+                    label="Cancel"
+                    variant="secondary"
+                    onClick={() => { setIsAdding(false); setNewTitle(""); setNewContent(""); }}
+                  />
+                  <SaveButton
+                    label="Save Section"
+                    onClick={addSection}
+                  />
+                </div>
+              </div>
+            </AdminCard>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Sections list */}
-      <div className="flex flex-col gap-2">
-        {sections.length === 0 && <p className="text-sm text-white/30 text-center py-8">No sections yet</p>}
-        {sections.map((s, i) => (
-          <motion.div key={s.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 group">
-            {editingId === s.id ? (
-              <div className="flex flex-col gap-3">
-                <input id="terms-edit-title" name="terms-edit-title" className={inputClass} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Section title" />
-                <textarea id="terms-edit-content" name="terms-edit-content" className={`${inputClass} min-h-[100px] resize-y`} value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Section content" />
-                <div className="flex gap-2 justify-end">
-                  <button onClick={cancelEdit} className="px-4 py-2 rounded-xl border border-white/[0.08] text-white/50 hover:text-white/70 text-sm transition-colors">Cancel</button>
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={saveEdit} className="px-4 py-2 rounded-xl bg-white/[0.12] text-white text-sm font-medium hover:bg-white/[0.18] transition-colors flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />Save</motion.button>
+      {/* ── Sections list ── */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Sections" />
+
+        {sections.length === 0 && (
+          <EmptyState message="No sections yet" action={
+            <button
+              onClick={() => setIsAdding(true)}
+              className="text-xs font-bold text-white/40 hover:text-white/70 underline underline-offset-4 transition-colors"
+            >
+              Add your first section
+            </button>
+          } />
+        )}
+
+        <div className="flex flex-col gap-2">
+          {sections.map((s, i) => (
+            <motion.div
+              key={s.id}
+              layout
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="group bg-gradient-to-br from-white/[0.04] to-white/[0.02] border border-white/[0.06] rounded-3xl p-5 hover:border-white/[0.1] transition-all"
+            >
+              {editingId === s.id ? (
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Title</label>
+                    <input
+                      id="terms-edit-title"
+                      name="terms-edit-title"
+                      className={inputClass}
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Section title"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Content</label>
+                    <textarea
+                      id="terms-edit-content"
+                      name="terms-edit-content"
+                      className={`${inputClass} min-h-[100px] resize-y`}
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      placeholder="Section content"
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <SaveButton label="Cancel" variant="secondary" onClick={cancelEdit} />
+                    <SaveButton label="Save" onClick={saveEdit} />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-3">
-                <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => moveSection(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-white/[0.06] text-white/30 hover:text-white/60 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronUp className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => moveSection(i, 1)} disabled={i === sections.length - 1} className="p-1 rounded hover:bg-white/[0.06] text-white/30 hover:text-white/60 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronDown className="w-3.5 h-3.5" /></button>
+              ) : (
+                <div className="flex items-start gap-3">
+                  {/* Reorder arrows */}
+                  <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity pt-0.5">
+                    <button
+                      onClick={() => moveSection(i, -1)}
+                      disabled={i === 0}
+                      className="p-1 rounded-lg hover:bg-white/[0.06] text-white/20 hover:text-white/50 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => moveSection(i, 1)}
+                      disabled={i === sections.length - 1}
+                      className="p-1 rounded-lg hover:bg-white/[0.06] text-white/20 hover:text-white/50 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => startEdit(s)}>
+                    <h4 className="text-sm font-bold text-white/85">{s.title}</h4>
+                    <p className="text-xs text-white/35 mt-1.5 leading-relaxed line-clamp-3">{s.content}</p>
+                  </div>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => deleteSection(s.id)}
+                    className="p-2 rounded-xl hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => startEdit(s)}>
-                  <h4 className="text-sm font-semibold text-white/90">{s.title}</h4>
-                  <p className="text-xs text-white/40 mt-1 leading-relaxed line-clamp-3">{s.content}</p>
-                </div>
-                <button onClick={() => deleteSection(s.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
-              </div>
-            )}
-          </motion.div>
-        ))}
-      </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };
