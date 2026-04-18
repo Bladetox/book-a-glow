@@ -7,7 +7,6 @@ import {
   XCircle, Package, Bell, Clock, Info, X, Megaphone
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
-import { supabase } from "@/integrations/supabase/client";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
@@ -21,16 +20,16 @@ const ALL_SECTIONS = [
 type SectionKey = typeof ALL_SECTIONS[number];
 
 const sectionLabels: Record<SectionKey, string> = {
-  hero:              "Overview Card",
-  health:            "Business Health",
-  topServices:       "Top Services",
-  alerts:            "Alerts",
-  revenueGraph:      "Revenue Trend",
-  heatmap:           "Booking Heatmap",
+  hero: "Overview Card",
+  health: "Business Health",
+  topServices: "Top Services",
+  alerts: "Alerts",
+  revenueGraph: "Revenue Trend",
+  heatmap: "Booking Heatmap",
   todayAppointments: "Today's Appointments",
-  clientInsights:    "Client Insights",
-  leadSource:        "Acquisition Channels",
-  stockAlerts:       "Stock Alerts",
+  clientInsights: "Client Insights",
+  leadSource: "Acquisition Channels",
+  stockAlerts: "Stock Alerts",
 };
 
 function getVisibility(): Record<SectionKey, boolean> {
@@ -39,12 +38,14 @@ function getVisibility(): Record<SectionKey, boolean> {
     if (stored) {
       const parsed = JSON.parse(stored);
       return Object.fromEntries(
-        ALL_SECTIONS.map(s => [s, parsed[s] !== false])
+        ALL_SECTIONS.map((s) => [s, parsed[s] !== false])
       ) as Record<SectionKey, boolean>;
     }
   } catch {}
-  return Object.fromEntries(ALL_SECTIONS.map(s => [s, true])) as Record<SectionKey, boolean>;
+
+  return Object.fromEntries(ALL_SECTIONS.map((s) => [s, true])) as Record<SectionKey, boolean>;
 }
+
 function saveVisibility(v: Record<SectionKey, boolean>) {
   localStorage.setItem(DASHBOARD_VIS_KEY, JSON.stringify(v));
 }
@@ -57,33 +58,43 @@ interface Appointment {
   status: "confirmed" | "pending" | "complete" | "completed" | "cancelled";
   balance: number;
 }
-interface HeatmapCell { slot: string; intensity: number; }
-interface HeatmapRow  { day: string; slots: HeatmapCell[]; }
+
+interface HeatmapCell {
+  slot: string;
+  intensity: number;
+}
+
+interface HeatmapRow {
+  day: string;
+  slots: HeatmapCell[];
+}
 
 interface MetricEntry {
   title: string;
   explain: string;
   benchmark?: string;
 }
+
 interface InfoLine {
   term: string;
   def: string;
 }
+
 interface MetricCopyShape {
-  revenueToday:      MetricEntry;
+  revenueToday: MetricEntry;
   appointmentsToday: MetricEntry;
-  remaining:         MetricEntry;
-  nextUp:            MetricEntry;
-  fillRate:          MetricEntry;
-  avgBasket:         MetricEntry;
-  appointments:      MetricEntry;
-  cancellations:     MetricEntry;
-  clients:           MetricEntry;
-  returning:         MetricEntry;
-  retention:         MetricEntry;
-  leadSource:        MetricEntry;
-  revenueTrend:      InfoLine[];
-  heatmap:           InfoLine[];
+  remaining: MetricEntry;
+  nextUp: MetricEntry;
+  fillRate: MetricEntry;
+  avgBasket: MetricEntry;
+  appointments: MetricEntry;
+  cancellations: MetricEntry;
+  clients: MetricEntry;
+  returning: MetricEntry;
+  retention: MetricEntry;
+  leadSource: MetricEntry;
+  revenueTrend: InfoLine[];
+  heatmap: InfoLine[];
 }
 
 interface ExpandedCard extends MetricEntry {
@@ -151,28 +162,36 @@ const METRIC_COPY: MetricCopyShape = {
     benchmark: "Double down on your top channel. If 'Not specified' leads, prompt clients to answer at booking.",
   },
   revenueTrend: [
-    { term: "Revenue Trend",    def: "Daily revenue plotted across the month." },
-    { term: "Peak Days",        def: "The tallest bars are your best earning days." },
+    { term: "Revenue Trend", def: "Daily revenue plotted across the month." },
+    { term: "Peak Days", def: "The tallest bars are your best earning days." },
     { term: "Flat / Zero Bars", def: "Days with no revenue. Quiet days may need a targeted push." },
-    { term: "Month-on-Month",   def: "Compare this to last month to see if revenue is growing." },
+    { term: "Month-on-Month", def: "Compare this to last month to see if revenue is growing." },
   ],
   heatmap: [
-    { term: "Booking Heatmap",    def: "Shows which days and time slots get the most bookings." },
-    { term: "Bright Green",       def: "Peak demand slots. Never discount these." },
-    { term: "Faint / Empty",      def: "Quiet slots. Run targeted offers here." },
-    { term: "Day Patterns",       def: "Weekend-heavy? Build weekday traffic to smooth revenue." },
+    { term: "Booking Heatmap", def: "Shows which days and time slots get the most bookings." },
+    { term: "Bright Green", def: "Peak demand slots. Never discount these." },
+    { term: "Faint / Empty", def: "Quiet slots. Run targeted offers here." },
+    { term: "Day Patterns", def: "Weekend-heavy? Build weekday traffic to smooth revenue." },
   ],
 };
 
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
-const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onClose: () => void }) => (
+const MetricExpandOverlay = ({
+  card,
+  onClose,
+}: {
+  card: ExpandedCard | null;
+  onClose: () => void;
+}) => (
   <AnimatePresence>
     {card && (
       <>
         <motion.div
           key="backdrop"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.22 }}
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
           onClick={onClose}
@@ -211,7 +230,9 @@ const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onC
               )}
               {card.extraLines && card.extraLines.length > 0 && (
                 <div className="mt-1 flex flex-col gap-1.5">
-                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mb-0.5">All-time breakdown</p>
+                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mb-0.5">
+                    All-time breakdown
+                  </p>
                   {card.extraLines.map((l, i) => (
                     <div key={i} className="flex items-center justify-between gap-3">
                       <span className="text-[12px] text-white/60 truncate flex-1">{l.term}</span>
@@ -232,10 +253,24 @@ const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onC
 );
 
 const MetricCard = ({
-  id, icon: Icon, label, value, color, sub, title, explain, benchmark, onExpand,
+  id,
+  icon: Icon,
+  label,
+  value,
+  color,
+  sub,
+  title,
+  explain,
+  benchmark,
+  onExpand,
 }: {
-  id: string; icon: React.ElementType; label: string; value: string;
-  color?: string; sub?: string; onExpand: (c: ExpandedCard) => void;
+  id: string;
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  color?: string;
+  sub?: string;
+  onExpand: (c: ExpandedCard) => void;
 } & MetricEntry) => (
   <motion.div
     layoutId={id}
@@ -255,16 +290,32 @@ const MetricCard = ({
         <span className={`text-base sm:text-lg font-bold truncate ${color ?? "text-white/90"}`}>{value}</span>
         {sub && <span className="text-[10px] text-white/25 truncate">{sub}</span>}
       </div>
-      <div className="shrink-0 mt-1 ml-1"><Info className="w-3 h-3 text-white/15" /></div>
+      <div className="shrink-0 mt-1 ml-1">
+        <Info className="w-3 h-3 text-white/15" />
+      </div>
     </div>
   </motion.div>
 );
 
 const ClientMiniCard = ({
-  id, icon: Icon, iconColor, value, valueColor, label, title, explain, benchmark, onExpand,
+  id,
+  icon: Icon,
+  iconColor,
+  value,
+  valueColor,
+  label,
+  title,
+  explain,
+  benchmark,
+  onExpand,
 }: {
-  id: string; icon: React.ElementType; iconColor?: string;
-  value: string; valueColor?: string; label: string; onExpand: (c: ExpandedCard) => void;
+  id: string;
+  icon: React.ElementType;
+  iconColor?: string;
+  value: string;
+  valueColor?: string;
+  label: string;
+  onExpand: (c: ExpandedCard) => void;
 } & MetricEntry) => (
   <motion.div
     layoutId={id}
@@ -285,7 +336,7 @@ const ClientMiniCard = ({
 
 const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   <div className="mt-3 mb-1 rounded-lg border border-white/[0.06] bg-white/[0.04] p-3 flex flex-col gap-2">
-    {lines.map(l => (
+    {lines.map((l) => (
       <div key={l.term} className="flex gap-2">
         <span className="text-[10px] font-semibold text-emerald-400/80 shrink-0 w-28 leading-snug">{l.term}</span>
         <span className="text-[11px] text-white/55 leading-snug">{l.def}</span>
@@ -297,7 +348,8 @@ const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
 const heatmapSlots = ["08-10", "10-12", "12-14", "14-16", "16-18"];
 
 const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
-  const maxIntensity = Math.max(...data.flatMap(r => r.slots.map(s => s.intensity)), 1);
+  const maxIntensity = Math.max(...data.flatMap((r) => r.slots.map((s) => s.intensity)), 1);
+
   return (
     <>
       <div className="hidden sm:block overflow-x-auto -mx-1">
@@ -305,16 +357,18 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
           <thead>
             <tr>
               <th className="text-[10px] text-white/20 text-left pr-2 pb-2" />
-              {heatmapSlots.map(s => (
-                <th key={s} className="text-[10px] text-white/20 text-center pb-2 px-1">{s}</th>
+              {heatmapSlots.map((s) => (
+                <th key={s} className="text-[10px] text-white/20 text-center pb-2 px-1">
+                  {s}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.map(row => (
+            {data.map((row) => (
               <tr key={row.day}>
                 <td className="text-[10px] text-white/30 pr-2 py-1">{row.day}</td>
-                {row.slots.map(cell => {
+                {row.slots.map((cell) => {
                   const opacity = Math.min(cell.intensity / maxIntensity, 1);
                   return (
                     <td key={cell.slot} className="p-0.5">
@@ -336,15 +390,17 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
           </tbody>
         </table>
       </div>
+
       <div className="sm:hidden flex flex-col gap-2">
-        {data.map(row => {
+        {data.map((row) => {
           const total = row.slots.reduce((a, b) => a + b.intensity, 0);
           if (total === 0) return null;
+
           return (
             <div key={row.day} className="flex items-center gap-2">
               <span className="text-[10px] font-semibold text-white/40 w-8 shrink-0">{row.day}</span>
               <div className="flex gap-1 flex-1">
-                {row.slots.map(cell => {
+                {row.slots.map((cell) => {
                   const opacity = Math.min(cell.intensity / maxIntensity, 1);
                   return (
                     <div
@@ -352,9 +408,7 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
                       className="flex-1 h-8 rounded-md flex items-center justify-center"
                       style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.85, 0.06)})` }}
                     >
-                      {cell.intensity > 0 && (
-                        <span className="text-[9px] font-bold text-white/70">{cell.intensity}</span>
-                      )}
+                      {cell.intensity > 0 && <span className="text-[9px] font-bold text-white/70">{cell.intensity}</span>}
                     </div>
                   );
                 })}
@@ -362,9 +416,12 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
             </div>
           );
         })}
+
         <div className="flex gap-1 px-8">
-          {heatmapSlots.map(s => (
-            <span key={s} className="flex-1 text-[8px] text-white/20 text-center">{s}</span>
+          {heatmapSlots.map((s) => (
+            <span key={s} className="flex-1 text-[8px] text-white/20 text-center">
+              {s}
+            </span>
           ))}
         </div>
       </div>
@@ -373,8 +430,12 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
 };
 
 const AppointmentsList = ({
-  appointments, onSelect,
-}: { appointments: Appointment[]; onSelect?: (client: string) => void }) => (
+  appointments,
+  onSelect,
+}: {
+  appointments: Appointment[];
+  onSelect?: (client: string) => void;
+}) => (
   <>
     <div className="hidden sm:block overflow-x-auto -mx-1">
       <table className="w-full text-xs">
@@ -388,7 +449,7 @@ const AppointmentsList = ({
           </tr>
         </thead>
         <tbody>
-          {appointments.map(a => (
+          {appointments.map((a) => (
             <tr
               key={a.id}
               className="border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.04] transition-colors"
@@ -397,15 +458,18 @@ const AppointmentsList = ({
               <td className="py-2.5 text-white/60">{a.time}</td>
               <td className="py-2.5 text-white/80 font-medium">{a.client}</td>
               <td className="py-2.5 text-white/50">{a.service}</td>
-              <td className="py-2.5"><StatusBadge status={a.status} /></td>
+              <td className="py-2.5">
+                <StatusBadge status={a.status} />
+              </td>
               <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+
     <div className="sm:hidden flex flex-col gap-2">
-      {appointments.map(a => (
+      {appointments.map((a) => (
         <div
           key={a.id}
           className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
@@ -430,21 +494,20 @@ const AppointmentsList = ({
 );
 
 const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
-  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-    status === "confirmed"  ? "bg-emerald-500/10 text-emerald-400" :
-    status === "complete" || status === "completed" ? "bg-white/[0.08] text-white/50" :
-    status === "cancelled"  ? "bg-red-500/10 text-red-400" :
-    "bg-amber-500/10 text-amber-400"
-  }`}>
+  <span
+    className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+      status === "confirmed"
+        ? "bg-emerald-500/10 text-emerald-400"
+        : status === "complete" || status === "completed"
+          ? "bg-white/[0.08] text-white/50"
+          : status === "cancelled"
+            ? "bg-red-500/10 text-red-400"
+            : "bg-amber-500/10 text-amber-400"
+    }`}
+  >
     {status === "completed" ? "complete" : status}
   </span>
 );
-
-const alertIcons: Record<string, React.ElementType> = {
-  warning: CircleDollarSign,
-  info:    CalendarCheck,
-  danger:  Package,
-};
 
 const AdminDashboard = ({
   onSelectAppointment,
@@ -453,17 +516,22 @@ const AdminDashboard = ({
   onSelectAppointment?: (client: string) => void;
   onNavigate?: (view: string) => void;
 }) => {
-  const [visibility, setVisibility]         = useState(getVisibility);
-  const [showCustomize, setShowCustomize]   = useState(false);
-  const [showHeatInfo, setShowHeatInfo]     = useState(false);
-  const [expandedCard, setExpandedCard]     = useState<ExpandedCard | null>(null);
+  const [visibility, setVisibility] = useState(getVisibility);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [showHeatInfo, setShowHeatInfo] = useState(false);
+  const [expandedCard, setExpandedCard] = useState<ExpandedCard | null>(null);
   const [servicesPeriod, setServicesPeriod] = useState<"month" | "alltime">("month");
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
   const data = useDashboardData();
-    const tenantId = localStorage.getItem("tenant_id") || "";
-  const { data: { overdueLoyaltyClients = [], inactiveClients = [] } = {}, isLoading: alertsLoading } = useClientAlerts(tenantId);
-    const overdueClients = overdueLoyaltyClients; // Alias for consistency with modalconst [alertModalOpen, setAlertModalOpen] = useState(false);
-  const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
+  const tenantId = localStorage.getItem("tenant_id") || "";
+  const {
+    data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
+    isLoading: alertsLoading,
+  } = useClientAlerts(tenantId);
+
+  const overdueClients = overdueLoyaltyClients;
 
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
@@ -484,60 +552,56 @@ const AdminDashboard = ({
     );
   }
 
-  const monthRevenue   = data.revenue?.month    ?? 0;
-  const lastMonthRev   = data.revenue?.lastMonth ?? 0;
-  const todayRevenue   = data.revenue?.today     ?? 0;
-  const todayAppts     = data.today?.appointments ?? 0;
-  const todayRemaining = data.today?.remaining    ?? 0;
-  const nextAppt       = data.today?.nextAppointment ?? null;
-  const fillRate       = data.health?.fillRate    ?? null;
-  const avgBasket      = data.health?.avgBasket   ?? 0;
-  const totalAppts     = data.health?.totalAppointments ?? 0;
-  const cancelRate     = data.health?.cancellationRate  ?? 0;
-  const totalClients   = data.clients?.total     ?? 0;
+  const monthRevenue = data.revenue?.month ?? 0;
+  const lastMonthRev = data.revenue?.lastMonth ?? 0;
+  const todayRevenue = data.revenue?.today ?? 0;
+  const todayAppts = data.today?.appointments ?? 0;
+  const todayRemaining = data.today?.remaining ?? 0;
+  const nextAppt = data.today?.nextAppointment ?? null;
+  const fillRate = data.health?.fillRate ?? null;
+  const avgBasket = data.health?.avgBasket ?? 0;
+  const totalAppts = data.health?.totalAppointments ?? 0;
+  const cancelRate = data.health?.cancellationRate ?? 0;
+  const totalClients = data.clients?.total ?? 0;
   const returningCount = data.clients?.returning ?? 0;
-  const retentionRate  = data.clients?.retentionRate ?? 0;
-  const revenueTrend   = data.revenueTrend ?? [];
-  const stockAlerts    = data.stockAlerts ?? [];
-  const alerts         = data.alerts ?? [];
+  const retentionRate = data.clients?.retentionRate ?? 0;
+  const revenueTrend = data.revenueTrend ?? [];
+  const stockAlerts = data.stockAlerts ?? [];
   const leadSourceBreakdown: { channel: string; count: number }[] = data.leadSourceBreakdown ?? [];
 
   const displayedServices =
-    servicesPeriod === "alltime"
-      ? (data.allTimeTopServices ?? [])
-      : (data.topServices ?? []);
+    servicesPeriod === "alltime" ? (data.allTimeTopServices ?? []) : (data.topServices ?? []);
 
   const hasLastMonth = lastMonthRev > 0;
-  const pctChange    = hasLastMonth
-    ? Math.round(((monthRevenue - lastMonthRev) / lastMonthRev) * 100)
-    : null;
+  const pctChange = hasLastMonth ? Math.round(((monthRevenue - lastMonthRev) / lastMonthRev) * 100) : null;
   const pctUp = pctChange !== null ? pctChange >= 0 : true;
 
   const fillRateDisplay = () => {
-    if (fillRate === null) return { text: "…",  color: "text-white/40" };
-    if (fillRate === 0)    return { text: "—",  color: "text-white/30" };
+    if (fillRate === null) return { text: "…", color: "text-white/40" };
+    if (fillRate === 0) return { text: "—", color: "text-white/30" };
     const pct = Math.round(fillRate * 100);
     return {
-      text:  `${pct}%`,
+      text: `${pct}%`,
       color: pct >= 70 ? "text-emerald-400" : pct >= 50 ? "text-amber-400" : "text-red-400",
     };
   };
-  const fr = fillRateDisplay();
 
-  const cancelDisplay  = `${Math.round(cancelRate)}%`;
-  const cancelColor    = cancelRate > 20 ? "text-red-400" : "text-white/90";
-  const retentionDisp  = `${retentionRate}%`;
+  const fr = fillRateDisplay();
+  const cancelDisplay = `${Math.round(cancelRate)}%`;
+  const cancelColor = cancelRate > 20 ? "text-red-400" : "text-white/90";
+  const retentionDisp = `${retentionRate}%`;
   const retentionColor = retentionRate >= 40 ? "text-emerald-400" : "text-white/90";
 
-  const topChannel      = leadSourceBreakdown[0]?.channel ?? "—";
+  const topChannel = leadSourceBreakdown[0]?.channel ?? "—";
   const totalWithSource = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
-  const topChannelPct   = totalWithSource > 0 && leadSourceBreakdown[0]
-    ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
-    : null;
-  const leadSourceSub  = topChannelPct !== null ? `${topChannelPct}% of all bookings` : undefined;
-  const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map(r => ({
+  const topChannelPct =
+    totalWithSource > 0 && leadSourceBreakdown[0]
+      ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
+      : null;
+  const leadSourceSub = topChannelPct !== null ? `${topChannelPct}% of all bookings` : undefined;
+  const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map((r) => ({
     term: r.channel,
-    def:  `${r.count} booking${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
+    def: `${r.count} booking${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
   }));
 
   return (
@@ -551,10 +615,9 @@ const AdminDashboard = ({
         inactiveClients={inactiveClients}
       />
 
-      {/* Customize toggle */}
       <div className="flex items-center justify-end">
         <button
-          onClick={() => setShowCustomize(v => !v)}
+          onClick={() => setShowCustomize((v) => !v)}
           className="flex items-center gap-1.5 text-[10px] tracking-[0.1em] uppercase text-white/25 hover:text-white/50 transition-colors"
         >
           <Eye className="w-3 h-3" />
@@ -562,17 +625,18 @@ const AdminDashboard = ({
         </button>
       </div>
 
-      {/* Customize panel */}
       <AnimatePresence>
         {showCustomize && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
               <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mb-3">Show / Hide Sections</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {ALL_SECTIONS.map(key => (
+                {ALL_SECTIONS.map((key) => (
                   <button
                     key={key}
                     onClick={() => toggle(key)}
@@ -582,7 +646,7 @@ const AdminDashboard = ({
                         : "bg-transparent border-white/[0.04] text-white/25"
                     }`}
                   >
-                    <div className={`w-2 h-2 rounded-full ${ visibility[key] ? "bg-emerald-400" : "bg-white/10" }`} />
+                    <div className={`w-2 h-2 rounded-full ${visibility[key] ? "bg-emerald-400" : "bg-white/10"}`} />
                     {sectionLabels[key]}
                   </button>
                 ))}
@@ -592,7 +656,6 @@ const AdminDashboard = ({
         )}
       </AnimatePresence>
 
-      {/* ── HERO ── */}
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-4">
@@ -603,7 +666,7 @@ const AdminDashboard = ({
                   R {monthRevenue.toLocaleString()}
                 </p>
                 {pctChange !== null && (
-                  <div className={`flex items-center gap-1 mt-2 ${ pctUp ? "text-emerald-400" : "text-red-400" }`}>
+                  <div className={`flex items-center gap-1 mt-2 ${pctUp ? "text-emerald-400" : "text-red-400"}`}>
                     {pctUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     <span className="text-xs font-semibold">{Math.abs(pctChange)}% vs last month</span>
                   </div>
@@ -615,11 +678,31 @@ const AdminDashboard = ({
               <p className="text-[9px] tracking-[0.14em] uppercase text-white/20 mb-2">Today at a glance</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { label: "Bookings Today",  value: String(todayAppts),    color: "text-white/80",   sub: todayAppts === 1 ? "appointment" : "appointments" },
-                  { label: "Still to Come",   value: String(todayRemaining), color: todayRemaining > 0 ? "text-amber-400" : "text-white/40", sub: "remaining" },
-                  { label: "Revenue Today",   value: `R ${todayRevenue.toLocaleString()}`, color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40", sub: "paid in" },
-                  { label: "Next Client",     value: nextAppt ? nextAppt.split(" - ")[0] : "—", color: nextAppt ? "text-white/80" : "text-white/25", sub: nextAppt ? nextAppt.split(" - ").slice(1).join(" ") : "no more today" },
-                ].map(item => (
+                  {
+                    label: "Bookings Today",
+                    value: String(todayAppts),
+                    color: "text-white/80",
+                    sub: todayAppts === 1 ? "appointment" : "appointments",
+                  },
+                  {
+                    label: "Still to Come",
+                    value: String(todayRemaining),
+                    color: todayRemaining > 0 ? "text-amber-400" : "text-white/40",
+                    sub: "remaining",
+                  },
+                  {
+                    label: "Revenue Today",
+                    value: `R ${todayRevenue.toLocaleString()}`,
+                    color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40",
+                    sub: "paid in",
+                  },
+                  {
+                    label: "Next Client",
+                    value: nextAppt ? nextAppt.split(" - ")[0] : "—",
+                    color: nextAppt ? "text-white/80" : "text-white/25",
+                    sub: nextAppt ? nextAppt.split(" - ").slice(1).join(" ") : "no more today",
+                  },
+                ].map((item) => (
                   <div key={item.label} className="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <span className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</span>
                     <span className={`text-sm font-bold ${item.color}`}>{item.value}</span>
@@ -632,22 +715,20 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── BUSINESS HEALTH ── */}
       {visibility.health && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.04 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Business Health</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <MetricCard id="mc-fill"    icon={Percent}       label="Fill Rate"         value={fr.text}                color={fr.color}    sub={fillRate === null ? "not configured" : undefined} {...METRIC_COPY.fillRate}    onExpand={setExpandedCard} />
-            <MetricCard id="mc-atv"     icon={ShoppingBag}   label="Avg Basket"        value={`R ${Math.round(avgBasket)}`}                {...METRIC_COPY.avgBasket}   onExpand={setExpandedCard} />
-            <MetricCard id="mc-appts"   icon={CalendarCheck} label="Appointments"      value={String(totalAppts)}                          {...METRIC_COPY.appointments} onExpand={setExpandedCard} />
-            <MetricCard id="mc-cancel"  icon={XCircle}       label="Cancellation Rate" value={cancelDisplay}          color={cancelColor}  {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
-            <MetricCard id="mc-clients" icon={UserPlus}      label="Unique Clients"    value={String(totalClients)}                        {...METRIC_COPY.clients}     onExpand={setExpandedCard} />
-            <MetricCard id="mc-ret"     icon={Bell}          label="Retention"         value={retentionDisp}          color={retentionColor} {...METRIC_COPY.retention}  onExpand={setExpandedCard} />
+            <MetricCard id="mc-fill" icon={Percent} label="Fill Rate" value={fr.text} color={fr.color} sub={fillRate === null ? "not configured" : undefined} {...METRIC_COPY.fillRate} onExpand={setExpandedCard} />
+            <MetricCard id="mc-atv" icon={ShoppingBag} label="Avg Basket" value={`R ${Math.round(avgBasket)}`} {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
+            <MetricCard id="mc-appts" icon={CalendarCheck} label="Appointments" value={String(totalAppts)} {...METRIC_COPY.appointments} onExpand={setExpandedCard} />
+            <MetricCard id="mc-cancel" icon={XCircle} label="Cancellation Rate" value={cancelDisplay} color={cancelColor} {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
+            <MetricCard id="mc-clients" icon={UserPlus} label="Unique Clients" value={String(totalClients)} {...METRIC_COPY.clients} onExpand={setExpandedCard} />
+            <MetricCard id="mc-ret" icon={Bell} label="Retention" value={retentionDisp} color={retentionColor} {...METRIC_COPY.retention} onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
 
-      {/* ── TOP SERVICES ── */}
       {visibility.topServices && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.08 }}>
           <div className="flex items-center justify-between mb-3">
@@ -656,9 +737,7 @@ const AdminDashboard = ({
               <button
                 onClick={() => setServicesPeriod("month")}
                 className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                  servicesPeriod === "month"
-                    ? "bg-white/[0.10] text-white/80"
-                    : "text-white/30 hover:text-white/55"
+                  servicesPeriod === "month" ? "bg-white/[0.10] text-white/80" : "text-white/30 hover:text-white/55"
                 }`}
               >
                 This Month
@@ -666,9 +745,7 @@ const AdminDashboard = ({
               <button
                 onClick={() => setServicesPeriod("alltime")}
                 className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                  servicesPeriod === "alltime"
-                    ? "bg-white/[0.10] text-white/80"
-                    : "text-white/30 hover:text-white/55"
+                  servicesPeriod === "alltime" ? "bg-white/[0.10] text-white/80" : "text-white/30 hover:text-white/55"
                 }`}
               >
                 All Time
@@ -716,7 +793,6 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── ALERTS ── */}
       {visibility.alerts && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.1 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">General Alerts</p>
@@ -769,7 +845,6 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── REVENUE TREND ── */}
       {visibility.revenueGraph && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
           <RevenueTrendCard
@@ -781,12 +856,11 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── HEATMAP ── */}
       {visibility.heatmap && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.14 }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Booking Heatmap</p>
-            <button onClick={() => setShowHeatInfo(v => !v)} className="text-white/20 hover:text-white/50 transition-colors">
+            <button onClick={() => setShowHeatInfo((v) => !v)} className="text-white/20 hover:text-white/50 transition-colors">
               <Info className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -797,7 +871,6 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── TODAY'S APPOINTMENTS ── */}
       {visibility.todayAppointments && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.16 }}>
           <div className="flex items-center justify-between mb-3">
@@ -824,20 +897,18 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── CLIENT INSIGHTS ── */}
       {visibility.clientInsights && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Client Insights</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ClientMiniCard id="ci-total"  icon={UserPlus}         iconColor="text-sky-400/60"     value={String(totalClients)}   valueColor="text-sky-400"     label="Total Clients" {...METRIC_COPY.clients}   onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-ret"    icon={UserCheck}        iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Returning"     {...METRIC_COPY.returning} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-retpct" icon={Percent}          iconColor="text-violet-400/60"  value={retentionDisp}          valueColor="text-violet-400" label="Retention %"  {...METRIC_COPY.retention} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-rev"    icon={CircleDollarSign} iconColor="text-amber-400/60"   value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket"  {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-total" icon={UserPlus} iconColor="text-sky-400/60" value={String(totalClients)} valueColor="text-sky-400" label="Total Clients" {...METRIC_COPY.clients} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-ret" icon={UserCheck} iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Returning" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-retpct" icon={Percent} iconColor="text-violet-400/60" value={retentionDisp} valueColor="text-violet-400" label="Retention %" {...METRIC_COPY.retention} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-rev" icon={CircleDollarSign} iconColor="text-amber-400/60" value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket" {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
 
-      {/* ── ACQUISITION CHANNELS ── */}
       {visibility.leadSource && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.19 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Acquisition Channels</p>
@@ -845,9 +916,9 @@ const AdminDashboard = ({
             layoutId="mc-lead-source"
             onClick={() =>
               setExpandedCard({
-                id:         "mc-lead-source",
-                label:      "Acquisition Channel",
-                value:      topChannel,
+                id: "mc-lead-source",
+                label: "Acquisition Channel",
+                value: topChannel,
                 valueColor: "text-violet-400",
                 extraLines: leadSourceExtraLines,
                 ...METRIC_COPY.leadSource,
@@ -868,21 +939,20 @@ const AdminDashboard = ({
                 <span className="text-base sm:text-lg font-bold text-violet-400 truncate">{topChannel}</span>
                 {leadSourceSub && <span className="text-[10px] text-white/25">{leadSourceSub}</span>}
               </div>
-              <div className="shrink-0 mt-1 ml-1"><Info className="w-3 h-3 text-white/15" /></div>
+              <div className="shrink-0 mt-1 ml-1">
+                <Info className="w-3 h-3 text-white/15" />
+              </div>
             </div>
             {leadSourceBreakdown.length > 1 && (
               <div className="px-3 sm:px-4 pb-3 flex flex-col gap-1">
-                {leadSourceBreakdown.slice(0, 4).map(r => {
+                {leadSourceBreakdown.slice(0, 4).map((r) => {
                   const pct = totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0;
                   return (
                     <div key={r.channel} className="flex items-center gap-2">
                       <span className="text-[11px] text-white/45 truncate flex-1">{r.channel}</span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="w-16 h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-violet-400/50"
-                            style={{ width: `${pct}%` }}
-                          />
+                          <div className="h-full rounded-full bg-violet-400/50" style={{ width: `${pct}%` }} />
                         </div>
                         <span className="text-[10px] text-white/30 w-7 text-right">{pct}%</span>
                       </div>
@@ -895,7 +965,6 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {/* ── STOCK ALERTS ── */}
       {visibility.stockAlerts && stockAlerts.length > 0 && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.2 }}>
           <div className="flex items-center justify-between mb-3">
@@ -911,13 +980,16 @@ const AdminDashboard = ({
           </div>
           <div className="flex flex-col gap-2">
             {stockAlerts.map((s: any, i: number) => (
-              <div key={i} className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
-                s.level === "critical" ? "border-red-500/15 bg-red-500/[0.04]" : "border-amber-500/15 bg-amber-500/[0.04]"
-              }`}>
-                <Package className={`w-3.5 h-3.5 shrink-0 ${ s.level === "critical" ? "text-red-400/60" : "text-amber-400/60" }`} />
+              <div
+                key={i}
+                className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
+                  s.level === "critical" ? "border-red-500/15 bg-red-500/[0.04]" : "border-amber-500/15 bg-amber-500/[0.04]"
+                }`}
+              >
+                <Package className={`w-3.5 h-3.5 shrink-0 ${s.level === "critical" ? "text-red-400/60" : "text-amber-400/60"}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-white/70 truncate">{s.item}</p>
-                  <p className={`text-[10px] ${ s.level === "critical" ? "text-red-400/70" : "text-amber-400/70" }`}>
+                  <p className={`text-[10px] ${s.level === "critical" ? "text-red-400/70" : "text-amber-400/70"}`}>
                     {s.level === "critical" ? "Critical" : "Low"} stock
                   </p>
                 </div>
