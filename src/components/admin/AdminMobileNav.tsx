@@ -1,13 +1,13 @@
 // C7 — Mobile bottom navigation bar for admin (pinned, shown on < lg screens)
 import { motion } from "framer-motion";
-import { LayoutDashboard, CalendarCheck, Star, Package, Settings } from "lucide-react";
+import { LayoutDashboard, CalendarCheck, Users, Package, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", view: "Dashboard",  icon: LayoutDashboard },
-  { label: "Bookings",  view: "Bookings",   icon: CalendarCheck },
-  { label: "Reviews",   view: "Reviews",    icon: Star },
-  { label: "Stock",     view: "Stock",      icon: Package },
-  { label: "Settings",  view: "Settings",   icon: Settings },
+  { label: "Dashboard",  view: "Dashboard",          icon: LayoutDashboard },
+  { label: "Bookings",   view: "Bookings",            icon: CalendarCheck },
+  { label: "Client Mgmt", view: "Client Management",  icon: Users },
+  { label: "Stock",      view: "Stock",               icon: Package },
+  { label: "Settings",   view: "Settings",            icon: Settings },
 ] as const;
 
 interface AdminMobileNavProps {
@@ -35,7 +35,7 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
           >
             {isActive && (
               <motion.div
-                layoutId="mobile-nav-active"
+                layoutID="mobile-nav-active"
                 className="absolute inset-x-2 inset-y-1.5 rounded-xl bg-white/[0.07]"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               />
@@ -47,16 +47,14 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
                 }`}
               />
               {view === "Bookings" && pendingCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-amber-400 text-[8px] font-bold text-black flex items-center justify-center leading-none">
+                <span className="absolute -top-1 -right-1.5 flex items-center justify-center min-w-[14px] h-[14px] px-0.5 rounded-full bg-white text-[8px] font-bold text-black">
                   {pendingCount > 9 ? "9+" : pendingCount}
                 </span>
               )}
             </div>
-            <span
-              className={`text-[9px] font-medium tracking-wide relative z-10 ${
-                isActive ? "text-white/80" : "text-white/25"
-              }`}
-            >
+            <span className={`relative z-10 text-[9px] font-semibold ${
+              isActive ? "text-white" : "text-white/30"
+            }`}>
               {label}
             </span>
           </button>
