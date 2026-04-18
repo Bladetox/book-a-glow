@@ -32,17 +32,16 @@ const iconMap: Record<string, React.ElementType> = {
 
 type NavItem =
   | { kind: "direct"; label: string; view: string }
-  | { kind: "group";  label: string; children: string[] };
+  | { kind: "group";  label: string; icon: React.ElementType; children: string[] };
 
 const NAV: NavItem[] = [
-  { kind: "direct", label: "Dashboard",         view: "Dashboard" },
-  { kind: "group",  label: "Schedule",           children: ["Bookings", "Availability"] },
-  { kind: "group",  label: "Catalogue",          children: ["Services", "Stock"] },
-  { kind: "direct", label: "Client Management",  view: "Client Management" },
-  { kind: "group",  label: "Business",           children: ["Integrations", "Settings", "Terms & Conditions"] },
+  { kind: "direct", label: "Dashboard",        view: "Dashboard" },
+  { kind: "group",  label: "Schedule",          icon: BookingsIcon,  children: ["Bookings", "Availability"] },
+  { kind: "group",  label: "Catalogue",         icon: ServicesIcon,  children: ["Services", "Stock"] },
+  { kind: "direct", label: "Client Management", view: "Client Management" },
+  { kind: "group",  label: "Business",          icon: SettingsIcon,  children: ["Integrations", "Settings", "Terms & Conditions"] },
 ];
 
-// Which groups contain the given view?
 const parentGroupOf = (view: string): string | null => {
   for (const item of NAV) {
     if (item.kind === "group" && item.children.includes(view)) return item.label;
@@ -59,15 +58,13 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSidebarProps) => {
-  const { tenantId }        = useTenant();
-  const { data: tenant }    = useTenantSettings();
-  const isMobile            = useIsMobile();
-  const stockAlerts         = useStockAlerts();
+  const { tenantId }            = useTenant();
+  const { data: tenant }        = useTenantSettings();
+  const isMobile                = useIsMobile();
+  const stockAlerts             = useStockAlerts();
   const { data: bookings = [] } = useSupabaseBookings();
   const pendingCount = bookings.filter(b => b.status === "pending").length;
 
-  // On first load all groups collapsed — parent of activeView opens automatically
-  // only when user navigates into a child (handled in handleSelect).
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const parent = parentGroupOf(activeView);
     return parent ? new Set([parent]) : new Set();
@@ -83,9 +80,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
 
   const handleSelect = (view: string) => {
     const parent = parentGroupOf(view);
-    if (parent) {
-      setOpenGroups(prev => new Set([...prev, parent]));
-    }
+    if (parent) setOpenGroups(prev => new Set([...prev, parent]));
     onSelect(view);
   };
 
@@ -101,6 +96,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
 
+  // ── Child item (indented) ──────────────────────────────────────────────────
   const renderChild = (view: string) => {
     if (!views.includes(view)) return null;
     const Icon       = iconMap[view] || DashboardIcon;
@@ -114,10 +110,10 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
       <button
         key={view}
         onClick={() => { handleSelect(view); onClose?.(); }}
-        className={`relative flex items-center gap-3 pl-8 pr-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
+        className={`relative flex items-center gap-3 pl-10 pr-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
           isActive
             ? "bg-white/[0.08] text-white"
-            : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+            : "text-white/35 hover:text-white/65 hover:bg-white/[0.03]"
         }`}
       >
         {isActive && (
@@ -149,6 +145,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     );
   };
 
+  // ── Direct nav item ────────────────────────────────────────────────────────
   const renderDirect = (item: Extract<NavItem, { kind: "direct" }>) => {
     if (!views.includes(item.view)) return null;
     const Icon     = iconMap[item.view] || DashboardIcon;
@@ -179,11 +176,13 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     );
   };
 
+  // ── Group header + collapsible children ───────────────────────────────────
   const renderGroup = (item: Extract<NavItem, { kind: "group" }>) => {
     const visibleChildren = item.children.filter(v => views.includes(v));
     if (visibleChildren.length === 0) return null;
-    const isOpen      = openGroups.has(item.label);
-    const hasActive   = visibleChildren.includes(activeView);
+    const isExpanded = openGroups.has(item.label);
+    const hasActive  = visibleChildren.includes(activeView);
+    const GroupIcon  = item.icon;
 
     return (
       <div key={item.label} className="flex flex-col">
@@ -191,28 +190,31 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
           onClick={() => toggleGroup(item.label)}
           className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full ${
             hasActive
-              ? "text-white/80"
-              : "text-white/40 hover:text-white/65"
+              ? "text-white/85"
+              : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
           }`}
         >
+          <div className="w-4 h-4 shrink-0">
+            <GroupIcon className="w-4 h-4" />
+          </div>
           <span className="flex-1 truncate">{item.label}</span>
           <motion.div
-            animate={{ rotate: isOpen ? 90 : 0 }}
+            animate={{ rotate: isExpanded ? 90 : 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="shrink-0"
           >
-            <ChevronRight className="w-3.5 h-3.5 text-white/25" />
+            <ChevronRight className={`w-3.5 h-3.5 ${ hasActive ? "text-white/40" : "text-white/20" }`} />
           </motion.div>
         </button>
 
         <AnimatePresence initial={false}>
-          {isOpen && (
+          {isExpanded && (
             <motion.div
               key="children"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
               className="overflow-hidden flex flex-col gap-0.5 pb-1"
             >
               {visibleChildren.map(renderChild)}
@@ -234,7 +236,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
         className="fixed lg:relative z-50 lg:z-auto flex flex-col w-64 h-full bg-[#0d0d0d] border-r border-white/[0.06] overflow-y-auto shrink-0"
       >
-        {/* ── Brand header ── */}
+        {/* Brand header */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/[0.05]">
           <div className="relative w-9 h-9 rounded-xl bg-white/[0.07] border border-white/[0.1] flex items-center justify-center overflow-hidden shrink-0">
             {logoUrl ? (
@@ -271,12 +273,11 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
           )}
         </div>
 
-        {/* ── Nav ── */}
+        {/* Nav */}
         <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
-          {NAV.map((item) => {
-            if (item.kind === "direct") return renderDirect(item);
-            return renderGroup(item);
-          })}
+          {NAV.map((item) =>
+            item.kind === "direct" ? renderDirect(item) : renderGroup(item)
+          )}
         </nav>
       </motion.aside>
     </>
