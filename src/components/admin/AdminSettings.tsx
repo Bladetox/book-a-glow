@@ -48,24 +48,56 @@ const SettingsCard = ({
   icon: Icon,
   gradient,
   children,
+  collapsible = false,
+  defaultOpen = false,
 }: {
   title: string;
   icon?: React.ElementType;
   gradient: string;
   children: React.ReactNode;
-}) => (
-  <div className={`flex flex-col gap-5 p-5 rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05]`}>
-    <div className="flex items-center gap-3">
-      {Icon && (
-        <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
-          <Icon className="w-4 h-4 text-white/40" />
-        </div>
-      )}
-      <h4 className="text-sm font-bold text-white/80">{title}</h4>
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05] overflow-hidden`}>
+      <div
+        className={`flex items-center gap-3 p-5 ${collapsible ? "cursor-pointer select-none" : ""}`}
+        onClick={collapsible ? () => setOpen((v) => !v) : undefined}
+      >
+        {Icon && (
+          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+            <Icon className="w-4 h-4 text-white/40" />
+          </div>
+        )}
+        <h4 className="text-sm font-bold text-white/80 flex-1">{title}</h4>
+        {collapsible && (
+          <ChevronDown
+            className={`w-4 h-4 text-white/25 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          />
+        )}
+      </div>
+
+      <AnimatePresence initial={false}>
+        {(!collapsible || open) && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-5 px-5 pb-5">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-    {children}
-  </div>
-);
+  );
+};
 
 const SettingRow = ({
   label,
@@ -350,7 +382,7 @@ const AdminSettings = () => {
   return (
     <div className="flex flex-col gap-8 pb-12">
 
-      {/* ── BOOKING PAGE ── */}
+      {/* ── BOOKING PAGE (always visible) ── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Your Booking Page" />
         <div className="p-5 rounded-3xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.05] flex flex-col gap-4">
@@ -398,7 +430,7 @@ const AdminSettings = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Identity" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.05] to-white/[0.02]">
+          <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <SettingRow id="biz-name" label="Business Name" placeholder="The Glow Lab" value={draft.name} onChange={(v) => update("name", v)} />
             <SettingRow id="biz-email" label="Contact Email" placeholder="hello@glowlab.com" value={draft.email} onChange={(v) => update("email", v)} />
             <SettingRow id="biz-phone" label="Contact Phone" placeholder="012 345 6789" value={draft.phone} onChange={(v) => update("phone", v)} />
@@ -408,7 +440,7 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Branding & Logo" icon={Image} gradient="from-white/[0.05] to-white/[0.02]">
+          <SettingsCard title="Branding & Logo" icon={Image} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             {draft.logo_url && (
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Logo preview</span>
@@ -440,7 +472,7 @@ const AdminSettings = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Appearance" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Booking Page Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]">
+          <SettingsCard title="Booking Page Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <div className="grid grid-cols-2 gap-2">
               {businessThemes.map((t) => (
                 <button
@@ -461,7 +493,7 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Splash Screen Content" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]">
+          <SettingsCard title="Splash Screen Content" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <SettingRow id="splash-welcome" label="Welcome Label" placeholder="Welcome to" value={draft.splash_welcome_label} onChange={(v) => update("splash_welcome_label", v)} />
             <SettingRow id="splash-tag1" label="Main Tagline" placeholder="The Future of Glow" value={draft.splash_tagline1} onChange={(v) => update("splash_tagline1", v)} />
             <SettingRow id="splash-tag2" label="Secondary Tagline" placeholder="Premium skincare services." value={draft.splash_tagline2} onChange={(v) => update("splash_tagline2", v)} />
@@ -478,7 +510,7 @@ const AdminSettings = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Operations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.06] to-white/[0.02]">
+          <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
             <div className="flex flex-col gap-2.5">
               <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Deposit Percentage</label>
               <div className="grid grid-cols-4 gap-2">
@@ -508,7 +540,7 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Travel & Payments" icon={Zap} gradient="from-white/[0.06] to-white/[0.02]">
+          <SettingsCard title="Travel & Payments" icon={Zap} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
             <SettingRow id="origin-address" label="Fixed Origin Address" placeholder="123 Studio Way, Cape Town" value={draft.fixed_origin_address} onChange={(v) => update("fixed_origin_address", v)} />
             <SettingRow id="km-rate" label="Rate Per KM (ZAR)" placeholder="5.50" type="number" value={draft.rate_per_km} onChange={(v) => update("rate_per_km", v)} />
             <SettingRow id="currency" label="Currency Symbol" placeholder="R" value={draft.currency} onChange={(v) => update("currency", v)} />
@@ -524,7 +556,7 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Booking Confirmation" icon={FileText} gradient="from-white/[0.06] to-white/[0.02]">
+          <SettingsCard title="Booking Confirmation" icon={FileText} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
             <SettingRow id="confirmation-subject" label="Email Subject" placeholder="Your Glow Lab Booking" value={draft.confirmation_subject} onChange={(v) => update("confirmation_subject", v)} />
             <SettingRow id="confirmation-title" label="Main Heading" placeholder="Booking Confirmed!" value={draft.confirmation_title} onChange={(v) => update("confirmation_title", v)} />
             <div className="flex flex-col gap-1.5">
@@ -542,7 +574,7 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Custom Domain" icon={Link} gradient="from-white/[0.06] to-white/[0.02]">
+          <SettingsCard title="Custom Domain" icon={Link} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Default URL</span>
               <div className="flex items-center gap-2">
@@ -565,7 +597,7 @@ const AdminSettings = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Integrations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]">
+          <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
             <SettingRow id="smtp-host" label="SMTP Host" placeholder="smtp.gmail.com" value={draft.smtp_host} onChange={(v) => update("smtp_host", v)} />
             <SettingRow id="smtp-port" label="SMTP Port" placeholder="587" type="number" value={draft.smtp_port} onChange={(v) => update("smtp_port", v)} />
             <SettingRow id="smtp-user" label="SMTP User (email)" placeholder="your@gmail.com" value={draft.smtp_user} onChange={(v) => update("smtp_user", v)} />
@@ -577,7 +609,7 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Google Maps" icon={MapPin} gradient="from-white/[0.04] to-white/[0.01]">
+          <SettingsCard title="Google Maps" icon={MapPin} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
             <SettingRow id="google-maps-api-key" label="Google Maps API Key" placeholder="AIza..." masked={isMasked("google_maps_api_key")} onUnmask={() => unmask("google_maps_api_key")} value={draft.google_maps_api_key} onChange={(v) => update("google_maps_api_key", v)} hint={!isMasked("google_maps_api_key") ? "Restrict this key to your domain in Google Cloud Console." : undefined} />
             <SettingRow id="default-distance" label="Default Distance (km)" placeholder="10" type="number" value={draft.default_distance_km} onChange={(v) => update("default_distance_km", v)} />
             <div className="flex items-center gap-3">
@@ -586,7 +618,7 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Google Reviews" icon={Globe} gradient="from-white/[0.04] to-white/[0.01]">
+          <SettingsCard title="Google Reviews" icon={Globe} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
             <SettingRow id="google-review-link" label="Google Review Link" placeholder="https://g.page/r/..." value={draft.google_review_link} onChange={(v) => update("google_review_link", v)} />
             <SettingRow id="google-place-id" label="Google Place ID" placeholder="ChIJ..." value={draft.google_place_id} onChange={(v) => update("google_place_id", v)} />
             <div className="flex items-center gap-3">
@@ -596,7 +628,7 @@ const AdminSettings = () => {
           </SettingsCard>
 
           {appSettings["gcal_connected"] === "true" && (
-            <SettingsCard title="Google Calendar" icon={CalendarCheck} gradient="from-emerald-500/[0.05] to-white/[0.02]">
+            <SettingsCard title="Google Calendar" icon={CalendarCheck} gradient="from-emerald-500/[0.05] to-white/[0.02]" collapsible>
               <p className="text-xs text-white/40 leading-relaxed">Create calendar events for all existing bookings that are missing one. Safe to run multiple times — only processes bookings without an existing event.</p>
               <div className="flex items-center gap-3">
                 <SaveBtn label={gcalSyncing ? "Syncing..." : gcalSyncResult ? `✓ ${gcalSyncResult}` : "Sync All Bookings"} loading={gcalSyncing} onClick={handleGcalBackfill} />
@@ -610,7 +642,7 @@ const AdminSettings = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Security" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]">
+          <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <SettingRow id="settings-new-password" label="New Password" placeholder="Min 6 characters" type="password" value={newPw} onChange={setNewPw} />
             <SettingRow id="settings-confirm-password" label="Confirm Password" placeholder="Confirm new password" type="password" value={confirmPw} onChange={setConfirmPw} />
             {pwError && <p className="text-xs text-red-400">{pwError}</p>}
