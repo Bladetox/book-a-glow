@@ -4,6 +4,7 @@ import {
   Check, KeyRound, Palette, Building2, MapPin, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
   Globe, CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp,
+  ShieldBan, ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -17,6 +18,7 @@ import {
 import { useTenant } from "@/contexts/TenantContext";
 import { useSupabaseServices } from "@/hooks/useSupabaseServices";
 import type { AddonRule } from "@/hooks/useSuggestedAddons";
+import BlockClientModal from "@/components/admin/BlockClientModal";
 import { toast } from "sonner";
 
 // ─── Deposit presets ────────────────────────────────────────────────────────────────
@@ -33,6 +35,17 @@ const SENSITIVE_KEYS = new Set([
   "google_maps_api_key",
   "google_service_account_json",
 ]);
+
+interface BlockedClientRow {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  reason: string | null;
+  created_at?: string | null;
+  is_active?: boolean | null;
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────────────
 const SectionLabel = ({ label }: { label: string }) => (
@@ -167,6 +180,11 @@ const AdminSettings = () => {
   const [gcalSyncing, setGcalSyncing] = useState(false);
   const [gcalSyncResult, setGcalSyncResult] = useState<string | null>(null);
 
+  const [blockedClients, setBlockedClients] = useState<BlockedClientRow[]>([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [selectedBlockedClient, setSelectedBlockedClient] = useState<BlockedClientRow | null>(null);
+
   // ── Booking URL ──────────────────────────────────────────────────────────────────────
   const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
   const customDomain = (draft.custom_domain ?? "").trim();
@@ -176,6 +194,30 @@ const AdminSettings = () => {
     navigator.clipboard.writeText(url);
     toast.success("Copied to clipboard");
   };
+
+  const loadBlockedClients = async () => {
+    if (!tenantId) return;
+    setBlockedLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("blocked_clients")
+        .select("id, name, email, phone, address, reason, created_at, is_active")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setBlockedClients((data as BlockedClientRow[]) ?? []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load blocked clients");
+    } finally {
+      setBlockedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBlockedClients();
+  }, [tenantId]);
 
   // ── Draft initialisation ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -347,6 +389,22 @@ const AdminSettings = () => {
 
   return (
     <div className="flex flex-col gap-8 pb-12">
+      <BlockClientModal
+        open={blockModalOpen}
+        clientName={selectedBlockedClient?.name ?? ""}
+        clientEmail={selectedBlockedClient?.email ?? ""}
+        clientPhone={selectedBlockedClient?.phone ?? ""}
+        clientAddress={selectedBlockedClient?.address ?? ""}
+        existingBlockId={selectedBlockedClient?.id ?? null}
+        onClose={() => {
+          setBlockModalOpen(false);
+          setSelectedBlockedClient(null);
+        }}
+        onSuccess={() => {
+          loadBlockedClients();
+        }}
+      />
+
       {/* ── BOOKING PAGE ── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Your Booking Page" />
@@ -391,9 +449,6 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          SECTION 1 — BUSINESS IDENTITY
-          ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Identity" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -435,9 +490,6 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          SECTION 2 — APPEARANCE & BRANDING
-          ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Appearance" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -475,9 +527,6 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          SECTION 3 — OPERATIONS
-          ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Operations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -564,9 +613,6 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          SECTION 4 — INTEGRATIONS
-          ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Integrations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -611,9 +657,6 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          SECTION 5 — SECURITY
-          ══════════════════════════════════════════════════════════════════════ */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Security" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -629,6 +672,76 @@ const AdminSettings = () => {
             <button onClick={handlePasswordChange} className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5">
               <KeyRound className="w-3 h-3" /> Update Password
             </button>
+          </SettingsCard>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Client Management" />
+        <div className="grid grid-cols-1 gap-4">
+          <SettingsCard title="Blocked Clients" icon={ShieldBan} gradient="from-red-500/[0.06] to-white/[0.02]">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-white/35 leading-relaxed">
+                Active client blocks are managed here. Unblocking a client allows them to book again while keeping the audit trail intact.
+              </p>
+              <button
+                onClick={loadBlockedClients}
+                disabled={blockedLoading}
+                className="shrink-0 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/50 hover:text-white/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {blockedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                Refresh
+              </button>
+            </div>
+
+            {blockedLoading ? (
+              <div className="flex flex-col gap-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-16 rounded-2xl bg-white/[0.03] border border-white/[0.05] animate-pulse" />
+                ))}
+              </div>
+            ) : blockedClients.length === 0 ? (
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-8 flex flex-col items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400/50" />
+                <p className="text-sm font-semibold text-white/75">No blocked clients</p>
+                <p className="text-xs text-white/30 text-center">When a client is blocked, they will appear here and can be unblocked at any time.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {blockedClients.map((client) => (
+                  <div
+                    key={client.id}
+                    className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-semibold text-white/85 truncate">{client.name || "Unnamed client"}</p>
+                        <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400">
+                          Blocked
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {client.phone && <p className="text-[11px] text-white/35 truncate">{client.phone}</p>}
+                        {client.email && <p className="text-[11px] text-white/35 truncate">{client.email}</p>}
+                        {client.reason && <p className="text-[11px] text-white/45 truncate">Reason: {client.reason}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          setSelectedBlockedClient(client);
+                          setBlockModalOpen(true);
+                        }}
+                        className="px-3 py-2 rounded-xl bg-emerald-500/12 border border-emerald-500/20 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Unblock
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </SettingsCard>
         </div>
       </section>
