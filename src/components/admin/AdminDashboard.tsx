@@ -7,6 +7,7 @@ import {
   XCircle, Package, Bell, Clock, Info, X, Megaphone
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
+import { supabase } from "@/integrations/supabase/client";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
@@ -459,8 +460,9 @@ const AdminDashboard = ({
   const [servicesPeriod, setServicesPeriod] = useState<"month" | "alltime">("month");
 
   const data = useDashboardData();
-  const { overdueClients = [], inactiveClients = [], loading: alertsLoading } = useClientAlerts();
-  const [alertModalOpen, setAlertModalOpen] = useState(false);
+    const tenantId = localStorage.getItem("tenant_id") || "";
+  const { data: { overdueLoyaltyClients = [], inactiveClients = [] } = {}, isLoading: alertsLoading } = useClientAlerts(tenantId);
+    const overdueClients = overdueLoyaltyClients; // Alias for consistency with modalconst [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
   const toggle = (key: SectionKey) => {
