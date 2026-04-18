@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import {
   CreditCard, Calendar, MapPin, Mail,
-  Eye, EyeOff, Save, CheckCircle2, AlertCircle,
+  Eye, EyeOff, CheckCircle2, AlertCircle,
   Loader2, Edit2, LogOut,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -10,8 +10,14 @@ import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  AdminPageHeader,
+  SectionLabel,
+  AdminTag,
+  SaveButton,
+} from "@/components/admin/AdminSharedUI";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────────
 
 const MASK = "••••••••••••••••";
 
@@ -45,8 +51,11 @@ const Field = ({
   const inputType    = isSecret && !show ? "password" : "text";
 
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={fieldKey} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/40">
+    <div className="flex flex-col gap-1.5">
+      <label
+        htmlFor={fieldKey}
+        className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30"
+      >
         {label}
       </label>
       <div className="relative">
@@ -58,24 +67,24 @@ const Field = ({
           value={displayValue}
           placeholder={placeholder}
           onChange={(e) => onChange(fieldKey, e.target.value)}
-          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white/80 placeholder-white/20 focus:outline-none focus:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed pr-8"
+          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed pr-9 transition-colors"
         />
         {isSecret && (
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
           >
             {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </button>
         )}
       </div>
-      {hint && <p className="text-[10px] text-white/25 mt-0.5">{hint}</p>}
+      {hint && <p className="text-[10px] text-white/20 italic px-1">{hint}</p>}
     </div>
   );
 };
 
-// ─── IntegrationCard ──────────────────────────────────────────────────────────
+// ─── IntegrationCard ───────────────────────────────────────────────────────────
 
 interface IntegrationCardProps {
   icon: ElementType;
@@ -97,63 +106,56 @@ const IntegrationCard = ({
   <motion.div
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
-    className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-5 flex flex-col gap-4"
+    className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
   >
     {/* Header */}
-    <div className="flex items-start justify-between">
+    <div className="flex items-start justify-between p-5 pb-0">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
-          <Icon className="w-4 h-4 text-white/60" />
+        <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+          <Icon className="w-4 h-4 text-white/40" />
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-white/90">{name}</h4>
-          <p className="text-xs text-white/35 mt-0.5">{desc}</p>
+          <h4 className="text-sm font-bold text-white/80">{name}</h4>
+          <p className="text-[10px] text-white/30 mt-0.5 font-medium">{desc}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+      <div className="shrink-0 ml-2 pt-0.5">
         {configured ? (
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-            <CheckCircle2 className="w-3 h-3" /> Connected
-          </span>
+          <AdminTag label="Connected" color="emerald" />
         ) : (
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-white/30">
-            <AlertCircle className="w-3 h-3" /> Not configured
-          </span>
+          <AdminTag label="Not configured" color="default" />
         )}
       </div>
     </div>
 
     {/* Fields */}
-    <div className="flex flex-col gap-3">{children}</div>
+    <div className="flex flex-col gap-4 px-5 pt-5">{children}</div>
 
     {/* Optional status badge */}
     {statusBadge && (
-      <div className="flex items-center gap-2">{statusBadge}</div>
+      <div className="flex items-center gap-2 px-5 pt-3">{statusBadge}</div>
     )}
 
     {/* Footer */}
-    <div className="flex items-center justify-end gap-3 pt-1 border-t border-white/[0.04]">
+    <div className="flex items-center justify-end gap-3 px-5 py-4 mt-2 border-t border-white/[0.04]">
       {configured && !editing && (
         <button
           onClick={onEdit}
-          className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
         >
           <Edit2 className="w-3 h-3" /> Edit
         </button>
       )}
-      <button
+      <SaveButton
+        label={saving ? "Saving…" : "Save Configuration"}
+        loading={saving}
         onClick={onSave}
-        disabled={saving}
-        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all disabled:opacity-50"
-      >
-        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-        {saving ? "Saving..." : "Save Configuration"}
-      </button>
+      />
     </div>
   </motion.div>
 );
 
-// ─── Google Calendar card ─────────────────────────────────────────────────────
+// ─── Google Calendar card ─────────────────────────────────────────────────────────
 
 interface GoogleCalendarCardProps {
   connected: boolean;
@@ -238,73 +240,70 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-5 flex flex-col gap-4"
+      className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
     >
-      <div className="flex items-start justify-between">
+      {/* Header */}
+      <div className="flex items-start justify-between p-5 pb-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
-            <Calendar className="w-4 h-4 text-white/60" />
+          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+            <Calendar className="w-4 h-4 text-white/40" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white/90">Google Calendar</h4>
-            <p className="text-xs text-white/35 mt-0.5">
+            <h4 className="text-sm font-bold text-white/80">Google Calendar</h4>
+            <p className="text-[10px] text-white/30 mt-0.5 font-medium">
               Auto-creates events when deposits are confirmed
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          {isConnected ? (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-              <CheckCircle2 className="w-3 h-3" /> Connected
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-white/30">
-              <AlertCircle className="w-3 h-3" /> Not connected
-            </span>
-          )}
+        <div className="shrink-0 ml-2 pt-0.5">
+          {isConnected
+            ? <AdminTag label="Connected" color="emerald" />
+            : <AdminTag label="Not connected" color="default" />
+          }
         </div>
       </div>
 
-      <p className="text-xs text-white/40 leading-relaxed">
-        {isConnected
-          ? "Your Google Calendar is connected. New bookings appear automatically when a deposit is confirmed."
-          : "Connect once — new bookings appear in your calendar automatically the moment a deposit is confirmed."}
-      </p>
+      {/* Body */}
+      <div className="px-5 pt-5">
+        <p className="text-xs text-white/30 leading-relaxed">
+          {isConnected
+            ? "Your Google Calendar is connected. New bookings appear automatically when a deposit is confirmed."
+            : "Connect once — new bookings appear in your calendar automatically the moment a deposit is confirmed."}
+        </p>
+      </div>
 
-      <div className="pt-1 border-t border-white/[0.04] flex items-center justify-end gap-3">
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-3 px-5 py-4 mt-2 border-t border-white/[0.04]">
         {isConnected ? (
           <>
             <button
               onClick={handleDisconnect}
               disabled={isDisconnecting}
-              className="flex items-center gap-1.5 text-xs text-rose-400/60 hover:text-rose-400 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs text-rose-400/60 hover:text-rose-400 transition-colors disabled:opacity-50 font-semibold"
             >
               {isDisconnecting
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : <LogOut className="w-3 h-3" />}
-              {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+              {isDisconnecting ? "Disconnecting…" : "Disconnect"}
             </button>
-            <button
+            <SaveButton
+              label="Reconnect"
+              variant="secondary"
               onClick={handleConnect}
-              className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
-            >
-              <Edit2 className="w-3 h-3" /> Reconnect
-            </button>
+            />
           </>
         ) : (
-          <button
+          <SaveButton
+            label="Connect Google Calendar"
             onClick={handleConnect}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-white/80 transition-all"
-          >
-            <Calendar className="w-3 h-3" /> Connect Google Calendar
-          </button>
+          />
         )}
       </div>
     </motion.div>
   );
 };
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────────
 
 const AdminIntegrations = () => {
   const { tenantId } = useTenant();
@@ -321,7 +320,6 @@ const AdminIntegrations = () => {
 
   const [savingSection, setSavingSection] = useState<string | null>(null);
 
-  // Populate drafts once settings load
   useEffect(() => {
     if (isLoading || Object.keys(settings).length === 0) return;
 
@@ -340,7 +338,6 @@ const AdminIntegrations = () => {
       smtp_from_email: settings.smtp_from_email ?? settings.smtp_user ?? settings.smtp_username ?? "",
     });
 
-    // Lock sections already configured
     if (settings.yoco_public_key || settings.yoco_secret_key) setYocoEditing(false);
     if (settings.google_maps_api_key)                         setMapsEditing(false);
     if (settings.smtp_user || settings.smtp_username)         setSmtpEditing(false);
@@ -352,41 +349,22 @@ const AdminIntegrations = () => {
     (key: string, value: string) =>
       setter((prev) => ({ ...prev, [key]: value }));
 
-  // ── Yoco save ───────────────────────────────────────────────────────────────
-  // Architecture:
-  //   1. Saves public + secret keys to app_settings (UI reads from here)
-  //   2. Writes secret key to tenants.yoco_secret_key (yoco-checkout reads here)
-  //   3. DB trigger on app_settings fires register-yoco-webhook automatically
-  //      in the background — webhook setup requires zero additional steps
   const handleYocoSave = async () => {
     const toSave = Object.fromEntries(
       Object.entries(yocoDraft).filter(([, v]) => v && v !== MASK)
     );
-
     if (!toSave.yoco_secret_key) {
       toast.error("Secret key is required.");
       return;
     }
-
     setSavingSection("yoco");
     try {
-      // Step 1 — persist to app_settings
       await upsert.mutateAsync(toSave);
-
-      // Step 2 — write secret key to tenants row for yoco-checkout
       const { error: tenantErr } = await supabase
         .from("tenants")
         .update({ yoco_secret_key: toSave.yoco_secret_key })
         .eq("id", tenantId);
-
       if (tenantErr) throw tenantErr;
-
-      // Step 3 — DB trigger fires automatically in the background:
-      //   app_settings upsert with key='yoco_secret_key'
-      //   triggers register-yoco-webhook edge function
-      //   which registers webhook with Yoco and stores webhook_id + webhook_secret
-      //   No frontend action needed for webhook setup.
-
       await refetch();
       toast.success("Yoco configuration saved. Webhook is being registered automatically.");
       setYocoEditing(false);
@@ -397,7 +375,6 @@ const AdminIntegrations = () => {
     }
   };
 
-  // ── Generic save ────────────────────────────────────────────────────────────
   const handleGenericSave = async (
     section: string,
     draft: Record<string, string>,
@@ -436,170 +413,167 @@ const AdminIntegrations = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8 pb-12">
 
-      {/* Section header */}
-      <div>
-        <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">
-          Connected Services
-        </p>
-        <h3 className="font-display text-xl sm:text-2xl font-bold text-white/90">
-          Integrations
-        </h3>
-        <p className="text-sm text-white/40 mt-2 leading-relaxed">
-          Configure your third-party services. Keys are masked after saving for security.
-        </p>
-      </div>
+      {/* ── Header ── */}
+      <AdminPageHeader
+        title="Integrations"
+        subtitle="Configure third-party services. Keys are masked after saving."
+      />
 
-      <div className="flex flex-col gap-4">
+      {/* ── Cards ── */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Connected Services" />
+        <div className="flex flex-col gap-4">
 
-        {/* ── Yoco Payments ── */}
-        <IntegrationCard
-          icon={CreditCard}
-          name="Yoco Payments"
-          desc="Online checkout, deposit & balance collection"
-          configured={yocoConfigured}
-          saving={savingSection === "yoco"}
-          editing={yocoEditing}
-          onEdit={() => setYocoEditing(true)}
-          onSave={handleYocoSave}
-          statusBadge={
-            yocoConfigured && !yocoEditing
-              ? webhookActive
-                ? (
-                    <span className="flex items-center gap-1 text-[10px] text-emerald-400/80">
-                      <CheckCircle2 className="w-3 h-3" /> Webhook active
-                    </span>
-                  )
-                : (
-                    <span className="flex items-center gap-1 text-[10px] text-amber-400/70">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Webhook registering...
-                    </span>
-                  )
-              : undefined
-          }
-        >
-          <Field
-            label="Public Key"
-            fieldKey="yoco_public_key"
-            placeholder="pk_live_... or pk_test_..."
-            value={yocoDraft.yoco_public_key ?? ""}
-            masked={yocoConfigured}
+          {/* Yoco Payments */}
+          <IntegrationCard
+            icon={CreditCard}
+            name="Yoco Payments"
+            desc="Online checkout, deposit & balance collection"
+            configured={yocoConfigured}
+            saving={savingSection === "yoco"}
             editing={yocoEditing}
-            onChange={handleChange(setYocoDraft)}
-            hint="From Yoco Business Portal: Selling Online > Payment Gateway"
-          />
-          <Field
-            label="Secret Key"
-            fieldKey="yoco_secret_key"
-            placeholder="sk_live_... or sk_test_..."
-            type="password"
-            value={yocoDraft.yoco_secret_key ?? ""}
-            masked={yocoConfigured}
-            editing={yocoEditing}
-            onChange={handleChange(setYocoDraft)}
-            hint="Server-side only — never exposed to the browser"
-          />
-          {(!yocoConfigured || yocoEditing) && (
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 text-[11px] text-white/35 leading-relaxed">
-              Save once — webhook registration happens automatically in the background.
-              No additional steps required.
-            </div>
-          )}
-        </IntegrationCard>
+            onEdit={() => setYocoEditing(true)}
+            onSave={handleYocoSave}
+            statusBadge={
+              yocoConfigured && !yocoEditing
+                ? webhookActive
+                  ? (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-semibold">
+                        <CheckCircle2 className="w-3 h-3" /> Webhook active
+                      </span>
+                    )
+                  : (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-semibold">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Webhook registering…
+                      </span>
+                    )
+                : undefined
+            }
+          >
+            <Field
+              label="Public Key"
+              fieldKey="yoco_public_key"
+              placeholder="pk_live_… or pk_test_…"
+              value={yocoDraft.yoco_public_key ?? ""}
+              masked={yocoConfigured}
+              editing={yocoEditing}
+              onChange={handleChange(setYocoDraft)}
+              hint="From Yoco Business Portal › Selling Online › Payment Gateway"
+            />
+            <Field
+              label="Secret Key"
+              fieldKey="yoco_secret_key"
+              placeholder="sk_live_… or sk_test_…"
+              type="password"
+              value={yocoDraft.yoco_secret_key ?? ""}
+              masked={yocoConfigured}
+              editing={yocoEditing}
+              onChange={handleChange(setYocoDraft)}
+              hint="Server-side only — never exposed to the browser"
+            />
+            {(!yocoConfigured || yocoEditing) && (
+              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/30 leading-relaxed italic">
+                Save once — webhook registration happens automatically in the background.
+                No additional steps required.
+              </div>
+            )}
+          </IntegrationCard>
 
-        {/* ── Google Maps ── */}
-        <IntegrationCard
-          icon={MapPin}
-          name="Google Maps"
-          desc="Distance matrix for callout fee calculation & address autocomplete"
-          configured={mapsConfigured}
-          saving={savingSection === "maps"}
-          editing={mapsEditing}
-          onEdit={() => setMapsEditing(true)}
-          onSave={() => handleGenericSave("maps", mapsDraft, () => setMapsEditing(false))}
-        >
-          <Field
-            label="API Key"
-            fieldKey="google_maps_api_key"
-            placeholder="AIzaSy..."
-            type="password"
-            value={mapsDraft.google_maps_api_key ?? ""}
-            masked={mapsConfigured}
+          {/* Google Maps */}
+          <IntegrationCard
+            icon={MapPin}
+            name="Google Maps"
+            desc="Distance matrix for callout fee calculation & address autocomplete"
+            configured={mapsConfigured}
+            saving={savingSection === "maps"}
             editing={mapsEditing}
-            onChange={handleChange(setMapsDraft)}
-          />
-        </IntegrationCard>
-
-        {/* ── Google Calendar ── */}
-        <GoogleCalendarCard
-          connected={settings["gcal_connected"] === "true"}
-          tenantId={tenantId}
-        />
-
-        {/* ── SMTP / Gmail ── */}
-        <IntegrationCard
-          icon={Mail}
-          name="Gmail / SMTP"
-          desc="Transactional emails to clients and admin"
-          configured={smtpConfigured}
-          saving={savingSection === "smtp"}
-          editing={smtpEditing}
-          onEdit={() => setSmtpEditing(true)}
-          onSave={() => handleGenericSave("smtp", smtpDraft, () => setSmtpEditing(false))}
-        >
-          <div className="grid grid-cols-2 gap-3">
+            onEdit={() => setMapsEditing(true)}
+            onSave={() => handleGenericSave("maps", mapsDraft, () => setMapsEditing(false))}
+          >
             <Field
-              label="SMTP Host"
-              fieldKey="smtp_host"
-              placeholder="smtp.gmail.com"
-              value={smtpDraft.smtp_host ?? ""}
+              label="API Key"
+              fieldKey="google_maps_api_key"
+              placeholder="AIzaSy…"
+              type="password"
+              value={mapsDraft.google_maps_api_key ?? ""}
+              masked={mapsConfigured}
+              editing={mapsEditing}
+              onChange={handleChange(setMapsDraft)}
+            />
+          </IntegrationCard>
+
+          {/* Google Calendar */}
+          <GoogleCalendarCard
+            connected={settings["gcal_connected"] === "true"}
+            tenantId={tenantId}
+          />
+
+          {/* Gmail / SMTP */}
+          <IntegrationCard
+            icon={Mail}
+            name="Gmail / SMTP"
+            desc="Transactional emails to clients and admin"
+            configured={smtpConfigured}
+            saving={savingSection === "smtp"}
+            editing={smtpEditing}
+            onEdit={() => setSmtpEditing(true)}
+            onSave={() => handleGenericSave("smtp", smtpDraft, () => setSmtpEditing(false))}
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <Field
+                label="SMTP Host"
+                fieldKey="smtp_host"
+                placeholder="smtp.gmail.com"
+                value={smtpDraft.smtp_host ?? ""}
+                masked={smtpConfigured}
+                editing={smtpEditing}
+                onChange={handleChange(setSmtpDraft)}
+              />
+              <Field
+                label="Port"
+                fieldKey="smtp_port"
+                placeholder="587"
+                value={smtpDraft.smtp_port ?? ""}
+                masked={smtpConfigured}
+                editing={smtpEditing}
+                onChange={handleChange(setSmtpDraft)}
+              />
+            </div>
+            <Field
+              label="Username / Email"
+              fieldKey="smtp_user"
+              placeholder="you@gmail.com"
+              value={smtpDraft.smtp_user ?? ""}
               masked={smtpConfigured}
               editing={smtpEditing}
               onChange={handleChange(setSmtpDraft)}
             />
             <Field
-              label="Port"
-              fieldKey="smtp_port"
-              placeholder="587"
-              value={smtpDraft.smtp_port ?? ""}
+              label="App Password"
+              fieldKey="smtp_password"
+              placeholder="Google App Password"
+              type="password"
+              value={smtpDraft.smtp_password ?? ""}
+              masked={smtpConfigured}
+              editing={smtpEditing}
+              onChange={handleChange(setSmtpDraft)}
+              hint="Use a Google App Password, not your account password"
+            />
+            <Field
+              label="From Email"
+              fieldKey="smtp_from_email"
+              placeholder="noreply@yourbusiness.com"
+              value={smtpDraft.smtp_from_email ?? ""}
               masked={smtpConfigured}
               editing={smtpEditing}
               onChange={handleChange(setSmtpDraft)}
             />
-          </div>
-          <Field
-            label="Username / Email"
-            fieldKey="smtp_user"
-            placeholder="you@gmail.com"
-            value={smtpDraft.smtp_user ?? ""}
-            masked={smtpConfigured}
-            editing={smtpEditing}
-            onChange={handleChange(setSmtpDraft)}
-          />
-          <Field
-            label="App Password"
-            fieldKey="smtp_password"
-            placeholder="Google App Password"
-            type="password"
-            value={smtpDraft.smtp_password ?? ""}
-            masked={smtpConfigured}
-            editing={smtpEditing}
-            onChange={handleChange(setSmtpDraft)}
-            hint="Use a Google App Password, not your account password"
-          />
-          <Field
-            label="From Email"
-            fieldKey="smtp_from_email"
-            placeholder="noreply@yourbusiness.com"
-            value={smtpDraft.smtp_from_email ?? ""}
-            masked={smtpConfigured}
-            editing={smtpEditing}
-            onChange={handleChange(setSmtpDraft)}
-          />
-        </IntegrationCard>
+          </IntegrationCard>
 
-      </div>
+        </div>
+      </section>
     </div>
   );
 };
