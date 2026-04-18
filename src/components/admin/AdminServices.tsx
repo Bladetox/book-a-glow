@@ -31,7 +31,7 @@ const emptyService = (): EditingService => ({
   is_active: true,
 });
 
-// ── Rule Editor Sub-component (moved from Settings) ───────────────────────────────────
+// ── Rule Editor Sub-component ─────────────────────────────────────────────────
 interface ServiceOption {
   id: string;
   name: string;
@@ -40,14 +40,15 @@ interface ServiceOption {
 interface RuleEditorProps {
   rule: AddonRule;
   index: number;
+  isOpen: boolean;
   services: ServiceOption[];
   usedTriggerIds: string[];
+  onToggle: () => void;
   onChange: (updated: AddonRule) => void;
   onDelete: () => void;
 }
 
-const RuleEditor = ({ rule, index, services, usedTriggerIds, onChange, onDelete }: RuleEditorProps) => {
-  const [open, setOpen] = useState(true);
+const RuleEditor = ({ rule, index, isOpen, services, usedTriggerIds, onToggle, onChange, onDelete }: RuleEditorProps) => {
   const triggerService = services.find((s) => s.id === rule.triggerId);
 
   const toggleSuggest = (id: string) => {
@@ -78,10 +79,10 @@ const RuleEditor = ({ rule, index, services, usedTriggerIds, onChange, onDelete 
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={onToggle}
             className="p-1 text-white/30 hover:text-white/60 transition-colors"
           >
-            {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
           <button
             onClick={onDelete}
@@ -92,50 +93,61 @@ const RuleEditor = ({ rule, index, services, usedTriggerIds, onChange, onDelete 
         </div>
       </div>
 
-      {open && (
-        <div className="p-4 flex flex-col gap-4 border-t border-white/[0.04]">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold tracking-wider uppercase text-white/30">Trigger service</label>
-            <select
-              value={rule.triggerId}
-              onChange={(e) => onChange({ ...rule, triggerId: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 focus:outline-none focus:border-white/20 transition-colors"
-            >
-              <option value="" className="bg-zinc-900">— pick a trigger —</option>
-              {triggerOptions.map((s) => (
-                <option key={s.id} value={s.id} className="bg-zinc-900">{s.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-semibold tracking-wider uppercase text-white/30">Suggest these add-ons</label>
-            {rule.triggerId === "" ? (
-              <p className="text-[11px] text-white/20 italic px-1">Select a trigger first.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {suggestOptions.map((s) => {
-                  const checked = rule.suggestIds.includes(s.id);
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => toggleSuggest(s.id)}
-                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-left transition-all ${
-                        checked
-                          ? "border-amber-400/30 bg-amber-400/[0.07] text-white/85"
-                          : "border-white/[0.06] bg-white/[0.02] text-white/40 hover:border-white/15 hover:text-white/60"
-                      }`}
-                    >
-                      {checked && <Check className="w-3 h-3 text-amber-400" />}
-                      <span className="text-xs truncate">{s.name}</span>
-                    </button>
-                  );
-                })}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 flex flex-col gap-4 border-t border-white/[0.04]">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-semibold tracking-wider uppercase text-white/30">Trigger service</label>
+                <select
+                  value={rule.triggerId}
+                  onChange={(e) => onChange({ ...rule, triggerId: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 focus:outline-none focus:border-white/20 transition-colors"
+                >
+                  <option value="" className="bg-zinc-900">— pick a trigger —</option>
+                  {triggerOptions.map((s) => (
+                    <option key={s.id} value={s.id} className="bg-zinc-900">{s.name}</option>
+                  ))}
+                </select>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-semibold tracking-wider uppercase text-white/30">Suggest these add-ons</label>
+                {rule.triggerId === "" ? (
+                  <p className="text-[11px] text-white/20 italic px-1">Select a trigger first.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {suggestOptions.map((s) => {
+                      const checked = rule.suggestIds.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => toggleSuggest(s.id)}
+                          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-left transition-all ${
+                            checked
+                              ? "border-amber-400/30 bg-amber-400/[0.07] text-white/85"
+                              : "border-white/[0.06] bg-white/[0.02] text-white/40 hover:border-white/15 hover:text-white/60"
+                          }`}
+                        >
+                          {checked && <Check className="w-3 h-3 text-amber-400" />}
+                          <span className="text-xs truncate">{s.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -233,6 +245,12 @@ const AdminServices = () => {
   // Suggested add-ons state
   const [addonRules, setAddonRules] = useState<AddonRule[]>([]);
   const [addonSaved, setAddonSaved] = useState(false);
+  // Only one rule open at a time; null = all collapsed
+  const [openRuleIndex, setOpenRuleIndex] = useState<number | null>(null);
+
+  const handleToggleRule = (i: number) => {
+    setOpenRuleIndex(prev => (prev === i ? null : i));
+  };
 
   // Load existing add-on rules from appSettings
   useEffect(() => {
@@ -540,7 +558,7 @@ const AdminServices = () => {
         )}
       </section>
 
-      {/* ── SUGGESTED ADD-ONS (moved from Settings) ── */}
+      {/* ── SUGGESTED ADD-ONS ── */}
       <section className="flex flex-col gap-4 mt-4 border-t border-white/[0.06] pt-8">
         <div className="flex items-center justify-between">
           <div>
@@ -555,7 +573,12 @@ const AdminServices = () => {
           <div className="flex items-center gap-3">
             {addonSaved && <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Saved</span>}
             <button
-              onClick={() => setAddonRules([...addonRules, { triggerId: "", suggestIds: [] }])}
+              onClick={() => {
+                const newIndex = addonRules.length;
+                setAddonRules([...addonRules, { triggerId: "", suggestIds: [] }]);
+                // Auto-open the newly added rule
+                setOpenRuleIndex(newIndex);
+              }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-white/80 text-xs font-bold hover:bg-white/[0.12] transition-colors"
             >
               <Plus className="w-3.5 h-3.5" /> Add Rule
@@ -569,10 +592,16 @@ const AdminServices = () => {
               key={i}
               index={i}
               rule={rule}
+              isOpen={openRuleIndex === i}
               services={serviceOptions}
               usedTriggerIds={usedTriggerIds}
+              onToggle={() => handleToggleRule(i)}
               onChange={(updated) => setAddonRules(addonRules.map((r, idx) => (idx === i ? updated : r)))}
-              onDelete={() => setAddonRules(addonRules.filter((_, idx) => idx !== i))}
+              onDelete={() => {
+                setAddonRules(addonRules.filter((_, idx) => idx !== i));
+                // Close if the deleted rule was open
+                setOpenRuleIndex(prev => (prev === i ? null : prev !== null && prev > i ? prev - 1 : prev));
+              }}
             />
           ))}
         </div>
