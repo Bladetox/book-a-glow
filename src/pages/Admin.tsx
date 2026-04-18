@@ -3,24 +3,22 @@ import type { ReactNode, ErrorInfo } from "react";
 import { Menu, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TenantProvider } from "@/contexts/TenantContext";
-import AdminLogin     from "@/components/admin/AdminLogin";
-import AdminSidebar   from "@/components/admin/AdminSidebar";
-import AdminMobileNav from "@/components/admin/AdminMobileNav";
-import AdminDashboard from "@/components/admin/AdminDashboard";
+import AdminLogin        from "@/components/admin/AdminLogin";
+import AdminSidebar     from "@/components/admin/AdminSidebar";
+import AdminMobileNav   from "@/components/admin/AdminMobileNav";
+import AdminDashboard   from "@/components/admin/AdminDashboard";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
-const AdminBookings      = lazy(() => import("@/components/admin/AdminBookings"));
-const AdminServices      = lazy(() => import("@/components/admin/AdminServices"));
-const AdminConsultations = lazy(() => import("@/components/admin/AdminConsultations"));
-const AdminAvailability  = lazy(() => import("@/components/admin/AdminAvailability"));
-const AdminStock         = lazy(() => import("@/components/admin/AdminStock"));
-const AdminReviews       = lazy(() => import("@/components/admin/AdminReviews"));
-const AdminIntegrations  = lazy(() => import("@/components/admin/AdminIntegrations"));
-const AdminSettings      = lazy(() => import("@/components/admin/AdminSettings"));
-const AdminLoyalty       = lazy(() => import("@/components/admin/AdminLoyalty"));
-const AdminTerms         = lazy(() => import("@/components/admin/AdminTerms"));
+const AdminBookings          = lazy(() => import("@/components/admin/AdminBookings"));
+const AdminServices          = lazy(() => import("@/components/admin/AdminServices"));
+const AdminAvailability      = lazy(() => import("@/components/admin/AdminAvailability"));
+const AdminStock             = lazy(() => import("@/components/admin/AdminStock"));
+const AdminIntegrations      = lazy(() => import("@/components/admin/AdminIntegrations"));
+const AdminSettings          = lazy(() => import("@/components/admin/AdminSettings"));
+const AdminTerms             = lazy(() => import("@/components/admin/AdminTerms"));
+const AdminClientManagement  = lazy(() => import("@/components/admin/AdminClientManagement"));
 
-// ── Error boundary ──────────────────────────────────────────────────────────
+// ── Error boundary ────────────────────────────────────────────────────────────
 // Catches lazy-load / render errors so they show a visible card rather than a
 // silent blank screen (especially noticeable on mobile after nav tap).
 interface EBState { hasError: boolean; message: string }
@@ -57,21 +55,28 @@ class ViewErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 // ────────────────────────────────────────────────────────────────────────────
 
 const TabLoader = () => (
-  <div className="flex items-center justify-center py-20">
+  <div className="flex items-center justify-center py-24">
     <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
   </div>
 );
 
 const views = [
-  "Dashboard", "Bookings", "Services", "Consultations", "Availability",
-  "Stock", "Reviews", "Integrations", "Settings", "Loyalty Tracker", "Terms & Conditions",
+  "Dashboard",
+  "Bookings",
+  "Services",
+  "Availability",
+  "Stock",
+  "Client Management",
+  "Integrations",
+  "Settings",
+  "Terms & Conditions",
 ] as const;
 
 type ViewName = typeof views[number];
 
 const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
-  const [activeView, setActiveView]         = useState<ViewName>("Dashboard");
-  const [sidebarOpen, setSidebarOpen]       = useState(false);
+  const [activeView, setActiveView]   = useState<ViewName>("Dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
   const { data: bookings = [] } = useSupabaseBookings();
@@ -86,56 +91,48 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
 
   const renderView = () => {
     switch (activeView) {
-      case "Dashboard":          return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
-      case "Bookings":           return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
-      case "Services":           return <AdminServices />;
-      case "Consultations":      return <AdminConsultations />;
-      case "Availability":       return <AdminAvailability />;
-      case "Stock":              return <AdminStock />;
-      case "Reviews":            return <AdminReviews />;
-      case "Integrations":       return <AdminIntegrations />;
-      case "Settings":           return <AdminSettings />;
-      case "Loyalty Tracker":    return <AdminLoyalty />;
+      case "Dashboard":        return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+      case "Bookings":         return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
+      case "Services":         return <AdminServices />;
+      case "Availability":     return <AdminAvailability />;
+      case "Stock":            return <AdminStock />;
+      case "Client Management": return <AdminClientManagement />;
+      case "Integrations":     return <AdminIntegrations />;
+      case "Settings":         return <AdminSettings />;
       case "Terms & Conditions": return <AdminTerms />;
-      default:                   return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+      default:                 return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
     }
   };
 
   return (
-    // FIX: was overflow-hidden — clips the content scroll area to 0 height on
-    // mobile (Safari / Chrome). Use overflow-x-hidden instead so horizontal
-    // overflow is still contained but the column can grow to full viewport height.
-    <div className="h-screen bg-[hsl(0,0%,4%)] text-[hsl(0,0%,90%)] flex overflow-x-hidden">
+    <div className="flex h-screen overflow-x-hidden bg-[#0a0a0a]">
       <AdminSidebar
-        views={views as unknown as string[]}
+        views={[...views]}
         activeView={activeView}
         onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-
-      {/* FIX: was min-h-screen — inside a flex parent that is h-screen this
-          resolves to an ambiguous height. Use h-full so flex-1 on the scroll
-          area gets a concrete pixel height on all mobile browsers. */}
-      <div className="flex-1 flex flex-col h-full min-w-0 pb-14 lg:pb-0">
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06] shrink-0">
+      {/* FIX: was min-h-screen — inside a flex parent that is h-screen this resolves to an ambiguous height. */}
+      <div className="flex flex-col flex-1 h-full overflow-hidden">
+        {/* Mobile top bar */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
           <button
-            className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5 text-white/60" />
           </button>
-          <h2 className="font-display text-base sm:text-lg font-semibold text-white/90 truncate">{activeView}</h2>
-          <div className="flex-1" />
+          <h1 className="text-sm font-semibold text-white/80">{activeView}</h1>
           <button
-            className="text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08]"
             onClick={onSignOut}
+            className="text-xs text-white/30 hover:text-white/60 transition-colors"
           >
             Sign out
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        {/* Content area */}
+        <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           {/* ViewErrorBoundary key=activeView resets error state on every nav tap */}
           <ViewErrorBoundary key={activeView}>
             <Suspense fallback={<TabLoader />}>
@@ -143,13 +140,13 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
             </Suspense>
           </ViewErrorBoundary>
         </div>
-      </div>
 
-      <AdminMobileNav
-        activeView={activeView}
-        onSelect={(v) => setActiveView(v as ViewName)}
-        pendingCount={pendingCount}
-      />
+        <AdminMobileNav
+          activeView={activeView}
+          onSelect={(v) => setActiveView(v as ViewName)}
+          pendingCount={pendingCount}
+        />
+      </div>
     </div>
   );
 };
@@ -170,12 +167,8 @@ const Admin = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      // Prefer 'owner' first — prevents a super-admin with stale 'admin' rows on
-      // other tenants from being routed into the wrong tenant context.
-      const adminRole =
-        roles?.find(r => r.role === "owner") ??
-        roles?.find(r => r.role === "admin");
-
+      // Prefer 'owner' first
+      const adminRole = roles?.find(r => r.role === "owner") ?? roles?.find(r => r.role === "admin");
       if (adminRole) {
         setTenantId(adminRole.tenant_id);
         setUserId(user.id);
@@ -210,14 +203,14 @@ const Admin = () => {
 
   if (authState === "loading") {
     return (
-      <div className="min-h-screen bg-[hsl(0,0%,3%)] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+      <div className="flex items-center justify-center h-screen bg-[#0a0a0a]">
+        <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
       </div>
     );
   }
 
   if (authState === "unauthenticated" || !tenantCtx) {
-    return <AdminLogin onLogin={() => checkAdminSession()} />;
+    return <AdminLogin onSuccess={checkAdminSession} />;
   }
 
   const handleSignOut = async () => {
