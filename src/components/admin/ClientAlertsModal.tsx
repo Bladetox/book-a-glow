@@ -58,12 +58,11 @@ export default function ClientAlertsModal({
               {alertType === "overdue_loyalty" ? (
                 overdueClients.map((client) => (
                   <div
-                    key={client.client_id}
+                    key={client.id}
                     className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition-colors"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">
+                    key={client.id}                        <h3 className="font-medium text-gray-900 truncate">
                           {client.client_name}
                         </h3>
                         <p className="text-sm text-gray-600 truncate">
