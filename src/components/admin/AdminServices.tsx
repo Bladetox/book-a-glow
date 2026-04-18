@@ -1,4 +1,3 @@
-this is the services menu. lets update it to a similar layout as the settings menu:
 // C5 — Drag-to-reorder services list via @dnd-kit (persists display_order to Supabase)
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
