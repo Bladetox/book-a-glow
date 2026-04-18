@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ToggleLeft, ToggleRight, Loader2, Calendar, Clock } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from "date-fns";
 
 import { useTenant } from "@/contexts/TenantContext";
@@ -14,6 +14,11 @@ import {
   type WeekAvailability,
   type DailyOverrides,
 } from "@/hooks/useSupabaseAvailability";
+import {
+  AdminPageHeader,
+  SectionLabel,
+  AdminTag,
+} from "@/components/admin/AdminSharedUI";
 
 /* ─── Generate every 30-min slot from 06:00 to 23:00 ─── */
 function buildAllSlots(): string[] {
@@ -40,7 +45,6 @@ const AdminAvailability = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<"weekly" | "daily">("weekly");
 
-  // Sync both weekly and daily state from DB
   useEffect(() => {
     if (rawSlots) {
       setWeekAvail(toWeekAvailability(rawSlots));
@@ -84,7 +88,6 @@ const AdminAvailability = () => {
   };
 
   // ─── Daily override helpers ───
-
   const getDayConfig = (date: Date): { enabled: boolean; slots: string[]; isOverride: boolean } => {
     const iso = format(date, "yyyy-MM-dd");
     if (dailyOverrides[iso]) {
@@ -130,35 +133,20 @@ const AdminAvailability = () => {
     persistDailyOverride(date, next);
   };
 
-  /**
-   * Revert a date back to its weekly schedule.
-   * FIX: was passing allSlots:[] which deleted rows and inserted nothing,
-   * so the override was lost on next load. Now we write the weekly config
-   * as a regular (non-override) state by simply deleting the specific_date rows.
-   * useSaveDailyOverride handles the delete; passing allSlots:ALL_SLOTS with
-   * enabled:false and slots:[] writes closed sentinel rows so the DB always
-   * has a record — but actually for "revert to weekly" we want NO override rows.
-   * We achieve that by calling the delete path directly via a dedicated flag.
-   */
   const clearDailyOverride = (date: Date) => {
     const iso = format(date, "yyyy-MM-dd");
-    // 1. Remove from local state immediately
     setDailyOverrides((prev) => {
       const next = { ...prev };
       delete next[iso];
       return next;
     });
-    // 2. Delete override rows from DB.
-    // Pass allSlots:[] with the deleteOnly flag so useSaveDailyOverride
-    // skips the insert step entirely — leaving NO specific_date rows,
-    // which correctly means "use weekly schedule" for this date.
     saveDailyMutation.mutate({
       staffId: userId,
       date: iso,
       dayOfWeek: getDay(date),
       enabled: false,
       slots: [],
-      allSlots: [],   // empty = delete-only, no sentinel rows
+      allSlots: [],
       deleteOnly: true,
     });
   };
@@ -180,38 +168,39 @@ const AdminAvailability = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/40 mb-1">Schedule</p>
-          <h3 className="font-display text-xl sm:text-2xl font-bold text-white/90">Availability</h3>
-        </div>
-        <div className="flex gap-2">
-          {views.map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all
-                ${
+    <div className="flex flex-col gap-8 pb-12">
+
+      {/* ── Header ── */}
+      <AdminPageHeader
+        title="Availability"
+        subtitle={
+          view === "weekly"
+            ? "Set your default weekly hours. Toggle days on/off and tap slots to mark available or blocked."
+            : "Tap a date to override its availability. Override dates show a dot on the calendar."
+        }
+        action={
+          <div className="flex gap-2">
+            {views.map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all ${
                   view === v
                     ? "bg-white/[0.12] text-white border border-white/[0.15]"
                     : "text-white/35 border border-white/[0.06] hover:text-white/60"
                 }`}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-sm text-white/40 leading-relaxed">
-        {view === "weekly"
-          ? "Set your default weekly hours. Toggle days on/off and tap time slots to mark as available or blocked."
-          : "Tap a date to override its availability. Override dates show a dot on the calendar. Changes save instantly."}
-      </p>
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       <AnimatePresence mode="wait">
-        {view === "weekly" ? (
+
+        {/* ══ WEEKLY VIEW ══ */}
+        {view === "weekly" && (
           <motion.div
             key="weekly"
             initial={{ opacity: 0, x: -20 }}
@@ -219,12 +208,26 @@ const AdminAvailability = () => {
             exit={{ opacity: 0, x: 20 }}
             className="flex flex-col gap-3"
           >
+            <SectionLabel label="Weekly Schedule" />
             {DAY_NAMES.map((day) => {
               const config = weekAvail[day] || { enabled: false, slots: [] };
               return (
-                <div key={day} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-white/80">{day}</span>
+                <div
+                  key={day}
+                  className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-5"
+                >
+                  {/* Day header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+                        <Clock className="w-4 h-4 text-white/40" />
+                      </div>
+                      <span className="text-sm font-bold text-white/80">{day}</span>
+                      {config.enabled
+                        ? <AdminTag label={`${config.slots.length} slots`} color="emerald" />
+                        : <AdminTag label="Closed" color="default" />
+                      }
+                    </div>
                     <button
                       onClick={() => toggleDayEnabled(day)}
                       className="text-white/60 hover:text-white transition-colors"
@@ -235,31 +238,35 @@ const AdminAvailability = () => {
                       }
                     </button>
                   </div>
+
+                  {/* Slots */}
                   {config.enabled ? (
                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
                       {ALL_SLOTS.map((slot) => (
                         <button
                           key={slot}
                           onClick={() => toggleWeekSlot(day, slot)}
-                          className={`py-1.5 rounded-lg text-[11px] font-medium transition-all
-                            ${
-                              config.slots.includes(slot)
-                                ? "bg-white/[0.12] text-white border border-white/[0.15]"
-                                : "text-white/20 border border-white/[0.04] hover:text-white/40"
-                            }`}
+                          className={`py-1.5 rounded-xl text-[11px] font-medium transition-all ${
+                            config.slots.includes(slot)
+                              ? "bg-white/[0.12] text-white border border-white/[0.15]"
+                              : "text-white/20 border border-white/[0.04] hover:text-white/40 hover:border-white/[0.08]"
+                          }`}
                         >
                           {slot}
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-white/20">Closed</p>
+                    <p className="text-xs text-white/20 px-1">Closed — toggle on to set hours</p>
                   )}
                 </div>
               );
             })}
           </motion.div>
-        ) : (
+        )}
+
+        {/* ══ DAILY VIEW ══ */}
+        {view === "daily" && (
           <motion.div
             key="daily"
             initial={{ opacity: 0, x: 20 }}
@@ -267,32 +274,44 @@ const AdminAvailability = () => {
             exit={{ opacity: 0, x: -20 }}
             className="flex flex-col gap-4"
           >
-            {/* Calendar */}
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                  className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/[0.06]"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="font-display text-base font-semibold text-white/90">
-                  {format(currentMonth, "MMMM yyyy")}
-                </span>
-                <button
-                  onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                  className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/[0.06]"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+            <SectionLabel label="Monthly Calendar" />
+
+            {/* Calendar card */}
+            <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-5">
+              {/* Month nav */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+                    <Calendar className="w-4 h-4 text-white/40" />
+                  </div>
+                  <span className="text-sm font-bold text-white/80">
+                    {format(currentMonth, "MMMM yyyy")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
+              {/* Day-of-week labels */}
               <div className="grid grid-cols-7 gap-1 text-center mb-2">
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-                  <span key={d} className="text-[10px] font-semibold text-white/30 uppercase">{d}</span>
+                  <span key={d} className="text-[10px] font-bold tracking-[0.12em] text-white/25 uppercase">{d}</span>
                 ))}
               </div>
 
+              {/* Day cells */}
               <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: startDayOfWeek }).map((_, i) => (
                   <div key={`empty-${i}`} />
@@ -307,17 +326,16 @@ const AdminAvailability = () => {
                     <button
                       key={iso}
                       onClick={() => setSelectedDate(day)}
-                      className={`relative w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
-                        ${isActive ? "bg-white/[0.15] text-white ring-1 ring-white/20" : "hover:bg-white/[0.06]"}
-                        ${isClosed ? "text-red-400/60" : config.enabled ? "text-white/80" : "text-white/20"}
-                      `}
+                      className={`relative w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200 ${
+                        isActive ? "bg-white/[0.15] text-white ring-1 ring-white/20" : "hover:bg-white/[0.06]"
+                      } ${
+                        isClosed ? "text-red-400/60" : config.enabled ? "text-white/80" : "text-white/20"
+                      }`}
                     >
                       {format(day, "d")}
-                      {/* Amber dot = has override (open with custom hours) */}
                       {hasOverride && config.enabled && (
                         <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-400" />
                       )}
-                      {/* Red dot = explicitly closed override */}
                       {isClosed && (
                         <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-400/80" />
                       )}
@@ -341,78 +359,93 @@ const AdminAvailability = () => {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 overflow-hidden"
+                    className="overflow-hidden"
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-white/80">
-                          {format(selectedDate, "EEEE, d MMMM yyyy")}
-                        </h4>
-                        {hasOverride && (
-                          <span className={`text-[9px] tracking-wider uppercase px-2 py-0.5 rounded-full border ${
-                            config.enabled
-                              ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
-                              : "bg-red-400/10 text-red-400 border-red-400/20"
-                          }`}>
-                            {config.enabled ? "Override" : "Closed"}
-                          </span>
-                        )}
-                        {isSaving && <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {hasOverride && (
-                          <button
-                            onClick={() => clearDailyOverride(selectedDate)}
-                            className="text-[10px] tracking-wider uppercase text-white/30 hover:text-white/60 transition-colors"
-                          >
-                            Reset
-                          </button>
-                        )}
-                        <button
-                          onClick={() => toggleDailyEnabled(selectedDate)}
-                          className="text-white/60 hover:text-white transition-colors"
-                        >
-                          {config.enabled
-                            ? <ToggleRight className="w-6 h-6 text-emerald-400" />
-                            : <ToggleLeft className="w-6 h-6 text-white/20" />
-                          }
-                        </button>
-                      </div>
-                    </div>
+                    <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-5 flex flex-col gap-4">
 
-                    {config.enabled ? (
-                      <>
-                        <p className="text-[10px] text-white/30 mb-3">
-                          {hasOverride
-                            ? "Custom hours for this date. Tap slots to toggle."
-                            : "Using weekly schedule. Tap a slot to start a custom override."}
-                        </p>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
-                          {ALL_SLOTS.map((slot) => (
+                      {/* Panel header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+                            <Calendar className="w-4 h-4 text-white/40" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white/80">
+                              {format(selectedDate, "EEEE, d MMMM yyyy")}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {hasOverride && (
+                                <AdminTag
+                                  label={config.enabled ? "Override" : "Closed"}
+                                  color={config.enabled ? "amber" : "red"}
+                                />
+                              )}
+                              {isSaving && (
+                                <span className="flex items-center gap-1 text-[10px] text-white/30">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {hasOverride && (
                             <button
-                              key={slot}
-                              onClick={() => toggleDailySlot(selectedDate, slot)}
-                              className={`py-1.5 rounded-lg text-[11px] font-medium transition-all
-                                ${
+                              onClick={() => clearDailyOverride(selectedDate)}
+                              className="text-[10px] tracking-[0.12em] uppercase text-white/30 hover:text-white/60 transition-colors font-semibold"
+                            >
+                              Reset
+                            </button>
+                          )}
+                          <button
+                            onClick={() => toggleDailyEnabled(selectedDate)}
+                            className="text-white/60 hover:text-white transition-colors"
+                          >
+                            {config.enabled
+                              ? <ToggleRight className="w-6 h-6 text-emerald-400" />
+                              : <ToggleLeft className="w-6 h-6 text-white/20" />
+                            }
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Slots or closed message */}
+                      {config.enabled ? (
+                        <div className="flex flex-col gap-3">
+                          <p className="text-[10px] text-white/25 italic px-1">
+                            {hasOverride
+                              ? "Custom hours for this date — tap slots to toggle."
+                              : "Using weekly schedule — tap a slot to start a custom override."}
+                          </p>
+                          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
+                            {ALL_SLOTS.map((slot) => (
+                              <button
+                                key={slot}
+                                onClick={() => toggleDailySlot(selectedDate, slot)}
+                                className={`py-1.5 rounded-xl text-[11px] font-medium transition-all ${
                                   config.slots.includes(slot)
                                     ? "bg-white/[0.12] text-white border border-white/[0.15]"
-                                    : "text-white/20 border border-white/[0.04] hover:text-white/40"
+                                    : "text-white/20 border border-white/[0.04] hover:text-white/40 hover:border-white/[0.08]"
                                 }`}
-                            >
-                              {slot}
-                            </button>
-                          ))}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </>
-                    ) : (
-                      <p className="text-xs text-white/20">Closed for this date</p>
-                    )}
+                      ) : (
+                        <p className="text-xs text-white/20 px-1">Closed for this date</p>
+                      )}
+                    </div>
                   </motion.div>
                 );
               })()}
             </AnimatePresence>
+
           </motion.div>
         )}
+
       </AnimatePresence>
     </div>
   );
