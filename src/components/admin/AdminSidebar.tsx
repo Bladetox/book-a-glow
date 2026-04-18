@@ -1,4 +1,6 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -28,15 +30,25 @@ const iconMap: Record<string, React.ElementType> = {
   "Terms & Conditions": TermsIcon,
 };
 
-// Views rendered ungrouped at the top
-const UNGROUPED = ["Dashboard", "Client Management"];
+type NavItem =
+  | { kind: "direct"; label: string; view: string }
+  | { kind: "group";  label: string; children: string[] };
 
-// Grouped nav sections
-const GROUPS = [
-  { label: "Schedule",  views: ["Bookings", "Availability"] },
-  { label: "Catalogue", views: ["Services", "Stock"] },
-  { label: "Business",  views: ["Integrations", "Settings", "Terms & Conditions"] },
+const NAV: NavItem[] = [
+  { kind: "direct", label: "Dashboard",         view: "Dashboard" },
+  { kind: "group",  label: "Schedule",           children: ["Bookings", "Availability"] },
+  { kind: "group",  label: "Catalogue",          children: ["Services", "Stock"] },
+  { kind: "direct", label: "Client Management",  view: "Client Management" },
+  { kind: "group",  label: "Business",           children: ["Integrations", "Settings", "Terms & Conditions"] },
 ];
+
+// Which groups contain the given view?
+const parentGroupOf = (view: string): string | null => {
+  for (const item of NAV) {
+    if (item.kind === "group" && item.children.includes(view)) return item.label;
+  }
+  return null;
+};
 
 interface AdminSidebarProps {
   views: string[];
@@ -54,6 +66,29 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   const { data: bookings = [] } = useSupabaseBookings();
   const pendingCount = bookings.filter(b => b.status === "pending").length;
 
+  // On first load all groups collapsed — parent of activeView opens automatically
+  // only when user navigates into a child (handled in handleSelect).
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const parent = parentGroupOf(activeView);
+    return parent ? new Set([parent]) : new Set();
+  });
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  };
+
+  const handleSelect = (view: string) => {
+    const parent = parentGroupOf(view);
+    if (parent) {
+      setOpenGroups(prev => new Set([...prev, parent]));
+    }
+    onSelect(view);
+  };
+
   const getAbbreviation = (name: string) => {
     if (!name) return "NS";
     const words = name.split(" ").filter(Boolean);
@@ -66,19 +101,20 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
 
-  const renderNavItem = (view: string) => {
-    const Icon      = iconMap[view] || DashboardIcon;
-    const isActive  = activeView === view;
-    const isStock   = view === "Stock";
+  const renderChild = (view: string) => {
+    if (!views.includes(view)) return null;
+    const Icon       = iconMap[view] || DashboardIcon;
+    const isActive   = activeView === view;
+    const isStock    = view === "Stock";
     const isBookings = view === "Bookings";
-    const hasOutage = isStock && stockAlerts.out > 0;
-    const hasLow    = isStock && stockAlerts.low > 0 && stockAlerts.out === 0;
+    const hasOutage  = isStock && stockAlerts.out > 0;
+    const hasLow     = isStock && stockAlerts.low > 0 && stockAlerts.out === 0;
 
     return (
       <button
         key={view}
-        onClick={() => onSelect(view)}
-        className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left shrink-0 overflow-hidden ${
+        onClick={() => { handleSelect(view); onClose?.(); }}
+        className={`relative flex items-center gap-3 pl-8 pr-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
           isActive
             ? "bg-white/[0.08] text-white"
             : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
@@ -113,13 +149,84 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     );
   };
 
+  const renderDirect = (item: Extract<NavItem, { kind: "direct" }>) => {
+    if (!views.includes(item.view)) return null;
+    const Icon     = iconMap[item.view] || DashboardIcon;
+    const isActive = activeView === item.view;
+
+    return (
+      <button
+        key={item.view}
+        onClick={() => { handleSelect(item.view); onClose?.(); }}
+        className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
+          isActive
+            ? "bg-white/[0.08] text-white"
+            : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+        }`}
+      >
+        {isActive && (
+          <motion.div
+            layoutId="sidebar-active"
+            className="absolute inset-0 rounded-xl bg-white/[0.06]"
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+          />
+        )}
+        <div className="relative z-10 w-4 h-4 shrink-0">
+          <Icon className="w-4 h-4" />
+        </div>
+        <span className="relative z-10 truncate">{item.label}</span>
+      </button>
+    );
+  };
+
+  const renderGroup = (item: Extract<NavItem, { kind: "group" }>) => {
+    const visibleChildren = item.children.filter(v => views.includes(v));
+    if (visibleChildren.length === 0) return null;
+    const isOpen      = openGroups.has(item.label);
+    const hasActive   = visibleChildren.includes(activeView);
+
+    return (
+      <div key={item.label} className="flex flex-col">
+        <button
+          onClick={() => toggleGroup(item.label)}
+          className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full ${
+            hasActive
+              ? "text-white/80"
+              : "text-white/40 hover:text-white/65"
+          }`}
+        >
+          <span className="flex-1 truncate">{item.label}</span>
+          <motion.div
+            animate={{ rotate: isOpen ? 90 : 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
+            className="shrink-0"
+          >
+            <ChevronRight className="w-3.5 h-3.5 text-white/25" />
+          </motion.div>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              key="children"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+              className="overflow-hidden flex flex-col gap-0.5 pb-1"
+            >
+              {visibleChildren.map(renderChild)}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   return (
     <>
       {isMobile && isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
       )}
 
       <motion.aside
@@ -164,31 +271,12 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
           )}
         </div>
 
-        {/* ── Nav items ── */}
+        {/* ── Nav ── */}
         <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
-
-          {/* Ungrouped top items (Dashboard, Client Management) */}
-          {UNGROUPED.filter(v => views.includes(v)).map(renderNavItem)}
-
-          {/* Divider before groups */}
-          {UNGROUPED.some(v => views.includes(v)) && (
-            <div className="mx-2 my-2 h-px bg-white/[0.06]" />
-          )}
-
-          {/* Grouped sections */}
-          {GROUPS.map((group) => {
-            const groupViews = group.views.filter(v => views.includes(v));
-            if (groupViews.length === 0) return null;
-            return (
-              <div key={group.label} className="flex flex-col gap-0.5 mb-1">
-                <p className="px-4 pt-2 pb-1 text-[10px] font-bold tracking-[0.18em] uppercase text-white/20">
-                  {group.label}
-                </p>
-                {groupViews.map(renderNavItem)}
-              </div>
-            );
+          {NAV.map((item) => {
+            if (item.kind === "direct") return renderDirect(item);
+            return renderGroup(item);
           })}
-
         </nav>
       </motion.aside>
     </>
