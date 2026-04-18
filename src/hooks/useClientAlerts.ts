@@ -24,10 +24,19 @@ export interface ClientAlerts {
   totalAlerts: number;
 }
 
-export function useClientAlerts(tenantId: string) {
+export function useClientAlerts(tenantIdProp?: string) {
   return useQuery({
-    queryKey: ["client-alerts", tenantId],
+    queryKey: ["client-alerts", tenantIdProp],
     queryFn: async (): Promise<ClientAlerts> => {
+      // Resolve tenantId: prefer prop, then fall back to session user id
+      let tenantId = tenantIdProp;
+      if (!tenantId) {
+        const { data: { session } } = await supabase.auth.getSession();
+        tenantId = session?.user?.id ?? "";
+      }
+
+      if (!tenantId) return { overdueLoyaltyClients: [], inactiveClients: [], totalAlerts: 0 };
+
       const today = new Date();
       const ninetyDaysAgo = format(subDays(today, 90), "yyyy-MM-dd");
 
@@ -62,7 +71,7 @@ export function useClientAlerts(tenantId: string) {
 
       // Group by client to find their last booking
       const clientLastBooking = new Map<string, { name: string; phone: string | null; date: string }>();
-      
+
       (bookingsData || []).forEach((booking) => {
         const key = booking.client_id || booking.client_phone || booking.client_name;
         if (!clientLastBooking.has(key)) {
@@ -95,7 +104,8 @@ export function useClientAlerts(tenantId: string) {
         totalAlerts: overdueClients.length + inactiveClients.length,
       };
     },
-    enabled: !!tenantId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    // Always enabled — tenantId is resolved inside queryFn
+    enabled: true,
+    staleTime: 1000 * 60 * 5,
   });
 }
