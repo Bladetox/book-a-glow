@@ -456,17 +456,16 @@ const AdminDashboard = ({
   const [showCustomize, setShowCustomize]   = useState(false);
   const [showHeatInfo, setShowHeatInfo]     = useState(false);
   const [expandedCard, setExpandedCard]     = useState<ExpandedCard | null>(null);
-  // "month" = this month's bookings | "alltime" = all-time bookings
   const [servicesPeriod, setServicesPeriod] = useState<"month" | "alltime">("month");
 
   const data = useDashboardData();
-  const { overdueClients = [], inactiveClients = [], loading: alertsLoading } = useClientAlerts();  const [alertModalOpen, setAlertModalOpen] = useState(false);
-  const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
-
-    setVisibility(next);
-      const { overdueClients, inactiveClients, loading: alertsLoading } = useClientAlerts();
+  const { overdueClients = [], inactiveClients = [], loading: alertsLoading } = useClientAlerts();
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
+
+  const toggle = (key: SectionKey) => {
+    const next = { ...visibility, [key]: !visibility[key] };
+    setVisibility(next);
     saveVisibility(next);
   };
 
@@ -501,7 +500,6 @@ const AdminDashboard = ({
   const alerts         = data.alerts ?? [];
   const leadSourceBreakdown: { channel: string; count: number }[] = data.leadSourceBreakdown ?? [];
 
-  // Pick the correct services list based on the toggle
   const displayedServices =
     servicesPeriod === "alltime"
       ? (data.allTimeTopServices ?? [])
@@ -529,9 +527,9 @@ const AdminDashboard = ({
   const retentionDisp  = `${retentionRate}%`;
   const retentionColor = retentionRate >= 40 ? "text-emerald-400" : "text-white/90";
 
-  const topChannel     = leadSourceBreakdown[0]?.channel ?? "—";
+  const topChannel      = leadSourceBreakdown[0]?.channel ?? "—";
   const totalWithSource = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
-  const topChannelPct  = totalWithSource > 0 && leadSourceBreakdown[0]
+  const topChannelPct   = totalWithSource > 0 && leadSourceBreakdown[0]
     ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
     : null;
   const leadSourceSub  = topChannelPct !== null ? `${topChannelPct}% of all bookings` : undefined;
@@ -543,7 +541,7 @@ const AdminDashboard = ({
   return (
     <div className="flex flex-col gap-6">
       <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
-            <ClientAlertsModal
+      <ClientAlertsModal
         isOpen={alertModalOpen}
         onClose={() => setAlertModalOpen(false)}
         alertType={alertModalType}
@@ -650,7 +648,6 @@ const AdminDashboard = ({
       {/* ── TOP SERVICES ── */}
       {visibility.topServices && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.08 }}>
-          {/* Header row: label + pill toggle */}
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Top Services</p>
             <div className="flex items-center gap-0.5 rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
@@ -678,7 +675,6 @@ const AdminDashboard = ({
           </div>
 
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
-            {/* Loading state for all-time while query 9 resolves */}
             {servicesPeriod === "alltime" && data.allTimeServicesLoading ? (
               <div className="flex flex-col gap-2 p-4">
                 {[...Array(5)].map((_, i) => (
@@ -722,7 +718,7 @@ const AdminDashboard = ({
       {visibility.alerts && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.1 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">General Alerts</p>
-          
+
           {alertsLoading ? (
             <div className="flex flex-col gap-2">
               {[...Array(2)].map((_, i) => (
@@ -731,7 +727,6 @@ const AdminDashboard = ({
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {/* Overdue Loyalty Clients Alert */}
               {overdueClients.length > 0 && (
                 <div
                   onClick={() => {
@@ -742,12 +737,11 @@ const AdminDashboard = ({
                 >
                   <CalendarCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-400" />
                   <p className="text-xs text-white/60 leading-relaxed flex-1">
-                    {overdueClients.length} client{overdueClients.length !== 1 ? 's' : ''} with overdue loyalty appointments
+                    {overdueClients.length} client{overdueClients.length !== 1 ? "s" : ""} with overdue loyalty appointments
                   </p>
                 </div>
               )}
 
-              {/* Inactive 90+ Days Clients Alert */}
               {inactiveClients.length > 0 && (
                 <div
                   onClick={() => {
@@ -758,7 +752,7 @@ const AdminDashboard = ({
                 >
                   <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
                   <p className="text-xs text-white/60 leading-relaxed flex-1">
-                    {inactiveClients.length} client{inactiveClients.length !== 1 ? 's' : ''} haven't booked in 90+ days
+                    {inactiveClients.length} client{inactiveClients.length !== 1 ? "s" : ""} haven't booked in 90+ days
                   </p>
                 </div>
               )}
@@ -772,6 +766,7 @@ const AdminDashboard = ({
           )}
         </motion.section>
       )}
+
       {/* ── REVENUE TREND ── */}
       {visibility.revenueGraph && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
@@ -929,7 +924,6 @@ const AdminDashboard = ({
           </div>
         </motion.section>
       )}
-
     </div>
   );
 };
