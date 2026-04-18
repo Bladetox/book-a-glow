@@ -10,6 +10,7 @@ import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
+import { useTenant } from "@/contexts/TenantContext";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 const ALL_SECTIONS = [
@@ -525,7 +526,7 @@ const AdminDashboard = ({
   const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
   const data = useDashboardData();
-  const tenantId = localStorage.getItem("tenant_id") || "";
+  const { tenantId } = useTenant();
   const {
     data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
     isLoading: alertsLoading,
