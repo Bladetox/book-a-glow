@@ -196,17 +196,23 @@ export const FieldTextarea = ({
 
 // ── SaveButton ────────────────────────────────────────────────────────────────
 // Standard white save/action button used at the bottom of each card section.
+// Supports an optional leading icon node and disabled state.
 // Usage: <SaveButton onClick={handleSave} loading={mutation.isPending} />
+// Usage: <SaveButton label="Confirm" icon={<Check className="w-3 h-3" />} onClick={fn} />
 export const SaveButton = ({
   onClick,
   label = "Save",
   loading,
+  disabled,
   variant = "primary",
+  icon,
 }: {
-  onClick: () => void;
+  onClick: (e?: React.MouseEvent) => void;
   label?: string;
   loading?: boolean;
+  disabled?: boolean;
   variant?: "primary" | "secondary" | "danger";
+  icon?: React.ReactNode;
 }) => {
   const base = "px-5 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-2";
   const variants = {
@@ -215,8 +221,12 @@ export const SaveButton = ({
     danger:    "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/20",
   };
   return (
-    <button onClick={onClick} disabled={loading} className={`${base} ${variants[variant]}`}>
-      {loading && <Loader2 className="w-3 h-3 animate-spin" />}
+    <button
+      onClick={onClick}
+      disabled={loading || disabled}
+      className={`${base} ${variants[variant]}`}
+    >
+      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : icon}
       {label}
     </button>
   );
@@ -234,7 +244,8 @@ export const SavedBadge = ({ visible }: { visible: boolean }) =>
 
 // ── AdminTag ──────────────────────────────────────────────────────────────────
 // Small inline badge/tag used for status labels, categories, counts.
-// Usage: <AdminTag label="Inactive" color="red" />
+// Usage: <AdminTag label="completed" color="default" />
+// Color "default" = muted white — used for completed/neutral statuses.
 export const AdminTag = ({
   label,
   color = "default",
@@ -262,17 +273,27 @@ export const AdminTag = ({
 
 // ── EmptyState ────────────────────────────────────────────────────────────────
 // Consistent empty/zero-data placeholder used across list views.
+// Accepts either `message` (legacy) or `title` + optional `description`.
 // Usage: <EmptyState message="No bookings yet" />
+// Usage: <EmptyState icon={CalendarCheck} title="No bookings" description="Try another filter." />
 export const EmptyState = ({
   message,
+  title,
+  description,
+  icon: Icon,
   action,
 }: {
-  message: string;
+  message?: string;
+  title?: string;
+  description?: string;
+  icon?: React.ElementType;
   action?: React.ReactNode;
 }) => (
   <div className="py-12 flex flex-col items-center justify-center text-center px-4 rounded-3xl bg-white/[0.02] border border-dashed border-white/[0.08]">
-    <p className="text-sm text-white/20 mb-3">{message}</p>
-    {action}
+    {Icon && <Icon className="w-6 h-6 text-white/20 mb-3" />}
+    <p className="text-sm text-white/30 font-medium mb-1">{title ?? message}</p>
+    {description && <p className="text-xs text-white/20 max-w-xs">{description}</p>}
+    {action && <div className="mt-4">{action}</div>}
   </div>
 );
 
