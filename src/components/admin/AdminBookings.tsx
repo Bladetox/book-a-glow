@@ -27,13 +27,6 @@ import { toast } from "sonner";
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
-const statusColors: Record<BookingRow["status"], string> = {
-  pending: "bg-amber-500/10 text-amber-400",
-  confirmed: "bg-emerald-500/10 text-emerald-400",
-  completed: "bg-white/[0.06] text-white/50",
-  cancelled: "bg-red-500/10 text-red-400",
-};
-
 const statusBorderAccent: Record<BookingRow["status"], string> = {
   pending: "border-l-2 border-l-amber-500/50",
   confirmed: "border-l-2 border-l-emerald-500/30",
@@ -753,7 +746,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                             {isClientBlocked && <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />}
                             <AdminTag
                               label={b.status}
-                              color={b.status === "pending" ? "amber" : b.status === "confirmed" ? "emerald" : b.status === "cancelled" ? "red" : "zinc"}
+                              color={b.status === "pending" ? "amber" : b.status === "confirmed" ? "emerald" : b.status === "cancelled" ? "red" : "default"}
                             />
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
