@@ -10,7 +10,7 @@ import {
 import { PlusCircle, ShieldBan, ShieldCheck } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Trash2, ChevronDown, ChevronUp,
@@ -18,7 +18,6 @@ import {
   SendHorizonal, Search, AlertTriangle, Edit3
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -110,9 +109,9 @@ const RescheduleModal = ({
             key="rs-modal"
             initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
-            className="pointer-events-auto w-full max-w-lg rounded-3xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
+            className="pointer-events-auto w-full max-w-lg max-h-[90dvh] rounded-3xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-y-auto"
           >
-            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 sticky top-0 bg-[#0f0f0f] z-10">
               <div>
                 <p className="text-[10px] tracking-[0.14em] uppercase text-white/30">Reschedule</p>
                 <p className="text-sm font-semibold text-white/85">{booking.client} — {booking.service}</p>
@@ -123,19 +122,40 @@ const RescheduleModal = ({
             </div>
             <div className="mx-5 border-t border-white/[0.06]" />
             <div className="px-5 py-4 flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-white/30 mb-2">New Date</p>
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-2">
                   <Calendar
                     mode="single"
                     selected={rescheduleDate}
                     onSelect={onDateSelect}
-                    disabled={(date) => date < new Date()}
-                    className={cn("p-3 pointer-events-auto [&_.rdp-day_focus]:bg-white/10 [&_.rdp-day]:text-white/70")}
+                    disabled={(date) => startOfDay(date) < startOfDay(new Date())}
+                    className="p-1 pointer-events-auto text-white"
+                    classNames={{
+                      months: "flex flex-col sm:flex-row gap-4",
+                      month: "space-y-4 w-full",
+                      caption: "flex justify-center pt-1 relative items-center text-white/90",
+                      caption_label: "text-sm font-medium",
+                      nav: "flex items-center gap-1",
+                      nav_button: "h-8 w-8 bg-white/[0.04] border border-white/[0.08] text-white/70 hover:bg-white/[0.08] hover:text-white rounded-md inline-flex items-center justify-center transition-colors",
+                      nav_button_previous: "absolute left-1",
+                      nav_button_next: "absolute right-1",
+                      table: "w-full border-collapse",
+                      head_row: "flex",
+                      head_cell: "text-white/35 rounded-md w-9 font-normal text-[0.8rem]",
+                      row: "flex w-full mt-2",
+                      cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-white/[0.06] first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                      day: "h-9 w-9 p-0 font-normal text-white/80 hover:bg-white/[0.08] hover:text-white rounded-md transition-colors aria-selected:opacity-100",
+                      day_selected: "bg-sky-500/20 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 hover:text-sky-200 focus:bg-sky-500/25 focus:text-sky-200",
+                      day_today: "bg-white/[0.08] text-white border border-white/[0.12]",
+                      day_outside: "text-white/20 opacity-50",
+                      day_disabled: "text-white/15 opacity-30 cursor-not-allowed hover:bg-transparent hover:text-white/15",
+                      day_hidden: "invisible",
+                    }}
                   />
                 </div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-white/30 mb-2">New Time</p>
                 <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
                   {slotsLoading ? (
@@ -160,8 +180,8 @@ const RescheduleModal = ({
                 </div>
               </div>
             </div>
-            <div className="px-5 pb-5 flex items-center justify-between gap-3">
-              <div className="text-xs text-white/40">
+            <div className="px-5 pb-5 pt-1 flex items-center justify-between gap-3 sticky bottom-0 bg-[#0f0f0f] border-t border-white/[0.06]">
+              <div className="text-xs text-white/40 min-w-0">
                 {rescheduleDate && rescheduleTime
                   ? <span>New: <span className="text-white/70 font-medium">{format(rescheduleDate, "d MMM yyyy")} at {rescheduleTime}</span></span>
                   : <span className="text-white/25">Select date and time</span>
