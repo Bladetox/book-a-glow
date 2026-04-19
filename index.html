@@ -17,7 +17,21 @@
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="NextSlot" />
-    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Dynamic PWA manifest: /admin routes get admin manifest (start_url=/admin),
+         all other routes get the booking manifest (start_url=/).
+         This ensures Add to Home Screen captures the correct entry point. -->
+    <script>
+      (function () {
+        var isAdmin = window.location.pathname.startsWith('/admin');
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = isAdmin
+          ? '/functions/v1/manifest?admin=1'
+          : '/functions/v1/manifest';
+        document.head.appendChild(link);
+      })();
+    </script>
 
     <!-- PWA / Theme -->
     <meta name="theme-color" content="#1a0a2e" />
