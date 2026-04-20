@@ -14,15 +14,14 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
 
     try {
       // Call edge function — generates magic link server-side, bypasses captcha entirely
-  const { error: fnError } = await supabase.functions.invoke("send-superadmin-otp", {
-      body: {
-        origin: window.location.origin,
-    },
-      headers: {
-        "X-Admin-Secret": import.meta.env.VITE_SUPER_ADMIN_SECRET ?? "",
-    },
-    });
-
+      const { error: fnError } = await supabase.functions.invoke("send-superadmin-otp", {
+        body: {
+          origin: window.location.origin,
+        },
+        headers: {
+          "X-Admin-Secret": import.meta.env.VITE_SUPER_ADMIN_SECRET ?? "",
+        },
+      });
 
       if (fnError) throw fnError;
       setStage("sent");
@@ -56,8 +55,7 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
             <div className="space-y-1">
               <p className="text-sm font-medium text-white/80">Sign in with magic link</p>
               <p className="text-xs text-white/35 leading-relaxed">
-                A secure one-click sign-in link will be sent to<br />
-                <span className="text-white/60 font-medium">arshadsegal@gmail.com</span>
+                A secure one-click sign-in link will be sent to the registered super admin address.
               </p>
             </div>
 
@@ -88,8 +86,7 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
               <div>
                 <p className="text-sm font-semibold text-white">Check your email</p>
                 <p className="text-xs text-white/40 mt-1 leading-relaxed">
-                  Sign-in link sent to<br />
-                  <span className="text-white/60 font-medium">arshadsegal@gmail.com</span>
+                  Sign-in link sent to the registered super admin address.
                 </p>
               </div>
             </div>
