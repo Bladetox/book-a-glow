@@ -15,17 +15,17 @@ import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes"
 import { supabase } from "@/integrations/supabase/client";
 
 const availabilityPresets = [
-  { label: "Standard Work Week", desc: "Mon–Fri, 09:00–17:00", schedule: { mon: "09:00–17:00", tue: "09:00–17:00", wed: "09:00–17:00", thu: "09:00–17:00", fri: "09:00–17:00", sat: "Closed", sun: "Closed" } },
-  { label: "Weekend Business", desc: "Thu–Sun, 09:00–18:00", schedule: { mon: "Closed", tue: "Closed", wed: "Closed", thu: "09:00–18:00", fri: "09:00–18:00", sat: "09:00–18:00", sun: "09:00–15:00" } },
-  { label: "Custom Schedule", desc: "Set your own hours", schedule: { mon: "09:00–18:00", tue: "09:00–18:00", wed: "Closed", thu: "09:00–18:00", fri: "09:00–19:00", sat: "09:00–15:00", sun: "Closed" } },
+  { label: "Standard Work Week", desc: "Mon\u2013Fri, 09:00\u201317:00", schedule: { mon: "09:00\u201317:00", tue: "09:00\u201317:00", wed: "09:00\u201317:00", thu: "09:00\u201317:00", fri: "09:00\u201317:00", sat: "Closed", sun: "Closed" } },
+  { label: "Weekend Business", desc: "Thu\u2013Sun, 09:00\u201318:00", schedule: { mon: "Closed", tue: "Closed", wed: "Closed", thu: "09:00\u201318:00", fri: "09:00\u201318:00", sat: "09:00\u201318:00", sun: "09:00\u201315:00" } },
+  { label: "Custom Schedule", desc: "Set your own hours", schedule: { mon: "09:00\u201318:00", tue: "09:00\u201318:00", wed: "Closed", thu: "09:00\u201318:00", fri: "09:00\u201319:00", sat: "09:00\u201315:00", sun: "Closed" } },
 ];
 
 interface Service { name: string; price: string; duration: string; }
 
 /**
- * Builds the correct admin URL after tenant creation — mirrors Login.tsx logic exactly.
- * - localhost / dev  → same origin with ?tenant= param
- * - production       → hard redirect to {tenantId}.{rootDomain}/admin
+ * Builds the correct admin URL after tenant creation \u2014 mirrors Login.tsx logic exactly.
+ * - localhost / dev  \u2192 same origin with ?tenant= param
+ * - production       \u2192 hard redirect to {tenantId}.{rootDomain}/admin
  */
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -77,11 +77,11 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
 const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
 
 /**
- * Onboarding flow — 3 steps (was 4):
+ * Onboarding flow \u2014 3 steps (was 4):
  *
- * Step 1 — Business type + name  (combined, auto-advances on type selection)
- * Step 2 — Services              (pre-filled from theme, editable)
- * Step 3 — Account + summary     (email, password, confirm, then launch)
+ * Step 1 \u2014 Business type + name  (combined, auto-advances on type selection)
+ * Step 2 \u2014 Services              (pre-filled from theme, editable)
+ * Step 3 \u2014 Account + summary     (email, password, confirm, then launch)
  *
  * Rationale (present-bias & status-quo-bias fix):
  * The original flow asked for credentials on Step 2, before the user had
@@ -103,10 +103,10 @@ const Onboarding = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Invisible honeypot — bots fill hidden fields; humans never see or touch it.
+  // Invisible honeypot \u2014 bots fill hidden fields; humans never see or touch it.
   const [honeypot, setHoneypot] = useState("");
 
-  // Always use default schedule — editable in admin later
+  // Always use default schedule \u2014 editable in admin later
   const schedule = availabilityPresets[0].schedule;
 
   const activeTheme = useMemo(() => {
@@ -122,7 +122,7 @@ const Onboarding = () => {
   const passwordsMatch = password === confirmPassword;
   const passwordValid = password.length >= 8;
 
-  // ── Mount guard ──────────────────────────────────────────────────────────
+  // \u2500\u2500 Mount guard \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // Check if the user already has a valid Supabase session when they land here.
   useEffect(() => {
     (async () => {
@@ -150,7 +150,7 @@ const Onboarding = () => {
           setEmail(session.user.email);
         }
       } catch {
-        // No session or network error — render wizard normally
+        // No session or network error \u2014 render wizard normally
       }
     })();
   }, []);
@@ -184,7 +184,7 @@ const Onboarding = () => {
     setServices(updated);
   };
 
-  // ── handleComplete ────────────────────────────────────────────────────────
+  // \u2500\u2500 handleComplete \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const handleComplete = async () => {
     if (honeypot) return;
 
@@ -215,7 +215,7 @@ const Onboarding = () => {
       }
 
       const res = await fetch(
-        "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
+        (import.meta.env.VITE_SUPABASE_URL as string) + "/functions/v1/create-tenant",
         {
           method: "POST",
           headers: {
@@ -277,335 +277,286 @@ const Onboarding = () => {
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <img
-              src="/web-app-manifest-192x192.png"
+              src="/nextslot-logo.svg"
               alt="NextSlot"
-              width={40}
-              height={40}
-              loading="lazy"
-              decoding="async"
-              className="h-10 w-10 object-contain rounded-lg shrink-0"
+              className="h-7 w-auto"
+              onError={(e) => {
+                const t = e.currentTarget;
+                t.style.display = "none";
+                const fallback = document.createElement("span");
+                fallback.className = "text-base font-bold tracking-tight text-foreground";
+                fallback.textContent = "NextSlot";
+                t.parentNode?.insertBefore(fallback, t.nextSibling);
+              }}
             />
-            <span className="text-base font-bold tracking-tight leading-none">
-              Next<span className="text-accent">Slot</span>
-            </span>
           </Link>
-          <div className="flex items-center gap-3">
-            {activeTheme && (
-              <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-accent/20 text-accent-foreground transition-colors duration-500">
-                {activeTheme.vibe}
-              </span>
-            )}
-            <span className="text-xs text-muted-foreground">
-              Step {step} of {totalSteps}
-            </span>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i + 1 < step
+                    ? "w-6 bg-primary"
+                    : i + 1 === step
+                    ? "w-6 bg-primary"
+                    : "w-3 bg-border"
+                }`}
+              />
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 w-full mt-6">
-        <div className="flex gap-1.5">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
-                i < step ? "bg-primary" : "bg-border"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-xl">
 
-      <div className="flex-1 flex items-start justify-center pt-12 pb-20 px-4">
-        <div className="w-full max-w-lg">
-
-          {/* ── STEP 1: Business type + name (combined) ── */}
+          {/* \u2500 Step 1: Business Type + Name \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
-                  Let's set up your booking page
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Pick your business type and give your page a name. We'll have it ready before you create an account.
-                </p>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">What kind of business do you run?</h1>
+                <p className="mt-2 text-sm text-muted-foreground">We\u2019ll pre-fill your services and settings to match.</p>
               </div>
 
-              {/* Business type selection */}
-              <div className="space-y-2">
-                {businessThemes.map((type) => (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {businessThemes.map((theme) => (
                   <button
-                    key={type.label}
-                    onClick={() => handleSelectBusinessType(type.label)}
-                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 text-left ${
-                      businessType === type.label
-                        ? "border-primary gradient-card shadow-elevated"
-                        : "border-border hover:border-foreground/20 hover:shadow-soft gradient-surface"
+                    key={theme.label}
+                    type="button"
+                    onClick={() => handleSelectBusinessType(theme.label)}
+                    className={`relative flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-all hover:border-primary/60 hover:bg-primary/5 ${
+                      businessType === theme.label
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                        : "border-border bg-card"
                     }`}
                   >
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-300 ${
-                        businessType === type.label
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-muted-foreground"
-                      }`}
-                    >
-                      <type.icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">{type.label}</p>
-                      <p className="text-xs text-muted-foreground">{type.desc}</p>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground hidden sm:block">
-                      {type.vibe}
-                    </span>
-                    {businessType === type.label && (
-                      <Check className="h-4 w-4 text-primary" />
+                    <span className="text-2xl">{theme.emoji}</span>
+                    <span className="text-xs font-medium text-foreground leading-tight">{theme.label}</span>
+                    {businessType === theme.label && (
+                      <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                        <Check className="h-2.5 w-2.5" />
+                      </span>
                     )}
                   </button>
                 ))}
               </div>
 
-              {/* Business name — shown once a type is selected */}
               {businessType && (
-                <div className="animate-fade-in space-y-2">
-                  <label htmlFor="onboarding-business-name" className="block text-sm font-medium text-foreground">
-                    What's your business called?
+                <div className="space-y-3 animate-fade-in">
+                  <label className="block text-sm font-medium text-foreground">
+                    Business name
                   </label>
                   <input
-                    id="onboarding-business-name"
-                    name="business-name"
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
-                    placeholder="e.g. Glow by Tash"
+                    placeholder="e.g. Glow Studio"
+                    className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
                     autoFocus
                   />
-                  <p className="text-xs text-muted-foreground">This becomes your booking page name. You can change it later.</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* ── STEP 2: Services ── */}
+          {/* \u2500 Step 2: Services \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {step === 2 && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-6 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
-                  Your services
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  We've pre-filled these based on your business type — edit prices and times to match yours.
-                </p>
+                <h2 className="text-xl font-semibold text-foreground">Your services</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Pre-filled based on your business type. Edit, remove, or add more.</p>
               </div>
+
               <div className="space-y-3">
                 {services.map((service, i) => (
-                  <div key={i} className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Service {i + 1}</span>
-                      {services.length > 1 && (
-                        <button onClick={() => removeService(i)} className="text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      id={`service-name-${i}`}
-                      name={`service-name-${i}`}
-                      type="text"
-                      value={service.name}
-                      onChange={(e) => updateService(i, "name", e.target.value)}
-                      placeholder="Service name"
-                      className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                    />
-                    <div className="grid grid-cols-2 gap-3">
+                  <div key={i} className="flex gap-2 items-start">
+                    <div className="flex-1 grid grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={service.name}
+                        onChange={(e) => updateService(i, "name", e.target.value)}
+                        placeholder="Service name"
+                        className="col-span-3 sm:col-span-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">R</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R</span>
                         <input
-                          id={`service-price-${i}`}
-                          name={`service-price-${i}`}
-                          type="text"
+                          type="number"
                           value={service.price}
                           onChange={(e) => updateService(i, "price", e.target.value)}
                           placeholder="Price"
-                          className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                          className="w-full rounded-lg border border-border bg-background pl-6 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                         />
                       </div>
                       <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                         <select
-                          id={`service-duration-${i}`}
-                          name={`service-duration-${i}`}
                           value={service.duration}
                           onChange={(e) => updateService(i, "duration", e.target.value)}
-                          className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all appearance-none"
+                          className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
                         >
-                          <option value="15">15 min</option>
-                          <option value="20">20 min</option>
-                          <option value="30">30 min</option>
-                          <option value="45">45 min</option>
-                          <option value="60">1 hour</option>
-                          <option value="90">1.5 hours</option>
-                          <option value="120">2 hours</option>
-                          <option value="180">3 hours</option>
+                          {[15,20,30,45,60,75,90,105,120,150,180].map(m => (
+                            <option key={m} value={String(m)}>{m} min</option>
+                          ))}
                         </select>
                       </div>
                     </div>
+                    {services.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeService(i)}
+                        className="mt-2 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))}
-                <button
-                  onClick={addService}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:shadow-soft transition-all"
-                >
-                  <Plus className="h-4 w-4" />Add another service
-                </button>
               </div>
+
+              <button
+                type="button"
+                onClick={addService}
+                className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Add service
+              </button>
             </div>
           )}
 
-          {/* ── STEP 3: Account credentials + summary ── */}
+          {/* \u2500 Step 3: Account \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {step === 3 && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-6 animate-fade-in">
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
-                  Almost there — create your account 🎉
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Your booking page is ready. Create a free account to launch it. No credit card required.
-                </p>
+                <h2 className="text-xl font-semibold text-foreground">Create your account</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Almost there \u2014 set up your login details.</p>
               </div>
-
-              {/* Summary strip */}
-              <div className="gradient-surface rounded-xl p-4 border border-border/50 space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Your booking page</p>
-                <p className="text-sm text-foreground"><span className="text-muted-foreground">Business: </span>{businessName}</p>
-                <p className="text-sm text-foreground"><span className="text-muted-foreground">Type: </span>{businessType}</p>
-                <p className="text-sm text-foreground">
-                  <span className="text-muted-foreground">Services: </span>
-                  {services.filter((s) => s.name.trim()).length} added
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">
-                    Email address
-                  </label>
-                  <input
-                    id="onboarding-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
-                    placeholder="you@example.com"
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="onboarding-password" className="block text-sm font-medium mb-1.5 text-foreground">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="onboarding-password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
-                      placeholder="Minimum 8 characters"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {password && !passwordValid && (
-                    <p className="text-xs text-destructive mt-1.5">Password must be at least 8 characters</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="onboarding-confirm-password" className="block text-sm font-medium mb-1.5 text-foreground">
-                    Confirm password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="onboarding-confirm-password"
-                      name="confirm-password"
-                      type={showConfirm ? "text" : "password"}
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
-                      placeholder="Re-enter your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={showConfirm ? "Hide password" : "Show password"}
-                    >
-                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {confirmPassword && !passwordsMatch && (
-                    <p className="text-xs text-destructive mt-1.5">Passwords don't match</p>
-                  )}
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground">Free for 30 days. No credit card required. Cancel anytime.</p>
 
               {submitError && (
-                <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
                   {submitError}
                 </div>
               )}
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-foreground">Email address</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-foreground">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min. 8 characters"
+                      autoComplete="new-password"
+                      className="w-full rounded-lg border border-border bg-background px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {password && !passwordValid && (
+                    <p className="text-xs text-destructive">Password must be at least 8 characters</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-foreground">Confirm password</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirm ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repeat password"
+                      autoComplete="new-password"
+                      className="w-full rounded-lg border border-border bg-background px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && !passwordsMatch && (
+                    <p className="text-xs text-destructive">Passwords don\u2019t match</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-card border border-border p-4 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Summary</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-foreground font-medium">{businessName}</p>
+                  <p className="text-xs text-muted-foreground">{businessType}</p>
+                  <p className="text-xs text-muted-foreground">{services.filter(s => s.name.trim()).length} service{services.filter(s => s.name.trim()).length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+                By creating an account you agree to the{" "}
+                <Link to="/terms" target="_blank" className="underline underline-offset-2 hover:text-foreground transition-colors">Terms of Service</Link>
+                {" "}and{" "}
+                <Link to="/privacy" target="_blank" className="underline underline-offset-2 hover:text-foreground transition-colors">Privacy Policy</Link>.
+              </p>
             </div>
           )}
 
-          {/* ── NAV BUTTONS ── */}
-          <div className="mt-8 flex items-center justify-between gap-3">
+          {/* Navigation */}
+          <div className="mt-8 flex items-center justify-between">
             {step > 1 ? (
               <button
+                type="button"
                 onClick={() => setStep(step - 1)}
                 disabled={submitting}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
               >
-                <ArrowLeft className="h-4 w-4" />Back
+                <ArrowLeft className="w-4 h-4" /> Back
               </button>
             ) : (
-              <div />
+              <Link
+                to="/"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Home
+              </Link>
             )}
 
             {step < totalSteps ? (
               <button
+                type="button"
                 onClick={() => setStep(step + 1)}
                 disabled={!canProceed()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Continue<ArrowRight className="h-4 w-4" />
+                Continue <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleComplete}
-                disabled={submitting || !canProceed()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={!canProceed() || submitting}
+                className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {submitting ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
-                ) : (
-                  <>Launch My Dashboard<ArrowRight className="h-4 w-4" /></>
-                )}
+                {submitting
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Launching\u2026</>
+                  : <>Launch my business <ArrowRight className="w-4 h-4" /></>}
               </button>
             )}
           </div>
