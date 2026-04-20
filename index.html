@@ -20,15 +20,16 @@
 
     <!-- Dynamic PWA manifest: /admin routes get admin manifest (start_url=/admin),
          all other routes get the booking manifest (start_url=/).
-         This ensures Add to Home Screen captures the correct entry point. -->
+         Absolute Supabase URL used to bypass Vercel catch-all rewrite which would
+         otherwise serve index.html instead of the JSON manifest. -->
     <script>
       (function () {
         var isAdmin = window.location.pathname.startsWith('/admin');
         var link = document.createElement('link');
         link.rel = 'manifest';
         link.href = isAdmin
-          ? '/functions/v1/manifest?admin=1'
-          : '/functions/v1/manifest';
+          ? 'https://kjibbbuceipnialfgflt.supabase.co/functions/v1/manifest?admin=1'
+          : 'https://kjibbbuceipnialfgflt.supabase.co/functions/v1/manifest';
         document.head.appendChild(link);
       })();
     </script>
