@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { Link } from "react-router-dom";
 import { Check, Minus, ArrowRight, ChevronDown, ChevronUp, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const tiers = [
   {
@@ -73,22 +74,22 @@ type FeatureRow = {
 };
 
 const comparisonRows: FeatureRow[] = [
-  { label: "Online booking page",                  starter: true,   professional: true,   studio: true },
-  { label: "Service and pricing management",        starter: true,   professional: true,   studio: true },
-  { label: "Availability calendar",                starter: true,   professional: true,   studio: true },
-  { label: "Deposit and payment collection",        starter: true,   professional: true,   studio: true },
-  { label: "Client capture and booking history",    starter: true,   professional: true,   studio: true },
-  { label: "Email confirmations and reminders",     starter: true,   professional: true,   studio: true },
-  { label: "Business dashboard and analytics",      starter: false,  professional: true,   studio: true },
-  { label: "Revenue trends and graphs",             starter: false,  professional: true,   studio: true },
-  { label: "Client source tracking",                starter: false,  professional: true,   studio: true },
-  { label: "Loyalty tiers (New / Regular / VIP)",   starter: false,  professional: true,   studio: true },
-  { label: "Google review request system",          starter: false,  professional: true,   studio: true },
-  { label: "Cancellation and retention alerts",     starter: false,  professional: true,   studio: true },
-  { label: "Multiple staff profiles",               starter: false,  professional: false,  studio: true },
-  { label: "Stock and inventory management",        starter: false,  professional: false,  studio: true },
-  { label: "Advanced analytics and heatmap",        starter: false,  professional: false,  studio: true },
-  { label: "Priority support",                      starter: false,  professional: false,  studio: true },
+  { label: "Online booking page", starter: true, professional: true, studio: true },
+  { label: "Service and pricing management", starter: true, professional: true, studio: true },
+  { label: "Availability calendar", starter: true, professional: true, studio: true },
+  { label: "Deposit and payment collection", starter: true, professional: true, studio: true },
+  { label: "Client capture and booking history", starter: true, professional: true, studio: true },
+  { label: "Email confirmations and reminders", starter: true, professional: true, studio: true },
+  { label: "Business dashboard and analytics", starter: false, professional: true, studio: true },
+  { label: "Revenue trends and graphs", starter: false, professional: true, studio: true },
+  { label: "Client source tracking", starter: false, professional: true, studio: true },
+  { label: "Loyalty tiers (New / Regular / VIP)", starter: false, professional: true, studio: true },
+  { label: "Google review request system", starter: false, professional: true, studio: true },
+  { label: "Cancellation and retention alerts", starter: false, professional: true, studio: true },
+  { label: "Multiple staff profiles", starter: false, professional: false, studio: true },
+  { label: "Stock and inventory management", starter: false, professional: false, studio: true },
+  { label: "Advanced analytics and heatmap", starter: false, professional: false, studio: true },
+  { label: "Priority support", starter: false, professional: false, studio: true },
 ];
 
 const faqs = [
@@ -126,11 +127,6 @@ const faqs = [
   },
 ];
 
-/* Trial checklist items -- shown in hero right column.
-   UX: Zeigarnik Effect: visitor sees unchecked items and feels compelled
-   to start the trial to complete the loop. Anchoring: free-trial framing
-   appears before any price is shown, so free is the reference point.
-*/
 const trialBuilds = [
   "Know which channel drives your bookings",
   "See which services generate the most revenue per hour",
@@ -138,6 +134,27 @@ const trialBuilds = [
   "Spot clients who have not rebooked",
   "Get a growth strategy built from your real data",
 ];
+
+type TenantPlan = "starter" | "professional" | "studio";
+type PricingMode = "signup" | "manage";
+
+const planKeyMap: Record<string, TenantPlan> = {
+  Starter: "starter",
+  Professional: "professional",
+  Studio: "studio",
+};
+
+const planLabelMap: Record<TenantPlan, string> = {
+  starter: "Starter",
+  professional: "Professional",
+  studio: "Studio",
+};
+
+const planRank: Record<TenantPlan, number> = {
+  starter: 1,
+  professional: 2,
+  studio: 3,
+};
 
 const CellValue = ({ value }: { value: boolean | string }) => {
   if (typeof value === "string") return <span className="text-xs text-foreground/80">{value}</span>;
@@ -149,21 +166,119 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 const Pricing = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [pricingMode, setPricingMode] = useState<PricingMode>("signup");
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<TenantPlan | null>(null);
+  const [loadingTenantContext, setLoadingTenantContext] = useState(true);
+  const [submittingPlan, setSubmittingPlan] = useState<TenantPlan | null>(null);
+  const [manageNotice, setManageNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTenantContext = async () => {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !authData?.user) {
+          if (isMounted) {
+            setPricingMode("signup");
+            setLoadingTenantContext(false);
+          }
+          return;
+        }
+
+        const userId = authData.user.id;
+
+        const { data: tenant, error: tenantError } = await supabase
+          .from("tenants")
+          .select("id, plan")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (tenantError || !tenant) {
+          if (isMounted) {
+            setPricingMode("signup");
+            setLoadingTenantContext(false);
+          }
+          return;
+        }
+
+        const normalizedPlan = String(tenant.plan ?? "").trim().toLowerCase();
+        const safePlan: TenantPlan =
+          normalizedPlan === "professional" || normalizedPlan === "studio" ? normalizedPlan : "starter";
+
+        if (isMounted) {
+          setTenantId(tenant.id);
+          setCurrentPlan(safePlan);
+          setPricingMode("manage");
+          setLoadingTenantContext(false);
+        }
+      } catch (error) {
+        console.error("Failed to load pricing context:", error);
+        if (isMounted) {
+          setPricingMode("signup");
+          setLoadingTenantContext(false);
+        }
+      }
+    };
+
+    loadTenantContext();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const manageTierMeta = useMemo(() => {
+    if (!currentPlan) return null;
+    return {
+      label: planLabelMap[currentPlan],
+      rank: planRank[currentPlan],
+    };
+  }, [currentPlan]);
+
+  const handlePlanChange = async (selectedPlan: TenantPlan) => {
+    if (!tenantId || pricingMode !== "manage" || currentPlan === selectedPlan) return;
+
+    setManageNotice(null);
+    setSubmittingPlan(selectedPlan);
+
+    try {
+      const currentRank = currentPlan ? planRank[currentPlan] : 0;
+      const selectedRank = planRank[selectedPlan];
+      const nextStatus = selectedRank > currentRank ? "pending_payment" : "pending_downgrade";
+
+      const { error } = await supabase
+        .from("tenants")
+        .update({
+          plan: selectedPlan,
+          subscription_status: nextStatus,
+        })
+        .eq("id", tenantId);
+
+      if (error) throw error;
+
+      setCurrentPlan(selectedPlan);
+      setManageNotice(
+        nextStatus === "pending_payment"
+          ? `${planLabelMap[selectedPlan]} selected. Your upgrade has been recorded and is awaiting billing confirmation.`
+          : `${planLabelMap[selectedPlan]} selected. Your downgrade has been recorded for the next billing cycle.`
+      );
+    } catch (error) {
+      console.error("Failed to update tenant plan:", error);
+      setManageNotice("We could not update your plan right now. Please try again.");
+    } finally {
+      setSubmittingPlan(null);
+    }
+  };
 
   return (
     <div className="min-h-screen nextslot-theme bg-background">
       <SiteHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* HERO -- 2-col split
-            LEFT:  free-trial headline + primary CTA (Anchoring: free before price)
-            RIGHT: trial-value checklist (Zeigarnik: open loops invite action)
-            UX: Serial Position -- strongest value prop in first visible region.
-        */}
         <section className="py-16 md:py-24">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-
-            {/* LEFT */}
             <div>
               <div
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
@@ -189,26 +304,39 @@ const Pricing = () => {
                 After 30 days, pick the plan that fits. Starter from R399 per month.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  to="/onboarding"
-                  className="group inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                  style={{
-                    background: "hsl(var(--foreground))",
-                    color: "hsl(var(--background))",
-                    boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow =
-                      "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.40)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow =
-                      "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)";
-                  }}
-                >
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
+                {pricingMode === "manage" ? (
+                  <div
+                    className="inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px]"
+                    style={{
+                      background: "hsl(var(--accent)/0.08)",
+                      color: "hsl(var(--foreground))",
+                      border: "1px solid hsl(var(--accent)/0.25)",
+                    }}
+                  >
+                    You are currently on the {manageTierMeta?.label ?? "Starter"} plan
+                  </div>
+                ) : (
+                  <Link
+                    to="/onboarding"
+                    className="group inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                    style={{
+                      background: "hsl(var(--foreground))",
+                      color: "hsl(var(--background))",
+                      boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.boxShadow =
+                        "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.40)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.boxShadow =
+                        "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)";
+                    }}
+                  >
+                    Start Free Trial
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                )}
                 <a
                   href="#plans"
                   className="inline-flex items-center justify-center text-sm font-medium px-7 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.01]"
@@ -236,9 +364,18 @@ const Pricing = () => {
               >
                 No credit card required. Cancel anytime. POPIA compliant.
               </p>
+              {pricingMode === "manage" && manageNotice && (
+                <p className="text-sm mt-3" style={{ color: "hsl(var(--accent))" }}>
+                  {manageNotice}
+                </p>
+              )}
+              {loadingTenantContext && (
+                <p className="text-xs mt-3" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Checking your account…
+                </p>
+              )}
             </div>
 
-            {/* RIGHT: Zeigarnik checklist card */}
             <div
               className="rounded-2xl p-8 relative overflow-hidden"
               style={{
@@ -290,13 +427,11 @@ const Pricing = () => {
                 </p>
               </div>
             </div>
-
           </div>
 
-          {/* 3-step journey */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mt-14">
             {[
-              { num: "01", label: "Sign up free",      sub: "No card. Live in minutes." },
+              { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
               { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
               { num: "03", label: "Get your strategy", sub: "Personalised insights after 30 days." },
             ].map((step) => (
@@ -309,7 +444,6 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* TIER CARDS */}
         <section id="plans" className="pb-10">
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {tiers.map((tier) => (
@@ -321,7 +455,7 @@ const Pricing = () => {
                     : "border border-border gradient-surface shadow-soft"
                 }`}
               >
-                <div className={`px-8 pt-8 pb-6 ${ tier.featured ? "border-b border-foreground/10" : "border-b border-border/50" }`}>
+                <div className={`px-8 pt-8 pb-6 ${tier.featured ? "border-b border-foreground/10" : "border-b border-border/50"}`}>
                   {tier.featured && (
                     <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-accent mb-3">Most Popular</span>
                   )}
@@ -349,46 +483,133 @@ const Pricing = () => {
                   </ul>
                 </div>
                 <div className="px-8 pb-8">
-                  <Link
-                    to="/onboarding"
-                    className={`group w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] ${
-                      tier.featured
-                        ? "hover:scale-[1.02]"
-                        : "hover:scale-[1.01]"
-                    }`}
-                    style={tier.featured ? {
-                      background: "hsl(var(--foreground))",
-                      color: "hsl(var(--background))",
-                      boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)",
-                    } : {
-                      border: "1px solid hsl(var(--border))",
-                      color: "hsl(var(--foreground)/0.75)",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (tier.featured) {
-                        (e.currentTarget as HTMLElement).style.boxShadow =
-                          "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.38)";
-                      } else {
-                        (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
-                        (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
-                        (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (tier.featured) {
-                        (e.currentTarget as HTMLElement).style.boxShadow =
-                          "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)";
-                      } else {
-                        (e.currentTarget as HTMLElement).style.background = "transparent";
-                        (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
-                        (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
-                      }
-                    }}
-                  >
-                    {tier.cta}
-                    <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                  <p className="text-center text-[11px] text-muted-foreground mt-2">Free for 30 days. No card required.</p>
+                  {(() => {
+                    const tierPlan = planKeyMap[tier.name];
+                    const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
+                    const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
+                    const isDowngrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] < planRank[currentPlan];
+                    const isBusy = submittingPlan === tierPlan;
+
+                    const ctaLabel = pricingMode === "manage"
+                      ? isCurrent
+                        ? "Current Plan"
+                        : isUpgrade
+                        ? "Upgrade"
+                        : isDowngrade
+                        ? "Downgrade"
+                        : "Select Plan"
+                      : tier.cta;
+
+                    if (pricingMode === "manage") {
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isCurrent || !!submittingPlan}
+                            onClick={() => handlePlanChange(tierPlan)}
+                            className={`group w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] ${
+                              isCurrent ? "cursor-not-allowed opacity-60" : tier.featured ? "hover:scale-[1.02]" : "hover:scale-[1.01]"
+                            }`}
+                            style={
+                              isCurrent
+                                ? {
+                                    background: "hsl(var(--accent)/0.10)",
+                                    color: "hsl(var(--foreground))",
+                                    border: "1px solid hsl(var(--accent)/0.25)",
+                                  }
+                                : tier.featured
+                                ? {
+                                    background: "hsl(var(--foreground))",
+                                    color: "hsl(var(--background))",
+                                    boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)",
+                                  }
+                                : {
+                                    border: "1px solid hsl(var(--border))",
+                                    color: "hsl(var(--foreground)/0.75)",
+                                  }
+                            }
+                            onMouseEnter={(e) => {
+                              if (isCurrent || isBusy) return;
+                              if (tier.featured) {
+                                (e.currentTarget as HTMLElement).style.boxShadow =
+                                  "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.38)";
+                              } else {
+                                (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
+                                (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
+                                (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isCurrent || isBusy) return;
+                              if (tier.featured) {
+                                (e.currentTarget as HTMLElement).style.boxShadow =
+                                  "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)";
+                              } else {
+                                (e.currentTarget as HTMLElement).style.background = "transparent";
+                                (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
+                                (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
+                              }
+                            }}
+                          >
+                            {isBusy ? "Saving..." : ctaLabel}
+                            {!isCurrent && <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />}
+                          </button>
+                          <p className="text-center text-[11px] text-muted-foreground mt-2">
+                            {isCurrent
+                              ? "This is your current subscription."
+                              : isUpgrade
+                              ? "Upgrade request will be recorded for billing."
+                              : isDowngrade
+                              ? "Downgrade request will be recorded for the next billing cycle."
+                              : "Select the plan you want to move to."}
+                          </p>
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <Link
+                          to="/onboarding"
+                          className={`group w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] ${
+                            tier.featured ? "hover:scale-[1.02]" : "hover:scale-[1.01]"
+                          }`}
+                          style={tier.featured ? {
+                            background: "hsl(var(--foreground))",
+                            color: "hsl(var(--background))",
+                            boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)",
+                          } : {
+                            border: "1px solid hsl(var(--border))",
+                            color: "hsl(var(--foreground)/0.75)",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (tier.featured) {
+                              (e.currentTarget as HTMLElement).style.boxShadow =
+                                "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.38)";
+                            } else {
+                              (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
+                              (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
+                              (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (tier.featured) {
+                              (e.currentTarget as HTMLElement).style.boxShadow =
+                                "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)";
+                            } else {
+                              (e.currentTarget as HTMLElement).style.background = "transparent";
+                              (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
+                              (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
+                            }
+                          }}
+                        >
+                          {tier.cta}
+                          <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                        <p className="text-center text-[11px] text-muted-foreground mt-2">Free for 30 days. No card required.</p>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
@@ -408,7 +629,6 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* COMPARISON TABLE */}
         <section className="pb-16 md:pb-20 max-w-4xl mx-auto">
           <div className="flex justify-center">
             <button
@@ -417,9 +637,7 @@ const Pricing = () => {
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
             >
               {showComparison ? "Hide" : "See"} full plan comparison
-              {showComparison
-                ? <ChevronUp className="h-4 w-4" />
-                : <ChevronDown className="h-4 w-4" />}
+              {showComparison ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
           </div>
           {showComparison && (
@@ -437,9 +655,7 @@ const Pricing = () => {
                   {comparisonRows.map((row, i) => (
                     <tr
                       key={row.label}
-                      className={`border-b border-border/50 ${
-                        i % 2 === 0 ? "bg-background" : "bg-secondary/20"
-                      }`}
+                      className={`border-b border-border/50 ${i % 2 === 0 ? "bg-background" : "bg-secondary/20"}`}
                     >
                       <td className="py-3 px-5 text-foreground/80">{row.label}</td>
                       <td className="py-3 px-3 text-center"><CellValue value={row.starter} /></td>
@@ -453,7 +669,6 @@ const Pricing = () => {
           )}
         </section>
 
-        {/* WHAT THE TRIAL BUILDS */}
         <section className="pb-20 md:pb-24 max-w-3xl mx-auto">
           <div className="rounded-2xl border border-accent/25 bg-accent/5 px-8 py-10">
             <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">What your 30-day trial actually builds</p>
@@ -482,7 +697,6 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* FAQ */}
         <section className="pb-20 md:pb-28 max-w-2xl mx-auto">
           <h2 className="text-2xl font-semibold tracking-tight text-center mb-2">Common questions</h2>
           <p className="text-center text-sm text-muted-foreground mb-10">Straight answers. No sales speak.</p>
@@ -508,10 +722,8 @@ const Pricing = () => {
             ))}
           </div>
         </section>
-
       </main>
 
-      {/* BOTTOM CTA */}
       <section className="bg-primary text-primary-foreground py-16 md:py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">30 days free. No card needed.</p>
@@ -522,13 +734,23 @@ const Pricing = () => {
             Sign up in minutes. Your first 30 days are completely free.
             NextSlot learns your business patterns and delivers a personalised growth strategy built on your real data.
           </p>
-          <Link
-            to="/onboarding"
-            className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
-          >
-            Start Your Free Trial
-            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+          {pricingMode === "manage" ? (
+            <a
+              href="#plans"
+              className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
+            >
+              Manage Your Plan
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+          ) : (
+            <Link
+              to="/onboarding"
+              className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
+            >
+              Start Your Free Trial
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          )}
           <p className="text-xs text-primary-foreground/40 pt-1">No payment required. Try free for 30 days. Cancel anytime.</p>
         </div>
       </section>
