@@ -707,10 +707,9 @@ const AdminSettings = () => {
                   {(resolvedStatus === "trial" || displayStatus === "trial_expired") && (
                     <>
                       <div className="border-t border-white/[0.05]" />
-                      <a
-                        href="/https://nextslot.co.za/pricing"
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => window.open("https://nextslot.co.za/pricing", "_blank", "noopener,noreferrer")}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90"
                         style={{
                           background: "rgba(255,255,255,0.07)",
