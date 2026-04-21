@@ -7,6 +7,7 @@ import AdminLogin        from "@/components/admin/AdminLogin";
 import AdminSidebar     from "@/components/admin/AdminSidebar";
 import AdminMobileNav   from "@/components/admin/AdminMobileNav";
 import AdminDashboard   from "@/components/admin/AdminDashboard";
+import TrialExpiredPaywall from "@/components/admin/TrialExpiredPaywall";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
 const AdminBookings          = lazy(() => import("@/components/admin/AdminBookings"));
@@ -18,9 +19,40 @@ const AdminSettings          = lazy(() => import("@/components/admin/AdminSettin
 const AdminTerms             = lazy(() => import("@/components/admin/AdminTerms"));
 const AdminClientManagement  = lazy(() => import("@/components/admin/AdminClientManagement"));
 
+// ── Subscription gate logic ──────────────────────────────────────────────────
+// INTERNAL: 7-day silent grace period after trial_ends_at before paywall shows.
+// The tenant is NEVER told about the grace period — they see the paywall as if
+// the trial ended exactly on trial_ends_at.
+const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+function isPaywalled(
+  status: string | null,
+  isLifetimeFree: boolean,
+  trialEndsAt: string | null
+): boolean {
+  if (isLifetimeFree) return false;
+  if (!status) return false;
+
+  // Fully active
+  if (status === "active") return false;
+
+  // Trial — check if within grace window
+  if (status === "trial") {
+    if (!trialEndsAt) return false; // no end date set → keep open
+    const graceCutoff = new Date(trialEndsAt).getTime() + GRACE_PERIOD_MS;
+    return Date.now() > graceCutoff; // gate only AFTER grace window expires
+  }
+
+  // Explicit expired / cancelled / pending_payment
+  if (status === "trial_expired" || status === "cancelled" || status === "pending_payment") {
+    return true;
+  }
+
+  return false;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Error boundary ────────────────────────────────────────────────────────────
-// Catches lazy-load / render errors so they show a visible card rather than a
-// silent blank screen (especially noticeable on mobile after nav tap).
 interface EBState { hasError: boolean; message: string }
 class ViewErrorBoundary extends Component<{ children: ReactNode }, EBState> {
   constructor(props: { children: ReactNode }) {
@@ -52,7 +84,7 @@ class ViewErrorBoundary extends Component<{ children: ReactNode }, EBState> {
     return this.props.children;
   }
 }
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 const TabLoader = () => (
   <div className="flex items-center justify-center py-24">
@@ -91,16 +123,16 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
 
   const renderView = () => {
     switch (activeView) {
-      case "Dashboard":        return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
-      case "Bookings":         return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
-      case "Services":         return <AdminServices />;
-      case "Availability":     return <AdminAvailability />;
-      case "Stock":            return <AdminStock />;
+      case "Dashboard":         return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+      case "Bookings":          return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
+      case "Services":          return <AdminServices />;
+      case "Availability":      return <AdminAvailability />;
+      case "Stock":             return <AdminStock />;
       case "Client Management": return <AdminClientManagement />;
-      case "Integrations":     return <AdminIntegrations />;
-      case "Settings":         return <AdminSettings />;
+      case "Integrations":      return <AdminIntegrations />;
+      case "Settings":          return <AdminSettings />;
       case "Terms & Conditions": return <AdminTerms />;
-      default:                 return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+      default:                  return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
     }
   };
 
@@ -113,13 +145,10 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      {/* FIX: was min-h-screen — inside a flex parent that is h-screen this resolves to an ambiguous height. */}
       <div className="flex flex-col flex-1 h-full overflow-hidden">
         {/* Mobile top bar */}
         <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-          <button
-            onClick={() => setSidebarOpen(true)}
-          >
+          <button onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5 text-white/60" />
           </button>
           <h1 className="text-sm font-semibold text-white/80">{activeView}</h1>
@@ -133,7 +162,6 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
 
         {/* Content area */}
         <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-          {/* ViewErrorBoundary key=activeView resets error state on every nav tap */}
           <ViewErrorBoundary key={activeView}>
             <Suspense fallback={<TabLoader />}>
               {renderView()}
@@ -151,10 +179,18 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   );
 };
 
+// ── Subscription shape returned from tenants table ────────────────────────────
+interface TenantSubscription {
+  subscription_status: string | null;
+  is_lifetime_free: boolean;
+  trial_ends_at: string | null;
+}
+
 const Admin = () => {
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
   const [tenantId, setTenantId]   = useState<string | null>(null);
   const [userId, setUserId]       = useState<string | null>(null);
+  const [sub, setSub]             = useState<TenantSubscription | null>(null);
 
   const checkAdminSession = async () => {
     try {
@@ -167,16 +203,25 @@ const Admin = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      // Prefer 'owner' first
       const adminRole = roles?.find(r => r.role === "owner") ?? roles?.find(r => r.role === "admin");
-      if (adminRole) {
-        setTenantId(adminRole.tenant_id);
-        setUserId(user.id);
-        setAuthState("authenticated");
-      } else {
+      if (!adminRole) {
         setAuthState("unauthenticated");
         await supabase.auth.signOut();
+        return;
       }
+
+      setTenantId(adminRole.tenant_id);
+      setUserId(user.id);
+
+      // ── Fetch subscription fields ──────────────────────────────────────────
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("subscription_status, is_lifetime_free, trial_ends_at")
+        .eq("id", adminRole.tenant_id)
+        .single();
+
+      setSub(tenantRow as TenantSubscription | null);
+      setAuthState("authenticated");
     } catch {
       setAuthState("unauthenticated");
     }
@@ -188,6 +233,7 @@ const Admin = () => {
         setAuthState("unauthenticated");
         setTenantId(null);
         setUserId(null);
+        setSub(null);
       } else if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
         checkAdminSession();
       }
@@ -201,6 +247,12 @@ const Admin = () => {
     [tenantId, userId]
   );
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setAuthState("unauthenticated");
+  };
+
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (authState === "loading") {
     return (
       <div className="flex items-center justify-center h-screen bg-[#0a0a0a]">
@@ -209,15 +261,27 @@ const Admin = () => {
     );
   }
 
+  // ── Unauthenticated ────────────────────────────────────────────────────────
   if (authState === "unauthenticated" || !tenantCtx) {
     return <AdminLogin onSuccess={checkAdminSession} />;
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setAuthState("unauthenticated");
-  };
+  // ── Subscription gate ──────────────────────────────────────────────────────
+  const paywalled = isPaywalled(
+    sub?.subscription_status ?? null,
+    sub?.is_lifetime_free ?? false,
+    sub?.trial_ends_at ?? null
+  );
 
+  if (paywalled) {
+    return (
+      <TenantProvider value={tenantCtx}>
+        <TrialExpiredPaywall onSignOut={handleSignOut} />
+      </TenantProvider>
+    );
+  }
+
+  // ── Authenticated + active ─────────────────────────────────────────────────
   return (
     <TenantProvider value={tenantCtx}>
       <AdminShell onSignOut={handleSignOut} />
