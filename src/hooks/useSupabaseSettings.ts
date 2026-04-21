@@ -180,3 +180,29 @@ export function useUpsertAppSetting() {
     },
   });
 }
+
+// ─── Tenant subscription / billing (read-only, never exposed to mutations) ────
+export function useTenantSubscription() {
+  const { tenantId } = useTenant();
+
+  return useQuery({
+    queryKey: ["tenant-subscription", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("subscription_status, is_lifetime_free, plan, trial_started_at, trial_ends_at, billing_cycle_anchor")
+        .eq("id", tenantId)
+        .single();
+      if (error) throw error;
+      return data as {
+        subscription_status: string;
+        is_lifetime_free: boolean;
+        plan: string;
+        trial_started_at: string | null;
+        trial_ends_at: string | null;
+        billing_cycle_anchor: string | null;
+      };
+    },
+    staleTime: 60_000, // re-fetch every 60s max
+  });
+}
