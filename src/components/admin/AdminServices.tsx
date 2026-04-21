@@ -7,7 +7,7 @@ import {
   SaveButton,
   EmptyState,
 } from "@/components/admin/AdminSharedUI";
-import { Plus, Pencil, Trash2, Check, Search, ChevronDown, ChevronUp, Loader2, GripVertical, X, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Search, ChevronDown, ChevronUp, GripVertical, X, Sparkles } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -25,7 +25,7 @@ interface EditingService {
   price: string;
   duration_minutes: string;
   category: string;
-  customCategory: string;         // NEW — free-text when "Add new category…" is selected
+  customCategory: string;
   is_active: boolean;
 }
 
@@ -360,7 +360,6 @@ const AdminServices = () => {
   const saveEdit = () => {
     if (!editing) return;
 
-    // Guard: tenant must be resolved before saving
     if (!tenantId) {
       toast.error("Tenant not ready — please wait a moment and try again.");
       return;
@@ -369,7 +368,6 @@ const AdminServices = () => {
     const price = parseFloat(editing.price);
     const duration = parseInt(editing.duration_minutes, 10);
 
-    // Resolve final category — either picked from list or custom typed value
     const resolvedCategory =
       editing.category === NEW_CATEGORY_SENTINEL
         ? editing.customCategory.trim().toLowerCase().replace(/\s+/g, "-")
@@ -477,7 +475,7 @@ const AdminServices = () => {
                 onChange={(e) => setEditing({ ...editing, name: e.target.value })}
               />
 
-              {/* ── Category picker with "Add new category" option ── */}
+              {/* ── Category picker with custom category support ── */}
               <div className="flex flex-col gap-2">
                 <select
                   className={inputClass}
@@ -491,7 +489,6 @@ const AdminServices = () => {
                   <option value={NEW_CATEGORY_SENTINEL}>＋ Add new category…</option>
                 </select>
 
-                {/* Show free-text input when tenant picks "Add new category" */}
                 {editing.category === NEW_CATEGORY_SENTINEL && (
                   <input
                     className={inputClass}
@@ -554,12 +551,22 @@ const AdminServices = () => {
           </motion.div>
         )}
 
+        {/* ── FIX: action is ReactNode (a button element), NOT an object ── */}
         {filtered.length === 0 ? (
           <EmptyState
             icon={Search}
             title={search.trim() ? `No services match "${search}"` : "No services yet"}
             description={!search.trim() ? "Add your first service to get started." : "Try a different search term."}
-            action={!search.trim() ? { label: "Add your first service", onClick: startNew } : undefined}
+            action={
+              !search.trim() ? (
+                <button
+                  onClick={startNew}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add your first service
+                </button>
+              ) : undefined
+            }
           />
         ) : (
           <div className="flex flex-col gap-2.5">
@@ -628,6 +635,7 @@ const AdminServices = () => {
           ))}
         </div>
 
+        {/* ── FIX: no action prop here — EmptyState without action ── */}
         {addonRules.length === 0 && (
           <EmptyState
             icon={Sparkles}
