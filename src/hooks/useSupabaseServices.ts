@@ -18,6 +18,7 @@ export interface Service {
   tenant_id: string | null;
   created_at: string | null;
   updated_at: string | null;
+  display_order: number | null;
 }
 
 export function useSupabaseServices() {
@@ -25,16 +26,17 @@ export function useSupabaseServices() {
 
   return useQuery({
     queryKey: ["services", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
         .select(
           "id, name, description, category, price, duration_minutes, " +
           "deposit_percent, is_active, is_call_out_available, " +
-          "image_url, tags, tenant_id, created_at, updated_at"
+          "image_url, tags, tenant_id, created_at, updated_at, display_order"
         )
-        .eq("tenant_id", tenantId)
-        .order("category")
+        .eq("tenant_id", tenantId!)
+        .order("display_order", { ascending: true, nullsFirst: false })
         .order("name");
       if (error) throw error;
       return (data ?? []) as Service[];
@@ -47,7 +49,9 @@ export function useServiceCategories() {
 
   return useQuery({
     queryKey: ["service-categories", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from("services")
         .select("category")
@@ -78,9 +82,11 @@ export function useUpsertService() {
         category: string;
       }
     ) => {
+      if (!tenantId) throw new Error("Tenant not loaded — please try again.");
+
       const payload = { ...service, tenant_id: tenantId };
+
       if (service.id) {
-        // Tenant guard on update — belt AND suspenders alongside RLS
         const { error } = await supabase
           .from("services")
           .update(payload)
@@ -88,7 +94,6 @@ export function useUpsertService() {
           .eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        // Strip id (undefined) so Supabase generates its own UUID
         const { id: _omit, ...insertPayload } = payload;
         const { error } = await supabase.from("services").insert(insertPayload);
         if (error) throw error;
@@ -97,6 +102,10 @@ export function useUpsertService() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services", tenantId] });
       qc.invalidateQueries({ queryKey: ["service-categories", tenantId] });
+      toast.success("Service saved");
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to save service: ${err.message}`);
     },
   });
 }
@@ -107,9 +116,7 @@ export function useDeleteService() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // Soft-delete: set is_active = false instead of hard-deleting.
-      // Hard DELETE fails with 409 Conflict when booking_items still
-      // reference this service via FK (no ON DELETE CASCADE).
+      if (!tenantId) throw new Error("Tenant not loaded — please try again.");
       const { error } = await supabase
         .from("services")
         .update({ is_active: false })
