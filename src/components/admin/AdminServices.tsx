@@ -25,6 +25,7 @@ interface EditingService {
   price: string;
   duration_minutes: string;
   category: string;
+  customCategory: string;         // NEW — free-text when "Add new category…" is selected
   is_active: boolean;
 }
 
@@ -34,8 +35,11 @@ const emptyService = (): EditingService => ({
   price: "",
   duration_minutes: "",
   category: "",
+  customCategory: "",
   is_active: true,
 });
+
+const NEW_CATEGORY_SENTINEL = "__new__";
 
 // ── Rule Editor ───────────────────────────────────────────────────────────────
 interface ServiceOption { id: string; name: string; }
@@ -170,7 +174,7 @@ const SortableServiceRow = ({ service, onEdit, onDelete }: { service: Service; o
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <h4 className="text-sm font-semibold text-white/90 truncate">{service.name}</h4>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-white/40 font-medium">
-            {service.category}
+            {service.category.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
           </span>
           {!service.is_active && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400/80 font-medium">
@@ -337,6 +341,7 @@ const AdminServices = () => {
       price: String(t.price),
       duration_minutes: String(t.duration_minutes),
       category: t.category,
+      customCategory: "",
       is_active: t.is_active,
     });
     setIsNew(false);
@@ -354,9 +359,27 @@ const AdminServices = () => {
 
   const saveEdit = () => {
     if (!editing) return;
+
+    // Guard: tenant must be resolved before saving
+    if (!tenantId) {
+      toast.error("Tenant not ready — please wait a moment and try again.");
+      return;
+    }
+
     const price = parseFloat(editing.price);
     const duration = parseInt(editing.duration_minutes, 10);
-    if (!editing.name.trim() || isNaN(price) || isNaN(duration) || !editing.category) return;
+
+    // Resolve final category — either picked from list or custom typed value
+    const resolvedCategory =
+      editing.category === NEW_CATEGORY_SENTINEL
+        ? editing.customCategory.trim().toLowerCase().replace(/\s+/g, "-")
+        : editing.category;
+
+    if (!editing.name.trim()) { toast.error("Service name is required."); return; }
+    if (isNaN(price) || price < 0) { toast.error("Enter a valid price."); return; }
+    if (isNaN(duration) || duration <= 0) { toast.error("Enter a valid duration."); return; }
+    if (!resolvedCategory) { toast.error("Please select or enter a category."); return; }
+
     upsertMutation.mutate(
       {
         id: isNew ? undefined : editing.id,
@@ -364,8 +387,9 @@ const AdminServices = () => {
         description: editing.description.trim() || null,
         price,
         duration_minutes: duration,
-        category: editing.category,
+        category: resolvedCategory,
         is_active: editing.is_active,
+        display_order: isNew ? services.length : undefined,
       },
       { onSuccess: cancelEdit }
     );
@@ -452,16 +476,33 @@ const AdminServices = () => {
                 value={editing.name}
                 onChange={(e) => setEditing({ ...editing, name: e.target.value })}
               />
-              <select
-                className={inputClass}
-                value={editing.category}
-                onChange={(e) => setEditing({ ...editing, category: e.target.value })}
-              >
-                <option value="">Select Category *</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
+
+              {/* ── Category picker with "Add new category" option ── */}
+              <div className="flex flex-col gap-2">
+                <select
+                  className={inputClass}
+                  value={editing.category}
+                  onChange={(e) => setEditing({ ...editing, category: e.target.value, customCategory: "" })}
+                >
+                  <option value="">Select Category *</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                  <option value={NEW_CATEGORY_SENTINEL}>＋ Add new category…</option>
+                </select>
+
+                {/* Show free-text input when tenant picks "Add new category" */}
+                {editing.category === NEW_CATEGORY_SENTINEL && (
+                  <input
+                    className={inputClass}
+                    placeholder="Type your category name *"
+                    autoFocus
+                    value={editing.customCategory}
+                    onChange={(e) => setEditing({ ...editing, customCategory: e.target.value })}
+                  />
+                )}
+              </div>
+
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-xs">R</span>
                 <input
@@ -478,7 +519,7 @@ const AdminServices = () => {
                   className={inputClass}
                   placeholder="Duration (min) *"
                   type="number"
-                  min="0"
+                  min="1"
                   value={editing.duration_minutes}
                   onChange={(e) => setEditing({ ...editing, duration_minutes: e.target.value })}
                 />
