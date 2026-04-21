@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, KeyRound, Palette, Building2, MapPin, Clock,
-  FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
-  Globe, CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp, CreditCard, ShieldCheck
+  Check, KeyRound, Palette, Building2, MapPin, Clock, FileText,
+  Loader2, Image, Sparkles, Link, Copy, ExternalLink, Globe,
+  CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp,
+  CreditCard, ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -18,10 +19,11 @@ import {
 import { useTenant } from "@/contexts/TenantContext";
 import { useSupabaseServices } from "@/hooks/useSupabaseServices";
 import type { AddonRule } from "@/hooks/useSuggestedAddons";
-
 import { toast } from "sonner";
 
-// ─── Deposit presets ────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Deposit presets
+// ---------------------------------------------------------------------------
 const DEPOSIT_PRESETS = [
   { label: "30%", value: "30" },
   { label: "50%", value: "50" },
@@ -29,20 +31,31 @@ const DEPOSIT_PRESETS = [
   { label: "Full", value: "100" },
 ];
 
-// ─── Sensitive keys ───────────────────────────────────────────────────────────────────────────
+// Sensitive keys — shown masked until explicitly unlocked
 const SENSITIVE_KEYS = new Set([
   "smtp_password",
   "google_maps_api_key",
   "google_service_account_json",
 ]);
 
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 
-// ─── Sub-components ───────────────────────────────────────────────────────────────────
 const SectionLabel = ({ label }: { label: string }) => (
   <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-white/25 px-1 pt-2">
     {label}
   </p>
 );
+
+interface SettingsCardProps {
+  title: string;
+  icon?: React.ElementType;
+  gradient: string;
+  children: React.ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}
 
 const SettingsCard = ({
   title,
@@ -51,14 +64,7 @@ const SettingsCard = ({
   children,
   collapsible = false,
   defaultOpen = false,
-}: {
-  title: string;
-  icon?: React.ElementType;
-  gradient: string;
-  children: React.ReactNode;
-  collapsible?: boolean;
-  defaultOpen?: boolean;
-}) => {
+}: SettingsCardProps) => {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -90,15 +96,25 @@ const SettingsCard = ({
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-5 px-5 pb-5">
-              {children}
-            </div>
+            <div className="flex flex-col gap-5 px-5 pb-5">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 };
+
+interface SettingRowProps {
+  label: string;
+  id?: string;
+  placeholder: string;
+  type?: string;
+  value?: string;
+  onChange?: (v: string) => void;
+  hint?: string;
+  masked?: boolean;
+  onUnmask?: () => void;
+}
 
 const SettingRow = ({
   label,
@@ -110,17 +126,7 @@ const SettingRow = ({
   hint,
   masked,
   onUnmask,
-}: {
-  label: string;
-  id?: string;
-  placeholder: string;
-  type?: string;
-  value?: string;
-  onChange?: (v: string) => void;
-  hint?: string;
-  masked?: boolean;
-  onUnmask?: () => void;
-}) => (
+}: SettingRowProps) => (
   <div className="flex flex-col gap-1.5">
     {masked ? (
       <div className="flex items-center justify-between">
@@ -133,10 +139,11 @@ const SettingRow = ({
         {label}
       </label>
     )}
+
     {masked ? (
       <div className="flex items-center gap-2">
         <p className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/20 font-mono italic">
-          ••••••••••••••••
+          ••••••••••••
         </p>
         <button
           onClick={onUnmask}
@@ -152,23 +159,24 @@ const SettingRow = ({
         type={type}
         placeholder={placeholder}
         value={value ?? ""}
-        onChange={(e) => onChange ? onChange(e.target.value) : undefined}
+        onChange={(e) => onChange?.(e.target.value)}
         className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
       />
     )}
-    {hint && <p className="text-[10px] text-white/20 italic px-1">{hint}</p>}
+
+    {hint && (
+      <p className="text-[10px] text-white/20 italic px-1">{hint}</p>
+    )}
   </div>
 );
 
-const SaveBtn = ({
-  onClick,
-  label = "Save",
-  loading,
-}: {
+interface SaveBtnProps {
   onClick: () => void;
   label?: string;
   loading?: boolean;
-}) => (
+}
+
+const SaveBtn = ({ onClick, label = "Save", loading }: SaveBtnProps) => (
   <button
     onClick={onClick}
     disabled={loading}
@@ -179,15 +187,18 @@ const SaveBtn = ({
   </button>
 );
 
-// ─── Main component ───────────────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
-  const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
+  const { data: appSettings, isLoading: settingsLoading } = useAppSettings();
   const updateTenant = useUpdateTenant();
   const upsertSetting = useUpsertAppSetting();
   const { data: subscription } = useTenantSubscription();
-  const { setThemeById } = useBusinessTheme();
-  const { tenantId } = useTenant();
+  const setThemeById = useBusinessTheme();
+  const tenantId = useTenant();
 
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<string | null>(null);
@@ -203,7 +214,7 @@ const AdminSettings = () => {
   const [gcalSyncing, setGcalSyncing] = useState(false);
   const [gcalSyncResult, setGcalSyncResult] = useState<string | null>(null);
 
-  const customDomain = draft.custom_domain ?? "";
+  const customDomain = draft["custom_domain"] ?? "";
   const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
   const activeBookingUrl = customDomain ? `https://${customDomain}` : defaultBookingUrl;
 
@@ -212,8 +223,7 @@ const AdminSettings = () => {
     toast.success("Copied to clipboard");
   };
 
-
-  // ── Draft initialisation ─────────────────────────────────────────────────────────────────
+  // Draft initialisation
   useEffect(() => {
     if (tenant) {
       setDraft((prev) => ({
@@ -236,22 +246,24 @@ const AdminSettings = () => {
     }
   }, [appSettings]);
 
-  const update = (field: string, value: string) => setDraft((prev) => ({ ...prev, [field]: value }));
+  const update = (field: string, value: string) =>
+    setDraft((prev) => ({ ...prev, [field]: value }));
 
   const flash = (section: string) => {
     setSaved(section);
     setTimeout(() => setSaved(null), 3500);
   };
 
-  const unmask = (key: string) => setUnmasked((prev) => new Set(prev).add(key));
-  const isMasked = (key: string) => SENSITIVE_KEYS.has(key) && !unmasked.has(key) && !!appSettings[key];
+  const unmask = (key: string) =>
+    setUnmasked((prev) => new Set(prev).add(key));
 
-  // ── Save: tenant-table fields ─────────────────────────────────────────────────────────────────
+  const isMasked = (key: string) =>
+    SENSITIVE_KEYS.has(key) && !unmasked.has(key) && !!appSettings[key];
+
+  // Save tenant-table fields
   const saveTenantFields = (section: string, fields: string[]) => {
     const tenantUpdates: Record<string, string> = {};
-    fields.forEach((f) => {
-      tenantUpdates[f] = draft[f] ?? "";
-    });
+    fields.forEach((f) => (tenantUpdates[f] = draft[f] ?? ""));
     updateTenant.mutate(tenantUpdates);
 
     const syncToSettings: Record<string, string> = {};
@@ -261,27 +273,28 @@ const AdminSettings = () => {
       setThemeById(draft["theme_id"] ?? "standard");
     }
     if (Object.keys(syncToSettings).length > 0) upsertSetting.mutate(syncToSettings);
-
     flash(section);
   };
 
-  // ── Save: app_settings-only fields ──────────────────────────────────────────────────────────────
+  // Save app_settings-only fields
   const saveSettings = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => {
       if (SENSITIVE_KEYS.has(f) && !unmasked.has(f)) return;
       updates[f] = draft[f] ?? "";
     });
-    if (Object.keys(updates).length > 0) upsertSetting.mutate(updates);
-    setUnmasked((prev) => {
-      const next = new Set(prev);
-      fields.forEach((f) => next.delete(f));
-      return next;
-    });
+    if (Object.keys(updates).length > 0) {
+      upsertSetting.mutate(updates);
+      setUnmasked((prev) => {
+        const next = new Set(prev);
+        fields.forEach((f) => next.delete(f));
+        return next;
+      });
+    }
     flash(section);
   };
 
-  // ── Logo upload ──────────────────────────────────────────────────────────────────────
+  // Logo upload
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -292,7 +305,6 @@ const AdminSettings = () => {
       const { error: uploadError } = await supabase.storage
         .from("business-logos")
         .upload(path, file, { upsert: true });
-
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("business-logos").getPublicUrl(path);
       update("logo_url", urlData.publicUrl);
@@ -301,36 +313,27 @@ const AdminSettings = () => {
       toast.success("Logo uploaded");
     } catch (err: any) {
       toast.error(err.message ?? "Logo upload failed");
-      console.error("Logo upload failed:", err);
+      console.error("Logo upload failed", err);
     } finally {
       setLogoUploading(false);
       if (logoInputRef.current) logoInputRef.current.value = "";
     }
   };
 
-  // ── Password change ─────────────────────────────────────────────────────────────────────────
+  // Password change
   const handlePasswordChange = async () => {
     setPwError("");
     setPwSuccess("");
-    if (newPw.length < 6) {
-      setPwError("Must be at least 6 characters");
-      return;
-    }
-    if (newPw !== confirmPw) {
-      setPwError("Passwords do not match");
-      return;
-    }
+    if (newPw.length < 6) { setPwError("Must be at least 6 characters"); return; }
+    if (newPw !== confirmPw) { setPwError("Passwords do not match"); return; }
     const { error } = await supabase.auth.updateUser({ password: newPw });
-    if (error) {
-      setPwError(error.message);
-      return;
-    }
+    if (error) { setPwError(error.message); return; }
     setNewPw("");
     setConfirmPw("");
     setPwSuccess("Password updated successfully");
   };
 
-  // ── GCal backfill ────────────────────────────────────────────────────────────────────────
+  // GCal backfill
   const handleGcalBackfill = async () => {
     if (gcalSyncing) return;
     setGcalSyncing(true);
@@ -338,25 +341,22 @@ const AdminSettings = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
-
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const res = await fetch(`${supabaseUrl}/functions/v1/gcal-backfill`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ tenant_id: tenantId }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Sync failed");
-
       const result = `${data.created} created, ${data.skipped} skipped`;
       setGcalSyncResult(result);
       toast.success(`Calendar sync complete — ${data.created} events created`);
     } catch (e: any) {
-      toast.error(e.message || "Sync failed");
+      toast.error(e.message ?? "Sync failed");
     } finally {
       setGcalSyncing(false);
     }
@@ -369,6 +369,9 @@ const AdminSettings = () => {
       </span>
     ) : null;
 
+  // ---------------------------------------------------------------------------
+  // Loading skeleton
+  // ---------------------------------------------------------------------------
   if (tenantLoading || settingsLoading) {
     return (
       <div className="flex flex-col gap-6 animate-pulse">
@@ -381,16 +384,19 @@ const AdminSettings = () => {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <div className="flex flex-col gap-8 pb-12">
 
-      {/* ── BOOKING PAGE (always visible) ── */}
+      {/* ── BOOKING PAGE ──────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Your Booking Page" />
         <div className="p-5 rounded-3xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.05] flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-              {customDomain ? "Custom Domain (active)" : "Default URL (active)"}
+              {customDomain ? "Custom Domain active" : "Default URL active"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -416,7 +422,10 @@ const AdminSettings = () => {
           {customDomain && (
             <p className="text-[10px] text-white/20 px-1">
               Fallback: <span className="font-mono">{defaultBookingUrl}</span>
-              <button onClick={() => copyUrl(defaultBookingUrl)} className="text-white/25 hover:text-white/50 transition-colors shrink-0">
+              <button
+                onClick={() => copyUrl(defaultBookingUrl)}
+                className="text-white/25 hover:text-white/50 transition-colors shrink-0"
+              >
                 <Copy className="w-2.5 h-2.5 inline ml-1.5 mb-0.5" />
               </button>
             </p>
@@ -428,14 +437,15 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      {/* ── IDENTITY ── */}
+      {/* ── IDENTITY ──────────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Identity" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
           <SettingsCard title="Business Info" icon={Building2} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
-            <SettingRow id="biz-name" label="Business Name" placeholder="The Glow Lab" value={draft.name} onChange={(v) => update("name", v)} />
-            <SettingRow id="biz-email" label="Contact Email" placeholder="hello@glowlab.com" value={draft.email} onChange={(v) => update("email", v)} />
-            <SettingRow id="biz-phone" label="Contact Phone" placeholder="012 345 6789" value={draft.phone} onChange={(v) => update("phone", v)} />
+            <SettingRow id="biz-name" label="Business Name" placeholder="The Glow Lab" value={draft["name"]} onChange={(v) => update("name", v)} />
+            <SettingRow id="biz-email" label="Contact Email" placeholder="hello@glowlab.com" value={draft["email"]} onChange={(v) => update("email", v)} />
+            <SettingRow id="biz-phone" label="Contact Phone" placeholder="012 345 6789" value={draft["phone"]} onChange={(v) => update("phone", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveTenantFields("info", ["name", "email", "phone"])} loading={updateTenant.isPending} />
               <SavedBadge section="info" />
@@ -443,20 +453,20 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Branding & Logo" icon={Image} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
-            {draft.logo_url && (
+            {draft["logo_url"] && (
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Logo preview</span>
-                <img src={draft.logo_url} alt="Logo" className="w-16 h-16 rounded-2xl border border-white/[0.1] bg-white/[0.02] object-cover" />
+                <img src={draft["logo_url"]} alt="Logo" className="w-16 h-16 rounded-2xl border border-white/10 bg-white/[0.02] object-cover" />
               </div>
             )}
-            <SettingRow id="logo-url" label="Logo URL" placeholder="https://..." value={draft.logo_url} onChange={(v) => update("logo_url", v)} />
+            <SettingRow id="logo-url" label="Logo URL" placeholder="https://..." value={draft["logo_url"]} onChange={(v) => update("logo_url", v)} />
             <div className="flex flex-col gap-2">
               <p className="text-[10px] text-white/20 italic px-1">Or upload directly below. Recommended: square, min 200×200px.</p>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => logoInputRef.current?.click()}
                   disabled={logoUploading}
-                  className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/10 text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                   {logoUploading ? "Uploading..." : "Upload File"}
@@ -464,16 +474,25 @@ const AdminSettings = () => {
                 <SaveBtn onClick={() => saveTenantFields("logo", ["logo_url"])} loading={updateTenant.isPending} />
                 <SavedBadge section="logo" />
               </div>
-              <input id="logo-upload" name="logo-upload" ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" className="hidden" onChange={handleLogoUpload} />
             </div>
+            <input
+              id="logo-upload"
+              ref={logoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
           </SettingsCard>
+
         </div>
       </section>
 
-      {/* ── APPEARANCE ── */}
+      {/* ── APPEARANCE ────────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Appearance" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
           <SettingsCard title="Booking Page Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <div className="grid grid-cols-2 gap-2">
               {businessThemes.map((t) => (
@@ -481,7 +500,9 @@ const AdminSettings = () => {
                   key={t.id}
                   onClick={() => update("theme_id", t.id)}
                   className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
-                    draft.theme_id === t.id ? "border-white/30 bg-white/[0.1]" : "border-white/[0.06] hover:border-white/[0.12]"
+                    draft["theme_id"] === t.id
+                      ? "border-white/30 bg-white/[0.1]"
+                      : "border-white/[0.06] hover:border-white/[0.12]"
                   }`}
                 >
                   <span className="text-xs font-bold text-white/80">{t.label}</span>
@@ -496,60 +517,78 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Splash Screen Content" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
-            <SettingRow id="splash-welcome" label="Welcome Label" placeholder="Welcome to" value={draft.splash_welcome_label} onChange={(v) => update("splash_welcome_label", v)} />
-            <SettingRow id="splash-tag1" label="Main Tagline" placeholder="The Future of Glow" value={draft.splash_tagline1} onChange={(v) => update("splash_tagline1", v)} />
-            <SettingRow id="splash-tag2" label="Secondary Tagline" placeholder="Premium skincare services." value={draft.splash_tagline2} onChange={(v) => update("splash_tagline2", v)} />
-            <SettingRow id="splash-cta" label="Button Label" placeholder="Book Your Session" value={draft.splash_cta_label} onChange={(v) => update("splash_cta_label", v)} />
+            <SettingRow id="splash-welcome" label="Welcome Label" placeholder="Welcome to" value={draft["splash_welcome_label"]} onChange={(v) => update("splash_welcome_label", v)} />
+            <SettingRow id="splash-tag1" label="Main Tagline" placeholder="The Future of Glow" value={draft["splash_tagline1"]} onChange={(v) => update("splash_tagline1", v)} />
+            <SettingRow id="splash-tag2" label="Secondary Tagline" placeholder="Premium skincare services." value={draft["splash_tagline2"]} onChange={(v) => update("splash_tagline2", v)} />
+            <SettingRow id="splash-cta" label="Button Label" placeholder="Book Your Session" value={draft["splash_cta_label"]} onChange={(v) => update("splash_cta_label", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveSettings("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])} loading={upsertSetting.isPending} />
               <SavedBadge section="splash" />
             </div>
           </SettingsCard>
+
         </div>
       </section>
 
-      {/* ── OPERATIONS ── */}
+      {/* ── OPERATIONS ────────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Operations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
           <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
             <div className="flex flex-col gap-2.5">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Deposit Percentage</label>
+              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                Deposit Percentage
+              </label>
               <div className="grid grid-cols-4 gap-2">
                 {DEPOSIT_PRESETS.map((p) => (
                   <button
                     key={p.value}
                     onClick={() => update("deposit_percent", p.value)}
                     className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
-                      draft.deposit_percent === p.value ? "border-white/40 bg-white/[0.12] text-white" : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20 hover:text-white/70"
+                      draft["deposit_percent"] === p.value
+                        ? "border-white/40 bg-white/[0.12] text-white"
+                        : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20 hover:text-white/70"
                     }`}
                   >
                     {p.label}
                   </button>
                 ))}
               </div>
-              <input id="deposit-custom-percent" name="deposit_percent" type="number" placeholder="Custom %" value={draft.deposit_percent ?? ""} onChange={(e) => update("deposit_percent", e.target.value)} min={1} max={100} className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
+              <input
+                id="deposit-custom-percent"
+                name="deposit_percent"
+                type="number"
+                placeholder="Custom"
+                value={draft["deposit_percent"] ?? ""}
+                onChange={(e) => update("deposit_percent", e.target.value)}
+                min={1}
+                max={100}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+              />
               <p className="text-[10px] text-white/20 px-1 italic">
-                {draft.deposit_percent === "100" ? "Clients pay in full at booking." : `Clients pay ${draft.deposit_percent ?? 50}% now, the rest on the day.`}
+                {draft["deposit_percent"] === "100"
+                  ? "Clients pay in full at booking."
+                  : `Clients pay ${draft["deposit_percent"] ?? "50"}% now, the rest on the day.`}
               </p>
             </div>
-            <SettingRow id="min-notice" label="Min Notice (Hours)" placeholder="24" type="number" value={draft.min_notice_hours} onChange={(v) => update("min_notice_hours", v)} />
-            <SettingRow id="max-advance" label="Max Advance (Days)" placeholder="30" type="number" value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
-            <SettingRow id="ref-prefix" label="Booking Ref Prefix" placeholder="GLW" value={draft.booking_ref_prefix} onChange={(v) => update("booking_ref_prefix", v)} />
+            <SettingRow id="min-notice" label="Min Notice Hours" placeholder="24" type="number" value={draft["min_notice_hours"]} onChange={(v) => update("min_notice_hours", v)} />
+            <SettingRow id="max-advance" label="Max Advance Days" placeholder="30" type="number" value={draft["max_advance_days"]} onChange={(v) => update("max_advance_days", v)} />
+            <SettingRow id="ref-prefix" label="Booking Ref Prefix" placeholder="GLW" value={draft["booking_ref_prefix"]} onChange={(v) => update("booking_ref_prefix", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_hours", "max_advance_days", "booking_ref_prefix"])} loading={upsertSetting.isPending} />
               <SavedBadge section="rules" />
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Travel & Payments" icon={Zap} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
-            <SettingRow id="origin-address" label="Fixed Origin Address" placeholder="123 Studio Way, Cape Town" value={draft.fixed_origin_address} onChange={(v) => update("fixed_origin_address", v)} />
-            <SettingRow id="km-rate" label="Rate Per KM (ZAR)" placeholder="5.50" type="number" value={draft.rate_per_km} onChange={(v) => update("rate_per_km", v)} />
-            <SettingRow id="currency" label="Currency Symbol" placeholder="R" value={draft.currency} onChange={(v) => update("currency", v)} />
+          <SettingsCard title="Travel Payments" icon={Zap} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
+            <SettingRow id="origin-address" label="Fixed Origin Address" placeholder="123 Studio Way, Cape Town" value={draft["fixed_origin_address"]} onChange={(v) => update("fixed_origin_address", v)} />
+            <SettingRow id="km-rate" label="Rate Per KM (ZAR)" placeholder="5.50" type="number" value={draft["rate_per_km"]} onChange={(v) => update("rate_per_km", v)} />
+            <SettingRow id="currency" label="Currency Symbol" placeholder="R" value={draft["currency"]} onChange={(v) => update("currency", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn
                 onClick={() => {
-                  upsertSetting.mutate({ fixed_origin_address: draft.fixed_origin_address ?? "", rate_per_km: draft.rate_per_km ?? "" });
+                  upsertSetting.mutate({ fixed_origin_address: draft["fixed_origin_address"] ?? "", rate_per_km: draft["rate_per_km"] ?? "" });
                   saveTenantFields("travel", ["currency"]);
                 }}
                 loading={updateTenant.isPending || upsertSetting.isPending}
@@ -559,19 +598,39 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Booking Confirmation" icon={FileText} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
-            <SettingRow id="confirmation-subject" label="Email Subject" placeholder="Your Glow Lab Booking" value={draft.confirmation_subject} onChange={(v) => update("confirmation_subject", v)} />
-            <SettingRow id="confirmation-title" label="Main Heading" placeholder="Booking Confirmed!" value={draft.confirmation_title} onChange={(v) => update("confirmation_title", v)} />
+            <SettingRow id="confirmation-subject" label="Email Subject" placeholder="Your Glow Lab Booking" value={draft["confirmation_subject"]} onChange={(v) => update("confirmation_subject", v)} />
+            <SettingRow id="confirmation-title" label="Main Heading" placeholder="Booking Confirmed!" value={draft["confirmation_title"]} onChange={(v) => update("confirmation_title", v)} />
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="confirmation-intro" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Intro Message</label>
-              <textarea id="confirmation-intro" name="confirmation_intro" placeholder="Your booking is confirmed..." value={draft.confirmation_intro ?? ""} onChange={(e) => update("confirmation_intro", e.target.value)} rows={3} className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none" />
+              <label htmlFor="confirmation-intro" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                Intro Message
+              </label>
+              <textarea
+                id="confirmation-intro"
+                name="confirmation_intro"
+                placeholder="Your booking is confirmed..."
+                value={draft["confirmation_intro"] ?? ""}
+                onChange={(e) => update("confirmation_intro", e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="confirmation-outro" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Outro Message</label>
-              <textarea id="confirmation-outro" name="confirmation_outro" placeholder="We look forward to seeing you." value={draft.confirmation_outro ?? ""} onChange={(e) => update("confirmation_outro", e.target.value)} rows={4} className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none" />
+              <label htmlFor="confirmation-outro" className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                Outro Message
+              </label>
+              <textarea
+                id="confirmation-outro"
+                name="confirmation_outro"
+                placeholder="We look forward to seeing you."
+                value={draft["confirmation_outro"] ?? ""}
+                onChange={(e) => update("confirmation_outro", e.target.value)}
+                rows={4}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
+              />
             </div>
-            <SettingRow id="confirmation-signoff" label="Sign-off" placeholder="Toodles" value={draft.sign_off} onChange={(v) => update("sign_off", v)} />
+            <SettingRow id="confirmation-signoff" label="Sign-off" placeholder="Toodles" value={draft["signoff"]} onChange={(v) => update("signoff", v)} />
             <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveSettings("confirmation", ["confirmation_subject", "confirmation_title", "confirmation_intro", "confirmation_outro", "sign_off"])} loading={upsertSetting.isPending} />
+              <SaveBtn onClick={() => saveSettings("confirmation", ["confirmation_subject", "confirmation_title", "confirmation_intro", "confirmation_outro", "signoff"])} loading={upsertSetting.isPending} />
               <SavedBadge section="confirmation" />
             </div>
           </SettingsCard>
@@ -580,68 +639,90 @@ const AdminSettings = () => {
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Default URL</span>
               <div className="flex items-center gap-2">
-                <p className="flex-1 text-xs text-white/50 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] font-mono truncate">{defaultBookingUrl}</p>
-                <button onClick={() => copyUrl(defaultBookingUrl)} className="shrink-0 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors">
+                <p className="flex-1 text-xs text-white/50 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] font-mono truncate">
+                  {defaultBookingUrl}
+                </p>
+                <button
+                  onClick={() => copyUrl(defaultBookingUrl)}
+                  className="shrink-0 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors"
+                >
                   <Copy className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
-            <SettingRow id="custom-domain" label="Custom Domain (optional)" placeholder="book.yourdomain.co.za" value={draft.custom_domain} onChange={(v) => update("custom_domain", v)} hint="Point a CNAME from your domain to cname.vercel-dns.com, then enter the domain here." />
+            <SettingRow
+              id="custom-domain"
+              label="Custom Domain (optional)"
+              placeholder="book.yourdomain.co.za"
+              value={draft["custom_domain"]}
+              onChange={(v) => update("custom_domain", v)}
+              hint="Point a CNAME from your domain to cname.vercel-dns.com, then enter the domain here."
+            />
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveTenantFields("domain", ["custom_domain"])} loading={updateTenant.isPending} />
               <SavedBadge section="domain" />
             </div>
           </SettingsCard>
+
         </div>
       </section>
 
-
-      {/* ── SUBSCRIPTION ── */}
+      {/* ── SUBSCRIPTION ──────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Subscription" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
           <SettingsCard title="Your Plan" icon={CreditCard} gradient="from-white/[0.05] to-white/[0.02]" collapsible defaultOpen>
-            {(() => {
-              if (!subscription) {
-                return <p className="text-xs text-white/30 italic">Loading plan details…</p>;
-              }
+            {!subscription ? (
+              <p className="text-xs text-white/30 italic">Loading plan details…</p>
+            ) : (() => {
+              const {
+                subscription_status,
+                is_lifetime_free,
+                plan,
+                trial_ends_at,
+                billing_cycle_anchor,
+              } = subscription;
 
-              const { subscription_status, is_lifetime_free, plan, trial_ends_at, billing_cycle_anchor } = subscription;
-
-              // ── Helpers ──────────────────────────────────────────────────────
               const daysUntil = (d: string | null) => {
                 if (!d) return null;
-                return Math.ceil((new Date(d).getTime() - Date.now()) / 86_400_000);
+                return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
               };
 
               const fmt = (d: string | null) => {
-                if (!d) return "—";
-                return new Date(d).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" });
+                if (!d) return "";
+                return new Date(d).toLocaleDateString("en-ZA", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                });
               };
 
               const PLAN_LABELS: Record<string, string> = {
-                trial:         "Free Trial",
-                starter:       "Starter",
-                professional:  "Professional",
-                studio:        "Studio",
+                trial: "Free Trial",
+                starter: "Starter",
+                professional: "Professional",
+                studio: "Studio",
                 lifetime_free: "Lifetime Free",
               };
 
               const STATUS_COLORS: Record<string, { dot: string; badge: string; text: string }> = {
-                trial:          { dot: "#fbbf24", badge: "rgba(251,191,36,0.10)",  text: "#fbbf24" },
-                active:         { dot: "#00c853", badge: "rgba(0,200,83,0.10)",   text: "#00c853" },
-                trial_expired:  { dot: "#ef4444", badge: "rgba(239,68,68,0.10)",  text: "#ef4444" },
-                cancelled:      { dot: "#ef4444", badge: "rgba(239,68,68,0.10)",  text: "#ef4444" },
-                lifetime_free:  { dot: "#00c853", badge: "rgba(0,200,83,0.10)",   text: "#00c853" },
+                trial:         { dot: "#fbbf24", badge: "rgba(251,191,36,0.10)",   text: "#fbbf24" },
+                active:        { dot: "#00c853", badge: "rgba(0,200,83,0.10)",     text: "#00c853" },
+                trial_expired: { dot: "#ef4444", badge: "rgba(239,68,68,0.10)",    text: "#ef4444" },
+                cancelled:     { dot: "#ef4444", badge: "rgba(239,68,68,0.10)",    text: "#ef4444" },
+                lifetime_free: { dot: "#00c853", badge: "rgba(0,200,83,0.10)",     text: "#00c853" },
               };
 
               const resolvedStatus = is_lifetime_free ? "lifetime_free" : subscription_status;
-              const colors = STATUS_COLORS[resolvedStatus] ?? STATUS_COLORS["trial"];
-              const planLabel = PLAN_LABELS[plan] ?? plan;
+              const planLabel = PLAN_LABELS[plan ?? ""] ?? plan;
               const trialDaysLeft = daysUntil(trial_ends_at);
-              const isTrialExpired = resolvedStatus === "trial" && trialDaysLeft !== null && trialDaysLeft <= 0;
+              const isTrialExpired =
+                resolvedStatus === "trial" &&
+                trialDaysLeft !== null &&
+                trialDaysLeft <= 0;
               const displayStatus = isTrialExpired ? "trial_expired" : resolvedStatus;
-              const displayColors = STATUS_COLORS[displayStatus] ?? colors;
+              const displayColors = STATUS_COLORS[displayStatus] ?? STATUS_COLORS["trial"];
 
               return (
                 <div className="flex flex-col gap-4">
@@ -653,7 +734,11 @@ const AdminSettings = () => {
                     </div>
                     <span
                       className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                      style={{ background: displayColors.badge, color: displayColors.text, border: `1px solid ${displayColors.dot}30` }}
+                      style={{
+                        background: displayColors.badge,
+                        color: displayColors.text,
+                        border: `1px solid ${displayColors.dot}30`,
+                      }}
                     >
                       {displayStatus.replace("_", " ")}
                     </span>
@@ -665,17 +750,23 @@ const AdminSettings = () => {
                   {/* Trial info */}
                   {resolvedStatus === "trial" && trial_ends_at && (
                     <div className="flex flex-col gap-1">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Trial ends</p>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                        Trial ends
+                      </p>
                       <p className="text-sm text-white/70">{fmt(trial_ends_at)}</p>
                       {trialDaysLeft !== null && trialDaysLeft > 0 && (
                         <div className="mt-1">
-                          {/* Progress bar */}
                           <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all"
                               style={{
                                 width: `${Math.min(100, Math.max(0, ((30 - trialDaysLeft) / 30) * 100))}%`,
-                                background: trialDaysLeft <= 7 ? "#ef4444" : trialDaysLeft <= 14 ? "#fbbf24" : "#00c853",
+                                background:
+                                  trialDaysLeft < 7
+                                    ? "#ef4444"
+                                    : trialDaysLeft < 14
+                                    ? "#fbbf24"
+                                    : "#00c853",
                               }}
                             />
                           </div>
@@ -684,16 +775,19 @@ const AdminSettings = () => {
                           </p>
                         </div>
                       )}
-                      {isTrialExpired && (
-                        <p className="text-xs text-red-400 font-medium">Your trial has expired.</p>
-                      )}
                     </div>
+                  )}
+
+                  {isTrialExpired && (
+                    <p className="text-xs text-red-400 font-medium">Your trial has expired.</p>
                   )}
 
                   {/* Billing cycle anchor */}
                   {resolvedStatus === "active" && billing_cycle_anchor && (
                     <div className="flex flex-col gap-1">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Next billing date</p>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                        Next billing date
+                      </p>
                       <p className="text-sm text-white/70">{fmt(billing_cycle_anchor)}</p>
                     </div>
                   )}
@@ -705,12 +799,17 @@ const AdminSettings = () => {
 
                   {/* Upgrade CTA — only show for trial or expired */}
                   {(resolvedStatus === "trial" || displayStatus === "trial_expired") && (
-                    <>
-                      <div className="border-t border-white/[0.05]" />
+                    <div className="border-t border-white/[0.05] pt-4">
                       <button
                         type="button"
-                        onClick={() => window.open("https://nextslot.co.za/pricing", "_blank", "noopener,noreferrer")}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90"
+                        onClick={() =>
+                          window.open(
+                            "https://nextslot.co.za/pricing",
+                            "_blank",
+                            "noopener,noreferrer"
+                          )
+                        }
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90 w-full"
                         style={{
                           background: "rgba(255,255,255,0.07)",
                           border: "1px solid rgba(255,255,255,0.12)",
@@ -719,26 +818,38 @@ const AdminSettings = () => {
                       >
                         <Zap className="w-3.5 h-3.5" style={{ color: "#fbbf24" }} />
                         View plans &amp; upgrade
-                      </a>
-                    </>
+                      </button>
+                    </div>
                   )}
                 </div>
               );
             })()}
           </SettingsCard>
+
         </div>
       </section>
 
-      {/* ── INTEGRATIONS ── */}
+      {/* ── INTEGRATIONS ──────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Integrations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
           <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
-            <SettingRow id="smtp-host" label="SMTP Host" placeholder="smtp.gmail.com" value={draft.smtp_host} onChange={(v) => update("smtp_host", v)} />
-            <SettingRow id="smtp-port" label="SMTP Port" placeholder="587" type="number" value={draft.smtp_port} onChange={(v) => update("smtp_port", v)} />
-            <SettingRow id="smtp-user" label="SMTP User (email)" placeholder="your@gmail.com" value={draft.smtp_user} onChange={(v) => update("smtp_user", v)} />
-            <SettingRow id="smtp-password" label="SMTP Password / App Password" placeholder="App password from Google" type="password" masked={isMasked("smtp_password")} onUnmask={() => unmask("smtp_password")} value={draft.smtp_password} onChange={(v) => update("smtp_password", v)} hint={!isMasked("smtp_password") ? "Use a Google App Password, not your account password." : undefined} />
-            <SettingRow id="from-email" label="From Email" placeholder="noreply@yourdomain.co.za" value={draft.smtp_from_email} onChange={(v) => update("smtp_from_email", v)} />
+            <SettingRow id="smtp-host" label="SMTP Host" placeholder="smtp.gmail.com" value={draft["smtp_host"]} onChange={(v) => update("smtp_host", v)} />
+            <SettingRow id="smtp-port" label="SMTP Port" placeholder="587" type="number" value={draft["smtp_port"]} onChange={(v) => update("smtp_port", v)} />
+            <SettingRow id="smtp-user" label="SMTP User / email" placeholder="you@gmail.com" value={draft["smtp_user"]} onChange={(v) => update("smtp_user", v)} />
+            <SettingRow
+              id="smtp-password"
+              label="SMTP Password (App Password)"
+              placeholder="App password from Google"
+              type="password"
+              masked={isMasked("smtp_password")}
+              onUnmask={() => unmask("smtp_password")}
+              value={draft["smtp_password"]}
+              onChange={(v) => update("smtp_password", v)}
+              hint={!isMasked("smtp_password") ? "Use a Google App Password, not your account password." : undefined}
+            />
+            <SettingRow id="from-email" label="From Email" placeholder="noreply@yourdomain.co.za" value={draft["smtp_from_email"]} onChange={(v) => update("smtp_from_email", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveSettings("smtp", ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from_email"])} loading={upsertSetting.isPending} />
               <SavedBadge section="smtp" />
@@ -746,8 +857,17 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Google Maps" icon={MapPin} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
-            <SettingRow id="google-maps-api-key" label="Google Maps API Key" placeholder="AIza..." masked={isMasked("google_maps_api_key")} onUnmask={() => unmask("google_maps_api_key")} value={draft.google_maps_api_key} onChange={(v) => update("google_maps_api_key", v)} hint={!isMasked("google_maps_api_key") ? "Restrict this key to your domain in Google Cloud Console." : undefined} />
-            <SettingRow id="default-distance" label="Default Distance (km)" placeholder="10" type="number" value={draft.default_distance_km} onChange={(v) => update("default_distance_km", v)} />
+            <SettingRow
+              id="google-maps-api-key"
+              label="Google Maps API Key"
+              placeholder="AIza..."
+              masked={isMasked("google_maps_api_key")}
+              onUnmask={() => unmask("google_maps_api_key")}
+              value={draft["google_maps_api_key"]}
+              onChange={(v) => update("google_maps_api_key", v)}
+              hint={!isMasked("google_maps_api_key") ? "Restrict this key to your domain in Google Cloud Console." : undefined}
+            />
+            <SettingRow id="default-distance" label="Default Distance (km)" placeholder="10" type="number" value={draft["default_distance_km"]} onChange={(v) => update("default_distance_km", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveSettings("maps", ["google_maps_api_key", "default_distance_km"])} loading={upsertSetting.isPending} />
               <SavedBadge section="maps" />
@@ -755,8 +875,8 @@ const AdminSettings = () => {
           </SettingsCard>
 
           <SettingsCard title="Google Reviews" icon={Globe} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
-            <SettingRow id="google-review-link" label="Google Review Link" placeholder="https://g.page/r/..." value={draft.google_review_link} onChange={(v) => update("google_review_link", v)} />
-            <SettingRow id="google-place-id" label="Google Place ID" placeholder="ChIJ..." value={draft.google_place_id} onChange={(v) => update("google_place_id", v)} />
+            <SettingRow id="google-review-link" label="Google Review Link" placeholder="https://g.page/r..." value={draft["google_review_link"]} onChange={(v) => update("google_review_link", v)} />
+            <SettingRow id="google-place-id" label="Google Place ID" placeholder="ChIJ..." value={draft["google_place_id"]} onChange={(v) => update("google_place_id", v)} />
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveSettings("reviews", ["google_review_link", "google_place_id"])} loading={upsertSetting.isPending} />
               <SavedBadge section="reviews" />
@@ -765,32 +885,46 @@ const AdminSettings = () => {
 
           {appSettings["gcal_connected"] === "true" && (
             <SettingsCard title="Google Calendar" icon={CalendarCheck} gradient="from-emerald-500/[0.05] to-white/[0.02]" collapsible>
-              <p className="text-xs text-white/40 leading-relaxed">Create calendar events for all existing bookings that are missing one. Safe to run multiple times — only processes bookings without an existing event.</p>
+              <p className="text-xs text-white/40 leading-relaxed">
+                Create calendar events for all existing bookings that are missing one. Safe to run multiple times — only processes bookings without an existing event.
+              </p>
               <div className="flex items-center gap-3">
-                <SaveBtn label={gcalSyncing ? "Syncing..." : gcalSyncResult ? `✓ ${gcalSyncResult}` : "Sync All Bookings"} loading={gcalSyncing} onClick={handleGcalBackfill} />
+                <SaveBtn
+                  label={gcalSyncing ? "Syncing..." : gcalSyncResult ? gcalSyncResult : "Sync All Bookings"}
+                  loading={gcalSyncing}
+                  onClick={handleGcalBackfill}
+                />
               </div>
             </SettingsCard>
           )}
+
         </div>
       </section>
 
-      {/* ── SECURITY ── */}
+      {/* ── SECURITY ──────────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Security" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
           <SettingsCard title="Change Password" icon={KeyRound} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <SettingRow id="settings-new-password" label="New Password" placeholder="Min 6 characters" type="password" value={newPw} onChange={setNewPw} />
             <SettingRow id="settings-confirm-password" label="Confirm Password" placeholder="Confirm new password" type="password" value={confirmPw} onChange={setConfirmPw} />
             {pwError && <p className="text-xs text-red-400">{pwError}</p>}
             {pwSuccess && (
               <p className="text-xs text-emerald-400 flex items-center gap-1">
-                <Check className="w-3 h-3" /> {pwSuccess}
+                <Check className="w-3 h-3" />
+                {pwSuccess}
               </p>
             )}
-            <button onClick={handlePasswordChange} className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5">
-              <KeyRound className="w-3 h-3" /> Update Password
+            <button
+              onClick={handlePasswordChange}
+              className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/10 text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5"
+            >
+              <KeyRound className="w-3 h-3" />
+              Update Password
             </button>
           </SettingsCard>
+
         </div>
       </section>
 
