@@ -708,7 +708,7 @@ const AdminSettings = () => {
                     <>
                       <div className="border-t border-white/[0.05]" />
                       <a
-                        href="/pricing"
+                        href="/https://nextslot.co.za/pricing"
                         target="_blank"
                         rel="noreferrer"
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90"
