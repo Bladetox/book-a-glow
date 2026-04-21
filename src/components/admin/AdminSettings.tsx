@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, MapPin, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
-  Globe, CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp
+  Globe, CalendarCheck, Zap, Plus, Trash2, ChevronDown, ChevronUp, CreditCard, ShieldCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -13,6 +13,7 @@ import {
   useAppSettings,
   useUpdateTenant,
   useUpsertAppSetting,
+  useTenantSubscription,
 } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
 import { useSupabaseServices } from "@/hooks/useSupabaseServices";
@@ -184,6 +185,7 @@ const AdminSettings = () => {
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
   const updateTenant = useUpdateTenant();
   const upsertSetting = useUpsertAppSetting();
+  const { data: subscription } = useTenantSubscription();
   const { setThemeById } = useBusinessTheme();
   const { tenantId } = useTenant();
 
@@ -589,6 +591,141 @@ const AdminSettings = () => {
               <SaveBtn onClick={() => saveTenantFields("domain", ["custom_domain"])} loading={updateTenant.isPending} />
               <SavedBadge section="domain" />
             </div>
+          </SettingsCard>
+        </div>
+      </section>
+
+
+      {/* ── SUBSCRIPTION ── */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Subscription" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SettingsCard title="Your Plan" icon={CreditCard} gradient="from-white/[0.05] to-white/[0.02]" collapsible defaultOpen>
+            {(() => {
+              if (!subscription) {
+                return <p className="text-xs text-white/30 italic">Loading plan details…</p>;
+              }
+
+              const { subscription_status, is_lifetime_free, plan, trial_ends_at, billing_cycle_anchor } = subscription;
+
+              // ── Helpers ──────────────────────────────────────────────────────
+              const daysUntil = (d: string | null) => {
+                if (!d) return null;
+                return Math.ceil((new Date(d).getTime() - Date.now()) / 86_400_000);
+              };
+
+              const fmt = (d: string | null) => {
+                if (!d) return "—";
+                return new Date(d).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" });
+              };
+
+              const PLAN_LABELS: Record<string, string> = {
+                trial:         "Free Trial",
+                starter:       "Starter",
+                professional:  "Professional",
+                studio:        "Studio",
+                lifetime_free: "Lifetime Free",
+              };
+
+              const STATUS_COLORS: Record<string, { dot: string; badge: string; text: string }> = {
+                trial:          { dot: "#fbbf24", badge: "rgba(251,191,36,0.10)",  text: "#fbbf24" },
+                active:         { dot: "#00c853", badge: "rgba(0,200,83,0.10)",   text: "#00c853" },
+                trial_expired:  { dot: "#ef4444", badge: "rgba(239,68,68,0.10)",  text: "#ef4444" },
+                cancelled:      { dot: "#ef4444", badge: "rgba(239,68,68,0.10)",  text: "#ef4444" },
+                lifetime_free:  { dot: "#00c853", badge: "rgba(0,200,83,0.10)",   text: "#00c853" },
+              };
+
+              const resolvedStatus = is_lifetime_free ? "lifetime_free" : subscription_status;
+              const colors = STATUS_COLORS[resolvedStatus] ?? STATUS_COLORS["trial"];
+              const planLabel = PLAN_LABELS[plan] ?? plan;
+              const trialDaysLeft = daysUntil(trial_ends_at);
+              const isTrialExpired = resolvedStatus === "trial" && trialDaysLeft !== null && trialDaysLeft <= 0;
+              const displayStatus = isTrialExpired ? "trial_expired" : resolvedStatus;
+              const displayColors = STATUS_COLORS[displayStatus] ?? colors;
+
+              return (
+                <div className="flex flex-col gap-4">
+                  {/* Plan name + status badge */}
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-white/30" />
+                      <span className="text-sm font-bold text-white/80">{planLabel}</span>
+                    </div>
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                      style={{ background: displayColors.badge, color: displayColors.text, border: `1px solid ${displayColors.dot}30` }}
+                    >
+                      {displayStatus.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/[0.05]" />
+
+                  {/* Trial info */}
+                  {resolvedStatus === "trial" && trial_ends_at && (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Trial ends</p>
+                      <p className="text-sm text-white/70">{fmt(trial_ends_at)}</p>
+                      {trialDaysLeft !== null && trialDaysLeft > 0 && (
+                        <div className="mt-1">
+                          {/* Progress bar */}
+                          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, Math.max(0, ((30 - trialDaysLeft) / 30) * 100))}%`,
+                                background: trialDaysLeft <= 7 ? "#ef4444" : trialDaysLeft <= 14 ? "#fbbf24" : "#00c853",
+                              }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-white/30 mt-1.5 italic">
+                            {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} remaining
+                          </p>
+                        </div>
+                      )}
+                      {isTrialExpired && (
+                        <p className="text-xs text-red-400 font-medium">Your trial has expired.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Billing cycle anchor */}
+                  {resolvedStatus === "active" && billing_cycle_anchor && (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Next billing date</p>
+                      <p className="text-sm text-white/70">{fmt(billing_cycle_anchor)}</p>
+                    </div>
+                  )}
+
+                  {/* Lifetime badge */}
+                  {resolvedStatus === "lifetime_free" && (
+                    <p className="text-xs text-white/40 italic">No billing — lifetime access.</p>
+                  )}
+
+                  {/* Upgrade CTA — only show for trial or expired */}
+                  {(resolvedStatus === "trial" || displayStatus === "trial_expired") && (
+                    <>
+                      <div className="border-t border-white/[0.05]" />
+                      <a
+                        href="/pricing"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90"
+                        style={{
+                          background: "rgba(255,255,255,0.07)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          color: "rgba(255,255,255,0.75)",
+                        }}
+                      >
+                        <Zap className="w-3.5 h-3.5" style={{ color: "#fbbf24" }} />
+                        View plans &amp; upgrade
+                      </a>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </SettingsCard>
         </div>
       </section>
