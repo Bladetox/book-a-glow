@@ -14,6 +14,16 @@ async function getStaffId(tenantId: string): Promise<string> {
   return data.owner_id;
 }
 
+/** Returns today's date string in YYYY-MM-DD using the local clock */
+function todayLocalStr(): string {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 /**
  * Fetch available slots for an entire month.
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
@@ -55,6 +65,15 @@ export function useMonthAvailability(
 
 /**
  * Fetch available slots for a specific date.
+ *
+ * The database function (get_available_slots) is the source of truth for
+ * past-time filtering — it uses Africa/Johannesburg (SAST) server time to
+ * exclude slots that have already passed when p_date equals today.
+ *
+ * On the client we additionally set staleTime = 0 when the requested date is
+ * today so React Query never serves a cached response that may contain slots
+ * that were valid minutes ago but are now in the past.
+ *
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
  */
 export function useDateSlots(
@@ -66,10 +85,14 @@ export function useDateSlots(
   const { tenantId, ownerId } = usePublicTenant();
   const resolvedStaffId = staffId || ownerId || null;
 
+  // Never serve a stale cache when the client is viewing today's slots:
+  // a 2-min-old response could still contain past time slots.
+  const isToday = !!date && date === todayLocalStr();
+
   return useQuery({
     queryKey: ["public-date-slots", tenantId, date, durationMinutes],
     enabled: !!date && !!tenantId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: isToday ? 0 : 2 * 60 * 1000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!date) return [];
