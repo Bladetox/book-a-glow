@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 
@@ -12,10 +12,45 @@ export interface AppNotification {
   created_at: string;
 }
 
+// Plays a soft two-tone chime using Web Audio API — no file needed
+function playNotificationChime() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    const playTone = (frequency: number, startTime: number, duration: number, gain: number) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(frequency, startTime);
+
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    const now = ctx.currentTime;
+    playTone(880, now, 0.25, 0.3);        // A5 — first note
+    playTone(1108.73, now + 0.18, 0.35, 0.2); // C#6 — second note (higher, softer)
+
+    // Clean up context after chime finishes
+    setTimeout(() => ctx.close(), 800);
+  } catch {
+    // AudioContext not supported or blocked — fail silently
+  }
+}
+
 export function useRealtimeNotifications() {
   const { tenantId } = useTenant();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const isInitialLoad = useRef(true);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -30,6 +65,7 @@ export function useRealtimeNotifications() {
 
     if (!error && data) setNotifications(data as AppNotification[]);
     setLoading(false);
+    isInitialLoad.current = false;
   }, [tenantId]);
 
   const markAllRead = useCallback(async () => {
@@ -67,7 +103,13 @@ export function useRealtimeNotifications() {
           filter: `tenant_id=eq.${tenantId}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as AppNotification, ...prev].slice(0, 30));
+          // Only chime for live arrivals, not the initial page load fetch
+          if (!isInitialLoad.current) {
+            playNotificationChime();
+          }
+          setNotifications((prev) =>
+            [payload.new as AppNotification, ...prev].slice(0, 30)
+          );
         }
       )
       .subscribe();
