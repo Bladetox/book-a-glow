@@ -1,4 +1,4 @@
-// AdminHelp — Layer 3 persistent help centre.
+// AdminHelp - Layer 3 persistent help centre.
 // Accessible from the sidebar under Business > Help.
 // Contains full setup guides for all integrations + general FAQs.
 
@@ -6,12 +6,12 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CreditCard, Calendar, Mail, ChevronDown,
-  AlertTriangle, CheckCircle2, Info, HelpCircle,
+  AlertTriangle, CheckCircle2, Info,
   MessageCircle,
 } from "lucide-react";
 import { AdminPageHeader, SectionLabel } from "@/components/admin/AdminSharedUI";
 
-// ─── Primitives ─────────────────────────────────────────────────────────────────
+// ── Primitives ────────────────────────────────────────────────────────────────
 
 const Callout = ({
   type, children,
@@ -20,9 +20,9 @@ const Callout = ({
   children: React.ReactNode;
 }) => {
   const styles = {
-    warning: { bg: "bg-amber-400/[0.06] border-amber-400/20",    icon: AlertTriangle,  ic: "text-amber-400/80" },
-    success: { bg: "bg-emerald-500/[0.06] border-emerald-500/20", icon: CheckCircle2,   ic: "text-emerald-400/80" },
-    info:    { bg: "bg-blue-500/[0.06] border-blue-500/20",       icon: Info,           ic: "text-blue-400/80" },
+    warning: { bg: "bg-amber-400/[0.06] border-amber-400/20",    icon: AlertTriangle, ic: "text-amber-400/80" },
+    success: { bg: "bg-emerald-500/[0.06] border-emerald-500/20", icon: CheckCircle2,  ic: "text-emerald-400/80" },
+    info:    { bg: "bg-blue-500/[0.06] border-blue-500/20",       icon: Info,          ic: "text-blue-400/80" },
   };
   const { bg, icon: Icon, ic } = styles[type];
   return (
@@ -46,6 +46,17 @@ const Code = ({ children }: { children: React.ReactNode }) => (
   <code className="px-1.5 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/60 font-mono">
     {children}
   </code>
+);
+
+const Link = ({ href, children }: { href: string; children: React.ReactNode }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
+  >
+    {children}
+  </a>
 );
 
 const AccordionCard = ({
@@ -112,21 +123,29 @@ const AccordionCard = ({
   );
 };
 
-// ─── Guide content ───────────────────────────────────────────────────────────────
+// ── Guide content ─────────────────────────────────────────────────────────────
 
 const YocoGuide = () => (
   <>
     <Callout type="info">
-      Yoco is free to sign up. They charge a transaction fee of 2.55% per successful payment — no monthly fee.
+      Yoco is free to sign up. They charge a transaction fee of 2.55% per successful payment with no monthly fee.
     </Callout>
     <div className="flex flex-col gap-3">
-      <Step n={1}>Go to <strong className="text-white/60">app.yoco.com</strong> and sign in to your Yoco Business account.</Step>
-      <Step n={2}>In the left sidebar click <strong className="text-white/60">Developers</strong>, then <strong className="text-white/60">API Keys</strong>.</Step>
-      <Step n={3}>Copy your <Code>Public Key</Code> (starts with <Code>pk_live_</Code>) and <Code>Secret Key</Code> (starts with <Code>sk_live_</Code>).</Step>
-      <Step n={4}>Paste both keys into the Yoco card on the Integrations page and click <strong className="text-white/60">Save Configuration</strong>.</Step>
+      <Step n={1}>
+        Go to <Link href="https://app.yoco.com">app.yoco.com</Link> and sign in to your Yoco Business account.
+      </Step>
+      <Step n={2}>
+        In the left sidebar click <strong className="text-white/60">Sales</strong>, then <strong className="text-white/60">Payment Gateway</strong>.
+      </Step>
+      <Step n={3}>
+        Copy your <Code>Public Key</Code> (starts with <Code>pk_live_</Code>) and <Code>Secret Key</Code> (starts with <Code>sk_live_</Code>).
+      </Step>
+      <Step n={4}>
+        Paste both keys into the Yoco card on the Integrations page and click <strong className="text-white/60">Save Configuration</strong>.
+      </Step>
     </div>
     <Callout type="success">
-      Webhook registration happens automatically after saving — no extra steps needed. You'll see a "Webhook active" badge once confirmed.
+      Webhook registration happens automatically after saving. No extra steps needed. You will see a "Webhook active" badge once confirmed.
     </Callout>
     <Callout type="warning">
       Use <strong>Live keys</strong> for real payments. Test keys (<Code>pk_test_</Code> / <Code>sk_test_</Code>) only work in sandbox mode.
@@ -142,9 +161,9 @@ const GoogleCalGuide = () => (
     <div className="flex flex-col gap-3">
       <Step n={1}>Go to <strong className="text-white/60">Integrations</strong> and open the Google Calendar card.</Step>
       <Step n={2}>Click <strong className="text-white/60">Connect Google Calendar</strong>. A Google sign-in window will open.</Step>
-      <Step n={3}>Sign in with the <strong className="text-white/60">correct Google account</strong> — the calendar you want bookings to appear in.</Step>
+      <Step n={3}>Sign in with the <strong className="text-white/60">correct Google account</strong> - the calendar you want bookings to appear in.</Step>
       <Step n={4}>Click <strong className="text-white/60">Allow</strong> on the permissions screen.</Step>
-      <Step n={5}>You'll be redirected back. The card will show <strong className="text-white/60">Connected</strong> in green.</Step>
+      <Step n={5}>You will be redirected back. The card will show <strong className="text-white/60">Connected</strong> in green.</Step>
     </div>
     <Callout type="warning">
       To switch Google accounts, click <strong>Disconnect</strong> first, then reconnect with the new account.
@@ -155,15 +174,17 @@ const GoogleCalGuide = () => (
 const SmtpGuide = () => (
   <>
     <Callout type="warning">
-      Google removed regular Gmail password support in September 2024. You must use a <strong>Google App Password</strong> — not your normal login password.
+      Google removed regular Gmail password support in 2024. You must use a <strong>Google App Password</strong> and not your normal login password.
     </Callout>
     <p className="text-[11px] text-white/40 font-semibold uppercase tracking-widest">Generate a Google App Password</p>
     <div className="flex flex-col gap-3">
-      <Step n={1}>Go to <strong className="text-white/60">myaccount.google.com</strong> and sign in.</Step>
+      <Step n={1}>
+        Go to <Link href="https://myaccount.google.com">myaccount.google.com</Link> and sign in.
+      </Step>
       <Step n={2}>Click <strong className="text-white/60">Security</strong>. Make sure 2-Step Verification is turned <strong className="text-white/60">ON</strong> (required).</Step>
       <Step n={3}>Search for <strong className="text-white/60">App Passwords</strong> using the search bar at the top.</Step>
       <Step n={4}>Under App name type <Code>NextSlot</Code> and click <strong className="text-white/60">Create</strong>.</Step>
-      <Step n={5}>Copy the 16-character password shown — it is only shown once.</Step>
+      <Step n={5}>Copy the 16-character password shown. It is only shown once.</Step>
     </div>
     <Callout type="info">
       If you missed the dialog, go back to App Passwords, delete the old entry, and create a new one.
@@ -186,7 +207,7 @@ const SmtpGuide = () => (
   </>
 );
 
-// ─── FAQ ─────────────────────────────────────────────────────────────────────
+// ── FAQ ───────────────────────────────────────────────────────────────────────
 
 const FAQS = [
   {
@@ -194,20 +215,20 @@ const FAQS = [
     a: "Keys are masked for security. They are stored encrypted and never exposed in the browser after the initial save. Click Edit inside the card to replace a key.",
   },
   {
-    q: "My Yoco webhook shows \"registering\" — is that normal?",
-    a: "Yes. After saving your keys, the webhook registers automatically in the background. It typically completes within 30 seconds. Refresh the Integrations page if it still shows \"registering\" after a minute.",
+    q: "My Yoco webhook shows registering - is that normal?",
+    a: "Yes. After saving your keys, the webhook registers automatically in the background. It typically completes within 30 seconds. Refresh the Integrations page if it still shows registering after a minute.",
   },
   {
-    q: "Booking confirmation emails are not being sent — what do I check?",
+    q: "Booking confirmation emails are not being sent - what do I check?",
     a: "First verify your Gmail / SMTP settings are saved on the Integrations page. Check that you used a Google App Password (not your regular Gmail password). Also confirm the From Email field matches the Gmail address you authenticated with.",
   },
   {
-    q: "Google Calendar events are not appearing after a booking — why?",
-    a: "Ensure Google Calendar shows \"Connected\" on the Integrations page. Events are only created when a deposit payment is confirmed, not when a booking is first made. If the integration shows Connected but events are missing, try disconnecting and reconnecting.",
+    q: "Google Calendar events are not appearing after a booking - why?",
+    a: "Ensure Google Calendar shows Connected on the Integrations page. Events are only created when a deposit payment is confirmed, not when a booking is first made. If the integration shows Connected but events are missing, try disconnecting and reconnecting.",
   },
   {
     q: "Can I use a non-Gmail SMTP provider?",
-    a: "Yes. Set the SMTP Host and Port to your provider's values (e.g. Outlook: smtp.office365.com / 587). The App Password field accepts any SMTP password — it doesn't have to be a Google App Password for non-Gmail providers.",
+    a: "Yes. Set the SMTP Host and Port to your provider's values (e.g. Outlook: smtp.office365.com / 587). The App Password field accepts any SMTP password and does not have to be a Google App Password for non-Gmail providers.",
   },
 ];
 
@@ -243,7 +264,7 @@ const FaqItem = ({ q, a }: { q: string; a: string }) => {
   );
 };
 
-// ─── Main page ──────────────────────────────────────────────────────────────────
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 const AdminHelp = () => (
   <div className="flex flex-col gap-8 pb-12">
@@ -252,7 +273,6 @@ const AdminHelp = () => (
       subtitle="Step-by-step setup instructions and answers to common questions."
     />
 
-    {/* Integration guides */}
     <section className="flex flex-col gap-3">
       <SectionLabel label="Integration Setup" />
       <div className="flex flex-col gap-3">
@@ -268,7 +288,6 @@ const AdminHelp = () => (
       </div>
     </section>
 
-    {/* FAQ */}
     <section className="flex flex-col gap-3">
       <SectionLabel label="Frequently Asked Questions" />
       <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.01] divide-y divide-white/[0.05] px-5">
@@ -276,7 +295,6 @@ const AdminHelp = () => (
       </div>
     </section>
 
-    {/* Contact */}
     <section className="flex flex-col gap-3">
       <SectionLabel label="Support" />
       <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5 flex items-start gap-4">
@@ -286,7 +304,7 @@ const AdminHelp = () => (
         <div>
           <p className="text-sm font-bold text-white/70 mb-1">Need more help?</p>
           <p className="text-[12px] text-white/35 leading-relaxed">
-            Contact NextSlot support and we'll get back to you as soon as possible.
+            Contact NextSlot support and we will get back to you as soon as possible.
           </p>
         </div>
       </div>
