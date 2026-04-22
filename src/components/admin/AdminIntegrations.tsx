@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   CreditCard, Calendar, MapPin, Mail,
   Eye, EyeOff, CheckCircle2,
-  Loader2, Edit2, LogOut, ChevronDown, BookOpen,
+  Loader2, Edit2, LogOut, ChevronDown, BookOpen, Lock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { ReactNode, ElementType, Dispatch, SetStateAction } from "react";
@@ -19,15 +19,15 @@ import {
 } from "@/components/admin/AdminSharedUI";
 import IntegrationsGuidePanel from "@/components/admin/IntegrationsGuidePanel";
 
-// ─── Constants ────────────────────────────────────────────────────────────────────
-const MASK = "••••••••••••••••";
+// ── Constants ───────────────────────────────────────────────────────────────
+const MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function isConfigured(settings: Record<string, string>, keys: string[]) {
   return keys.some((k) => !!settings[k]);
 }
 
-// ─── Field ────────────────────────────────────────────────────────────────────────
+// ── Field ─────────────────────────────────────────────────────────────────────
 interface FieldProps {
   label: string;
   fieldKey: string;
@@ -38,7 +38,6 @@ interface FieldProps {
   editing: boolean;
   onChange: (key: string, value: string) => void;
   hint?: string;
-  /** Layer 1: tooltip text shown on the ? icon next to the label */
   tooltip?: string;
 }
 
@@ -53,7 +52,6 @@ const Field = ({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {/* Label row with optional HintTooltip */}
       <div className="flex items-center gap-1.5">
         <label
           htmlFor={fieldKey}
@@ -63,7 +61,6 @@ const Field = ({
         </label>
         {tooltip && <HintTooltip text={tooltip} />}
       </div>
-
       <div className="relative">
         <input
           id={fieldKey}
@@ -90,23 +87,25 @@ const Field = ({
   );
 };
 
-// ─── IntegrationCard ───────────────────────────────────────────────────────────
+// ── IntegrationCard ──────────────────────────────────────────────────────────
 interface IntegrationCardProps {
   icon: ElementType;
   name: string;
   desc: string;
   configured: boolean;
-  saving: boolean;
-  editing: boolean;
-  onEdit: () => void;
-  onSave: () => void;
+  saving?: boolean;
+  editing?: boolean;
+  onEdit?: () => void;
+  onSave?: () => void;
   children: ReactNode;
   statusBadge?: ReactNode;
+  /** When true, hides the edit/save footer entirely */
+  readOnly?: boolean;
 }
 
 const IntegrationCard = ({
   icon: Icon, name, desc, configured, saving, editing,
-  onEdit, onSave, children, statusBadge,
+  onEdit, onSave, children, statusBadge, readOnly = false,
 }: IntegrationCardProps) => {
   const [open, setOpen] = useState(false);
 
@@ -156,21 +155,24 @@ const IntegrationCard = ({
               {statusBadge && (
                 <div className="flex items-center gap-2 px-5 pt-3">{statusBadge}</div>
               )}
-              <div className="flex items-center justify-end gap-3 px-5 py-4 mt-2 border-t border-white/[0.04]">
-                {configured && !editing && (
-                  <button
-                    onClick={onEdit}
-                    className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
-                  >
-                    <Edit2 className="w-3 h-3" /> Edit
-                  </button>
-                )}
-                <SaveButton
-                  label={saving ? "Saving…" : "Save Configuration"}
-                  loading={saving}
-                  onClick={onSave}
-                />
-              </div>
+              {!readOnly && (
+                <div className="flex items-center justify-end gap-3 px-5 py-4 mt-2 border-t border-white/[0.04]">
+                  {configured && !editing && (
+                    <button
+                      onClick={onEdit}
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
+                    >
+                      <Edit2 className="w-3 h-3" /> Edit
+                    </button>
+                  )}
+                  <SaveButton
+                    label={saving ? "Saving..." : "Save Configuration"}
+                    loading={saving}
+                    onClick={onSave}
+                  />
+                </div>
+              )}
+              {readOnly && <div className="pb-5" />}
             </div>
           </motion.div>
         )}
@@ -179,16 +181,16 @@ const IntegrationCard = ({
   );
 };
 
-// ─── GoogleCalendarCard ──────────────────────────────────────────────────────────
+// ── GoogleCalendarCard ────────────────────────────────────────────────────────
 interface GoogleCalendarCardProps {
   connected: boolean;
   tenantId: string;
 }
 
 const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
-  const [isConnected, setIsConnected]       = useState(connected);
+  const [isConnected, setIsConnected]         = useState(connected);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [open, setOpen]                     = useState(false);
+  const [open, setOpen]                       = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -298,7 +300,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
                 <p className="text-xs text-white/30 leading-relaxed">
                   {isConnected
                     ? "Your Google Calendar is connected. New bookings appear automatically when a deposit is confirmed."
-                    : "Connect once — new bookings appear in your calendar automatically the moment a deposit is confirmed."}
+                    : "Connect once and new bookings appear in your calendar automatically the moment a deposit is confirmed."}
                 </p>
               </div>
               <div className="flex items-center justify-end gap-3 px-5 py-4 mt-2 border-t border-white/[0.04]">
@@ -312,7 +314,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
                       {isDisconnecting
                         ? <Loader2 className="w-3 h-3 animate-spin" />
                         : <LogOut className="w-3 h-3" />}
-                      {isDisconnecting ? "Disconnecting…" : "Disconnect"}
+                      {isDisconnecting ? "Disconnecting..." : "Disconnect"}
                     </button>
                     <SaveButton label="Reconnect" variant="secondary" onClick={handleConnect} />
                   </>
@@ -328,24 +330,20 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
   );
 };
 
-// ─── Main component ──────────────────────────────────────────────────────────────────
+// ── Main component ───────────────────────────────────────────────────────────────
 const AdminIntegrations = () => {
   const { tenantId } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
   const [yocoDraft, setYocoDraft] = useState<Record<string, string>>({});
-  const [mapsDraft, setMapsDraft] = useState<Record<string, string>>({});
   const [smtpDraft, setSmtpDraft] = useState<Record<string, string>>({});
 
   const [yocoEditing, setYocoEditing] = useState(false);
-  const [mapsEditing, setMapsEditing] = useState(false);
   const [smtpEditing, setSmtpEditing] = useState(false);
 
   const [savingSection, setSavingSection] = useState<string | null>(null);
-
-  // Layer 2 panel state
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideOpen, setGuideOpen]         = useState(false);
 
   useEffect(() => {
     if (isLoading || Object.keys(settings).length === 0) return;
@@ -353,7 +351,6 @@ const AdminIntegrations = () => {
       yoco_public_key: settings.yoco_public_key ?? "",
       yoco_secret_key: settings.yoco_secret_key ?? "",
     });
-    setMapsDraft({ google_maps_api_key: settings.google_maps_api_key ?? "" });
     setSmtpDraft({
       smtp_host:       settings.smtp_host       ?? "",
       smtp_port:       settings.smtp_port       ?? "587",
@@ -362,7 +359,6 @@ const AdminIntegrations = () => {
       smtp_from_email: settings.smtp_from_email ?? settings.smtp_user ?? settings.smtp_username ?? "",
     });
     if (settings.yoco_public_key || settings.yoco_secret_key) setYocoEditing(false);
-    if (settings.google_maps_api_key)                         setMapsEditing(false);
     if (settings.smtp_user || settings.smtp_username)         setSmtpEditing(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
@@ -427,7 +423,6 @@ const AdminIntegrations = () => {
 
   return (
     <>
-      {/* Layer 2 — slide-over guide panel */}
       <IntegrationsGuidePanel open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <div className="flex flex-col gap-8 pb-12">
@@ -450,7 +445,7 @@ const AdminIntegrations = () => {
           <SectionLabel label="Connected Services" />
           <div className="flex flex-col gap-3">
 
-            {/* ─ Yoco ─ */}
+            {/* Yoco */}
             <IntegrationCard
               icon={CreditCard}
               name="Yoco Payments"
@@ -464,63 +459,63 @@ const AdminIntegrations = () => {
                 yocoConfigured && !yocoEditing
                   ? webhookActive
                     ? <span className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-semibold"><CheckCircle2 className="w-3 h-3" /> Webhook active</span>
-                    : <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-semibold"><Loader2 className="w-3 h-3 animate-spin" /> Webhook registering…</span>
+                    : <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-semibold"><Loader2 className="w-3 h-3 animate-spin" /> Webhook registering...</span>
                   : undefined
               }
             >
               <Field
                 label="Public Key" fieldKey="yoco_public_key"
-                placeholder="pk_live_… or pk_test_…"
+                placeholder="pk_live_... or pk_test_..."
                 value={yocoDraft.yoco_public_key ?? ""}
                 masked={yocoConfigured} editing={yocoEditing}
                 onChange={handleChange(setYocoDraft)}
-                hint="From Yoco Business Portal › Selling Online › Payment Gateway"
-                tooltip="Found at app.yoco.com → Developers → API Keys. Starts with pk_live_"
+                hint="From Yoco app: Sales > Payment Gateway"
+                tooltip="In the Yoco app, click Sales then Payment Gateway to find your keys."
               />
               <Field
                 label="Secret Key" fieldKey="yoco_secret_key"
-                placeholder="sk_live_… or sk_test_…" type="password"
+                placeholder="sk_live_... or sk_test_..." type="password"
                 value={yocoDraft.yoco_secret_key ?? ""}
                 masked={yocoConfigured} editing={yocoEditing}
                 onChange={handleChange(setYocoDraft)}
-                hint="Server-side only — never exposed to the browser"
-                tooltip="Found at app.yoco.com → Developers → API Keys. Starts with sk_live_. Never share this key."
+                hint="Server-side only - never exposed to the browser"
+                tooltip="In the Yoco app, click Sales then Payment Gateway to find your keys. Never share this key."
               />
               {(!yocoConfigured || yocoEditing) && (
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/30 leading-relaxed italic">
-                  Save once — webhook registration happens automatically in the background. No additional steps required.
+                  Save once - webhook registration happens automatically in the background. No additional steps required.
                 </div>
               )}
             </IntegrationCard>
 
-            {/* ─ Google Maps ─ */}
+            {/* Google Maps - read-only, managed by NextSlot */}
             <IntegrationCard
               icon={MapPin}
               name="Google Maps"
               desc="Distance matrix for callout fee calculation & address autocomplete"
               configured={mapsConfigured}
-              saving={savingSection === "maps"}
-              editing={mapsEditing}
-              onEdit={() => setMapsEditing(true)}
-              onSave={() => handleGenericSave("maps", mapsDraft, () => setMapsEditing(false))}
+              readOnly
             >
-              <Field
-                label="API Key" fieldKey="google_maps_api_key"
-                placeholder="AIzaSy…" type="password"
-                value={mapsDraft.google_maps_api_key ?? ""}
-                masked={mapsConfigured} editing={mapsEditing}
-                onChange={handleChange(setMapsDraft)}
-                tooltip="Found in Google Cloud Console → APIs & Services → Credentials. Ensure Maps JavaScript API and Distance Matrix API are enabled."
-              />
+              <div className="flex items-start gap-3 rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3.5">
+                <Lock className="w-3.5 h-3.5 text-white/25 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-semibold text-white/40">
+                    Managed by NextSlot
+                  </p>
+                  <p className="text-[11px] text-white/25 leading-relaxed mt-0.5">
+                    This integration is pre-configured and maintained by NextSlot. No action required on your end.
+                  </p>
+                </div>
+              </div>
             </IntegrationCard>
 
-            {/* ─ Google Calendar ─ */}
+            {/* Google Calendar */}
             <GoogleCalendarCard
               connected={settings["gcal_connected"] === "true"}
               tenantId={tenantId}
             />
 
-            {/* ─ Gmail / SMTP ─ */}
+            {/* Gmail / SMTP */}
             <IntegrationCard
               icon={Mail}
               name="Gmail / SMTP"
@@ -564,7 +559,7 @@ const AdminIntegrations = () => {
                 masked={smtpConfigured} editing={smtpEditing}
                 onChange={handleChange(setSmtpDraft)}
                 hint="Use a Google App Password, not your account password"
-                tooltip="NOT your Gmail login password. Go to Google Account → Security → App Passwords to generate a 16-character password."
+                tooltip="NOT your Gmail login password. Go to Google Account > Security > App Passwords to generate a 16-character password."
               />
               <Field
                 label="From Email" fieldKey="smtp_from_email"
