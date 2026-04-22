@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy,
-  Zap, Plus, ChevronDown, CreditCard, ShieldCheck
+  Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -285,6 +285,23 @@ const AdminSettings = () => {
       <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Saved</span>
     ) : null;
 
+  // ── Notification preference helpers ──────────────────────────────────────
+  const notifPrefs: Record<string, boolean> = (tenant as any)?.notification_preferences ?? {
+    new_booking: true,
+    deposit_received: true,
+    balance_paid: true,
+    full_payment_received: true,
+    cancelled: true,
+  };
+
+  const toggleNotifPref = (key: string) => {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    updateTenant.mutate({ notification_preferences: updated } as any, {
+      onSuccess: () => flash("notif"),
+      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+    });
+  };
+
   if (tenantLoading || settingsLoading) {
     return (
       <div className="flex flex-col gap-6 animate-pulse">
@@ -554,6 +571,50 @@ const AdminSettings = () => {
                 </div>
               );
             })()}
+          </SettingsCard>
+        </div>
+      </section>
+
+      {/* ── NOTIFICATIONS ── */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Notifications" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SettingsCard title="Notification Preferences" icon={Bell} gradient="from-white/[0.05] to-white/[0.02]" collapsible defaultOpen>
+            <p className="text-xs text-white/30 leading-relaxed -mt-1">
+              Choose which events show a notification in your admin panel.
+            </p>
+            <div className="flex flex-col gap-4">
+              {[
+                { key: "new_booking",           label: "New Booking",           desc: "A client submits a new booking" },
+                { key: "deposit_received",      label: "Deposit Received",      desc: "A deposit payment is confirmed via Yoco" },
+                { key: "balance_paid",          label: "Balance Paid",          desc: "A remaining balance is paid via Yoco" },
+                { key: "full_payment_received", label: "Full Payment Received", desc: "Full upfront payment confirmed via Yoco" },
+                { key: "cancelled",             label: "Booking Cancelled",     desc: "A booking is cancelled" },
+              ].map(({ key, label, desc }) => {
+                const enabled = notifPrefs[key] !== false;
+                return (
+                  <div key={key} className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white/70">{label}</p>
+                      <p className="text-[11px] text-white/30 mt-0.5">{desc}</p>
+                    </div>
+                    <button
+                      onClick={() => toggleNotifPref(key)}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                        enabled ? "bg-emerald-500" : "bg-white/[0.08]"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${
+                          enabled ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <SavedBadge section="notif" />
           </SettingsCard>
         </div>
       </section>
