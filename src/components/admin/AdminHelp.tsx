@@ -276,7 +276,7 @@ const AdminHelp = () => (
     <section className="flex flex-col gap-3">
       <SectionLabel label="Integration Setup" />
       <div className="flex flex-col gap-3">
-        <AccordionCard icon={CreditCard} title="Yoco Payments" badge="Setup Required" badgeColor="amber" defaultOpen>
+        <AccordionCard icon={CreditCard} title="Yoco Payments" badge="Setup Required" badgeColor="amber">
           <YocoGuide />
         </AccordionCard>
         <AccordionCard icon={Calendar} title="Google Calendar" badge="One-time Setup" badgeColor="purple">
