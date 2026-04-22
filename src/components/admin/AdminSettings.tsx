@@ -25,6 +25,20 @@ const DEPOSIT_PRESETS = [
   { label: "Full", value: "100" },
 ];
 
+const MIN_NOTICE_PRESETS = [
+  { label: "30 min", value: "30" },
+  { label: "1 hour", value: "60" },
+  { label: "1h 30m", value: "90" },
+  { label: "2 hours", value: "120" },
+];
+
+const MAX_DAYS_PRESETS = [
+  { label: "30 days", value: "30" },
+  { label: "60 days", value: "60" },
+  { label: "90 days", value: "90" },
+  { label: "120 days", value: "120" },
+];
+
 const SENSITIVE_KEYS = new Set([
   "smtp_password",
   "google_maps_api_key",
@@ -117,6 +131,40 @@ const SettingRow = ({
   </div>
 );
 
+const PillPicker = ({
+  label,
+  presets,
+  value,
+  onSelect,
+  hint,
+}: {
+  label: string;
+  presets: { label: string; value: string }[];
+  value: string | undefined;
+  onSelect: (v: string) => void;
+  hint?: string;
+}) => (
+  <div className="flex flex-col gap-2.5">
+    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">{label}</label>
+    <div className="grid grid-cols-4 gap-2">
+      {presets.map((p) => (
+        <button
+          key={p.value}
+          onClick={() => onSelect(p.value)}
+          className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
+            value === p.value
+              ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+              : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20"
+          }`}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+    {hint && <p className="text-[10px] text-white/20 italic px-1">{hint}</p>}
+  </div>
+);
+
 const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; label?: string; loading?: boolean }) => (
   <button
     onClick={onClick} disabled={loading}
@@ -151,8 +199,6 @@ const AdminSettings = () => {
   }, []);
 
   // ── Mutations ──
-  // Each mutation receives a dedicated onSuccess that fires flash ONLY after
-  // Supabase confirms the write succeeded — never prematurely.
   const updateTenant = useUpdateTenant();
   const upsertSetting = useUpsertAppSetting();
   const { data: subscription } = useTenantSubscription();
@@ -187,8 +233,6 @@ const AdminSettings = () => {
   const unmask = (key: string) => setUnmasked((prev) => new Set(prev).add(key));
   const isMasked = (key: string) => SENSITIVE_KEYS.has(key) && !unmasked.has(key) && !!appSettings[key];
 
-  // ── saveTenantFields ──
-  // flash() is called in the mutation's onSuccess callback, not immediately.
   const saveTenantFields = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => { updates[f] = draft[f] ?? ""; });
@@ -215,8 +259,6 @@ const AdminSettings = () => {
     });
   };
 
-  // ── saveSettings ──
-  // flash() is called in the mutation's onSuccess callback, not immediately.
   const saveSettings = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => {
@@ -380,27 +422,29 @@ const AdminSettings = () => {
         <SectionLabel label="Operations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SettingsCard title="Booking Rules" icon={Clock} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
-            <div className="flex flex-col gap-2.5">
-              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Deposit Percentage</label>
-              <div className="grid grid-cols-4 gap-2">
-                {DEPOSIT_PRESETS.map((p) => (
-                  <button key={p.value} onClick={() => update("deposit_percent", p.value)}
-                    className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
-                      draft.deposit_percent === p.value
-                        ? "border-white/40 bg-white/[0.12] text-white"
-                        : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20"
-                    }`}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <SettingRow id="min-notice" label="Min Notice Minutes" placeholder="30" type="number" value={draft.min_notice_minutes} onChange={(v) => update("min_notice_minutes", v)} hint="Minimum minutes required before a client can book a slot." />
-            <SettingRow id="max-advance" label="Max Advance Days" placeholder="30" type="number" value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
-            <SettingRow id="ref-prefix" label="Booking Ref Prefix" placeholder="GLW" value={draft.booking_ref_prefix} onChange={(v) => update("booking_ref_prefix", v)} />
+            <PillPicker
+              label="Deposit Percentage"
+              presets={DEPOSIT_PRESETS}
+              value={draft.deposit_percent}
+              onSelect={(v) => update("deposit_percent", v)}
+            />
+            <PillPicker
+              label="Minimum Notice"
+              presets={MIN_NOTICE_PRESETS}
+              value={draft.min_notice_minutes}
+              onSelect={(v) => update("min_notice_minutes", v)}
+              hint="Minimum time required before a client can book a slot."
+            />
+            <PillPicker
+              label="Max Advance Booking"
+              presets={MAX_DAYS_PRESETS}
+              value={draft.max_advance_days}
+              onSelect={(v) => update("max_advance_days", v)}
+              hint="How far ahead clients can schedule an appointment."
+            />
             <div className="flex items-center gap-3">
               <SaveBtn
-                onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days", "booking_ref_prefix"])}
+                onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days"])}
                 loading={upsertSetting.isPending}
               />
               <SavedBadge section="rules" />
