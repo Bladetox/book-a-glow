@@ -12,6 +12,7 @@ import {
   SettingsIcon,
   TermsIcon,
 } from "@/components/icons/BrandIcons";
+import { HelpCircle } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantSettings } from "@/hooks/useSupabaseSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,6 +29,7 @@ const iconMap: Record<string, React.ElementType> = {
   "Integrations":       IntegrationsIcon,
   "Settings":           SettingsIcon,
   "Terms & Conditions": TermsIcon,
+  "Help":               HelpCircle,
 };
 
 type NavItem =
@@ -39,7 +41,7 @@ const NAV: NavItem[] = [
   { kind: "group",  label: "Schedule",          icon: BookingsIcon,  children: ["Bookings", "Availability"] },
   { kind: "group",  label: "Catalogue",         icon: ServicesIcon,  children: ["Services", "Stock"] },
   { kind: "direct", label: "Client Management", view: "Client Management" },
-  { kind: "group",  label: "Business",          icon: SettingsIcon,  children: ["Integrations", "Settings", "Terms & Conditions"] },
+  { kind: "group",  label: "Business",          icon: SettingsIcon,  children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
 ];
 
 const parentGroupOf = (view: string): string | null => {
@@ -96,7 +98,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
 
-  // ── Child item (indented) ──────────────────────────────────────────────────
+  // ── Child item ─────────────────────────────────────────────────────────────
   const renderChild = (view: string) => {
     if (!views.includes(view)) return null;
     const Icon       = iconMap[view] || DashboardIcon;

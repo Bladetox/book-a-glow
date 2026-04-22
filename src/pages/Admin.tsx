@@ -18,12 +18,10 @@ const AdminIntegrations      = lazy(() => import("@/components/admin/AdminIntegr
 const AdminSettings          = lazy(() => import("@/components/admin/AdminSettings"));
 const AdminTerms             = lazy(() => import("@/components/admin/AdminTerms"));
 const AdminClientManagement  = lazy(() => import("@/components/admin/AdminClientManagement"));
+const AdminHelp              = lazy(() => import("@/components/admin/AdminHelp"));
 
 // ── Subscription gate logic ──────────────────────────────────────────────────
-// INTERNAL: 7-day silent grace period after trial_ends_at before paywall shows.
-// The tenant is NEVER told about the grace period — they see the paywall as if
-// the trial ended exactly on trial_ends_at.
-const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
 function isPaywalled(
   status: string | null,
@@ -32,25 +30,17 @@ function isPaywalled(
 ): boolean {
   if (isLifetimeFree) return false;
   if (!status) return false;
-
-  // Fully active
   if (status === "active") return false;
-
-  // Trial — check if within grace window
   if (status === "trial") {
-    if (!trialEndsAt) return false; // no end date set → keep open
+    if (!trialEndsAt) return false;
     const graceCutoff = new Date(trialEndsAt).getTime() + GRACE_PERIOD_MS;
-    return Date.now() > graceCutoff; // gate only AFTER grace window expires
+    return Date.now() > graceCutoff;
   }
-
-  // Explicit expired / cancelled / pending_payment
   if (status === "trial_expired" || status === "cancelled" || status === "pending_payment") {
     return true;
   }
-
   return false;
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Error boundary ────────────────────────────────────────────────────────────
 interface EBState { hasError: boolean; message: string }
@@ -84,7 +74,6 @@ class ViewErrorBoundary extends Component<{ children: ReactNode }, EBState> {
     return this.props.children;
   }
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 const TabLoader = () => (
   <div className="flex items-center justify-center py-24">
@@ -102,6 +91,7 @@ const views = [
   "Integrations",
   "Settings",
   "Terms & Conditions",
+  "Help",
 ] as const;
 
 type ViewName = typeof views[number];
@@ -123,16 +113,17 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
 
   const renderView = () => {
     switch (activeView) {
-      case "Dashboard":         return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
-      case "Bookings":          return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
-      case "Services":          return <AdminServices />;
-      case "Availability":      return <AdminAvailability />;
-      case "Stock":             return <AdminStock />;
-      case "Client Management": return <AdminClientManagement />;
-      case "Integrations":      return <AdminIntegrations />;
-      case "Settings":          return <AdminSettings />;
+      case "Dashboard":          return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+      case "Bookings":           return <AdminBookings initialClient={selectedClient} onClearClient={() => setSelectedClient(null)} />;
+      case "Services":           return <AdminServices />;
+      case "Availability":       return <AdminAvailability />;
+      case "Stock":              return <AdminStock />;
+      case "Client Management":  return <AdminClientManagement />;
+      case "Integrations":       return <AdminIntegrations />;
+      case "Settings":           return <AdminSettings />;
       case "Terms & Conditions": return <AdminTerms />;
-      default:                  return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
+      case "Help":               return <AdminHelp />;
+      default:                   return <AdminDashboard onSelectAppointment={handleSelectAppointment} onNavigate={handleDashboardNav} />;
     }
   };
 
@@ -179,7 +170,6 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
   );
 };
 
-// ── Subscription shape returned from tenants table ────────────────────────────
 interface TenantSubscription {
   subscription_status: string | null;
   is_lifetime_free: boolean;
@@ -213,7 +203,6 @@ const Admin = () => {
       setTenantId(adminRole.tenant_id);
       setUserId(user.id);
 
-      // ── Fetch subscription fields ──────────────────────────────────────────
       const { data: tenantRow } = await supabase
         .from("tenants")
         .select("subscription_status, is_lifetime_free, trial_ends_at")
@@ -252,7 +241,6 @@ const Admin = () => {
     setAuthState("unauthenticated");
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (authState === "loading") {
     return (
       <div className="flex items-center justify-center h-screen bg-[#0a0a0a]">
@@ -261,12 +249,10 @@ const Admin = () => {
     );
   }
 
-  // ── Unauthenticated ────────────────────────────────────────────────────────
   if (authState === "unauthenticated" || !tenantCtx) {
     return <AdminLogin onSuccess={checkAdminSession} />;
   }
 
-  // ── Subscription gate ──────────────────────────────────────────────────────
   const paywalled = isPaywalled(
     sub?.subscription_status ?? null,
     sub?.is_lifetime_free ?? false,
@@ -281,7 +267,6 @@ const Admin = () => {
     );
   }
 
-  // ── Authenticated + active ─────────────────────────────────────────────────
   return (
     <TenantProvider value={tenantCtx}>
       <AdminShell onSignOut={handleSignOut} />
