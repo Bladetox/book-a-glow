@@ -84,8 +84,11 @@ export function useMonthAvailability(
  * min_notice_minutes window from now.
  * This also implicitly removes all past slots on today's date.
  *
- * staleTime is set to 0 when viewing today so React Query never serves a
- * cached response that may contain slots that have since passed.
+ * For today's date:
+ *   - staleTime = 0       → never serve a cached response
+ *   - refetchInterval = 60 000ms → re-fetches every 60 s so slots that
+ *     tick into the past (or into the notice window) disappear automatically
+ *   - refetchOnWindowFocus = true → also refetches when the tab regains focus
  *
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
  */
@@ -104,7 +107,11 @@ export function useDateSlots(
     queryKey: ["public-date-slots", tenantId, date, durationMinutes],
     enabled: !!date && !!tenantId,
     staleTime: isToday ? 0 : 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    // Re-fetch every 60 s when viewing today so slots that tick into the past
+    // (or into the min-notice window) are removed without a page refresh.
+    refetchInterval: isToday ? 60 * 1000 : false,
+    // Also re-fetch when the user switches back to this tab (today only).
+    refetchOnWindowFocus: isToday,
     queryFn: async () => {
       if (!date) return [];
       const sid = resolvedStaffId ?? await getStaffId(tenantId);
