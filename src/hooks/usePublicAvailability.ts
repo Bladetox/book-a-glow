@@ -127,10 +127,12 @@ export function useDateSlots(
       return (data ?? [])
         .filter((s: any) => s.is_available)
         .filter((s: any) => {
-          // Build a full timestamp for this slot on the selected date
           const [hh, mm] = (s.slot_start as string).slice(0, 5).split(":").map(Number);
-          const slotDate = new Date(date);
-          slotDate.setHours(hh, mm, 0, 0);
+          // Use local date constructor (year, month, day, hours, minutes) to avoid
+          // the UTC-midnight offset that new Date("YYYY-MM-DD") introduces.
+          // Without this, SAST (UTC+2) clients see slots shifted 2 hours into the past.
+          const [yyyy, mo, dd] = date.split("-").map(Number);
+          const slotDate = new Date(yyyy, mo - 1, dd, hh, mm, 0, 0);
           // Slot must start at least minNoticeMinutes from now
           // (also blocks all past slots when min_notice_minutes = 0)
           return slotDate.getTime() - now >= minNoticeMs;
