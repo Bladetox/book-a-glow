@@ -385,14 +385,15 @@ const AdminSettings = () => {
               <div className="grid grid-cols-4 gap-2">
                 {DEPOSIT_PRESETS.map((p) => (
                   <button key={p.value} onClick={() => update("deposit_percent", p.value)}
-                    className={`py-2 rounded-xl border text-xs font-semibold transition-all ${draft.deposit_percent === p.value ? "border-white/40 bg-white/[0.12] text-white" : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20"}`}>
+                    className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
+                      draft.deposit_percent === p.value
+                        ? "border-white/40 bg-white/[0.12] text-white"
+                        : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20"
+                    }`}>
                     {p.label}
                   </button>
                 ))}
               </div>
-              <input id="deposit-custom" name="deposit_percent" type="number" placeholder="Custom %" min={1} max={100}
-                value={draft.deposit_percent ?? ""} onChange={(e) => update("deposit_percent", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
             </div>
             <SettingRow id="min-notice" label="Min Notice Minutes" placeholder="30" type="number" value={draft.min_notice_minutes} onChange={(v) => update("min_notice_minutes", v)} hint="Minimum minutes required before a client can book a slot." />
             <SettingRow id="max-advance" label="Max Advance Days" placeholder="30" type="number" value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
