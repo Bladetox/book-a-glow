@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 
 export interface AppNotification {
   id: string;
@@ -13,7 +13,7 @@ export interface AppNotification {
 }
 
 export function useRealtimeNotifications() {
-  const { tenantId } = useAuth();
+  const { tenantId } = useTenant();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
