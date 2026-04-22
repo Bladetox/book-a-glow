@@ -3,6 +3,7 @@
 // Zero logic — purely presentational.
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Loader2, HelpCircle } from "lucide-react";
 
@@ -280,53 +281,96 @@ export const AdminPageHeader = ({
 );
 
 // ── HintTooltip ───────────────────────────────────────────────────────────────
-// Layer 1 contextual help — a small ? icon that opens a floating hint popover.
+// Layer 1 contextual help — a small ? icon with a floating hint popover.
+// Rendered via React Portal into document.body to escape overflow-hidden ancestors.
 // Dismisses on outside click or Escape key.
 // Usage: <HintTooltip text="Found at app.yoco.com → Developers → API Keys" />
 export const HintTooltip = ({ text }: { text: string }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen]   = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  // Position popover above the trigger button using getBoundingClientRect
+  const updatePosition = () => {
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    setCoords({
+      top:  r.top + window.scrollY - 8,   // 8px gap above button
+      left: r.left + r.width / 2 + window.scrollX,
+    });
+  };
+
+  const handleOpen = () => {
+    updatePosition();
+    setOpen((v) => !v);
+  };
 
   useEffect(() => {
     if (!open) return;
-    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    const onKey   = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onClick = (e: MouseEvent) => {
+      if (
+        popRef.current && !popRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) setOpen(false);
     };
-    document.addEventListener("keydown", handleKey);
-    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", onClick as any);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
     return () => {
-      document.removeEventListener("keydown", handleKey);
-      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", onClick as any);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
     };
   }, [open]);
 
+  const popover = (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          ref={popRef}
+          initial={{ opacity: 0, scale: 0.92, y: 4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.92, y: 4 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          style={{
+            position: "fixed",
+            top:  coords.top,
+            left: coords.left,
+            transform: "translate(-50%, -100%)",
+            zIndex: 9999,
+          }}
+          className="w-60 rounded-xl bg-zinc-900 border border-white/[0.12] shadow-2xl px-3 py-2.5 pointer-events-auto"
+        >
+          {/* Arrow pointing down */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 w-0 h-0"
+            style={{
+              bottom: "-6px",
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderTop: "6px solid rgba(255,255,255,0.12)",
+            }}
+          />
+          <p className="text-[11px] text-white/65 leading-relaxed">{text}</p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
-    <div ref={ref} className="relative inline-flex items-center">
+    <>
       <button
+        ref={btnRef}
         type="button"
         aria-label="Show hint"
-        onClick={() => setOpen((v) => !v)}
-        className="w-4 h-4 rounded-full flex items-center justify-center text-white/25 hover:text-white/60 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
+        onClick={handleOpen}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white/25 hover:text-white/65 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
       >
         <HelpCircle className="w-3.5 h-3.5" />
       </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: -4 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-60 rounded-xl bg-zinc-900 border border-white/[0.1] shadow-xl px-3 py-2.5"
-          >
-            {/* Arrow */}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white/10" />
-            <p className="text-[11px] text-white/60 leading-relaxed">{text}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      {typeof document !== "undefined" && createPortal(popover, document.body)}
+    </>
   );
 };
