@@ -39,12 +39,6 @@ const MAX_DAYS_PRESETS = [
   { label: "120 days", value: "120" },
 ];
 
-const SENSITIVE_KEYS = new Set([
-  "smtp_password",
-  "google_maps_api_key",
-  "google_service_account_json",
-]);
-
 const SectionLabel = ({ label }: { label: string }) => (
   <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-white/25 px-1 pt-2">
     {label}
@@ -102,31 +96,19 @@ const SettingsCard = ({
 };
 
 const SettingRow = ({
-  label, id, placeholder, type = "text", value, onChange, hint, masked, onUnmask,
+  label, id, placeholder, type = "text", value, onChange, hint,
 }: {
   label: string; id?: string; placeholder: string; type?: string;
   value?: string; onChange?: (v: string) => void; hint?: string;
-  masked?: boolean; onUnmask?: () => void;
 }) => (
   <div className="flex flex-col gap-1.5">
     <label htmlFor={id} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">{label}</label>
-    {masked ? (
-      <div className="flex items-center gap-2">
-        <p className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/20 font-mono italic">
-          ••••••••••••••••
-        </p>
-        <button onClick={onUnmask} className="px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/40 hover:text-white/70 transition-colors">
-          Edit
-        </button>
-      </div>
-    ) : (
-      <input
-        id={id} name={id} type={type} placeholder={placeholder}
-        value={value ?? ""}
-        onChange={(e) => onChange?.(e.target.value)}
-        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
-      />
-    )}
+    <input
+      id={id} name={id} type={type} placeholder={placeholder}
+      value={value ?? ""}
+      onChange={(e) => onChange?.(e.target.value)}
+      className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+    />
     {hint && <p className="text-[10px] text-white/20 italic px-1">{hint}</p>}
   </div>
 );
@@ -184,7 +166,6 @@ const AdminSettings = () => {
 
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<string | null>(null);
-  const [unmasked, setUnmasked] = useState<Set<string>>(new Set());
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [newPw, setNewPw] = useState("");
@@ -228,8 +209,6 @@ const AdminSettings = () => {
   }, [appSettings]);
 
   const update = (field: string, value: string) => setDraft((prev) => ({ ...prev, [field]: value }));
-  const unmask = (key: string) => setUnmasked((prev) => new Set(prev).add(key));
-  const isMasked = (key: string) => SENSITIVE_KEYS.has(key) && !unmasked.has(key) && !!appSettings[key];
 
   const saveTenantFields = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
@@ -259,18 +238,12 @@ const AdminSettings = () => {
 
   const saveSettings = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
-    fields.forEach((f) => {
-      if (SENSITIVE_KEYS.has(f) && !unmasked.has(f)) return;
-      updates[f] = draft[f] ?? "";
-    });
+    fields.forEach((f) => { updates[f] = draft[f] ?? ""; });
 
     if (Object.keys(updates).length === 0) return;
 
     upsertSetting.mutate(updates, {
-      onSuccess: () => {
-        setUnmasked((prev) => { const next = new Set(prev); fields.forEach((f) => next.delete(f)); return next; });
-        flash(section);
-      },
+      onSuccess: () => flash(section),
       onError: (err: any) => toast.error(err?.message ?? "Save failed"),
     });
   };
@@ -581,33 +554,6 @@ const AdminSettings = () => {
                 </div>
               );
             })()}
-          </SettingsCard>
-        </div>
-      </section>
-
-      {/* ── INTEGRATIONS ── */}
-      <section className="flex flex-col gap-3">
-        <SectionLabel label="Integrations" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Email Settings (SMTP)" icon={FileText} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
-            <SettingRow id="smtp-host" label="SMTP Host" placeholder="smtp.gmail.com" value={draft.smtp_host} onChange={(v) => update("smtp_host", v)} />
-            <SettingRow id="smtp-port" label="SMTP Port" placeholder="587" type="number" value={draft.smtp_port} onChange={(v) => update("smtp_port", v)} />
-            <SettingRow id="smtp-user" label="SMTP User (email)" placeholder="your@gmail.com" value={draft.smtp_user} onChange={(v) => update("smtp_user", v)} />
-            <SettingRow id="smtp-password" label="SMTP Password / App Password" placeholder="App password from Google" type="password" masked={isMasked("smtp_password")} onUnmask={() => unmask("smtp_password")} value={draft.smtp_password} onChange={(v) => update("smtp_password", v)} hint={!isMasked("smtp_password") ? "Use a Google App Password, not your account password." : undefined} />
-            <SettingRow id="from-email" label="From Email" placeholder="noreply@yourdomain.co.za" value={draft.smtp_from_email} onChange={(v) => update("smtp_from_email", v)} />
-            <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveSettings("smtp", ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from_email"])} loading={upsertSetting.isPending} />
-              <SavedBadge section="smtp" />
-            </div>
-          </SettingsCard>
-
-          <SettingsCard title="Google Maps" icon={Clock} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
-            <SettingRow id="google-maps-api-key" label="Google Maps API Key" placeholder="AIza..." masked={isMasked("google_maps_api_key")} onUnmask={() => unmask("google_maps_api_key")} value={draft.google_maps_api_key} onChange={(v) => update("google_maps_api_key", v)} hint={!isMasked("google_maps_api_key") ? "Restrict this key to your domain in Google Cloud Console." : undefined} />
-            <SettingRow id="default-distance" label="Default Distance (km)" placeholder="10" type="number" value={draft.default_distance_km} onChange={(v) => update("default_distance_km", v)} />
-            <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveSettings("maps", ["google_maps_api_key", "default_distance_km"])} loading={upsertSetting.isPending} />
-              <SavedBadge section="maps" />
-            </div>
           </SettingsCard>
         </div>
       </section>
