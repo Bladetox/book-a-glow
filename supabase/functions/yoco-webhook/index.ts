@@ -109,10 +109,6 @@ async function createCalendarEvent(
       accessToken = newToken;
     }
 
-    // ── Build start/end as LOCAL datetime strings (no UTC conversion) ─────
-    // Using new Date().toISOString() shifts SAST times back 2 hours because
-    // Deno runs in UTC. Passing a naive local string lets Google Calendar
-    // apply the timeZone field correctly.
     const pad = (n: number) => String(n).padStart(2, "0");
     const [year, month, day] = (booking.booking_date as string).split("-").map(Number);
     const [hours, minutes]   = (booking.start_time as string ?? "00:00").split(":").map(Number);
@@ -123,7 +119,6 @@ async function createCalendarEvent(
     const startLocal = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
     const endLocal   = `${year}-${pad(month)}-${pad(day)}T${pad(endH)}:${pad(endM)}:00`;
 
-    // ── Client details ────────────────────────────────────────────────────
     const clientName  = booking.client_name  ?? booking.guest_name  ?? "Client";
     const clientPhone = booking.client_phone ?? booking.guest_phone ?? "";
     const clientEmail = booking.client_email ?? booking.guest_email ?? "";
@@ -132,7 +127,6 @@ async function createCalendarEvent(
     const dep         = Number(booking.deposit_amount ?? 0);
     const bal         = Math.max(0, Number(booking.balance_due) > 0 ? Number(booking.balance_due) : tot - dep);
 
-    // ── Fetch service names from booking_services ─────────────────────────
     const { data: bsRows } = await supabase
       .from("booking_services")
       .select("price, duration_minutes, services ( name )")
@@ -149,7 +143,6 @@ async function createCalendarEvent(
       ? (bsRows ?? []).map((bs: any) => bs.services?.name).filter(Boolean).join(", ")
       : "Appointment";
 
-    // ── Build description matching Hunga's event format ───────────────────
     const descParts: string[] = [
       `Guest: ${clientName}`,
       clientPhone ? `Phone: ${clientPhone}` : "",
@@ -172,11 +165,7 @@ async function createCalendarEvent(
     descParts.push(`Booking ID: ${booking.id}`);
 
     const description = descParts.join("\n");
-
-    // ── Attendee: invite client so they get a calendar notification ───────
     const attendees = clientEmail ? [{ email: clientEmail }] : [];
-
-    // ── Summary matches Hunga's format: "ClientName — Service1, Service2" ─
     const summary = `${clientName} — ${serviceLabel}`;
 
     const method   = booking.gcal_event_id ? "PUT" : "POST";
@@ -211,6 +200,43 @@ async function createCalendarEvent(
     }
   } catch (err) {
     console.error("createCalendarEvent error:", err);
+  }
+}
+
+// ── NEW: insert a notification row if the tenant has that preference enabled ──
+async function insertNotification(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  type: string,
+  title: string,
+  body: string,
+  bookingId: string
+): Promise<void> {
+  try {
+    const { data: tenantRow } = await supabase
+      .from("tenants")
+      .select("notification_preferences")
+      .eq("id", tenantId)
+      .single();
+
+    const prefs = tenantRow?.notification_preferences ?? {};
+    if (prefs[type] === false) {
+      console.log(`Notification type "${type}" disabled for tenant:`, tenantId);
+      return;
+    }
+
+    const { error } = await supabase.from("notifications").insert({
+      tenant_id:  tenantId,
+      type,
+      title,
+      body,
+      booking_id: bookingId,
+    });
+
+    if (error) console.error("insertNotification error:", error);
+    else console.log(`Notification inserted: ${type} for booking:`, bookingId);
+  } catch (err) {
+    console.error("insertNotification unhandled error:", err);
   }
 }
 
@@ -277,17 +303,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (tenant?.yoco_webhook_secret && svixSignature) {
-  const valid = await verifyYocoSignature(payloadBytes, svixSignature, svixTimestamp, tenant.yoco_webhook_secret);
-  if (!valid) {
-    console.error("Invalid Yoco webhook signature for tenant:", tenantId);
-    return new Response(JSON.stringify({ error: "Invalid signature" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  console.log("Signature verified for tenant:", tenantId);
-} else {
-  console.warn("No signature header present — proceeding without verification:", tenantId);
-}
+      const valid = await verifyYocoSignature(payloadBytes, svixSignature, svixTimestamp, tenant.yoco_webhook_secret);
+      if (!valid) {
+        console.error("Invalid Yoco webhook signature for tenant:", tenantId);
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.log("Signature verified for tenant:", tenantId);
+    } else {
+      console.warn("No signature header present — proceeding without verification:", tenantId);
+    }
 
     if (type !== "payment.succeeded") {
       console.log("Ignoring event type:", type);
@@ -387,6 +413,16 @@ Deno.serve(async (req) => {
         completed_at:   new Date().toISOString(),
       });
 
+      // ── Notification: Full Payment Received ──
+      await insertNotification(
+        supabase,
+        effectiveTenantId,
+        "full_payment_received",
+        "Full Payment Received",
+        `Full payment of R${Number(booking.total_amount).toFixed(2)} received.`,
+        booking.id
+      );
+
       createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: 0 })
         .catch((e) => console.error("gcal background error:", e));
 
@@ -464,6 +500,16 @@ Deno.serve(async (req) => {
         completed_at:   new Date().toISOString(),
       });
 
+      // ── Notification: Balance Paid ──
+      await insertNotification(
+        supabase,
+        effectiveTenantId,
+        "balance_paid",
+        "Balance Paid",
+        `Balance payment of R${balanceAmount.toFixed(2)} received.`,
+        booking.id
+      );
+
       createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: 0 })
         .catch((e) => console.error("gcal background error (balance):", e));
 
@@ -540,6 +586,16 @@ Deno.serve(async (req) => {
       transaction_id: transactionId,
       completed_at:   new Date().toISOString(),
     });
+
+    // ── Notification: Deposit Received ──
+    await insertNotification(
+      supabase,
+      effectiveTenantId,
+      "deposit_received",
+      "Deposit Received",
+      `Deposit of R${depositAmount.toFixed(2)} received.`,
+      booking.id
+    );
 
     createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: remainingBalance })
       .catch((e) => console.error("gcal background error:", e));
