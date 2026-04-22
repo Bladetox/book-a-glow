@@ -9,6 +9,7 @@ import AdminMobileNav   from "@/components/admin/AdminMobileNav";
 import AdminDashboard   from "@/components/admin/AdminDashboard";
 import TrialExpiredPaywall from "@/components/admin/TrialExpiredPaywall";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
+import { NotificationBell } from "@/components/admin/NotificationBell";
 
 const AdminBookings          = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminServices          = lazy(() => import("@/components/admin/AdminServices"));
@@ -143,12 +144,15 @@ const AdminShell = ({ onSignOut }: { onSignOut: () => void }) => {
             <Menu className="w-5 h-5 text-white/60" />
           </button>
           <h1 className="text-sm font-semibold text-white/80">{activeView}</h1>
-          <button
-            onClick={onSignOut}
-            className="text-xs text-white/30 hover:text-white/60 transition-colors"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <button
+              onClick={onSignOut}
+              className="text-xs text-white/30 hover:text-white/60 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
 
         {/* Content area */}
