@@ -24,8 +24,12 @@ function todayLocalStr(): string {
   ].join("-");
 }
 
-/** Fetch the tenant's min_notice_hours from app_settings (defaults to 0) */
-async function fetchMinNoticeHours(tenantId: string): Promise<number> {
+/**
+ * Fetch the tenant's min_notice_hours from app_settings.
+ * The stored value is treated as MINUTES (e.g. 30 = 30 minutes notice).
+ * Falls back to 0 if the setting is not configured.
+ */
+async function fetchMinNoticeMinutes(tenantId: string): Promise<number> {
   const { data, error } = await supabase
     .from("app_settings")
     .select("value")
@@ -77,8 +81,8 @@ export function useMonthAvailability(
  * Fetch available slots for a specific date.
  *
  * Filters out any slot whose start time falls within the tenant's
- * min_notice_hours window from now. This also implicitly removes all
- * past slots on today's date (since they are always within 0+ hours of now).
+ * min_notice_hours window from now (stored value is interpreted as MINUTES).
+ * This also implicitly removes all past slots on today's date.
  *
  * staleTime is set to 0 when viewing today so React Query never serves a
  * cached response that may contain slots that have since passed.
@@ -105,18 +109,19 @@ export function useDateSlots(
       if (!date) return [];
       const sid = resolvedStaffId ?? await getStaffId(tenantId);
 
-      const [{ data, error }, minNoticeHours] = await Promise.all([
+      const [{ data, error }, minNoticeMinutes] = await Promise.all([
         supabase.rpc("get_available_slots", {
           p_staff_id:         sid,
           p_date:             date,
           p_duration_minutes: durationMinutes,
         } as any),
-        fetchMinNoticeHours(tenantId),
+        fetchMinNoticeMinutes(tenantId),
       ]);
 
       if (error) throw error;
 
-      const minNoticeMs = minNoticeHours * 60 * 60 * 1000;
+      // Convert minutes → milliseconds for comparison
+      const minNoticeMs = minNoticeMinutes * 60 * 1000;
       const now = Date.now();
 
       return (data ?? [])
@@ -126,7 +131,7 @@ export function useDateSlots(
           const [hh, mm] = (s.slot_start as string).slice(0, 5).split(":").map(Number);
           const slotDate = new Date(date);
           slotDate.setHours(hh, mm, 0, 0);
-          // Slot must start at least min_notice_hours from now
+          // Slot must start at least minNoticeMinutes from now
           // (also blocks all past slots when min_notice_hours = 0)
           return slotDate.getTime() - now >= minNoticeMs;
         })
