@@ -18,24 +18,33 @@ import {
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 
+const OVERRUN_PRESETS = [
+  { label: "None",   value: "0" },
+  { label: "15 min", value: "15" },
+  { label: "30 min", value: "30" },
+  { label: "45 min", value: "45" },
+  { label: "60 min", value: "60" },
+  { label: "90 min", value: "90" },
+];
+
 const DEPOSIT_PRESETS = [
-  { label: "30%", value: "30" },
-  { label: "50%", value: "50" },
-  { label: "70%", value: "70" },
+  { label: "30%",  value: "30" },
+  { label: "50%",  value: "50" },
+  { label: "70%",  value: "70" },
   { label: "Full", value: "100" },
 ];
 
 const MIN_NOTICE_PRESETS = [
-  { label: "30 min", value: "30" },
-  { label: "1 hour", value: "60" },
+  { label: "30 min",  value: "30" },
+  { label: "1 hour",  value: "60" },
   { label: "1h 30m", value: "90" },
   { label: "2 hours", value: "120" },
 ];
 
 const MAX_DAYS_PRESETS = [
-  { label: "30 days", value: "30" },
-  { label: "60 days", value: "60" },
-  { label: "90 days", value: "90" },
+  { label: "30 days",  value: "30" },
+  { label: "60 days",  value: "60" },
+  { label: "90 days",  value: "90" },
   { label: "120 days", value: "120" },
 ];
 
@@ -119,16 +128,18 @@ const PillPicker = ({
   value,
   onSelect,
   hint,
+  cols = 4,
 }: {
   label: string;
   presets: { label: string; value: string }[];
   value: string | undefined;
   onSelect: (v: string) => void;
   hint?: string;
+  cols?: 3 | 4;
 }) => (
   <div className="flex flex-col gap-2.5">
     <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">{label}</label>
-    <div className="grid grid-cols-4 gap-2">
+    <div className={`grid ${ cols === 3 ? "grid-cols-3" : "grid-cols-4" } gap-2`}>
       {presets.map((p) => (
         <button
           key={p.value}
@@ -157,7 +168,7 @@ const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; la
   </button>
 );
 
-// ─── Main component ──────────────────────────────────────────────────────────────────────────────────────
+// ─── Main component ──────────────────────────────────────────────────────────────────────────────────────────────────────
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
@@ -285,7 +296,7 @@ const AdminSettings = () => {
       <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Saved</span>
     ) : null;
 
-  // ── Notification preference helpers ──────────────────────────────────────
+  // ── Notification preference helpers ────────────────────────────────────
   const notifPrefs: Record<string, boolean> = (tenant as any)?.notification_preferences ?? {
     new_booking: true,
     deposit_received: true,
@@ -430,9 +441,17 @@ const AdminSettings = () => {
               onSelect={(v) => update("max_advance_days", v)}
               hint="How far ahead clients can schedule an appointment."
             />
+            <PillPicker
+              label="Overrun Buffer"
+              presets={OVERRUN_PRESETS}
+              value={draft.overrun_minutes}
+              onSelect={(v) => update("overrun_minutes", v)}
+              hint="Extra minutes past closing that a booking is allowed to run into."
+              cols={3}
+            />
             <div className="flex items-center gap-3">
               <SaveBtn
-                onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days"])}
+                onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days", "overrun_minutes"])}
                 loading={upsertSetting.isPending}
               />
               <SavedBadge section="rules" />
