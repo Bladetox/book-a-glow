@@ -361,11 +361,11 @@ const AdminSettings = () => {
                 value={draft.deposit_percent ?? ""} onChange={(e) => update("deposit_percent", e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
             </div>
-            <SettingRow id="min-notice" label="Min Notice Hours" placeholder="24" type="number" value={draft.min_notice_hours} onChange={(v) => update("min_notice_hours", v)} />
+            <SettingRow id="min-notice" label="Min Notice Minutes" placeholder="30" type="number" value={draft.min_notice_minutes} onChange={(v) => update("min_notice_minutes", v)} hint="Minimum minutes required before a client can book a slot." />
             <SettingRow id="max-advance" label="Max Advance Days" placeholder="30" type="number" value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
             <SettingRow id="ref-prefix" label="Booking Ref Prefix" placeholder="GLW" value={draft.booking_ref_prefix} onChange={(v) => update("booking_ref_prefix", v)} />
             <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_hours", "max_advance_days", "booking_ref_prefix"])} loading={upsertSetting.isPending} />
+              <SaveBtn onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days", "booking_ref_prefix"])} loading={upsertSetting.isPending} />
               <SavedBadge section="rules" />
             </div>
           </SettingsCard>

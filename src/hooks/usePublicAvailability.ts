@@ -25,7 +25,7 @@ function todayLocalStr(): string {
 }
 
 /**
- * Fetch the tenant's min_notice_hours from app_settings.
+ * Fetch the tenant's min_notice_minutes from app_settings.
  * The stored value is treated as MINUTES (e.g. 30 = 30 minutes notice).
  * Falls back to 0 if the setting is not configured.
  */
@@ -34,7 +34,7 @@ async function fetchMinNoticeMinutes(tenantId: string): Promise<number> {
     .from("app_settings")
     .select("value")
     .eq("tenant_id", tenantId)
-    .eq("key", "min_notice_hours")
+    .eq("key", "min_notice_minutes")
     .maybeSingle();
   if (error || !data?.value) return 0;
   const parsed = parseFloat(data.value);
@@ -81,7 +81,7 @@ export function useMonthAvailability(
  * Fetch available slots for a specific date.
  *
  * Filters out any slot whose start time falls within the tenant's
- * min_notice_hours window from now (stored value is interpreted as MINUTES).
+ * min_notice_minutes window from now.
  * This also implicitly removes all past slots on today's date.
  *
  * staleTime is set to 0 when viewing today so React Query never serves a
@@ -132,7 +132,7 @@ export function useDateSlots(
           const slotDate = new Date(date);
           slotDate.setHours(hh, mm, 0, 0);
           // Slot must start at least minNoticeMinutes from now
-          // (also blocks all past slots when min_notice_hours = 0)
+          // (also blocks all past slots when min_notice_minutes = 0)
           return slotDate.getTime() - now >= minNoticeMs;
         })
         .map((s: any) => (s.slot_start as string).slice(0, 5));
