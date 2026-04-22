@@ -12,6 +12,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   "min_notice_hours",    // legacy – kept for backwards-compat reads
   "min_notice_minutes",  // canonical key used by the admin UI
   "max_advance_days",
+  "overrun_minutes",     // how many minutes past closing a booking may end
   // Business / branding
   "business_name",
   "currency",
