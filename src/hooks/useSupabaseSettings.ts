@@ -9,7 +9,8 @@ const ALLOWED_APP_SETTING_KEYS = [
   // Booking rules
   "booking_ref_prefix",
   "deposit_percent",
-  "min_notice_hours",
+  "min_notice_hours",    // legacy – kept for backwards-compat reads
+  "min_notice_minutes",  // canonical key used by the admin UI
   "max_advance_days",
   // Business / branding
   "business_name",
@@ -31,7 +32,6 @@ const ALLOWED_APP_SETTING_KEYS = [
   "sign_off",
   // Google Maps
   "google_maps_api_key",
-  "default_distance_km",
   // Google Reviews
   "google_place_id",
   "google_review_link",
@@ -127,6 +127,17 @@ export function useAppSettings() {
       (data ?? []).forEach((row) => {
         if (row.value) map[row.key] = row.value;
       });
+
+      // ── Legacy migration: if only min_notice_hours exists, derive minutes ──
+      // Once the admin saves via the new UI, min_notice_minutes will be set
+      // and this fallback will no longer be needed.
+      if (!map["min_notice_minutes"] && map["min_notice_hours"]) {
+        const hours = parseFloat(map["min_notice_hours"]);
+        if (!isNaN(hours)) {
+          map["min_notice_minutes"] = String(Math.round(hours * 60));
+        }
+      }
+
       return map;
     },
   });
@@ -203,6 +214,6 @@ export function useTenantSubscription() {
         billing_cycle_anchor: string | null;
       };
     },
-    staleTime: 60_000, // re-fetch every 60s max
+    staleTime: 60_000,
   });
 }
