@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   CreditCard, Calendar, MapPin, Mail,
   Eye, EyeOff, CheckCircle2,
-  Loader2, Edit2, LogOut, ChevronDown,
+  Loader2, Edit2, LogOut, ChevronDown, BookOpen,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { ReactNode, ElementType, Dispatch, SetStateAction } from "react";
@@ -15,20 +15,19 @@ import {
   SectionLabel,
   AdminTag,
   SaveButton,
+  HintTooltip,
 } from "@/components/admin/AdminSharedUI";
+import IntegrationsGuidePanel from "@/components/admin/IntegrationsGuidePanel";
 
-// ─── Constants ─────────────────────────────────────────────────────────────────
-
+// ─── Constants ────────────────────────────────────────────────────────────────────
 const MASK = "••••••••••••••••";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
+// ─── Helpers ─────────────────────────────────────────────────────────────────────
 function isConfigured(settings: Record<string, string>, keys: string[]) {
   return keys.some((k) => !!settings[k]);
 }
 
-// ─── Field ────────────────────────────────────────────────────────────────────
-
+// ─── Field ────────────────────────────────────────────────────────────────────────
 interface FieldProps {
   label: string;
   fieldKey: string;
@@ -39,11 +38,13 @@ interface FieldProps {
   editing: boolean;
   onChange: (key: string, value: string) => void;
   hint?: string;
+  /** Layer 1: tooltip text shown on the ? icon next to the label */
+  tooltip?: string;
 }
 
 const Field = ({
   label, fieldKey, placeholder, type = "text",
-  value, masked: isMasked, editing, onChange, hint,
+  value, masked: isMasked, editing, onChange, hint, tooltip,
 }: FieldProps) => {
   const [show, setShow] = useState(false);
   const isSecret     = type === "password";
@@ -52,12 +53,17 @@ const Field = ({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor={fieldKey}
-        className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30"
-      >
-        {label}
-      </label>
+      {/* Label row with optional HintTooltip */}
+      <div className="flex items-center gap-1.5">
+        <label
+          htmlFor={fieldKey}
+          className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30"
+        >
+          {label}
+        </label>
+        {tooltip && <HintTooltip text={tooltip} />}
+      </div>
+
       <div className="relative">
         <input
           id={fieldKey}
@@ -85,7 +91,6 @@ const Field = ({
 };
 
 // ─── IntegrationCard ───────────────────────────────────────────────────────────
-
 interface IntegrationCardProps {
   icon: ElementType;
   name: string;
@@ -111,7 +116,6 @@ const IntegrationCard = ({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
     >
-      {/* Clickable header */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -131,16 +135,12 @@ const IntegrationCard = ({
             ? <AdminTag label="Connected" color="emerald" />
             : <AdminTag label="Not configured" color="default" />
           }
-          <motion.div
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
             <ChevronDown className="w-4 h-4 text-white/25" />
           </motion.div>
         </div>
       </button>
 
-      {/* Collapsible body */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -152,15 +152,10 @@ const IntegrationCard = ({
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.04]">
-              {/* Fields */}
               <div className="flex flex-col gap-4 px-5 pt-5">{children}</div>
-
-              {/* Optional status badge */}
               {statusBadge && (
                 <div className="flex items-center gap-2 px-5 pt-3">{statusBadge}</div>
               )}
-
-              {/* Footer */}
               <div className="flex items-center justify-end gap-3 px-5 py-4 mt-2 border-t border-white/[0.04]">
                 {configured && !editing && (
                   <button
@@ -184,17 +179,16 @@ const IntegrationCard = ({
   );
 };
 
-// ─── Google Calendar card ─────────────────────────────────────────────────────────
-
+// ─── GoogleCalendarCard ──────────────────────────────────────────────────────────
 interface GoogleCalendarCardProps {
   connected: boolean;
   tenantId: string;
 }
 
 const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
-  const [isConnected, setIsConnected] = useState(connected);
+  const [isConnected, setIsConnected]       = useState(connected);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]                     = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -253,9 +247,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       toast.success("Google Calendar disconnected.");
     } catch (err: any) {
       toast.error(err.message ?? "Failed to disconnect. Please try again.");
-    } finally {
-      setIsDisconnecting(false);
-    }
+    } finally { setIsDisconnecting(false); }
   };
 
   return (
@@ -264,7 +256,6 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       animate={{ opacity: 1, y: 0 }}
       className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
     >
-      {/* Clickable header */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -286,16 +277,12 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
             ? <AdminTag label="Connected" color="emerald" />
             : <AdminTag label="Not connected" color="default" />
           }
-          <motion.div
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
             <ChevronDown className="w-4 h-4 text-white/25" />
           </motion.div>
         </div>
       </button>
 
-      {/* Collapsible body */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -341,8 +328,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
   );
 };
 
-// ─── Main component ───────────────────────────────────────────────────────────────
-
+// ─── Main component ──────────────────────────────────────────────────────────────────
 const AdminIntegrations = () => {
   const { tenantId } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
@@ -357,6 +343,9 @@ const AdminIntegrations = () => {
   const [smtpEditing, setSmtpEditing] = useState(false);
 
   const [savingSection, setSavingSection] = useState<string | null>(null);
+
+  // Layer 2 panel state
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     if (isLoading || Object.keys(settings).length === 0) return;
@@ -437,82 +426,160 @@ const AdminIntegrations = () => {
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-12">
-      <AdminPageHeader
-        title="Integrations"
-        subtitle="Configure third-party services. Keys are masked after saving."
-      />
+    <>
+      {/* Layer 2 — slide-over guide panel */}
+      <IntegrationsGuidePanel open={guideOpen} onClose={() => setGuideOpen(false)} />
 
-      <section className="flex flex-col gap-3">
-        <SectionLabel label="Connected Services" />
-        <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-8 pb-12">
+        <AdminPageHeader
+          title="Integrations"
+          subtitle="Configure third-party services. Keys are masked after saving."
+          action={
+            <button
+              type="button"
+              onClick={() => setGuideOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-xs font-bold text-white/60 hover:text-white/90 hover:bg-white/[0.1] transition-colors"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Setup Guide
+            </button>
+          }
+        />
 
-          <IntegrationCard
-            icon={CreditCard}
-            name="Yoco Payments"
-            desc="Online checkout, deposit & balance collection"
-            configured={yocoConfigured}
-            saving={savingSection === "yoco"}
-            editing={yocoEditing}
-            onEdit={() => setYocoEditing(true)}
-            onSave={handleYocoSave}
-            statusBadge={
-              yocoConfigured && !yocoEditing
-                ? webhookActive
-                  ? <span className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-semibold"><CheckCircle2 className="w-3 h-3" /> Webhook active</span>
-                  : <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-semibold"><Loader2 className="w-3 h-3 animate-spin" /> Webhook registering…</span>
-                : undefined
-            }
-          >
-            <Field label="Public Key" fieldKey="yoco_public_key" placeholder="pk_live_… or pk_test_…" value={yocoDraft.yoco_public_key ?? ""} masked={yocoConfigured} editing={yocoEditing} onChange={handleChange(setYocoDraft)} hint="From Yoco Business Portal › Selling Online › Payment Gateway" />
-            <Field label="Secret Key" fieldKey="yoco_secret_key" placeholder="sk_live_… or sk_test_…" type="password" value={yocoDraft.yoco_secret_key ?? ""} masked={yocoConfigured} editing={yocoEditing} onChange={handleChange(setYocoDraft)} hint="Server-side only — never exposed to the browser" />
-            {(!yocoConfigured || yocoEditing) && (
-              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/30 leading-relaxed italic">
-                Save once — webhook registration happens automatically in the background. No additional steps required.
+        <section className="flex flex-col gap-3">
+          <SectionLabel label="Connected Services" />
+          <div className="flex flex-col gap-3">
+
+            {/* ─ Yoco ─ */}
+            <IntegrationCard
+              icon={CreditCard}
+              name="Yoco Payments"
+              desc="Online checkout, deposit & balance collection"
+              configured={yocoConfigured}
+              saving={savingSection === "yoco"}
+              editing={yocoEditing}
+              onEdit={() => setYocoEditing(true)}
+              onSave={handleYocoSave}
+              statusBadge={
+                yocoConfigured && !yocoEditing
+                  ? webhookActive
+                    ? <span className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-semibold"><CheckCircle2 className="w-3 h-3" /> Webhook active</span>
+                    : <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-semibold"><Loader2 className="w-3 h-3 animate-spin" /> Webhook registering…</span>
+                  : undefined
+              }
+            >
+              <Field
+                label="Public Key" fieldKey="yoco_public_key"
+                placeholder="pk_live_… or pk_test_…"
+                value={yocoDraft.yoco_public_key ?? ""}
+                masked={yocoConfigured} editing={yocoEditing}
+                onChange={handleChange(setYocoDraft)}
+                hint="From Yoco Business Portal › Selling Online › Payment Gateway"
+                tooltip="Found at app.yoco.com → Developers → API Keys. Starts with pk_live_"
+              />
+              <Field
+                label="Secret Key" fieldKey="yoco_secret_key"
+                placeholder="sk_live_… or sk_test_…" type="password"
+                value={yocoDraft.yoco_secret_key ?? ""}
+                masked={yocoConfigured} editing={yocoEditing}
+                onChange={handleChange(setYocoDraft)}
+                hint="Server-side only — never exposed to the browser"
+                tooltip="Found at app.yoco.com → Developers → API Keys. Starts with sk_live_. Never share this key."
+              />
+              {(!yocoConfigured || yocoEditing) && (
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/30 leading-relaxed italic">
+                  Save once — webhook registration happens automatically in the background. No additional steps required.
+                </div>
+              )}
+            </IntegrationCard>
+
+            {/* ─ Google Maps ─ */}
+            <IntegrationCard
+              icon={MapPin}
+              name="Google Maps"
+              desc="Distance matrix for callout fee calculation & address autocomplete"
+              configured={mapsConfigured}
+              saving={savingSection === "maps"}
+              editing={mapsEditing}
+              onEdit={() => setMapsEditing(true)}
+              onSave={() => handleGenericSave("maps", mapsDraft, () => setMapsEditing(false))}
+            >
+              <Field
+                label="API Key" fieldKey="google_maps_api_key"
+                placeholder="AIzaSy…" type="password"
+                value={mapsDraft.google_maps_api_key ?? ""}
+                masked={mapsConfigured} editing={mapsEditing}
+                onChange={handleChange(setMapsDraft)}
+                tooltip="Found in Google Cloud Console → APIs & Services → Credentials. Ensure Maps JavaScript API and Distance Matrix API are enabled."
+              />
+            </IntegrationCard>
+
+            {/* ─ Google Calendar ─ */}
+            <GoogleCalendarCard
+              connected={settings["gcal_connected"] === "true"}
+              tenantId={tenantId}
+            />
+
+            {/* ─ Gmail / SMTP ─ */}
+            <IntegrationCard
+              icon={Mail}
+              name="Gmail / SMTP"
+              desc="Transactional emails to clients and admin"
+              configured={smtpConfigured}
+              saving={savingSection === "smtp"}
+              editing={smtpEditing}
+              onEdit={() => setSmtpEditing(true)}
+              onSave={() => handleGenericSave("smtp", smtpDraft, () => setSmtpEditing(false))}
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <Field
+                  label="SMTP Host" fieldKey="smtp_host"
+                  placeholder="smtp.gmail.com"
+                  value={smtpDraft.smtp_host ?? ""}
+                  masked={smtpConfigured} editing={smtpEditing}
+                  onChange={handleChange(setSmtpDraft)}
+                  tooltip="For Gmail use: smtp.gmail.com"
+                />
+                <Field
+                  label="Port" fieldKey="smtp_port"
+                  placeholder="587"
+                  value={smtpDraft.smtp_port ?? ""}
+                  masked={smtpConfigured} editing={smtpEditing}
+                  onChange={handleChange(setSmtpDraft)}
+                  tooltip="Use 587 for Gmail (TLS/STARTTLS). Port 465 uses SSL."
+                />
               </div>
-            )}
-          </IntegrationCard>
+              <Field
+                label="Username / Email" fieldKey="smtp_user"
+                placeholder="you@gmail.com"
+                value={smtpDraft.smtp_user ?? ""}
+                masked={smtpConfigured} editing={smtpEditing}
+                onChange={handleChange(setSmtpDraft)}
+                tooltip="Your full Gmail address e.g. you@gmail.com"
+              />
+              <Field
+                label="App Password" fieldKey="smtp_password"
+                placeholder="Google App Password" type="password"
+                value={smtpDraft.smtp_password ?? ""}
+                masked={smtpConfigured} editing={smtpEditing}
+                onChange={handleChange(setSmtpDraft)}
+                hint="Use a Google App Password, not your account password"
+                tooltip="NOT your Gmail login password. Go to Google Account → Security → App Passwords to generate a 16-character password."
+              />
+              <Field
+                label="From Email" fieldKey="smtp_from_email"
+                placeholder="noreply@yourbusiness.com"
+                value={smtpDraft.smtp_from_email ?? ""}
+                masked={smtpConfigured} editing={smtpEditing}
+                onChange={handleChange(setSmtpDraft)}
+                tooltip="The email address clients see on booking confirmation emails. Usually your Gmail address."
+              />
+            </IntegrationCard>
 
-          <IntegrationCard
-            icon={MapPin}
-            name="Google Maps"
-            desc="Distance matrix for callout fee calculation & address autocomplete"
-            configured={mapsConfigured}
-            saving={savingSection === "maps"}
-            editing={mapsEditing}
-            onEdit={() => setMapsEditing(true)}
-            onSave={() => handleGenericSave("maps", mapsDraft, () => setMapsEditing(false))}
-          >
-            <Field label="API Key" fieldKey="google_maps_api_key" placeholder="AIzaSy…" type="password" value={mapsDraft.google_maps_api_key ?? ""} masked={mapsConfigured} editing={mapsEditing} onChange={handleChange(setMapsDraft)} />
-          </IntegrationCard>
-
-          <GoogleCalendarCard
-            connected={settings["gcal_connected"] === "true"}
-            tenantId={tenantId}
-          />
-
-          <IntegrationCard
-            icon={Mail}
-            name="Gmail / SMTP"
-            desc="Transactional emails to clients and admin"
-            configured={smtpConfigured}
-            saving={savingSection === "smtp"}
-            editing={smtpEditing}
-            onEdit={() => setSmtpEditing(true)}
-            onSave={() => handleGenericSave("smtp", smtpDraft, () => setSmtpEditing(false))}
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="SMTP Host" fieldKey="smtp_host" placeholder="smtp.gmail.com" value={smtpDraft.smtp_host ?? ""} masked={smtpConfigured} editing={smtpEditing} onChange={handleChange(setSmtpDraft)} />
-              <Field label="Port" fieldKey="smtp_port" placeholder="587" value={smtpDraft.smtp_port ?? ""} masked={smtpConfigured} editing={smtpEditing} onChange={handleChange(setSmtpDraft)} />
-            </div>
-            <Field label="Username / Email" fieldKey="smtp_user" placeholder="you@gmail.com" value={smtpDraft.smtp_user ?? ""} masked={smtpConfigured} editing={smtpEditing} onChange={handleChange(setSmtpDraft)} />
-            <Field label="App Password" fieldKey="smtp_password" placeholder="Google App Password" type="password" value={smtpDraft.smtp_password ?? ""} masked={smtpConfigured} editing={smtpEditing} onChange={handleChange(setSmtpDraft)} hint="Use a Google App Password, not your account password" />
-            <Field label="From Email" fieldKey="smtp_from_email" placeholder="noreply@yourbusiness.com" value={smtpDraft.smtp_from_email ?? ""} masked={smtpConfigured} editing={smtpEditing} onChange={handleChange(setSmtpDraft)} />
-          </IntegrationCard>
-
-        </div>
-      </section>
-    </div>
+          </div>
+        </section>
+      </div>
+    </>
   );
 };
 
