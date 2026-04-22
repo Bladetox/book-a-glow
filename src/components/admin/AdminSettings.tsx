@@ -494,7 +494,7 @@ const AdminSettings = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Subscription" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Your Plan" icon={CreditCard} gradient="from-white/[0.05] to-white/[0.02]" collapsible defaultOpen>
+          <SettingsCard title="Your Plan" icon={CreditCard} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             {!subscription ? (
               <p className="text-xs text-white/30 italic">Loading plan details…</p>
             ) : (() => {
@@ -579,7 +579,7 @@ const AdminSettings = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Notifications" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SettingsCard title="Notification Preferences" icon={Bell} gradient="from-white/[0.05] to-white/[0.02]" collapsible defaultOpen>
+          <SettingsCard title="Notification Preferences" icon={Bell} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <p className="text-xs text-white/30 leading-relaxed -mt-1">
               Choose which events show a notification in your admin panel.
             </p>
