@@ -2,13 +2,11 @@
 // Import from here instead of rebuilding inline in each view.
 // Zero logic — purely presentational.
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, HelpCircle } from "lucide-react";
 
 // ── SectionLabel ─────────────────────────────────────────────────────────────
-// Uppercase spaced label used above groups of cards.
-// Usage: <SectionLabel label="Identity" />
 export const SectionLabel = ({ label }: { label: string }) => (
   <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-white/25 px-1 pt-2">
     {label}
@@ -16,11 +14,6 @@ export const SectionLabel = ({ label }: { label: string }) => (
 );
 
 // ── AdminCard ─────────────────────────────────────────────────────────────────
-// Gradient bordered card with optional icon, optional collapsible behaviour.
-// Usage:
-//   <AdminCard title="Business Info" icon={Building2} gradient="from-white/[0.05] to-white/[0.02]">
-//     …children…
-//   </AdminCard>
 export const AdminCard = ({
   title,
   icon: Icon,
@@ -36,22 +29,16 @@ export const AdminCard = ({
   children: React.ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
-  /** Optional slot for header-level actions (buttons, badges, etc.) */
   actions?: React.ReactNode;
 }) => {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div
-      className={`flex flex-col rounded-3xl bg-gradient-to-br ${
-        gradient
-      } border border-white/[0.05] overflow-hidden`}
+      className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05] overflow-hidden`}
     >
-      {/* Header */}
       <div
-        className={`flex items-center gap-3 p-5 ${
-          collapsible ? "cursor-pointer select-none" : ""
-        }`}
+        className={`flex items-center gap-3 p-5 ${collapsible ? "cursor-pointer select-none" : ""}`}
         onClick={collapsible ? () => setOpen((v) => !v) : undefined}
       >
         {Icon && (
@@ -63,14 +50,11 @@ export const AdminCard = ({
         {actions && <div className="flex items-center gap-2">{actions}</div>}
         {collapsible && (
           <ChevronDown
-            className={`w-4 h-4 text-white/25 transition-transform duration-300 shrink-0 ${
-              open ? "rotate-180" : ""
-            }`}
+            className={`w-4 h-4 text-white/25 transition-transform duration-300 shrink-0 ${open ? "rotate-180" : ""}`}
           />
         )}
       </div>
 
-      {/* Body */}
       <AnimatePresence initial={false}>
         {(!collapsible || open) && (
           <motion.div
@@ -90,9 +74,6 @@ export const AdminCard = ({
 };
 
 // ── FieldRow ──────────────────────────────────────────────────────────────────
-// Labelled input field with optional hint and masked (sensitive) state.
-// Usage:
-//   <FieldRow label="Business Name" placeholder="The Glow Lab" value={v} onChange={setV} />
 export const FieldRow = ({
   label,
   id,
@@ -149,14 +130,11 @@ export const FieldRow = ({
       />
     )}
 
-    {hint && (
-      <p className="text-[10px] text-white/20 italic px-1">{hint}</p>
-    )}
+    {hint && <p className="text-[10px] text-white/20 italic px-1">{hint}</p>}
   </div>
 );
 
 // ── FieldTextarea ─────────────────────────────────────────────────────────────
-// Labelled textarea with optional hint.
 export const FieldTextarea = ({
   label,
   id,
@@ -195,10 +173,6 @@ export const FieldTextarea = ({
 );
 
 // ── SaveButton ────────────────────────────────────────────────────────────────
-// Standard white save/action button used at the bottom of each card section.
-// Supports an optional leading icon node and disabled state.
-// Usage: <SaveButton onClick={handleSave} loading={mutation.isPending} />
-// Usage: <SaveButton label="Confirm" icon={<Check className="w-3 h-3" />} onClick={fn} />
 export const SaveButton = ({
   onClick,
   label = "Save",
@@ -233,8 +207,6 @@ export const SaveButton = ({
 };
 
 // ── SavedBadge ────────────────────────────────────────────────────────────────
-// Inline "Saved" confirmation that appears briefly after a successful save.
-// Usage: <SavedBadge visible={saved === "sectionKey"} />
 export const SavedBadge = ({ visible }: { visible: boolean }) =>
   visible ? (
     <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">
@@ -243,9 +215,6 @@ export const SavedBadge = ({ visible }: { visible: boolean }) =>
   ) : null;
 
 // ── AdminTag ──────────────────────────────────────────────────────────────────
-// Small inline badge/tag used for status labels, categories, counts.
-// Usage: <AdminTag label="completed" color="default" />
-// Color "default" = muted white — used for completed/neutral statuses.
 export const AdminTag = ({
   label,
   color = "default",
@@ -261,21 +230,13 @@ export const AdminTag = ({
     blue:    "bg-blue-500/10 border-blue-500/20 text-blue-400/80",
   };
   return (
-    <span
-      className={`text-[10px] px-1.5 py-0.5 rounded-md border font-medium ${
-        colors[color]
-      }`}
-    >
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-md border font-medium ${colors[color]}`}>
       {label}
     </span>
   );
 };
 
 // ── EmptyState ────────────────────────────────────────────────────────────────
-// Consistent empty/zero-data placeholder used across list views.
-// Accepts either `message` (legacy) or `title` + optional `description`.
-// Usage: <EmptyState message="No bookings yet" />
-// Usage: <EmptyState icon={CalendarCheck} title="No bookings" description="Try another filter." />
 export const EmptyState = ({
   message,
   title,
@@ -298,13 +259,6 @@ export const EmptyState = ({
 );
 
 // ── AdminPageHeader ───────────────────────────────────────────────────────────
-// Top-of-page title + subtitle + optional action button.
-// Usage:
-//   <AdminPageHeader
-//     title="Services Menu"
-//     subtitle="12 services across 3 categories"
-//     action={<button>Add</button>}
-//   />
 export const AdminPageHeader = ({
   title,
   subtitle,
@@ -324,3 +278,55 @@ export const AdminPageHeader = ({
     {action && <div className="shrink-0">{action}</div>}
   </div>
 );
+
+// ── HintTooltip ───────────────────────────────────────────────────────────────
+// Layer 1 contextual help — a small ? icon that opens a floating hint popover.
+// Dismisses on outside click or Escape key.
+// Usage: <HintTooltip text="Found at app.yoco.com → Developers → API Keys" />
+export const HintTooltip = ({ text }: { text: string }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-flex items-center">
+      <button
+        type="button"
+        aria-label="Show hint"
+        onClick={() => setOpen((v) => !v)}
+        className="w-4 h-4 rounded-full flex items-center justify-center text-white/25 hover:text-white/60 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
+      >
+        <HelpCircle className="w-3.5 h-3.5" />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: -4 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-60 rounded-xl bg-zinc-900 border border-white/[0.1] shadow-xl px-3 py-2.5"
+          >
+            {/* Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white/10" />
+            <p className="text-[11px] text-white/60 leading-relaxed">{text}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
