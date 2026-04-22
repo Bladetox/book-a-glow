@@ -24,6 +24,19 @@ function todayLocalStr(): string {
   ].join("-");
 }
 
+/** Fetch the tenant's min_notice_hours from app_settings (defaults to 0) */
+async function fetchMinNoticeHours(tenantId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("tenant_id", tenantId)
+    .eq("key", "min_notice_hours")
+    .maybeSingle();
+  if (error || !data?.value) return 0;
+  const parsed = parseFloat(data.value);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 /**
  * Fetch available slots for an entire month.
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
@@ -40,12 +53,9 @@ export function useMonthAvailability(
   return useQuery({
     queryKey: ["public-month-availability", tenantId, year, month, durationMinutes],
     enabled: !!tenantId,
-    // 2-min cache — slots won't change second-to-second; avoids re-fetching on every
-    // window focus event (e.g. guest switches app on mobile and comes back)
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      // Use ownerId already in context; fall back to DB only if somehow missing
       const sid = resolvedStaffId ?? await getStaffId(tenantId);
       const { data, error } = await supabase.rpc("get_month_availability", {
         p_staff_id: sid,
@@ -66,13 +76,12 @@ export function useMonthAvailability(
 /**
  * Fetch available slots for a specific date.
  *
- * The database function (get_available_slots) is the source of truth for
- * past-time filtering — it uses Africa/Johannesburg (SAST) server time to
- * exclude slots that have already passed when p_date equals today.
+ * Filters out any slot whose start time falls within the tenant's
+ * min_notice_hours window from now. This also implicitly removes all
+ * past slots on today's date (since they are always within 0+ hours of now).
  *
- * On the client we additionally set staleTime = 0 when the requested date is
- * today so React Query never serves a cached response that may contain slots
- * that were valid minutes ago but are now in the past.
+ * staleTime is set to 0 when viewing today so React Query never serves a
+ * cached response that may contain slots that have since passed.
  *
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
  */
@@ -85,8 +94,6 @@ export function useDateSlots(
   const { tenantId, ownerId } = usePublicTenant();
   const resolvedStaffId = staffId || ownerId || null;
 
-  // Never serve a stale cache when the client is viewing today's slots:
-  // a 2-min-old response could still contain past time slots.
   const isToday = !!date && date === todayLocalStr();
 
   return useQuery({
@@ -97,14 +104,32 @@ export function useDateSlots(
     queryFn: async () => {
       if (!date) return [];
       const sid = resolvedStaffId ?? await getStaffId(tenantId);
-      const { data, error } = await supabase.rpc("get_available_slots", {
-        p_staff_id:         sid,
-        p_date:             date,
-        p_duration_minutes: durationMinutes,
-      } as any);
+
+      const [{ data, error }, minNoticeHours] = await Promise.all([
+        supabase.rpc("get_available_slots", {
+          p_staff_id:         sid,
+          p_date:             date,
+          p_duration_minutes: durationMinutes,
+        } as any),
+        fetchMinNoticeHours(tenantId),
+      ]);
+
       if (error) throw error;
+
+      const minNoticeMs = minNoticeHours * 60 * 60 * 1000;
+      const now = Date.now();
+
       return (data ?? [])
         .filter((s: any) => s.is_available)
+        .filter((s: any) => {
+          // Build a full timestamp for this slot on the selected date
+          const [hh, mm] = (s.slot_start as string).slice(0, 5).split(":").map(Number);
+          const slotDate = new Date(date);
+          slotDate.setHours(hh, mm, 0, 0);
+          // Slot must start at least min_notice_hours from now
+          // (also blocks all past slots when min_notice_hours = 0)
+          return slotDate.getTime() - now >= minNoticeMs;
+        })
         .map((s: any) => (s.slot_start as string).slice(0, 5));
     },
   });
