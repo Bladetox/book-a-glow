@@ -5,9 +5,8 @@ import { AdminPageHeader } from "@/components/admin/AdminSharedUI";
 const AdminLoyalty        = lazy(() => import("@/components/admin/AdminLoyalty"));
 const AdminBlockedClients = lazy(() => import("@/components/admin/AdminBlockedClients"));
 const AdminConsultations  = lazy(() => import("@/components/admin/AdminConsultations"));
-const AdminReviews        = lazy(() => import("@/components/admin/AdminReviews"));
 
-const TABS = ["Loyalty", "Blocked Clients", "Consultations", "Reviews"] as const;
+const TABS = ["Loyalty", "Blocked Clients", "Consultations"] as const;
 type Tab = typeof TABS[number];
 
 const TabLoader = () => (
@@ -24,7 +23,6 @@ const AdminClientManagement = () => {
       case "Loyalty":         return <AdminLoyalty />;
       case "Blocked Clients": return <AdminBlockedClients />;
       case "Consultations":   return <AdminConsultations />;
-      case "Reviews":         return <AdminReviews />;
     }
   };
 
@@ -33,7 +31,7 @@ const AdminClientManagement = () => {
 
       <AdminPageHeader
         title="Client Management"
-        subtitle="Manage loyalty programmes, blocked clients, consultation requests, and client reviews."
+        subtitle="Manage loyalty programmes, blocked clients, and consultation requests."
       />
 
       {/* Tab bar */}
