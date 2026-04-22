@@ -74,6 +74,7 @@ const SAFE_TENANT_FIELDS = [
   "min_notice_hours",
   "max_advance_days",
   "travel_buffer_minutes",
+  "notification_preferences",
   "created_at",
   "updated_at",
 ].join(", ");
@@ -92,6 +93,7 @@ const SAFE_UPDATE_KEYS = new Set([
   "max_advance_days",
   "travel_buffer_minutes",
   "custom_domain",
+  "notification_preferences",
 ]);
 
 export function useTenantSettings() {
