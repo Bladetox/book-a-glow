@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, Clock,
-  FileText, Loader2, Image, Sparkles, Link, Copy, ExternalLink,
+  FileText, Loader2, Image, Sparkles, Link, Copy,
   Zap, Plus, ChevronDown, CreditCard, ShieldCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -192,13 +192,11 @@ const AdminSettings = () => {
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
 
-  // ── flash is stable — safe to pass as onSuccess callback ──
   const flash = useCallback((section: string) => {
     setSaved(section);
     setTimeout(() => setSaved(null), 3500);
   }, []);
 
-  // ── Mutations ──
   const updateTenant = useUpdateTenant();
   const upsertSetting = useUpsertAppSetting();
   const { data: subscription } = useTenantSubscription();
@@ -339,7 +337,7 @@ const AdminSettings = () => {
               <Copy className="w-3.5 h-3.5" /> Copy
             </button>
             <a href={activeBookingUrl} target="_blank" rel="noreferrer" className="shrink-0 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors">
-              <ExternalLink className="w-4 h-4" />
+              <Zap className="w-4 h-4" />
             </a>
           </div>
           {customDomain && (
@@ -609,15 +607,6 @@ const AdminSettings = () => {
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveSettings("maps", ["google_maps_api_key", "default_distance_km"])} loading={upsertSetting.isPending} />
               <SavedBadge section="maps" />
-            </div>
-          </SettingsCard>
-
-          <SettingsCard title="Google Reviews" icon={ExternalLink} gradient="from-white/[0.04] to-white/[0.01]" collapsible>
-            <SettingRow id="google-review-link" label="Google Review Link" placeholder="https://g.page/r/..." value={draft.google_review_link} onChange={(v) => update("google_review_link", v)} />
-            <SettingRow id="google-place-id" label="Google Place ID" placeholder="ChIJ..." value={draft.google_place_id} onChange={(v) => update("google_place_id", v)} />
-            <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveSettings("reviews", ["google_review_link", "google_place_id"])} loading={upsertSetting.isPending} />
-              <SavedBadge section="reviews" />
             </div>
           </SettingsCard>
         </div>
