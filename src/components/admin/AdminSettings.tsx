@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, Clock,
@@ -127,13 +127,10 @@ const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; la
   </button>
 );
 
-// ─── Main component ───────────────────────────────────────────────────────────────────────────
+// ─── Main component ──────────────────────────────────────────────────────────────────────────────────────
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
-  const updateTenant = useUpdateTenant();
-  const upsertSetting = useUpsertAppSetting();
-  const { data: subscription } = useTenantSubscription();
   const { setThemeById } = useBusinessTheme();
   const { tenantId } = useTenant();
 
@@ -146,6 +143,19 @@ const AdminSettings = () => {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
+
+  // ── flash is stable — safe to pass as onSuccess callback ──
+  const flash = useCallback((section: string) => {
+    setSaved(section);
+    setTimeout(() => setSaved(null), 3500);
+  }, []);
+
+  // ── Mutations ──
+  // Each mutation receives a dedicated onSuccess that fires flash ONLY after
+  // Supabase confirms the write succeeded — never prematurely.
+  const updateTenant = useUpdateTenant();
+  const upsertSetting = useUpsertAppSetting();
+  const { data: subscription } = useTenantSubscription();
 
   const customDomain = draft.custom_domain ?? "";
   const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
@@ -174,33 +184,55 @@ const AdminSettings = () => {
   }, [appSettings]);
 
   const update = (field: string, value: string) => setDraft((prev) => ({ ...prev, [field]: value }));
-  const flash = (section: string) => { setSaved(section); setTimeout(() => setSaved(null), 3500); };
   const unmask = (key: string) => setUnmasked((prev) => new Set(prev).add(key));
   const isMasked = (key: string) => SENSITIVE_KEYS.has(key) && !unmasked.has(key) && !!appSettings[key];
 
+  // ── saveTenantFields ──
+  // flash() is called in the mutation's onSuccess callback, not immediately.
   const saveTenantFields = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => { updates[f] = draft[f] ?? ""; });
-    updateTenant.mutate(updates);
+
     const settingsSync: Record<string, string> = {};
     if (fields.includes("currency")) settingsSync["currency"] = draft["currency"] ?? "R";
     if (fields.includes("theme_id")) {
       settingsSync["theme_id"] = draft["theme_id"] ?? "standard";
       setThemeById(draft["theme_id"] ?? "standard");
     }
-    if (Object.keys(settingsSync).length > 0) upsertSetting.mutate(settingsSync);
-    flash(section);
+
+    updateTenant.mutate(updates, {
+      onSuccess: () => {
+        if (Object.keys(settingsSync).length > 0) {
+          upsertSetting.mutate(settingsSync, {
+            onSuccess: () => flash(section),
+            onError: (err: any) => toast.error(err?.message ?? "Settings sync failed"),
+          });
+        } else {
+          flash(section);
+        }
+      },
+      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+    });
   };
 
+  // ── saveSettings ──
+  // flash() is called in the mutation's onSuccess callback, not immediately.
   const saveSettings = (section: string, fields: string[]) => {
     const updates: Record<string, string> = {};
     fields.forEach((f) => {
       if (SENSITIVE_KEYS.has(f) && !unmasked.has(f)) return;
       updates[f] = draft[f] ?? "";
     });
-    if (Object.keys(updates).length > 0) upsertSetting.mutate(updates);
-    setUnmasked((prev) => { const next = new Set(prev); fields.forEach((f) => next.delete(f)); return next; });
-    flash(section);
+
+    if (Object.keys(updates).length === 0) return;
+
+    upsertSetting.mutate(updates, {
+      onSuccess: () => {
+        setUnmasked((prev) => { const next = new Set(prev); fields.forEach((f) => next.delete(f)); return next; });
+        flash(section);
+      },
+      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+    });
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,9 +246,10 @@ const AdminSettings = () => {
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("business-logos").getPublicUrl(path);
       update("logo_url", urlData.publicUrl);
-      updateTenant.mutate({ logo_url: urlData.publicUrl });
-      flash("logo");
-      toast.success("Logo uploaded");
+      updateTenant.mutate({ logo_url: urlData.publicUrl }, {
+        onSuccess: () => { flash("logo"); toast.success("Logo uploaded"); },
+        onError: (err: any) => toast.error(err?.message ?? "Logo upload failed"),
+      });
     } catch (err: any) {
       toast.error(err.message ?? "Logo upload failed");
     } finally {
@@ -365,7 +398,10 @@ const AdminSettings = () => {
             <SettingRow id="max-advance" label="Max Advance Days" placeholder="30" type="number" value={draft.max_advance_days} onChange={(v) => update("max_advance_days", v)} />
             <SettingRow id="ref-prefix" label="Booking Ref Prefix" placeholder="GLW" value={draft.booking_ref_prefix} onChange={(v) => update("booking_ref_prefix", v)} />
             <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days", "booking_ref_prefix"])} loading={upsertSetting.isPending} />
+              <SaveBtn
+                onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days", "booking_ref_prefix"])}
+                loading={upsertSetting.isPending}
+              />
               <SavedBadge section="rules" />
             </div>
           </SettingsCard>
@@ -375,7 +411,18 @@ const AdminSettings = () => {
             <SettingRow id="km-rate" label="Rate Per KM (ZAR)" placeholder="5.50" type="number" value={draft.rate_per_km} onChange={(v) => update("rate_per_km", v)} />
             <SettingRow id="currency" label="Currency Symbol" placeholder="R" value={draft.currency} onChange={(v) => update("currency", v)} />
             <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => { upsertSetting.mutate({ fixed_origin_address: draft.fixed_origin_address ?? "", rate_per_km: draft.rate_per_km ?? "" }); saveTenantFields("travel", ["currency"]); }} loading={updateTenant.isPending || upsertSetting.isPending} />
+              <SaveBtn
+                onClick={() => {
+                  upsertSetting.mutate(
+                    { fixed_origin_address: draft.fixed_origin_address ?? "", rate_per_km: draft.rate_per_km ?? "" },
+                    {
+                      onSuccess: () => saveTenantFields("travel", ["currency"]),
+                      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+                    }
+                  );
+                }}
+                loading={updateTenant.isPending || upsertSetting.isPending}
+              />
               <SavedBadge section="travel" />
             </div>
           </SettingsCard>
