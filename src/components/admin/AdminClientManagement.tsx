@@ -96,16 +96,17 @@ const ProactiveAlertBanner = ({
 };
 
 // ══════════════════════════════════════════════════
-const AdminClientManagement = () => {
+  const AdminClientManagement = () => {
   const { tenantId } = useTenant();
   const [activeTab, setActiveTab]   = useState<Tab>("Loyalty");
   const [alertModal, setAlertModal] = useState<AlertModalType>(null);
 
   // ─── Client alert counts (overdue + inactive from existing hook) ───
-  const { overdueClients, inactiveClients } = useClientAlerts();
-
+  const { data: alertData } = useClientAlerts();
+  const overdueClients  = alertData?.overdueLoyaltyClients ?? [];
+  const inactiveClients = alertData?.inactiveClients ?? [];
   // ─── Birthday count: client_occasions next 7 days ───
-  const { data: birthdayClients = [] } = useQuery({
+    const { data: birthdayClients = [] } = useQuery({
     queryKey: ["birthday-clients-banner", tenantId],
     queryFn: async () => {
       const today   = format(new Date(), "yyyy-MM-dd");
