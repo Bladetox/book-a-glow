@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Cake, Heart, Plus, X, Loader2, MessageCircle,
-  Trash2, Check, CalendarDays, ChevronDown, Sparkles,
+  Trash2, Check, CalendarDays,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -61,38 +61,19 @@ function buildAnniversaryMsg(name: string, businessName: string): string {
 
 // ─── TYPE_META ───
 const TYPE_META: Record<OccasionType, { label: string; Icon: React.ElementType; color: string; badgeCls: string }> = {
-  birthday:    { label: "Birthday",    Icon: Cake,        color: "text-pink-400",   badgeCls: "bg-pink-500/10 text-pink-400 border border-pink-500/20" },
-  anniversary: { label: "Anniversary", Icon: Heart,       color: "text-rose-400",   badgeCls: "bg-rose-500/10 text-rose-400 border border-rose-500/20" },
+  birthday:    { label: "Birthday",    Icon: Cake,         color: "text-pink-400",   badgeCls: "bg-pink-500/10 text-pink-400 border border-pink-500/20" },
+  anniversary: { label: "Anniversary", Icon: Heart,        color: "text-rose-400",   badgeCls: "bg-rose-500/10 text-rose-400 border border-rose-500/20" },
   other:       { label: "Other",       Icon: CalendarDays, color: "text-violet-400", badgeCls: "bg-violet-500/10 text-violet-400 border border-violet-500/20" },
 };
 
-// ─── AlertStrip ───
-const AlertStrip = ({
-  rows, onFilterChange,
-}: { rows: OccasionRow[]; onFilterChange: (f: FilterChip) => void }) => {
-  const thisWeek  = rows.filter(r => daysUntil(r.occasion_date) <= 7);
-  const today     = rows.filter(r => daysUntil(r.occasion_date) === 0);
-  if (thisWeek.length === 0) return null;
-
-  const bdCount   = thisWeek.filter(r => r.type === "birthday").length;
-  const annCount  = thisWeek.filter(r => r.type === "anniversary").length;
-  const todayCount = today.length;
-
-  const parts: string[] = [];
-  if (todayCount > 0)  parts.push(`🎂 ${todayCount} today!`);
-  if (bdCount > 0)     parts.push(`🎂 ${bdCount} birthday${bdCount > 1 ? "s" : ""} this week`);
-  if (annCount > 0)    parts.push(`💖 ${annCount} anniversary${annCount > 1 ? "ies" : ""} this week`);
-
-  return (
-    <motion.button initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-      onClick={() => onFilterChange("week")}
-      className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border border-pink-500/25 bg-pink-500/[0.05] text-left hover:bg-pink-500/[0.08] transition-colors">
-      <Sparkles className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-      <p className="text-[11px] font-semibold text-pink-400 flex-1">{parts.join(" · ")}</p>
-      <ChevronDown className="w-3.5 h-3.5 text-pink-400/50 rotate-[-90deg] shrink-0" />
-    </motion.button>
-  );
-};
+// ─── Filter Chips config ───
+const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
+  { key: "all",         label: "All" },
+  { key: "week",        label: "This Week" },
+  { key: "month",       label: "This Month" },
+  { key: "birthday",    label: "Birthdays" },
+  { key: "anniversary", label: "Anniversaries" },
+];
 
 // ─── OccasionCard ───
 const OccasionCard = ({
@@ -107,7 +88,7 @@ const OccasionCard = ({
   const meta = TYPE_META[type];
   const Icon = meta.Icon;
   const days = daysUntil(row.occasion_date);
-  const isToday = days === 0;
+  const isToday    = days === 0;
   const isThisWeek = days <= 7;
 
   const msg = type === "birthday"
@@ -129,6 +110,7 @@ const OccasionCard = ({
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${meta.badgeCls}`}>
         <Icon className="w-3.5 h-3.5" />
       </div>
+
       <div className="flex-1 min-w-0 flex flex-col gap-0.5">
         <p className="text-sm font-semibold text-white/85 truncate">{row.client_name}</p>
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -137,6 +119,7 @@ const OccasionCard = ({
           <span className="text-[10px] text-white/35">{formatOccasionShort(row.occasion_date)}</span>
         </div>
       </div>
+
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
           isToday
@@ -147,6 +130,7 @@ const OccasionCard = ({
         }`}>
           {isToday ? "Today! 🎉" : `${days}d`}
         </span>
+
         <div className="flex items-center gap-1">
           {row.phone && (
             <a href={waLink(row.phone, msg)} target="_blank" rel="noopener noreferrer"
@@ -158,13 +142,26 @@ const OccasionCard = ({
           )}
           {confirmDelete ? (
             <div className="flex items-center gap-1">
-              <button onClick={() => onDelete(row.id)} className="text-[10px] text-red-400 hover:text-red-300 font-semibold px-1.5 py-1 rounded-lg hover:bg-red-500/10 transition-colors">Yes</button>
-              <button onClick={() => setConfirmDelete(false)} className="text-[10px] text-white/30 hover:text-white/60 font-semibold px-1.5 py-1 rounded-lg hover:bg-white/[0.05] transition-colors">No</button>
+              <button
+                onClick={() => onDelete(row.id)}
+                className="text-[10px] text-red-400 hover:text-red-300 font-semibold px-2 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors min-w-[36px] text-center"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="text-[10px] text-white/30 hover:text-white/60 font-semibold px-2 py-1.5 rounded-lg hover:bg-white/[0.05] transition-colors min-w-[36px] text-center"
+              >
+                No
+              </button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDelete(true)}
-              className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/5 transition-colors" title="Delete">
-              <Trash2 className="w-3 h-3" />
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/5 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -177,29 +174,33 @@ const OccasionCard = ({
 const AddOccasionForm = ({
   tenantId, onAdded, onClose,
 }: { tenantId: string; onAdded: () => void; onClose: () => void }) => {
-  const [name, setName]       = useState("");
-  const [phone, setPhone]     = useState("");
-  const [type, setType]       = useState<OccasionType>("birthday");
-  const [label, setLabel]     = useState("");
-  const [date, setDate]       = useState("");
-  const [saving, setSaving]   = useState(false);
+  const [name, setName]     = useState("");
+  const [phone, setPhone]   = useState("");
+  const [type, setType]     = useState<OccasionType>("birthday");
+  const [label, setLabel]   = useState("");
+  const [date, setDate]     = useState("");
+  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     if (!name.trim() || !date) { toast.error("Name and date are required."); return; }
     setSaving(true);
     const { error } = await supabase.from("client_occasions").insert({
-      tenant_id: tenantId,
-      client_name: name.trim(),
-      phone: phone.trim() || null,
+      tenant_id:      tenantId,
+      client_name:    name.trim(),
+      phone:          phone.trim() || null,
       type,
-      label: label.trim() || null,
-      occasion_date: date,
+      label:          label.trim() || null,
+      occasion_date:  date,
     });
     setSaving(false);
     if (error) { toast.error("Failed to save occasion."); return; }
     toast.success(`${name} added!`);
     onAdded();
     onClose();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSave();
   };
 
   return (
@@ -211,23 +212,40 @@ const AddOccasionForm = ({
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-emerald-400/80">Add Occasion</p>
-          <button onClick={onClose} className="text-white/25 hover:text-white/60 transition-colors"><X className="w-3.5 h-3.5" /></button>
+          <button onClick={onClose} className="text-white/25 hover:text-white/60 transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Client Name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sarah Jones"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors" />
+            <input
+              autoFocus
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="e.g. Sarah Jones"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Phone (optional)</label>
-            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. 0821234567"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors" />
+            <input
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="e.g. 0821234567"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Type *</label>
-            <select value={type} onChange={e => setType(e.target.value as OccasionType)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors appearance-none">
+            <select
+              value={type}
+              onChange={e => setType(e.target.value as OccasionType)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors appearance-none"
+            >
               <option value="birthday">🎂 Birthday</option>
               <option value="anniversary">💖 Anniversary</option>
               <option value="other">📅 Other</option>
@@ -235,19 +253,37 @@ const AddOccasionForm = ({
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Date *</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors" />
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
+            />
           </div>
           <div className="flex flex-col gap-1 sm:col-span-2">
             <label className="text-[10px] tracking-[0.1em] uppercase text-white/30">Label (optional)</label>
-            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. husband's birthday, 5 year anniversary"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors" />
+            <input
+              value={label}
+              onChange={e => setLabel(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="e.g. husband's birthday, 5 year anniversary"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
+            />
           </div>
         </div>
+
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-3 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving || !name.trim() || !date}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-colors disabled:opacity-40">
+          <button
+            onClick={onClose}
+            className="px-3 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !name.trim() || !date}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-colors disabled:opacity-40"
+          >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
             {saving ? "Saving…" : "Save"}
           </button>
@@ -256,15 +292,6 @@ const AddOccasionForm = ({
     </motion.div>
   );
 };
-
-// ─── Filter Chips ───
-const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
-  { key: "all",         label: "All" },
-  { key: "week",        label: "This Week" },
-  { key: "month",       label: "This Month" },
-  { key: "birthday",    label: "Birthdays" },
-  { key: "anniversary", label: "Anniversaries" },
-];
 
 // ══════════════════════════════════════════════════
 // ─── AdminSpecialOccasions ───
@@ -283,9 +310,13 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
   const { data: settingsRows = [] } = useQuery({
     queryKey: ["loyalty-settings", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("app_settings").select("key, value")
-        .eq("tenant_id", tenantId).in("key", ["loyalty_business_name", "loyalty_service_label"]);
-      if (error) throw error; return data ?? [];
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .eq("tenant_id", tenantId)
+        .in("key", ["loyalty_business_name", "loyalty_service_label"]);
+      if (error) throw error;
+      return data ?? [];
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -293,7 +324,10 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
   const { businessName, serviceLabel } = useMemo(() => {
     const map: Record<string, string> = {};
     settingsRows.forEach((r: any) => { map[r.key] = r.value; });
-    return { businessName: map.loyalty_business_name || "", serviceLabel: map.loyalty_service_label || "wax" };
+    return {
+      businessName: map.loyalty_business_name || "",
+      serviceLabel: map.loyalty_service_label || "wax",
+    };
   }, [settingsRows]);
 
   const { data: rows = [], isLoading } = useQuery({
@@ -311,7 +345,11 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
 
   const { mutate: deleteOccasion } = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("client_occasions").delete().eq("id", id).eq("tenant_id", tenantId);
+      const { error } = await supabase
+        .from("client_occasions")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -321,10 +359,18 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
     onError: () => toast.error("Failed to remove occasion"),
   });
 
-  // Sort by next occurrence
+  // Sort by next occurrence ascending
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => daysUntil(a.occasion_date) - daysUntil(b.occasion_date));
   }, [rows]);
+
+  // Counts for filter chips — only compute once
+  const counts = useMemo(() => ({
+    week:        sortedRows.filter(r => daysUntil(r.occasion_date) <= 7).length,
+    month:       sortedRows.filter(r => daysUntil(r.occasion_date) <= 31).length,
+    birthday:    sortedRows.filter(r => r.type === "birthday").length,
+    anniversary: sortedRows.filter(r => r.type === "anniversary").length,
+  }), [sortedRows]);
 
   const filteredRows = useMemo(() => {
     return sortedRows.filter(r => {
@@ -337,25 +383,18 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
     });
   }, [sortedRows, activeFilter]);
 
-  const counts = useMemo(() => ({
-    week:        sortedRows.filter(r => daysUntil(r.occasion_date) <= 7).length,
-    month:       sortedRows.filter(r => daysUntil(r.occasion_date) <= 31).length,
-    birthday:    sortedRows.filter(r => r.type === "birthday").length,
-    anniversary: sortedRows.filter(r => r.type === "anniversary").length,
-  }), [sortedRows]);
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Alert strip */}
-      <AlertStrip rows={sortedRows} onFilterChange={setActiveFilter} />
 
       {/* Header row */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] tracking-[0.15em] uppercase text-white/30 font-semibold">
           {rows.length} occasion{rows.length !== 1 ? "s" : ""}
         </p>
-        <button onClick={() => setShowAddForm(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors">
+        <button
+          onClick={() => setShowAddForm(v => !v)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+        >
           <Plus className="w-3.5 h-3.5" />
           Add Occasion
         </button>
@@ -372,22 +411,29 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
         )}
       </AnimatePresence>
 
-      {/* Filter chips */}
+      {/* Filter chips — hide zero-count chips (except "All") */}
       <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
         {FILTER_CHIPS.map(chip => {
           const count = chip.key === "all" ? rows.length : counts[chip.key as keyof typeof counts] ?? 0;
+          // Hide non-"all" chips that have zero items
+          if (chip.key !== "all" && count === 0) return null;
           return (
-            <button key={chip.key} onClick={() => setActiveFilter(chip.key)}
+            <button
+              key={chip.key}
+              onClick={() => setActiveFilter(chip.key)}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 activeFilter === chip.key
                   ? "bg-white/[0.1] text-white border border-white/[0.18]"
                   : "text-white/35 border border-white/[0.06] hover:text-white/60 hover:bg-white/[0.04]"
-              }`}>
+              }`}
+            >
               {chip.label}
               {count > 0 && (
                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
                   activeFilter === chip.key ? "bg-white/[0.15] text-white/80" : "bg-white/[0.06] text-white/35"
-                }`}>{count}</span>
+                }`}>
+                  {count}
+                </span>
               )}
             </button>
           );
@@ -396,10 +442,14 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
 
       {/* List */}
       {isLoading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-5 h-5 text-white/30 animate-spin" /></div>
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+        </div>
       ) : filteredRows.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 flex flex-col items-center gap-3 text-center">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 flex flex-col items-center gap-3 text-center"
+        >
           <div className="w-12 h-12 rounded-full bg-pink-500/[0.07] flex items-center justify-center">
             <Cake className="w-5 h-5 text-pink-400/40" />
           </div>
@@ -407,14 +457,18 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
             {rows.length === 0 ? "No occasions added yet." : "No occasions match this filter."}
           </p>
           {rows.length === 0 && (
-            <p className="text-xs text-white/20">Add your first client birthday or anniversary using the button above.</p>
+            <p className="text-xs text-white/20">
+              Add your first client birthday or anniversary using the button above.
+            </p>
           )}
         </motion.div>
       ) : (
         <div className="flex flex-col gap-2">
           {filteredRows.map((row, i) => (
             <OccasionCard
-              key={row.id} row={row} i={i}
+              key={row.id}
+              row={row}
+              i={i}
               onDelete={id => deleteOccasion(id)}
               businessName={businessName}
               serviceLabel={serviceLabel}
@@ -422,6 +476,7 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
           ))}
         </div>
       )}
+
     </div>
   );
 };
