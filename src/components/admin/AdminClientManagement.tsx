@@ -1,12 +1,12 @@
 import { lazy, Suspense, useState } from "react";
-import { Loader2, AlertTriangle, CalendarCheck, Cake, ChevronRight } from "lucide-react";
+import { Loader2, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { AdminPageHeader } from "@/components/admin/AdminSharedUI";
 import ClientAlertsModal, { type BirthdayClient } from "@/components/admin/ClientAlertsModal";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
-import { format, addDays } from "date-fns";
+import { addDays } from "date-fns";
 
 const AdminLoyalty          = lazy(() => import("@/components/admin/AdminLoyalty"));
 const AdminBlockedClients   = lazy(() => import("@/components/admin/AdminBlockedClients"));
@@ -24,7 +24,7 @@ const TabLoader = () => (
   </div>
 );
 
-// ─── ProactiveAlertBanner ───
+// ─── AlertChip ───
 interface AlertChip {
   key: AlertModalType;
   icon: string;
@@ -79,40 +79,51 @@ const ProactiveAlertBanner = ({
   if (chips.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {chips.map(chip => (
-        <button
-          key={chip.key}
-          onClick={() => onOpen(chip.key)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${chip.border} ${chip.bg} transition-colors`}
-        >
-          <span className="text-sm">{chip.icon}</span>
-          <span className={`text-[11px] font-semibold ${chip.color}`}>{chip.label}</span>
-          <ChevronRight className={`w-3 h-3 ${chip.color} opacity-60`} />
-        </button>
-      ))}
+    <div className="flex flex-col gap-2">
+      {/* Section label */}
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/30">
+          Action Required
+        </p>
+        <div className="flex-1 h-px bg-white/[0.05]" />
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/15">
+          {chips.length}
+        </span>
+      </div>
+
+      {/* Chips row */}
+      <div className="flex flex-wrap gap-2">
+        {chips.map(chip => (
+          <button
+            key={String(chip.key)}
+            onClick={() => onOpen(chip.key)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${chip.border} ${chip.bg} transition-colors`}
+          >
+            <span className="text-sm leading-none">{chip.icon}</span>
+            <span className={`text-[11px] font-semibold ${chip.color}`}>{chip.label}</span>
+            <ChevronRight className={`w-3 h-3 ${chip.color} opacity-60`} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
 
 // ══════════════════════════════════════════════════
-  const AdminClientManagement = () => {
+const AdminClientManagement = () => {
   const { tenantId } = useTenant();
   const [activeTab, setActiveTab]   = useState<Tab>("Loyalty");
   const [alertModal, setAlertModal] = useState<AlertModalType>(null);
 
-  // ─── Client alert counts (overdue + inactive from existing hook) ───
+  // ─── Client alert counts ───
   const { data: alertData } = useClientAlerts();
   const overdueClients  = alertData?.overdueLoyaltyClients ?? [];
   const inactiveClients = alertData?.inactiveClients ?? [];
-  // ─── Birthday count: client_occasions next 7 days ───
-    const { data: birthdayClients = [] } = useQuery({
+
+  // ─── Birthday count: next 7 days ───
+  const { data: birthdayClients = [] } = useQuery({
     queryKey: ["birthday-clients-banner", tenantId],
     queryFn: async () => {
-      const today   = format(new Date(), "yyyy-MM-dd");
-      const in7days = format(addDays(new Date(), 7), "yyyy-MM-dd");
-
-      // Fetch all occasions for tenant, filter by next occurrence in JS
       const { data, error } = await supabase
         .from("client_occasions")
         .select("id, client_name, phone, type, label, occasion_date")
@@ -136,9 +147,9 @@ const ProactiveAlertBanner = ({
 
   const renderTab = () => {
     switch (activeTab) {
-      case "Loyalty":        return <AdminLoyalty />;
-      case "Consultations":  return <AdminConsultations />;
-      case "Special Dates":  return <AdminSpecialOccasions />;
+      case "Loyalty":         return <AdminLoyalty />;
+      case "Consultations":   return <AdminConsultations />;
+      case "Special Dates":   return <AdminSpecialOccasions />;
       case "Blocked Clients": return <AdminBlockedClients />;
     }
   };
@@ -150,7 +161,7 @@ const ProactiveAlertBanner = ({
         subtitle="Manage loyalty programmes, special occasions, blocked clients, and consultation requests."
       />
 
-      {/* Proactive alert banner */}
+      {/* Action Required banner — only renders when alerts exist */}
       <ProactiveAlertBanner
         overdueCount={overdueClients.length}
         inactiveCount={inactiveClients.length}
@@ -158,13 +169,13 @@ const ProactiveAlertBanner = ({
         onOpen={setAlertModal}
       />
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06] self-start flex-wrap">
+      {/* Tab bar — horizontal scroll on narrow screens, no wrapping */}
+      <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06] overflow-x-auto scrollbar-hide">
         {TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap shrink-0 ${
               activeTab === tab
                 ? "bg-white/[0.12] text-white border border-white/[0.1]"
                 : "text-white/40 hover:text-white/70"
@@ -172,7 +183,7 @@ const ProactiveAlertBanner = ({
           >
             {tab}
             {tab === "Special Dates" && birthdayClients.length > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-pink-500/20 text-pink-400 text-[9px] font-bold">
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-pink-500/20 text-pink-400 text-[9px] font-bold">
                 {birthdayClients.length}
               </span>
             )}
