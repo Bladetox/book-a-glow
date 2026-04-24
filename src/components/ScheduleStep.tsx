@@ -16,6 +16,7 @@ import { useMonthAvailability, useDateSlots } from "@/hooks/usePublicAvailabilit
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import type { useSlotHold } from "@/hooks/useSlotHold";
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 interface ScheduleStepProps {
   selectedDate: Date | null;
@@ -53,9 +54,17 @@ const ScheduleStep = ({
   const timeSlotsRef = useRef<HTMLDivElement>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Pull ownerId from context so useMonthAvailability can skip the extra DB lookup
+  const { ownerId } = usePublicTenant();
+
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
-  const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(year, month, totalDuration);
+  const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(
+    year,
+    month,
+    totalDuration,
+    ownerId || undefined,
+  );
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
   // Pass sessionToken so the client's own hold never greys out their own slot
