@@ -5,7 +5,7 @@ import StickyCtaBar from "@/components/site/StickyCtaBar";
 import {
   ArrowRight, Play, TrendingUp, Users, MapPin, Check,
   MessageCircle, CreditCard, BarChart2, CalendarX,
-  Clock, Shield, MapPinned,
+  Clock, Shield, MapPinned, Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -37,52 +37,53 @@ const cardLeave = (el: HTMLDivElement) => {
 const painPoints = [
   {
     Icon: MessageCircle,
-    heading: "Bookings scattered across WhatsApp",
-    body: "Managing multiple conversations. No structured client history, trying to remember who confirmed and who didn't.",
+    heading: "You're making decisions blind",
+    body: "You don't know what's driving revenue — so you keep repeating what might not be working.",
   },
   {
     Icon: CreditCard,
-    heading: "Chasing deposits manually",
-    body: "Sending banking details, waiting for proof of payment, following up, manually.",
+    heading: "Chasing deposits is eating your time",
+    body: "Sending banking details, waiting for proof of payment, following up. Every single booking.",
   },
   {
     Icon: BarChart2,
-    heading: "No idea what's actually working",
-    body: "You don't know which services make the most money or where your best clients come from.",
+    heading: "Your schedule looks full. Your income isn't stable.",
+    body: "Gaps, cancellations, and no-shows quietly drain your revenue while you're too busy to notice.",
   },
   {
     Icon: CalendarX,
-    heading: "Double bookings and no-shows",
-    body: "Without a real system, gaps in your schedule cost you money, your clients' trust and steal your time.",
+    heading: "Your best marketing channel is a guess",
+    body: "You're spending time and money on Instagram, TikTok, Google — but you have no idea which one actually works.",
   },
 ];
 
 const trustBadges = [
-  { Icon: Clock,     label: "Try free for 30 days. No payment required." },
+  { Icon: Clock,     label: "Try free for 30 days. No card required." },
   { Icon: Shield,    label: "POPIA ready." },
-  { Icon: MapPinned, label: "Proudly made in South Africa." },
+  { Icon: MapPinned, label: "Built for South African service businesses." },
+  { Icon: Zap,       label: "Set up in under 10 minutes." },
 ];
 
 const howSteps = [
   {
     num: "01",
-    title: "Create your booking page",
-    desc: "Set your services, prices and availability. Your page is live and taking real bookings in minutes.",
+    title: "Set up your booking system",
+    desc: "Your services, pricing, and availability go live in minutes. No technical skills needed.",
   },
   {
     num: "02",
-    title: "Share your booking link",
-    desc: "Drop it in your Instagram bio, TikTok bio or WhatsApp status. Clients book themselves.",
+    title: "Let clients book and pay themselves",
+    desc: "No back and forth. No manual follow-ups. Works on your phone.",
   },
   {
     num: "03",
-    title: "Your dashboard does the rest",
-    desc: "Track bookings, revenue, clients and trends. Always know what to do next.",
+    title: "Start seeing patterns",
+    desc: "You'll know what's working, what's not, and what to do next. Most businesses get their first booking within hours.",
   },
 ];
 
 const Index = () => {
-  const [loaded, setLoaded] = useState(false);
+  const [_loaded, setLoaded] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -91,8 +92,8 @@ const Index = () => {
 
       <main>
 
-        {/* HERO */}
-        <section className="relative min-h-[580px] md:min-h-[660px] flex items-center overflow-hidden">
+        {/* ── HERO ── */}
+        <section className="relative min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
               src={HERO_IMAGE}
@@ -106,29 +107,35 @@ const Index = () => {
               className="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(105deg, hsl(var(--background)/0.93) 0%, hsl(var(--background)/0.82) 50%, hsl(var(--background)/0.25) 100%)",
+                  "linear-gradient(105deg, hsl(var(--background)/0.95) 0%, hsl(var(--background)/0.85) 52%, hsl(var(--background)/0.28) 100%)",
               }}
             />
           </div>
 
           <div className="relative z-10 w-full py-24 md:py-32 px-6">
             <div className="max-w-6xl mx-auto">
-              <div className="max-w-2xl text-left space-y-8">
+              <div className="max-w-2xl text-left space-y-7">
 
                 <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
                   Built for service businesses
                 </p>
 
+                {/* Headline — calls out the contradiction */}
                 <h1 className="text-4xl md:text-6xl font-semibold leading-tight">
-                  Stop guessing how to grow your business.
+                  You're fully booked. But your income still feels random.
                 </h1>
 
-                <p className="text-lg text-muted-foreground">
-                  NextSlot shows you what's actually driving your bookings, revenue,
-                  and clients. You will always know what to do next.
+                {/* Sub — introduces the outcome */}
+                <p className="text-lg text-muted-foreground max-w-xl">
+                  NextSlot shows you exactly where your bookings, revenue, and best clients come from — so you can stop guessing and start growing.
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-start gap-4 pt-2">
+                {/* Mechanism line */}
+                <p className="text-sm font-medium" style={{ color: GOLD }}>
+                  Bookings, payments, and insights in one system that tells you what to do next.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-start gap-4 pt-1">
                   <Link
                     to="/onboarding"
                     className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
@@ -146,7 +153,7 @@ const Index = () => {
                         "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)";
                     }}
                   >
-                    Start Growing Your Business
+                    Get clarity in under 10 minutes
                     <ArrowRight className="h-4 w-4" />
                   </Link>
 
@@ -155,22 +162,34 @@ const Index = () => {
                     className="inline-flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-3"
                   >
                     <Play className="h-4 w-4" />
-                    See live demo
+                    Watch how it works
                   </Link>
                 </div>
 
-                {/* "You will." + trust badges */}
+                {/* Trust badges */}
                 <div className="pt-2 space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Most businesses don't know where their clients come from.
-                    <span className="text-foreground font-medium"> You will.</span>
-                  </p>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                     {trustBadges.map(({ Icon, label }) => (
                       <div key={label} className="flex items-center gap-2">
                         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: GOLD }} />
                         <span className="text-xs text-muted-foreground">{label}</span>
                       </div>
+                    ))}
+                  </div>
+                  {/* Micro-friction removers */}
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    {["No setup stress", "No payment required", "Works on your phone"].map(tag => (
+                      <span
+                        key={tag}
+                        className="text-[11px] px-2.5 py-1 rounded-full"
+                        style={{
+                          background: "hsl(38 40% 58% / 0.10)",
+                          border: "1px solid hsl(38 40% 58% / 0.25)",
+                          color: GOLD,
+                        }}
+                      >
+                        {tag}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -180,17 +199,46 @@ const Index = () => {
           </div>
         </section>
 
-        {/* DASHBOARD PREVIEW */}
+        {/* ── DASHBOARD — Proof, not decoration ── */}
         <section className="px-6 pb-24 pt-16">
-          <div className="max-w-5xl mx-auto text-center space-y-10">
+          <div className="max-w-5xl mx-auto text-center space-y-6">
+
+            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
+              Your business, finally visible
+            </p>
 
             <h2 className="text-2xl md:text-3xl font-semibold">
-              This is where your business finally makes sense.
+              This is where your business stops feeling random.
             </h2>
 
             <p className="text-muted-foreground max-w-xl mx-auto">
-              See what's working, what's not, and what to do next. All in one place.
+              Not just data. Clear signals on what's working and what to do next.
             </p>
+
+            {/* Dashboard callout pills — evidence layer */}
+            <div className="flex flex-wrap justify-center gap-3 pb-2">
+              {[
+                { label: "Top service: 42% of revenue", color: GOLD },
+                { label: "Repeat clients: 68%", color: "hsl(142 71% 45%)" },
+                { label: "Best source: TikTok (46%)", color: "hsl(210 100% 60%)" },
+              ].map(({ label, color }) => (
+                <div
+                  key={label}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                  style={{
+                    background: `${color}18`,
+                    border: `1px solid ${color}45`,
+                    color,
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: color }}
+                  />
+                  {label}
+                </div>
+              ))}
+            </div>
 
             <Suspense
               fallback={
@@ -200,10 +248,14 @@ const Index = () => {
               <DashboardPreview onLoad={() => setLoaded(true)} />
             </Suspense>
 
+            <p className="text-xs text-muted-foreground pt-2">
+              Built for service businesses like yours.
+            </p>
+
           </div>
         </section>
 
-        {/* PAIN POINTS */}
+        {/* ── PAIN POINTS — Higher stakes ── */}
         <section
           className="py-20 px-6"
           style={{ background: "hsl(220 20% 6%)" }}
@@ -212,10 +264,10 @@ const Index = () => {
 
             <div className="text-center space-y-3">
               <h2 className="text-2xl md:text-3xl font-semibold text-white">
-                Most service businesses are busy. But not growing.
+                You're not disorganized. You're operating without a system.
               </h2>
               <p className="text-white/50 text-sm max-w-md mx-auto">
-                These aren't minor inconveniences. They're costing you clients, revenue, and eating away at your precious hours, every single day.
+                And it's costing you money every single week.
               </p>
             </div>
 
@@ -248,40 +300,59 @@ const Index = () => {
             <div className="flex justify-center pt-2">
               <p className="flex items-center gap-2 text-sm font-medium text-white/70">
                 <Check className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
-                NextSlot replaces all of it with one system.
+                NextSlot replaces all of this with one clear system.
               </p>
             </div>
 
           </div>
         </section>
 
-        {/* REFRAME */}
+        {/* ── REFRAME — Category positioning ── */}
         <section className="py-20 px-6">
-          <div className="max-w-4xl mx-auto text-center space-y-6">
+          <div className="max-w-4xl mx-auto text-center space-y-5">
 
-            <h2 className="text-3xl font-semibold">
-              Most booking apps help you manage your business.
+            <p className="text-sm text-muted-foreground">
+              Most booking apps help you stay organized.
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-semibold" style={{ color: GOLD }}>
+              NextSlot shows you how to grow.
             </h2>
 
-            <h3 className="text-3xl font-semibold" style={{ color: GOLD }}>
-              NextSlot helps you grow it.
-            </h3>
-
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Not just bookings. Not just data. Actual direction.
+              Not just bookings. Not just data.
+              <br />
+              Clear direction on what to do next.
+            </p>
+
+            {/* Identity reinforcement */}
+            <p className="text-sm font-medium text-foreground/60 pt-2">
+              Built for service businesses like yours — hair, beauty, wellness, and beyond.
             </p>
 
           </div>
         </section>
 
-        {/* VALUE CARDS */}
+        {/* ── VALUE CARDS — Outcome-driven ── */}
         <section className="py-20 px-6 bg-secondary/30">
           <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
 
             {[
-              { Icon: TrendingUp, title: "Know what drives revenue", body: "See which services and actions actually grow your business." },
-              { Icon: Users,      title: "Understand your best clients", body: "Identify who spends the most and how to get more like them." },
-              { Icon: MapPin,     title: "Track where bookings come from", body: "Stop wasting money on marketing that doesn't work." },
+              {
+                Icon: TrendingUp,
+                title: "See exactly what makes you money",
+                body: "Instantly identify your highest-performing services and the bookings that drive the most revenue per hour.",
+              },
+              {
+                Icon: Users,
+                title: "Know who spends the most",
+                body: "Understand your best clients and learn how to get more people exactly like them.",
+              },
+              {
+                Icon: MapPin,
+                title: "Stop wasting money on marketing",
+                body: "Track where your bookings actually come from. Double down on what works. Cut what doesn't.",
+              },
             ].map(({ Icon, title, body }) => (
               <div
                 key={title}
@@ -299,7 +370,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* HOW IT WORKS — 2-col with image */}
+        {/* ── HOW IT WORKS — Transformation layer ── */}
         <section className="py-20 px-6 overflow-hidden">
           <div className="max-w-6xl mx-auto">
 
@@ -344,6 +415,20 @@ const Index = () => {
                   ))}
                 </ol>
 
+                {/* Micro-proof */}
+                <div
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm"
+                  style={{
+                    background: "hsl(38 40% 58% / 0.08)",
+                    border: "1px solid hsl(38 40% 58% / 0.25)",
+                  }}
+                >
+                  <Zap className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
+                  <span className="text-muted-foreground">
+                    Most businesses get their first booking <strong className="text-foreground">within hours</strong>
+                  </span>
+                </div>
+
                 <Link
                   to="/onboarding"
                   className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
@@ -351,7 +436,7 @@ const Index = () => {
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.75"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                 >
-                  Get started in minutes
+                  Start free in under 10 minutes
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -388,7 +473,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CASE STUDY */}
+        {/* ── CASE STUDY — Make it undeniable ── */}
         <section className="py-20 px-6 bg-secondary/20">
           <div className="max-w-4xl mx-auto space-y-10 text-center">
 
@@ -397,7 +482,7 @@ const Index = () => {
             </p>
 
             <h2 className="text-2xl md:text-3xl font-semibold">
-              From chaos to clarity in 30 days
+              What happens in the first 30 days
             </h2>
 
             <p className="text-muted-foreground max-w-xl mx-auto">
@@ -420,7 +505,7 @@ const Index = () => {
                   <li>Bookings scattered across WhatsApp</li>
                   <li>Deposits manually requested and tracked</li>
                   <li>No idea which marketing actually worked</li>
-                  <li>Fully booked but inconsistent income</li>
+                  <li>Fully booked but income felt unpredictable</li>
                 </ul>
               </div>
 
@@ -452,7 +537,7 @@ const Index = () => {
                   </li>
                   <li className="flex items-start gap-2">
                     <span style={{ color: GOLD }} className="mt-0.5 shrink-0">✓</span>
-                    Dashboard shows where revenue comes from
+                    Dashboard shows exactly where revenue comes from
                   </li>
                   <li className="flex items-start gap-2">
                     <span style={{ color: GOLD }} className="mt-0.5 shrink-0">✓</span>
@@ -460,14 +545,14 @@ const Index = () => {
                   </li>
                   <li className="flex items-start gap-2">
                     <span style={{ color: GOLD }} className="mt-0.5 shrink-0">✓</span>
-                    Clear next steps every single week
+                    Clear next steps, every single week
                   </li>
                 </ul>
               </div>
 
             </div>
 
-            {/* PULL QUOTE — bold statement */}
+            {/* PULL QUOTE */}
             <div className="py-4">
               <div
                 className="mx-auto max-w-xl py-8 px-6 rounded-2xl text-center"
@@ -483,7 +568,7 @@ const Index = () => {
                   "For the first time, the business felt like it was running itself."
                 </p>
                 <p className="mt-4 text-sm font-medium" style={{ color: GOLD }}>
-                  PhenomeBeauty &mdash; NextSlot customer
+                  PhenomeBeauty &mdash; Cape Town
                 </p>
                 <div className="flex justify-center mt-4">
                   <div className="h-px w-10" style={{ background: GOLD }} />
@@ -491,7 +576,7 @@ const Index = () => {
               </div>
             </div>
 
-            {/* CASE STUDY CTA — inviting card */}
+            {/* CASE STUDY CTA */}
             <div className="pt-2">
               <Link
                 to="/case-study/phenomebeauty"
@@ -512,7 +597,7 @@ const Index = () => {
               >
                 <span className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>PhenomeBeauty</span>
                 <span className="text-base font-semibold">See exactly how it happened, step by step</span>
-                <span className="text-sm text-muted-foreground">The full story: from WhatsApp chaos to a business that runs itself.</span>
+                <span className="text-sm text-muted-foreground">From WhatsApp chaos to a business that runs itself.</span>
                 <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold group-hover:gap-2.5 transition-all" style={{ color: GOLD }}>
                   Read the full story <ArrowRight className="h-4 w-4" />
                 </span>
@@ -522,9 +607,13 @@ const Index = () => {
           </div>
         </section>
 
-        {/* FINAL CTA */}
+        {/* ── FINAL CTA — Stop the guesswork ── */}
         <section className="py-24 px-6 bg-black text-white text-center">
           <div className="max-w-2xl mx-auto space-y-6">
+
+            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
+              From "I hope this works" to "I know what's working"
+            </p>
 
             <h2 className="text-3xl md:text-4xl font-semibold">
               Stop running your business on guesswork.
@@ -534,7 +623,7 @@ const Index = () => {
               Start seeing what actually drives your growth.
             </p>
 
-            <div className="flex justify-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 to="/onboarding"
                 className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-8 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
@@ -552,9 +641,32 @@ const Index = () => {
                     "0 0 0 1.5px hsl(38 40% 58% / 0.70), 0 6px 20px -2px hsl(38 40% 58% / 0.40)";
                 }}
               >
-                Start Free Trial
+                Get clarity in under 10 minutes
                 <ArrowRight className="h-4 w-4" />
               </Link>
+
+              <Link
+                to="/demo"
+                className="text-sm text-white/50 hover:text-white/80 transition-colors flex items-center gap-2 py-3.5"
+              >
+                <Play className="h-4 w-4" />
+                Watch how it works
+              </Link>
+            </div>
+
+            {/* Friction removers */}
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-2">
+              {[
+                "No payment required",
+                "Takes less than 10 minutes",
+                "No technical skills needed",
+                "Works on your phone",
+              ].map(item => (
+                <span key={item} className="text-xs text-white/40 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full shrink-0" style={{ background: GOLD }} />
+                  {item}
+                </span>
+              ))}
             </div>
 
           </div>
