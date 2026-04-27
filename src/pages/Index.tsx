@@ -1,7 +1,6 @@
 import { useState, lazy, Suspense } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
-import StickyCtaBar from "@/components/site/StickyCtaBar";
 import {
   ArrowRight, Play, TrendingUp, Users, MapPin, Check,
   MessageCircle, CreditCard, BarChart2, CalendarX,
@@ -38,7 +37,7 @@ const painPoints = [
   {
     Icon: MessageCircle,
     heading: "You're making decisions blind",
-    body: "You don't know what's driving revenue — so you keep repeating what might not be working.",
+    body: "You don't know what's driving revenue, so you keep repeating what might not be working.",
   },
   {
     Icon: CreditCard,
@@ -53,7 +52,7 @@ const painPoints = [
   {
     Icon: CalendarX,
     heading: "Your best marketing channel is a guess",
-    body: "You're spending time and money on Instagram, TikTok, Google — but you have no idea which one actually works.",
+    body: "You're spending time and money on Instagram, TikTok, Google but you have no idea which one actually works.",
   },
 ];
 
@@ -88,11 +87,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SiteHeader />
-      <StickyCtaBar />
 
       <main>
 
-        {/* ── HERO ── */}
+        {/* HERO */}
         <section className="relative min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
@@ -120,17 +118,14 @@ const Index = () => {
                   Built for service businesses
                 </p>
 
-                {/* Headline — calls out the contradiction */}
                 <h1 className="text-4xl md:text-6xl font-semibold leading-tight">
                   You're fully booked. But your income still feels random.
                 </h1>
 
-                {/* Sub — introduces the outcome */}
                 <p className="text-lg text-muted-foreground max-w-xl">
-                  NextSlot shows you exactly where your bookings, revenue, and best clients come from — so you can stop guessing and start growing.
+                  NextSlot shows you exactly where your bookings, revenue, and best clients come from so you can stop guessing and start growing.
                 </p>
 
-                {/* Mechanism line */}
                 <p className="text-sm font-medium" style={{ color: GOLD }}>
                   Bookings, payments, and insights in one system that tells you what to do next.
                 </p>
@@ -166,7 +161,6 @@ const Index = () => {
                   </Link>
                 </div>
 
-                {/* Trust badges */}
                 <div className="pt-2 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                     {trustBadges.map(({ Icon, label }) => (
@@ -176,7 +170,6 @@ const Index = () => {
                       </div>
                     ))}
                   </div>
-                  {/* Micro-friction removers */}
                   <div className="flex flex-wrap gap-3 pt-1">
                     {["No setup stress", "No payment required", "Works on your phone"].map(tag => (
                       <span
@@ -199,7 +192,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── DASHBOARD — Proof, not decoration ── */}
+        {/* DASHBOARD */}
         <section className="px-6 pb-24 pt-16">
           <div className="max-w-5xl mx-auto text-center space-y-6">
 
@@ -215,7 +208,6 @@ const Index = () => {
               Not just data. Clear signals on what's working and what to do next.
             </p>
 
-            {/* Dashboard callout pills — evidence layer */}
             <div className="flex flex-wrap justify-center gap-3 pb-2">
               {[
                 { label: "Top service: 42% of revenue", color: GOLD },
@@ -255,7 +247,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── PAIN POINTS — Higher stakes ── */}
+        {/* PAIN POINTS */}
         <section
           className="py-20 px-6"
           style={{ background: "hsl(220 20% 6%)" }}
@@ -307,7 +299,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── REFRAME — Category positioning ── */}
+        {/* REFRAME */}
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto text-center space-y-5">
 
@@ -325,15 +317,14 @@ const Index = () => {
               Clear direction on what to do next.
             </p>
 
-            {/* Identity reinforcement */}
             <p className="text-sm font-medium text-foreground/60 pt-2">
-              Built for service businesses like yours — hair, beauty, wellness, and beyond.
+              Built for service businesses like yours: hair, beauty, wellness, and beyond.
             </p>
 
           </div>
         </section>
 
-        {/* ── VALUE CARDS — Outcome-driven ── */}
+        {/* VALUE CARDS */}
         <section className="py-20 px-6 bg-secondary/30">
           <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
 
@@ -370,13 +361,12 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── HOW IT WORKS — Transformation layer ── */}
+        {/* HOW IT WORKS */}
         <section className="py-20 px-6 overflow-hidden">
           <div className="max-w-6xl mx-auto">
 
             <div className="grid md:grid-cols-2 gap-12 items-center">
 
-              {/* Left: steps */}
               <div className="space-y-10">
                 <div className="space-y-2">
                   <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>Simple by design</p>
@@ -415,7 +405,6 @@ const Index = () => {
                   ))}
                 </ol>
 
-                {/* Micro-proof */}
                 <div
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm"
                   style={{
@@ -441,7 +430,6 @@ const Index = () => {
                 </Link>
               </div>
 
-              {/* Right: image */}
               <div className="relative rounded-2xl overflow-hidden aspect-[4/5] md:aspect-auto md:h-[500px] shadow-2xl">
                 <img
                   src={HOW_IMAGE}
@@ -455,7 +443,6 @@ const Index = () => {
                     background: "linear-gradient(to top, hsl(var(--background)/0.75) 0%, transparent 55%)",
                   }}
                 />
-                {/* Floating stat */}
                 <div
                   className="absolute bottom-5 left-5 right-5 rounded-xl px-5 py-4"
                   style={{
@@ -473,7 +460,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── CASE STUDY — Make it undeniable ── */}
+        {/* CASE STUDY */}
         <section className="py-20 px-6 bg-secondary/20">
           <div className="max-w-4xl mx-auto space-y-10 text-center">
 
@@ -491,7 +478,6 @@ const Index = () => {
 
             <div className="grid md:grid-cols-2 gap-6 text-left">
 
-              {/* BEFORE */}
               <div
                 className="p-6 rounded-2xl bg-background"
                 style={{ ...cardBase }}
@@ -509,7 +495,6 @@ const Index = () => {
                 </ul>
               </div>
 
-              {/* AFTER */}
               <div
                 className="p-6 rounded-2xl"
                 style={{
@@ -532,19 +517,19 @@ const Index = () => {
                 </h3>
                 <ul className="space-y-3 text-sm font-medium">
                   <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">✓</span>
+                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
                     Clients book and pay automatically
                   </li>
                   <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">✓</span>
+                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
                     Dashboard shows exactly where revenue comes from
                   </li>
                   <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">✓</span>
+                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
                     Top services identified instantly
                   </li>
                   <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">✓</span>
+                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
                     Clear next steps, every single week
                   </li>
                 </ul>
@@ -552,7 +537,6 @@ const Index = () => {
 
             </div>
 
-            {/* PULL QUOTE */}
             <div className="py-4">
               <div
                 className="mx-auto max-w-xl py-8 px-6 rounded-2xl text-center"
@@ -568,7 +552,7 @@ const Index = () => {
                   "For the first time, the business felt like it was running itself."
                 </p>
                 <p className="mt-4 text-sm font-medium" style={{ color: GOLD }}>
-                  PhenomeBeauty &mdash; Cape Town
+                  PhenomeBeauty, Cape Town
                 </p>
                 <div className="flex justify-center mt-4">
                   <div className="h-px w-10" style={{ background: GOLD }} />
@@ -576,7 +560,6 @@ const Index = () => {
               </div>
             </div>
 
-            {/* CASE STUDY CTA */}
             <div className="pt-2">
               <Link
                 to="/case-study/phenomebeauty"
@@ -607,7 +590,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── FINAL CTA — Stop the guesswork ── */}
+        {/* FINAL CTA */}
         <section className="py-24 px-6 bg-black text-white text-center">
           <div className="max-w-2xl mx-auto space-y-6">
 
@@ -654,7 +637,6 @@ const Index = () => {
               </Link>
             </div>
 
-            {/* Friction removers */}
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-2">
               {[
                 "No payment required",
