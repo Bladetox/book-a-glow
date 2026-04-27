@@ -2,9 +2,9 @@ import { useState, lazy, Suspense } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import {
-  ArrowRight, Play, TrendingUp, Users, MapPin, Check,
-  MessageCircle, CreditCard, BarChart2, CalendarX,
-  Clock, Shield, MapPinned, Zap,
+  ArrowRight, Play, TrendingUp, TrendingDown, Users, MapPin, Check,
+  EyeOff, Coins, HelpCircle,
+  Clock, Shield, MapPinned, Zap, CalendarX,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -35,22 +35,26 @@ const cardLeave = (el: HTMLDivElement) => {
 
 const painPoints = [
   {
-    Icon: MessageCircle,
+    // Blind decisions = hidden/no visibility
+    Icon: EyeOff,
     heading: "You're making decisions blind",
     body: "You don't know what's driving revenue, so you keep repeating what might not be working.",
   },
   {
-    Icon: CreditCard,
+    // Chasing payment/deposits = money slipping through time
+    Icon: Coins,
     heading: "Chasing deposits is eating your time",
     body: "Sending banking details, waiting for proof of payment, following up. Every single booking.",
   },
   {
-    Icon: BarChart2,
+    // Full schedule but unstable income = downward trend despite appearances
+    Icon: TrendingDown,
     heading: "Your schedule looks full. Your income isn't stable.",
     body: "Gaps, cancellations, and no-shows quietly drain your revenue while you're too busy to notice.",
   },
   {
-    Icon: CalendarX,
+    // Best channel is a guess = uncertainty, no target
+    Icon: HelpCircle,
     heading: "Your best marketing channel is a guess",
     body: "You're spending time and money on Instagram, TikTok, Google but you have no idea which one actually works.",
   },
@@ -281,7 +285,7 @@ const Index = () => {
                       border: "1px solid hsl(0 72% 51% / 0.25)",
                     }}
                   >
-                    <Icon className="h-4.5 w-4.5" style={{ color: RED }} strokeWidth={2} />
+                    <Icon className="h-[18px] w-[18px]" style={{ color: RED }} strokeWidth={1.75} />
                   </div>
                   <h3 className="text-sm font-semibold text-white/90 leading-snug">{heading}</h3>
                   <p className="text-xs text-white/45 leading-relaxed">{body}</p>
