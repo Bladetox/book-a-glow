@@ -50,15 +50,13 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // ── Theme-aware client-type button labels ──────────────────────────────────
-  // Falls back to neutral copy if the key is not set in app_settings
   const existingClientLabel: string =
     (config as Record<string, string>)["client_type_existing_label"] ?? "Returning Client";
   const newClientLabel: string =
     (config as Record<string, string>)["client_type_new_label"] ?? "New Client";
   const existingClientNotesPlaceholder: string =
     (config as Record<string, string>)["client_type_existing_notes_placeholder"] ??
-    "e.g. any changes since your last visit, preferences…";
+    "e.g. any changes since your last visit, preferences\u2026";
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -113,13 +111,11 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     return data;
   };
 
-  // ── Block check: fires 800ms after any of the 3 identity fields settle ──────
   useEffect(() => {
     const email = booking.email.trim();
     const phone = booking.phone.trim().replace(/\s/g, "");
     const name = booking.fullName.trim();
 
-    // Need at least email OR phone to fire — avoids spamming on first keystrokes
     const hasEnough = validators.email(email) || validators.phone(phone);
     if (!hasEnough || !tenantId) {
       if (isBlocked) {
@@ -140,7 +136,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         setIsBlocked(blocked);
         onBlockedChange?.(blocked);
       } catch {
-        // Fail open — don't block on error
         setIsBlocked(false);
         onBlockedChange?.(false);
       } finally {
@@ -220,7 +215,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         Your details
       </h3>
 
-      {/* Blocked banner — shown instead of the form fields when blocked */}
       <AnimatePresence>
         {isBlocked && (
           <motion.div
@@ -344,9 +338,9 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                     ))}
                   </div>
 
-                  {/* Free-text detail field when Yes is selected */}
+                  {/* Free-text detail — shown for Q1–Q7 only. Q8 is Yes/No only. */}
                   <AnimatePresence>
-                    {booking.safetyAnswers[q.id] === true && (
+                    {booking.safetyAnswers[q.id] === true && q.id !== 8 && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
@@ -461,7 +455,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
             }}
             onBlur={() => markTouched("email")}
           />
-          {/* Subtle spinner while block check runs */}
           {blockChecking && (
             <div className="absolute right-3.5 top-3.5 w-3.5 h-3.5 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
           )}
@@ -554,7 +547,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
           {!showSuggestions && (
             <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
               {booking.addressVerified
-                ? "✓ Address confirmed — used to calculate your call-out fee"
+                ? "\u2713 Address confirmed \u2014 used to calculate your call-out fee"
                 : "Used to calculate your call-out fee"}
             </p>
           )}
