@@ -79,6 +79,22 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
     setSubmitting(true);
 
     try {
+      // Guard: services must be selected
+      if (!booking.selectedTreatments.length) {
+        toast.error("No services selected. Please go back and choose a service.");
+        onGoToStep(0);
+        return;
+      }
+
+      // Guard: date and time must be present
+      const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
+      const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
+      if (!bookingDate || !startTime) {
+        toast.error("Missing date or time. Please go back and select a slot.");
+        onGoToStep(1);
+        return;
+      }
+
       const clientId = null;
       const { data: tenantRow } = await supabase
         .from("tenants")
@@ -89,9 +105,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       const staffId = tenantRow?.owner_id;
       if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
 
-      const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-      const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
-
+      // Returns full detail text — used for all fields except pregnancy
       const getAnswerDetail = (id: number) => {
         const answer = booking.safetyAnswers[id];
         if (answer === true) {
@@ -102,7 +116,16 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         return booking.isExistingClient ? "On File" : "None reported";
       };
 
-      const guestPhone = `${booking.phoneCode} ${booking.phone}`.trim();
+      // Pregnancy column has a strict CHECK constraint: only 'Yes', 'No', or 'On File'
+      const getPregnancyAnswer = () => {
+        const answer = booking.safetyAnswers[4];
+        if (answer === true) return "Yes";
+        if (answer === false) return "No";
+        return booking.isExistingClient ? "On File" : "No";
+      };
+
+      // Guard: avoid sending "+27" when phone is empty
+      const guestPhone = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
 
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
         p_client_id: clientId,
@@ -120,14 +143,14 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         p_medications: getAnswerDetail(2),
         p_allergies: getAnswerDetail(3),
         p_health_conditions: getAnswerDetail(5),
-        p_pregnancy: getAnswerDetail(4),
+        p_pregnancy: getPregnancyAnswer(),
         p_additional_notes: booking.additionalNotes || null,
         p_environmental_exposure: getAnswerDetail(6),
         p_physical_factors: getAnswerDetail(7),
         p_hair_length_ok: booking.safetyAnswers[8] === false ? "No" : "Yes",
         p_guest_name: booking.fullName || null,
         p_guest_email: booking.email || null,
-        p_guest_phone: guestPhone || null,
+        p_guest_phone: guestPhone,
         p_total_amount: total,
         p_deposit_amount: amountDueNow,
       });
