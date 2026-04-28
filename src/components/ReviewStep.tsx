@@ -61,7 +61,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   })();
 
   const servicesTotal = selectedWithQty.reduce((sum, { svc, qty }) => sum + svc.price * qty, 0);
-  // Guard against NaN: if distanceKm is undefined and address is falsy, default to 0
   const estimatedDistanceKm = Number(booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0)) || 0;
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
   const total = servicesTotal + callOutFee;
@@ -105,7 +104,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       const staffId = tenantRow?.owner_id;
       if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
 
-      // Returns full detail text — used for all fields except pregnancy
+      // Returns full detail text for all consent form fields, including pregnancy.
+      // e.g. "Yes: 4 Months" — full text is preserved so the tenant sees exactly what the client submitted.
       const getAnswerDetail = (id: number) => {
         const answer = booking.safetyAnswers[id];
         if (answer === true) {
@@ -114,14 +114,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         }
         if (answer === false) return "No";
         return booking.isExistingClient ? "On File" : "None reported";
-      };
-
-      // Pregnancy column has a strict CHECK constraint: only 'Yes', 'No', or 'On File'
-      const getPregnancyAnswer = () => {
-        const answer = booking.safetyAnswers[4];
-        if (answer === true) return "Yes";
-        if (answer === false) return "No";
-        return booking.isExistingClient ? "On File" : "No";
       };
 
       // Guard: avoid sending "+27" when phone is empty
@@ -143,7 +135,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         p_medications: getAnswerDetail(2),
         p_allergies: getAnswerDetail(3),
         p_health_conditions: getAnswerDetail(5),
-        p_pregnancy: getPregnancyAnswer(),
+        p_pregnancy: getAnswerDetail(4),
         p_additional_notes: booking.additionalNotes || null,
         p_environmental_exposure: getAnswerDetail(6),
         p_physical_factors: getAnswerDetail(7),
@@ -161,7 +153,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
       const bookingId = result?.booking_id;
       if (bookingId) {
-        // Create GCal event immediately after booking, before Yoco redirect
         try {
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
           const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -211,7 +202,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
         if (checkoutErr) throw checkoutErr;
         if (checkoutData?.redirect_url || checkoutData?.redirectUrl || checkoutData?.url) {
-          // Release the hold before redirecting — slot is now a real booking
           await releaseHold();
           window.location.href = checkoutData.redirect_url ?? checkoutData.redirectUrl ?? checkoutData.url;
           return;
