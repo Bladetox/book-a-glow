@@ -61,7 +61,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   })();
 
   const servicesTotal = selectedWithQty.reduce((sum, { svc, qty }) => sum + svc.price * qty, 0);
-  const estimatedDistanceKm = booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0);
+  // Guard against NaN: if distanceKm is undefined and address is falsy, default to 0
+  const estimatedDistanceKm = Number(booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0)) || 0;
   const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
   const total = servicesTotal + callOutFee;
 
@@ -118,17 +119,17 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         p_skin_conditions: getAnswerDetail(1),
         p_medications: getAnswerDetail(2),
         p_allergies: getAnswerDetail(3),
-        p_pregnancy: getAnswerDetail(4),
         p_health_conditions: getAnswerDetail(5),
+        p_pregnancy: getAnswerDetail(4),
+        p_additional_notes: booking.additionalNotes || null,
         p_environmental_exposure: getAnswerDetail(6),
         p_physical_factors: getAnswerDetail(7),
         p_hair_length_ok: booking.safetyAnswers[8] === false ? "No" : "Yes",
-        p_additional_notes: booking.additionalNotes || null,
         p_guest_name: booking.fullName || null,
         p_guest_email: booking.email || null,
         p_guest_phone: guestPhone || null,
         p_total_amount: total,
-        p_deposit_amount: amountDueNow
+        p_deposit_amount: amountDueNow,
       });
 
       if (error) throw error;
