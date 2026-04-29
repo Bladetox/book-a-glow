@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, CalendarCheck, 
   AlertTriangle, Star, ShoppingBag, Eye, 
   BarChart3, CircleDollarSign, UserPlus, UserCheck, 
-  Percent, XCircle, Package, Bell, Clock, Info, X, Megaphone 
+  Percent, XCircle, Package, Bell, Clock, Info, X, Megaphone, Sparkles 
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
@@ -56,79 +56,15 @@ function saveVisibility(v: Record<SectionKey, boolean>) {
   localStorage.setItem(DASHBOARD_VIS_KEY, JSON.stringify(v));
 }
 
-interface Appointment {
-  id: string;
-  time: string;
-  client: string;
-  service: string;
-  status: "confirmed" | "pending" | "complete" | "completed" | "cancelled";
-  balance: number;
-}
-
-interface HeatmapCell {
-  slot: string;
-  intensity: number;
-}
-
-interface HeatmapRow {
-  day: string;
-  slots: HeatmapCell[];
-}
-
-interface MetricEntry {
-  title: string;
-  explain: string;
-  benchmark?: string;
-}
-
-interface InfoLine {
-  term: string;
-  def: string;
-}
-
-interface MetricCopyShape {
-  revenueToday: MetricEntry;
-  appointmentsToday: MetricEntry;
-  remaining: MetricEntry;
-  nextUp: MetricEntry;
-  fillRate: MetricEntry;
-  avgBasket: MetricEntry;
-  appointments: MetricEntry;
-  cancellations: MetricEntry;
-  clients: MetricEntry;
-  returning: MetricEntry;
-  retention: MetricEntry;
-  leadSource: MetricEntry;
-  revenueTrend: InfoLine[];
-  heatmap: InfoLine[];
-}
-
-interface ExpandedCard extends MetricEntry {
+interface ExpandedCard {
   id: string;
   label: string;
   value: string;
   valueColor?: string;
-  extraLines?: InfoLine[];
+  title: string;
+  explain: string;
+  benchmark?: string;
 }
-
-const METRIC_COPY: MetricCopyShape = {
-  revenueToday: { title: "Daily Revenue", explain: "Total money received today.", benchmark: "Aim: consistent with your weekday average.", },
-  appointmentsToday: { title: "Today's Bookings", explain: "How many clients are booked in today.", },
-  remaining: { title: "Remaining Appointments", explain: "Appointments still ahead today.", },
-  nextUp: { title: "Next Appointment", explain: "Your next client.", },
-  fillRate: { title: "Fill Rate", explain: "Capacity utilisation.", benchmark: "Target: 70%+.", },
-  avgBasket: { title: "ATV", explain: "Average revenue per appointment.", benchmark: "Tip: add one upsell.", },
-  appointments: { title: "Monthly Volume", explain: "Total bookings this month.", },
-  cancellations: { title: "Cancellation Rate", explain: "% of bookings cancelled.", benchmark: "Target: <10%.", },
-  clients: { title: "Unique Clients", explain: "Distinct people who booked.", },
-  returning: { title: "Returning Clients", explain: "Clients from last month.", benchmark: "Aim: 30-40%.", },
-  retention: { title: "Retention Rate", explain: "MoM retention measure.", benchmark: "Target: 40%+.", },
-  leadSource: { title: "Acquisition Channel", explain: "Where clients discover you.", benchmark: "Double down on top channel.", },
-  revenueTrend: [ { term: "Revenue Trend", def: "Daily revenue plotted." } ],
-  heatmap: [ { term: "Booking Heatmap", def: "Demand patterns." } ],
-};
-
-const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
 const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onClose: () => void; }) => (
   <AnimatePresence>
@@ -166,22 +102,6 @@ const MetricExpandOverlay = ({ card, onClose }: { card: ExpandedCard | null; onC
       </div>
     )}
   </AnimatePresence>
-);
-
-const MetricCard = ({ id, icon: Icon, label, value, color, sub, title, explain, benchmark, onExpand }: any) => (
-  <motion.div
-    onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark })}
-    className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 cursor-pointer select-none"
-    whileTap={{ scale: 0.97 }}
-    role="button"
-  >
-    <div className="flex items-center gap-2 mb-2">
-      <Icon className="w-3.5 h-3.5 text-white/30" />
-      <span className="text-[10px] uppercase tracking-widest text-white/40 font-medium">{label}</span>
-    </div>
-    <div className={`text-xl font-bold ${color || 'text-white'}`}>{value}</div>
-    {sub && <div className="text-[10px] text-white/20 mt-1">{sub}</div>}
-  </motion.div>
 );
 
 const SectionHeader = ({ title, icon: Icon, children }: any) => (
@@ -262,8 +182,6 @@ const AdminDashboard = ({ onNavigate }: { onNavigate?: (view: string) => void; }
           <AdminRecommendations onNavigate={onNavigate || (() => {})} />
         </section>
       )}
-
-      {/* Grid of existing sections based on visibility... */}
     </div>
   );
 };
