@@ -106,7 +106,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   const pendingCount = bookings?.filter((b) => b.status === "pending").length ?? 0;
 
   const handleNavigate = (view: string) => {
-    if (views.includes(view as ViewName)) setActiveView(view as ViewName);
+    if ((views as readonly string[]).includes(view)) setActiveView(view as ViewName);
   };
 
   if (
@@ -121,12 +121,13 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col lg:flex-row overflow-hidden">
+      {/* AdminSidebar expects: views, activeView, onSelect, isOpen, onClose */}
       <AdminSidebar
+        views={[...views]}
         activeView={activeView}
-        onViewChange={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
+        onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        pendingCount={pendingCount}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative h-screen overflow-hidden">
@@ -174,6 +175,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
           </AdminErrorBoundary>
         </div>
 
+        {/* AdminMobileNav — pass pendingCount explicitly since AdminSidebar now owns it internally */}
         <AdminMobileNav
           activeView={activeView}
           onViewChange={(v) => setActiveView(v as ViewName)}
