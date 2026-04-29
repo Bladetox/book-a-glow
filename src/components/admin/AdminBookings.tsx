@@ -4,6 +4,7 @@ import {
   AdminPageHeader,
   SectionLabel,
   AdminTag,
+  PaymentTag,
   SaveButton,
   EmptyState,
 } from "@/components/admin/AdminSharedUI";
@@ -15,7 +16,7 @@ import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Trash2, ChevronDown, ChevronUp,
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
-  SendHorizonal, Search, AlertTriangle, Edit3
+  SendHorizonal, Search, AlertTriangle, Edit3, Sparkles
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
@@ -26,11 +27,30 @@ import { toast } from "sonner";
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
+// Map DB status values to human-readable display labels.
+// "completed" in the DB now means the appointment was physically serviced.
+const statusDisplayLabel: Record<BookingRow["status"], string> = {
+  pending:   "pending",
+  confirmed: "confirmed",
+  completed: "serviced",
+  cancelled: "cancelled",
+};
+
 const statusBorderAccent: Record<BookingRow["status"], string> = {
-  pending: "border-l-2 border-l-amber-500/50",
+  pending:   "border-l-2 border-l-amber-500/50",
   confirmed: "border-l-2 border-l-emerald-500/30",
-  completed: "border-l-2 border-l-white/10",
+  completed: "border-l-2 border-l-sky-500/20",
   cancelled: "border-l-2 border-l-red-500/20",
+};
+
+const statusTagColor = (
+  status: BookingRow["status"]
+): "amber" | "emerald" | "sky" | "red" | "default" => {
+  if (status === "pending")   return "amber";
+  if (status === "confirmed") return "emerald";
+  if (status === "completed") return "sky";
+  if (status === "cancelled") return "red";
+  return "default";
 };
 
 interface ConfirmDialogProps {
@@ -228,11 +248,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [markingServicedId, setMarkingServicedId] = useState<string | null>(null);
 
   const [confirmDelete, setConfirmDelete] = useState<BookingRow | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<BookingRow | null>(null);
   const [confirmConfirm, setConfirmConfirm] = useState<BookingRow | null>(null);
   const [confirmMarkPaid, setConfirmMarkPaid] = useState<BookingRow | null>(null);
+  const [confirmMarkServiced, setConfirmMarkServiced] = useState<BookingRow | null>(null);
   const [confirmRequestBalance, setConfirmRequestBalance] = useState<BookingRow | null>(null);
 
   const [addServiceBooking, setAddServiceBooking] = useState<BookingRow | null>(null);
@@ -350,9 +372,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   }, [bookings, activeFilter, todayStr, searchQuery]);
 
   const counts: Record<FilterType, number> = {
-    All: bookings.length,
-    Today: bookings.filter(b => b.date === todayStr).length,
-    Pending: bookings.filter(b => b.status === "pending").length,
+    All:       bookings.length,
+    Today:     bookings.filter(b => b.date === todayStr).length,
+    Pending:   bookings.filter(b => b.status === "pending").length,
     Confirmed: bookings.filter(b => b.status === "confirmed").length,
     Completed: bookings.filter(b => b.status === "completed").length,
     Cancelled: bookings.filter(b => b.status === "cancelled").length,
@@ -471,6 +493,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
+  // ── Mark Fully Paid ────────────────────────────────────────────────────────
+  // Payment lifecycle only — does NOT change appointment status.
+  // The appointment status is managed independently via Mark as Serviced.
   const handleMarkFullyPaid = async (b: BookingRow) => {
     if (markingPaidId === b.id) return;
     setMarkingPaidId(b.id);
@@ -482,15 +507,33 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           deposit_paid: true,
           full_payment_received: true,
           final_payment_paid: true,
-          completed_at: new Date().toISOString(),
         },
       });
-      await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
-      toast.success(`${b.client}'s booking marked as fully paid & complete`);
+      toast.success(`${b.client}'s booking marked as fully paid`);
     } catch (e: any) {
       toast.error(e.message || "Failed to mark as paid");
     } finally {
       setMarkingPaidId(null);
+    }
+  };
+
+  // ── Mark as Serviced ───────────────────────────────────────────────────────
+  // Appointment lifecycle only — records that the service was physically delivered.
+  // Sets status → "completed". Visible only on/after the booking date.
+  const handleMarkServiced = async (b: BookingRow) => {
+    if (markingServicedId === b.id) return;
+    setMarkingServicedId(b.id);
+    try {
+      await updateFields.mutateAsync({
+        bookingId: b.id,
+        updates: { completed_at: new Date().toISOString() },
+      });
+      await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
+      toast.success(`${b.client}'s appointment marked as serviced`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to mark as serviced");
+    } finally {
+      setMarkingServicedId(null);
     }
   };
 
@@ -553,11 +596,20 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       <ConfirmDialog
         open={!!confirmMarkPaid}
         title="Mark as fully paid?"
-        description={confirmMarkPaid ? `This will clear the outstanding balance for ${confirmMarkPaid.client} and mark the booking complete.` : ""}
+        description={confirmMarkPaid ? `This will clear the outstanding balance of R${confirmMarkPaid.balance} for ${confirmMarkPaid.client}. The appointment status is unchanged.` : ""}
         confirmLabel="Mark Paid"
         confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
         onConfirm={() => { if (confirmMarkPaid) handleMarkFullyPaid(confirmMarkPaid); setConfirmMarkPaid(null); }}
         onCancel={() => setConfirmMarkPaid(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmMarkServiced}
+        title="Mark as serviced?"
+        description={confirmMarkServiced ? `This records that ${confirmMarkServiced.client}'s appointment was attended and the service was delivered.` : ""}
+        confirmLabel="Mark Serviced"
+        confirmClass="bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/30"
+        onConfirm={() => { if (confirmMarkServiced) handleMarkServiced(confirmMarkServiced); setConfirmMarkServiced(null); }}
+        onCancel={() => setConfirmMarkServiced(null)}
       />
       <ConfirmDialog
         open={!!confirmRequestBalance}
@@ -678,6 +730,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {filters.map(f => {
             const showCount = f !== "All" && f !== "Today";
+            // Display "Serviced" in the filter tab label instead of "Completed"
+            const filterLabel = f === "Completed" ? "Serviced" : f;
             return (
               <button
                 key={f}
@@ -688,7 +742,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                     : "text-white/35 border-white/[0.06] hover:text-white/60"
                 }`}
               >
-                {f}
+                {filterLabel}
                 {showCount && (
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-white/10" : "bg-white/[0.04]"}`}>
                     {counts[f]}
@@ -730,9 +784,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                   const isEditingInline = editingInlineId === b.id;
                   const isRequestingBalance = requestingBalanceId === b.id;
                   const isMarkingPaid = markingPaidId === b.id;
-                  const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && b.status !== "completed" && !b.fullPaymentReceived;
+                  const isMarkingServiced = markingServicedId === b.id;
+                  const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && !b.fullPaymentReceived;
                   const blockStatus = blockStatusMap[b.id];
                   const isClientBlocked = blockStatus?.isBlocked ?? false;
+
+                  // Show Mark as Serviced only on or after the booking date, for non-cancelled, non-serviced bookings
+                  const canMarkServiced = b.status !== "cancelled" && b.status !== "completed" && b.date <= todayStr;
 
                   const serviceList = (b.service ?? "").split(", ").filter(Boolean);
 
@@ -764,9 +822,16 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
                             {isClientBlocked && <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />}
+                            {/* Appointment lifecycle pill */}
                             <AdminTag
-                              label={b.status}
-                              color={b.status === "pending" ? "amber" : b.status === "confirmed" ? "emerald" : b.status === "cancelled" ? "red" : "default"}
+                              label={statusDisplayLabel[b.status]}
+                              color={statusTagColor(b.status)}
+                            />
+                            {/* Payment lifecycle pill — independent of appointment status */}
+                            <PaymentTag
+                              fullPaymentReceived={b.fullPaymentReceived}
+                              balance={b.balance}
+                              depositPaid={b.depositPaid}
                             />
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -775,9 +840,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                             </span>
                             <span className="text-[10px] text-white/20">·</span>
                             <span className="text-[10px] text-white/25">{b.duration}min</span>
-                            {hasOutstandingBalance && (
-                              <span className="text-[10px] text-amber-400/80">· R {b.balance} due</span>
-                            )}
                           </div>
                         </div>
 
@@ -902,7 +964,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </button>
                                   )}
 
-                                  {b.status !== "cancelled" && b.status !== "completed" && (
+                                  {/* Payment action — independent of appointment status */}
+                                  {b.status !== "cancelled" && !b.fullPaymentReceived && b.balance > 0 && (
                                     <button disabled={isMarkingPaid} onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }} className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                                       {isMarkingPaid ? <Loader2 className="w-3 h-3 animate-spin" /> : <CircleDollarSign className="w-3 h-3" />}
                                       Mark Fully Paid
@@ -913,6 +976,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     <button disabled={isRequestingBalance} onClick={e => { e.stopPropagation(); setConfirmRequestBalance(b); }} className="px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] text-xs font-medium text-amber-400 hover:bg-amber-500/[0.15] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                                       {isRequestingBalance ? <Loader2 className="w-3 h-3 animate-spin" /> : <SendHorizonal className="w-3 h-3" />}
                                       Request Final Payment
+                                    </button>
+                                  )}
+
+                                  {/* Appointment lifecycle action — only appears on/after booking date */}
+                                  {canMarkServiced && (
+                                    <button disabled={isMarkingServiced} onClick={e => { e.stopPropagation(); setConfirmMarkServiced(b); }} className="px-3 py-1.5 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                                      {isMarkingServiced ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                      Mark as Serviced
                                     </button>
                                   )}
 

@@ -221,7 +221,7 @@ export const AdminTag = ({
   color = "default",
 }: {
   label: string;
-  color?: "default" | "red" | "amber" | "emerald" | "blue";
+  color?: "default" | "red" | "amber" | "emerald" | "blue" | "sky";
 }) => {
   const colors = {
     default: "bg-white/[0.05] border-white/[0.08] text-white/40",
@@ -229,12 +229,49 @@ export const AdminTag = ({
     amber:   "bg-amber-400/10 border-amber-400/20 text-amber-400/80",
     emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
     blue:    "bg-blue-500/10 border-blue-500/20 text-blue-400/80",
+    sky:     "bg-sky-500/10 border-sky-500/20 text-sky-400/80",
   };
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded-md border font-medium ${colors[color]}`}>
       {label}
     </span>
   );
+};
+
+// ── PaymentTag ────────────────────────────────────────────────────────────────
+// Independent payment-state pill — always shown alongside AdminTag (appointment).
+// Represents the financial lifecycle separately from the appointment lifecycle.
+export const PaymentTag = ({
+  fullPaymentReceived,
+  balance,
+  depositPaid,
+}: {
+  fullPaymentReceived: boolean;
+  balance: number;
+  depositPaid: boolean;
+}) => {
+  if (fullPaymentReceived || balance === 0) {
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded-md border font-medium bg-emerald-500/10 border-emerald-500/20 text-emerald-400">
+        paid ✓
+      </span>
+    );
+  }
+  if (balance > 0 && depositPaid) {
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded-md border font-medium bg-amber-400/10 border-amber-400/20 text-amber-400/80">
+        R{balance} due
+      </span>
+    );
+  }
+  if (balance > 0 && !depositPaid) {
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded-md border font-medium bg-white/[0.04] border-white/[0.08] text-white/30">
+        deposit only
+      </span>
+    );
+  }
+  return null;
 };
 
 // ── EmptyState ────────────────────────────────────────────────────────────────
@@ -291,12 +328,11 @@ export const HintTooltip = ({ text }: { text: string }) => {
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
-  // Position popover above the trigger button using getBoundingClientRect
   const updatePosition = () => {
     if (!btnRef.current) return;
     const r = btnRef.current.getBoundingClientRect();
     setCoords({
-      top:  r.top + window.scrollY - 8,   // 8px gap above button
+      top:  r.top + window.scrollY - 8,
       left: r.left + r.width / 2 + window.scrollX,
     });
   };
@@ -343,7 +379,6 @@ export const HintTooltip = ({ text }: { text: string }) => {
           }}
           className="w-60 rounded-xl bg-zinc-900 border border-white/[0.12] shadow-2xl px-3 py-2.5 pointer-events-auto"
         >
-          {/* Arrow pointing down */}
           <div
             className="absolute left-1/2 -translate-x-1/2 w-0 h-0"
             style={{
