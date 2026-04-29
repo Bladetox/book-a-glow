@@ -101,7 +101,6 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   const [activeView, setActiveView] = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Safe to call here: AdminShell is always rendered inside TenantProvider
   const { data: bookings } = useSupabaseBookings();
   const pendingCount = bookings?.filter((b) => b.status === "pending").length ?? 0;
 
@@ -121,7 +120,6 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col lg:flex-row overflow-hidden">
-      {/* AdminSidebar expects: views, activeView, onSelect, isOpen, onClose */}
       <AdminSidebar
         views={[...views]}
         activeView={activeView}
@@ -175,10 +173,9 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
           </AdminErrorBoundary>
         </div>
 
-        {/* AdminMobileNav — pass pendingCount explicitly since AdminSidebar now owns it internally */}
         <AdminMobileNav
           activeView={activeView}
-          onViewChange={(v) => setActiveView(v as ViewName)}
+          onSelect={(v) => setActiveView(v as ViewName)}
           pendingCount={pendingCount}
         />
       </main>

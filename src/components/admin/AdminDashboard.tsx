@@ -4,7 +4,8 @@ import {
   TrendingUp, TrendingDown, CalendarCheck, 
   AlertTriangle, Star, ShoppingBag, Eye, 
   BarChart3, CircleDollarSign, UserPlus, UserCheck, 
-  Percent, XCircle, Package, Bell, Clock, Info, X, Megaphone, Sparkles 
+  Percent, XCircle, Package, Bell, Clock, Info, X, Megaphone, Sparkles,
+  Loader2
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
