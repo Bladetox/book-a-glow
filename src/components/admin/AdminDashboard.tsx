@@ -11,8 +11,12 @@ import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
 import { useTenant } from "@/contexts/TenantContext";
+import AdminRecommendations from "@/components/admin/AdminRecommendations";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
+const NEXTY_TENANTS = (import.meta.env.VITE_NEXTY_TENANTS ?? "phenomebeauty")
+  .split(",")
+  .map((s: string) => s.trim().toLowerCase());
 const ALL_SECTIONS = [
   "hero", "health", "topServices", "alerts",
   "revenueGraph", "heatmap", "todayAppointments", "clientInsights",
@@ -526,7 +530,9 @@ const AdminDashboard = ({
   const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
   const data = useDashboardData();
-  const { tenantId } = useTenant();
+  const { tenantId } = useTenant();   
+    onst tenantSlug = window.location.hostname.split(".")[0].toLowerCase();
+    const isNextyEnabled = NEXTY_TENANTS.includes(tenantSlug);
   const {
     data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
     isLoading: alertsLoading,
@@ -998,6 +1004,11 @@ const AdminDashboard = ({
             ))}
           </div>
         </motion.section>
+      
+        {/* Nexty AI — gated to approved tenants only */}
+        {isNextyEnabled && (
+          <AdminRecommendations onNavigate={onNavigate} />
+        )}
       )}
     </div>
   );
