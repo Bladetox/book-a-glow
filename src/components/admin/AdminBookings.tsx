@@ -702,7 +702,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         {filtered.length === 0 ? (
           <EmptyState
             icon={CalendarCheck}
-            title={searchQuery ? `No bookings matching “${searchQuery}”` : "No bookings match this filter"}
+            title={searchQuery ? `No bookings matching "${searchQuery}"` : "No bookings match this filter"}
             description={searchQuery ? "Try another search term or clear the search." : "Adjust the filter to view a different set of bookings."}
           />
         ) : (
@@ -890,13 +890,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </button>
                                   )}
 
-                                  {b.status !== "cancelled" && b.status !== "completed" && (
+                                  {b.status !== "cancelled" && (
                                     <button onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }} className="px-3 py-1.5 rounded-xl border border-sky-500/25 bg-sky-500/[0.08] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5">
                                       <CalendarClock className="w-3 h-3" /> Reschedule
                                     </button>
                                   )}
 
-                                  {b.status !== "cancelled" && b.status !== "completed" && (
+                                  {b.status !== "cancelled" && (
                                     <button onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }} className="px-3 py-1.5 rounded-xl border border-violet-500/25 bg-violet-500/[0.08] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors flex items-center gap-1.5">
                                       <PlusCircle className="w-3 h-3" /> Add Service
                                     </button>
@@ -926,7 +926,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                   <div className="flex-1" />
 
-                                  {b.status !== "cancelled" && b.status !== "completed" && (
+                                  {b.status !== "cancelled" && (
                                     <button onClick={e => { e.stopPropagation(); setConfirmCancel(b); }} className="px-3 py-1.5 rounded-xl border border-red-500/20 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-1.5">
                                       <X className="w-3 h-3" /> Cancel
                                     </button>
