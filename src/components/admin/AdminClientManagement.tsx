@@ -8,12 +8,11 @@ import ClientAlertsModal, { type BirthdayClient } from "@/components/admin/Clien
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import { addDays } from "date-fns";
 
-const AdminLoyalty          = lazy(() => import("@/components/admin/AdminLoyalty"));
 const AdminBlockedClients   = lazy(() => import("@/components/admin/AdminBlockedClients"));
 const AdminConsultations    = lazy(() => import("@/components/admin/AdminConsultations"));
 const AdminSpecialOccasions = lazy(() => import("@/components/admin/AdminSpecialOccasions"));
 
-const TABS = ["Loyalty", "Consultations", "Special Dates", "Blocked Clients"] as const;
+const TABS = ["Special Dates", "Consultations", "Blocked Clients"] as const;
 type Tab = typeof TABS[number];
 
 type AlertModalType = "overdue_loyalty" | "inactive_90_days" | "birthday" | null;
@@ -36,26 +35,15 @@ interface AlertChip {
 }
 
 const ProactiveAlertBanner = ({
-  overdueCount,
   inactiveCount,
   birthdayCount,
   onOpen,
 }: {
-  overdueCount: number;
   inactiveCount: number;
   birthdayCount: number;
   onOpen: (type: AlertModalType) => void;
 }) => {
   const chips: AlertChip[] = [
-    {
-      key:    "overdue_loyalty",
-      icon:   "⚠️",
-      label:  `${overdueCount} overdue`,
-      count:  overdueCount,
-      color:  "text-red-400",
-      border: "border-red-500/25",
-      bg:     "bg-red-500/[0.06] hover:bg-red-500/[0.1]",
-    },
     {
       key:    "inactive_90_days",
       icon:   "💤",
@@ -80,7 +68,6 @@ const ProactiveAlertBanner = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Section label */}
       <div className="flex items-center gap-2">
         <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/30">
           Action Required
@@ -91,7 +78,6 @@ const ProactiveAlertBanner = ({
         </span>
       </div>
 
-      {/* Chips row */}
       <div className="flex flex-wrap gap-2">
         {chips.map(chip => (
           <button
@@ -112,12 +98,11 @@ const ProactiveAlertBanner = ({
 // ══════════════════════════════════════════════════
 const AdminClientManagement = () => {
   const { tenantId } = useTenant();
-  const [activeTab, setActiveTab]   = useState<Tab>("Loyalty");
+  const [activeTab, setActiveTab]   = useState<Tab>("Special Dates");
   const [alertModal, setAlertModal] = useState<AlertModalType>(null);
 
   // ─── Client alert counts ───
   const { data: alertData } = useClientAlerts();
-  const overdueClients  = alertData?.overdueLoyaltyClients ?? [];
   const inactiveClients = alertData?.inactiveClients ?? [];
 
   // ─── Birthday count: next 7 days ───
@@ -147,9 +132,8 @@ const AdminClientManagement = () => {
 
   const renderTab = () => {
     switch (activeTab) {
-      case "Loyalty":         return <AdminLoyalty />;
-      case "Consultations":   return <AdminConsultations />;
       case "Special Dates":   return <AdminSpecialOccasions />;
+      case "Consultations":   return <AdminConsultations />;
       case "Blocked Clients": return <AdminBlockedClients />;
     }
   };
@@ -158,18 +142,17 @@ const AdminClientManagement = () => {
     <div className="flex flex-col gap-6 pb-12">
       <AdminPageHeader
         title="Client Management"
-        subtitle="Manage loyalty programmes, special occasions, blocked clients, and consultation requests."
+        subtitle="Manage special occasions, consultation requests, and blocked clients."
       />
 
       {/* Action Required banner — only renders when alerts exist */}
       <ProactiveAlertBanner
-        overdueCount={overdueClients.length}
         inactiveCount={inactiveClients.length}
         birthdayCount={birthdayClients.length}
         onOpen={setAlertModal}
       />
 
-      {/* Tab bar — horizontal scroll on narrow screens, no wrapping */}
+      {/* Tab bar */}
       <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06] overflow-x-auto scrollbar-hide">
         {TABS.map(tab => (
           <button
@@ -201,7 +184,7 @@ const AdminClientManagement = () => {
         isOpen={alertModal !== null}
         onClose={() => setAlertModal(null)}
         alertType={alertModal}
-        overdueClients={overdueClients}
+        overdueClients={[]}
         inactiveClients={inactiveClients}
         birthdayClients={birthdayClients}
       />
