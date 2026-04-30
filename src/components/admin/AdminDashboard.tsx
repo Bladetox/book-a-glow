@@ -171,7 +171,7 @@ const METRIC_COPY: MetricCopyShape = {
     benchmark: "Target: below 10%. Above 20% = take action.",
   },
   clients: {
-    title: "Unique Clients",
+    title: "Clients This Month",
     explain: "Total distinct people who booked with you this month.",
   },
   returning: {
@@ -805,22 +805,22 @@ const AdminDashboard = ({
         )}
       </AnimatePresence>
 
-      {/* Nexty AI — compact proactive cards. Full advisor in Recommendations nav view. */}
+      {/* Nexty AI — single teaser row. Full analysis lives in Recommendations. */}
       {isNextyEnabled && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigate?.("Recommendations")}
+            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3.5 hover:bg-white/[0.05] hover:border-white/[0.12] transition-all group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
               <MiniNextyOrb />
-              <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Nexty AI Insights</p>
+              <div className="flex flex-col items-start gap-0.5 min-w-0">
+                <p className="text-[11px] font-semibold text-white/80 leading-none">Nexty has insights for you</p>
+                <p className="text-[10px] text-white/30 leading-none">Open Nexty to see your business analysis</p>
+              </div>
             </div>
-            <button
-              onClick={() => onNavigate?.("Recommendations")}
-              className="flex items-center gap-1 text-[10px] text-white/20 hover:text-white/50 uppercase tracking-widest transition-colors"
-            >
-              Open advisor <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-          <NextyInsightCards onNavigate={onNavigate} />
+            <ArrowRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 shrink-0 transition-colors" />
+          </button>
         </motion.section>
       )}
 
@@ -891,7 +891,7 @@ const AdminDashboard = ({
             <MetricCard id="mc-atv" icon={ShoppingBag} label="Avg Basket" value={`R ${Math.round(avgBasket)}`} {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
             <MetricCard id="mc-appts" icon={CalendarCheck} label="Appointments" value={String(totalAppts)} {...METRIC_COPY.appointments} onExpand={setExpandedCard} />
             <MetricCard id="mc-cancel" icon={XCircle} label="Cancellation Rate" value={cancelDisplay} color={cancelColor} {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
-            <MetricCard id="mc-clients" icon={UserPlus} label="Unique Clients" value={String(totalClients)} {...METRIC_COPY.clients} onExpand={setExpandedCard} />
+            <MetricCard id="mc-clients" icon={UserPlus} label="Clients This Month" value={String(totalClients)} {...METRIC_COPY.clients} onExpand={setExpandedCard} />
             <MetricCard id="mc-ret" icon={Bell} label="Retention" value={retentionDisp} color={retentionColor} {...METRIC_COPY.retention} onExpand={setExpandedCard} />
           </div>
         </motion.section>
@@ -1063,7 +1063,7 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
           <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Client Insights</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ClientMiniCard id="ci-total" icon={UserPlus} iconColor="text-sky-400/60" value={String(totalClients)} valueColor="text-sky-400" label="Total Clients" {...METRIC_COPY.clients} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-total" icon={UserPlus} iconColor="text-sky-400/60" value={String(totalClients)} valueColor="text-sky-400" label="Clients This Month" {...METRIC_COPY.clients} onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-ret" icon={UserCheck} iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Returning" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-retpct" icon={Percent} iconColor="text-violet-400/60" value={retentionDisp} valueColor="text-violet-400" label="Retention %" {...METRIC_COPY.retention} onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-rev" icon={CircleDollarSign} iconColor="text-amber-400/60" value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket" {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />

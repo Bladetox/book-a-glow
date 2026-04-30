@@ -130,7 +130,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 relative h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 relative h-dvh overflow-hidden">
         <header className="h-16 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
           <div className="flex items-center gap-3">
             <button
@@ -151,7 +151,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth relative z-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-24 lg:pb-8 scroll-smooth relative z-10 custom-scrollbar">
           <AdminErrorBoundary>
             <Suspense
               fallback={

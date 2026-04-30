@@ -15,7 +15,7 @@ function resolveClientKey(b: any): string {
   return b.client_id || b.guest_email || b.guest_phone || b.id;
 }
 
-const CLIENT_TYPE_LABELS = ["returning client", "returning", "existing client", "existing"];
+const CLIENT_TYPE_LABELS = ["new client", "new", "existing client", "existing"];
 function isClientTypeLabel(src: string): boolean {
   return CLIENT_TYPE_LABELS.includes(src.toLowerCase().trim());
 }
