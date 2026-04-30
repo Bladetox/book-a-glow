@@ -200,10 +200,6 @@ export function useNextyInsights() {
         const avgSpend     = Number(g.avg_spend_per_visit);
         const names        = g.sample_client_names ?? "";
 
-        const contextLine = isMobile
-          ? `These clients have already shown they value having the service come to them.`
-          : `These clients have already demonstrated consistent demand.`;
-
         const recoveryStep = count === 1
           ? `Open the Loyalty Tracker and tap "Enroll" next to ${names}. ` +
             `This starts the retention cycle that brings them back on a predictable schedule.`
@@ -214,11 +210,12 @@ export function useNextyInsights() {
         insights.push({
           id: "loyalty_gap",
           type: "retention",
-          priority: count > 3 ? "important" : "info",
+          priority: annualRev > 0 ? "important" : "info",
           title: "Retention Opportunity",
           message:
-            `${count} repeat client${count === 1 ? "" : "s"} ${count === 1 ? "is" : "are"} not in your loyalty tracker. ` +
-            `${contextLine} At ${formatRand(Math.round(avgSpend))} per visit on average, ` +
+            `${count} repeat client${count === 1 ? "" : "s"} who already book${count === 1 ? "s" : ""} regularly ` +
+            `${count === 1 ? "is" : "are"} not tracked in your loyalty programme. ` +
+            `At ${formatRand(Math.round(avgSpend))} per visit, this is ${formatRand(Math.round(annualRev))} in identifiable annual retention revenue sitting outside the system. ` +
             recoveryStep,
           actionLabel: count === 1 ? "Enroll Client" : "Enroll Clients",
           actionView: "Loyalty",
