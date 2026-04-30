@@ -5,14 +5,14 @@ import {
   AlertTriangle, Star, ShoppingBag, Eye, 
   BarChart3, CircleDollarSign, UserPlus, UserCheck, 
   Percent, XCircle, Package, Bell, Clock, Info, X, Megaphone, Sparkles,
-  Loader2
+  Loader2, ArrowRight
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
 import { useTenant } from "@/contexts/TenantContext";
-import AdminRecommendations from "@/components/admin/AdminRecommendations";
+import { useNextyInsights } from "@/hooks/useNextyInsights";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 const NEXTY_TENANTS = (import.meta.env.VITE_NEXTY_TENANTS ?? "phenomebeauty")
@@ -115,6 +115,76 @@ const SectionHeader = ({ title, icon: Icon, children }: any) => (
   </div>
 );
 
+// ---------------------------------------------------------------------------
+// Compact proactive insight cards — inline on the Dashboard.
+// The full Nexty chat UI lives in the dedicated Recommendations nav view.
+// ---------------------------------------------------------------------------
+const priorityIcon: Record<string, React.ElementType> = {
+  critical: AlertTriangle,
+  high:     TrendingUp,
+  medium:   UserCheck,
+  low:      Clock,
+};
+const priorityAccent: Record<string, { icon: string; bg: string; border: string }> = {
+  critical: { icon: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/20" },
+  high:     { icon: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+  medium:   { icon: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20" },
+  low:      { icon: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
+};
+
+const NextyInsightCards = ({ onNavigate }: { onNavigate?: (view: string) => void }) => {
+  const { data: insights, isLoading } = useNextyInsights();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-white/20 text-xs py-4">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        Analysing your business data…
+      </div>
+    );
+  }
+
+  if (!insights || insights.length === 0) {
+    return (
+      <p className="text-xs text-white/20 py-2">No insights yet. Check back once more bookings come in.</p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {insights.slice(0, 3).map((insight) => {
+        const Icon   = priorityIcon[insight.priority]  ?? TrendingUp;
+        const accent = priorityAccent[insight.priority] ?? priorityAccent.low;
+        return (
+          <div
+            key={insight.id}
+            className={`flex items-start gap-3 p-4 rounded-xl border bg-white/[0.02] ${accent.border}`}
+          >
+            <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${accent.bg}`}>
+              <Icon className={`w-3.5 h-3.5 ${accent.icon}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${accent.icon}`}>
+                {insight.title}
+              </p>
+              <p className="text-xs text-white/60 leading-relaxed">{insight.message}</p>
+              {insight.actionLabel && (
+                <button
+                  onClick={() => onNavigate?.(insight.actionView || "Recommendations")}
+                  className="mt-2 flex items-center gap-1.5 text-[10px] text-white/40 hover:text-white/70 transition-colors font-medium"
+                >
+                  {insight.actionLabel}
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const AdminDashboard = ({ onNavigate }: { onNavigate?: (view: string) => void; }) => {
   const [visibility, setVisibility] = useState(getVisibility);
   const [showCustomize, setShowCustomize] = useState(false);
@@ -160,6 +230,22 @@ const AdminDashboard = ({ onNavigate }: { onNavigate?: (view: string) => void; }
         </div>
       )}
 
+      {/* Nexty AI — compact proactive cards at the top of the dashboard.
+          The full chat advisor is accessible via the Recommendations nav item. */}
+      {isNextyEnabled && (
+        <section>
+          <SectionHeader title="Nexty AI Insights" icon={Sparkles}>
+            <button
+              onClick={() => onNavigate?.("Recommendations")}
+              className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/55 uppercase tracking-widest transition-colors"
+            >
+              Open advisor <ArrowRight className="w-3 h-3" />
+            </button>
+          </SectionHeader>
+          <NextyInsightCards onNavigate={onNavigate} />
+        </section>
+      )}
+
       {visibility.hero && (
         <section className="bg-gradient-to-br from-white/[0.05] to-transparent border border-white/[0.08] rounded-2xl p-6 lg:p-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -174,13 +260,6 @@ const AdminDashboard = ({ onNavigate }: { onNavigate?: (view: string) => void; }
               )}
             </div>
           </div>
-        </section>
-      )}
-
-      {isNextyEnabled && (
-        <section>
-          <SectionHeader title="Nexty AI Insights" icon={Sparkles} />
-          <AdminRecommendations onNavigate={onNavigate || (() => {})} />
         </section>
       )}
     </div>
