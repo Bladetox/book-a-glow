@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock } from "lucide-react";
+import { Sparkles, ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock } from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,6 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const hasInitialised                = useRef(false);
   const scrollRef                     = useRef<HTMLDivElement>(null);
 
-  // Run once when loading completes and insights are available
   useEffect(() => {
     if (isLoading || hasInitialised.current) return;
     hasInitialised.current = true;
@@ -70,15 +69,13 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] max-w-4xl mx-auto bg-[#0a0a0a] border border-white/[0.06] rounded-2xl overflow-hidden shadow-2xl">
       {/* Header */}
-      <div className="p-4 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-white tracking-tight">Nexty AI</h2>
-            <p className="text-[10px] text-white/40 uppercase tracking-[0.1em]">Business Growth Advisor</p>
-          </div>
+      <div className="p-4 border-b border-white/[0.06] bg-white/[0.02] flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+          <Sparkles className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-white tracking-tight">Nexty AI</h2>
+          <p className="text-[10px] text-white/40 uppercase tracking-[0.1em]">Business Growth Advisor</p>
         </div>
       </div>
 
@@ -103,10 +100,10 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
               )}>
                 {msg.insight && (
                   <div className="flex items-center gap-2 mb-2">
-                    {msg.insight.priority === "critical"  && <AlertTriangle className="w-4 h-4 text-red-400" />}
-                    {msg.insight.type === "margin"        && <TrendingUp className="w-4 h-4 text-emerald-400" />}
-                    {msg.insight.type === "retention"     && <UserCheck className="w-4 h-4 text-blue-400" />}
-                    {msg.insight.type === "capacity"      && <Clock className="w-4 h-4 text-amber-400" />}
+                    {msg.insight.priority === "critical" && <AlertTriangle className="w-4 h-4 text-red-400" />}
+                    {msg.insight.type === "margin"       && <TrendingUp className="w-4 h-4 text-emerald-400" />}
+                    {msg.insight.type === "retention"    && <UserCheck className="w-4 h-4 text-blue-400" />}
+                    {msg.insight.type === "capacity"     && <Clock className="w-4 h-4 text-amber-400" />}
                     <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
                       {msg.insight.title}
                     </span>
@@ -141,23 +138,6 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             </div>
           </motion.div>
         )}
-      </div>
-
-      {/* Footer */}
-      <div className="p-4 bg-white/[0.02] border-t border-white/[0.06]">
-        <div className="relative group">
-          <input
-            disabled
-            placeholder="Ask Nexty anything about your business..."
-            className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white/40 cursor-not-allowed group-hover:border-white/[0.12] transition-colors"
-          />
-          <div className="absolute right-2 top-1.5 p-1.5 rounded-lg bg-white/[0.05] text-white/20">
-            <Send className="w-4 h-4" />
-          </div>
-        </div>
-        <p className="mt-2 text-[9px] text-center text-white/20 uppercase tracking-widest font-medium">
-          Powered by NextSlot Intelligence Engine
-        </p>
       </div>
     </div>
   );
