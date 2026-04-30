@@ -1,245 +1,402 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock } from "lucide-react";
+import {
+  ArrowRight, TrendingUp, AlertTriangle, UserCheck,
+  Clock, RotateCcw, Package, PlusCircle,
+} from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
-import { cn } from "@/lib/utils";
-
-interface Message {
-  id: string;
-  role: "assistant" | "user";
-  content: string;
-  insight?: NextyInsight;
-  timestamp: Date;
-}
 
 // ── Nexty Orb ────────────────────────────────────────────────────────────────
 function NextyOrb() {
   return (
     <div className="nexty-orb-wrapper" aria-hidden="true">
-      {/* Outer glow pulse */}
       <div className="nexty-orb-glow" />
-      {/* Revolving ring */}
       <div className="nexty-orb-ring" />
-      {/* Sphere body */}
       <div className="nexty-orb-sphere" />
-
       <style>{`
-        .nexty-orb-wrapper {
-          position: relative;
-          width: 44px;
-          height: 44px;
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        /* Ambient gold glow that pulses */
-        .nexty-orb-glow {
-          position: absolute;
-          inset: -6px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(209,153,0,0.35) 0%, transparent 70%);
-          animation: nexty-pulse 2.8s ease-in-out infinite;
-        }
-        @keyframes nexty-pulse {
-          0%, 100% { opacity: 0.6; transform: scale(1); }
-          50%       { opacity: 1;   transform: scale(1.18); }
-        }
-
-        /* Revolving orbital ring */
-        .nexty-orb-ring {
-          position: absolute;
-          width: 52px;
-          height: 52px;
-          border-radius: 50%;
-          border: 1.5px solid transparent;
-          border-top-color:    rgba(253,171,67,0.9);
-          border-right-color:  rgba(253,171,67,0.3);
-          border-bottom-color: rgba(253,171,67,0.05);
-          border-left-color:   rgba(253,171,67,0.3);
-          animation: nexty-orbit 2s linear infinite;
-          filter: drop-shadow(0 0 4px rgba(253,171,67,0.6));
-        }
-        /* Second counter-rotating ring for depth */
-        .nexty-orb-ring::after {
-          content: '';
-          position: absolute;
-          inset: 4px;
-          border-radius: 50%;
-          border: 1px solid transparent;
-          border-top-color:   rgba(232,175,52,0.4);
-          border-left-color:  rgba(232,175,52,0.15);
-          animation: nexty-orbit-reverse 3.2s linear infinite;
-        }
-        @keyframes nexty-orbit {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-        @keyframes nexty-orbit-reverse {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(-360deg); }
-        }
-
-        /* Sphere — layered radial gradients for 3D volume */
-        .nexty-orb-sphere {
-          position: absolute;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background:
-            /* Specular highlight — top left */
-            radial-gradient(circle at 32% 28%, rgba(255,240,180,0.85) 0%, transparent 40%),
-            /* Mid-tone gold body */
-            radial-gradient(circle at 50% 50%, #fdab43 0%, #d19900 45%, #8a5b00 100%);
-          box-shadow:
-            /* Inner light rim */
-            inset -2px -3px 6px rgba(0,0,0,0.45),
-            inset  2px  2px 5px rgba(255,235,160,0.25),
-            /* Outer depth shadow */
-            0 4px 16px rgba(209,153,0,0.45),
-            0 1px  4px rgba(0,0,0,0.5);
-          animation: nexty-breathe 4s ease-in-out infinite;
-        }
-        @keyframes nexty-breathe {
-          0%, 100% { filter: brightness(1); }
-          50%       { filter: brightness(1.12); }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .nexty-orb-glow, .nexty-orb-ring,
-          .nexty-orb-ring::after, .nexty-orb-sphere {
-            animation: none;
-          }
-        }
+        .nexty-orb-wrapper{position:relative;width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+        .nexty-orb-glow{position:absolute;inset:-6px;border-radius:50%;background:radial-gradient(circle,rgba(209,153,0,.35) 0%,transparent 70%);animation:nexty-pulse 2.8s ease-in-out infinite}
+        @keyframes nexty-pulse{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.18)}}
+        .nexty-orb-ring{position:absolute;width:52px;height:52px;border-radius:50%;border:1.5px solid transparent;border-top-color:rgba(253,171,67,.9);border-right-color:rgba(253,171,67,.3);border-bottom-color:rgba(253,171,67,.05);border-left-color:rgba(253,171,67,.3);animation:nexty-orbit 2s linear infinite;filter:drop-shadow(0 0 4px rgba(253,171,67,.6))}
+        .nexty-orb-ring::after{content:'';position:absolute;inset:4px;border-radius:50%;border:1px solid transparent;border-top-color:rgba(232,175,52,.4);border-left-color:rgba(232,175,52,.15);animation:nexty-orbit-rev 3.2s linear infinite}
+        @keyframes nexty-orbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes nexty-orbit-rev{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+        .nexty-orb-sphere{position:absolute;width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 32% 28%,rgba(255,240,180,.85) 0%,transparent 40%),radial-gradient(circle at 50% 50%,#fdab43 0%,#d19900 45%,#8a5b00 100%);box-shadow:inset -2px -3px 6px rgba(0,0,0,.45),inset 2px 2px 5px rgba(255,235,160,.25),0 4px 16px rgba(209,153,0,.45),0 1px 4px rgba(0,0,0,.5);animation:nexty-breathe 4s ease-in-out infinite}
+        @keyframes nexty-breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+        @media(prefers-reduced-motion:reduce){.nexty-orb-glow,.nexty-orb-ring,.nexty-orb-ring::after,.nexty-orb-sphere{animation:none}}
       `}</style>
     </div>
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getFilterKey(ins: NextyInsight): string {
+  if (ins.priority === "critical") return "critical";
+  if (ins.type === "retention")    return "retention";
+  if (ins.type === "ops")          return "ops";
+  return "growth";
+}
+
+function InsightIcon({ type, priority }: { type: string; priority: string }) {
+  const cls = "w-4 h-4";
+  if (priority === "critical") return <AlertTriangle className={cls} />;
+  if (type === "margin")       return <TrendingUp    className={cls} />;
+  if (type === "retention")    return <UserCheck     className={cls} />;
+  if (type === "capacity")     return <Clock         className={cls} />;
+  if (type === "ops")          return <Package       className={cls} />;
+  return <PlusCircle className={cls} />;
+}
+
+const PRIORITY_STYLES: Record<string, { label: string; dot: string; iconBg: string; iconColor: string }> = {
+  critical:  { label: "Critical",  dot: "#ff5757", iconBg: "rgba(255,87,87,0.08)",   iconColor: "#ff5757" },
+  important: { label: "Important", dot: "#f59e0b", iconBg: "rgba(245,158,11,0.08)", iconColor: "#f59e0b" },
+  info:      { label: "Info",      dot: "#60a5fa", iconBg: "rgba(96,165,250,0.08)",  iconColor: "#60a5fa" },
+};
+
+// ── Counter animation hook ───────────────────────────────────────────────────
+function useCounter(target: number, run: boolean) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!run || target === 0) return;
+    const start = performance.now();
+    const duration = 1200;
+    const frame = (ts: number) => {
+      const p = Math.min((ts - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setValue(Math.round(ease * target));
+      if (p < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }, [target, run]);
+  return value;
+}
+
+// ── Main Component ───────────────────────────────────────────────────────────
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
-  const { data: insights, isLoading } = useNextyInsights();
-  const [messages, setMessages]       = useState<Message[]>([]);
-  const [isTyping, setIsTyping]       = useState(false);
-  const hasInitialised                = useRef(false);
-  const scrollRef                     = useRef<HTMLDivElement>(null);
+  const { data: insights, isLoading, refetch } = useNextyInsights();
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [showCards,    setShowCards]    = useState(false);
+  const [isRescanning, setIsRescanning] = useState(false);
+  const [dismissed,    setDismissed]    = useState<Set<string>>(new Set());
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isLoading || hasInitialised.current) return;
-    hasInitialised.current = true;
-    initialiseChat(insights ?? []);
-  }, [isLoading, insights]);
+    if (isLoading) return;
+    const t = setTimeout(() => setShowCards(true), 1600);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, isTyping]);
+  const handleRescan = async () => {
+    setIsRescanning(true);
+    setShowCards(false);
+    setDismissed(new Set());
+    await refetch();
+    setTimeout(() => { setIsRescanning(false); setShowCards(true); }, 1800);
+  };
 
-  const initialiseChat = async (resolvedInsights: NextyInsight[]) => {
-    setIsTyping(true);
-    await new Promise(r => setTimeout(r, 1500));
+  const allInsights = (insights ?? []).filter(i => !dismissed.has(i.id));
+  const totalImpact = (insights ?? []).reduce((s, i) => s + (i.impactRand ?? 0), 0);
+  const displayedCount = useCounter(totalImpact, showCards);
 
-    if (resolvedInsights.length === 0) {
-      setMessages([{
-        id: "welcome",
-        role: "assistant",
-        content: "I've reviewed your business data, but there isn't enough activity yet to surface specific recommendations. Keep taking bookings — once you have more completed appointments I'll start finding opportunities for you.",
-        timestamp: new Date(),
-      }]);
-      setIsTyping(false);
-      return;
-    }
+  const FILTERS = [
+    { key: "all",       label: "All",        count: allInsights.length },
+    { key: "critical",  label: "Critical",   count: allInsights.filter(i => getFilterKey(i) === "critical").length },
+    { key: "growth",    label: "Growth",     count: allInsights.filter(i => getFilterKey(i) === "growth").length },
+    { key: "retention", label: "Retention",  count: allInsights.filter(i => getFilterKey(i) === "retention").length },
+    { key: "ops",       label: "Operations", count: allInsights.filter(i => getFilterKey(i) === "ops").length },
+  ].filter(f => f.key === "all" || f.count > 0);
 
-    setMessages([{
-      id: "welcome",
-      role: "assistant",
-      content: "I've analysed your business data. Here are the most impactful growth opportunities I've found for you right now.",
-      timestamp: new Date(),
-    }]);
-    setIsTyping(false);
+  const filtered = activeFilter === "all"
+    ? allInsights
+    : allInsights.filter(i => getFilterKey(i) === activeFilter);
 
-    for (const insight of resolvedInsights) {
-      setIsTyping(true);
-      await new Promise(r => setTimeout(r, 1000));
-      setMessages(prev => [...prev, {
-        id: insight.id,
-        role: "assistant",
-        content: insight.message,
-        insight,
-        timestamp: new Date(),
-      }]);
-      setIsTyping(false);
-    }
+  // ── Shared style tokens ────────────────────────────────────────────────────
+  const S = {
+    surface:  "#111110",
+    surface2: "#161614",
+    surface3: "#1c1b19",
+    border:   "rgba(255,255,255,0.06)",
+    border2:  "rgba(255,255,255,0.10)",
+    text:     "#e8e8e6",
+    muted:    "rgba(232,232,230,0.5)",
+    faint:    "rgba(232,232,230,0.28)",
+    gold:     "#fdab43",
+    goldDim:  "#d19900",
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] max-w-4xl mx-auto bg-[#0a0a0a] border border-white/[0.06] rounded-2xl overflow-hidden shadow-2xl">
+    <div style={{
+      display: "flex", flexDirection: "column",
+      height: "calc(100vh - 120px)", maxWidth: 900, margin: "0 auto",
+      background: "#0a0a0a", borderRadius: 16,
+      border: `1px solid ${S.border}`, overflow: "hidden",
+      boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+    }}>
 
-      {/* Header */}
-      <div className="p-4 border-b border-white/[0.06] bg-white/[0.02] flex items-center gap-3">
+      {/* ── Header ── */}
+      <div style={{
+        padding: "16px 20px 12px", borderBottom: `1px solid ${S.border}`,
+        background: "rgba(255,255,255,0.015)",
+        display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
+      }}>
         <NextyOrb />
-        <div>
-          <h2 className="text-sm font-semibold text-white tracking-tight">Nexty AI</h2>
-          <p className="text-[10px] text-white/40 uppercase tracking-[0.1em]">Business Growth Advisor</p>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: S.text, letterSpacing: "-0.01em" }}>Nexty AI</div>
+          <div style={{ fontSize: 10, color: S.faint, textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 1 }}>
+            Business Growth Advisor
+          </div>
         </div>
+        <button
+          onClick={handleRescan}
+          aria-label="Re-scan business data"
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "7px 14px", background: S.surface2,
+            border: `1px solid ${S.border2}`, borderRadius: 6,
+            fontSize: 12, fontWeight: 500, color: S.muted, cursor: "pointer",
+            transition: "all 180ms",
+          }}
+        >
+          <RotateCcw
+            size={13}
+            style={{
+              opacity: 0.5,
+              animation: isRescanning ? "nexty-spin 1s linear infinite" : "none",
+            }}
+          />
+          Re-scan
+          <style>{`@keyframes nexty-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+        </button>
       </div>
 
-      {/* Chat Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
-        <AnimatePresence initial={false}>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              className={cn(
-                "flex w-full",
-                msg.role === "assistant" ? "justify-start" : "justify-end"
-              )}
-            >
-              <div className={cn(
-                "max-w-[85%] rounded-2xl p-4 shadow-sm",
-                msg.role === "assistant"
-                  ? "bg-white/[0.03] border border-white/[0.06] text-white/90"
-                  : "bg-amber-600 text-white"
-              )}>
-                {msg.insight && (
-                  <div className="flex items-center gap-2 mb-2">
-                    {msg.insight.priority === "critical" && <AlertTriangle className="w-4 h-4 text-red-400" />}
-                    {msg.insight.type === "margin"       && <TrendingUp className="w-4 h-4 text-emerald-400" />}
-                    {msg.insight.type === "retention"    && <UserCheck className="w-4 h-4 text-blue-400" />}
-                    {msg.insight.type === "capacity"     && <Clock className="w-4 h-4 text-amber-400" />}
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-                      {msg.insight.title}
-                    </span>
-                  </div>
-                )}
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+      {/* ── Impact Banner ── */}
+      {totalImpact > 0 && (
+        <div style={{
+          margin: "14px 20px 0",
+          padding: "14px 16px",
+          background: "linear-gradient(135deg,rgba(253,171,67,0.07) 0%,rgba(253,171,67,0.03) 100%)",
+          border: "1px solid rgba(253,171,67,0.14)", borderRadius: 10,
+          display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: S.faint, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              Total Recoverable Revenue Identified
+            </div>
+            <div style={{ fontSize: 10, color: S.faint, marginTop: 2 }}>
+              Based on last 90 days · Updated just now
+            </div>
+          </div>
+          <div style={{
+            fontSize: 22, fontWeight: 700, color: S.gold,
+            letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums",
+            flexShrink: 0,
+          }}>
+            R{displayedCount.toLocaleString("en-ZA")}
+          </div>
+        </div>
+      )}
 
-                {msg.insight?.actionLabel && (
-                  <button
-                    onClick={() => onNavigate(msg.insight!.actionView || "Dashboard")}
-                    className="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] transition-all text-xs font-medium group"
-                  >
-                    {msg.insight.actionLabel}
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                )}
-              </div>
+      {/* ── Filter Tabs ── */}
+      <div style={{
+        display: "flex", gap: 6, padding: "14px 20px 4px",
+        overflowX: "auto", flexShrink: 0,
+      }}>
+        {FILTERS.map(f => (
+          <button
+            key={f.key}
+            onClick={() => setActiveFilter(f.key)}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+              color: activeFilter === f.key ? S.text : S.muted,
+              background: activeFilter === f.key ? S.surface2 : "transparent",
+              border: `1px solid ${activeFilter === f.key ? S.border2 : "transparent"}`,
+              whiteSpace: "nowrap", cursor: "pointer", transition: "all 180ms",
+            }}
+          >
+            {f.label}
+            <span style={{
+              fontSize: 10, padding: "1px 5px", borderRadius: 3,
+              background: activeFilter === f.key ? "rgba(253,171,67,0.15)" : "rgba(255,255,255,0.07)",
+              color: activeFilter === f.key ? S.goldDim : S.faint,
+            }}>
+              {f.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Scroll Area ── */}
+      <div
+        ref={scrollRef}
+        style={{
+          flex: 1, overflowY: "auto", padding: "16px 20px 24px",
+          display: "flex", flexDirection: "column", gap: 16,
+        }}
+      >
+        {/* Welcome message */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: S.surface, border: `1px solid ${S.border}`,
+            borderRadius: 16, padding: "14px 18px",
+            fontSize: 13.5, color: S.muted, lineHeight: 1.65, maxWidth: "88%",
+          }}
+        >
+          I've analysed your business data across{" "}
+          <strong style={{ color: S.text, fontWeight: 500 }}>
+            bookings, services, clients, stock, availability and loyalty
+          </strong>
+          . Here are the highest-impact opportunities I found — sorted by potential revenue.
+        </motion.div>
+
+        {/* Typing dots / loading */}
+        <AnimatePresence>
+          {(!showCards || isRescanning) && (
+            <motion.div
+              key="typing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "14px 16px", background: S.surface,
+                border: `1px solid ${S.border}`, borderRadius: 16, width: "fit-content",
+              }}
+            >
+              {[0, 150, 300].map(delay => (
+                <span
+                  key={delay}
+                  style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: "rgba(255,255,255,0.18)",
+                    display: "inline-block",
+                    animation: "nexty-bounce 1.2s ease-in-out infinite",
+                    animationDelay: `${delay}ms`,
+                  }}
+                />
+              ))}
+              <style>{`@keyframes nexty-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
             </motion.div>
-          ))}
+          )}
         </AnimatePresence>
 
-        {isTyping && (
+        {/* Insight Cards */}
+        <AnimatePresence>
+          {showCards && !isRescanning && filtered.map((ins, idx) => {
+            const p = PRIORITY_STYLES[ins.priority] ?? PRIORITY_STYLES.info;
+            return (
+              <motion.div
+                key={ins.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ delay: idx * 0.06, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  background: S.surface, borderRadius: 16,
+                  border: `1px solid ${S.border}`, overflow: "hidden",
+                }}
+              >
+                {/* Card Top */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px 16px 12px" }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 9,
+                    background: p.iconBg, color: p.iconColor,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0, marginTop: 1,
+                  }}>
+                    <InsightIcon type={ins.type} priority={ins.priority} />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      fontSize: 10, fontWeight: 600, textTransform: "uppercase",
+                      letterSpacing: "0.1em", color: p.dot, marginBottom: 5,
+                    }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot }} />
+                      {p.label}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: S.text, letterSpacing: "-0.01em", lineHeight: 1.3 }}>
+                      {ins.title}
+                    </div>
+                    <div style={{ fontSize: 10, color: S.faint, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      {ins.type}
+                    </div>
+                  </div>
+
+                  {ins.impactRand && (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 4,
+                      padding: "4px 10px",
+                      background: "rgba(253,171,67,0.09)",
+                      border: "1px solid rgba(253,171,67,0.15)",
+                      borderRadius: 6, fontSize: 11, fontWeight: 600,
+                      color: S.gold, whiteSpace: "nowrap",
+                    }}>
+                      <TrendingUp size={10} />
+                      R{ins.impactRand.toLocaleString("en-ZA")}
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Body */}
+                <div style={{ padding: "0 16px 14px", fontSize: 13, color: S.muted, lineHeight: 1.65 }}>
+                  {ins.message}
+                </div>
+
+                {/* Card Footer */}
+                <div style={{
+                  borderTop: `1px solid ${S.border}`, padding: "10px 16px",
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+                }}>
+                  {ins.actionLabel && (
+                    <button
+                      onClick={() => onNavigate(ins.actionView ?? "Dashboard")}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        padding: "7px 14px", background: S.surface2,
+                        border: `1px solid ${S.border2}`, borderRadius: 6,
+                        fontSize: 12, fontWeight: 500, color: S.text, cursor: "pointer",
+                        transition: "all 180ms",
+                      }}
+                    >
+                      {ins.actionLabel}
+                      <ArrowRight size={12} style={{ color: S.faint }} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setDismissed(prev => new Set(prev).add(ins.id))}
+                    style={{
+                      fontSize: 11, color: S.faint, padding: "7px 8px",
+                      borderRadius: 6, cursor: "pointer", background: "none",
+                      border: "none", transition: "all 180ms",
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+
+        {/* Empty state */}
+        {showCards && !isRescanning && filtered.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex justify-start"
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              justifyContent: "center", flex: 1, gap: 12,
+              color: S.faint, textAlign: "center", padding: "40px 24px",
+            }}
           >
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 flex gap-1">
-              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            <TrendingUp size={32} style={{ opacity: 0.3 }} />
+            <div style={{ fontSize: 14, color: S.muted, fontWeight: 500 }}>No insights in this category</div>
+            <div style={{ fontSize: 12, color: S.faint, maxWidth: 280, lineHeight: 1.6 }}>
+              Keep taking bookings — Nexty will surface more opportunities as your data grows.
             </div>
           </motion.div>
         )}
