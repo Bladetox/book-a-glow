@@ -21,8 +21,28 @@ function isClientTypeLabel(src: string): boolean {
 }
 
 const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HEAT_SLOTS = ["08-10", "10-12", "12-14", "14-16", "16-18"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
+
+// Derive 2-hour heat slots from actual staff availability times.
+// Falls back to 08-18 if availability data has not loaded yet.
+function buildHeatSlots(availRows: any[]): { label: string; hourStart: number }[] {
+  const starts = availRows
+    .map((r: any) => r.slot_start_time)
+    .filter(Boolean)
+    .map((t: string) => parseInt(t.split(":")[0]))
+    .filter((h: number) => !isNaN(h));
+
+  const minHour = starts.length > 0 ? Math.min(...starts) : 8;
+  const maxHour = starts.length > 0 ? Math.max(...starts) + 2 : 18;
+  const clampedMin = Math.max(6, Math.min(minHour, 10));
+  const clampedMax = Math.min(22, Math.max(maxHour, 14));
+
+  const slots: { label: string; hourStart: number }[] = [];
+  for (let h = clampedMin; h < clampedMax; h += 2) {
+    slots.push({ label: `${String(h).padStart(2, "0")}-${String(h + 2).padStart(2, "0")}`, hourStart: h });
+  }
+  return slots;
+}
 
 const STAFF_ROLES = ["owner", "admin", "staff"] as const;
 
@@ -240,6 +260,22 @@ export function useDashboardData() {
     },
   });
 
+
+  // 10. New vs returning clients split — RPC-based, accurate across all booking history.
+  const { data: newVsReturningData } = useQuery({
+    queryKey:  ["dash-new-vs-returning", tenantId, monthStart, monthEnd],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_new_vs_returning_clients", {
+        p_tenant_id:   tenantId,
+        p_month_start: monthStart,
+        p_month_end:   monthEnd,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+
   const coreLoading  = l1 || l2 || l3 || l6;
   const staffLoading = l4 || l5;
 
@@ -360,24 +396,31 @@ export function useDashboardData() {
   }, [allPayments, trendBookings, ninetyDaysAgo, todayStr]);
 
   // ─── booking heatmap ──────────────────────────────────────────────────────
+  // Slot boundaries are derived from actual staff_availability times,
+  // so the heatmap reflects the real operating hours of the business.
   const heatmap = useMemo(() => {
+    const heatSlots = buildHeatSlots(availabilityRows);
     const idx: Record<string, number> = {};
     active.forEach((b: any) => {
       const dow  = DOW_TO_IDX[new Date(b.booking_date + "T00:00:00").getDay()];
       const hour = parseInt((b.start_time || "0").split(":")[0]);
-      const slot = Math.floor((hour - 8) / 2);
-      if (dow === undefined || slot < 0 || slot > 4) return;
-      const key = `${dow}__${slot}`;
+      if (dow === undefined) return;
+      const slotIdx = heatSlots.findIndex((s, i) => {
+        const next = heatSlots[i + 1];
+        return hour >= s.hourStart && (!next || hour < next.hourStart);
+      });
+      if (slotIdx === -1) return;
+      const key = `${dow}__${slotIdx}`;
       idx[key] = (idx[key] || 0) + 1;
     });
     return HEAT_DAYS.map((day, di) => ({
       day,
-      slots: HEAT_SLOTS.map((slot, si) => ({
-        slot,
+      slots: heatSlots.map((slot, si) => ({
+        slot: slot.label,
         intensity: idx[`${di}__${si}`] || 0,
       })),
     }));
-  }, [active]);
+  }, [active, availabilityRows]);
 
   // ─── client insights ──────────────────────────────────────────────────────
   const { clientKeySet, returningCount, retentionRate } = useMemo(() => {
@@ -521,7 +564,7 @@ export function useDashboardData() {
     },
     clients: {
       total:         clientKeySet.size,
-      newClients:    0,
+      newClients:    Number(newVsReturningData?.new_clients ?? 0),
       returning:     returningCount,
       retentionRate,
     },

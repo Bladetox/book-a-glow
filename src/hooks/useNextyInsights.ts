@@ -51,6 +51,16 @@ export function useNextyInsights() {
       const apptWord      = isMobile ? "appointment" : "slot";
       const scheduleNoun  = isMobile ? "your schedule" : "the chair";
 
+
+      // -- Solo operator check ----------------------------------------------
+      // If only one active staff profile exists, suppress "staff" framing.
+      const { data: staffRows } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .in("role", ["owner", "admin", "staff"]);
+      const isSolo = !staffRows || staffRows.length <= 1;
+
       // -- 1. Revenue Per Minute Audit ----------------------------------------
       // Fires when top service earns more than 2x per minute vs bottom service.
       const { data: rpm } = await supabase.rpc("get_revenue_per_minute", {
@@ -109,6 +119,7 @@ export function useNextyInsights() {
             : `The evening of ${prevDay}, send a personal WhatsApp to loyalty clients who are overdue for a visit. ` +
               `Open the Loyalty Tracker, filter by "Time to Book" or "Overdue" and message them directly. ` +
               `A personal message from you converts at a much higher rate than a broadcast.`;
+          void isSolo; // isSolo available for future staff-specific branching
 
           insights.push({
             id: "quiet_day",
@@ -250,6 +261,52 @@ export function useNextyInsights() {
               recoveryStep,
             actionLabel: "Review Clients",
             actionView: "ClientManagement",
+          });
+        }
+      }
+
+
+      // -- 6. Cancellation Leakage -------------------------------------------
+      // Only fires when there are real cancelled bookings with lost revenue.
+      // Data source: bookings table, last 90 days, status = cancelled.
+      const { data: cancelData } = await supabase
+        .from("bookings")
+        .select("total_amount, status, booking_date, deposit_paid, deposit_amount")
+        .eq("tenant_id", tenantId)
+        .eq("status", "cancelled")
+        .gte("booking_date", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+
+      if (cancelData && cancelData.length > 0) {
+        const cancelCount = cancelData.length;
+        const cancelLost = cancelData.reduce((sum, b) => {
+          const net = Number(b.total_amount ?? 0) - (b.deposit_paid ? Number(b.deposit_amount ?? 0) : 0);
+          return sum + Math.max(net, 0);
+        }, 0);
+
+        if (cancelLost > 0) {
+          const avgLoss = Math.round(cancelLost / cancelCount);
+          const recoveryStep = isMobile
+            ? `When a client cancels, send a personal WhatsApp within the hour offering the freed slot to someone on your list. ` +
+              `Open Loyalty Tracker, find a client who is overdue, and offer them the gap. ` +
+              `A same-day offer to a warm contact fills ${isMobile ? "travel windows" : "chair time"} that would otherwise be lost.`
+            : `When a slot opens from a cancellation, go to Clients, filter by overdue loyalty clients and offer them the gap directly. ` +
+              `A personal message fills cancelled slots at a far higher rate than any automated broadcast.`;
+
+          insights.push({
+            id: "cancellation_leakage",
+            type: "leakage",
+            priority: cancelLost > 1000 ? "important" : "info",
+            title: "Cancellation Revenue Gap",
+            message:
+              `${cancelCount} cancellation${cancelCount === 1 ? "" : "s"} in the last 90 days. ` +
+              `${depositPct > 0
+                ? `Your ${depositPct}% deposit covered part of each cancellation. `
+                : `No deposit was collected on these ${apptWord}s. `}` +
+              `Net revenue not recovered: ${formatRand(Math.round(cancelLost))} across ${cancelCount} ${apptWord}${cancelCount === 1 ? "" : "s"} (${formatRand(avgLoss)} average per cancellation). ` +
+              recoveryStep,
+            actionLabel: "View Bookings",
+            actionView: "Bookings",
+            impactRand: Math.round(cancelLost),
           });
         }
       }

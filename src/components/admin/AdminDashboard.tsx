@@ -11,13 +11,34 @@ import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
+import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useNextyInsights } from "@/hooks/useNextyInsights";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
-const NEXTY_TENANTS = (import.meta.env.VITE_NEXTY_TENANTS ?? "phenomebeauty")
-  .split(",")
-  .map((s: string) => s.trim().toLowerCase());
+
+// ---------------------------------------------------------------------------
+// Determines Nexty eligibility directly from the tenants table in Supabase.
+// Eligible plans: lifetime_free, professional, studio OR is_lifetime_free = true.
+// This replaces the previous env-var gate which was not connected to real data.
+// ---------------------------------------------------------------------------
+function useIsNextyEnabled(tenantId: string): boolean {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    if (!tenantId) return;
+    supabase
+      .from("tenants")
+      .select("plan, is_lifetime_free")
+      .eq("id", tenantId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        const eligiblePlans = ["lifetime_free", "professional", "studio"];
+        setEnabled(data.is_lifetime_free === true || eligiblePlans.includes(data.plan ?? ""));
+      });
+  }, [tenantId]);
+  return enabled;
+}
 
 const ALL_SECTIONS = [
   "hero", "health", "topServices", "alerts",
@@ -659,8 +680,7 @@ const AdminDashboard = ({
 
   const overdueClients = overdueLoyaltyClients;
 
-  const tenantSlug = window.location.hostname.split(".")[0].toLowerCase();
-  const isNextyEnabled = NEXTY_TENANTS.includes(tenantSlug);
+  const isNextyEnabled = useIsNextyEnabled(tenantId);
 
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
