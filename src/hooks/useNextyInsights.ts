@@ -205,11 +205,11 @@ export function useNextyInsights() {
           : `These clients have already demonstrated consistent demand.`;
 
         const recoveryStep = count === 1
-          ? `Go to Loyalty Tracker and tap "Add Client". Search for ${names}. ` +
-            `Enrolling takes under 2 minutes and starts the retention cycle that keeps them returning on a predictable schedule.`
-          : `Go to Loyalty Tracker and enroll each of the following: ${names}. ` +
-            `Enrolling all ${count} takes under 5 minutes and anchors ` +
-            `${formatRand(Math.round(annualRev))} in tracked annual revenue.`;
+          ? `Open the Loyalty Tracker and tap "Enroll" next to ${names}. ` +
+            `This starts the retention cycle that brings them back on a predictable schedule.`
+          : `Open the Loyalty Tracker and tap "Enroll" next to each of the following: ${names}. ` +
+            `Enrolling all ${count} takes under 5 minutes and puts ` +
+            `${formatRand(Math.round(annualRev))} in predictable annual revenue onto the tracker.`;
 
         insights.push({
           id: "loyalty_gap",
@@ -311,7 +311,114 @@ export function useNextyInsights() {
         }
       }
 
-      // Sort: critical -> important -> info
+      // -- 7. Peak Time / Quiet Day Opportunity ---------------------------
+      // Fires when the quietest day has under 40% of peak day bookings.
+      const { data: peakData } = await supabase.rpc("get_peak_time_analysis", {
+        p_tenant_id: tenantId,
+      });
+      if (peakData && peakData[0]) {
+        const p = peakData[0];
+        const quietCount = Number(p.quietest_day_booking_count ?? 0);
+        const peakHour   = Number(p.peak_hour ?? 0);
+        const totalAnalysed = Number(p.total_analysed ?? 0);
+        const peakHourLabel = peakHour < 12
+          ? `${peakHour === 0 ? 12 : peakHour}am`
+          : `${peakHour === 12 ? 12 : peakHour - 12}pm`;
+
+        if (totalAnalysed >= 10 && quietCount < totalAnalysed * 0.1) {
+          insights.push({
+            id: "quiet_day_promo",
+            type: "growth",
+            priority: "info",
+            title: "Fill Your Quietest Day",
+            message:
+              `${p.quietest_day} is your slowest day with only ${quietCount} booking${quietCount === 1 ? "" : "s"} in the last 90 days. ` +
+              `Your peak time is around ${peakHourLabel}. ` +
+              `A targeted offer on ${p.quietest_day} posted to your TikTok or Instagram story between 7pm and 9pm tends to fill same-week slots. ` +
+              `Quiet days cost the same in travel prep time as busy ones. Filling even 2 extra slots per ${p.quietest_day} adds meaningful monthly revenue.`,
+            actionLabel: "View Schedule",
+            actionView: "Availability",
+          });
+        }
+      }
+
+      // -- 8. TikTok Channel ROI Signal -------------------------------------
+      // Fires when TikTok has bookings but average basket is below overall average.
+      const { data: channelData } = await supabase.rpc("get_channel_roi", {
+        p_tenant_id: tenantId,
+      });
+      if (channelData && channelData.length > 0) {
+        const tiktokRow   = channelData.find((r: any) => r.channel === "TikTok");
+        const overallAvg  = channelData.reduce((s: number, r: any) => s + Number(r.total_revenue ?? 0), 0)
+                          / channelData.reduce((s: number, r: any) => s + Number(r.booking_count ?? 0), 0);
+
+        if (tiktokRow && Number(tiktokRow.booking_count) >= 5) {
+          const tiktokAvg = Number(tiktokRow.avg_basket ?? 0);
+          const tiktokCount = Number(tiktokRow.booking_count);
+          const tiktokRev = Number(tiktokRow.total_revenue ?? 0);
+
+          if (tiktokAvg < overallAvg * 0.85) {
+            insights.push({
+              id: "tiktok_basket",
+              type: "growth",
+              priority: "info",
+              title: "TikTok Clients: Lower Basket Size",
+              message:
+                `TikTok brought in ${tiktokCount} bookings (${formatRand(Math.round(tiktokRev))}) in the last 90 days. ` +
+                `However, TikTok clients average ${formatRand(Math.round(tiktokAvg))} per booking versus ${formatRand(Math.round(overallAvg))} overall. ` +
+                `This is common when social content focuses only on entry-level services. ` +
+                `Adding one short-form video showing a premium or combo service could lift the basket size from that channel within 30 days.`,
+              actionLabel: "View Services",
+              actionView: "Services",
+            });
+          } else {
+            insights.push({
+              id: "tiktok_top_channel",
+              type: "growth",
+              priority: "info",
+              title: "TikTok Is a Strong Acquisition Channel",
+              message:
+                `TikTok generated ${tiktokCount} bookings and ${formatRand(Math.round(tiktokRev))} in the last 90 days. ` +
+                `Average basket from TikTok clients is ${formatRand(Math.round(tiktokAvg))} which is in line with your overall average. ` +
+                `This channel is working. Posting consistently (3 to 4 times per week) is the single most effective way to scale it further without any additional cost.`,
+              actionLabel: "View Clients",
+              actionView: "Client Management",
+            });
+          }
+        }
+      }
+
+      // -- 9. New Client Conversion Rate ------------------------------------
+      // Fires when new client conversion < 50% over the last 90 days.
+      const { data: convData } = await supabase.rpc("get_new_client_conversion", {
+        p_tenant_id: tenantId,
+      });
+      if (convData && convData[0]) {
+        const c = convData[0];
+        const newCount  = Number(c.new_clients_90d ?? 0);
+        const converted = Number(c.converted_to_repeat ?? 0);
+        const rate      = Number(c.conversion_rate_pct ?? 0);
+        const missed    = newCount - converted;
+
+        if (newCount >= 5 && rate < 50) {
+          insights.push({
+            id: "new_client_conversion",
+            type: "retention",
+            priority: rate < 30 ? "important" : "info",
+            title: "New Clients Are Not Coming Back",
+            message:
+              `${converted} of ${newCount} new clients from the last 90 days booked a second ${apptWord}. ` +
+              `That is a ${rate.toFixed(0)}% conversion rate. ` +
+              `The ${missed} who did not return likely had a great first experience but had no prompt to rebook. ` +
+              `A personal WhatsApp within 48 hours of a first visit, asking if they would like to lock in the next session, recovers roughly 1 in 3 of those clients. ` +
+              `Go to Clients, sort by newest first-time visitors, and send a personal message to each one.`,
+            actionLabel: "View Clients",
+            actionView: "Client Management",
+          });
+        }
+      }
+
+            // Sort: critical -> important -> info
       const priorityMap: Record<InsightPriority, number> = {
         critical: 0,
         important: 1,

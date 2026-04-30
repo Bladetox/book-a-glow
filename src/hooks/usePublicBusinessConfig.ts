@@ -5,13 +5,12 @@ import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 export const defaultReferralOptions = [
   "Returning Client",
-  "Instagram",
+  "Website",
   "TikTok",
+  "Instagram",
   "Facebook",
-  "Google Search",
-  "Word of Mouth",
-  "Referred by a Friend",
-  "Other",
+  "Google",
+  "Referral",
 ];
 
 export interface PublicBusinessConfig {

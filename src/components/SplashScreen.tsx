@@ -40,36 +40,17 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     []
   );
 
-  // Canonical display order for "where did you hear about us" options.
-  // Any option from config that does not match a canonical label is appended at the end.
-  const referralOptions = useMemo(() => {
-    const CANONICAL_ORDER = [
-      "Returning Client",
-      "Website",
-      "TikTok",
-      "Instagram",
-      "Facebook",
-      "Google",
-      "Referral",
-    ];
-    const pool = [...config.referralOptions];
-    const ordered: string[] = [];
-    CANONICAL_ORDER.forEach(canonical => {
-      const idx = pool.findIndex(
-        o => o.toLowerCase().trim() === canonical.toLowerCase().trim()
-      );
-      if (idx !== -1) {
-        ordered.push(pool.splice(idx, 1)[0]);
-      } else {
-        ordered.push(canonical);
-      }
-    });
-    // Append any extra options the tenant has added that are not in the canonical list
-    pool.forEach(o => {
-      if (o.trim()) ordered.push(o);
-    });
-    return ordered;
-  }, [config.referralOptions]);
+  // Strict canonical acquisition channels. These are the only valid options.
+  // Order and content are fixed per product spec.
+  const referralOptions = [
+    "Returning Client",
+    "Website",
+    "TikTok",
+    "Instagram",
+    "Facebook",
+    "Google",
+    "Referral",
+  ];
 
   const isSelected = referralSource.trim().length > 0;
 
