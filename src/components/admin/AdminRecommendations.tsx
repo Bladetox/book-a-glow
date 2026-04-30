@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 
-// ── Nexty Orb ────────────────────────────────────────────────────────────────
+// -- Nexty Orb ----------------------------------------------------------------
 function NextyOrb() {
   return (
     <div className="nexty-orb-wrapper" aria-hidden="true">
@@ -29,7 +29,7 @@ function NextyOrb() {
   );
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// -- Helpers ------------------------------------------------------------------
 function getFilterKey(ins: NextyInsight): string {
   if (ins.priority === "critical") return "critical";
   if (ins.type === "retention")    return "retention";
@@ -53,7 +53,7 @@ const PRIORITY_STYLES: Record<string, { label: string; dot: string; iconBg: stri
   info:      { label: "Info",      dot: "#60a5fa", iconBg: "rgba(96,165,250,0.08)",  iconColor: "#60a5fa" },
 };
 
-// ── Counter animation hook ───────────────────────────────────────────────────
+// -- Counter animation hook ---------------------------------------------------
 function useCounter(target: number, run: boolean) {
   const [value, setValue] = useState(0);
   useEffect(() => {
@@ -71,7 +71,7 @@ function useCounter(target: number, run: boolean) {
   return value;
 }
 
-// ── Main Component ───────────────────────────────────────────────────────────
+// -- Main Component -----------------------------------------------------------
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
   const { data: insights, isLoading, refetch } = useNextyInsights();
   const [activeFilter, setActiveFilter] = useState("all");
@@ -94,8 +94,8 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
     setTimeout(() => { setIsRescanning(false); setShowCards(true); }, 1800);
   };
 
-  const allInsights = (insights ?? []).filter(i => !dismissed.has(i.id));
-  const totalImpact = (insights ?? []).reduce((s, i) => s + (i.impactRand ?? 0), 0);
+  const allInsights   = (insights ?? []).filter(i => !dismissed.has(i.id));
+  const totalImpact   = (insights ?? []).reduce((s, i) => s + (i.impactRand ?? 0), 0);
   const displayedCount = useCounter(totalImpact, showCards);
 
   const FILTERS = [
@@ -110,7 +110,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
     ? allInsights
     : allInsights.filter(i => getFilterKey(i) === activeFilter);
 
-  // ── Shared style tokens ────────────────────────────────────────────────────
+  // -- Style tokens -----------------------------------------------------------
   const S = {
     surface:  "#111110",
     surface2: "#161614",
@@ -125,22 +125,27 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   };
 
   return (
+    // Outer wrapper: fills the admin content area, no fixed height, no card border
     <div style={{
-      display: "flex", flexDirection: "column",
-      height: "calc(100vh - 120px)", maxWidth: 900, margin: "0 auto",
-      background: "#0a0a0a", borderRadius: 16,
-      border: `1px solid ${S.border}`, overflow: "hidden",
-      boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+      display: "flex",
+      flexDirection: "column",
+      flex: 1,
+      minHeight: 0,
+      width: "100%",
+      maxWidth: 860,
+      margin: "0 auto",
+      background: "#0a0a0a",
     }}>
 
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       <div style={{
-        padding: "16px 20px 12px", borderBottom: `1px solid ${S.border}`,
+        padding: "16px 16px 12px",
+        borderBottom: `1px solid ${S.border}`,
         background: "rgba(255,255,255,0.015)",
         display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
       }}>
         <NextyOrb />
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: S.text, letterSpacing: "-0.01em" }}>Nexty AI</div>
           <div style={{ fontSize: 10, color: S.faint, textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 1 }}>
             Business Growth Advisor
@@ -151,10 +156,10 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           aria-label="Re-scan business data"
           style={{
             display: "flex", alignItems: "center", gap: 6,
-            padding: "7px 14px", background: S.surface2,
+            padding: "7px 12px", background: S.surface2,
             border: `1px solid ${S.border2}`, borderRadius: 6,
             fontSize: 12, fontWeight: 500, color: S.muted, cursor: "pointer",
-            transition: "all 180ms",
+            flexShrink: 0,
           }}
         >
           <RotateCcw
@@ -169,25 +174,25 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         </button>
       </div>
 
-      {/* ── Impact Banner ── */}
+      {/* -- Impact Banner -- */}
       {totalImpact > 0 && (
         <div style={{
-          margin: "14px 20px 0",
-          padding: "14px 16px",
+          margin: "12px 16px 0",
+          padding: "12px 14px",
           background: "linear-gradient(135deg,rgba(253,171,67,0.07) 0%,rgba(253,171,67,0.03) 100%)",
           border: "1px solid rgba(253,171,67,0.14)", borderRadius: 10,
-          display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
         }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: S.faint, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: S.faint, textTransform: "uppercase", letterSpacing: "0.08em", lineHeight: 1.4 }}>
               Total Recoverable Revenue Identified
             </div>
             <div style={{ fontSize: 10, color: S.faint, marginTop: 2 }}>
-              Based on last 90 days · Updated just now
+              Based on last 90 days
             </div>
           </div>
           <div style={{
-            fontSize: 22, fontWeight: 700, color: S.gold,
+            fontSize: 20, fontWeight: 700, color: S.gold,
             letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums",
             flexShrink: 0,
           }}>
@@ -196,10 +201,11 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         </div>
       )}
 
-      {/* ── Filter Tabs ── */}
+      {/* -- Filter Tabs -- */}
       <div style={{
-        display: "flex", gap: 6, padding: "14px 20px 4px",
+        display: "flex", gap: 6, padding: "12px 16px 4px",
         overflowX: "auto", flexShrink: 0,
+        scrollbarWidth: "none",
       }}>
         {FILTERS.map(f => (
           <button
@@ -207,11 +213,11 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             onClick={() => setActiveFilter(f.key)}
             style={{
               display: "flex", alignItems: "center", gap: 5,
-              padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+              padding: "5px 11px", borderRadius: 6, fontSize: 12, fontWeight: 500,
               color: activeFilter === f.key ? S.text : S.muted,
               background: activeFilter === f.key ? S.surface2 : "transparent",
               border: `1px solid ${activeFilter === f.key ? S.border2 : "transparent"}`,
-              whiteSpace: "nowrap", cursor: "pointer", transition: "all 180ms",
+              whiteSpace: "nowrap", cursor: "pointer",
             }}
           >
             {f.label}
@@ -226,12 +232,17 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         ))}
       </div>
 
-      {/* ── Scroll Area ── */}
+      {/* -- Scroll Area -- */}
       <div
         ref={scrollRef}
         style={{
-          flex: 1, overflowY: "auto", padding: "16px 20px 24px",
-          display: "flex", flexDirection: "column", gap: 16,
+          flex: 1,
+          overflowY: "auto",
+          padding: "14px 16px 32px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {/* Welcome message */}
@@ -240,18 +251,18 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           animate={{ opacity: 1, y: 0 }}
           style={{
             background: S.surface, border: `1px solid ${S.border}`,
-            borderRadius: 16, padding: "14px 18px",
-            fontSize: 13.5, color: S.muted, lineHeight: 1.65, maxWidth: "88%",
+            borderRadius: 14, padding: "13px 16px",
+            fontSize: 13, color: S.muted, lineHeight: 1.65,
           }}
         >
           I've analysed your business data across{" "}
           <strong style={{ color: S.text, fontWeight: 500 }}>
             bookings, services, clients, stock, availability and loyalty
           </strong>
-          . Here are the highest-impact opportunities I found — sorted by potential revenue.
+          . Here are the highest-impact opportunities found, sorted by potential revenue.
         </motion.div>
 
-        {/* Typing dots / loading */}
+        {/* Typing dots */}
         <AnimatePresence>
           {(!showCards || isRescanning) && (
             <motion.div
@@ -261,8 +272,8 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
               exit={{ opacity: 0 }}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
-                padding: "14px 16px", background: S.surface,
-                border: `1px solid ${S.border}`, borderRadius: 16, width: "fit-content",
+                padding: "13px 14px", background: S.surface,
+                border: `1px solid ${S.border}`, borderRadius: 14, width: "fit-content",
               }}
             >
               {[0, 150, 300].map(delay => (
@@ -294,14 +305,15 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ delay: idx * 0.06, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 style={{
-                  background: S.surface, borderRadius: 16,
+                  background: S.surface, borderRadius: 14,
                   border: `1px solid ${S.border}`, overflow: "hidden",
+                  width: "100%",
                 }}
               >
                 {/* Card Top */}
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px 16px 12px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "14px 14px 10px" }}>
                   <div style={{
-                    width: 34, height: 34, borderRadius: 9,
+                    width: 32, height: 32, borderRadius: 8,
                     background: p.iconBg, color: p.iconColor,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, marginTop: 1,
@@ -313,57 +325,63 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                     <div style={{
                       display: "inline-flex", alignItems: "center", gap: 4,
                       fontSize: 10, fontWeight: 600, textTransform: "uppercase",
-                      letterSpacing: "0.1em", color: p.dot, marginBottom: 5,
+                      letterSpacing: "0.1em", color: p.dot, marginBottom: 4,
                     }}>
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot }} />
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot, flexShrink: 0 }} />
                       {p.label}
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: S.text, letterSpacing: "-0.01em", lineHeight: 1.3 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 600, color: S.text,
+                      letterSpacing: "-0.01em", lineHeight: 1.3,
+                      wordBreak: "break-word",
+                    }}>
                       {ins.title}
-                    </div>
-                    <div style={{ fontSize: 10, color: S.faint, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      {ins.type}
                     </div>
                   </div>
 
                   {ins.impactRand && (
                     <div style={{
-                      display: "flex", alignItems: "center", gap: 4,
-                      padding: "4px 10px",
+                      display: "flex", alignItems: "center", gap: 3,
+                      padding: "3px 8px",
                       background: "rgba(253,171,67,0.09)",
                       border: "1px solid rgba(253,171,67,0.15)",
                       borderRadius: 6, fontSize: 11, fontWeight: 600,
-                      color: S.gold, whiteSpace: "nowrap",
+                      color: S.gold, whiteSpace: "nowrap", flexShrink: 0,
                     }}>
-                      <TrendingUp size={10} />
+                      <TrendingUp size={9} />
                       R{ins.impactRand.toLocaleString("en-ZA")}
                     </div>
                   )}
                 </div>
 
                 {/* Card Body */}
-                <div style={{ padding: "0 16px 14px", fontSize: 13, color: S.muted, lineHeight: 1.65 }}>
+                <div style={{
+                  padding: "0 14px 12px",
+                  fontSize: 13, color: S.muted, lineHeight: 1.65,
+                  wordBreak: "break-word",
+                }}>
                   {ins.message}
                 </div>
 
                 {/* Card Footer */}
                 <div style={{
-                  borderTop: `1px solid ${S.border}`, padding: "10px 16px",
-                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+                  borderTop: `1px solid ${S.border}`, padding: "9px 14px",
+                  display: "flex", alignItems: "center",
+                  justifyContent: ins.actionLabel ? "space-between" : "flex-end",
+                  gap: 8,
                 }}>
                   {ins.actionLabel && (
                     <button
                       onClick={() => onNavigate(ins.actionView ?? "Dashboard")}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
-                        padding: "7px 14px", background: S.surface2,
+                        padding: "7px 12px", background: S.surface2,
                         border: `1px solid ${S.border2}`, borderRadius: 6,
                         fontSize: 12, fontWeight: 500, color: S.text, cursor: "pointer",
-                        transition: "all 180ms",
                       }}
                     >
                       {ins.actionLabel}
-                      <ArrowRight size={12} style={{ color: S.faint }} />
+                      <ArrowRight size={11} style={{ color: S.faint }} />
                     </button>
                   )}
                   <button
@@ -371,7 +389,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                     style={{
                       fontSize: 11, color: S.faint, padding: "7px 8px",
                       borderRadius: 6, cursor: "pointer", background: "none",
-                      border: "none", transition: "all 180ms",
+                      border: "none",
                     }}
                   >
                     Dismiss
@@ -395,8 +413,8 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           >
             <TrendingUp size={32} style={{ opacity: 0.3 }} />
             <div style={{ fontSize: 14, color: S.muted, fontWeight: 500 }}>No insights in this category</div>
-            <div style={{ fontSize: 12, color: S.faint, maxWidth: 280, lineHeight: 1.6 }}>
-              Keep taking bookings — Nexty will surface more opportunities as your data grows.
+            <div style={{ fontSize: 12, color: S.faint, maxWidth: 260, lineHeight: 1.6 }}>
+              Keep taking bookings. Nexty will surface more opportunities as your data grows.
             </div>
           </motion.div>
         )}
