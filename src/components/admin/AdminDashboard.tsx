@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Info, X, Megaphone, Sparkles,
+  XCircle, Package, Bell, Clock, Info, X, Megaphone,
   Loader2, ArrowRight
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
@@ -183,6 +183,63 @@ const METRIC_COPY: MetricCopyShape = {
 };
 
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
+
+// ---------------------------------------------------------------------------
+// Mini gold orb — used in the dashboard Nexty AI Insights section header.
+// Matches the full orb in AdminRecommendations but scaled down to 14px.
+// ---------------------------------------------------------------------------
+function MiniNextyOrb() {
+  return (
+    <span className="nexty-mini-orb" aria-hidden="true">
+      <style>{`
+        .nexty-mini-orb {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+        }
+        .nexty-mini-orb::before {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(209,153,0,0.4) 0%, transparent 70%);
+          animation: nexty-mini-pulse 2.8s ease-in-out infinite;
+        }
+        .nexty-mini-orb::after {
+          content: '';
+          position: absolute;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background:
+            radial-gradient(circle at 32% 28%, rgba(255,240,180,0.9) 0%, transparent 38%),
+            radial-gradient(circle at 50% 50%, #fdab43 0%, #d19900 45%, #8a5b00 100%);
+          box-shadow:
+            inset -1px -2px 4px rgba(0,0,0,0.45),
+            inset  1px  1px 3px rgba(255,235,160,0.25),
+            0 2px 8px rgba(209,153,0,0.5);
+          animation: nexty-mini-breathe 4s ease-in-out infinite;
+        }
+        @keyframes nexty-mini-pulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%       { opacity: 1;    transform: scale(1.2); }
+        }
+        @keyframes nexty-mini-breathe {
+          0%, 100% { filter: brightness(1); }
+          50%       { filter: brightness(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nexty-mini-orb::before,
+          .nexty-mini-orb::after { animation: none; }
+        }
+      `}</style>
+    </span>
+  );
+}
 
 const MetricExpandOverlay = ({
   card,
@@ -733,7 +790,7 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-violet-400/60" />
+              <MiniNextyOrb />
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Nexty AI Insights</p>
             </div>
             <button
