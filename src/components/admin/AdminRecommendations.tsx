@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock } from "lucide-react";
+import { ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock } from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,112 @@ interface Message {
   timestamp: Date;
 }
 
+// ── Nexty Orb ────────────────────────────────────────────────────────────────
+function NextyOrb() {
+  return (
+    <div className="nexty-orb-wrapper" aria-hidden="true">
+      {/* Outer glow pulse */}
+      <div className="nexty-orb-glow" />
+      {/* Revolving ring */}
+      <div className="nexty-orb-ring" />
+      {/* Sphere body */}
+      <div className="nexty-orb-sphere" />
+
+      <style>{`
+        .nexty-orb-wrapper {
+          position: relative;
+          width: 44px;
+          height: 44px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* Ambient gold glow that pulses */
+        .nexty-orb-glow {
+          position: absolute;
+          inset: -6px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(209,153,0,0.35) 0%, transparent 70%);
+          animation: nexty-pulse 2.8s ease-in-out infinite;
+        }
+        @keyframes nexty-pulse {
+          0%, 100% { opacity: 0.6; transform: scale(1); }
+          50%       { opacity: 1;   transform: scale(1.18); }
+        }
+
+        /* Revolving orbital ring */
+        .nexty-orb-ring {
+          position: absolute;
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          border: 1.5px solid transparent;
+          border-top-color:    rgba(253,171,67,0.9);
+          border-right-color:  rgba(253,171,67,0.3);
+          border-bottom-color: rgba(253,171,67,0.05);
+          border-left-color:   rgba(253,171,67,0.3);
+          animation: nexty-orbit 2s linear infinite;
+          filter: drop-shadow(0 0 4px rgba(253,171,67,0.6));
+        }
+        /* Second counter-rotating ring for depth */
+        .nexty-orb-ring::after {
+          content: '';
+          position: absolute;
+          inset: 4px;
+          border-radius: 50%;
+          border: 1px solid transparent;
+          border-top-color:   rgba(232,175,52,0.4);
+          border-left-color:  rgba(232,175,52,0.15);
+          animation: nexty-orbit-reverse 3.2s linear infinite;
+        }
+        @keyframes nexty-orbit {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes nexty-orbit-reverse {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(-360deg); }
+        }
+
+        /* Sphere — layered radial gradients for 3D volume */
+        .nexty-orb-sphere {
+          position: absolute;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background:
+            /* Specular highlight — top left */
+            radial-gradient(circle at 32% 28%, rgba(255,240,180,0.85) 0%, transparent 40%),
+            /* Mid-tone gold body */
+            radial-gradient(circle at 50% 50%, #fdab43 0%, #d19900 45%, #8a5b00 100%);
+          box-shadow:
+            /* Inner light rim */
+            inset -2px -3px 6px rgba(0,0,0,0.45),
+            inset  2px  2px 5px rgba(255,235,160,0.25),
+            /* Outer depth shadow */
+            0 4px 16px rgba(209,153,0,0.45),
+            0 1px  4px rgba(0,0,0,0.5);
+          animation: nexty-breathe 4s ease-in-out infinite;
+        }
+        @keyframes nexty-breathe {
+          0%, 100% { filter: brightness(1); }
+          50%       { filter: brightness(1.12); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nexty-orb-glow, .nexty-orb-ring,
+          .nexty-orb-ring::after, .nexty-orb-sphere {
+            animation: none;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
   const { data: insights, isLoading } = useNextyInsights();
   const [messages, setMessages]       = useState<Message[]>([]);
@@ -68,11 +174,10 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] max-w-4xl mx-auto bg-[#0a0a0a] border border-white/[0.06] rounded-2xl overflow-hidden shadow-2xl">
+
       {/* Header */}
       <div className="p-4 border-b border-white/[0.06] bg-white/[0.02] flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-          <Sparkles className="w-5 h-5 text-white" />
-        </div>
+        <NextyOrb />
         <div>
           <h2 className="text-sm font-semibold text-white tracking-tight">Nexty AI</h2>
           <p className="text-[10px] text-white/40 uppercase tracking-[0.1em]">Business Growth Advisor</p>
@@ -96,7 +201,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                 "max-w-[85%] rounded-2xl p-4 shadow-sm",
                 msg.role === "assistant"
                   ? "bg-white/[0.03] border border-white/[0.06] text-white/90"
-                  : "bg-violet-600 text-white"
+                  : "bg-amber-600 text-white"
               )}>
                 {msg.insight && (
                   <div className="flex items-center gap-2 mb-2">
