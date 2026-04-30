@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Heart } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -26,6 +26,7 @@ const iconMap: Record<string, React.ElementType> = {
   "Availability":       AvailabilityIcon,
   "Stock":              StockIcon,
   "Client Management":  ClientManagementIcon,
+  "Loyalty":            Heart,
   "Integrations":       IntegrationsIcon,
   "Settings":           SettingsIcon,
   "Terms & Conditions": TermsIcon,
@@ -38,10 +39,10 @@ type NavItem =
 
 const NAV: NavItem[] = [
   { kind: "direct", label: "Dashboard",        view: "Dashboard" },
-  { kind: "group",  label: "Schedule",          icon: BookingsIcon,  children: ["Bookings", "Availability"] },
-  { kind: "group",  label: "Catalogue",         icon: ServicesIcon,  children: ["Services", "Stock"] },
-  { kind: "direct", label: "Client Management", view: "Client Management" },
-  { kind: "group",  label: "Business",          icon: SettingsIcon,  children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
+  { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
+  { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
+  { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty"] },
+  { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
 ];
 
 const parentGroupOf = (view: string): string | null => {

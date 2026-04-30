@@ -12,16 +12,17 @@ import TrialExpiredPaywall from "@/components/admin/TrialExpiredPaywall";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 import { NotificationBell } from "@/components/admin/NotificationBell";
 
-const AdminBookings       = lazy(() => import("@/components/admin/AdminBookings"));
-const AdminServices       = lazy(() => import("@/components/admin/AdminServices"));
-const AdminAvailability   = lazy(() => import("@/components/admin/AdminAvailability"));
-const AdminStock          = lazy(() => import("@/components/admin/AdminStock"));
-const AdminIntegrations   = lazy(() => import("@/components/admin/AdminIntegrations"));
-const AdminSettings       = lazy(() => import("@/components/admin/AdminSettings"));
-const AdminTerms          = lazy(() => import("@/components/admin/AdminTerms"));
+const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
+const AdminServices         = lazy(() => import("@/components/admin/AdminServices"));
+const AdminAvailability     = lazy(() => import("@/components/admin/AdminAvailability"));
+const AdminStock            = lazy(() => import("@/components/admin/AdminStock"));
+const AdminIntegrations     = lazy(() => import("@/components/admin/AdminIntegrations"));
+const AdminSettings         = lazy(() => import("@/components/admin/AdminSettings"));
+const AdminTerms            = lazy(() => import("@/components/admin/AdminTerms"));
 const AdminClientManagement = lazy(() => import("@/components/admin/AdminClientManagement"));
-const AdminHelp           = lazy(() => import("@/components/admin/AdminHelp"));
-const AdminRecommendations = lazy(() => import("@/components/admin/AdminRecommendations"));
+const AdminLoyalty          = lazy(() => import("@/components/admin/AdminLoyalty"));
+const AdminHelp             = lazy(() => import("@/components/admin/AdminHelp"));
+const AdminRecommendations  = lazy(() => import("@/components/admin/AdminRecommendations"));
 
 const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -81,6 +82,7 @@ const views = [
   "Availability",
   "Stock",
   "Client Management",
+  "Loyalty",
   "Integrations",
   "Settings",
   "Terms & Conditions",
@@ -165,6 +167,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
               {activeView === "Availability"       && <AdminAvailability />}
               {activeView === "Stock"              && <AdminStock />}
               {activeView === "Client Management" && <AdminClientManagement />}
+              {activeView === "Loyalty"            && <AdminLoyalty />}
               {activeView === "Integrations"       && <AdminIntegrations />}
               {activeView === "Settings"           && <AdminSettings />}
               {activeView === "Terms & Conditions" && <AdminTerms />}
