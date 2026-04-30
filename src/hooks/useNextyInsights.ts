@@ -15,6 +15,16 @@ export interface NextyInsight {
   impactRand?: number;
 }
 
+/** Format a rand value: R1,234 (no decimals for whole numbers, 2dp otherwise) */
+function formatRand(value: number): string {
+  return `R${value % 1 === 0 ? value.toLocaleString("en-ZA") : value.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Format revenue-per-minute to 2 decimal places */
+function formatRpm(value: number): string {
+  return `R${Number(value).toFixed(2)}`;
+}
+
 export function useNextyInsights() {
   const { tenantId } = useTenant();
 
@@ -24,19 +34,26 @@ export function useNextyInsights() {
       const insights: NextyInsight[] = [];
 
       // ── 1. Revenue Per Minute Audit ────────────────────────────────────────
-      // Fires when top service earns >2× more per minute than bottom service.
-      // DB returns: service_name, revenue_per_minute, total_revenue, total_minutes, booking_count
+      // Fires when top service earns >2× more per minute than the bottom.
+      // RPC returns: service_name, revenue_per_minute, total_revenue, total_minutes, booking_count
       const { data: rpm } = await supabase.rpc("get_revenue_per_minute", { p_tenant_id: tenantId });
       if (rpm && rpm.length > 1) {
         const top    = rpm[0];
         const bottom = rpm[rpm.length - 1];
-        if (top.revenue_per_minute > bottom.revenue_per_minute * 2) {
+        const topRpm    = Number(top.revenue_per_minute);
+        const bottomRpm = Number(bottom.revenue_per_minute);
+        if (topRpm > bottomRpm * 2) {
+          const multiplier = (topRpm / bottomRpm).toFixed(1);
           insights.push({
             id: "rpm_gap",
             type: "margin",
             priority: "important",
-            title: "Margin Intelligence",
-            message: `Your '${top.service_name}' earns R${top.revenue_per_minute}/min while '${bottom.service_name}' earns only R${bottom.revenue_per_minute}/min. You are working twice as hard for the same time. Lead your booking page with '${top.service_name}'.`,
+            title: "Revenue-Per-Minute Gap",
+            message:
+              `"${top.service_name}" earns ${formatRpm(topRpm)}/min while ` +
+              `"${bottom.service_name}" earns ${formatRpm(bottomRpm)}/min — ` +
+              `${multiplier}× more return for the same chair time. ` +
+              `Promote "${top.service_name}" higher on your booking page to shift client selection without touching your prices.`,
             actionLabel: "Reorder Services",
             actionView: "Services",
           });
@@ -44,20 +61,31 @@ export function useNextyInsights() {
       }
 
       // ── 2. Quiet Day Audit ─────────────────────────────────────────────────
-      // Threshold lowered: 40% → 60% so early-stage tenants see this insight.
-      // DB returns: day_of_week, day_name, booking_count, avg_daily_bookings, capacity_percentage (0–100)
+      // Fires when the quietest day is below 75% of average bookings.
+      // RPC returns: day_of_week, day_name, booking_count, avg_daily_bookings, capacity_percentage
       const { data: quietDays } = await supabase.rpc("get_quiet_day_analysis", { p_tenant_id: tenantId });
       if (quietDays && quietDays.length > 0) {
-        const slowest = [...quietDays].sort(
-          (a: any, b: any) => a.capacity_percentage - b.capacity_percentage
-        )[0];
-        if (slowest && slowest.capacity_percentage < 60) {
+        // Already ordered ASC by capacity_percentage from the RPC
+        const slowest = quietDays[0] as {
+          day_of_week: number;
+          day_name: string;
+          booking_count: number;
+          avg_daily_bookings: number;
+          capacity_percentage: number;
+        };
+        const busiest = quietDays[quietDays.length - 1];
+        const pct = Math.round(Number(slowest.capacity_percentage));
+        if (pct < 75) {
           insights.push({
             id: "quiet_day",
             type: "capacity",
-            priority: "info",
+            priority: pct < 50 ? "important" : "info",
             title: "Capacity Gap",
-            message: `${slowest.day_name.trim()} is running at only ${Math.round(slowest.capacity_percentage)}% capacity compared to your busiest day. One message to your loyal clients on a slow morning could fill those gaps consistently.`,
+            message:
+              `${slowest.day_name.trim()} is your quietest day at ${pct}% capacity — ` +
+              `${slowest.booking_count} booking${slowest.booking_count === 1 ? "" : "s"} vs ` +
+              `${busiest.booking_count} on ${busiest.day_name.trim()}. ` +
+              `One targeted message to your loyalty clients the evening before could consistently fill those slots.`,
             actionLabel: "View Loyalty Tracker",
             actionView: "Loyalty",
           });
@@ -65,77 +93,102 @@ export function useNextyInsights() {
       }
 
       // ── 3. No-Show / Deposit Health Audit ─────────────────────────────────
-      // Two sub-checks:
-      //   a) No-show rate >5%  → revenue leakage alert (active problem)
-      //   b) Deposits disabled → proactive warning (structural risk)
-      // DB returns: no_show_count, total_lost_revenue, total_bookings, no_show_rate
+      // a) no_show_rate > 5%  → active revenue leakage (critical)
+      // b) no_show_count === 0 and total_bookings > 0 → structural risk advisory
+      // RPC returns: no_show_count, total_lost_revenue, total_bookings, no_show_rate
       const { data: noShowData } = await supabase.rpc("get_no_show_leakage", { p_tenant_id: tenantId });
       if (noShowData && noShowData[0]) {
         const d = noShowData[0];
+        const rate    = Number(d.no_show_rate);
+        const lost    = Number(d.total_lost_revenue);
+        const count   = Number(d.no_show_count);
+        const total   = Number(d.total_bookings);
 
-        if (d.no_show_rate > 5) {
-          // Active leakage
+        if (rate > 5) {
           insights.push({
             id: "no_show_leak",
             type: "leakage",
             priority: "critical",
             title: "Revenue Leakage",
-            message: `You lost R${Math.round(d.total_lost_revenue)} to no-shows in the last 90 days. Your no-show rate is ${d.no_show_rate}%. Your deposit system is the only structural fix — turn it on in Settings and this goes to near-zero.`,
+            message:
+              `You lost ${formatRand(Math.round(lost))} to no-shows across ${total} bookings. ` +
+              `Your no-show rate is ${rate.toFixed(1)}% — nearly 1 in every ${Math.round(100 / rate)} appointments leaves without revenue. ` +
+              `Enabling your deposit requirement in Settings is the only structural fix.`,
             actionLabel: "Open Settings",
             actionView: "Settings",
-            impactRand: d.total_lost_revenue,
+            impactRand: Math.round(lost),
           });
-        } else if (d.no_show_count === 0 || d.total_bookings < 20) {
-          // Early stage — proactively recommend deposits before it becomes a problem
+        } else if (count === 0 && total >= 10) {
+          // Clean record — proactively protect it before scale exposes the gap
           insights.push({
             id: "deposit_health",
             type: "leakage",
-            priority: "important",
-            title: "Deposit Protection Off",
-            message: `You have no no-shows yet — great start. But without a deposit requirement, you have no protection as your client base grows. Turning on deposits now costs you nothing and protects every future booking.`,
-            actionLabel: "Enable Deposits",
+            priority: "info",
+            title: "Deposit Protection",
+            message:
+              `${total} bookings completed with zero no-shows — a clean record. ` +
+              `Without a deposit requirement in place, that record depends entirely on client goodwill. ` +
+              `Enabling deposits now protects every future booking at no cost to your current clients.`,
+            actionLabel: "Review Settings",
             actionView: "Settings",
           });
         }
       }
 
       // ── 4. Loyalty Gap Audit ───────────────────────────────────────────────
-      // Threshold lowered: >3 → >0 so it fires for small tenant client bases.
-      // DB returns: ghost_regular_count, potential_annual_revenue, avg_spend_per_visit, sample_client_names
+      // Fires when regular clients exist outside the loyalty tracker.
+      // RPC returns: ghost_regular_count, potential_annual_revenue, avg_spend_per_visit, sample_client_names
       const { data: loyaltyGap } = await supabase.rpc("get_loyalty_gap_analysis", { p_tenant_id: tenantId });
       if (loyaltyGap && loyaltyGap[0] && loyaltyGap[0].ghost_regular_count > 0) {
-        const g = loyaltyGap[0];
-        const count = g.ghost_regular_count;
+        const g     = loyaltyGap[0];
+        const count = Number(g.ghost_regular_count);
+        const annualRevenue = Number(g.potential_annual_revenue);
+        const avgSpend      = Number(g.avg_spend_per_visit);
         insights.push({
           id: "loyalty_gap",
           type: "retention",
           priority: count > 5 ? "important" : "info",
           title: "Retention Opportunity",
-          message: `You have ${count} regular client${count === 1 ? "" : "s"} not enrolled in your loyalty tracker. These are your most valuable clients — enrolling them creates anchored return visits and secures an estimated R${Math.round(g.potential_annual_revenue)} in annual revenue.`,
-          actionLabel: "Enroll Clients",
+          message:
+            `You have ${count} regular client${count === 1 ? "" : "s"} who visit consistently but ` +
+            `${count === 1 ? "is" : "are"} not tracked in your loyalty system. ` +
+            `At an average of ${formatRand(Math.round(avgSpend))} per visit, enrolling them ` +
+            `secures an estimated ${formatRand(Math.round(annualRevenue))} in anchored annual revenue.`,
+          actionLabel: count === 1 ? "Enroll Client" : "Enroll Clients",
           actionView: "Loyalty",
-          impactRand: g.potential_annual_revenue > 0 ? g.potential_annual_revenue : undefined,
+          impactRand: annualRevenue > 0 ? Math.round(annualRevenue) : undefined,
         });
       }
 
       // ── 5. Rebooking Rate Audit ────────────────────────────────────────────
-      // Fires when first-time clients who haven't rebooked within 8 weeks
-      // outnumber those who have — indicating follow-up friction.
-      // DB returns: rebooked_count, not_rebooked_count, rebooking_rate, total_first_timers
-      const { data: rebookData } = await supabase.rpc("get_rebooking_rate", { p_tenant_id: tenantId });
-      if (rebookData && rebookData[0] && rebookData[0].total_first_timers >= 3) {
-        const r = rebookData[0];
-        if (r.rebooking_rate < 55) {
+      // Fires when rebooking rate < 55% AND there are enough first-timers to be meaningful.
+      // RPC: get_rebooking_rate_analysis(p_tenant_id, p_rebook_window_days=56)
+      // Returns: total_first_time_clients, rebooked_within_window, rebooking_rate_pct,
+      //          avg_days_to_rebook, window_days
+      const { data: rebookData } = await supabase.rpc("get_rebooking_rate_analysis", { p_tenant_id: tenantId });
+      if (rebookData && rebookData[0] && Number(rebookData[0].total_first_time_clients) >= 3) {
+        const r    = rebookData[0];
+        const rate = Number(r.rebooking_rate_pct);
+        const total = Number(r.total_first_time_clients);
+        const rebooked = Number(r.rebooked_within_window);
+        const windowWeeks = Math.round(Number(r.window_days) / 7);
+
+        if (rate < 55) {
           insights.push({
             id: "rebooking_rate",
             type: "retention",
-            priority: r.rebooking_rate < 35 ? "important" : "info",
-            title: "First-Time Client Rebooking",
-            message: `Only ${Math.round(r.rebooking_rate)}% of your first-time clients book again within 8 weeks. The industry average for solo operators is 55–65%. The gap is almost always the moment after they leave — no follow-up, no reminder, no reason to return.`,
+            priority: rate < 35 ? "important" : "info",
+            title: "First-Time Rebooking Gap",
+            message:
+              `${rebooked} of your ${total} first-time clients rebooked within ${windowWeeks} weeks — ` +
+              `a rebooking rate of ${rate.toFixed(1)}%. ` +
+              `The other ${total - rebooked} client${total - rebooked === 1 ? "" : "s"} didn't return. ` +
+              `A simple follow-up 48 hours after their first visit is the most reliable way to recover these bookings.`,
             actionLabel: "Review Client Flow",
             actionView: "ClientManagement",
           });
         }
+        // Rate >= 55%: no card — healthy, no action needed.
       }
 
       // ── Sort: critical → important → info ──────────────────────────────────
