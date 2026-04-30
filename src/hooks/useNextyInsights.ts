@@ -415,6 +415,36 @@ export function useNextyInsights() {
         }
       }
 
+            // -- 10. Outside-Settings Regulars ----------------------------------------
+      // Clients with 2+ bookings who never book the qualifying service.
+      // Named individually so the tenant can act immediately in Loyalty Tracker.
+      const { data: outsideData } = await supabase.rpc("get_nexty_outside_candidates", {
+        p_tenant_id: tenantId,
+      });
+      if (outsideData && outsideData.length > 0) {
+        const count     = outsideData.length;
+        const names     = outsideData
+          .slice(0, 4)
+          .map((c: any) => c.client_name.trim())
+          .join(", ");
+        const totalSpend = outsideData.reduce((s: number, c: any) => s + Number(c.total_spend ?? 0), 0);
+        const extraLabel = count > 4 ? ` and ${count - 4} more` : "";
+
+        insights.push({
+          id: "outside_settings_regulars",
+          type: "retention",
+          priority: "important",
+          title: "Loyal Clients Outside Your Programme",
+          message:
+            `${count} client${count === 1 ? "" : "s"} book regularly but fall outside your current loyalty programme settings because they do not book your qualifying service. ` +
+            `They have spent a combined ${formatRand(Math.round(totalSpend))} with no retention structure around them. ` +
+            `${names}${extraLabel} ${count === 1 ? "is" : "are"} in your Loyalty Tracker under "Nexty Recommends Enrolling" and can be enrolled with one tap.`,
+          actionLabel: "Enroll Now",
+          actionView: "Loyalty",
+          impactRand: Math.round(totalSpend),
+        });
+      }
+
             // Sort: critical -> important -> info
       const priorityMap: Record<InsightPriority, number> = {
         critical: 0,
