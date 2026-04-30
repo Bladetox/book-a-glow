@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, MessageCircle, Send, ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock, X } from "lucide-react";
+import { Sparkles, Send, ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock } from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 import { cn } from "@/lib/utils";
 
@@ -14,47 +14,56 @@ interface Message {
 
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
   const { data: insights, isLoading } = useNextyInsights();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages]       = useState<Message[]>([]);
+  const [isTyping, setIsTyping]       = useState(false);
+  const hasInitialised                = useRef(false);
+  const scrollRef                     = useRef<HTMLDivElement>(null);
 
+  // Run once when loading completes and insights are available
   useEffect(() => {
-    if (!isLoading && messages.length === 0) {
-      initialiseChat();
-    }
-  }, [isLoading]);
+    if (isLoading || hasInitialised.current) return;
+    hasInitialised.current = true;
+    initialiseChat(insights ?? []);
+  }, [isLoading, insights]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const initialiseChat = async () => {
+  const initialiseChat = async (resolvedInsights: NextyInsight[]) => {
     setIsTyping(true);
     await new Promise(r => setTimeout(r, 1500));
-    
-    const welcome: Message = {
+
+    if (resolvedInsights.length === 0) {
+      setMessages([{
+        id: "welcome",
+        role: "assistant",
+        content: "I've reviewed your business data, but there isn't enough activity yet to surface specific recommendations. Keep taking bookings — once you have more completed appointments I'll start finding opportunities for you.",
+        timestamp: new Date(),
+      }]);
+      setIsTyping(false);
+      return;
+    }
+
+    setMessages([{
       id: "welcome",
       role: "assistant",
-      content: "I've analyzed your business data. Here are the most impactful growth opportunities I've found for you right now.",
-      timestamp: new Date()
-    };
-    
-    setMessages([welcome]);
+      content: "I've analysed your business data. Here are the most impactful growth opportunities I've found for you right now.",
+      timestamp: new Date(),
+    }]);
     setIsTyping(false);
 
-    if (insights && insights.length > 0) {
-      for (const insight of insights) {
-        setIsTyping(true);
-        await new Promise(r => setTimeout(r, 1000));
-        setMessages(prev => [...prev, {
-          id: insight.id,
-          role: "assistant",
-          content: insight.message,
-          insight,
-          timestamp: new Date()
-        }]);
-        setIsTyping(false);
-      }
+    for (const insight of resolvedInsights) {
+      setIsTyping(true);
+      await new Promise(r => setTimeout(r, 1000));
+      setMessages(prev => [...prev, {
+        id: insight.id,
+        role: "assistant",
+        content: insight.message,
+        insight,
+        timestamp: new Date(),
+      }]);
+      setIsTyping(false);
     }
   };
 
@@ -88,23 +97,23 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             >
               <div className={cn(
                 "max-w-[85%] rounded-2xl p-4 shadow-sm",
-                msg.role === "assistant" 
-                  ? "bg-white/[0.03] border border-white/[0.06] text-white/90" 
+                msg.role === "assistant"
+                  ? "bg-white/[0.03] border border-white/[0.06] text-white/90"
                   : "bg-violet-600 text-white"
               )}>
                 {msg.insight && (
                   <div className="flex items-center gap-2 mb-2">
-                    {msg.insight.priority === "critical" && <AlertTriangle className="w-4 h-4 text-red-400" />}
-                    {msg.insight.type === "margin" && <TrendingUp className="w-4 h-4 text-emerald-400" />}
-                    {msg.insight.type === "retention" && <UserCheck className="w-4 h-4 text-blue-400" />}
-                    {msg.insight.type === "capacity" && <Clock className="w-4 h-4 text-amber-400" />}
+                    {msg.insight.priority === "critical"  && <AlertTriangle className="w-4 h-4 text-red-400" />}
+                    {msg.insight.type === "margin"        && <TrendingUp className="w-4 h-4 text-emerald-400" />}
+                    {msg.insight.type === "retention"     && <UserCheck className="w-4 h-4 text-blue-400" />}
+                    {msg.insight.type === "capacity"      && <Clock className="w-4 h-4 text-amber-400" />}
                     <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
                       {msg.insight.title}
                     </span>
                   </div>
                 )}
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                
+
                 {msg.insight?.actionLabel && (
                   <button
                     onClick={() => onNavigate(msg.insight!.actionView || "Dashboard")}
@@ -118,7 +127,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             </motion.div>
           ))}
         </AnimatePresence>
-        
+
         {isTyping && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -126,15 +135,15 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             className="flex justify-start"
           >
             <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 flex gap-1">
-              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </motion.div>
         )}
       </div>
 
-      {/* Footer input (Static placeholder for visual completeness) */}
+      {/* Footer */}
       <div className="p-4 bg-white/[0.02] border-t border-white/[0.06]">
         <div className="relative group">
           <input
