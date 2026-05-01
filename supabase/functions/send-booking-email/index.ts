@@ -432,7 +432,7 @@ Deno.serve(async (req) => {
         : `Thank you for your appointment on <strong style="color:#000;">${formattedDate}</strong>.`;
 
       const balanceBodyLine2 = isPhenomeBeauty
-        ? `Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> on <strong style="color:#000;">${formattedDate}</strong> is ready to settle securely online.`
+        ? `Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> is ready to settle securely online.`
         : `Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> is ready to settle securely online.`;
 
       const reviewCopy = isPhenomeBeauty
