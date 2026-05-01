@@ -424,6 +424,26 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── Tenant-conditional copy ──────────────────────────────────────────
+      const isPhenomeBeauty = booking.tenant_id === "phenomebeauty";
+
+      const balanceBodyLine1 = isPhenomeBeauty
+        ? `Thank you so much for your session today — you were absolutely glowing! 💛`
+        : `Thank you for your appointment on <strong style="color:#000;">${formattedDate}</strong>.`;
+
+      const balanceBodyLine2 = isPhenomeBeauty
+        ? `Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> on <strong style="color:#000;">${formattedDate}</strong> is ready to settle securely online.`
+        : `Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> is ready to settle securely online.`;
+
+      const reviewCopy = isPhenomeBeauty
+        ? `help other women find their glow too. 🌸`
+        : `help others discover ${tenantName}.`;
+
+      const emailSubject = isPhenomeBeauty
+        ? `Your balance is ready to settle — Phenome Beauty`
+        : `Your balance payment — ${balanceDue} due`;
+      // ────────────────────────────────────────────────────────────────────
+
       const balanceHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -447,8 +467,8 @@ Deno.serve(async (req) => {
   </td></tr>
   <tr><td style="padding:28px 32px 16px;">
     <p class="tm" style="margin:0 0 12px;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>,</p>
-    <p class="tl" style="margin:0 0 8px;font-size:14px;color:#555;line-height:1.6;">Thank you so much for your session today — you were absolutely glowing! 💛</p>
-    <p class="tl" style="margin:0;font-size:14px;color:#555;line-height:1.6;">Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> on <strong style="color:#000;">${formattedDate}</strong> is ready to settle securely online.</p>
+    <p class="tl" style="margin:0 0 8px;font-size:14px;color:#555;line-height:1.6;">${balanceBodyLine1}</p>
+    <p class="tl" style="margin:0;font-size:14px;color:#555;line-height:1.6;">${balanceBodyLine2}</p>
   </td></tr>
   <tr><td style="padding:8px 32px 28px;text-align:center;">
     <a href="${payment_url}" target="_blank"
@@ -458,7 +478,7 @@ Deno.serve(async (req) => {
     <p class="tl" style="margin:12px 0 0;font-size:11px;color:#aaa;">Powered by Yoco &middot; Safe &amp; encrypted</p>
   </td></tr>
   ${reviewLink ? `<tr><td style="padding:0 32px 20px;">
-    <p class="tl" style="margin:0;font-size:13px;color:#666;">Once you're done, we'd love to hear about your experience — <a href="${reviewLink}" target="_blank" style="color:#000;font-weight:600;">share your review</a> and help other women find their glow too. 🌸</p>
+    <p class="tl" style="margin:0;font-size:13px;color:#666;">Once you're done, we'd love to hear about your experience — <a href="${reviewLink}" target="_blank" style="color:#000;font-weight:600;">share your review</a> and ${reviewCopy}</p>
   </td></tr>` : ""}
   <tr><td class="es" style="padding:14px 32px;text-align:center;background:#f0f0f0;">
     <p class="tf" style="margin:0;font-size:11px;color:#999;">&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot</p>
@@ -474,7 +494,7 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail,
           to:       [clientEmail],
-          subject:  `Your balance payment — ${balanceDue} due`,
+          subject:  emailSubject,
           html:     balanceHtml,
         }),
       });
