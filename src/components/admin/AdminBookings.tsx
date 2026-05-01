@@ -9,14 +9,14 @@ import {
   EmptyState,
 } from "@/components/admin/AdminSharedUI";
 import { PlusCircle, ShieldBan, ShieldCheck } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfDay } from "date-fns";
 import {
   Clock, User, Scissors, Phone, Mail, MapPin,
   Check, X, Trash2, ChevronDown, ChevronUp,
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
-  SendHorizonal, Search, AlertTriangle, Edit3, Sparkles
+  SendHorizonal, Search, AlertTriangle, Edit3, Sparkles, MoreHorizontal
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
@@ -27,8 +27,6 @@ import { toast } from "sonner";
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
-// Map DB status values to human-readable display labels.
-// "completed" in the DB now means the appointment was physically serviced.
 const statusDisplayLabel: Record<BookingRow["status"], string> = {
   pending:   "pending",
   confirmed: "confirmed",
@@ -51,6 +49,107 @@ const statusTagColor = (
   if (status === "completed") return "sky";
   if (status === "cancelled") return "red";
   return "default";
+};
+
+// ── WhatsApp icon SVG ────────────────────────────────────────────────────────
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+);
+
+// ── Normalise SA phone number for wa.me link ─────────────────────────────────
+const toWhatsAppHref = (phone: string, clientName: string, date: string, time: string, ref: string) => {
+  const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
+  const text = encodeURIComponent(
+    `Hi ${clientName}, just a reminder about your appointment on ${date} at ${time} (Ref: ${ref}).`
+  );
+  return `https://wa.me/${digits}?text=${text}`;
+};
+
+// ── OverflowMenu ─────────────────────────────────────────────────────────────
+// Tier 3: destructive + admin actions hidden behind a ··· popover.
+interface OverflowMenuProps {
+  isClientBlocked: boolean;
+  isCancelled: boolean;
+  onBlock: () => void;
+  onCancel: () => void;
+  onDelete: () => void;
+}
+const OverflowMenu = ({ isClientBlocked, isCancelled, onBlock, onCancel, onDelete }: OverflowMenuProps) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("mousedown", handler); document.removeEventListener("keydown", key); };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
+        aria-label="More actions"
+        className="p-2 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+      >
+        <MoreHorizontal className="w-3.5 h-3.5" />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 4 }}
+            transition={{ duration: 0.14, ease: "easeOut" }}
+            className="absolute right-0 bottom-full mb-2 z-30 w-44 rounded-2xl border border-white/[0.10] bg-[#111] shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Block / Unblock */}
+            <button
+              onClick={() => { setOpen(false); onBlock(); }}
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium transition-colors ${
+                isClientBlocked
+                  ? "text-emerald-400 hover:bg-emerald-500/10"
+                  : "text-red-400/80 hover:bg-red-500/10 hover:text-red-400"
+              }`}
+            >
+              {isClientBlocked
+                ? <><ShieldCheck className="w-3 h-3 shrink-0" /> Unblock Client</>
+                : <><ShieldBan className="w-3 h-3 shrink-0" /> Block Client</>
+              }
+            </button>
+
+            {/* Cancel */}
+            {!isCancelled && (
+              <button
+                onClick={() => { setOpen(false); onCancel(); }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+              >
+                <X className="w-3 h-3 shrink-0" /> Cancel Booking
+              </button>
+            )}
+
+            <div className="mx-3 border-t border-white/[0.06]" />
+
+            {/* Delete */}
+            <button
+              onClick={() => { setOpen(false); onDelete(); }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+            >
+              <Trash2 className="w-3 h-3 shrink-0" /> Delete Booking
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 interface ConfirmDialogProps {
@@ -380,6 +479,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     Cancelled: bookings.filter(b => b.status === "cancelled").length,
   };
 
+  // ── All handlers are untouched — logic preserved exactly ──────────────────
+
   const handleStatusChange = async (bookingId: string, status: string) => {
     try {
       await updateStatus.mutateAsync({ bookingId, status });
@@ -493,9 +594,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  // ── Mark Fully Paid ────────────────────────────────────────────────────────
   // Payment lifecycle only — does NOT change appointment status.
-  // The appointment status is managed independently via Mark as Serviced.
   const handleMarkFullyPaid = async (b: BookingRow) => {
     if (markingPaidId === b.id) return;
     setMarkingPaidId(b.id);
@@ -517,9 +616,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  // ── Mark as Serviced ───────────────────────────────────────────────────────
   // Appointment lifecycle only — records that the service was physically delivered.
-  // Sets status → "completed". Visible only on/after the booking date.
   const handleMarkServiced = async (b: BookingRow) => {
     if (markingServicedId === b.id) return;
     setMarkingServicedId(b.id);
@@ -566,6 +663,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   return (
     <div className="flex flex-col gap-8 pb-12">
 
+      {/* ── Confirm dialogs — all logic unchanged ─────────────────────────── */}
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete booking?"
@@ -663,6 +761,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         subtitle="View bookings, update guest details, manage payments, reschedule appointments, and handle client actions."
       />
 
+      {/* ── Overview stats ─────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Overview" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -706,6 +805,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         </div>
       </section>
 
+      {/* ── Bookings list ──────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Bookings List" />
 
@@ -730,7 +830,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {filters.map(f => {
             const showCount = f !== "All" && f !== "Today";
-            // Display "Serviced" in the filter tab label instead of "Completed"
             const filterLabel = f === "Completed" ? "Serviced" : f;
             return (
               <button
@@ -785,14 +884,49 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                   const isRequestingBalance = requestingBalanceId === b.id;
                   const isMarkingPaid = markingPaidId === b.id;
                   const isMarkingServiced = markingServicedId === b.id;
-                  const hasOutstandingBalance = b.balance > 0 && b.status !== "cancelled" && !b.fullPaymentReceived;
                   const blockStatus = blockStatusMap[b.id];
                   const isClientBlocked = blockStatus?.isBlocked ?? false;
-
-                  // Show Mark as Serviced only on or after the booking date, for non-cancelled, non-serviced bookings
                   const canMarkServiced = b.status !== "cancelled" && b.status !== "completed" && b.date <= todayStr;
-
                   const serviceList = (b.service ?? "").split(", ").filter(Boolean);
+
+                  // ── Tier 1: derive the single primary CTA for this booking ──────
+                  const primaryCTA = (() => {
+                    if (b.status === "pending") {
+                      return (
+                        <button
+                          onClick={e => { e.stopPropagation(); setConfirmConfirm(b); }}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        >
+                          <Check className="w-4 h-4" /> Confirm Booking
+                        </button>
+                      );
+                    }
+                    if (b.status === "confirmed" && b.balance > 0 && !b.fullPaymentReceived) {
+                      return (
+                        <button
+                          disabled={isRequestingBalance}
+                          onClick={e => { e.stopPropagation(); setConfirmRequestBalance(b); }}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.10] text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {isRequestingBalance ? <Loader2 className="w-4 h-4 animate-spin" /> : <SendHorizonal className="w-4 h-4" />}
+                          Request Final Payment
+                        </button>
+                      );
+                    }
+                    if (canMarkServiced) {
+                      return (
+                        <button
+                          disabled={isMarkingServiced}
+                          onClick={e => { e.stopPropagation(); setConfirmMarkServiced(b); }}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-sky-500/25 bg-sky-500/[0.08] text-sm font-semibold text-sky-400 hover:bg-sky-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {isMarkingServiced ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          Mark as Serviced
+                        </button>
+                      );
+                    }
+                    return null;
+                  })();
 
                   return (
                     <motion.div
@@ -803,6 +937,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       layout
                       className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-hidden ${statusBorderAccent[b.status]}`}
                     >
+                      {/* ── Card header (collapsed view) ─────────────────── */}
                       <div
                         className="p-4 sm:p-5 flex items-start gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                         onClick={() => setExpandedId(isExpanded ? null : b.id)}
@@ -822,12 +957,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
                             {isClientBlocked && <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />}
-                            {/* Appointment lifecycle pill */}
-                            <AdminTag
-                              label={statusDisplayLabel[b.status]}
-                              color={statusTagColor(b.status)}
-                            />
-                            {/* Payment lifecycle pill — independent of appointment status */}
+                            <AdminTag label={statusDisplayLabel[b.status]} color={statusTagColor(b.status)} />
                             <PaymentTag
                               fullPaymentReceived={b.fullPaymentReceived}
                               balance={b.balance}
@@ -848,11 +978,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                         </div>
                       </div>
 
+                      {/* ── Expanded body ─────────────────────────────────── */}
                       <AnimatePresence>
                         {isExpanded && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-white/[0.06]">
                               <div className="flex flex-col gap-3 mt-3">
+
+                                {/* Detail grid */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                   <DetailRow icon={User} label="Client" value={b.client} />
                                   <DetailRow icon={Phone} label="Phone" value={b.phone} />
@@ -878,6 +1011,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </div>
                                 )}
 
+                                {/* Payment summary */}
                                 <div className="grid grid-cols-3 gap-2 mt-1">
                                   <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
                                     <p className="text-[10px] text-white/30">Total</p>
@@ -906,6 +1040,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                 <div className="text-[10px] text-white/20">Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}</div>
 
+                                {/* Edit accordion — unchanged */}
                                 <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
                                   <button
                                     onClick={e => {
@@ -945,68 +1080,85 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </AnimatePresence>
                                 </div>
 
-                                <div className="flex items-center gap-2 pt-1 flex-wrap">
-                                  {b.status === "pending" && (
-                                    <button onClick={e => { e.stopPropagation(); setConfirmConfirm(b); }} className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5">
-                                      <Check className="w-3 h-3" /> Confirm
-                                    </button>
-                                  )}
+                                {/* ── TIER 1: Primary CTA ───────────────────────── */}
+                                {primaryCTA && (
+                                  <div className="pt-1">
+                                    {primaryCTA}
+                                  </div>
+                                )}
 
+                                {/* ── TIER 2: Secondary icon-button strip ───────── */}
+                                <div className="flex items-center gap-2 flex-wrap">
+
+                                  {/* Reschedule */}
                                   {b.status !== "cancelled" && (
-                                    <button onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }} className="px-3 py-1.5 rounded-xl border border-sky-500/25 bg-sky-500/[0.08] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5">
-                                      <CalendarClock className="w-3 h-3" /> Reschedule
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+                                      aria-label="Reschedule"
+                                      title="Reschedule"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors"
+                                    >
+                                      <CalendarClock className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Reschedule</span>
                                     </button>
                                   )}
 
+                                  {/* Add Service */}
                                   {b.status !== "cancelled" && (
-                                    <button onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }} className="px-3 py-1.5 rounded-xl border border-violet-500/25 bg-violet-500/[0.08] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors flex items-center gap-1.5">
-                                      <PlusCircle className="w-3 h-3" /> Add Service
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
+                                      aria-label="Add service"
+                                      title="Add service"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-500/25 bg-violet-500/[0.07] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors"
+                                    >
+                                      <PlusCircle className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Add Service</span>
                                     </button>
                                   )}
 
-                                  {/* Payment action — independent of appointment status */}
+                                  {/* Mark Fully Paid — payment lifecycle only */}
                                   {b.status !== "cancelled" && !b.fullPaymentReceived && b.balance > 0 && (
-                                    <button disabled={isMarkingPaid} onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }} className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-                                      {isMarkingPaid ? <Loader2 className="w-3 h-3 animate-spin" /> : <CircleDollarSign className="w-3 h-3" />}
-                                      Mark Fully Paid
+                                    <button
+                                      disabled={isMarkingPaid}
+                                      onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }}
+                                      aria-label="Mark fully paid"
+                                      title="Mark fully paid"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      {isMarkingPaid ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CircleDollarSign className="w-3.5 h-3.5" />}
+                                      <span className="hidden sm:inline">Mark Paid</span>
                                     </button>
                                   )}
 
-                                  {showRequestBalance(b) && (
-                                    <button disabled={isRequestingBalance} onClick={e => { e.stopPropagation(); setConfirmRequestBalance(b); }} className="px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] text-xs font-medium text-amber-400 hover:bg-amber-500/[0.15] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-                                      {isRequestingBalance ? <Loader2 className="w-3 h-3 animate-spin" /> : <SendHorizonal className="w-3 h-3" />}
-                                      Request Final Payment
-                                    </button>
+                                  {/* WhatsApp — only if phone exists */}
+                                  {b.phone && (
+                                    <a
+                                      href={toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref ?? "")}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={e => e.stopPropagation()}
+                                      aria-label="WhatsApp client"
+                                      title="WhatsApp client"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#25D366]/25 bg-[#25D366]/[0.07] text-xs font-medium text-[#25D366]/80 hover:bg-[#25D366]/15 hover:text-[#25D366] transition-colors"
+                                    >
+                                      <WhatsAppIcon className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">WhatsApp</span>
+                                    </a>
                                   )}
 
-                                  {/* Appointment lifecycle action — only appears on/after booking date */}
-                                  {canMarkServiced && (
-                                    <button disabled={isMarkingServiced} onClick={e => { e.stopPropagation(); setConfirmMarkServiced(b); }} className="px-3 py-1.5 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-                                      {isMarkingServiced ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                      Mark as Serviced
-                                    </button>
-                                  )}
-
-                                  <button onClick={e => { e.stopPropagation(); setBlockModalBooking(b); }} className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                                    isClientBlocked
-                                      ? "border border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-400 hover:bg-emerald-500/15"
-                                      : "border border-red-500/20 bg-red-500/[0.06] text-red-400/80 hover:bg-red-500/10 hover:text-red-400"
-                                  }`}>
-                                    {isClientBlocked ? <><ShieldCheck className="w-3 h-3" /> Unblock Client</> : <><ShieldBan className="w-3 h-3" /> Block Client</>}
-                                  </button>
-
+                                  {/* Spacer pushes overflow menu to the right */}
                                   <div className="flex-1" />
 
-                                  {b.status !== "cancelled" && (
-                                    <button onClick={e => { e.stopPropagation(); setConfirmCancel(b); }} className="px-3 py-1.5 rounded-xl border border-red-500/20 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-1.5">
-                                      <X className="w-3 h-3" /> Cancel
-                                    </button>
-                                  )}
-
-                                  <button onClick={e => { e.stopPropagation(); setConfirmDelete(b); }} className="p-2 rounded-xl border border-red-500/15 text-red-400/40 hover:bg-red-500/10 hover:text-red-400 transition-colors" aria-label="Delete booking">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                                  {/* ── TIER 3: Overflow menu (··· ) ──────────── */}
+                                  <OverflowMenu
+                                    isClientBlocked={isClientBlocked}
+                                    isCancelled={b.status === "cancelled"}
+                                    onBlock={() => setBlockModalBooking(b)}
+                                    onCancel={() => setConfirmCancel(b)}
+                                    onDelete={() => setConfirmDelete(b)}
+                                  />
                                 </div>
+
                               </div>
                             </div>
                           </motion.div>
