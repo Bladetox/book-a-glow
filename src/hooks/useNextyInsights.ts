@@ -41,6 +41,27 @@ export function useNextyInsights() {
     queryFn: async () => {
       const insights: NextyInsight[] = [];
 
+      // -- Persistence: load dismissed/actioned insight IDs from DB --------
+      // dismissed = skip for 7 days; actioned = skip for 30 days
+      const { data: actionRows } = await supabase
+        .from("nexty_insight_actions")
+        .select("insight_id, action_type, expires_at")
+        .eq("tenant_id", tenantId);
+
+      const suppressedIds = new Set<string>(
+        (actionRows ?? [])
+          .filter(r => {
+            if (!r.expires_at) return true; // permanent
+            return new Date(r.expires_at) > new Date(); // not expired
+          })
+          .map(r => r.insight_id)
+      );
+
+      // Helper: push insight only if not suppressed
+      const push = (insight: NextyInsight) => {
+        if (!suppressedIds.has(insight.id)) insights.push(insight);
+      };
+
       // -- 0. Business Context -----------------------------------------------
       // All advice branches on this: mobile vs fixed, deposits on/off.
       const { data: ctx } = await supabase.rpc("get_nexty_business_context", {
@@ -76,7 +97,7 @@ export function useNextyInsights() {
           const multiplier  = (topRpm / bottomRpm).toFixed(1);
           const topCount    = Number(top.booking_count);
           const bottomCount = Number(bottom.booking_count);
-          insights.push({
+          push({
             id: "rpm_gap",
             type: "margin",
             priority: "important",
@@ -121,7 +142,7 @@ export function useNextyInsights() {
               `A personal message from you converts at a much higher rate than a broadcast.`;
           void isSolo; // isSolo available for future staff-specific branching
 
-          insights.push({
+          push({
             id: "quiet_day",
             type: "capacity",
             priority: pct < 50 ? "important" : "info",
@@ -171,7 +192,7 @@ export function useNextyInsights() {
               `This single change eliminates most no-shows because clients with a financial commitment show up.`;
           }
 
-          insights.push({
+          push({
             id: "no_show_leak",
             type: "leakage",
             priority: "critical",
@@ -207,7 +228,7 @@ export function useNextyInsights() {
             `Enrolling all ${count} takes under 5 minutes and puts ` +
             `${formatRand(Math.round(annualRev))} in predictable annual revenue onto the tracker.`;
 
-        insights.push({
+        push({
           id: "loyalty_gap",
           type: "retention",
           priority: annualRev > 0 ? "important" : "info",
@@ -246,7 +267,7 @@ export function useNextyInsights() {
               `Go to Clients, filter by most recent first-timers and message the ${notReturned} who have not returned. ` +
               `A direct message from you converts approximately 1 in 3 first-time clients back into repeat bookings.`;
 
-          insights.push({
+          push({
             id: "rebooking_rate",
             type: "retention",
             priority: rate < 35 ? "important" : "info",
@@ -289,7 +310,7 @@ export function useNextyInsights() {
             : `When a slot opens from a cancellation, go to Clients, filter by overdue loyalty clients and offer them the gap directly. ` +
               `A personal message fills cancelled slots at a far higher rate than any automated broadcast.`;
 
-          insights.push({
+          push({
             id: "cancellation_leakage",
             type: "leakage",
             priority: cancelLost > 1000 ? "important" : "info",
@@ -323,7 +344,7 @@ export function useNextyInsights() {
           : `${peakHour === 12 ? 12 : peakHour - 12}pm`;
 
         if (totalAnalysed >= 10 && quietCount < totalAnalysed * 0.1) {
-          insights.push({
+          push({
             id: "quiet_day_promo",
             type: "growth",
             priority: "info",
@@ -355,7 +376,7 @@ export function useNextyInsights() {
           const tiktokRev = Number(tiktokRow.total_revenue ?? 0);
 
           if (tiktokAvg < overallAvg * 0.85) {
-            insights.push({
+            push({
               id: "tiktok_basket",
               type: "growth",
               priority: "info",
@@ -369,7 +390,7 @@ export function useNextyInsights() {
               actionView: "Services",
             });
           } else {
-            insights.push({
+            push({
               id: "tiktok_top_channel",
               type: "growth",
               priority: "info",
@@ -398,7 +419,7 @@ export function useNextyInsights() {
         const missed    = newCount - converted;
 
         if (newCount >= 5 && rate < 50) {
-          insights.push({
+          push({
             id: "new_client_conversion",
             type: "retention",
             priority: rate < 30 ? "important" : "info",
@@ -430,7 +451,7 @@ export function useNextyInsights() {
         const totalSpend = outsideData.reduce((s: number, c: any) => s + Number(c.total_spend ?? 0), 0);
         const extraLabel = count > 4 ? ` and ${count - 4} more` : "";
 
-        insights.push({
+        push({
           id: "outside_settings_regulars",
           type: "retention",
           priority: "important",
@@ -443,6 +464,275 @@ export function useNextyInsights() {
           actionView: "Loyalty",
           impactRand: Math.round(totalSpend),
         });
+      }
+
+      // -- 11. Unattributed Revenue ------------------------------------------
+      const { data: unattr } = await supabase.rpc("get_unattributed_revenue", { p_tenant_id: tenantId });
+      if (unattr?.[0] && Number(unattr[0].booking_count) >= 5) {
+        const uCount = Number(unattr[0].booking_count);
+        const uRev   = Number(unattr[0].total_revenue);
+        push({
+          id: "unattributed_revenue",
+          type: "ops",
+          priority: uRev > 5000 ? "important" : "info",
+          title: "Revenue With No Source Recorded",
+          message:
+            `${uCount} completed booking${uCount === 1 ? "" : "s"} have no acquisition channel recorded, ` +
+            `representing ${formatRand(Math.round(uRev))} in revenue you cannot attribute to any channel. ` +
+            `You cannot make informed decisions about where to invest your time or content without this data. ` +
+            `Ask every new client at the start of the session how they found you, and update the booking record immediately. ` +
+            `Even recovering 50% of this attribution changes what your channel data tells you.`,
+          actionLabel: "View Bookings",
+          actionView: "Bookings",
+          impactRand: Math.round(uRev),
+        });
+      }
+
+      // -- 12. SA Salary Cycle Dead Zones ------------------------------------
+      const { data: salaryData } = await supabase.rpc("get_salary_cycle_analysis", { p_tenant_id: tenantId });
+      if (salaryData && salaryData.length >= 2) {
+        const sorted = [...salaryData].sort((a: any, b: any) => Number(b.window_revenue) - Number(a.window_revenue));
+        const peak   = sorted[0];
+        const quiet  = sorted[sorted.length - 1];
+        const peakPct   = Number(peak.pct_of_total);
+        const quietPct  = Number(quiet.pct_of_total);
+        if (peakPct > 50 && quietPct < 20) {
+          push({
+            id: "salary_cycle_dead_zones",
+            type: "growth",
+            priority: "info",
+            title: "Salary Cycle Revenue Concentration",
+            message:
+              `${peakPct.toFixed(0)}% of your revenue in the last 90 days landed in the ${peak.window_name} window, ` +
+              `while ${quiet.window_name} generated only ${quietPct.toFixed(0)}%. ` +
+              `In South Africa, private sector pays around the 25th and government between the 15th and 20th. ` +
+              `${quiet.window_name} is your dead zone. A WhatsApp story or targeted offer to your loyalty clients ` +
+              `specifically during the ${quiet.window_name.split(" ")[0].toLowerCase()} window can convert quiet days ` +
+              `into a second income peak without acquiring a single new client.`,
+            actionLabel: "View Schedule",
+            actionView: "Availability",
+          });
+        }
+      }
+
+      // -- 13. Top Client Concentration Risk ---------------------------------
+      const { data: topClients } = await supabase.rpc("get_top_client_concentration", { p_tenant_id: tenantId });
+      if (topClients && topClients.length >= 3) {
+        const top5Rev   = topClients.reduce((s: number, c: any) => s + Number(c.total_spend), 0);
+        const top5Pct   = topClients.reduce((s: number, c: any) => s + Number(c.pct_of_revenue), 0);
+        const atRisk    = topClients.filter((c: any) => Number(c.days_since) > 42);
+        const atRiskNames = atRisk.map((c: any) => c.client_name.trim()).join(", ");
+        if (top5Pct > 35) {
+          push({
+            id: "top_client_concentration",
+            type: "retention",
+            priority: atRisk.length > 0 ? "important" : "info",
+            title: "Revenue Concentration Risk",
+            message:
+              `Your top 5 clients account for ${top5Pct.toFixed(0)}% of total revenue (${formatRand(Math.round(top5Rev))}). ` +
+              (atRisk.length > 0
+                ? `${atRiskNames} ${atRisk.length === 1 ? "has" : "have"} not booked in over 6 weeks. ` +
+                  `Losing even one of these clients creates a meaningful revenue gap. Send a personal message this week.`
+                : `This level of concentration is a structural risk. If 2 of these clients stop booking, ` +
+                  `the revenue impact is immediate. Focus on converting mid-tier clients into regulars to distribute the base.`),
+            actionLabel: "View Clients",
+            actionView: "Client Management",
+            impactRand: atRisk.length > 0 ? Math.round(atRisk.reduce((s: number, c: any) => s + Number(c.total_spend), 0)) : undefined,
+          });
+        }
+      }
+
+      // -- 14. Repeat Cancellers ---------------------------------------------
+      const { data: cancellers } = await supabase.rpc("get_repeat_cancellers", { p_tenant_id: tenantId });
+      if (cancellers && cancellers.length > 0) {
+        const names = cancellers.slice(0, 3).map((c: any) => c.client_name.trim()).join(", ");
+        const count = cancellers.length;
+        push({
+          id: "repeat_cancellers",
+          type: "retention",
+          priority: count >= 3 ? "important" : "info",
+          title: "Repeat Cancellation Pattern",
+          message:
+            `${count} client${count === 1 ? "" : "s"} have cancelled 2 or more times: ${names}${count > 3 ? ` and ${count - 3} more` : ""}. ` +
+            `Repeat cancellations are rarely about logistics. They typically signal price friction, a scheduling conflict, ` +
+            `or a relationship that needs attention before the client leaves quietly. ` +
+            `A personal WhatsApp asking if everything is okay and offering flexibility costs nothing ` +
+            `and recovers a meaningful percentage of these clients before they are lost.`,
+          actionLabel: "View Clients",
+          actionView: "Client Management",
+        });
+      }
+
+      // -- 15. Basket Trend --------------------------------------------------
+      const { data: basketData } = await supabase.rpc("get_basket_trend", { p_tenant_id: tenantId });
+      if (basketData && basketData.length >= 4) {
+        const weeks = basketData as { week_start: string; avg_basket: number; booking_count: number }[];
+        const recent4  = weeks.slice(-4).map(w => Number(w.avg_basket));
+        const prior4   = weeks.slice(0, Math.max(1, weeks.length - 4)).map(w => Number(w.avg_basket));
+        const recentAvg = recent4.reduce((s, v) => s + v, 0) / recent4.length;
+        const priorAvg  = prior4.reduce((s, v) => s + v, 0) / prior4.length;
+        const change    = ((recentAvg - priorAvg) / priorAvg) * 100;
+
+        if (change < -10) {
+          push({
+            id: "basket_trend_declining",
+            type: "growth",
+            priority: change < -20 ? "important" : "info",
+            title: "Average Basket Is Declining",
+            message:
+              `Your average booking value has dropped ${Math.abs(Math.round(change))}% over the past 4 weeks ` +
+              `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
+              `This typically happens when new clients book entry-level services or add-on suggestions are not being offered. ` +
+              `For every booking that includes a combo service, the average ticket is materially higher. ` +
+              `Go to Settings and review your suggested add-ons to ensure the most relevant pairings are configured.`,
+            actionLabel: "Open Settings",
+            actionView: "Business",
+          });
+        } else if (change > 15 && recentAvg > 500) {
+          push({
+            id: "basket_trend_growing",
+            type: "growth",
+            priority: "info",
+            title: "Basket Size Is Growing",
+            message:
+              `Your average booking value has increased ${Math.round(change)}% over the past 4 weeks ` +
+              `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
+              `This is a strong signal that upsell or combo bookings are working. ` +
+              `Keep the momentum: promote your highest-value service combinations in your next content post.`,
+            actionLabel: "View Services",
+            actionView: "Services",
+          });
+        }
+      }
+
+      // -- 16. Travel Efficiency (Mobile operators only) --------------------
+      if (isMobile) {
+        const { data: travelData } = await supabase.rpc("get_travel_efficiency", { p_tenant_id: tenantId });
+        if (travelData?.[0] && Number(travelData[0].total_callout_bookings) >= 5) {
+          const t = travelData[0];
+          const lowCount = Number(t.low_margin_count);
+          const totalCO  = Number(t.total_callout_bookings);
+          const rateKm   = Number(t.rate_per_km);
+          if (lowCount > 0) {
+            push({
+              id: "travel_efficiency",
+              type: "ops",
+              priority: lowCount / totalCO > 0.25 ? "important" : "info",
+              title: "Low-Margin Travel Identified",
+              message:
+                `${lowCount} of your last ${totalCO} callout booking${totalCO === 1 ? "" : "s"} had a service revenue ` +
+                `below twice the estimated petrol cost for that trip. ` +
+                `At current SA fuel prices and your ${formatRand(rateKm)}/km callout rate, ` +
+                `long-distance appointments for low-value services may be costing you more than they earn once travel time is factored in. ` +
+                `Consider setting a minimum booking value for callouts beyond a defined radius, ` +
+                `or grouping bookings in the same area on the same day to maximise revenue per kilometre driven.`,
+              actionLabel: "View Bookings",
+              actionView: "Bookings",
+            });
+          }
+        }
+      }
+
+      // -- 17. Referral Channel Low Basket -----------------------------------
+      const { data: chData } = await supabase.rpc("get_channel_roi", { p_tenant_id: tenantId });
+      if (chData && chData.length >= 2) {
+        const referralRow = chData.find((r: any) => r.channel === "Referral");
+        if (referralRow && Number(referralRow.booking_count) >= 3) {
+          const overallAvg = chData.reduce((s: number, r: any) => s + Number(r.total_revenue), 0)
+                           / chData.reduce((s: number, r: any) => s + Number(r.booking_count), 0);
+          const refAvg = Number(referralRow.avg_basket);
+          if (refAvg < overallAvg * 0.80) {
+            push({
+              id: "referral_low_basket",
+              type: "growth",
+              priority: "info",
+              title: "Referral Clients Book Lower-Value Services",
+              message:
+                `Clients who came through referrals average ${formatRand(Math.round(refAvg))} per booking ` +
+                `versus your overall average of ${formatRand(Math.round(overallAvg))}. ` +
+                `This usually means the referring client is recommending a specific entry-level service. ` +
+                `Create a referral incentive that is tied to a combo or premium service specifically. ` +
+                `A message like "refer a friend for a Hollywood + leg combo and both of you get 10% off" ` +
+                `lifts the referred basket while still rewarding the existing client.`,
+              actionLabel: "View Services",
+              actionView: "Services",
+            });
+          }
+        }
+      }
+
+      // -- 18. SA Seasonal Countdown -----------------------------------------
+      // Static SA dates. No RPC needed. Fires 21 days before key events.
+      const SA_SEASONAL: { name: string; date: string; type: "holiday" | "seasonal" }[] = [
+        { name: "Mother's Day",           date: "2026-05-11", type: "seasonal" },
+        { name: "Youth Day",               date: "2026-06-16", type: "holiday" },
+        { name: "Father's Day",           date: "2026-06-21", type: "seasonal" },
+        { name: "Women's Day",            date: "2026-08-09", type: "holiday" },
+        { name: "Heritage Day",            date: "2026-09-24", type: "holiday" },
+        { name: "Black Friday",            date: "2026-11-27", type: "seasonal" },
+        { name: "December peak season",    date: "2026-12-01", type: "seasonal" },
+        { name: "Day of Reconciliation",   date: "2026-12-16", type: "holiday" },
+        { name: "Christmas",               date: "2026-12-25", type: "holiday" },
+      ];
+      const today = new Date();
+      const upcomingEvent = SA_SEASONAL.find(e => {
+        const d     = new Date(e.date);
+        const diff  = Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 21;
+      });
+      if (upcomingEvent) {
+        const eventDate = new Date(upcomingEvent.date);
+        const daysLeft  = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const isHoliday = upcomingEvent.type === "holiday";
+        push({
+          id: `seasonal_${upcomingEvent.date}`,
+          type: "growth",
+          priority: daysLeft <= 7 ? "important" : "info",
+          title: `${upcomingEvent.name} Is ${daysLeft} Day${daysLeft === 1 ? "" : "s"} Away`,
+          message: isHoliday
+            ? `${upcomingEvent.name} falls on ${eventDate.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" })}. ` +
+              `This is a South African public holiday. Decide now whether to block the day or promote availability. ` +
+              `Clients who see your content in the days leading up to a public holiday often book the slot before it or after it, not on the day itself. ` +
+              `Post your availability decision on your story today to capture that window.`
+            : `${upcomingEvent.name} is ${daysLeft} days away and is one of the highest-demand periods in the SA beauty calendar. ` +
+              `If your slots are not already filling, a single story or WhatsApp broadcast to your client list today ` +
+              `referencing ${upcomingEvent.name} by name will convert faster than any other content you post this week. ` +
+              `Clients respond to date-specific prompts because they create natural urgency.`,
+          actionLabel: "View Schedule",
+          actionView: "Availability",
+        });
+      }
+
+      // -- 19. Google Review Velocity ----------------------------------------
+      const { data: ctxFull } = await supabase
+        .from("app_settings").select("key, value")
+        .eq("tenant_id", tenantId)
+        .in("key", ["google_review_url", "gmb_connected"]);
+      const ctxMap = Object.fromEntries((ctxFull ?? []).map((r: any) => [r.key, r.value]));
+      const hasGmb = ctxMap.gmb_connected === "true" && ctxMap.google_review_url;
+      if (hasGmb) {
+        const { data: recentBks } = await supabase
+          .from("bookings").select("id")
+          .eq("tenant_id", tenantId)
+          .not("status", "in", "(cancelled,pending)")
+          .gte("booking_date", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+        const recentCount = recentBks?.length ?? 0;
+        if (recentCount >= 8) {
+          push({
+            id: "google_review_velocity",
+            type: "growth",
+            priority: "info",
+            title: "Prompt Clients for Google Reviews",
+            message:
+              `You have had ${recentCount} completed bookings in the last 30 days. ` +
+              `In the South African market, Google reviews are the primary trust signal for a service that new clients cannot preview before paying a deposit. ` +
+              `After every completed session, send a personal WhatsApp with your Google review link. ` +
+              `A message from you directly converts at a significantly higher rate than an automated link in a confirmation email. ` +
+              `One review per week compounds into a competitive advantage that is very difficult for other operators to close.`,
+            actionLabel: "View Clients",
+            actionView: "Client Management",
+          });
+        }
       }
 
             // Sort: critical -> important -> info

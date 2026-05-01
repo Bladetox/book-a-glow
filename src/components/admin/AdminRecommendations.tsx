@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTenant } from "@/contexts/TenantContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, TrendingUp, AlertTriangle, UserCheck,
@@ -74,10 +75,25 @@ function useCounter(target: number, run: boolean) {
 // -- Main Component -----------------------------------------------------------
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
   const { data: insights, isLoading, refetch } = useNextyInsights();
+  const { tenantId } = useTenant();
   const [activeFilter, setActiveFilter] = useState("all");
   const [showCards,    setShowCards]    = useState(false);
   const [isRescanning, setIsRescanning] = useState(false);
   const [dismissed,    setDismissed]    = useState<Set<string>>(new Set());
+
+  const persistAction = async (insightId: string, actionType: "dismissed" | "actioned") => {
+    const now     = new Date();
+    const expires = actionType === "dismissed"
+      ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from("nexty_insight_actions").upsert({
+      tenant_id:   tenantId,
+      insight_id:  insightId,
+      action_type: actionType,
+      acted_at:    now.toISOString(),
+      expires_at:  expires,
+    }, { onConflict: "tenant_id,insight_id,action_type" });
+  };
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -89,7 +105,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const handleRescan = async () => {
     setIsRescanning(true);
     setShowCards(false);
-    setDismissed(new Set());
+    setDismissed(new Set()); // DB expires_at handles server-side suppression
     await refetch();
     setTimeout(() => { setIsRescanning(false); setShowCards(true); }, 1800);
   };
@@ -372,7 +388,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                 }}>
                   {ins.actionLabel && (
                     <button
-                      onClick={() => onNavigate(ins.actionView ?? "Dashboard")}
+                      onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
                         padding: "7px 12px", background: S.surface2,
@@ -385,7 +401,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                     </button>
                   )}
                   <button
-                    onClick={() => setDismissed(prev => new Set(prev).add(ins.id))}
+                    onClick={() => { setDismissed(prev => new Set(prev).add(ins.id)); persistAction(ins.id, "dismissed"); }}
                     style={{
                       fontSize: 11, color: S.faint, padding: "7px 8px",
                       borderRadius: 6, cursor: "pointer", background: "none",
