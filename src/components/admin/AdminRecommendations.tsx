@@ -6,6 +6,7 @@ import {
   Clock, RotateCcw, Package, PlusCircle,
 } from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
+import { supabase } from "@/integrations/supabase/client";
 
 // -- Nexty Orb ----------------------------------------------------------------
 function NextyOrb() {
@@ -94,20 +95,40 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
       expires_at:  expires,
     }, { onConflict: "tenant_id,insight_id,action_type" });
   };
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef   = useRef<HTMLDivElement>(null);
+  const updatedAtRef = useRef<number>(Date.now());
+  const [updatedLabel, setUpdatedLabel] = useState("Updated just now");
+
 
   useEffect(() => {
     if (isLoading) return;
-    const t = setTimeout(() => setShowCards(true), 1600);
+    const t = setTimeout(() => {
+      setShowCards(true);
+      updatedAtRef.current = Date.now();
+      setUpdatedLabel("Updated just now");
+    }, 1600);
     return () => clearTimeout(t);
   }, [isLoading]);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const mins = Math.floor((Date.now() - updatedAtRef.current) / 60000);
+      setUpdatedLabel(mins < 1 ? "Updated just now" : `Updated ${mins} min${mins === 1 ? "" : "s"} ago`);
+    }, 60000);
+    return () => clearInterval(iv);
+  }, []);
 
   const handleRescan = async () => {
     setIsRescanning(true);
     setShowCards(false);
     setDismissed(new Set()); // DB expires_at handles server-side suppression
     await refetch();
-    setTimeout(() => { setIsRescanning(false); setShowCards(true); }, 1800);
+    setTimeout(() => {
+      setIsRescanning(false);
+      setShowCards(true);
+      updatedAtRef.current = Date.now();
+      setUpdatedLabel("Updated just now");
+    }, 1800);
   };
 
   const allInsights   = (insights ?? []).filter(i => !dismissed.has(i.id));
@@ -186,7 +207,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             }}
           />
           Re-scan
-          <style>{`@keyframes nexty-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+          <style>{`@keyframes nexty-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.nexty-filter-scroll::-webkit-scrollbar{display:none}`}</style>
         </button>
       </div>
 
@@ -204,7 +225,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
               Total Recoverable Revenue Identified
             </div>
             <div style={{ fontSize: 10, color: S.faint, marginTop: 2 }}>
-              Based on last 90 days
+              Based on last 90 days · {updatedLabel}
             </div>
           </div>
           <div style={{
@@ -218,11 +239,15 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
       )}
 
       {/* -- Filter Tabs -- */}
-      <div style={{
-        display: "flex", gap: 6, padding: "12px 16px 4px",
-        overflowX: "auto", flexShrink: 0,
-        scrollbarWidth: "none",
-      }}>
+      <div
+        className="nexty-filter-scroll"
+        style={{
+          display: "flex", gap: 6, padding: "12px 16px 4px",
+          overflowX: "auto", flexShrink: 0,
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
         {FILTERS.map(f => (
           <button
             key={f.key}
@@ -339,12 +364,31 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      display: "inline-flex", alignItems: "center", gap: 4,
-                      fontSize: 10, fontWeight: 600, textTransform: "uppercase",
-                      letterSpacing: "0.1em", color: p.dot, marginBottom: 4,
+                      display: "flex", alignItems: "flex-start",
+                      justifyContent: "space-between", gap: 6, flexWrap: "wrap",
+                      marginBottom: 4,
                     }}>
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot, flexShrink: 0 }} />
-                      {p.label}
+                      <div style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 10, fontWeight: 600, textTransform: "uppercase",
+                        letterSpacing: "0.1em", color: p.dot,
+                      }}>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot, flexShrink: 0 }} />
+                        {p.label}
+                      </div>
+                      {ins.impactRand && (
+                        <div style={{
+                          display: "inline-flex", alignItems: "center", gap: 3,
+                          padding: "2px 7px",
+                          background: "rgba(253,171,67,0.09)",
+                          border: "1px solid rgba(253,171,67,0.15)",
+                          borderRadius: 6, fontSize: 11, fontWeight: 600,
+                          color: S.gold, whiteSpace: "nowrap", flexShrink: 0,
+                        }}>
+                          <TrendingUp size={9} />
+                          R{ins.impactRand.toLocaleString("en-ZA")}
+                        </div>
+                      )}
                     </div>
                     <div style={{
                       fontSize: 13, fontWeight: 600, color: S.text,
@@ -354,20 +398,6 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                       {ins.title}
                     </div>
                   </div>
-
-                  {ins.impactRand && (
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: 3,
-                      padding: "3px 8px",
-                      background: "rgba(253,171,67,0.09)",
-                      border: "1px solid rgba(253,171,67,0.15)",
-                      borderRadius: 6, fontSize: 11, fontWeight: 600,
-                      color: S.gold, whiteSpace: "nowrap", flexShrink: 0,
-                    }}>
-                      <TrendingUp size={9} />
-                      R{ins.impactRand.toLocaleString("en-ZA")}
-                    </div>
-                  )}
                 </div>
 
                 {/* Card Body */}
@@ -381,17 +411,18 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
 
                 {/* Card Footer */}
                 <div style={{
-                  borderTop: `1px solid ${S.border}`, padding: "9px 14px",
-                  display: "flex", alignItems: "center",
+                  borderTop: `1px solid ${S.border}`, padding: "4px 14px",
+                  display: "flex", alignItems: "center", flexWrap: "wrap",
                   justifyContent: ins.actionLabel ? "space-between" : "flex-end",
-                  gap: 8,
+                  gap: 4,
                 }}>
                   {ins.actionLabel && (
                     <button
                       onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
-                        padding: "7px 12px", background: S.surface2,
+                        padding: "0 12px", minHeight: 44,
+                        background: S.surface2,
                         border: `1px solid ${S.border2}`, borderRadius: 6,
                         fontSize: 12, fontWeight: 500, color: S.text, cursor: "pointer",
                       }}
@@ -402,10 +433,12 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                   )}
                   <button
                     onClick={() => { setDismissed(prev => new Set(prev).add(ins.id)); persistAction(ins.id, "dismissed"); }}
+                    aria-label="Dismiss this insight"
                     style={{
-                      fontSize: 11, color: S.faint, padding: "7px 8px",
+                      fontSize: 11, color: S.faint,
+                      padding: "0 8px", minHeight: 44,
                       borderRadius: 6, cursor: "pointer", background: "none",
-                      border: "none",
+                      border: "none", display: "flex", alignItems: "center",
                     }}
                   >
                     Dismiss
