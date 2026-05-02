@@ -16,17 +16,39 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const FLAG_KEYS = [
-  "loyalty_module",
-  "stock_module",
-  "consultations",
-  "special_occasions",
-  "integrations_tab",
-  "pwa_prompt",
-  "ai_insights",
-  "multi_staff",
-  "custom_domain",
-  "call_out",
-  "review_generation",
+  // ── Core booking
+  "slot_hold",              // Anti-double-booking slot reservation during checkout
+  "call_out",               // Mobile / travel-to-client bookings
+  "multi_staff",            // Manage multiple service providers
+  "suggested_addons",       // AI-powered upsell suggestions during booking flow
+  "consultations",          // Pre-booking health / intake forms
+  "special_occasions",      // Birthday & event-based booking upsells
+  // ── Notifications & comms
+  "email_confirmations",    // Transactional email on booking create / update / cancel
+  "whatsapp_reminders",     // WhatsApp reminder message from booking detail
+  "whatsapp_balance",       // WhatsApp outstanding balance request
+  "broadcast_email",        // Bulk email to all clients (superadmin-triggered)
+  // ── Payments
+  "yoco_payments",          // Full Yoco checkout payment
+  "deposit_payments",       // Deposit-only Yoco checkout
+  // ── Calendar
+  "google_calendar_sync",   // Google Calendar OAuth + create/update/delete events
+  // ── Reviews & reputation
+  "review_generation",      // Google review redirect after payment
+  "gmb_integration",        // Google My Business connect + reply to reviews
+  // ── Client management
+  "blocked_clients",        // Block clients with reason; check at booking time
+  "client_alerts",          // Client flags popup (no-shows, block status, loyalty)
+  "loyalty_module",         // Client retention & rebooking alerts
+  // ── Inventory
+  "stock_module",           // Inventory tracking for products
+  "stock_barcode_scan",     // Barcode / manual stock scan modal
+  // ── AI & insights
+  "ai_insights",            // Nexty AI — GPT-powered revenue & business suggestions
+  // ── Integrations & platform
+  "integrations_tab",       // Google, Yoco, webhook connections tab in admin
+  "custom_domain",          // book.yourbusiness.com custom domain setup
+  "pwa_prompt",             // Add-to-home-screen PWA install nudge
 ] as const;
 
 export type FlagKey = (typeof FLAG_KEYS)[number];

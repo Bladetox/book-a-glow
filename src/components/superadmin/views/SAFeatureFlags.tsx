@@ -2,22 +2,46 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Flag, Save, Loader2, RefreshCw, Building2, ChevronDown } from "lucide-react";
 
-interface FlagDef { key: string; label: string; desc: string; }
+interface FlagDef { key: string; label: string; desc: string; group: string; }
 
 // FLAG_DEFS must stay in sync with src/hooks/useFeatureFlags.ts FLAG_KEYS
 const FLAG_DEFS: FlagDef[] = [
-  { key: "loyalty_module",    label: "Loyalty Tracker",        desc: "Client retention & rebooking alerts"            },
-  { key: "stock_module",      label: "Stock Management",        desc: "Inventory tracking for products"                },
-  { key: "consultations",     label: "Consultation Forms",      desc: "Pre-booking health forms"                       },
-  { key: "special_occasions", label: "Special Occasions",       desc: "Birthday & event-based booking upsells"         },
-  { key: "integrations_tab",  label: "Integrations Tab",        desc: "Google, Yoco, webhook connections"              },
-  { key: "pwa_prompt",        label: "PWA Install Prompt",      desc: "Add to home screen nudge"                      },
-  { key: "ai_insights",       label: "AI Business Insights",    desc: "GPT-powered revenue suggestions"                },
-  { key: "multi_staff",       label: "Multi-Staff Support",     desc: "Manage multiple service providers"             },
-  { key: "custom_domain",     label: "Custom Domain Setup",     desc: "book.yourbusiness.com"                          },
-  { key: "call_out",          label: "Call-Out Bookings",       desc: "Mobile / travel-to-client bookings"            },
-  { key: "review_generation", label: "Review Generation",       desc: "Google review redirect after payment"          },
+  // ── Core Booking
+  { group: "Core Booking",     key: "slot_hold",            label: "Slot Hold",                 desc: "Reserves a time slot during checkout to prevent double-booking"     },
+  { group: "Core Booking",     key: "call_out",              label: "Call-Out Bookings",          desc: "Mobile / travel-to-client bookings with Google Places address"       },
+  { group: "Core Booking",     key: "multi_staff",           label: "Multi-Staff Support",        desc: "Manage multiple service providers with individual schedules"          },
+  { group: "Core Booking",     key: "suggested_addons",      label: "AI Suggested Add-ons",       desc: "Upsell suggestions shown to clients during the booking flow"          },
+  { group: "Core Booking",     key: "consultations",         label: "Consultation Forms",         desc: "Pre-booking health and intake forms"                                  },
+  { group: "Core Booking",     key: "special_occasions",     label: "Special Occasions",          desc: "Birthday and event-based booking upsells"                             },
+  // ── Notifications & Comms
+  { group: "Notifications",    key: "email_confirmations",   label: "Email Confirmations",        desc: "Transactional emails to client and admin on booking create/update/cancel" },
+  { group: "Notifications",    key: "whatsapp_reminders",    label: "WhatsApp Reminders",         desc: "Send a WhatsApp reminder message from the booking detail panel"       },
+  { group: "Notifications",    key: "whatsapp_balance",      label: "WhatsApp Balance Request",   desc: "Send a WhatsApp outstanding balance message to the client"           },
+  { group: "Notifications",    key: "broadcast_email",       label: "Broadcast Email",            desc: "Bulk email to all clients (superadmin-triggered from SA Broadcast)"  },
+  // ── Payments
+  { group: "Payments",         key: "yoco_payments",         label: "Yoco Full Payment",          desc: "Full Yoco checkout payment at time of booking"                       },
+  { group: "Payments",         key: "deposit_payments",      label: "Deposit Payments",           desc: "Deposit-only Yoco checkout; remainder collected at appointment"       },
+  // ── Calendar
+  { group: "Calendar",         key: "google_calendar_sync",  label: "Google Calendar Sync",       desc: "OAuth connect; auto-create, update and delete Google Calendar events"  },
+  // ── Reviews & Reputation
+  { group: "Reviews",          key: "review_generation",     label: "Review Generation",          desc: "Redirect clients to Google review page after payment"                },
+  { group: "Reviews",          key: "gmb_integration",       label: "Google My Business",         desc: "Connect GMB account and reply to reviews from the admin dashboard"    },
+  // ── Client Management
+  { group: "Client Management",key: "blocked_clients",       label: "Blocked Clients",            desc: "Block clients with a reason; checked at booking time before confirming" },
+  { group: "Client Management",key: "client_alerts",         label: "Client Alerts",              desc: "Popup flags for no-shows, block status and loyalty tier on bookings"   },
+  { group: "Client Management",key: "loyalty_module",        label: "Loyalty Tracker",            desc: "Client retention, rebooking alerts and visit milestones"              },
+  // ── Inventory
+  { group: "Inventory",        key: "stock_module",          label: "Stock Management",           desc: "Inventory tracking for products and supplies"                        },
+  { group: "Inventory",        key: "stock_barcode_scan",    label: "Stock Barcode Scan",         desc: "Barcode and manual stock scan modal inside inventory"                  },
+  // ── AI & Insights
+  { group: "AI & Insights",    key: "ai_insights",           label: "AI Business Insights",       desc: "Nexty AI — GPT-powered revenue suggestions and business recommendations" },
+  // ── Integrations & Platform
+  { group: "Platform",         key: "integrations_tab",      label: "Integrations Tab",           desc: "Google, Yoco and webhook connections tab visible in admin"            },
+  { group: "Platform",         key: "custom_domain",         label: "Custom Domain",              desc: "book.yourbusiness.com — custom booking URL per tenant"                },
+  { group: "Platform",         key: "pwa_prompt",            label: "PWA Install Prompt",         desc: "Add-to-home-screen nudge for clients on mobile"                       },
 ];
+
+const GROUPS = Array.from(new Set(FLAG_DEFS.map(f => f.group)));
 
 const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 const flagKeys = FLAG_DEFS.map(f => `feature_flag_${f.key}`);
@@ -48,6 +72,30 @@ function FlagRow({ def, enabled, onToggle, dimmed }: { def: FlagDef; enabled: bo
         aria-label={`Toggle ${def.label}`}>
         <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
       </button>
+    </div>
+  );
+}
+
+function FlagGroup({ group, defs, flags, onToggle, isLifetime }: {
+  group: string;
+  defs: FlagDef[];
+  flags: Record<string, boolean>;
+  onToggle: (key: string) => void;
+  isLifetime?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-widest text-white/25 font-semibold px-1 mb-1.5">{group}</p>
+      <div className="bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05]">
+        {defs.map(def => (
+          <FlagRow
+            key={def.key}
+            def={def}
+            enabled={isLifetime ? true : (flags[def.key] ?? false)}
+            onToggle={() => onToggle(def.key)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -103,10 +151,15 @@ function GlobalPanel() {
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-white/20 animate-spin" /></div>
       ) : (
-        <div className="bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05]">
-          {FLAG_DEFS.map(def => (
-            <FlagRow key={def.key} def={def} enabled={flags[def.key] ?? false}
-              onToggle={() => setFlags(prev => ({ ...prev, [def.key]: !prev[def.key] }))} />
+        <div className="space-y-5">
+          {GROUPS.map(group => (
+            <FlagGroup
+              key={group}
+              group={group}
+              defs={FLAG_DEFS.filter(f => f.group === group)}
+              flags={flags}
+              onToggle={key => setFlags(prev => ({ ...prev, [key]: !prev[key] }))}
+            />
           ))}
         </div>
       )}
@@ -195,7 +248,7 @@ function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) 
             <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[rgba(0,200,83,0.06)] border border-[rgba(0,200,83,0.15)]">
               <Flag className="w-3.5 h-3.5 text-[#00c853] shrink-0" />
               <p className="text-xs text-[#00c853]/80">
-                This is a <span className="font-semibold">Lifetime Free</span> tenant. All features are permanently unlocked in the app regardless of flags set here.
+                This is a <span className="font-semibold">Lifetime Free</span> tenant. All features are permanently unlocked regardless of flags set here.
               </p>
             </div>
           )}
@@ -203,10 +256,16 @@ function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) 
             <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-white/20 animate-spin" /></div>
           ) : (
             <>
-              <div className={`bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05] ${isLifetime ? "opacity-50 pointer-events-none" : ""}`}>
-                {FLAG_DEFS.map(def => (
-                  <FlagRow key={def.key} def={def} enabled={isLifetime ? true : (overrides[def.key] ?? false)}
-                    onToggle={() => setOverrides(prev => ({ ...prev, [def.key]: !prev[def.key] }))} />
+              <div className={`space-y-5 ${isLifetime ? "opacity-50 pointer-events-none" : ""}`}>
+                {GROUPS.map(group => (
+                  <FlagGroup
+                    key={group}
+                    group={group}
+                    defs={FLAG_DEFS.filter(f => f.group === group)}
+                    flags={overrides}
+                    onToggle={key => setOverrides(prev => ({ ...prev, [key]: !prev[key] }))}
+                    isLifetime={isLifetime}
+                  />
                 ))}
               </div>
               {!isLifetime && (
