@@ -16,7 +16,7 @@ export interface Tenant {
   custom_domain: string | null;
   theme_id: string | null;
   currency: string | null;
-  /** Not yet persisted in DB – always false until a subscriptions table exists */
+  /** Persisted in tenants.is_lifetime_free — true means all features always unlocked */
   is_lifetime_free?: boolean;
 }
 
@@ -76,14 +76,15 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
 
   const renderProps: TenantRenderProps = {
     tenant,
-    // No tenant_subscriptions table exists yet in the schema.
-    // isPaywalled() in Admin.tsx gracefully handles null → never paywalls.
-    subscription: null,
+    subscription: tenant
+      ? {
+          status: (tenant as any).subscription_status ?? null,
+          trial_ends_at: (tenant as any).trial_ends_at ?? null,
+        }
+      : null,
     loading,
   };
 
-  // While loading or when no tenant row is found we still need to call
-  // children so Admin.tsx can show its own loading / error states.
   if (!tenant) {
     return <>{children(renderProps)}</>;
   }

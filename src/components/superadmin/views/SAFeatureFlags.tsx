@@ -4,17 +4,19 @@ import { Flag, Save, Loader2, RefreshCw, Building2, ChevronDown } from "lucide-r
 
 interface FlagDef { key: string; label: string; desc: string; }
 
+// FLAG_DEFS must stay in sync with src/hooks/useFeatureFlags.ts FLAG_KEYS
 const FLAG_DEFS: FlagDef[] = [
-  { key: "loyalty_module",    label: "Loyalty Tracker",       desc: "Client retention & rebooking alerts"  },
-  { key: "stock_module",      label: "Stock Management",       desc: "Inventory tracking for products"      },
-  { key: "consultations",     label: "Consultation Forms",     desc: "Pre-booking health forms"             },
-  { key: "integrations_tab",  label: "Integrations Tab",       desc: "Google, Yoco, webhook connections"    },
-  { key: "pwa_prompt",        label: "PWA Install Prompt",     desc: "Add to home screen nudge"             },
-  { key: "ai_insights",       label: "AI Business Insights",   desc: "GPT-powered revenue suggestions"      },
-  { key: "multi_staff",       label: "Multi-Staff Support",    desc: "Manage multiple service providers"    },
-  { key: "custom_domain",     label: "Custom Domain Setup",    desc: "book.yourbusiness.com"                },
-  { key: "call_out",          label: "Call-Out Bookings",      desc: "Mobile / travel-to-client bookings"  },
-  { key: "review_generation", label: "Review Generation",      desc: "Google review redirect after payment" },
+  { key: "loyalty_module",    label: "Loyalty Tracker",        desc: "Client retention & rebooking alerts"            },
+  { key: "stock_module",      label: "Stock Management",        desc: "Inventory tracking for products"                },
+  { key: "consultations",     label: "Consultation Forms",      desc: "Pre-booking health forms"                       },
+  { key: "special_occasions", label: "Special Occasions",       desc: "Birthday & event-based booking upsells"         },
+  { key: "integrations_tab",  label: "Integrations Tab",        desc: "Google, Yoco, webhook connections"              },
+  { key: "pwa_prompt",        label: "PWA Install Prompt",      desc: "Add to home screen nudge"                      },
+  { key: "ai_insights",       label: "AI Business Insights",    desc: "GPT-powered revenue suggestions"                },
+  { key: "multi_staff",       label: "Multi-Staff Support",     desc: "Manage multiple service providers"             },
+  { key: "custom_domain",     label: "Custom Domain Setup",     desc: "book.yourbusiness.com"                          },
+  { key: "call_out",          label: "Call-Out Bookings",       desc: "Mobile / travel-to-client bookings"            },
+  { key: "review_generation", label: "Review Generation",       desc: "Google review redirect after payment"          },
 ];
 
 const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
@@ -112,7 +114,7 @@ function GlobalPanel() {
   );
 }
 
-interface TenantRow { id: string; name: string; }
+interface TenantRow { id: string; name: string; is_lifetime_free: boolean; }
 
 function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) {
   const [tenants, setTenants]             = useState<TenantRow[]>([]);
@@ -124,10 +126,13 @@ function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) 
   const [saved, setSaved]                 = useState(false);
   const [hasOverrides, setHasOverrides]   = useState(false);
 
+  const selectedTenant = tenants.find(t => t.id === selectedId);
+  const isLifetime     = selectedTenant?.is_lifetime_free === true;
+
   const loadTenants = useCallback(async () => {
     if (tenantsLoaded) return;
-    const { data } = await supabase.from("tenants").select("id, name").eq("is_active", true).order("name");
-    setTenants(data ?? []); setTenantsLoaded(true);
+    const { data } = await supabase.from("tenants").select("id, name, is_lifetime_free").eq("is_active", true).order("name");
+    setTenants((data as TenantRow[]) ?? []); setTenantsLoaded(true);
   }, [tenantsLoaded]);
 
   useEffect(() => {
@@ -175,35 +180,49 @@ function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) 
         <select id="feature-flags-tenant" name="feature-flags-tenant" value={selectedId} onChange={e => { setSelectedId(e.target.value); setSaved(false); }}
           className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-9 py-2.5 text-sm text-white/70 focus:outline-none focus:border-[rgba(0,200,83,0.30)] transition-colors appearance-none">
           <option value="" className="bg-[hsl(220,13%,10%)]">— Select a tenant —</option>
-          {tenants.map(t => <option key={t.id} value={t.id} className="bg-[hsl(220,13%,10%)] text-white">{t.name}</option>)}
+          {tenants.map(t => (
+            <option key={t.id} value={t.id} className="bg-[hsl(220,13%,10%)] text-white">
+              {t.name}{t.is_lifetime_free ? " ★ Lifetime" : ""}
+            </option>
+          ))}
         </select>
         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
       </div>
 
       {selectedId && (
         <>
+          {isLifetime && (
+            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[rgba(0,200,83,0.06)] border border-[rgba(0,200,83,0.15)]">
+              <Flag className="w-3.5 h-3.5 text-[#00c853] shrink-0" />
+              <p className="text-xs text-[#00c853]/80">
+                This is a <span className="font-semibold">Lifetime Free</span> tenant. All features are permanently unlocked in the app regardless of flags set here.
+              </p>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-white/20 animate-spin" /></div>
           ) : (
             <>
-              <div className="bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05]">
+              <div className={`bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05] ${isLifetime ? "opacity-50 pointer-events-none" : ""}`}>
                 {FLAG_DEFS.map(def => (
-                  <FlagRow key={def.key} def={def} enabled={overrides[def.key] ?? false}
+                  <FlagRow key={def.key} def={def} enabled={isLifetime ? true : (overrides[def.key] ?? false)}
                     onToggle={() => setOverrides(prev => ({ ...prev, [def.key]: !prev[def.key] }))} />
                 ))}
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-[rgba(0,200,83,0.12)] border border-[rgba(0,200,83,0.25)] text-[#00c853] hover:bg-[rgba(0,200,83,0.20)] disabled:opacity-50 transition-colors font-medium">
-                  {saving ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</> : <><Save className="w-3 h-3" /> {saved ? "Saved ✓" : "Save Overrides"}</>}
-                </button>
-                {hasOverrides && (
-                  <button onClick={handleClear} className="text-xs text-red-400/60 hover:text-red-400 transition-colors">
-                    Clear overrides (use global)
+              {!isLifetime && (
+                <div className="flex items-center gap-3">
+                  <button onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-[rgba(0,200,83,0.12)] border border-[rgba(0,200,83,0.25)] text-[#00c853] hover:bg-[rgba(0,200,83,0.20)] disabled:opacity-50 transition-colors font-medium">
+                    {saving ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</> : <><Save className="w-3 h-3" /> {saved ? "Saved ✓" : "Save Overrides"}</>}
                   </button>
-                )}
-                {!hasOverrides && <span className="text-[11px] text-white/20">Using global defaults</span>}
-              </div>
+                  {hasOverrides && (
+                    <button onClick={handleClear} className="text-xs text-red-400/60 hover:text-red-400 transition-colors">
+                      Clear overrides (use global)
+                    </button>
+                  )}
+                  {!hasOverrides && <span className="text-[11px] text-white/20">Using global defaults</span>}
+                </div>
+              )}
             </>
           )}
         </>
@@ -226,7 +245,7 @@ export default function SAFeatureFlags() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h2 className="text-white font-semibold text-lg tracking-tight">Feature Flags</h2>
-        <p className="text-white/35 text-sm mt-0.5">Control which features are available platform-wide or per tenant.</p>
+        <p className="text-white/35 text-sm mt-0.5">Control which features are available platform-wide or per tenant. Lifetime Free tenants always have every feature unlocked.</p>
       </div>
 
       <div className="flex gap-1 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-fit">

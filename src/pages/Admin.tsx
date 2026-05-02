@@ -11,6 +11,7 @@ import AdminDashboard from "@/components/admin/AdminDashboard";
 import TrialExpiredPaywall from "@/components/admin/TrialExpiredPaywall";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 import { NotificationBell } from "@/components/admin/NotificationBell";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminServices         = lazy(() => import("@/components/admin/AdminServices"));
@@ -23,6 +24,8 @@ const AdminClientManagement = lazy(() => import("@/components/admin/AdminClientM
 const AdminLoyalty          = lazy(() => import("@/components/admin/AdminLoyalty"));
 const AdminHelp             = lazy(() => import("@/components/admin/AdminHelp"));
 const AdminRecommendations  = lazy(() => import("@/components/admin/AdminRecommendations"));
+const AdminConsultations    = lazy(() => import("@/components/admin/AdminConsultations"));
+const AdminSpecialOccasions = lazy(() => import("@/components/admin/AdminSpecialOccasions"));
 
 const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -74,13 +77,28 @@ class AdminErrorBoundary extends Component<
   }
 }
 
-const views = [
+// Core views that are always available regardless of feature flags.
+const CORE_VIEWS = [
+  "Dashboard",
+  "Bookings",
+  "Services",
+  "Availability",
+  "Client Management",
+  "Settings",
+  "Terms & Conditions",
+  "Help",
+] as const;
+
+// All possible views in sidebar order.
+const ALL_VIEWS = [
   "Dashboard",
   "Recommendations",
   "Bookings",
   "Services",
   "Availability",
   "Stock",
+  "Consultations",
+  "Special Occasions",
   "Client Management",
   "Loyalty",
   "Integrations",
@@ -89,7 +107,7 @@ const views = [
   "Help",
 ] as const;
 
-type ViewName = (typeof views)[number];
+type ViewName = (typeof ALL_VIEWS)[number];
 
 // ---------------------------------------------------------------------------
 // AdminShell — rendered INSIDE TenantProvider so all useTenant() hooks work
@@ -100,30 +118,63 @@ interface AdminShellProps {
 }
 
 const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
+  const isLifetimeFree = tenant?.is_lifetime_free === true;
+  const { flags, loading: flagsLoading } = useFeatureFlags(tenant?.id, isLifetimeFree);
+
+  // Build the ordered list of views this tenant can access.
+  const allowedViews = ALL_VIEWS.filter((view) => {
+    // Core views are always on.
+    if ((CORE_VIEWS as readonly string[]).includes(view)) return true;
+    // Flagged views — checked only after flags have loaded.
+    if (view === "Recommendations")  return flags.ai_insights;
+    if (view === "Stock")            return flags.stock_module;
+    if (view === "Consultations")    return flags.consultations;
+    if (view === "Special Occasions") return flags.special_occasions;
+    if (view === "Loyalty")          return flags.loyalty_module;
+    if (view === "Integrations")     return flags.integrations_tab;
+    return false;
+  });
+
   const [activeView, setActiveView] = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // If the currently active view gets hidden by a flag change, fall back to Dashboard.
+  useEffect(() => {
+    if (!flagsLoading && !allowedViews.includes(activeView)) {
+      setActiveView("Dashboard");
+    }
+  }, [flagsLoading, allowedViews, activeView]);
 
   const { data: bookings } = useSupabaseBookings();
   const pendingCount = bookings?.filter((b) => b.status === "pending").length ?? 0;
 
   const handleNavigate = (view: string) => {
-    if ((views as readonly string[]).includes(view)) setActiveView(view as ViewName);
+    if ((ALL_VIEWS as readonly string[]).includes(view)) setActiveView(view as ViewName);
   };
 
   if (
     isPaywalled(
       subscription?.status ?? null,
-      tenant?.is_lifetime_free ?? false,
+      isLifetimeFree,
       subscription?.trial_ends_at ?? null,
     )
   ) {
     return <TrialExpiredPaywall tenantId={tenant?.id ?? ""} />;
   }
 
+  // Show a brief spinner while flags are being fetched (non-lifetime tenants only).
+  if (flagsLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col lg:flex-row overflow-hidden">
       <AdminSidebar
-        views={[...views]}
+        views={allowedViews as unknown as string[]}
         activeView={activeView}
         onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
         isOpen={sidebarOpen}
@@ -160,18 +211,20 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
                 </div>
               }
             >
-              {activeView === "Dashboard"         && <AdminDashboard onNavigate={handleNavigate} />}
-              {activeView === "Recommendations"   && <AdminRecommendations onNavigate={handleNavigate} />}
-              {activeView === "Bookings"           && <AdminBookings />}
-              {activeView === "Services"           && <AdminServices />}
-              {activeView === "Availability"       && <AdminAvailability />}
-              {activeView === "Stock"              && <AdminStock />}
-              {activeView === "Client Management" && <AdminClientManagement />}
-              {activeView === "Loyalty"            && <AdminLoyalty />}
-              {activeView === "Integrations"       && <AdminIntegrations />}
-              {activeView === "Settings"           && <AdminSettings />}
-              {activeView === "Terms & Conditions" && <AdminTerms />}
-              {activeView === "Help"               && <AdminHelp />}
+              {activeView === "Dashboard"          && <AdminDashboard onNavigate={handleNavigate} />}
+              {activeView === "Recommendations"    && flags.ai_insights       && <AdminRecommendations onNavigate={handleNavigate} />}
+              {activeView === "Bookings"            && <AdminBookings />}
+              {activeView === "Services"            && <AdminServices />}
+              {activeView === "Availability"        && <AdminAvailability />}
+              {activeView === "Stock"               && flags.stock_module      && <AdminStock />}
+              {activeView === "Consultations"       && flags.consultations     && <AdminConsultations />}
+              {activeView === "Special Occasions"   && flags.special_occasions && <AdminSpecialOccasions />}
+              {activeView === "Client Management"  && <AdminClientManagement />}
+              {activeView === "Loyalty"             && flags.loyalty_module    && <AdminLoyalty />}
+              {activeView === "Integrations"        && flags.integrations_tab  && <AdminIntegrations />}
+              {activeView === "Settings"            && <AdminSettings />}
+              {activeView === "Terms & Conditions"  && <AdminTerms />}
+              {activeView === "Help"                && <AdminHelp />}
             </Suspense>
           </AdminErrorBoundary>
         </div>
