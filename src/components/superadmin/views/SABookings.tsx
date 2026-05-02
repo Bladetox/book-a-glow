@@ -2,28 +2,17 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarDays, RefreshCw, Loader2, AlertCircle, CheckCircle2, Clock,
-  XCircle, Building2,
+  XCircle, Building2, Filter,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface TenantStat {
-  id: string;
-  name: string;
-  confirmed: number;
-  pending: number;
-  cancelled: number;
-  complete: number;
-  total: number;
-  gmv: number;          // sum of total_amount for completed bookings
+  id: string; name: string;
+  confirmed: number; pending: number; cancelled: number; complete: number;
+  total: number; gmv: number;
 }
-
 interface PlatformTotals {
-  confirmed: number;
-  pending: number;
-  cancelled: number;
-  complete: number;
-  total: number;
-  gmv: number;
+  confirmed: number; pending: number; cancelled: number; complete: number;
+  total: number; gmv: number;
 }
 
 const fmt = (n: number) =>
@@ -36,6 +25,13 @@ const STATUS_META = [
   { key: "complete",  label: "Complete",  icon: CheckCircle2, color: "#4f98a3" },
 ] as const;
 
+const DATE_RANGES = [
+  { label: "Last 30d",  days: 30  },
+  { label: "Last 90d",  days: 90  },
+  { label: "Last 365d", days: 365 },
+  { label: "All time",  days: 0   },
+] as const;
+
 const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div className={`bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
 );
@@ -46,35 +42,38 @@ export default function SABookings() {
   const [flagged,     setFlagged]     = useState<any[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [lastUpdated, setLastUpdated] = useState("");
+  const [rangeDays,   setRangeDays]   = useState(30);
 
   const load = useCallback(async () => {
     setLoading(true);
 
-    // 1. Fetch all tenants
-    const { data: tenants } = await supabase
-      .from("tenants")
-      .select("id, name")
-      .order("name");
+    const since = rangeDays > 0
+      ? new Date(Date.now() - rangeDays * 86_400_000).toISOString()
+      : null;
 
-    // 2. Fetch booking aggregates — only non-PII fields
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select("id, tenant_id, status, total_amount, booking_date")
-      .order("booking_date", { ascending: false });
+    const [{ data: tenants }, { data: bookings }, { data: payments }] = await Promise.all([
+      supabase.from("tenants").select("id, name").order("name"),
+      // Bounded fetch — 2000 rows max, filtered by date range
+      (() => {
+        let q = supabase.from("bookings")
+          .select("id, tenant_id, status, total_amount, booking_date")
+          .order("booking_date", { ascending: false })
+          .limit(2000);
+        if (since) q = q.gte("booking_date", since);
+        return q;
+      })(),
+      // Completed payments to cross-reference flagged anomalies
+      supabase.from("payments")
+        .select("id, booking_id, status, amount, created_at")
+        .eq("status", "completed")
+        .limit(500),
+    ]);
 
-    // 3. Fetch payments that are flagged (paid but booking not complete / cancelled)
-    const { data: payments } = await supabase
-      .from("payments")
-      .select("id, booking_id, status, amount, created_at")
-      .eq("status", "completed")
-      .limit(200);
+    const bks       = bookings  ?? [];
+    const pays      = payments  ?? [];
+    const tenantList = tenants  ?? [];
+    const tenantMap  = Object.fromEntries(tenantList.map(t => [t.id, t.name ?? t.id.slice(0, 8)]));
 
-    const bks = bookings ?? [];
-    const pays = payments ?? [];
-    const tenantList = tenants ?? [];
-    const tenantMap = Object.fromEntries(tenantList.map(t => [t.id, t.name ?? t.id.slice(0, 8)]));
-
-    // Build per-tenant stats
     const statsMap: Record<string, TenantStat> = {};
     for (const b of bks) {
       if (!statsMap[b.tenant_id]) {
@@ -86,56 +85,64 @@ export default function SABookings() {
       }
       const s = statsMap[b.tenant_id];
       s.total++;
-      if (b.status === "confirmed") s.confirmed++;
-      else if (b.status === "pending")   s.pending++;
-      else if (b.status === "cancelled") s.cancelled++;
-      else if (b.status === "complete")  { s.complete++; s.gmv += Number(b.total_amount) || 0; }
+      const amt = Number(b.total_amount) || 0;
+      if (b.status === "confirmed")  { s.confirmed++;            s.gmv += amt; }  // confirmed = paid, count in GMV
+      else if (b.status === "pending")   { s.pending++; }
+      else if (b.status === "cancelled") { s.cancelled++; }
+      else if (b.status === "complete")  { s.complete++;  s.gmv += amt; } // complete also counts
     }
     setTenantStats(Object.values(statsMap).sort((a, b) => b.total - a.total));
 
-    // Platform-level totals
     const pt: PlatformTotals = { confirmed: 0, pending: 0, cancelled: 0, complete: 0, total: 0, gmv: 0 };
     for (const s of Object.values(statsMap)) {
-      pt.confirmed += s.confirmed;
-      pt.pending   += s.pending;
-      pt.cancelled += s.cancelled;
-      pt.complete  += s.complete;
-      pt.total     += s.total;
-      pt.gmv       += s.gmv;
+      pt.confirmed += s.confirmed; pt.pending   += s.pending;
+      pt.cancelled += s.cancelled; pt.complete  += s.complete;
+      pt.total     += s.total;     pt.gmv       += s.gmv;
     }
     setTotals(pt);
 
-    // Flagged: completed payment but booking_id maps to a cancelled/pending booking
+    // Flagged: payment completed but booking is still pending or cancelled
     const bookingStatusMap = Object.fromEntries(bks.map(b => [b.id, b.status]));
-    const flaggedPays = pays.filter(p => {
-      const bStatus = bookingStatusMap[p.booking_id];
-      return bStatus === "cancelled" || bStatus === "pending";
-    });
+    const tenantNameForBooking = Object.fromEntries(bks.map(b => [b.id, tenantMap[b.tenant_id] ?? b.tenant_id.slice(0,8)]));
+    const flaggedPays = pays
+      .filter(p => {
+        const bStatus = bookingStatusMap[p.booking_id];
+        return bStatus === "cancelled" || bStatus === "pending";
+      })
+      .map(p => ({ ...p, tenantName: tenantNameForBooking[p.booking_id] ?? "Unknown" }));
     setFlagged(flaggedPays);
 
     setLastUpdated(new Date().toLocaleTimeString("en-ZA"));
     setLoading(false);
-  }, []);
+  }, [rangeDays]);
 
   useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-6 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-white font-semibold text-lg">Booking Health</h2>
-          <p className="text-white/40 text-sm">
-            Platform-wide booking volume and status breakdown by tenant.
-          </p>
+          <p className="text-white/40 text-sm">Platform-wide booking volume and status breakdown by tenant.</p>
         </div>
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <span className="text-[11px] text-white/20">Updated {lastUpdated}</span>
-          )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date range filter */}
+          <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-1">
+            {DATE_RANGES.map(r => (
+              <button
+                key={r.label}
+                onClick={() => setRangeDays(r.days)}
+                className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                  rangeDays === r.days
+                    ? "bg-[rgba(0,200,83,0.15)] text-[#00c853] border border-[rgba(0,200,83,0.25)]"
+                    : "text-white/30 hover:text-white/60"
+                }`}
+              >{r.label}</button>
+            ))}
+          </div>
+          {lastUpdated && <span className="text-[11px] text-white/20">Updated {lastUpdated}</span>}
           <button
-            onClick={load}
-            disabled={loading}
+            onClick={load} disabled={loading}
             className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -143,52 +150,45 @@ export default function SABookings() {
         </div>
       </div>
 
-      {/* Platform KPI strip */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#00c853" }} />
         </div>
       ) : (
         <>
-          {/* Status KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {STATUS_META.map(({ key, label, icon: Icon, color }) => (
-              <GlassCard key={key} className="p-4">
-                <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center mb-3"
-                  style={{ background: `${color}14`, border: `1px solid ${color}28` }}
-                >
+              <div key={key} className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl p-4">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-3"
+                  style={{ background: `${color}14`, border: `1px solid ${color}28` }}>
                   <Icon className="w-3.5 h-3.5" style={{ color }} />
                 </div>
                 <p className="text-xl font-bold text-white tabular-nums">
                   {totals ? totals[key as keyof PlatformTotals] : 0}
                 </p>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mt-1">{label}</p>
-              </GlassCard>
+              </div>
             ))}
           </div>
 
-          {/* GMV callout */}
-          <GlassCard className="px-5 py-4 flex items-center justify-between">
+          <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl px-5 py-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] text-white/25 uppercase tracking-widest">Platform GMV (completed bookings)</p>
-              <p className="text-2xl font-bold text-white tabular-nums mt-1">
-                {totals ? fmt(totals.gmv) : "R0.00"}
-              </p>
+              <p className="text-[10px] text-white/25 uppercase tracking-widest">Platform GMV (confirmed + complete)</p>
+              <p className="text-2xl font-bold text-white tabular-nums mt-1">{totals ? fmt(totals.gmv) : "R0.00"}</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] text-white/25 uppercase tracking-widest">Total Bookings</p>
-              <p className="text-2xl font-bold tabular-nums mt-1" style={{ color: "#00c853" }}>
-                {totals?.total ?? 0}
-              </p>
+              <p className="text-2xl font-bold tabular-nums mt-1" style={{ color: "#00c853" }}>{totals?.total ?? 0}</p>
             </div>
-          </GlassCard>
+          </div>
 
-          {/* Per-tenant breakdown */}
-          <GlassCard>
+          <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl">
             <div className="px-5 py-4 border-b border-white/[0.05] flex items-center gap-2">
               <Building2 className="w-4 h-4 text-white/30" />
               <h3 className="text-sm font-semibold text-white/70">Breakdown by Tenant</h3>
+              <span className="ml-auto text-[11px] text-white/20 flex items-center gap-1">
+                <Filter className="w-3 h-3" />{DATE_RANGES.find(r => r.days === rangeDays)?.label}
+              </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs min-w-[500px]">
@@ -201,11 +201,7 @@ export default function SABookings() {
                 </thead>
                 <tbody>
                   {tenantStats.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-10 text-white/20 text-xs">
-                        No booking data found.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={7} className="text-center py-10 text-white/20 text-xs">No booking data found.</td></tr>
                   ) : tenantStats.map(s => (
                     <tr key={s.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3 text-white/60 font-medium">{s.name}</td>
@@ -220,21 +216,20 @@ export default function SABookings() {
                 </tbody>
               </table>
             </div>
-          </GlassCard>
+          </div>
 
-          {/* Flagged payments */}
           {flagged.length > 0 && (
-            <GlassCard>
+            <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl">
               <div className="px-5 py-4 border-b border-white/[0.05] flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-400" />
                 <h3 className="text-sm font-semibold text-white/70">Flagged — Payment Received, Booking Not Complete</h3>
                 <span className="ml-auto text-[11px] text-red-400">{flagged.length} item{flagged.length > 1 ? "s" : ""}</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs min-w-[400px]">
+                <table className="w-full text-xs min-w-[480px]">
                   <thead>
                     <tr className="border-b border-white/[0.05]">
-                      {["Payment ID", "Booking ID", "Amount", "Paid At"].map(h => (
+                      {["Payment ID", "Booking ID", "Tenant", "Amount", "Paid At"].map(h => (
                         <th key={h} className="text-left text-[10px] text-white/20 font-bold uppercase tracking-wider px-4 py-3">{h}</th>
                       ))}
                     </tr>
@@ -244,6 +239,7 @@ export default function SABookings() {
                       <tr key={p.id} className="border-b border-white/[0.03]">
                         <td className="px-4 py-3 font-mono text-[10px] text-white/25">{p.id.slice(0, 8).toUpperCase()}</td>
                         <td className="px-4 py-3 font-mono text-[10px] text-white/25">{p.booking_id?.slice(0, 8).toUpperCase() ?? "—"}</td>
+                        <td className="px-4 py-3 text-[11px] text-white/40">{p.tenantName}</td>
                         <td className="px-4 py-3 text-red-400 font-mono">{fmt(p.amount)}</td>
                         <td className="px-4 py-3 text-white/30">
                           {new Date(p.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
@@ -253,7 +249,7 @@ export default function SABookings() {
                   </tbody>
                 </table>
               </div>
-            </GlassCard>
+            </div>
           )}
         </>
       )}

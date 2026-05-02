@@ -1,8 +1,8 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   RefreshCw, ShieldAlert, Search, Loader2,
-  UserCog, Building2, KeyRound, BellOff, RotateCcw, CheckCircle2,
+  UserCog, Building2, KeyRound, BellOff, RotateCcw, CheckCircle2, Download,
 } from "lucide-react";
 import type { ElementType } from "react";
 
@@ -29,6 +29,7 @@ const ACTION_COLOR: Record<string, string> = {
   "webhook.marked_done": "text-white/40 bg-white/[0.04] border-white/[0.08]",
 };
 const DEFAULT_COLOR = "text-white/50 bg-white/[0.04] border-white/[0.08]";
+const PAGE_SIZE = 50;
 
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleString("en-ZA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -38,19 +39,55 @@ export default function SAAuditLog() {
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page,     setPage]     = useState(0);
+  const [hasMore,  setHasMore]  = useState(false);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async (reset = true) => {
+    setLoading(true);
+    const from = reset ? 0 : page * PAGE_SIZE;
+    const { data } = await supabase
+      .from("sa_audit_logs")
+      .select("id, action, entity, entity_id, label, meta, actor_id, actor_email, created_at")
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    const rows = data ?? [];
+    if (reset) setLogs(rows);
+    else setLogs(prev => [...prev, ...rows]);
+    setHasMore(rows.length === PAGE_SIZE);
+    if (reset) setPage(0);
+    setLoading(false);
+  }, [page]);
+
+  useEffect(() => { fetchLogs(true); }, []);
+
+  const loadMore = async () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
     setLoading(true);
     const { data } = await supabase
       .from("sa_audit_logs")
       .select("id, action, entity, entity_id, label, meta, actor_id, actor_email, created_at")
       .order("created_at", { ascending: false })
-      .limit(300);
-    setLogs(data ?? []);
+      .range(nextPage * PAGE_SIZE, (nextPage + 1) * PAGE_SIZE - 1);
+    const rows = data ?? [];
+    setLogs(prev => [...prev, ...rows]);
+    setHasMore(rows.length === PAGE_SIZE);
     setLoading(false);
   };
 
-  useEffect(() => { fetchLogs(); }, []);
+  const exportCSV = () => {
+    const header = ["ID","Action","Entity","Entity ID","Label","Actor Email","Date"];
+    const rows = logs.map(l => [
+      l.id, l.action, l.entity, l.entity_id ?? "", l.label ?? "",
+      l.actor_email ?? "", l.created_at ?? "",
+    ]);
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `audit-log-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
 
   const filtered = logs.filter(l =>
     l.action?.toLowerCase().includes(search.toLowerCase()) ||
@@ -60,25 +97,25 @@ export default function SAAuditLog() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div>
           <h2 className="text-white font-semibold text-lg tracking-tight">Security &amp; Audit Log</h2>
           <p className="text-white/35 text-sm mt-0.5">All superadmin actions — suspensions, activations, password resets.</p>
         </div>
         <div className="sm:ml-auto flex items-center gap-2">
-          <button onClick={fetchLogs} className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/35 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
+          <button onClick={exportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/35 hover:text-white/70 transition-colors text-xs">
+            <Download className="w-3.5 h-3.5" />CSV
+          </button>
+          <button onClick={() => fetchLogs(true)}
+            className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/35 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-            <input
-              id="audit-search"
-              name="audit-search"
-              value={search} onChange={e => setSearch(e.target.value)}
+            <input id="audit-search" name="audit-search" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search action, label, actor…"
-              className="pl-8 pr-3 py-2 text-xs bg-white/[0.03] border border-white/[0.07] rounded-xl text-white/60 placeholder:text-white/20 focus:outline-none focus:border-[rgba(0,200,83,0.40)] w-56"
-            />
+              className="pl-8 pr-3 py-2 text-xs bg-white/[0.03] border border-white/[0.07] rounded-xl text-white/60 placeholder:text-white/20 focus:outline-none focus:border-[rgba(0,200,83,0.40)] w-56" />
           </div>
         </div>
       </div>
@@ -94,7 +131,7 @@ export default function SAAuditLog() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && logs.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-14">
                   <Loader2 className="w-5 h-5 text-white/15 animate-spin mx-auto" />
                 </td></tr>
@@ -149,6 +186,15 @@ export default function SAAuditLog() {
             </tbody>
           </table>
         </div>
+        {/* Load more */}
+        {hasMore && (
+          <div className="px-5 py-3 border-t border-white/[0.05] text-center">
+            <button onClick={loadMore} disabled={loading}
+              className="text-xs text-white/40 hover:text-white/70 transition-colors disabled:opacity-40">
+              {loading ? "Loading…" : "Load more"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
