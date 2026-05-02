@@ -35,25 +35,21 @@ const cardLeave = (el: HTMLDivElement) => {
 
 const painPoints = [
   {
-    // Blind decisions = hidden/no visibility
     Icon: EyeOff,
     heading: "You're making decisions blind",
     body: "You don't know what's driving revenue, so you keep repeating what might not be working.",
   },
   {
-    // Chasing payment/deposits = money slipping through time
     Icon: Coins,
     heading: "Chasing deposits is eating your time",
     body: "Sending banking details, waiting for proof of payment, following up. Every single booking.",
   },
   {
-    // Full schedule but unstable income = downward trend despite appearances
     Icon: TrendingDown,
     heading: "Your schedule looks full. Your income isn't stable.",
     body: "Gaps, cancellations, and no-shows quietly drain your revenue while you're too busy to notice.",
   },
   {
-    // Best channel is a guess = uncertainty, no target
     Icon: HelpCircle,
     heading: "Your best marketing channel is a guess",
     body: "You're spending time and money on Instagram, TikTok, Google but you have no idea which one actually works.",
@@ -89,7 +85,7 @@ const Index = () => {
   const [_loaded, setLoaded] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen nextslot-theme bg-background text-foreground">
       <SiteHeader />
 
       <main>
