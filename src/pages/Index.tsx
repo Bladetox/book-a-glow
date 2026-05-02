@@ -48,7 +48,7 @@ const Index = () => {
 
       <main>
 
-        {/* ─── SECTION 1: HERO ─── */}
+        {/* SECTION 1: HERO */}
         <section className="relative min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
@@ -81,7 +81,7 @@ const Index = () => {
                 </h1>
 
                 <p className="text-lg text-muted-foreground max-w-xl">
-                  NextSlot shows you exactly where your bookings, revenue, and best clients come from — so you can stop guessing and start growing.
+                  NextSlot shows you exactly where your bookings, revenue, and best clients come from. Stop guessing and start growing.
                 </p>
 
                 <p className="text-sm font-medium" style={{ color: GOLD }}>
@@ -150,7 +150,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ─── SECTION 2: THE FREEDOM TRAP ─── */}
+        {/* SECTION 2: THE FREEDOM TRAP */}
         <section
           className="py-20 px-6"
           style={{ background: "hsl(220 20% 6%)" }}
@@ -168,7 +168,7 @@ const Index = () => {
 
             <div className="space-y-5 text-left max-w-2xl mx-auto">
               <p className="text-white/65 text-base leading-relaxed">
-                If your business runs on manual effort — WhatsApp bookings, chasing deposits, gut-feel decisions — you're not building a business. You're building a job that follows you home. No off switch. No family time. No rest.
+                If your business runs on manual effort: WhatsApp bookings, chasing deposits, gut-feel decisions. You're not building a business. You're building a job that follows you home. No off switch. No family time. No rest.
               </p>
               <p className="text-white/65 text-base leading-relaxed">
                 Your clients don't pay you to be a booking clerk. They pay you for the experience. When admin steals your energy, you can't show up the way they signed up for.
@@ -181,7 +181,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ─── SECTION 3: DASHBOARD (visual proof) ─── */}
+        {/* SECTION 3: DASHBOARD (visual proof) */}
         <section className="px-6 pb-24 pt-16">
           <div className="max-w-5xl mx-auto text-center space-y-6">
 
@@ -232,7 +232,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ─── SECTION 4: TWO TRUTHS, ONE SYSTEM ─── */}
+        {/* SECTION 4: TWO TRUTHS, ONE SYSTEM */}
         <section className="py-20 px-6 bg-secondary/30">
           <div className="max-w-4xl mx-auto space-y-10">
 
@@ -247,7 +247,7 @@ const Index = () => {
 
             <div className="grid md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-white/10">
 
-              {/* Left — Established operator */}
+              {/* Left - Established operator */}
               <div
                 className="p-8 space-y-4"
                 style={{ background: "hsl(220 20% 8%)" }}
@@ -256,20 +256,17 @@ const Index = () => {
                   Already running a business?
                 </p>
                 <p className="text-white/80 text-base leading-relaxed">
-                  The chaos doesn't go away on its own. But once you can see your business clearly — what's working, what's costing you, who your best clients are — the decisions become obvious.
+                  The chaos doesn't go away on its own. But once you can see your business clearly. What's working, what's costing you, who your best clients are. The decisions become obvious.
                 </p>
                 <p className="text-white/50 text-sm leading-relaxed">
-                  A system isn't the opposite of connection. It gives you back your Mondays — time to check in on loyal clients, to show up fully in every session, to protect the thing your clients actually came for.
+                  A system isn't the opposite of connection. It gives you back your Mondays. Time to check in on loyal clients, to show up fully in every session, to protect the thing your clients actually came for.
                 </p>
                 <p className="text-sm font-semibold" style={{ color: GOLD }}>
                   Stop being the clerk. Go back to being the expert.
                 </p>
               </div>
 
-              {/* Divider */}
-              <div className="hidden md:block absolute inset-y-0 left-1/2 w-px bg-white/10" aria-hidden="true" />
-
-              {/* Right — New starter */}
+              {/* Right - New starter */}
               <div
                 className="p-8 space-y-4"
                 style={{ background: "hsl(220 20% 5%)" }}
@@ -309,7 +306,7 @@ const Index = () => {
                     "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)";
                 }}
               >
-                Start free — 30 days, no card required
+                Start free. 30 days, no card required.
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -317,7 +314,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ─── SECTION 5: HOW IT WORKS ─── */}
+        {/* SECTION 5: HOW IT WORKS */}
         <section className="py-20 px-6">
           <div className="max-w-2xl mx-auto space-y-10">
 
@@ -365,7 +362,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ─── SECTION 6: PROOF + FINAL CTA ─── */}
+        {/* SECTION 6: PROOF + FINAL CTA */}
         <section className="py-20 px-6 bg-secondary/20">
           <div className="max-w-4xl mx-auto space-y-10 text-center">
 
@@ -477,7 +474,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ─── FINAL CTA ─── */}
+        {/* FINAL CTA */}
         <section className="py-24 px-6 bg-black text-white text-center">
           <div className="max-w-2xl mx-auto space-y-6">
 
@@ -491,7 +488,7 @@ const Index = () => {
             </h2>
 
             <p className="text-white/60 max-w-lg mx-auto">
-              A system isn't the opposite of connection. It gives you back the time to be human — to check in on loyal clients, to show up fully in every session, to protect the legacy you've built.
+              A system isn't the opposite of connection. It gives you back the time to be human. To check in on loyal clients, to show up fully in every session, to protect the legacy you've built.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">

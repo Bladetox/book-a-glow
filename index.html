@@ -6,9 +6,6 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <!-- VIEWPORT: removed maximum-scale=1 / user-scalable=no — blocks pinch-zoom, hurts Google mobile score -->
-    <!-- interactive-widget=resizes-content: fixes keyboard layout shift on Android Chrome 108+ / Firefox 132+  -->
-    <!-- viewport-fit=cover: content fills notch/Dynamic Island area on iOS -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 
     <!-- Favicon & App Icons -->
@@ -18,10 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="NextSlot" />
 
-    <!-- Dynamic PWA manifest: /admin routes get admin manifest (start_url=/admin),
-         all other routes get the booking manifest (start_url=/).
-         Absolute Supabase URL used to bypass Vercel catch-all rewrite which would
-         otherwise serve index.html instead of the JSON manifest. -->
+    <!-- Dynamic PWA manifest -->
     <script>
       (function () {
         var isAdmin = window.location.pathname.startsWith('/admin');
@@ -43,8 +37,8 @@
     <link rel="canonical" href="https://www.nextslot.co.za/" />
 
     <!-- Primary SEO -->
-    <title>NextSlot | Online Booking System for Beauticians, Barbers &amp; Service Businesses in South Africa</title>
-    <meta name="description" content="NextSlot is South Africa's smart online booking system built for beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants. Accept bookings 24/7, collect deposit payments instantly, and manage your business from one dashboard." />
+    <title>NextSlot | Online Booking System for Service Businesses in South Africa</title>
+    <meta name="description" content="You're fully booked but your income still feels random. NextSlot shows South African service businesses exactly where their revenue, clients, and growth come from. Stop guessing. Start growing. Set up in under 10 minutes, no card required." />
     <meta name="keywords" content="online booking system South Africa, beautician booking app, barber appointment software, hairdresser booking, massage therapist scheduling, tattoo artist booking, photographer appointment, nail technician booking, image consultant scheduling, SA booking platform, POPIA compliant booking, NextSlot" />
     <meta name="author" content="NextSlot" />
     <meta name="robots" content="index, follow" />
@@ -54,22 +48,22 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="NextSlot" />
     <meta property="og:url" content="https://www.nextslot.co.za/" />
-    <meta property="og:title" content="NextSlot | Online Booking System for Beauticians, Barbers &amp; Service Businesses in South Africa" />
-    <meta property="og:description" content="South Africa's smart booking platform for beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants. Accept bookings 24/7 and get paid deposits instantly." />
+    <meta property="og:title" content="NextSlot | Online Booking System for Service Businesses in South Africa" />
+    <meta property="og:description" content="You're fully booked but your income still feels random. NextSlot shows South African service businesses exactly where their revenue, clients, and growth come from. Stop guessing. Start growing." />
     <meta property="og:image" content="https://www.nextslot.co.za/web-app-manifest-512x512.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
-    <meta property="og:image:alt" content="NextSlot — Online Booking System for South African Service Businesses" />
+    <meta property="og:image:alt" content="NextSlot - Online Booking System for South African Service Businesses" />
     <meta property="og:locale" content="en_ZA" />
 
     <!-- Twitter / X Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@nextslot_za" />
     <meta name="twitter:url" content="https://www.nextslot.co.za/" />
-    <meta name="twitter:title" content="NextSlot | Online Booking System for Beauticians, Barbers &amp; Service Businesses in South Africa" />
-    <meta name="twitter:description" content="South Africa's smart booking platform for beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants. Accept bookings 24/7." />
+    <meta name="twitter:title" content="NextSlot | Online Booking System for Service Businesses in South Africa" />
+    <meta name="twitter:description" content="You're fully booked but your income still feels random. NextSlot shows South African service businesses exactly where their revenue, clients, and growth come from. Stop guessing. Start growing." />
     <meta name="twitter:image" content="https://www.nextslot.co.za/web-app-manifest-512x512.png" />
-    <meta name="twitter:image:alt" content="NextSlot — Online Booking System for South African Service Businesses" />
+    <meta name="twitter:image:alt" content="NextSlot - Online Booking System for South African Service Businesses" />
 
     <!-- Structured Data: SoftwareApplication -->
     <script type="application/ld+json">
@@ -79,7 +73,7 @@
       "name": "NextSlot",
       "url": "https://www.nextslot.co.za/",
       "logo": "https://www.nextslot.co.za/web-app-manifest-512x512.png",
-      "description": "Smart online booking system for South African beauticians, barbers, hairdressers, massage therapists, tattoo artists, photographers, nail technicians, and image consultants.",
+      "description": "Smart online booking system for South African service businesses. See exactly where your revenue and clients come from. Stop guessing and start growing.",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web, iOS, Android",
       "offers": {
