@@ -16,93 +16,93 @@ const features = [
   {
     icon: SlidersHorizontal,
     title: "Fully Customisable Dashboard",
-    desc: "Your business is unique. Toggle any section on or off so you only see what matters to you: revenue, heatmaps, alerts, stock, or all of it. Your dashboard, your way.",
+    desc: "Your business is not like anyone else's. Toggle any section on or off so your dashboard only shows what matters to you. Revenue, booking heatmap, stock alerts, loyalty tiers, client source, all of it or none of it. Your system, your way.",
     highlight: true,
   },
   {
     icon: TrendingUp,
     title: "Revenue Tracking",
-    desc: "Monthly revenue overview, daily earnings, and a 30-day trend chart. Know exactly how your business is performing at a glance.",
+    desc: "Monthly revenue overview, daily earnings, and a 30-day trend chart. Know at a glance whether this week is up or down on last week, and exactly why.",
   },
   {
     icon: CalendarDays,
-    title: "Smart Scheduling",
-    desc: "Only available time slots are shown to clients. No double bookings, no confusion, no back-and-forth messages.",
+    title: "Smart Scheduling with Slot Hold",
+    desc: "Only your real available slots are shown to clients. The moment someone starts checkout, that slot is held so no one else can take it. No double bookings. No awkward apologies.",
   },
   {
     icon: Instagram,
     title: "Client Source Tracking",
-    desc: "Know exactly where your clients come from: Instagram, Google, referrals, TikTok, or WhatsApp. Spend your energy where it actually converts.",
+    desc: "Know exactly where each client came from: TikTok, Instagram, Google, WhatsApp, or referral. Stop guessing which platform deserves your time and your ad budget.",
   },
   {
     icon: Users,
-    title: "Client Insights",
-    desc: "Track new vs returning clients, visit frequency, retention rate, and loyalty tiers. Know who your VIPs are and who needs a nudge to rebook.",
+    title: "Client Insights and Alerts",
+    desc: "Track new vs returning clients, visit frequency, retention rate, and loyalty tiers. Get automatic alerts for clients who have gone quiet, have a flagged history, or are approaching VIP status.",
   },
   {
     icon: LayoutDashboard,
     title: "Booking Management",
-    desc: "View, confirm, cancel, and complete bookings. Full detail view with deposits, outstanding balances, and client info all in one place.",
+    desc: "View, confirm, cancel, and complete bookings in one place. Full detail per booking: deposit status, outstanding balance, client notes, and booking history at a glance.",
   },
   {
     icon: Clock,
     title: "Availability Control",
-    desc: "Set weekly hours, toggle days on or off, and block out specific dates. Your schedule, your rules.",
+    desc: "Set your weekly hours, toggle days on or off, and block specific dates. Build your schedule around your life, not the other way around.",
   },
   {
     icon: BarChart3,
     title: "Booking Heatmap",
-    desc: "See which time slots fill fastest across the week. Optimise your schedule based on real demand patterns from your own data.",
+    desc: "See which time slots fill fastest across the week. Use that data to price your peak hours differently, restructure your schedule, or plan staff coverage with confidence.",
   },
   {
     icon: Bell,
     title: "Smart Alerts",
-    desc: "Pending deposits, overdue rebookings, low stock, and new reviews are all surfaced automatically so nothing slips through.",
+    desc: "Pending deposits, overdue rebookings, low stock, and new reviews are surfaced automatically. Nothing slips through. You always know what needs attention before it becomes a problem.",
   },
   {
     icon: MessageSquare,
     title: "Google Review Requests",
-    desc: "Asking for reviews feels awkward. We made it easy. One tap sends your client a review request after their appointment. More reviews means your business ranks higher in Google searches.",
+    desc: "Asking for reviews feels awkward. We made it effortless. One tap sends your client to your Google review page after their appointment. More reviews means higher rankings and more organic bookings.",
   },
   {
     icon: Package,
     title: "Stock Management",
-    desc: "Track product inventory with quantity levels. Get alerts when items are running low or critically short before you run out.",
+    desc: "Track product inventory with live quantity levels. Barcode and manual scanning supported. Get low-stock and critical-stock alerts before you run out mid-week.",
   },
   {
     icon: Sparkles,
-    title: "Consultations",
-    desc: "Log pre-appointment consultation notes per client and service. Build a detailed history that helps you deliver a better experience every visit.",
+    title: "Consultation Forms",
+    desc: "Log pre-appointment consultation notes per client and per service. Build a detailed client history that helps you deliver a better, more personalised experience on every visit.",
   },
   {
     icon: Star,
-    title: "Google Reviews",
-    desc: "Monitor customer feedback and star ratings directly from your dashboard. Respond quickly and stay on top of your reputation.",
+    title: "Loyalty Tracker",
+    desc: "Track visit frequency and automatically classify clients as New, Regular, or VIP. Know who your most valuable clients are and who needs a reason to come back.",
   },
   {
     icon: Link2,
     title: "Integrations",
-    desc: "Connect Yoco payments, Google Calendar, Google Maps for callout fees, and Gmail for automated booking notifications.",
+    desc: "Connect Yoco for card payments, Google Calendar for two-way sync, Google Maps for callout fee calculation, and Gmail for automated booking confirmations and reminders.",
   },
   {
     icon: BadgeCheck,
     title: "Deposit Protection",
-    desc: "Collect a deposit at the point of booking. No deposit, no confirmed slot. No-shows drop, your calendar stays clean, and every appointment on your books is backed by real commitment.",
+    desc: "No deposit, no confirmed slot. Clients pay at the time of booking. No-shows drop, your calendar fills with committed clients, and you stop chasing EFT proof of payment for good.",
   },
   {
     icon: Gem,
-    title: "Loyalty Tracker",
-    desc: "Track client visit frequency and identify your New, Regular, and VIP clients. Build the relationships that keep people coming back.",
+    title: "AI-Powered Add-on Suggestions",
+    desc: "During the booking flow, NextSlot suggests relevant add-on services based on what the client is already booking. A passive upsell engine that increases your average booking value without any extra effort from you.",
   },
   {
     icon: Shield,
     title: "Professional Booking Page",
-    desc: "Give clients a clean, branded booking experience. Multiple themes to match your brand. No app download required from your clients.",
+    desc: "Give clients a clean, branded booking experience that works on any device. No app download required. Multiple themes to match your brand. Share your link anywhere.",
   },
   {
     icon: MapPin,
     title: "Callout Fee Calculator",
-    desc: "Mobile service providers can set a per-km rate. NextSlot automatically calculates round-trip travel fees using Google Maps.",
+    desc: "Mobile service providers can set a per-kilometre rate. NextSlot calculates the round-trip travel fee automatically using Google Maps. Your clients see the full cost upfront, no surprises.",
   },
 ];
 
@@ -125,23 +125,15 @@ const Product = () => (
             The Product
           </p>
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
-            One dashboard. Full control.
+            One dashboard. Every tool you actually need.
           </h1>
           <p className="text-lg max-w-lg mx-auto mb-4" style={{ color: "hsl(var(--muted-foreground))" }}>
-            Everything you need to run your appointment-based business, without the complexity.
+            Built for appointment-based businesses that are serious about their time, their clients, and their growth.
           </p>
           <p className="text-sm font-medium mb-10" style={{ color: "hsl(var(--accent))" }}>
-            Fully customisable. You only see what matters to your business.
+            Fully customisable. Show only what matters to your business.
           </p>
 
-          {/*
-            STAT ANCHOR ROW
-            Fix: replaced the shared inline-grid with borderRight on each cell
-            (which caused text to bleed visually across boundaries on mobile)
-            with three fully isolated cards that each have their own border,
-            background, shadow and padding. They now lift off the page
-            independently like physical tiles instead of a flat fused row.
-          */}
           <div className="flex flex-wrap justify-center gap-4 mb-14 mx-auto">
             {heroStats.map((stat) => (
               <div
@@ -179,7 +171,6 @@ const Product = () => (
             ))}
           </div>
 
-          {/* Device mockup */}
           <div className="max-w-5xl mx-auto flex items-end gap-6 justify-center">
             <div className="flex-1 max-w-[680px]">
               <LaptopFrame><DashboardPreview /></LaptopFrame>
@@ -212,7 +203,7 @@ const Product = () => (
             Every feature you need. Nothing you don't.
           </h2>
           <p className="text-center text-muted-foreground text-sm max-w-lg mx-auto mb-14">
-            Your dashboard is fully customisable. Toggle any section on or off. Only show what is relevant to your business.
+            Your dashboard is fully customisable. Toggle any section on or off. Only surface what is relevant to your business, your clients, and the way you work.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f) => (
@@ -235,20 +226,13 @@ const Product = () => (
         </div>
       </section>
 
-      {/*
-        COMBINED FOOTER CTA
-        Was: two side-by-side buttons (Create booking page + Try demo) both
-        styled as near-equals fighting for the same click.
-        Now: single dark section, one solid primary action, one soft ghost
-        secondary beneath it. One decision, clear hierarchy.
-      */}
       <section style={{ background: "hsl(220 20% 8%)" }} className="py-20 md:py-28 text-center">
         <div className="max-w-xl mx-auto px-4 space-y-6">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-white">
-            Ready to simplify your day?
+            Your business deserves a system that works as hard as you do.
           </h2>
           <p style={{ color: "hsl(0 0% 100% / 0.55)" }} className="text-base leading-relaxed">
-            Join NextSlot and see your business work for you.
+            Everything in one place. Nothing you have to chase. Try NextSlot free for 30 days.
           </p>
           <div className="flex flex-col items-center gap-3 pt-2">
             <Link
@@ -269,12 +253,12 @@ const Product = () => (
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "hsl(0 0% 100% / 0.75)"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "hsl(0 0% 100% / 0.40)"; }}
             >
-              Or try the live demo first
+              Or explore the live demo first
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
           <p className="text-xs" style={{ color: "hsl(0 0% 100% / 0.25)" }}>
-            Let your bookings run themselves. Try free for 30 days. No payment required.
+            No payment required. Free for 30 days. Cancel anytime.
           </p>
         </div>
       </section>

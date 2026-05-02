@@ -10,17 +10,18 @@ const tiers = [
     name: "Starter",
     price: "R399",
     period: "/ month",
-    description: "For solo operators just getting started.",
+    description: "For solo operators ready to ditch the WhatsApp chaos.",
     features: [
       "Online booking page, live in minutes",
       "Service and pricing management",
-      "Availability calendar",
-      "Client capture and booking history",
-      "Deposit and balance payment collection",
+      "Availability calendar with smart slot control",
+      "Client profiles and full booking history",
+      "Deposit and balance collection via Yoco",
       "Email confirmations and reminders",
+      "WhatsApp reminder messages",
     ],
     notIncluded: [
-      "Business dashboard and analytics",
+      "Business dashboard and revenue analytics",
       "Client source tracking",
       "Google review requests",
       "Multiple staff profiles",
@@ -32,7 +33,7 @@ const tiers = [
     name: "Professional",
     price: "R599",
     period: "/ month",
-    description: "For growing businesses that want real insights.",
+    description: "For growing businesses that want to know what's actually working.",
     features: [
       "Everything in Starter",
       "Full business dashboard and analytics",
@@ -40,6 +41,8 @@ const tiers = [
       "Google review request system",
       "Loyalty tiers: New, Regular and VIP clients",
       "Cancellation and retention alerts",
+      "AI-powered add-on suggestions during booking",
+      "Client alerts and blocked client management",
     ],
     notIncluded: [
       "Multiple staff profiles",
@@ -52,12 +55,14 @@ const tiers = [
     name: "Studio",
     price: "R899",
     period: "/ month",
-    description: "For teams and multi-operator setups.",
+    description: "For teams, multi-operator setups and studios running at full capacity.",
     features: [
       "Everything in Professional",
-      "Multiple staff profiles and scheduling",
-      "Stock and inventory management",
+      "Multiple staff profiles and individual scheduling",
+      "Stock and inventory management with low-stock alerts",
+      "Barcode and manual stock scanning",
       "Advanced analytics and booking heatmap",
+      "Google Calendar sync",
       "Priority support",
     ],
     notIncluded: [],
@@ -77,62 +82,75 @@ const comparisonRows: FeatureRow[] = [
   { label: "Online booking page", starter: true, professional: true, studio: true },
   { label: "Service and pricing management", starter: true, professional: true, studio: true },
   { label: "Availability calendar", starter: true, professional: true, studio: true },
-  { label: "Deposit and payment collection", starter: true, professional: true, studio: true },
-  { label: "Client capture and booking history", starter: true, professional: true, studio: true },
+  { label: "Deposit and payment collection (Yoco)", starter: true, professional: true, studio: true },
+  { label: "Client profiles and booking history", starter: true, professional: true, studio: true },
   { label: "Email confirmations and reminders", starter: true, professional: true, studio: true },
+  { label: "WhatsApp reminder messages", starter: true, professional: true, studio: true },
   { label: "Business dashboard and analytics", starter: false, professional: true, studio: true },
   { label: "Revenue trends and graphs", starter: false, professional: true, studio: true },
-  { label: "Client source tracking", starter: false, professional: true, studio: true },
+  { label: "Client source tracking (TikTok, Instagram, Google)", starter: false, professional: true, studio: true },
   { label: "Loyalty tiers (New / Regular / VIP)", starter: false, professional: true, studio: true },
   { label: "Google review request system", starter: false, professional: true, studio: true },
   { label: "Cancellation and retention alerts", starter: false, professional: true, studio: true },
+  { label: "AI-powered add-on suggestions", starter: false, professional: true, studio: true },
+  { label: "Client alerts and blocked client management", starter: false, professional: true, studio: true },
   { label: "Multiple staff profiles", starter: false, professional: false, studio: true },
   { label: "Stock and inventory management", starter: false, professional: false, studio: true },
-  { label: "Advanced analytics and heatmap", starter: false, professional: false, studio: true },
+  { label: "Barcode and manual stock scanning", starter: false, professional: false, studio: true },
+  { label: "Google Calendar sync", starter: false, professional: false, studio: true },
+  { label: "Advanced analytics and booking heatmap", starter: false, professional: false, studio: true },
   { label: "Priority support", starter: false, professional: false, studio: true },
 ];
 
 const faqs = [
   {
     q: "What happens during the 30-day free trial?",
-    a: "You get full access to the plan you choose. During this time, NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised growth strategies waiting for you.",
+    a: "You get full access to the plan you choose. During this time, NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised insights waiting for you.",
   },
   {
-    q: "Do I need payment to start?",
-    a: "No. Sign up is completely free. No payment is required to start your 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
+    q: "Do I need a card to start?",
+    a: "No. Sign up is completely free. No payment required to start your 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
   },
   {
     q: "Is there a contract or lock-in?",
-    a: "No. NextSlot is month-to-month. You can cancel anytime from your dashboard. No hidden fees, no early exit penalties.",
+    a: "None. NextSlot is month-to-month. Cancel anytime from your dashboard. No hidden fees, no exit penalties, no awkward phone calls.",
   },
   {
     q: "How long does setup take?",
-    a: "Most businesses are live within 20 minutes. You add your services, set your availability, connect your payment gateway, and share your booking link. That is it.",
+    a: "Most businesses are live within 20 minutes. Add your services, set your availability, connect Yoco, and share your booking link. That is it. No developer needed.",
   },
   {
-    q: "What payment gateway is used?",
-    a: "NextSlot integrates with Yoco, which is trusted by over 200,000 South African businesses. Your clients pay by card at booking. Deposits are collected automatically.",
+    q: "Which payment gateway does NextSlot use?",
+    a: "NextSlot integrates with Yoco, trusted by over 200 000 South African businesses. Clients pay by card at the time of booking. Deposits are collected automatically, no EFT proof-of-payment chasing required.",
   },
   {
     q: "What is client source tracking?",
-    a: "When clients book, they indicate how they found you: TikTok, Instagram, Google, WhatsApp, or referral. Your dashboard shows which channels drive the most bookings so you know where to focus your marketing.",
+    a: "When a client books, they tell you how they found you: TikTok, Instagram, Google, WhatsApp, or referral. Your dashboard shows which channels are actually converting so you know exactly where to focus your time and money.",
   },
   {
     q: "Can I upgrade or downgrade my plan?",
-    a: "Yes. You can change your plan at any time from your account settings. Upgrades take effect immediately. Downgrades apply at the start of the next billing cycle.",
+    a: "Yes. Change your plan anytime from your account settings. Upgrades apply immediately. Downgrades take effect at the start of your next billing cycle.",
   },
   {
     q: "What happens if a client does not pay the deposit?",
-    a: "The booking is not confirmed until the deposit is paid. This removes the manual back-and-forth of chasing payment and eliminates unconfirmed slots from taking up your calendar.",
+    a: "The booking is not confirmed until the deposit is paid. No manual follow-up, no guessing if they are serious. Your calendar only fills with clients who have committed.",
+  },
+  {
+    q: "What is the AI add-on suggestion feature?",
+    a: "During the booking flow, NextSlot can suggest relevant add-on services based on what the client is booking. It is a passive upsell that increases your average booking value without any extra effort from you.",
+  },
+  {
+    q: "Can I block a client?",
+    a: "Yes. On the Professional and Studio plans you can block a client with a reason attached. Blocked clients cannot make a new booking. You stay in control of who walks through your door.",
   },
 ];
 
 const trialBuilds = [
-  "Know which channel drives your bookings",
-  "See which services generate the most revenue per hour",
-  "Identify your fastest-filling time slots",
-  "Spot clients who have not rebooked",
-  "Get a growth strategy built from your real data",
+  "See which channel is actually driving your bookings",
+  "Know which services generate the most revenue per hour",
+  "Spot your fastest-filling slots and your dead zones",
+  "Identify clients who have gone quiet and need a nudge",
+  "Get a growth strategy built from your real data, not generic advice",
 ];
 
 type TenantPlan = "starter" | "professional" | "studio";
@@ -294,14 +312,14 @@ const Pricing = () => {
               <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.08] mb-5">
                 Try it free.
                 <br />
-                <span style={{ color: "hsl(var(--accent))" }}>No payment required.</span>
+                <span style={{ color: "hsl(var(--accent))" }}>See if it earns its keep.</span>
               </h1>
               <p
                 className="text-base leading-relaxed max-w-md mb-8"
                 style={{ color: "hsl(var(--muted-foreground))" }}
               >
-                Sign up, run your bookings, and let NextSlot learn how your business works.
-                After 30 days, pick the plan that fits. Starter from R399 per month.
+                Run your bookings for 30 days. Let NextSlot learn your business.
+                Then decide which plan fits. No card. No pressure. Starter from R399 per month.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 {pricingMode === "manage" ? (
@@ -371,7 +389,7 @@ const Pricing = () => {
               )}
               {loadingTenantContext && (
                 <p className="text-xs mt-3" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  Checking your account…
+                  Checking your account...
                 </p>
               )}
             </div>
@@ -433,7 +451,7 @@ const Pricing = () => {
             {[
               { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
               { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
-              { num: "03", label: "Get your strategy", sub: "Personalised insights after 30 days." },
+              { num: "03", label: "Get your strategy", sub: "Personalised insights ready when your trial ends." },
             ].map((step) => (
               <div key={step.num} className="flex flex-col items-center gap-2 p-5 rounded-2xl border border-border/60 bg-secondary/20">
                 <span className="text-xs font-bold text-accent tracking-widest">{step.num}</span>
@@ -560,7 +578,7 @@ const Pricing = () => {
                               : isUpgrade
                               ? "Upgrade request will be recorded for billing."
                               : isDowngrade
-                              ? "Downgrade request will be recorded for the next billing cycle."
+                              ? "Downgrade applies at the start of your next billing cycle."
                               : "Select the plan you want to move to."}
                           </p>
                         </>
@@ -618,7 +636,7 @@ const Pricing = () => {
           <div className="max-w-4xl mx-auto mt-6 border border-border rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-4 gradient-surface shadow-soft">
             <div>
               <h3 className="text-lg font-semibold mb-1">Enterprise</h3>
-              <p className="text-sm text-muted-foreground">For multi-location businesses, franchise brands, and white label infrastructure.</p>
+              <p className="text-sm text-muted-foreground">For multi-location businesses, franchise brands, and white-label infrastructure. Custom pricing, dedicated support, and a setup built around your operation.</p>
             </div>
             <Link
               to="/contact"
@@ -669,23 +687,24 @@ const Pricing = () => {
           )}
         </section>
 
-        <section className="pb-20 md:pb-24 max-w-3xl mx-auto">
+        <section className="pb-20 md:pb-24 max-w-4xl mx-auto">
           <div className="rounded-2xl border border-accent/25 bg-accent/5 px-8 py-10">
             <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">What your 30-day trial actually builds</p>
             <h2 className="text-2xl font-semibold tracking-tight mb-3">
               Your data. Your strategy.
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              Most booking tools just store appointments. NextSlot uses your first 30 days to understand your business:
-              when demand peaks, where clients come from, which services drive the most revenue, and which time slots go to waste.
-              By the time your trial ends, your dashboard is already working as a business advisor.
+              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business:
+              when demand peaks, where clients find you, which services drive the most revenue per hour, and
+              which time slots go to waste. By the time your trial ends, your dashboard is already working
+              as your business advisor.
             </p>
             <ul className="space-y-3">
               {[
-                "Know which channel (TikTok, Instagram, Google) drives your bookings",
-                "See which services generate the most revenue per hour",
-                "Identify your fastest-filling time slots and your dead zones",
-                "Spot clients who have not rebooked and need a follow-up",
+                "Know which channel (TikTok, Instagram, Google) is actually sending you clients",
+                "See which services generate the most revenue per hour worked",
+                "Identify your fastest-filling slots and the dead zones costing you money",
+                "Spot clients who have gone quiet and need a re-engagement nudge",
                 "Get growth strategies built from your actual data, not generic advice",
               ].map((point) => (
                 <li key={point} className="flex items-start gap-3 text-sm">
@@ -728,11 +747,11 @@ const Pricing = () => {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">30 days free. No card needed.</p>
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Start free. Let your data do the work.
+            Start free. Let your data do the talking.
           </h2>
           <p className="text-primary-foreground/70 text-base max-w-md mx-auto">
             Sign up in minutes. Your first 30 days are completely free.
-            NextSlot learns your business patterns and delivers a personalised growth strategy built on your real data.
+            NextSlot maps your business patterns and delivers personalised growth insights built on your real numbers.
           </p>
           {pricingMode === "manage" ? (
             <a
