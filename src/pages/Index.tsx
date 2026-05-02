@@ -2,9 +2,8 @@ import { useState, lazy, Suspense } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import {
-  ArrowRight, Play, TrendingUp, TrendingDown, Users, MapPin, Check,
-  EyeOff, Coins, HelpCircle,
-  Clock, Shield, MapPinned, Zap, CalendarX,
+  ArrowRight, Play, Check,
+  Clock, Shield, MapPinned, Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -13,48 +12,7 @@ const DashboardPreview = lazy(() => import("@/components/site/DashboardPreview")
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1400&q=80";
 
-const HOW_IMAGE =
-  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80";
-
 const GOLD = "hsl(38 40% 58%)";
-const RED  = "hsl(0 72% 51%)";
-
-const cardBase: React.CSSProperties = {
-  border: "1px solid hsl(38 40% 58% / 0.55)",
-  boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10), 0 8px 28px hsl(0 0% 0% / 0.06)",
-  transition: "box-shadow 0.2s, transform 0.2s",
-};
-const cardHover = (el: HTMLDivElement) => {
-  el.style.boxShadow = "0 8px 24px hsl(38 40% 58% / 0.22), 0 20px 48px hsl(0 0% 0% / 0.10)";
-  el.style.transform = "translateY(-4px)";
-};
-const cardLeave = (el: HTMLDivElement) => {
-  el.style.boxShadow = cardBase.boxShadow as string;
-  el.style.transform = "translateY(0)";
-};
-
-const painPoints = [
-  {
-    Icon: EyeOff,
-    heading: "You're making decisions blind",
-    body: "You don't know what's driving revenue, so you keep repeating what might not be working.",
-  },
-  {
-    Icon: Coins,
-    heading: "Chasing deposits is eating your time",
-    body: "Sending banking details, waiting for proof of payment, following up. Every single booking.",
-  },
-  {
-    Icon: TrendingDown,
-    heading: "Your schedule looks full. Your income isn't stable.",
-    body: "Gaps, cancellations, and no-shows quietly drain your revenue while you're too busy to notice.",
-  },
-  {
-    Icon: HelpCircle,
-    heading: "Your best marketing channel is a guess",
-    body: "You're spending time and money on Instagram, TikTok, Google but you have no idea which one actually works.",
-  },
-];
 
 const trustBadges = [
   { Icon: Clock,     label: "Try free for 30 days. No card required." },
@@ -77,7 +35,7 @@ const howSteps = [
   {
     num: "03",
     title: "Start seeing patterns",
-    desc: "You'll know what's working, what's not, and what to do next. Most businesses get their first booking within hours.",
+    desc: "You'll know what's working, what's not, and what to do next.",
   },
 ];
 
@@ -90,7 +48,7 @@ const Index = () => {
 
       <main>
 
-        {/* HERO */}
+        {/* ─── SECTION 1: HERO ─── */}
         <section className="relative min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
@@ -123,7 +81,7 @@ const Index = () => {
                 </h1>
 
                 <p className="text-lg text-muted-foreground max-w-xl">
-                  NextSlot shows you exactly where your bookings, revenue, and best clients come from so you can stop guessing and start growing.
+                  NextSlot shows you exactly where your bookings, revenue, and best clients come from — so you can stop guessing and start growing.
                 </p>
 
                 <p className="text-sm font-medium" style={{ color: GOLD }}>
@@ -192,7 +150,38 @@ const Index = () => {
           </div>
         </section>
 
-        {/* DASHBOARD */}
+        {/* ─── SECTION 2: THE FREEDOM TRAP ─── */}
+        <section
+          className="py-20 px-6"
+          style={{ background: "hsl(220 20% 6%)" }}
+        >
+          <div className="max-w-3xl mx-auto space-y-8 text-center">
+
+            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
+              The truth nobody talks about
+            </p>
+
+            <h2 className="text-2xl md:text-3xl font-semibold text-white leading-snug">
+              You left to have freedom.<br />
+              Nobody warned you about the prison you build without systems.
+            </h2>
+
+            <div className="space-y-5 text-left max-w-2xl mx-auto">
+              <p className="text-white/65 text-base leading-relaxed">
+                If your business runs on manual effort — WhatsApp bookings, chasing deposits, gut-feel decisions — you're not building a business. You're building a job that follows you home. No off switch. No family time. No rest.
+              </p>
+              <p className="text-white/65 text-base leading-relaxed">
+                Your clients don't pay you to be a booking clerk. They pay you for the experience. When admin steals your energy, you can't show up the way they signed up for.
+              </p>
+              <p className="text-white/80 text-base leading-relaxed font-medium">
+                The difference between a business that gives you freedom and one that owns you isn't your talent. It's whether your system can run without you carrying it every single day.
+              </p>
+            </div>
+
+          </div>
+        </section>
+
+        {/* ─── SECTION 3: DASHBOARD (visual proof) ─── */}
         <section className="px-6 pb-24 pt-16">
           <div className="max-w-5xl mx-auto text-center space-y-6">
 
@@ -240,247 +229,143 @@ const Index = () => {
               <DashboardPreview onLoad={() => setLoaded(true)} />
             </Suspense>
 
-            <p className="text-xs text-muted-foreground pt-2">
-              Built for service businesses like yours.
-            </p>
-
           </div>
         </section>
 
-        {/* PAIN POINTS */}
-        <section
-          className="py-20 px-6"
-          style={{ background: "hsl(220 20% 6%)" }}
-        >
-          <div className="max-w-4xl mx-auto space-y-8">
-
-            <div className="text-center space-y-3">
-              <h2 className="text-2xl md:text-3xl font-semibold text-white">
-                You're not disorganized. You're operating without a system.
-              </h2>
-              <p className="text-white/50 text-sm max-w-md mx-auto">
-                And it's costing you money every single week.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {painPoints.map(({ Icon, heading, body }) => (
-                <div
-                  key={heading}
-                  className="rounded-2xl p-5 flex flex-col gap-3"
-                  style={{
-                    background: "hsl(0 0% 100% / 0.03)",
-                    border: "1px solid hsl(0 72% 51% / 0.25)",
-                    boxShadow: "0 4px 20px hsl(0 72% 51% / 0.08)",
-                  }}
-                >
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                    style={{
-                      background: "hsl(0 72% 51% / 0.12)",
-                      border: "1px solid hsl(0 72% 51% / 0.25)",
-                    }}
-                  >
-                    <Icon className="h-[18px] w-[18px]" style={{ color: RED }} strokeWidth={1.75} />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white/90 leading-snug">{heading}</h3>
-                  <p className="text-xs text-white/45 leading-relaxed">{body}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-center pt-2">
-              <p className="flex items-center gap-2 text-sm font-medium text-white/70">
-                <Check className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
-                NextSlot replaces all of this with one clear system.
-              </p>
-            </div>
-
-          </div>
-        </section>
-
-        {/* JUST STARTING OUT */}
-        <section className="py-16 px-6">
-          <div className="max-w-2xl mx-auto">
-            <div
-              className="pl-6 py-1"
-              style={{ borderLeft: `3px solid ${GOLD}` }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: GOLD }}>
-                Just starting out?
-              </p>
-              <p className="text-base leading-relaxed text-foreground/80 mb-4">
-                Every booking you take without a system is a habit that becomes a problem. The chaos doesn't arrive all at once. It builds quietly while you're busy being brilliant at what you do.
-              </p>
-              <p className="text-base leading-relaxed text-foreground/80">
-                The operators who scale cleanly are never the most talented ones in the room. They're the ones who set up the system before they needed it.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* REFRAME */}
-        <section className="py-20 px-6">
-          <div className="max-w-4xl mx-auto text-center space-y-5">
-
-            <p className="text-sm text-muted-foreground">
-              Most booking apps help you stay organized.
-            </p>
-
-            <h2 className="text-3xl md:text-4xl font-semibold" style={{ color: GOLD }}>
-              NextSlot shows you how to grow.
-            </h2>
-
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Not just bookings. Not just data.
-              <br />
-              Clear direction on what to do next.
-            </p>
-
-            <p className="text-sm font-medium text-foreground/60 pt-2">
-              Built for service businesses like yours: hair, beauty, wellness, and beyond.
-            </p>
-
-          </div>
-        </section>
-
-        {/* VALUE CARDS */}
+        {/* ─── SECTION 4: TWO TRUTHS, ONE SYSTEM ─── */}
         <section className="py-20 px-6 bg-secondary/30">
-          <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
+          <div className="max-w-4xl mx-auto space-y-10">
 
-            {[
-              {
-                Icon: TrendingUp,
-                title: "See exactly what makes you money",
-                body: "Instantly identify your highest-performing services and the bookings that drive the most revenue per hour.",
-              },
-              {
-                Icon: Users,
-                title: "Know who spends the most",
-                body: "Understand your best clients and learn how to get more people exactly like them.",
-              },
-              {
-                Icon: MapPin,
-                title: "Stop wasting money on marketing",
-                body: "Track where your bookings actually come from. Double down on what works. Cut what doesn't.",
-              },
-            ].map(({ Icon, title, body }) => (
+            <div className="text-center space-y-2">
+              <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
+                Wherever you are in the journey
+              </p>
+              <h2 className="text-2xl md:text-3xl font-semibold">
+                NextSlot meets you where you are.
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-white/10">
+
+              {/* Left — Established operator */}
               <div
-                key={title}
-                className="p-6 rounded-2xl bg-background"
-                style={{ ...cardBase }}
-                onMouseEnter={e => cardHover(e.currentTarget as HTMLDivElement)}
-                onMouseLeave={e => cardLeave(e.currentTarget as HTMLDivElement)}
+                className="p-8 space-y-4"
+                style={{ background: "hsl(220 20% 8%)" }}
               >
-                <Icon className="mb-4 text-accent" />
-                <h3 className="font-semibold mb-2">{title}</h3>
-                <p className="text-sm text-muted-foreground">{body}</p>
-              </div>
-            ))}
-
-          </div>
-        </section>
-
-        {/* HOW IT WORKS */}
-        <section className="py-20 px-6 overflow-hidden">
-          <div className="max-w-6xl mx-auto">
-
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-
-              <div className="space-y-10">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>Simple by design</p>
-                  <h2 className="text-3xl font-semibold leading-tight">How it works</h2>
-                  <p className="text-muted-foreground text-sm max-w-sm">
-                    From signup to your first automated booking in under 10 minutes.
-                  </p>
-                </div>
-
-                <ol className="space-y-8">
-                  {howSteps.map((step, i) => (
-                    <li key={step.num} className="flex gap-5">
-                      <div className="shrink-0 flex flex-col items-center">
-                        <div
-                          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
-                          style={{
-                            background: "hsl(38 40% 58% / 0.12)",
-                            border: "1.5px solid hsl(38 40% 58% / 0.45)",
-                            color: GOLD,
-                          }}
-                        >
-                          {step.num}
-                        </div>
-                        {i < howSteps.length - 1 && (
-                          <div
-                            className="w-px flex-1 mt-2"
-                            style={{ background: "hsl(38 40% 58% / 0.20)", minHeight: "32px" }}
-                          />
-                        )}
-                      </div>
-                      <div className="pb-2">
-                        <h3 className="font-semibold mb-1">{step.title}</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-
-                <div
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm"
-                  style={{
-                    background: "hsl(38 40% 58% / 0.08)",
-                    border: "1px solid hsl(38 40% 58% / 0.25)",
-                  }}
-                >
-                  <Zap className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
-                  <span className="text-muted-foreground">
-                    Most businesses get their first booking <strong className="text-foreground">within hours</strong>
-                  </span>
-                </div>
-
-                <Link
-                  to="/onboarding"
-                  className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
-                  style={{ color: GOLD }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.75"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                >
-                  Start free in under 10 minutes
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                <p className="text-xs uppercase tracking-widest font-bold text-white/40">
+                  Already running a business?
+                </p>
+                <p className="text-white/80 text-base leading-relaxed">
+                  The chaos doesn't go away on its own. But once you can see your business clearly — what's working, what's costing you, who your best clients are — the decisions become obvious.
+                </p>
+                <p className="text-white/50 text-sm leading-relaxed">
+                  A system isn't the opposite of connection. It gives you back your Mondays — time to check in on loyal clients, to show up fully in every session, to protect the thing your clients actually came for.
+                </p>
+                <p className="text-sm font-semibold" style={{ color: GOLD }}>
+                  Stop being the clerk. Go back to being the expert.
+                </p>
               </div>
 
-              <div className="relative rounded-2xl overflow-hidden aspect-[4/5] md:aspect-auto md:h-[500px] shadow-2xl">
-                <img
-                  src={HOW_IMAGE}
-                  alt="Business owner reviewing their booking dashboard"
-                  decoding="async"
-                  className="w-full h-full object-cover object-center"
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: "linear-gradient(to top, hsl(var(--background)/0.75) 0%, transparent 55%)",
-                  }}
-                />
-                <div
-                  className="absolute bottom-5 left-5 right-5 rounded-xl px-5 py-4"
-                  style={{
-                    background: "hsl(var(--background)/0.88)",
-                    border: "1px solid hsl(38 40% 58% / 0.30)",
-                    backdropFilter: "blur(12px)",
-                  }}
-                >
-                  <p className="text-xs text-muted-foreground mb-0.5">Time from signup to first booking</p>
-                  <p className="text-2xl font-bold" style={{ color: GOLD }}>Under 10 min</p>
-                </div>
+              {/* Divider */}
+              <div className="hidden md:block absolute inset-y-0 left-1/2 w-px bg-white/10" aria-hidden="true" />
+
+              {/* Right — New starter */}
+              <div
+                className="p-8 space-y-4"
+                style={{ background: "hsl(220 20% 5%)" }}
+              >
+                <p className="text-xs uppercase tracking-widest font-bold text-white/40">
+                  Just getting started?
+                </p>
+                <p className="text-white/80 text-base leading-relaxed">
+                  Every booking you take without a system is a habit that becomes a problem. The chaos doesn't arrive all at once. It builds quietly while you're busy being brilliant at what you do.
+                </p>
+                <p className="text-white/50 text-sm leading-relaxed">
+                  The operators who scale cleanly are never the most talented ones in the room. They're the ones who set up the foundation before they needed it.
+                </p>
+                <p className="text-sm font-semibold" style={{ color: GOLD }}>
+                  Build it right from day one.
+                </p>
               </div>
 
             </div>
+
+            {/* Shared CTA beneath both */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+              <Link
+                to="/onboarding"
+                className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                style={{
+                  background: "hsl(var(--foreground))",
+                  color: "hsl(var(--background))",
+                  boxShadow: "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow =
+                    "0 0 0 1px hsl(38 40% 58% / 0.55), 0 6px 20px -2px hsl(38 40% 58% / 0.40)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow =
+                    "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)";
+                }}
+              >
+                Start free — 30 days, no card required
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
           </div>
         </section>
 
-        {/* CASE STUDY */}
+        {/* ─── SECTION 5: HOW IT WORKS ─── */}
+        <section className="py-20 px-6">
+          <div className="max-w-2xl mx-auto space-y-10">
+
+            <div className="space-y-2 text-center">
+              <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>Simple by design</p>
+              <h2 className="text-2xl md:text-3xl font-semibold leading-tight">How it works</h2>
+              <p className="text-muted-foreground text-sm">
+                From signup to your first automated booking in under 10 minutes.
+              </p>
+            </div>
+
+            <ol className="space-y-8">
+              {howSteps.map((step, i) => (
+                <li key={step.num} className="flex gap-5">
+                  <div className="shrink-0 flex flex-col items-center">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
+                      style={{
+                        background: "hsl(38 40% 58% / 0.12)",
+                        border: "1.5px solid hsl(38 40% 58% / 0.45)",
+                        color: GOLD,
+                      }}
+                    >
+                      {step.num}
+                    </div>
+                    {i < howSteps.length - 1 && (
+                      <div
+                        className="w-px flex-1 mt-2"
+                        style={{ background: "hsl(38 40% 58% / 0.20)", minHeight: "32px" }}
+                      />
+                    )}
+                  </div>
+                  <div className="pb-2">
+                    <h3 className="font-semibold mb-1">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <p className="text-center text-sm text-muted-foreground italic">
+              Most businesses get their first booking within hours. Then they wonder why they waited.
+            </p>
+
+          </div>
+        </section>
+
+        {/* ─── SECTION 6: PROOF + FINAL CTA ─── */}
         <section className="py-20 px-6 bg-secondary/20">
           <div className="max-w-4xl mx-auto space-y-10 text-center">
 
@@ -492,17 +377,14 @@ const Index = () => {
               What happens in the first 30 days
             </h2>
 
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              This is exactly what happens when a service business switches to NextSlot.
-            </p>
-
             <div className="grid md:grid-cols-2 gap-6 text-left">
 
               <div
                 className="p-6 rounded-2xl bg-background"
-                style={{ ...cardBase }}
-                onMouseEnter={e => cardHover(e.currentTarget as HTMLDivElement)}
-                onMouseLeave={e => cardLeave(e.currentTarget as HTMLDivElement)}
+                style={{
+                  border: "1px solid hsl(38 40% 58% / 0.55)",
+                  boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10)",
+                }}
               >
                 <h3 className="font-semibold mb-4 text-sm text-muted-foreground uppercase tracking-wider">
                   Before NextSlot
@@ -520,67 +402,52 @@ const Index = () => {
                 style={{
                   background: "hsl(38 40% 58% / 0.07)",
                   border: "1.5px solid hsl(38 40% 58% / 0.75)",
-                  boxShadow: "0 4px 24px hsl(38 40% 58% / 0.18), 0 12px 40px hsl(0 0% 0% / 0.08)",
-                  transition: "box-shadow 0.2s, transform 0.2s",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 36px hsl(38 40% 58% / 0.32), 0 20px 52px hsl(0 0% 0% / 0.12)";
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 24px hsl(38 40% 58% / 0.18), 0 12px 40px hsl(0 0% 0% / 0.08)";
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                  boxShadow: "0 4px 24px hsl(38 40% 58% / 0.18)",
                 }}
               >
                 <h3 className="font-bold mb-4 text-sm uppercase tracking-wider" style={{ color: GOLD }}>
                   After 30 Days
                 </h3>
                 <ul className="space-y-3 text-sm font-medium">
-                  <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
-                    Clients book and pay automatically
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
-                    Dashboard shows exactly where revenue comes from
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
-                    Top services identified instantly
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
-                    Clear next steps, every single week
-                  </li>
+                  {[
+                    "Clients book and pay automatically",
+                    "Dashboard shows exactly where revenue comes from",
+                    "Top services identified instantly",
+                    "Clear next steps, every single week",
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
+                      {item}
+                    </li>
+                  ))}
                 </ul>
               </div>
 
             </div>
 
-            <div className="py-4">
-              <div
-                className="mx-auto max-w-xl py-8 px-6 rounded-2xl text-center"
-                style={{
-                  background: "hsl(38 40% 58% / 0.06)",
-                  border: "1px solid hsl(38 40% 58% / 0.25)",
-                }}
-              >
-                <div className="flex justify-center mb-4">
-                  <div className="h-px w-10" style={{ background: GOLD }} />
-                </div>
-                <p className="text-xl sm:text-2xl font-semibold leading-snug italic">
-                  "For the first time, the business felt like it was running itself."
-                </p>
-                <p className="mt-4 text-sm font-medium" style={{ color: GOLD }}>
-                  PhenomeBeauty, Cape Town
-                </p>
-                <div className="flex justify-center mt-4">
-                  <div className="h-px w-10" style={{ background: GOLD }} />
-                </div>
+            {/* Quote */}
+            <div
+              className="mx-auto max-w-xl py-8 px-6 rounded-2xl text-center"
+              style={{
+                background: "hsl(38 40% 58% / 0.06)",
+                border: "1px solid hsl(38 40% 58% / 0.25)",
+              }}
+            >
+              <div className="flex justify-center mb-4">
+                <div className="h-px w-10" style={{ background: GOLD }} />
+              </div>
+              <p className="text-xl sm:text-2xl font-semibold leading-snug italic">
+                "For the first time, the business felt like it was running itself."
+              </p>
+              <p className="mt-4 text-sm font-medium" style={{ color: GOLD }}>
+                PhenomeBeauty, Cape Town
+              </p>
+              <div className="flex justify-center mt-4">
+                <div className="h-px w-10" style={{ background: GOLD }} />
               </div>
             </div>
 
-            <div className="pt-2">
+            <div>
               <Link
                 to="/case-study/phenomebeauty"
                 className="group inline-flex flex-col items-center gap-1 rounded-2xl px-8 py-5 text-center transition-all duration-200 hover:scale-[1.02]"
@@ -610,23 +477,24 @@ const Index = () => {
           </div>
         </section>
 
-        {/* FINAL CTA */}
+        {/* ─── FINAL CTA ─── */}
         <section className="py-24 px-6 bg-black text-white text-center">
           <div className="max-w-2xl mx-auto space-y-6">
 
             <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
-              From "I hope this works" to "I know what's working"
+              Stop being the clerk. Go back to being the expert.
             </p>
 
             <h2 className="text-3xl md:text-4xl font-semibold">
-              Stop running your business on guesswork.
+              Your clients pay you for the experience.<br />
+              <span className="text-white/50">Not the admin.</span>
             </h2>
 
-            <p className="text-white/60">
-              Start seeing what actually drives your growth.
+            <p className="text-white/60 max-w-lg mx-auto">
+              A system isn't the opposite of connection. It gives you back the time to be human — to check in on loyal clients, to show up fully in every session, to protect the legacy you've built.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
               <Link
                 to="/onboarding"
                 className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-8 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
