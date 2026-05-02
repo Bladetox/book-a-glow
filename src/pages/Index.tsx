@@ -299,6 +299,26 @@ const Index = () => {
           </div>
         </section>
 
+        {/* JUST STARTING OUT */}
+        <section className="py-16 px-6">
+          <div className="max-w-2xl mx-auto">
+            <div
+              className="pl-6 py-1"
+              style={{ borderLeft: `3px solid ${GOLD}` }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: GOLD }}>
+                Just starting out?
+              </p>
+              <p className="text-base leading-relaxed text-foreground/80 mb-4">
+                Every booking you take without a system is a habit that becomes a problem. The chaos doesn't arrive all at once. It builds quietly while you're busy being brilliant at what you do.
+              </p>
+              <p className="text-base leading-relaxed text-foreground/80">
+                The operators who scale cleanly are never the most talented ones in the room. They're the ones who set up the system before they needed it.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* REFRAME */}
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto text-center space-y-5">
