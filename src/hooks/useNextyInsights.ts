@@ -775,4 +775,21 @@ export function useNextyInsights() {
               `In the South African market, Google reviews are the primary trust signal for a service that new clients cannot preview before paying a deposit. ` +
               `After every completed session, send a personal WhatsApp with your Google review link. ` +
               `A message from you directly converts at a significantly higher rate than an automated link in a confirmation email. ` +
-              `One review per week compo
+              `One review per week compounds into a competitive advantage that is very difficult for other operators to close.`,
+            actionLabel: "View Clients",
+            actionView: "Client Management",
+          });
+        }
+      }
+
+      // Sort: critical -> important -> info
+      const priorityMap: Record<InsightPriority, number> = {
+        critical: 0,
+        important: 1,
+        info: 2,
+      };
+      return insights.sort((a, b) => priorityMap[a.priority] - priorityMap[b.priority]);
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
