@@ -55,6 +55,8 @@ const PRIORITY_STYLES: Record<string, { label: string; dot: string; iconBg: stri
   info:      { label: "Info",      dot: "#60a5fa", iconBg: "rgba(96,165,250,0.08)",  iconColor: "#60a5fa" },
 };
 
+const MAX_CARDS = 4;
+
 // -- Counter animation hook ---------------------------------------------------
 function useCounter(target: number, run: boolean) {
   const [value, setValue] = useState(0);
@@ -81,6 +83,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const [showCards,    setShowCards]    = useState(false);
   const [isRescanning, setIsRescanning] = useState(false);
   const [dismissed,    setDismissed]    = useState<Set<string>>(new Set());
+  const [expanded,     setExpanded]     = useState<Set<string>>(new Set());
 
   const persistAction = async (insightId: string, actionType: "dismissed" | "actioned") => {
     const now     = new Date();
@@ -122,6 +125,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
     setIsRescanning(true);
     setShowCards(false);
     setDismissed(new Set()); // DB expires_at handles server-side suppression
+    setExpanded(new Set());
     await refetch();
     setTimeout(() => {
       setIsRescanning(false);
@@ -146,6 +150,8 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const filtered = activeFilter === "all"
     ? allInsights
     : allInsights.filter(i => getFilterKey(i) === activeFilter);
+
+  const limited = filtered.slice(0, MAX_CARDS);
 
   // -- Style tokens -----------------------------------------------------------
   const S = {
@@ -296,11 +302,8 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             fontSize: 13, color: S.muted, lineHeight: 1.65,
           }}
         >
-          I've analysed your business data across{" "}
-          <strong style={{ color: S.text, fontWeight: 500 }}>
-            bookings, services, clients, stock, availability and loyalty
-          </strong>
-          . Here are the highest-impact opportunities found, sorted by potential revenue.
+          Here are the most important moves for your business right now.
+          Start with the first card – each one is a single action you can take this week.
         </motion.div>
 
         {/* Typing dots */}
@@ -336,8 +339,15 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
 
         {/* Insight Cards */}
         <AnimatePresence>
-          {showCards && !isRescanning && filtered.map((ins, idx) => {
+          {showCards && !isRescanning && limited.map((ins, idx) => {
             const p = PRIORITY_STYLES[ins.priority] ?? PRIORITY_STYLES.info;
+            const isExpanded = expanded.has(ins.id);
+            const previewLimit = 160;
+            const isLong = ins.message.length > previewLimit;
+            const bodyText = isExpanded || !isLong
+              ? ins.message
+              : `${ins.message.slice(0, previewLimit)}…`;
+
             return (
               <motion.div
                 key={ins.id}
@@ -406,7 +416,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                   fontSize: 13, color: S.muted, lineHeight: 1.65,
                   wordBreak: "break-word",
                 }}>
-                  {ins.message}
+                  {bodyText}
                 </div>
 
                 {/* Card Footer */}
@@ -416,21 +426,42 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                   justifyContent: ins.actionLabel ? "space-between" : "flex-end",
                   gap: 4,
                 }}>
-                  {ins.actionLabel && (
-                    <button
-                      onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 6,
-                        padding: "0 12px", minHeight: 44,
-                        background: S.surface2,
-                        border: `1px solid ${S.border2}`, borderRadius: 6,
-                        fontSize: 12, fontWeight: 500, color: S.text, cursor: "pointer",
-                      }}
-                    >
-                      {ins.actionLabel}
-                      <ArrowRight size={11} style={{ color: S.faint }} />
-                    </button>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {ins.actionLabel && (
+                      <button
+                        onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "0 12px", minHeight: 44,
+                          background: S.surface2,
+                          border: `1px solid ${S.border2}`, borderRadius: 6,
+                          fontSize: 12, fontWeight: 500, color: S.text, cursor: "pointer",
+                        }}
+                      >
+                        {ins.actionLabel}
+                        <ArrowRight size={11} style={{ color: S.faint }} />
+                      </button>
+                    )}
+                    {ins.message.length > 160 && (
+                      <button
+                        onClick={() => {
+                          setExpanded(prev => {
+                            const next = new Set(prev);
+                            if (next.has(ins.id)) next.delete(ins.id); else next.add(ins.id);
+                            return next;
+                          });
+                        }}
+                        style={{
+                          fontSize: 11, color: S.faint,
+                          padding: "0 8px", minHeight: 44,
+                          borderRadius: 6, cursor: "pointer", background: "none",
+                          border: "none", display: "flex", alignItems: "center",
+                        }}
+                      >
+                        {isExpanded ? "Show less" : "More details"}
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={() => { setDismissed(prev => new Set(prev).add(ins.id)); persistAction(ins.id, "dismissed"); }}
                     aria-label="Dismiss this insight"
@@ -450,7 +481,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         </AnimatePresence>
 
         {/* Empty state */}
-        {showCards && !isRescanning && filtered.length === 0 && (
+        {showCards && !isRescanning && limited.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
