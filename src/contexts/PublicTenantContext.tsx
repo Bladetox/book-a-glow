@@ -15,6 +15,35 @@ interface PublicTenantData {
 
 const PublicTenantContext = createContext<PublicTenantData | null>(null);
 
+/** Swap every favicon / apple-touch-icon tag to the tenant logo URL. */
+function applyTenantBranding(name: string, logoUrl: string | null) {
+  // Tab title
+  document.title = `${name} | Book Online`;
+
+  if (!logoUrl) return;
+
+  // Helper: find-or-create a <link> by rel + (optional) type
+  const setLink = (rel: string, href: string, type?: string, sizes?: string) => {
+    const selector = type
+      ? `link[rel="${rel}"][type="${type}"]`
+      : `link[rel="${rel}"]`;
+    let el = document.querySelector<HTMLLinkElement>(selector);
+    if (!el) {
+      el = document.createElement("link");
+      el.rel = rel;
+      if (type) el.type = type;
+      if (sizes) el.setAttribute("sizes", sizes);
+      document.head.appendChild(el);
+    }
+    el.href = logoUrl;
+  };
+
+  setLink("icon", logoUrl, "image/png", "96x96");
+  setLink("icon", logoUrl, "image/svg+xml");
+  setLink("shortcut icon", logoUrl);
+  setLink("apple-touch-icon", logoUrl, undefined, "180x180");
+}
+
 export function PublicTenantProvider({ children }: { children: ReactNode }) {
   const resolution = resolveTenantSync();
 
@@ -56,16 +85,19 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             // Don't set notFound — fall back to slug so booking still works
             setState((s) => ({ ...s, loading: false, tenantId: resolution.slug ?? "" }));
           } else {
+            const logoUrl = (data as any).logo_url ?? null;
             setState({
               tenantId: data.id,
               name: data.name,
               ownerId: data.owner_id ?? "",
-              logoUrl: (data as any).logo_url ?? null,
+              logoUrl,
               defaultSubdomain: `${data.id}.nextslot.co.za`,
               customDomain: data.custom_domain ?? null,
               loading: false,
               notFound: false,
             });
+            // Update browser tab + favicon for real users (crawlers handled by middleware)
+            applyTenantBranding(data.name, logoUrl);
           }
         } else if (resolution.isCustomDomain && resolution.customDomainHost) {
           const { data, error } = await supabase
@@ -79,16 +111,18 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             console.error("[PublicTenantContext] custom domain lookup failed:", error?.message);
             setState((s) => ({ ...s, loading: false, notFound: true }));
           } else {
+            const logoUrl = (data as any).logo_url ?? null;
             setState({
               tenantId: data.id,
               name: data.name,
               ownerId: data.owner_id ?? "",
-              logoUrl: (data as any).logo_url ?? null,
+              logoUrl,
               defaultSubdomain: `${data.id}.nextslot.co.za`,
               customDomain: data.custom_domain ?? null,
               loading: false,
               notFound: false,
             });
+            applyTenantBranding(data.name, logoUrl);
           }
         } else {
           setState((s) => ({ ...s, loading: false }));
