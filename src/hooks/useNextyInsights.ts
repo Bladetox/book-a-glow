@@ -218,7 +218,7 @@ export function useNextyInsights() {
       const { data: noShowData } = await supabase.rpc("get_no_show_leakage", {
         p_tenant_id: tenantId,
       });
-      if (noShowData && noShowData[0] && Number(noShowData[0].no_show_count ?? 0) >= NEXTY_THRESHOLDS.minNoShowBookings) {
+      if (noShowData && noShowData[0] && Number(noShowData[0].no_show_count ?? 0) >= NEXTY_THRESHOLDS.minBookingsForNoShow) {
         const d            = noShowData[0];
         const rate         = Number(d.no_show_rate);
         const lost         = Number(d.total_lost_revenue);
@@ -263,7 +263,7 @@ export function useNextyInsights() {
         // Rate <= 5%: healthy record. No card rendered.
       }
 
-      // ... rest of file remains unchanged for now ...
+      // TODO: Re-introduce remaining insights (4-19) with centralised thresholds
 
       // Sort: critical -> important -> info, then by impactRand desc within same priority
       const priorityMap: Record<InsightPriority, number> = {
