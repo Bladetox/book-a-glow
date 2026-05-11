@@ -15,6 +15,35 @@ export interface NextyInsight {
   impactRand?: number;
 }
 
+export type RevenuePerMinuteRow = {
+  service_name: string;
+  revenue_per_minute: number;
+  total_revenue: number;
+  total_minutes: number;
+  booking_count: number;
+};
+
+export type QuietDayRow = {
+  day_of_week: number;
+  day_name: string;
+  booking_count: number;
+  avg_daily_bookings: number;
+  capacity_percentage: number;
+};
+
+export type ChannelRoiRow = {
+  channel: string;
+  booking_count: number;
+  total_revenue: number;
+  avg_basket: number;
+};
+
+export type BasketTrendRow = {
+  week_start: string;
+  avg_basket: number;
+  booking_count: number;
+};
+
 function formatRand(value: number): string {
   return `R${value % 1 === 0
     ? value.toLocaleString("en-ZA")
@@ -62,6 +91,20 @@ export function useNextyInsights() {
         if (!suppressedIds.has(insight.id)) insights.push(insight);
       };
 
+      const computeOverallAvgBasket = (rows: ChannelRoiRow[]): number | null => {
+        if (!rows.length) return null;
+        const totalBookings = rows.reduce(
+          (s, r) => s + Number(r.booking_count ?? 0),
+          0
+        );
+        if (totalBookings === 0) return null;
+        const totalRevenue = rows.reduce(
+          (s, r) => s + Number(r.total_revenue ?? 0),
+          0
+        );
+        return totalRevenue / totalBookings;
+      };
+
       // -- 0. Business Context -----------------------------------------------
       // All advice branches on this: mobile vs fixed, deposits on/off.
       const { data: ctx } = await supabase.rpc("get_nexty_business_context", {
@@ -84,7 +127,7 @@ export function useNextyInsights() {
 
       // -- 1. Revenue Per Minute Audit ----------------------------------------
       // Fires when top service earns more than 2x per minute vs bottom service.
-      const { data: rpm } = await supabase.rpc("get_revenue_per_minute", {
+      const { data: rpm } = await supabase.rpc<RevenuePerMinuteRow>("get_revenue_per_minute", {
         p_tenant_id: tenantId,
       });
       if (rpm && rpm.length > 1) {
@@ -118,7 +161,7 @@ export function useNextyInsights() {
       // -- 2. Quiet Day Audit ------------------------------------------------
       // Fires when the quietest day is below 75% of the busiest day.
       // RPC returns rows ordered quietest first.
-      const { data: quietDays } = await supabase.rpc("get_quiet_day_analysis", {
+      const { data: quietDays } = await supabase.rpc<QuietDayRow>("get_quiet_day_analysis", {
         p_tenant_id: tenantId,
       });
       if (quietDays && quietDays.length > 0) {
@@ -362,15 +405,14 @@ export function useNextyInsights() {
 
       // -- 8. TikTok Channel ROI Signal -------------------------------------
       // Fires when TikTok has bookings but average basket is below overall average.
-      const { data: channelData } = await supabase.rpc("get_channel_roi", {
+      const { data: channelData } = await supabase.rpc<ChannelRoiRow>("get_channel_roi", {
         p_tenant_id: tenantId,
       });
       if (channelData && channelData.length > 0) {
-        const tiktokRow   = channelData.find((r: any) => r.channel === "TikTok");
-        const overallAvg  = channelData.reduce((s: number, r: any) => s + Number(r.total_revenue ?? 0), 0)
-                          / channelData.reduce((s: number, r: any) => s + Number(r.booking_count ?? 0), 0);
+        const tiktokRow   = channelData.find((r) => r.channel === "TikTok");
+        const overallAvg  = computeOverallAvgBasket(channelData);
 
-        if (tiktokRow && Number(tiktokRow.booking_count) >= 5) {
+        if (tiktokRow && overallAvg !== null && Number(tiktokRow.booking_count) >= 5) {
           const tiktokAvg = Number(tiktokRow.avg_basket ?? 0);
           const tiktokCount = Number(tiktokRow.booking_count);
           const tiktokRev = Number(tiktokRow.total_revenue ?? 0);
@@ -436,7 +478,7 @@ export function useNextyInsights() {
         }
       }
 
-            // -- 10. Outside-Settings Regulars ----------------------------------------
+      // -- 10. Outside-Settings Regulars ------------------------------------
       // Clients with 2+ bookings who never book the qualifying service.
       // Named individually so the tenant can act immediately in Loyalty Tracker.
       const { data: outsideData } = await supabase.rpc("get_nexty_outside_candidates", {
@@ -564,44 +606,50 @@ export function useNextyInsights() {
       }
 
       // -- 15. Basket Trend --------------------------------------------------
-      const { data: basketData } = await supabase.rpc("get_basket_trend", { p_tenant_id: tenantId });
+      const { data: basketData } = await supabase.rpc<BasketTrendRow>("get_basket_trend", { p_tenant_id: tenantId });
       if (basketData && basketData.length >= 4) {
-        const weeks = basketData as { week_start: string; avg_basket: number; booking_count: number }[];
-        const recent4  = weeks.slice(-4).map(w => Number(w.avg_basket));
-        const prior4   = weeks.slice(0, Math.max(1, weeks.length - 4)).map(w => Number(w.avg_basket));
-        const recentAvg = recent4.reduce((s, v) => s + v, 0) / recent4.length;
-        const priorAvg  = prior4.reduce((s, v) => s + v, 0) / prior4.length;
-        const change    = ((recentAvg - priorAvg) / priorAvg) * 100;
+        const weeks = basketData as BasketTrendRow[];
+        const recent = weeks.slice(-4).map((w) => Number(w.avg_basket));
+        const prior  = weeks.slice(0, weeks.length - 4).map((w) => Number(w.avg_basket));
 
-        if (change < -10) {
-          push({
-            id: "basket_trend_declining",
-            type: "growth",
-            priority: change < -20 ? "important" : "info",
-            title: "Average Basket Is Declining",
-            message:
-              `Your average booking value has dropped ${Math.abs(Math.round(change))}% over the past 4 weeks ` +
-              `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
-              `This typically happens when new clients book entry-level services or add-on suggestions are not being offered. ` +
-              `For every booking that includes a combo service, the average ticket is materially higher. ` +
-              `Go to Settings and review your suggested add-ons to ensure the most relevant pairings are configured.`,
-            actionLabel: "Open Settings",
-            actionView: "Business",
-          });
-        } else if (change > 15 && recentAvg > 500) {
-          push({
-            id: "basket_trend_growing",
-            type: "growth",
-            priority: "info",
-            title: "Basket Size Is Growing",
-            message:
-              `Your average booking value has increased ${Math.round(change)}% over the past 4 weeks ` +
-              `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
-              `This is a strong signal that upsell or combo bookings are working. ` +
-              `Keep the momentum: promote your highest-value service combinations in your next content post.`,
-            actionLabel: "View Services",
-            actionView: "Services",
-          });
+        if (recent.length > 0 && prior.length > 0) {
+          const recentAvg = recent.reduce((s, v) => s + v, 0) / recent.length;
+          const priorAvg  = prior.reduce((s, v) => s + v, 0) / prior.length;
+
+          if (priorAvg > 0) {
+            const change    = ((recentAvg - priorAvg) / priorAvg) * 100;
+
+            if (change < -10) {
+              push({
+                id: "basket_trend_declining",
+                type: "growth",
+                priority: change < -20 ? "important" : "info",
+                title: "Average Basket Is Declining",
+                message:
+                  `Your average booking value has dropped ${Math.abs(Math.round(change))}% over the most recent 4 weeks ` +
+                  `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
+                  `This typically happens when new clients book entry-level services or add-on suggestions are not being offered. ` +
+                  `For every booking that includes a combo service, the average ticket is materially higher. ` +
+                  `Go to Settings and review your suggested add-ons to ensure the most relevant pairings are configured.`,
+                actionLabel: "Open Settings",
+                actionView: "Business",
+              });
+            } else if (change > 15 && recentAvg > 500) {
+              push({
+                id: "basket_trend_growing",
+                type: "growth",
+                priority: "info",
+                title: "Basket Size Is Growing",
+                message:
+                  `Your average booking value has increased ${Math.round(change)}% over the most recent 4 weeks ` +
+                  `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
+                  `This is a strong signal that upsell or combo bookings are working. ` +
+                  `Keep the momentum: promote your highest-value service combinations in your next content post.`,
+                actionLabel: "View Services",
+                actionView: "Services",
+              });
+            }
+          }
         }
       }
 
@@ -634,12 +682,11 @@ export function useNextyInsights() {
       }
 
       // -- 17. Referral Channel Low Basket -----------------------------------
-      const { data: chData } = await supabase.rpc("get_channel_roi", { p_tenant_id: tenantId });
+      const { data: chData } = await supabase.rpc<ChannelRoiRow>("get_channel_roi", { p_tenant_id: tenantId });
       if (chData && chData.length >= 2) {
-        const referralRow = chData.find((r: any) => r.channel === "Referral");
-        if (referralRow && Number(referralRow.booking_count) >= 3) {
-          const overallAvg = chData.reduce((s: number, r: any) => s + Number(r.total_revenue), 0)
-                           / chData.reduce((s: number, r: any) => s + Number(r.booking_count), 0);
+        const referralRow = chData.find((r) => r.channel === "Referral");
+        const overallAvg = computeOverallAvgBasket(chData);
+        if (referralRow && overallAvg !== null && Number(referralRow.booking_count) >= 3) {
           const refAvg = Number(referralRow.avg_basket);
           if (refAvg < overallAvg * 0.80) {
             push({
@@ -735,7 +782,7 @@ export function useNextyInsights() {
         }
       }
 
-            // Sort: critical -> important -> info
+      // Sort: critical -> important -> info
       const priorityMap: Record<InsightPriority, number> = {
         critical: 0,
         important: 1,
