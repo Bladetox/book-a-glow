@@ -140,11 +140,11 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const displayedCount = useCounter(totalImpact, showCards);
 
   const FILTERS = [
-    { key: "all",       label: "All",        count: allInsights.length },
-    { key: "critical",  label: "Critical",   count: allInsights.filter(i => getFilterKey(i) === "critical").length },
-    { key: "growth",    label: "Growth",     count: allInsights.filter(i => getFilterKey(i) === "growth").length },
-    { key: "retention", label: "Retention",  count: allInsights.filter(i => getFilterKey(i) === "retention").length },
-    { key: "ops",       label: "Operations", count: allInsights.filter(i => getFilterKey(i) === "ops").length },
+    { key: "all",       label: "All",        count: Math.min(allInsights.length, MAX_CARDS) },
+    { key: "critical",  label: "Critical",   count: Math.min(allInsights.filter(i => getFilterKey(i) === "critical").length, MAX_CARDS) },
+    { key: "growth",    label: "Growth",     count: Math.min(allInsights.filter(i => getFilterKey(i) === "growth").length, MAX_CARDS) },
+    { key: "retention", label: "Retention",  count: Math.min(allInsights.filter(i => getFilterKey(i) === "retention").length, MAX_CARDS) },
+    { key: "ops",       label: "Operations", count: Math.min(allInsights.filter(i => getFilterKey(i) === "ops").length, MAX_CARDS) },
   ].filter(f => f.key === "all" || f.count > 0);
 
   const filtered = activeFilter === "all"
