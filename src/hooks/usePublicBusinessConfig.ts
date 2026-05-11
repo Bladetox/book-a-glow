@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
@@ -73,35 +72,14 @@ const defaults: PublicBusinessConfig = {
   clientLabelNew: "New Client",
 };
 
-// CSS variable names that map directly from app_settings keys → :root CSS properties
-// The booking page uses hsl(var(--background)) etc. via Tailwind/index.css
-const THEME_CSS_KEYS: Record<string, string> = {
-  theme_background:           "--background",
-  theme_foreground:           "--foreground",
-  theme_card:                 "--card",
-  theme_card_foreground:      "--card-foreground",
-  theme_primary:              "--primary",
-  theme_primary_foreground:   "--primary-foreground",
-  theme_secondary:            "--secondary",
-  theme_secondary_foreground: "--secondary-foreground",
-  theme_muted:                "--muted",
-  theme_muted_foreground:     "--muted-foreground",
-  theme_accent:               "--accent",
-  theme_accent_foreground:    "--accent-foreground",
-  theme_border:               "--border",
-  theme_input:                "--input",
-  theme_ring:                 "--ring",
-  theme_gradient_hero:        "--gradient-hero",
-  theme_gradient_card:        "--gradient-card",
-  theme_gradient_surface:     "--gradient-surface",
-};
-
 /**
  * Public-facing hook: reads operational config from tenants table (source of truth)
  * and display overrides from app_settings.
  *
- * Also injects theme CSS custom properties onto :root whenever the settings
- * are loaded, so the booking page renders in the tenant's chosen palette.
+ * NOTE: Theme CSS custom properties are intentionally NOT injected here.
+ * BusinessThemeProvider owns all CSS var application to :root, including
+ * glass, sidebar, gradient and colour vars. Injecting theme vars here caused
+ * a race-condition partial override that broke glass/gradient vars mid-booking.
  *
  * PERF: The tenants row (name, logoUrl) is already fetched once by
  * PublicTenantContext. We read those fields directly from context here so we
@@ -134,28 +112,6 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
       return map;
     },
   });
-
-  // ── Inject theme CSS variables onto :root ─────────────────────────────────
-  // Runs whenever appSettings loads or changes. Maps each theme_* key from
-  // app_settings to the matching CSS custom property so Tailwind utilities
-  // like bg-background, text-foreground, border-border etc. render correctly
-  // for this tenant's chosen theme.
-  useEffect(() => {
-    if (!appSettings) return;
-    const root = document.documentElement;
-    let applied = false;
-    for (const [settingsKey, cssVar] of Object.entries(THEME_CSS_KEYS)) {
-      const value = appSettings[settingsKey];
-      if (value) {
-        root.style.setProperty(cssVar, value);
-        applied = true;
-      }
-    }
-    if (applied) {
-      // Signal to any listener that theme vars have been hydrated
-      root.setAttribute("data-theme-loaded", tenantId ?? "");
-    }
-  }, [appSettings, tenantId]);
 
   // ── Tenants row — slim select for ONLY fields not already in PublicTenantContext
   // (email, phone, address, currency, min_notice_hours, max_advance_days)
