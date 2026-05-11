@@ -12,7 +12,8 @@ import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useMonthAvailability } from "@/hooks/usePublicAvailability";
 import { useSlotHold } from "@/hooks/useSlotHold";
-import { useTenantHead } from "@/hooks/useTenantHead";   // ← NEW
+import { useTenantHead } from "@/hooks/useTenantHead";
+import { useBrandFont } from "@/hooks/useBrandFont";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useCallback } from "react";
 
@@ -80,8 +81,10 @@ const Index = () => {
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
 
-  // Patch <head> with the tenant's name, logo, and metadata.        // ← NEW
-  useTenantHead({ name: config.name, logoUrl: config.logoUrl, loading: config.loading }); // ← NEW
+  // ── Brand font (sister-studios only; null for all other tenants) ──────────
+  const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
+
+  useTenantHead({ name: config.name, logoUrl: config.logoUrl, loading: config.loading });
 
   const canProceed = useCallback(() => {
     switch (step) {
@@ -145,9 +148,18 @@ const Index = () => {
     return Array(count).fill(svc);
   });
 
-  const totalPrice = selectedServices.reduce((sum, t) => sum + t.price, 0);
+  const totalPrice    = selectedServices.reduce((sum, t) => sum + t.price, 0);
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
   const durationForSlots = Math.max(totalDuration, 30);
+
+  // ── Brand name style: font + gold colour applied ONLY when set ────────────
+  const brandNameStyle: React.CSSProperties = {
+    ...(brandFontFamily  ? { fontFamily: brandFontFamily }               : {}),
+    ...(config.brandNameColor ? { color: config.brandNameColor }         : {}),
+    ...(config.brandNameColor ? {
+      textShadow: `0 2px 16px ${config.brandNameColor}44`,
+    } : {}),
+  };
 
   return (
     <>
@@ -166,22 +178,38 @@ const Index = () => {
             <div className="absolute right-0 top-0">
               <ThemeToggle />
             </div>
+
+            {/* Logo block — full-bleed when a logo is present */}
             <motion.div
               whileTap={{ scale: 0.95 }}
-              className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 flex items-center justify-center overflow-hidden"
+              className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 overflow-hidden flex items-center justify-center"
+              style={config.logoUrl ? { padding: 0 } : {}}
             >
               {config.logoUrl ? (
-                <img src={config.logoUrl} alt={businessName} className="w-full h-full object-contain p-1" />
+                <img
+                  src={config.logoUrl}
+                  alt={businessName}
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <span className="font-display text-xl font-bold text-foreground">{abbreviation}</span>
+                <span className="font-display text-xl font-bold text-foreground">
+                  {abbreviation}
+                </span>
               )}
             </motion.div>
+
             <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
               {config.tagline}
             </p>
-            <h1 className="font-display text-2xl font-bold text-foreground mt-1">
+
+            {/* Business name — brand font + gold when configured */}
+            <h1
+              className="font-display text-2xl font-bold mt-1"
+              style={Object.keys(brandNameStyle).length > 0 ? brandNameStyle : { color: undefined }}
+            >
               {businessName}
             </h1>
+
             <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground mt-0.5">
               {config.subtitle}
             </p>

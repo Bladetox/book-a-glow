@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
+import { useBrandFont } from "@/hooks/useBrandFont";
 
 interface BookingSummary {
   booking_date?: string;
@@ -23,6 +24,9 @@ const PaymentSuccess = () => {
   const config         = usePublicBusinessConfig();
   const { setThemeById } = useBusinessTheme();
 
+  // ── Brand font (sister-studios only; null for all other tenants) ──────────
+  const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
+
   const payment   = searchParams.get("payment");
   const bookingId = searchParams.get("booking_id");
   const tenant    = searchParams.get("tenant") ?? "";
@@ -37,10 +41,6 @@ const PaymentSuccess = () => {
   const [loading,    setLoading]    = useState(true);
   const [countdown,  setCountdown]  = useState(REDIRECT_SECONDS);
 
-  // Apply the tenant's saved theme as soon as we have the tenant slug.
-  // This is necessary on the /payment route because the URL is on the main
-  // domain (not the subdomain), so BusinessThemeProvider's resolveTenantSync()
-  // returns null and can't auto-load the theme. We fetch it here directly.
   useEffect(() => {
     if (!tenant) return;
     supabase
@@ -54,7 +54,10 @@ const PaymentSuccess = () => {
       });
   }, [tenant, setThemeById]);
 
-  // Fetch booking + review link
+  const isSuccess   = payment === "success";
+  const isCancelled = payment === "cancelled";
+  const isFinal     = type === "final" || type === "full";
+
   useEffect(() => {
     if (!isSuccess) { setLoading(false); return; }
 
@@ -98,13 +101,6 @@ const PaymentSuccess = () => {
     poll();
   }, [bookingId, isSuccess]);
 
-  const isSuccess   = payment === "success";
-  const isCancelled = payment === "cancelled";
-  // isFinal covers both: admin-sent balance request (type=final) and
-  // client paying full amount at booking time (type=full)
-  const isFinal = type === "final" || type === "full";
-
-  // Countdown redirect — deposit screen only, never for full/final payment
   useEffect(() => {
     if (!isSuccess || isFinal || loading) return;
     const interval = setInterval(() => {
@@ -127,7 +123,15 @@ const PaymentSuccess = () => {
   const displayDeposit = booking?.deposit_amount ?? urlDeposit;
   const displayTotal   = booking?.total_amount ?? null;
 
-  // ── CANCELLED ───────────────────────────────────────────────────────────────────
+  // Brand name heading style
+  const brandNameStyle: React.CSSProperties = {
+    ...(brandFontFamily       ? { fontFamily: brandFontFamily }               : {}),
+    ...(config.brandNameColor ? { color: config.brandNameColor }              : {}),
+    ...(config.brandNameColor ? { textShadow: `0 2px 16px ${config.brandNameColor}44` } : {}),
+  };
+  const hasBrand = Object.keys(brandNameStyle).length > 0;
+
+  // ── CANCELLED ───────────────────────────────────────────────────────────
   if (isCancelled) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -142,11 +146,11 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ── FULL / FINAL PAYMENT SUCCESS — no countdown, shows review prompt ──────
+  // ── FULL / FINAL PAYMENT SUCCESS ─────────────────────────────────────────
   if (isFinal && isSuccess && !loading) {
     const bookingAppUrl = `${window.location.origin}/?tenant=${tenant}`;
     const reviewHref    = reviewLink || `https://search.google.com/local/writereview?placeid=${tenant}`;
-    const paidAmount = type === "full"
+    const paidAmount    = type === "full"
       ? (displayTotal ?? displayDeposit)
       : (displayDeposit ?? displayTotal);
 
@@ -172,7 +176,12 @@ const PaymentSuccess = () => {
             transition={{ delay: 0.25 }}
             className="flex flex-col gap-1"
           >
-            <h2 className="font-display text-2xl font-bold text-foreground">Thank you. 💛</h2>
+            <h2
+              className="font-display text-2xl font-bold"
+              style={hasBrand ? brandNameStyle : { color: undefined }}
+            >
+              Thank you. 💛
+            </h2>
             <p className="text-sm text-muted-foreground italic">
               {type === "full"
                 ? "Full payment received — nothing due on the day."
@@ -213,20 +222,10 @@ const PaymentSuccess = () => {
               </div>
             )}
 
-            <p className="text-sm text-foreground leading-relaxed">
-              Thank you for letting me into your sanctuary today. 💛
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              I'm honored you chose me as your self-care partner.
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              As mothers, sisters, and daughters, we know how easily we put ourselves last.
-              By sharing your experience on Google, you help other women remember they matter too.
-              Your words might be exactly what they need to hear.
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Kindly share your experience so they find their way here:
-            </p>
+            <p className="text-sm text-foreground leading-relaxed">Thank you for letting me into your sanctuary today. 💛</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">I'm honored you chose me as your self-care partner.</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">As mothers, sisters, and daughters, we know how easily we put ourselves last. By sharing your experience on Google, you help other women remember they matter too. Your words might be exactly what they need to hear.</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">Kindly share your experience so they find their way here:</p>
 
             <a
               href={reviewHref}
@@ -238,12 +237,8 @@ const PaymentSuccess = () => {
               Share your experience on Google
             </a>
 
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Consistency is how we grow, inside and out. Now go ahead and honor yourself in the same way.
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Looking forward to our next girl time.
-            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">Consistency is how we grow, inside and out. Now go ahead and honor yourself in the same way.</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">Looking forward to our next girl time.</p>
             <p className="text-sm font-semibold text-foreground">Toodles. 🌸</p>
           </motion.div>
 
@@ -254,19 +249,14 @@ const PaymentSuccess = () => {
             className="w-full"
           >
             <p className="text-xs text-muted-foreground/60 mb-3">Ready to treat yourself again?</p>
-            <a
-              href={bookingAppUrl}
-              className="btn-next w-full inline-flex items-center justify-center gap-2 text-sm"
-            >
-              Book Again
-            </a>
+            <a href={bookingAppUrl} className="btn-next w-full inline-flex items-center justify-center gap-2 text-sm">Book Again</a>
           </motion.div>
         </motion.div>
       </div>
     );
   }
 
-  // ── DEPOSIT SUCCESS — with countdown ───────────────────────────────────────
+  // ── DEPOSIT SUCCESS — with countdown ──────────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <motion.div
@@ -286,7 +276,10 @@ const PaymentSuccess = () => {
             </motion.div>
 
             <div className="flex flex-col gap-1">
-              <h2 className="font-display text-2xl font-bold text-foreground">
+              <h2
+                className="font-display text-2xl font-bold"
+                style={hasBrand ? brandNameStyle : { color: undefined }}
+              >
                 {config.confirmationTitle || "Deposit Paid"}
               </h2>
               <p className="text-sm text-muted-foreground italic">You're all confirmed.</p>

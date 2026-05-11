@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
+import { useBrandFont } from "@/hooks/useBrandFont";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -9,39 +10,14 @@ interface SplashScreenProps {
   onReferralChange: (source: string) => void;
 }
 
-const BRAND_FONT_FAMILY = "BrandFont";
-
 const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashScreenProps) => {
   const config = usePublicBusinessConfig();
   const { theme, loading: themeLoading } = useBusinessTheme();
   const [attempted, setAttempted] = useState(false);
-  const [brandFontLoaded, setBrandFontLoaded] = useState(false);
 
-  // ── Inject brand font stylesheet for this tenant only ─────────────────────
-  // If brand_font_url is set in app_settings (e.g. for sister-studios),
-  // we append a <link> to <head> once. For all other tenants this is a no-op.
-  useEffect(() => {
-    if (!config.brandFontUrl) return;
-    const existingId = "brand-font-link";
-    if (document.getElementById(existingId)) {
-      setBrandFontLoaded(true);
-      return;
-    }
-    const link = document.createElement("link");
-    link.id = existingId;
-    link.rel = "stylesheet";
-    link.href = config.brandFontUrl;
-    link.onload = () => setBrandFontLoaded(true);
-    link.onerror = () => setBrandFontLoaded(true); // fail gracefully — theme font takes over
-    document.head.appendChild(link);
-    return () => {
-      // Clean up when navigating away so it doesn't bleed to other tenants
-      const el = document.getElementById(existingId);
-      if (el) document.head.removeChild(el);
-    };
-  }, [config.brandFontUrl]);
+  // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
+  const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
 
-  // Derive whether the active theme is dark
   const isDark = useMemo(() => {
     const parts = theme.colors.background.split(/\s+/);
     return parseFloat(parts[2] ?? "50") < 50;
@@ -57,55 +33,43 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     ? `rgba(${pH}, ${pS}%, ${orbL}%, 0.22)`
     : `hsla(${pH}, ${pS}%, ${orbL}%, 0.18)`;
 
-  const textPrimary   = isDark ? "rgba(255,255,255,0.88)"  : `hsl(${theme.colors.foreground})`;
-  const textSubtle    = isDark ? "rgba(255,255,255,0.38)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.55)`;
-  const textFaint     = isDark ? "rgba(255,255,255,0.18)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.35)`;
-  const textFooter    = isDark ? "rgba(255,255,255,0.14)"  : `hsla(${pH}, ${pS}%, 40%, 0.45)`;
+  const textPrimary    = isDark ? "rgba(255,255,255,0.88)"  : `hsl(${theme.colors.foreground})`;
+  const textSubtle     = isDark ? "rgba(255,255,255,0.38)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.55)`;
+  const textFaint      = isDark ? "rgba(255,255,255,0.18)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.35)`;
+  const textFooter     = isDark ? "rgba(255,255,255,0.14)"  : `hsla(${pH}, ${pS}%, 40%, 0.45)`;
   const textFooterLink = isDark ? `hsla(${pH}, ${pS}%, 75%, 0.65)` : `hsl(${pH} ${pS}% 35%)`;
-  const chipSelected  = isDark ? "rgba(255,255,255,0.10)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.12)`;
-  const chipBorderSel = isDark ? "rgba(255,255,255,0.35)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.50)`;
-  const chipTextSel   = isDark ? "rgba(255,255,255,0.95)"  : `hsl(${theme.colors.foreground})`;
-  const chipBorderDef = isDark ? "rgba(255,255,255,0.08)"  : `hsla(${pH}, ${pS}%, 40%, 0.15)`;
-  const chipTextDef   = isDark ? "rgba(255,255,255,0.32)"  : `hsla(${pH}, ${pS}%, 35%, 0.60)`;
-  const ctaActiveBg   = isDark ? "rgba(255,255,255,0.07)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.10)`;
-  const ctaBorderAct  = isDark ? "rgba(255,255,255,0.18)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.40)`;
-  const ctaTextAct    = isDark ? "rgba(255,255,255,0.88)"  : `hsl(${theme.colors.foreground})`;
-  const ctaInactiveBg = isDark ? "rgba(255,255,255,0.03)"  : "rgba(0,0,0,0.02)";
-  const ctaBorderIna  = isDark ? "rgba(255,255,255,0.06)"  : `hsla(${pH}, ${pS}%, 40%, 0.10)`;
-  const ctaTextIna    = isDark ? "rgba(255,255,255,0.28)"  : `hsla(${pH}, ${pS}%, 35%, 0.40)`;
-  const logoBg        = isDark ? "rgba(255,255,255,0.055)" : `hsla(${pH}, ${pS}%, 95%, 0.70)`;
-  const logoBoxShadow = isDark
+  const chipSelected   = isDark ? "rgba(255,255,255,0.10)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.12)`;
+  const chipBorderSel  = isDark ? "rgba(255,255,255,0.35)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.50)`;
+  const chipTextSel    = isDark ? "rgba(255,255,255,0.95)"  : `hsl(${theme.colors.foreground})`;
+  const chipBorderDef  = isDark ? "rgba(255,255,255,0.08)"  : `hsla(${pH}, ${pS}%, 40%, 0.15)`;
+  const chipTextDef    = isDark ? "rgba(255,255,255,0.32)"  : `hsla(${pH}, ${pS}%, 35%, 0.60)`;
+  const ctaActiveBg    = isDark ? "rgba(255,255,255,0.07)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.10)`;
+  const ctaBorderAct   = isDark ? "rgba(255,255,255,0.18)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.40)`;
+  const ctaTextAct     = isDark ? "rgba(255,255,255,0.88)"  : `hsl(${theme.colors.foreground})`;
+  const ctaInactiveBg  = isDark ? "rgba(255,255,255,0.03)"  : "rgba(0,0,0,0.02)";
+  const ctaBorderIna   = isDark ? "rgba(255,255,255,0.06)"  : `hsla(${pH}, ${pS}%, 40%, 0.10)`;
+  const ctaTextIna     = isDark ? "rgba(255,255,255,0.28)"  : `hsla(${pH}, ${pS}%, 35%, 0.40)`;
+  const logoBg         = isDark ? "rgba(255,255,255,0.055)" : `hsla(${pH}, ${pS}%, 95%, 0.70)`;
+  const logoBoxShadow  = isDark
     ? `0 0 0 0.5px hsla(${pH},${pS}%,80%,0.12) inset, 0 8px 32px rgba(0,0,0,0.5), 0 0 24px hsla(${pH},${pS}%,${orbL}%,0.06)`
     : `0 0 0 0.5px hsla(${pH},${pS}%,50%,0.12) inset, 0 4px 20px rgba(0,0,0,0.08)`;
-  const errorColor    = "rgba(255,100,100,0.85)";
-  const errorColorDim = "rgba(255,120,120,0.70)";
-  const dividerColor  = isDark
+  const errorColor     = "rgba(255,100,100,0.85)";
+  const errorColorDim  = "rgba(255,120,120,0.70)";
+  const dividerColor   = isDark
     ? `linear-gradient(90deg, transparent, hsla(${pH},${pS}%,${orbL}%,0.35), transparent)`
     : `linear-gradient(90deg, transparent, hsla(${pH},${pS}%,40%,0.20), transparent)`;
 
   const bgColor = `hsl(var(--background))`;
 
-  // ── Brand name heading style ───────────────────────────────────────────────
-  // If this tenant has a brand font + colour set, use them ONLY on the <h1>.
-  // For every other tenant brandFontUrl and brandNameColor are null — no effect.
-  const brandNameStyle = useMemo(() => {
-    const style: React.CSSProperties = {
-      fontSize: "clamp(2rem, 8vw, 2.6rem)",
-      color: config.brandNameColor ?? textPrimary,
-      textShadow: config.brandNameColor
-        ? `0 2px 24px ${config.brandNameColor}55, 0 0 48px ${config.brandNameColor}33`
-        : isDark ? `0 2px 32px ${orbColor(0.10)}` : "none",
-    };
-    if (config.brandFontUrl && brandFontLoaded) {
-      // Google Fonts CSS2 URL — the family name is embedded in the URL
-      // e.g. ?family=Cinzel+Decorative → "Cinzel Decorative"
-      const match = config.brandFontUrl.match(/family=([^:&]+)/);
-      if (match) {
-        style.fontFamily = `'${decodeURIComponent(match[1].replace(/\+/g, " "))}', serif`;
-      }
-    }
-    return style;
-  }, [config.brandFontUrl, config.brandNameColor, brandFontLoaded, textPrimary, isDark]);
+  // ── Brand name heading style ──────────────────────────────────────────────
+  const brandNameStyle = useMemo<React.CSSProperties>(() => ({
+    fontSize: "clamp(2rem, 8vw, 2.6rem)",
+    color: config.brandNameColor ?? textPrimary,
+    textShadow: config.brandNameColor
+      ? `0 2px 24px ${config.brandNameColor}55, 0 0 48px ${config.brandNameColor}33`
+      : isDark ? `0 2px 32px ${orbColor(0.10)}` : "none",
+    ...(brandFontFamily ? { fontFamily: brandFontFamily } : {}),
+  }), [brandFontFamily, config.brandNameColor, textPrimary, isDark]);
 
   const orbs = useMemo(
     () => [
@@ -137,20 +101,12 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   const isSelected = referralSource.trim().length > 0;
 
   const handleCta = () => {
-    if (!isSelected) {
-      setAttempted(true);
-      return;
-    }
+    if (!isSelected) { setAttempted(true); return; }
     onComplete();
   };
 
   if (themeLoading) {
-    return (
-      <div
-        className="fixed inset-0 z-[100]"
-        style={{ backgroundColor: bgColor }}
-      />
-    );
+    return <div className="fixed inset-0 z-[100]" style={{ backgroundColor: bgColor }} />;
   }
 
   return (
@@ -158,7 +114,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       className="fixed inset-0 z-[100] overflow-y-auto"
       style={{ backgroundColor: bgColor, WebkitOverflowScrolling: "touch" }}
     >
-      {/* ── Deep ambient gradient ── */}
+      {/* Deep ambient gradient */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0" style={{
           background: [
@@ -178,17 +134,15 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         />
       </div>
 
-      {/* ── Themed ambient orbs ── */}
+      {/* Ambient orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {orbs.map(o => (
           <motion.div
             key={o.id}
             className="absolute rounded-full"
             style={{
-              width: o.size,
-              height: o.size,
-              left: `${o.x}%`,
-              top: `${o.y}%`,
+              width: o.size, height: o.size,
+              left: `${o.x}%`, top: `${o.y}%`,
               background: `radial-gradient(circle, ${orbColor(orbAlpha)} 0%, transparent 70%)`,
               filter: "blur(48px)",
               transform: "translate(-50%, -50%)",
@@ -199,26 +153,20 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         ))}
       </div>
 
-      {/* ── Star particles ── */}
+      {/* Star particles */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {particles.map(p => (
           <motion.div
             key={p.id}
             className="absolute rounded-full"
-            style={{
-              width: p.size,
-              height: p.size,
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              background: particleColor,
-            }}
+            style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%`, background: particleColor }}
             animate={{ x: [0, p.driftX, 0], y: [0, p.driftY, 0], opacity: [0, p.maxOpacity, 0] }}
             transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: "easeInOut" }}
           />
         ))}
       </div>
 
-      {/* ── Scroll content ── */}
+      {/* Scroll content */}
       <motion.div
         className="relative flex flex-col items-center w-full min-h-screen px-6"
         style={{
@@ -229,7 +177,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
       >
-        {/* ── Logo ── */}
+        {/* Logo block — full-bleed when logo exists, abbreviation fallback otherwise */}
         <motion.div
           initial={{ scale: 0.82, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -246,9 +194,9 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           />
           <div
-            className="relative w-[82px] h-[82px] rounded-[26px] flex items-center justify-center overflow-hidden"
+            className="relative w-[82px] h-[82px] rounded-[26px] overflow-hidden flex items-center justify-center"
             style={{
-              background: logoBg,
+              background: config.logoUrl ? "transparent" : logoBg,
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
               boxShadow: logoBoxShadow,
@@ -258,21 +206,20 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               <img
                 src={config.logoUrl}
                 alt={config.name}
-                className="w-full h-full object-contain"
-                style={{ mixBlendMode: isDark ? "luminosity" : "normal", opacity: 0.95 }}
+                className="w-full h-full object-cover"
               />
             ) : (
-              <span
-                className="font-display text-2xl font-bold tracking-tight"
-                style={{ color: textPrimary }}
-              >
+              <span className="font-display text-2xl font-bold tracking-tight" style={{ color: textPrimary }}>
                 {config.abbreviation}
               </span>
             )}
-            <span
-              className="absolute top-0 left-3 right-3 h-px"
-              style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}
-            />
+            {/* Shimmer edge highlight — only shown for abbreviation fallback */}
+            {!config.logoUrl && (
+              <span
+                className="absolute top-0 left-3 right-3 h-px"
+                style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}
+              />
+            )}
           </div>
         </motion.div>
 
@@ -287,7 +234,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           {config.splashWelcomeLabel}
         </motion.p>
 
-        {/* ── Business name — brand font + gold colour applied HERE only ── */}
+        {/* Business name — brand font + gold colour ONLY for tenants that set it */}
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -314,7 +261,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.82, duration: 0.45 }}
-          className="text-[9px] font-medium tracking-[0.3em] uppercase"
+          className="text-[10px] font-medium tracking-[0.3em] uppercase"
           style={{ color: textFaint }}
         >
           {config.splashTagline2}
@@ -329,7 +276,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           style={{ width: 48, height: 1, background: dividerColor }}
         />
 
-        {/* Where did you hear about us — REQUIRED */}
+        {/* Where did you hear about us */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -408,18 +355,13 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           {isSelected && (
             <motion.span
               className="absolute inset-0 pointer-events-none"
-              style={{
-                background: `linear-gradient(105deg, transparent 30%, ${orbColor(0.10)} 50%, transparent 70%)`,
-              }}
+              style={{ background: `linear-gradient(105deg, transparent 30%, ${orbColor(0.10)} 50%, transparent 70%)` }}
               initial={{ x: "-100%" }}
               whileHover={{ x: "200%" }}
               transition={{ duration: 0.7, ease: "easeInOut" }}
             />
           )}
-          <span
-            className="absolute top-0 left-6 right-6 h-px"
-            style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}
-          />
+          <span className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }} />
           <span className="relative">{config.splashCtaLabel}</span>
         </motion.button>
 
@@ -432,12 +374,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           style={{ color: textFooter }}
         >
           Powered by{" "}
-          <a
-            href="https://nextslot.co.za"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: textFooterLink, textDecoration: "none" }}
-          >
+          <a href="https://nextslot.co.za" target="_blank" rel="noopener noreferrer" style={{ color: textFooterLink, textDecoration: "none" }}>
             nextslot.co.za
           </a>
         </motion.p>
