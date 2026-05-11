@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 
 interface BookingSummary {
   booking_date?: string;
@@ -20,6 +21,7 @@ const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate       = useNavigate();
   const config         = usePublicBusinessConfig();
+  const { setThemeById } = useBusinessTheme();
 
   const payment   = searchParams.get("payment");
   const bookingId = searchParams.get("booking_id");
@@ -35,11 +37,22 @@ const PaymentSuccess = () => {
   const [loading,    setLoading]    = useState(true);
   const [countdown,  setCountdown]  = useState(REDIRECT_SECONDS);
 
-  const isSuccess = payment === "success";
-  const isCancelled = payment === "cancelled";
-  // isFinal covers both: admin-sent balance request (type=final) and
-  // client paying full amount at booking time (type=full)
-  const isFinal = type === "final" || type === "full";
+  // Apply the tenant's saved theme as soon as we have the tenant slug.
+  // This is necessary on the /payment route because the URL is on the main
+  // domain (not the subdomain), so BusinessThemeProvider's resolveTenantSync()
+  // returns null and can't auto-load the theme. We fetch it here directly.
+  useEffect(() => {
+    if (!tenant) return;
+    supabase
+      .from("tenants")
+      .select("theme_id")
+      .eq("id", tenant)
+      .eq("is_active", true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.theme_id) setThemeById(data.theme_id);
+      });
+  }, [tenant, setThemeById]);
 
   // Fetch booking + review link
   useEffect(() => {
@@ -85,6 +98,12 @@ const PaymentSuccess = () => {
     poll();
   }, [bookingId, isSuccess]);
 
+  const isSuccess   = payment === "success";
+  const isCancelled = payment === "cancelled";
+  // isFinal covers both: admin-sent balance request (type=final) and
+  // client paying full amount at booking time (type=full)
+  const isFinal = type === "final" || type === "full";
+
   // Countdown redirect — deposit screen only, never for full/final payment
   useEffect(() => {
     if (!isSuccess || isFinal || loading) return;
@@ -108,10 +127,10 @@ const PaymentSuccess = () => {
   const displayDeposit = booking?.deposit_amount ?? urlDeposit;
   const displayTotal   = booking?.total_amount ?? null;
 
-  // ── CANCELLED ─────────────────────────────────────────────────────────────
+  // ── CANCELLED ───────────────────────────────────────────────────────────────────
   if (isCancelled) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center gap-4 text-center max-w-sm">
           <XCircle className="w-14 h-14 text-destructive" />
@@ -127,7 +146,6 @@ const PaymentSuccess = () => {
   if (isFinal && isSuccess && !loading) {
     const bookingAppUrl = `${window.location.origin}/?tenant=${tenant}`;
     const reviewHref    = reviewLink || `https://search.google.com/local/writereview?placeid=${tenant}`;
-    // For full-payment-at-booking: show total; for balance: show what was due
     const paidAmount = type === "full"
       ? (displayTotal ?? displayDeposit)
       : (displayDeposit ?? displayTotal);
@@ -168,9 +186,8 @@ const PaymentSuccess = () => {
             transition={{ delay: 0.38 }}
             className="glass-card-service rounded-2xl p-5 w-full text-left flex flex-col gap-4"
           >
-            {/* Payment summary card for full upfront payment */}
             {type === "full" && (displayDate || displayTime || paidAmount != null) && (
-              <div className="flex flex-col gap-2 pb-3 border-b border-white/[0.06]">
+              <div className="flex flex-col gap-2 pb-3 border-b border-border/30">
                 {displayDate && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Date</span>
@@ -186,12 +203,12 @@ const PaymentSuccess = () => {
                 {paidAmount != null && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total paid</span>
-                    <span className="text-primary font-semibold">R{paidAmount}</span>
+                    <span className="text-primary font-semibold">{config.currency}{paidAmount}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Balance due</span>
-                  <span className="text-emerald-400 font-semibold">R0.00</span>
+                  <span className="text-emerald-400 font-semibold">{config.currency}0.00</span>
                 </div>
               </div>
             )}
@@ -249,9 +266,9 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ── DEPOSIT SUCCESS — with countdown ──────────────────────────────────────
+  // ── DEPOSIT SUCCESS — with countdown ───────────────────────────────────────
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -297,7 +314,7 @@ const PaymentSuccess = () => {
                 {displayDeposit != null && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Deposit paid</span>
-                    <span className="text-primary font-semibold">R{displayDeposit}</span>
+                    <span className="text-primary font-semibold">{config.currency}{displayDeposit}</span>
                   </div>
                 )}
               </motion.div>
