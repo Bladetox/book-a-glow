@@ -1,5 +1,10 @@
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
+// Public Supabase credentials — same values hardcoded in client.ts.
+// VITE_-prefixed env vars are build-time only and are not available to
+// Vercel Edge Middleware runtime, so we hardcode them here directly.
+const SUPABASE_URL = "https://kjibbbuceipnialfgflt.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWJiYnVjZWlwbmlhbGZnZmx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDQ0NDgsImV4cCI6MjA4ODI4MDQ0OH0.clTpq3pUc-DQaaQgdqdyX-O2xBhJAJAWJFNHlXoxDRE";
+
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 
 export const config = {
@@ -31,7 +36,7 @@ export default async function middleware(request: Request): Promise<Response> {
   if (!isHtml && !isManifest) return fetch(request);
 
   try {
-    // Fetch tenant row from Supabase
+    // Fetch tenant row from Supabase REST API
     const tenantRes = await fetch(
       `${SUPABASE_URL}/rest/v1/tenants?id=eq.${encodeURIComponent(tenantId)}&select=name,logo_url&limit=1`,
       {
