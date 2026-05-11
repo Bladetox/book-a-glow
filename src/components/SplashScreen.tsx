@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 
@@ -9,23 +9,46 @@ interface SplashScreenProps {
   onReferralChange: (source: string) => void;
 }
 
+const BRAND_FONT_FAMILY = "BrandFont";
+
 const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashScreenProps) => {
   const config = usePublicBusinessConfig();
   const { theme, loading: themeLoading } = useBusinessTheme();
   const [attempted, setAttempted] = useState(false);
+  const [brandFontLoaded, setBrandFontLoaded] = useState(false);
 
-  // Derive whether the active theme is dark so we can pick appropriate overlay opacities
+  // ── Inject brand font stylesheet for this tenant only ─────────────────────
+  // If brand_font_url is set in app_settings (e.g. for sister-studios),
+  // we append a <link> to <head> once. For all other tenants this is a no-op.
+  useEffect(() => {
+    if (!config.brandFontUrl) return;
+    const existingId = "brand-font-link";
+    if (document.getElementById(existingId)) {
+      setBrandFontLoaded(true);
+      return;
+    }
+    const link = document.createElement("link");
+    link.id = existingId;
+    link.rel = "stylesheet";
+    link.href = config.brandFontUrl;
+    link.onload = () => setBrandFontLoaded(true);
+    link.onerror = () => setBrandFontLoaded(true); // fail gracefully — theme font takes over
+    document.head.appendChild(link);
+    return () => {
+      // Clean up when navigating away so it doesn't bleed to other tenants
+      const el = document.getElementById(existingId);
+      if (el) document.head.removeChild(el);
+    };
+  }, [config.brandFontUrl]);
+
+  // Derive whether the active theme is dark
   const isDark = useMemo(() => {
     const parts = theme.colors.background.split(/\s+/);
     return parseFloat(parts[2] ?? "50") < 50;
   }, [theme]);
 
-  // Orb and particle colours adapt to the active theme's primary hue
-  // We read the primary HSL string e.g. "340 25% 25%" and use just H + S
-  // then fix the lightness to a visible mid-value so it's always visible
   const primaryHSL = theme.colors.primary;
   const [pH, pS] = primaryHSL.replace(/%/g, "").split(/\s+/).map(Number);
-  // For dark themes: orbs are lighter (60-70% L). For light themes: slightly muted (55-65% L)
   const orbL  = isDark ? 65 : 60;
   const orbAlpha = isDark ? 0.13 : 0.10;
   const orbColor = (alpha: number) => `hsla(${pH}, ${pS}%, ${orbL}%, ${alpha})`;
@@ -34,8 +57,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     ? `rgba(${pH}, ${pS}%, ${orbL}%, 0.22)`
     : `hsla(${pH}, ${pS}%, ${orbL}%, 0.18)`;
 
-  // Splash text and UI colours via theme
-  // On dark themes: text is near-white. On light themes: text uses foreground.
   const textPrimary   = isDark ? "rgba(255,255,255,0.88)"  : `hsl(${theme.colors.foreground})`;
   const textSubtle    = isDark ? "rgba(255,255,255,0.38)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.55)`;
   const textFaint     = isDark ? "rgba(255,255,255,0.18)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.35)`;
@@ -62,10 +83,30 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     ? `linear-gradient(90deg, transparent, hsla(${pH},${pS}%,${orbL}%,0.35), transparent)`
     : `linear-gradient(90deg, transparent, hsla(${pH},${pS}%,40%,0.20), transparent)`;
 
-  // Splash background — use theme's background CSS var so it's always correct
   const bgColor = `hsl(var(--background))`;
 
-  // Ice-white orbs — large, slow, luminous
+  // ── Brand name heading style ───────────────────────────────────────────────
+  // If this tenant has a brand font + colour set, use them ONLY on the <h1>.
+  // For every other tenant brandFontUrl and brandNameColor are null — no effect.
+  const brandNameStyle = useMemo(() => {
+    const style: React.CSSProperties = {
+      fontSize: "clamp(2rem, 8vw, 2.6rem)",
+      color: config.brandNameColor ?? textPrimary,
+      textShadow: config.brandNameColor
+        ? `0 2px 24px ${config.brandNameColor}55, 0 0 48px ${config.brandNameColor}33`
+        : isDark ? `0 2px 32px ${orbColor(0.10)}` : "none",
+    };
+    if (config.brandFontUrl && brandFontLoaded) {
+      // Google Fonts CSS2 URL — the family name is embedded in the URL
+      // e.g. ?family=Cinzel+Decorative → "Cinzel Decorative"
+      const match = config.brandFontUrl.match(/family=([^:&]+)/);
+      if (match) {
+        style.fontFamily = `'${decodeURIComponent(match[1].replace(/\+/g, " "))}', serif`;
+      }
+    }
+    return style;
+  }, [config.brandFontUrl, config.brandNameColor, brandFontLoaded, textPrimary, isDark]);
+
   const orbs = useMemo(
     () => [
       { id: 0, x: 10,  y: 8,   size: 420, duration: 20, delay: 0,   driftX: 22,  driftY: 30 },
@@ -76,7 +117,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     []
   );
 
-  // Fine star particles
   const particles = useMemo(
     () =>
       Array.from({ length: 32 }, (_, i) => ({
@@ -104,8 +144,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     onComplete();
   };
 
-  // Hold the splash until the theme has fully loaded from Supabase
-  // so there is never a flash of the wrong (default) theme.
   if (themeLoading) {
     return (
       <div
@@ -128,7 +166,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             `radial-gradient(ellipse 70% 50% at 85% 90%, ${orbColor(orbAlpha * 0.30)} 0%, transparent 60%)`,
           ].join(", ")
         }} />
-        {/* Themed horizontal shimmer scan line */}
         <motion.div
           className="absolute left-0 right-0 h-px pointer-events-none"
           style={{
@@ -199,7 +236,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           transition={{ type: "spring", stiffness: 160, damping: 24, delay: 0.18 }}
           className="relative mb-10"
         >
-          {/* Outer breathing glow */}
           <motion.div
             className="absolute rounded-[32px] inset-[-14px]"
             style={{
@@ -209,7 +245,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.08, 1] }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           />
-          {/* Logo container */}
           <div
             className="relative w-[82px] h-[82px] rounded-[26px] flex items-center justify-center overflow-hidden"
             style={{
@@ -234,7 +269,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
                 {config.abbreviation}
               </span>
             )}
-            {/* Inner top highlight */}
             <span
               className="absolute top-0 left-3 right-3 h-px"
               style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}
@@ -253,17 +287,13 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           {config.splashWelcomeLabel}
         </motion.p>
 
-        {/* Business name */}
+        {/* ── Business name — brand font + gold colour applied HERE only ── */}
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.54, duration: 0.55 }}
           className="font-display leading-none font-bold text-center tracking-tight mb-6"
-          style={{
-            fontSize: "clamp(2rem, 8vw, 2.6rem)",
-            color: textPrimary,
-            textShadow: isDark ? `0 2px 32px ${orbColor(0.10)}` : "none",
-          }}
+          style={brandNameStyle}
         >
           {config.name}
         </motion.h1>
@@ -375,7 +405,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             cursor: isSelected ? "pointer" : "default",
           }}
         >
-          {/* Shimmer sweep — only when enabled */}
           {isSelected && (
             <motion.span
               className="absolute inset-0 pointer-events-none"
@@ -387,7 +416,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               transition={{ duration: 0.7, ease: "easeInOut" }}
             />
           )}
-          {/* Top highlight */}
           <span
             className="absolute top-0 left-6 right-6 h-px"
             style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}

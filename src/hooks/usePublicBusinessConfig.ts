@@ -40,6 +40,10 @@ export interface PublicBusinessConfig {
   mobileServiceEnabled: boolean;
   clientLabelExisting: string;
   clientLabelNew: string;
+  /** Optional CSS @font-face stylesheet URL (Google Fonts CSS, Bunny Fonts, or self-hosted) */
+  brandFontUrl: string | null;
+  /** Optional hex/hsl colour override for the business name heading only */
+  brandNameColor: string | null;
 }
 
 const defaults: PublicBusinessConfig = {
@@ -70,6 +74,8 @@ const defaults: PublicBusinessConfig = {
   mobileServiceEnabled: false,
   clientLabelExisting: "Returning Client",
   clientLabelNew: "New Client",
+  brandFontUrl: null,
+  brandNameColor: null,
 };
 
 /**
@@ -85,6 +91,10 @@ const defaults: PublicBusinessConfig = {
  * PublicTenantContext. We read those fields directly from context here so we
  * only need ONE extra tenants query for operational fields not in context
  * (email, phone, address, currency, min_notice_hours, max_advance_days).
+ *
+ * BRANDING: brandFontUrl + brandNameColor are optional per-tenant overrides
+ * stored in app_settings. They affect ONLY the business name heading on the
+ * splash screen — no other element, no other tenant.
  */
 export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boolean } {
   const {
@@ -114,8 +124,6 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
   });
 
   // ── Tenants row — slim select for ONLY fields not already in PublicTenantContext
-  // (email, phone, address, currency, min_notice_hours, max_advance_days)
-  // name + logo_url are skipped — already resolved by PublicTenantContext
   const { data: tenantRow, isLoading: tenantRowLoading } = useQuery({
     queryKey: ["public-tenant-ops", tenantId],
     enabled: !!tenantId,
@@ -145,7 +153,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
   }
 
   return {
-    // Identity — context already resolved name + logoUrl from the tenant row
+    // Identity
     name: tenantName || s.business_name || defaults.name,
     abbreviation: s.abbreviation || defaults.abbreviation,
     logoUrl: tenantLogoUrl || null,
@@ -164,17 +172,17 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     confirmationIntro: s.confirmation_intro || defaults.confirmationIntro,
     confirmationOutro: s.confirmation_outro || defaults.confirmationOutro,
 
-    // Contact — tenants table is ground truth
+    // Contact
     email: t?.email || s.email || defaults.email,
     phone: t?.phone || s.phone || defaults.phone,
     address: s.fixed_origin_address || t?.address || defaults.address,
 
-    // Operational values — tenants table only
+    // Operational
     currency: t?.currency || s.currency || defaults.currency,
     minNoticeHours: t?.min_notice_hours ?? defaults.minNoticeHours,
     maxAdvanceDays: t?.max_advance_days ?? defaults.maxAdvanceDays,
 
-    // Call-out pricing — app_settings
+    // Pricing
     depositPercent: s.deposit_percent ? Number(s.deposit_percent) : defaults.depositPercent,
     ratePerKm: s.rate_per_km ? Number(s.rate_per_km) : defaults.ratePerKm,
     defaultDistanceKm: s.default_distance_km
@@ -187,6 +195,10 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     // Client type labels
     clientLabelExisting: s.client_label_existing || defaults.clientLabelExisting,
     clientLabelNew: s.client_label_new || defaults.clientLabelNew,
+
+    // Per-tenant branding overrides (null for all tenants that haven't set them)
+    brandFontUrl: s.brand_font_url || null,
+    brandNameColor: s.brand_name_color || null,
 
     loading: tenantLoading || tenantRowLoading || settingsLoading,
   };
