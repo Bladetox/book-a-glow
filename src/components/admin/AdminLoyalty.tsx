@@ -9,9 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, Search, X, UserPlus,
-  Clock, CheckCircle, AlertCircle,
-  Download, Settings2, Save,
-  Users, CalendarCheck, ChevronDown, Bot,
+  Clock, Download, Settings2, Save,
+  Users, CalendarCheck, ChevronDown, Bot, ExternalLink,
 } from "lucide-react";
 import { format, subDays, addDays, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -23,7 +22,7 @@ import {
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
 } from "./loyalty/loyaltyConstants";
 import {
-  excelToISO, excelToDate, isoToDisplay,
+  excelToDate, isoToDisplay,
   normPhone, effectiveStatus, resolveKey, exportCSV,
 } from "./loyalty/loyaltyHelpers";
 import { LoyaltyBulkBar }           from "./loyalty/LoyaltyBulkBar";
@@ -37,15 +36,24 @@ import {
 } from "./loyalty/LoyaltyEnrollModal";
 
 // ────────────────────────────────────────────────────────────────
+// Props
+// ────────────────────────────────────────────────────────────────
+interface AdminLoyaltyProps {
+  onNavigate?: (view: string) => void;
+}
+
+// ────────────────────────────────────────────────────────────────
 // AdminLoyalty
 // ────────────────────────────────────────────────────────────────
-export default function AdminLoyalty() {
+export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const { tenantId } = useTenant();
   const qc = useQueryClient();
 
   // ── Settings state (persisted via app_settings) ──
   const [reminderWeeks, setReminderWeeks]       = useState(DEFAULT_LOYALTY_SETTINGS.reminder_weeks);
   const [serviceLabel, setServiceLabel]         = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
+  const [minBookings, setMinBookings]           = useState(DEFAULT_LOYALTY_SETTINGS.min_bookings);
+  const [lookbackDays, setLookbackDays]         = useState(DEFAULT_LOYALTY_SETTINGS.lookback_days);
   const [waTemplates, setWaTemplates]           = useState(DEFAULT_WA_TEMPLATES);
   const [showSettings, setShowSettings]         = useState(false);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
@@ -74,7 +82,6 @@ export default function AdminLoyalty() {
       return data as { name: string } | null;
     },
   });
-  // businessName is always derived from tenants table — never a local edit field
   const businessName = tenantInfo?.name ?? "";
 
   // ── Data: loyalty settings from app_settings ──
@@ -94,6 +101,8 @@ export default function AdminLoyalty() {
       const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
       if (map["loyalty.reminder_weeks"])           setReminderWeeks(Number(map["loyalty.reminder_weeks"]));
       if (map["loyalty.service_label"])            setServiceLabel(map["loyalty.service_label"]);
+      if (map["loyalty.min_bookings"])             setMinBookings(Number(map["loyalty.min_bookings"]));
+      if (map["loyalty.lookback_days"])            setLookbackDays(Number(map["loyalty.lookback_days"]));
       if (map["loyalty.wa_template_overdue"])      setWaTemplates(t => ({ ...t, overdue:    map["loyalty.wa_template_overdue"] }));
       if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook: map["loyalty.wa_template_time_to_book"] }));
       if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:    map["loyalty.wa_template_on_track"] }));
@@ -108,6 +117,8 @@ export default function AdminLoyalty() {
       const rows = [
         { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),     description: "Loyalty reminder interval in weeks" },
         { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,              description: "Service label used in WA templates" },
+        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),       description: "Min bookings for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),      description: "Lookback window (days) for Nexty suggestions" },
         { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,       description: "WA template: overdue" },
         { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,    description: "WA template: time to book" },
         { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,       description: "WA template: on track" },
@@ -122,7 +133,6 @@ export default function AdminLoyalty() {
       toast.success("Programme settings saved");
       setSettingsDirty(false);
       qc.invalidateQueries({ queryKey: ["loyalty_settings", tenantId] });
-      // re-run candidates query since reminder_weeks may have changed
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_enrichment", tenantId] });
     },
@@ -184,11 +194,12 @@ export default function AdminLoyalty() {
   });
 
   // ── Data: enroll candidates from bookings (Nexty-suggested) ──
+  // Uses minBookings + lookbackDays from persisted settings
   const { data: enrollCandidates = [] } = useQuery<EnrollCandidate[]>({
-    queryKey: ["loyalty_candidates", tenantId],
+    queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
     queryFn: async () => {
-      const cutoff = format(subDays(new Date(), 180), "yyyy-MM-dd");
+      const cutoff = format(subDays(new Date(), lookbackDays), "yyyy-MM-dd");
       const { data: bookings, error } = await supabase
         .from("bookings")
         .select("client_name, client_phone, client_email, booking_date, total_price, status")
@@ -217,7 +228,7 @@ export default function AdminLoyalty() {
       }
 
       return Object.values(grouped)
-        .filter(g => g.count >= 2)
+        .filter(g => g.count >= minBookings)
         .map(g => ({
           client_name: g.name,
           phone: g.phone,
@@ -233,7 +244,7 @@ export default function AdminLoyalty() {
     },
   });
 
-  // ── Enroll mutation (source='nexty' when coming from suggestions) ──
+  // ── Enroll mutation ──
   const enrollMutation = useMutation({
     mutationFn: async (vars: { name: string; phone: string; notes: string; lastBooking: string; nextDue: string; source: 'nexty' | 'manual' }) => {
       const { error } = await supabase.from("loyalty_tracker").insert({
@@ -306,6 +317,17 @@ export default function AdminLoyalty() {
           <p className="text-[11px] text-white/30">{loyaltyRows.length} clients enrolled</p>
         </div>
         <div className="flex items-center gap-2">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate("Recommendations")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/[0.06] border border-amber-500/[0.15] text-[11px] text-amber-400/70 hover:text-amber-300 hover:bg-amber-500/[0.1] transition-colors"
+              title="Open Nexty AI Insights"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              Nexty Insights
+              <ExternalLink className="w-3 h-3 opacity-50" />
+            </button>
+          )}
           <button
             onClick={() => exportCSV(filtered, enrichmentMap, reminderWeeks)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/50 hover:text-white/80 transition-colors"
@@ -316,7 +338,7 @@ export default function AdminLoyalty() {
             onClick={() => setShowSettings(s => !s)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/50 hover:text-white/80 transition-colors"
           >
-            <Settings2 className="w-3.5 h-3.5" /> Programme Settings
+            <Settings2 className="w-3.5 h-3.5" /> Settings
           </button>
         </div>
       </div>
@@ -327,7 +349,6 @@ export default function AdminLoyalty() {
           <div className="flex flex-col gap-3 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.02]">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold text-white/50 tracking-[0.08em] uppercase">Programme Settings</p>
-              {/* Business name: read-only, derived from tenant record */}
               {businessName && (
                 <span className="text-[10px] text-white/25 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 inline-block" />
@@ -335,6 +356,8 @@ export default function AdminLoyalty() {
                 </span>
               )}
             </div>
+
+            {/* Row 1: reminder + service label */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Reminder interval (weeks)</label>
@@ -354,6 +377,34 @@ export default function AdminLoyalty() {
               </div>
             </div>
 
+            {/* Row 2: Nexty suggestion criteria */}
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.1em] text-amber-400/50 mb-2 flex items-center gap-1">
+                <Bot className="w-3 h-3" /> Nexty suggestion criteria
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Min bookings to surface</label>
+                  <input
+                    type="number" min={1} max={20} value={minBookings}
+                    onChange={e => { setMinBookings(Number(e.target.value)); setSettingsDirty(true); }}
+                    className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-amber-400/40"
+                  />
+                  <span className="text-[9px] text-white/20">Default: 2 bookings</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Lookback window (days)</label>
+                  <input
+                    type="number" min={30} max={730} step={30} value={lookbackDays}
+                    onChange={e => { setLookbackDays(Number(e.target.value)); setSettingsDirty(true); }}
+                    className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-amber-400/40"
+                  />
+                  <span className="text-[9px] text-white/20">Default: 180 days (6 months)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* WA templates toggle */}
             <button
               onClick={() => setShowTemplateEditor(s => !s)}
               className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/70 transition-colors mt-1"
@@ -584,6 +635,9 @@ export default function AdminLoyalty() {
           <div className="flex items-center gap-1.5 mt-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
             <p className="text-[10px] uppercase tracking-[0.1em] text-white/25">Nexty — suggested to enroll</p>
+            <span className="text-[9px] text-white/15 ml-auto">
+              ≥{minBookings} bookings in last {lookbackDays}d
+            </span>
           </div>
           {enrollCandidates.map(c => (
             <button
@@ -641,7 +695,7 @@ export default function AdminLoyalty() {
         />
       </AnimatePresence>
 
-      {/* Enroll modal — source is 'nexty' when candidate came from suggestions list */}
+      {/* Enroll modal */}
       <AnimatePresence>
         {enrollCandidate && (
           <EnrollModal
@@ -650,7 +704,6 @@ export default function AdminLoyalty() {
             saving={enrollMutation.isPending}
             serviceLabel={serviceLabel}
             onConfirm={(name, phone, notes, lastBooking, nextDue) => {
-              // If the candidate has bookingCount > 0 it originated from the Nexty suggestions
               const source: 'nexty' | 'manual' = enrollCandidate.bookingCount > 0 ? 'nexty' : 'manual';
               enrollMutation.mutate({ name, phone, notes, lastBooking, nextDue, source });
             }}

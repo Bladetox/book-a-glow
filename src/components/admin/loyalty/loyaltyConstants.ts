@@ -34,18 +34,22 @@ export const DEFAULT_WA_TEMPLATES = {
 };
 
 export const DEFAULT_LOYALTY_SETTINGS = {
-  reminder_weeks:          4,
-  service_label:           "wax",
-  wa_template_overdue:     DEFAULT_WA_TEMPLATES.overdue,
+  reminder_weeks:           4,
+  service_label:            "wax",
+  min_bookings:             2,
+  lookback_days:            180,
+  wa_template_overdue:      DEFAULT_WA_TEMPLATES.overdue,
   wa_template_time_to_book: DEFAULT_WA_TEMPLATES.timeToBook,
-  wa_template_on_track:    DEFAULT_WA_TEMPLATES.onTrack,
-  wa_template_birthday:    DEFAULT_WA_TEMPLATES.birthday,
+  wa_template_on_track:     DEFAULT_WA_TEMPLATES.onTrack,
+  wa_template_birthday:     DEFAULT_WA_TEMPLATES.birthday,
 };
 
 /** app_settings keys used for loyalty config */
 export const LOYALTY_SETTING_KEYS = [
   "loyalty.reminder_weeks",
   "loyalty.service_label",
+  "loyalty.min_bookings",
+  "loyalty.lookback_days",
   "loyalty.wa_template_overdue",
   "loyalty.wa_template_time_to_book",
   "loyalty.wa_template_on_track",

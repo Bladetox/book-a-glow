@@ -77,7 +77,6 @@ class AdminErrorBoundary extends Component<
   }
 }
 
-// Core views that are always available regardless of feature flags.
 const CORE_VIEWS = [
   "Dashboard",
   "Bookings",
@@ -89,7 +88,6 @@ const CORE_VIEWS = [
   "Help",
 ] as const;
 
-// All possible views in sidebar order.
 const ALL_VIEWS = [
   "Dashboard",
   "Recommendations",
@@ -109,9 +107,6 @@ const ALL_VIEWS = [
 
 type ViewName = (typeof ALL_VIEWS)[number];
 
-// ---------------------------------------------------------------------------
-// AdminShell — rendered INSIDE TenantProvider so all useTenant() hooks work
-// ---------------------------------------------------------------------------
 interface AdminShellProps {
   tenant: Tenant | null;
   subscription: TenantSubscription | null;
@@ -121,24 +116,20 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   const isLifetimeFree = tenant?.is_lifetime_free === true;
   const { flags, loading: flagsLoading } = useFeatureFlags(tenant?.id, isLifetimeFree);
 
-  // Build the ordered list of views this tenant can access.
   const allowedViews = ALL_VIEWS.filter((view) => {
-    // Core views are always on.
     if ((CORE_VIEWS as readonly string[]).includes(view)) return true;
-    // Flagged views — checked only after flags have loaded.
-    if (view === "Recommendations")  return flags.ai_insights;
-    if (view === "Stock")            return flags.stock_module;
-    if (view === "Consultations")    return flags.consultations;
+    if (view === "Recommendations")   return flags.ai_insights;
+    if (view === "Stock")             return flags.stock_module;
+    if (view === "Consultations")     return flags.consultations;
     if (view === "Special Occasions") return flags.special_occasions;
-    if (view === "Loyalty")          return flags.loyalty_module;
-    if (view === "Integrations")     return flags.integrations_tab;
+    if (view === "Loyalty")           return flags.loyalty_module;
+    if (view === "Integrations")      return flags.integrations_tab;
     return false;
   });
 
   const [activeView, setActiveView] = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // If the currently active view gets hidden by a flag change, fall back to Dashboard.
   useEffect(() => {
     if (!flagsLoading && !allowedViews.includes(activeView)) {
       setActiveView("Dashboard");
@@ -162,7 +153,6 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
     return <TrialExpiredPaywall tenantId={tenant?.id ?? ""} />;
   }
 
-  // Show a brief spinner while flags are being fetched (non-lifetime tenants only).
   if (flagsLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -211,20 +201,20 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
                 </div>
               }
             >
-              {activeView === "Dashboard"          && <AdminDashboard onNavigate={handleNavigate} />}
-              {activeView === "Recommendations"    && flags.ai_insights       && <AdminRecommendations onNavigate={handleNavigate} />}
-              {activeView === "Bookings"            && <AdminBookings />}
-              {activeView === "Services"            && <AdminServices />}
-              {activeView === "Availability"        && <AdminAvailability />}
-              {activeView === "Stock"               && flags.stock_module      && <AdminStock />}
-              {activeView === "Consultations"       && flags.consultations     && <AdminConsultations />}
-              {activeView === "Special Occasions"   && flags.special_occasions && <AdminSpecialOccasions />}
-              {activeView === "Client Management"  && <AdminClientManagement />}
-              {activeView === "Loyalty"             && flags.loyalty_module    && <AdminLoyalty />}
-              {activeView === "Integrations"        && flags.integrations_tab  && <AdminIntegrations />}
-              {activeView === "Settings"            && <AdminSettings />}
-              {activeView === "Terms & Conditions"  && <AdminTerms />}
-              {activeView === "Help"                && <AdminHelp />}
+              {activeView === "Dashboard"         && <AdminDashboard onNavigate={handleNavigate} />}
+              {activeView === "Recommendations"   && flags.ai_insights       && <AdminRecommendations onNavigate={handleNavigate} />}
+              {activeView === "Bookings"           && <AdminBookings />}
+              {activeView === "Services"           && <AdminServices />}
+              {activeView === "Availability"       && <AdminAvailability />}
+              {activeView === "Stock"              && flags.stock_module      && <AdminStock />}
+              {activeView === "Consultations"      && flags.consultations     && <AdminConsultations />}
+              {activeView === "Special Occasions"  && flags.special_occasions && <AdminSpecialOccasions />}
+              {activeView === "Client Management" && <AdminClientManagement />}
+              {activeView === "Loyalty"            && flags.loyalty_module    && <AdminLoyalty onNavigate={handleNavigate} />}
+              {activeView === "Integrations"       && flags.integrations_tab  && <AdminIntegrations />}
+              {activeView === "Settings"           && <AdminSettings />}
+              {activeView === "Terms & Conditions" && <AdminTerms />}
+              {activeView === "Help"               && <AdminHelp />}
             </Suspense>
           </AdminErrorBoundary>
         </div>
@@ -239,9 +229,6 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   );
 };
 
-// ---------------------------------------------------------------------------
-// Admin page — handles auth, then delegates to TenantProvider + AdminShell
-// ---------------------------------------------------------------------------
 const Admin = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -280,7 +267,6 @@ const Admin = () => {
             </div>
           );
         }
-
         return (
           <AdminShell tenant={tenant} subscription={subscription} />
         );
