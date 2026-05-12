@@ -1166,7 +1166,16 @@ const AdminLoyalty = () => {
                       <div key={c.client_name + c.phone}
                         className="flex items-start sm:items-center justify-between gap-2 rounded-xl bg-amber-400/[0.03] border border-amber-400/[0.12] px-3 py-2.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white/85 break-words line-clamp-1">{c.client_name}</p>
+                          {/* ── Nexty source badge ── */}
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <p className="text-xs font-semibold text-white/85 break-words line-clamp-1">{c.client_name}</p>
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-400/15 border border-amber-400/25 text-amber-400 shrink-0"
+                              title="Nexty detected this client books regularly outside your loyalty settings"
+                            >
+                              <Bot className="w-2.5 h-2.5" /> Nexty
+                            </span>
+                          </div>
                           <p className="text-[10px] text-white/40 leading-relaxed">
                             {c.bookingCount} booking{c.bookingCount === 1 ? "" : "s"} &middot; R{Number(c.totalSpend).toLocaleString()} total spend &middot; last visited{" "}
                             <span className={c.daysSinceLastBooking >= 60 ? "text-amber-400" : "text-white/40"}>
@@ -1198,7 +1207,7 @@ const AdminLoyalty = () => {
                 </motion.div>
               )}
 
-                            {!isLoading && candidates.length > 0 && (
+              {!isLoading && candidates.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                   className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
                   <div className="flex items-center gap-2 mb-1">
@@ -1212,7 +1221,16 @@ const AdminLoyalty = () => {
                     {candidates.map(c => (
                       <div key={c.client_name + c.phone} className="flex items-start sm:items-center justify-between gap-2 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white/80 break-words line-clamp-1">{c.client_name}</p>
+                          {/* ── Settings source badge ── */}
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <p className="text-xs font-semibold text-white/80 break-words line-clamp-1">{c.client_name}</p>
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0"
+                              title="Matches your loyalty programme criteria from Settings"
+                            >
+                              <Settings2 className="w-2.5 h-2.5" /> Settings
+                            </span>
+                          </div>
                           <p className="text-[10px] text-white/35 leading-relaxed">
                             {c.bookingCount} bookings · R{c.totalSpend.toLocaleString()} · last booked{" "}
                             <span className={c.daysSinceLastBooking >= settings.reminderWeeks * 7 ? "text-amber-400" : "text-white/40"}>{c.daysSinceLastBooking}d ago</span>
