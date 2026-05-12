@@ -14,6 +14,8 @@ export interface LoyaltyRow {
   last_contacted_at: string | null;
   updated_by: string | null;
   updated_at: string | null;
+  /** 'nexty' = enrolled from Nexty suggestion, 'manual' = added manually */
+  source: 'nexty' | 'manual';
 }
 
 export interface EnrichmentMap {
@@ -32,4 +34,13 @@ export interface EnrollCandidate {
   lastBookingDate: string;
   nextDueDate?: string;
   daysSinceLastBooking: number;
+}
+
+export interface LoyaltySettings {
+  reminder_weeks: number;
+  service_label: string;
+  wa_template_overdue: string;
+  wa_template_time_to_book: string;
+  wa_template_on_track: string;
+  wa_template_birthday: string;
 }
