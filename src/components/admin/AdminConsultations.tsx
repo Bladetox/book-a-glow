@@ -16,7 +16,7 @@ const filters = ["All", "New", "Existing"];
 type LeadSourceConfig = {
   label: string;
   icon: React.ReactNode;
-  className: string; // pill bg + text colour
+  className: string;
 };
 
 function getLeadSourceConfig(source?: string | null): LeadSourceConfig {
@@ -25,7 +25,6 @@ function getLeadSourceConfig(source?: string | null): LeadSourceConfig {
     return {
       label: source!,
       icon: (
-        // TikTok icon via inline SVG — not in lucide
         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z" />
         </svg>
@@ -81,7 +80,7 @@ function getLeadSourceConfig(source?: string | null): LeadSourceConfig {
   };
 }
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── helpers ─────────────────────────────────────────────────────────────────
 
 function fmtTime(t?: string | null) {
   if (!t) return null;
@@ -103,10 +102,10 @@ function exportCSV(rows: any[]) {
     headers.join(","),
     ...rows.map((c: any) => {
       const booking = c.booking;
-      const client = booking?.client;
-      const name  = client?.full_name  || booking?.guest_name  || "";
-      const email = client?.email       || booking?.guest_email || "";
-      const phone = client?.phone       || booking?.guest_phone || "";
+      const client  = booking?.client;
+      const name    = client?.full_name  || booking?.guest_name  || "";
+      const email   = client?.email       || booking?.guest_email || "";
+      const phone   = client?.phone       || booking?.guest_phone || "";
       const services = (booking?.items ?? [])
         .sort((a: any, b: any) => a.sort_order - b.sort_order)
         .map((s: any) => `${s.service_name} (R${s.price})`)
@@ -116,7 +115,7 @@ function exportCSV(rows: any[]) {
         booking?.booking_date ?? "",
         fmtTime(booking?.start_time) ?? "",
         c.client_type ?? "",
-        c.lead_source ?? "",
+        booking?.lead_source ?? "",   // ← from bookings
         services,
         c.skin_conditions ?? "", c.medications ?? "", c.allergies ?? "",
         c.health_conditions ?? "", c.pregnancy ?? "",
@@ -136,7 +135,7 @@ function exportCSV(rows: any[]) {
   URL.revokeObjectURL(url);
 }
 
-// ─── component ──────────────────────────────────────────────────────────────
+// ─── component ───────────────────────────────────────────────────────────────
 
 const AdminConsultations = () => {
   const { tenantId } = useTenant();
@@ -152,7 +151,8 @@ const AdminConsultations = () => {
         .select(`
           *,
           booking:bookings!consultations_booking_id_fkey(
-            booking_date, start_time, guest_name, guest_email, guest_phone,
+            booking_date, start_time, lead_source,
+            guest_name, guest_email, guest_phone,
             client:profiles!bookings_client_id_fkey(full_name, email, phone),
             items:booking_items(service_name, price, sort_order)
           )
@@ -265,14 +265,16 @@ const AdminConsultations = () => {
             const services: { service_name: string; price: number; sort_order: number }[] =
               (booking?.items ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order);
 
-            const timeLabel   = fmtTime(booking?.start_time);
+            const timeLabel    = fmtTime(booking?.start_time);
             const submittedAgo = c.created_at
               ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true })
               : null;
 
-            const leadCfg = getLeadSourceConfig(c.lead_source);
+            // lead_source lives on the booking, not the consultation
+            const leadCfg = getLeadSourceConfig(booking?.lead_source);
+            const hasLeadSource = !!booking?.lead_source;
 
-            // health fields — only render if non-null / non-empty
+            // health fields
             const healthFields = [
               { label: "Allergies",         value: c.allergies },
               { label: "Skin Conditions",   value: c.skin_conditions },
@@ -314,7 +316,7 @@ const AdminConsultations = () => {
                     </p>
                   </div>
 
-                  {/* badges — client type + acquisition channel */}
+                  {/* badges */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
@@ -326,14 +328,16 @@ const AdminConsultations = () => {
                       {c.client_type}
                     </span>
 
-                    {/* acquisition channel pill */}
-                    <span
-                      className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${leadCfg.className}`}
-                      title="Acquisition channel"
-                    >
-                      {leadCfg.icon}
-                      {leadCfg.label}
-                    </span>
+                    {/* channel pill — only shown when data exists, hidden on mobile */}
+                    {hasLeadSource && (
+                      <span
+                        className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${leadCfg.className}`}
+                        title="Acquisition channel"
+                      >
+                        {leadCfg.icon}
+                        {leadCfg.label}
+                      </span>
+                    )}
                   </div>
 
                   {isExpanded
@@ -346,7 +350,6 @@ const AdminConsultations = () => {
                 {isExpanded && (
                   <div className="px-3 sm:px-4 pb-5 pt-1 border-t border-white/[0.06] flex flex-col gap-5">
 
-                    {/* form submitted timestamp */}
                     {submittedAgo && (
                       <p className="text-[10px] text-white/25 mt-2">Form submitted {submittedAgo}</p>
                     )}
@@ -368,15 +371,19 @@ const AdminConsultations = () => {
                           </div>
                         )}
 
-                        {/* Acquisition Channel — always rendered in expanded view */}
+                        {/* Acquisition Channel — always shown in expanded view */}
                         <div>
                           <p className="text-[10px] text-white/30 mb-0.5">Acquisition Channel</p>
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${leadCfg.className}`}
-                          >
-                            {leadCfg.icon}
-                            {leadCfg.label}
-                          </span>
+                          {hasLeadSource ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${leadCfg.className}`}
+                            >
+                              {leadCfg.icon}
+                              {leadCfg.label}
+                            </span>
+                          ) : (
+                            <p className="text-xs text-white/25 italic">Not recorded</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -399,7 +406,6 @@ const AdminConsultations = () => {
                     {/* Consultation form data */}
                     {hasConsultationData && (
                       <>
-                        {/* Health */}
                         {healthFields.length > 0 && (
                           <div>
                             <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Health</p>
@@ -414,7 +420,6 @@ const AdminConsultations = () => {
                           </div>
                         )}
 
-                        {/* Lifestyle */}
                         {lifestyleFields.length > 0 && (
                           <div>
                             <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Lifestyle</p>
@@ -429,7 +434,6 @@ const AdminConsultations = () => {
                           </div>
                         )}
 
-                        {/* Additional notes */}
                         {c.additional_notes && (
                           <div>
                             <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-1">Additional Notes</p>
@@ -439,7 +443,6 @@ const AdminConsultations = () => {
                       </>
                     )}
 
-                    {/* No consultation data fallback */}
                     {!hasConsultationData && (
                       <p className="text-xs text-white/25 italic">No health or lifestyle information provided.</p>
                     )}
