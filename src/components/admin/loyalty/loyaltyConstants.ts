@@ -8,6 +8,16 @@ export const STATUS_STYLE: Record<string, string> = {
   UNKNOWN:       "bg-white/5 text-white/30 border-white/10",
 };
 
+/** Ordered list of selectable statuses for the inline status editor */
+export const STATUS_OPTIONS = [
+  "ON TRACK",
+  "TIME TO BOOK",
+  "OVERDUE",
+  "BIRTHDAY",
+] as const;
+
+export type LoyaltyStatus = typeof STATUS_OPTIONS[number];
+
 export const STATUS_ORDER: Record<string, number> = {
   BIRTHDAY:       0,
   OVERDUE:        1,
