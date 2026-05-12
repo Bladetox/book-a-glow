@@ -3,10 +3,83 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
-import { Loader2, ChevronDown, ChevronUp, Search, Download } from "lucide-react";
+import {
+  Loader2, ChevronDown, ChevronUp, Search, Download,
+  Globe, Instagram, Facebook, Youtube, Users, RefreshCw, HelpCircle,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const filters = ["All", "New", "Existing"];
+
+// ─── lead source display config ─────────────────────────────────────────────
+
+type LeadSourceConfig = {
+  label: string;
+  icon: React.ReactNode;
+  className: string; // pill bg + text colour
+};
+
+function getLeadSourceConfig(source?: string | null): LeadSourceConfig {
+  const s = (source ?? "").toLowerCase().trim();
+  if (s.includes("tiktok"))
+    return {
+      label: source!,
+      icon: (
+        // TikTok icon via inline SVG — not in lucide
+        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z" />
+        </svg>
+      ),
+      className: "bg-white/[0.06] text-white/60",
+    };
+  if (s.includes("instagram"))
+    return {
+      label: source!,
+      icon: <Instagram className="w-3 h-3" />,
+      className: "bg-pink-500/10 text-pink-400",
+    };
+  if (s.includes("facebook"))
+    return {
+      label: source!,
+      icon: <Facebook className="w-3 h-3" />,
+      className: "bg-blue-500/10 text-blue-400",
+    };
+  if (s.includes("youtube"))
+    return {
+      label: source!,
+      icon: <Youtube className="w-3 h-3" />,
+      className: "bg-red-500/10 text-red-400",
+    };
+  if (s.includes("website") || s.includes("web") || s.includes("google") || s.includes("seo"))
+    return {
+      label: source!,
+      icon: <Globe className="w-3 h-3" />,
+      className: "bg-teal-500/10 text-teal-400",
+    };
+  if (s.includes("referral") || s.includes("word"))
+    return {
+      label: source!,
+      icon: <Users className="w-3 h-3" />,
+      className: "bg-violet-500/10 text-violet-400",
+    };
+  if (s.includes("returning") || s.includes("existing"))
+    return {
+      label: source!,
+      icon: <RefreshCw className="w-3 h-3" />,
+      className: "bg-emerald-500/10 text-emerald-400",
+    };
+  if (!source)
+    return {
+      label: "Unknown",
+      icon: <HelpCircle className="w-3 h-3" />,
+      className: "bg-white/[0.04] text-white/25",
+    };
+  return {
+    label: source,
+    icon: <Globe className="w-3 h-3" />,
+    className: "bg-white/[0.06] text-white/50",
+  };
+}
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -20,7 +93,7 @@ function fmtTime(t?: string | null) {
 
 function exportCSV(rows: any[]) {
   const headers = [
-    "Name", "Email", "Phone", "Date", "Time", "Type", "Services",
+    "Name", "Email", "Phone", "Date", "Time", "Type", "Acquisition Channel", "Services",
     "Skin Conditions", "Medications", "Allergies", "Health Conditions",
     "Pregnancy", "Environmental Exposure", "Physical Factors",
     "Hair Length OK", "Additional Notes", "Form Submitted",
@@ -43,6 +116,7 @@ function exportCSV(rows: any[]) {
         booking?.booking_date ?? "",
         fmtTime(booking?.start_time) ?? "",
         c.client_type ?? "",
+        c.lead_source ?? "",
         services,
         c.skin_conditions ?? "", c.medications ?? "", c.allergies ?? "",
         c.health_conditions ?? "", c.pregnancy ?? "",
@@ -152,8 +226,8 @@ const AdminConsultations = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
           <input
-          id="consultations-search"
-          name="consultations-search"
+            id="consultations-search"
+            name="consultations-search"
             type="text"
             placeholder="Search by client name…"
             value={search}
@@ -191,25 +265,26 @@ const AdminConsultations = () => {
             const services: { service_name: string; price: number; sort_order: number }[] =
               (booking?.items ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order);
 
-            const timeLabel = fmtTime(booking?.start_time);
-
+            const timeLabel   = fmtTime(booking?.start_time);
             const submittedAgo = c.created_at
               ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true })
               : null;
 
+            const leadCfg = getLeadSourceConfig(c.lead_source);
+
             // health fields — only render if non-null / non-empty
             const healthFields = [
-              { label: "Allergies",             value: c.allergies },
-              { label: "Skin Conditions",       value: c.skin_conditions },
-              { label: "Health Conditions",     value: c.health_conditions },
-              { label: "Medications",           value: c.medications },
-              { label: "Pregnancy",             value: c.pregnancy },
+              { label: "Allergies",         value: c.allergies },
+              { label: "Skin Conditions",   value: c.skin_conditions },
+              { label: "Health Conditions", value: c.health_conditions },
+              { label: "Medications",       value: c.medications },
+              { label: "Pregnancy",         value: c.pregnancy },
             ].filter((f) => f.value);
 
             const lifestyleFields = [
-              { label: "Physical Factors",      value: c.physical_factors },
-              { label: "Environmental Exposure",value: c.environmental_exposure },
-              { label: "Hair Length OK",        value: c.hair_length_ok },
+              { label: "Physical Factors",       value: c.physical_factors },
+              { label: "Environmental Exposure", value: c.environmental_exposure },
+              { label: "Hair Length OK",         value: c.hair_length_ok },
             ].filter((f) => f.value);
 
             const hasConsultationData =
@@ -238,12 +313,32 @@ const AdminConsultations = () => {
                       {c.client_type === "new" ? "New Client" : "Existing"}
                     </p>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${c.client_type === "new" ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>
-                    {c.client_type}
-                  </span>
+
+                  {/* badges — client type + acquisition channel */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        c.client_type === "new"
+                          ? "bg-amber-500/10 text-amber-400"
+                          : "bg-emerald-500/10 text-emerald-400"
+                      }`}
+                    >
+                      {c.client_type}
+                    </span>
+
+                    {/* acquisition channel pill */}
+                    <span
+                      className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${leadCfg.className}`}
+                      title="Acquisition channel"
+                    >
+                      {leadCfg.icon}
+                      {leadCfg.label}
+                    </span>
+                  </div>
+
                   {isExpanded
-                    ? <ChevronUp   className="w-4 h-4 text-white/20" />
-                    : <ChevronDown className="w-4 h-4 text-white/20" />
+                    ? <ChevronUp   className="w-4 h-4 text-white/20 shrink-0" />
+                    : <ChevronDown className="w-4 h-4 text-white/20 shrink-0" />
                   }
                 </div>
 
@@ -256,7 +351,7 @@ const AdminConsultations = () => {
                       <p className="text-[10px] text-white/25 mt-2">Form submitted {submittedAgo}</p>
                     )}
 
-                    {/* Contact */}
+                    {/* Contact + Acquisition Channel */}
                     <div>
                       <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Contact</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -272,6 +367,17 @@ const AdminConsultations = () => {
                             <p className="text-xs text-white/70">{displayPhone}</p>
                           </div>
                         )}
+
+                        {/* Acquisition Channel — always rendered in expanded view */}
+                        <div>
+                          <p className="text-[10px] text-white/30 mb-0.5">Acquisition Channel</p>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${leadCfg.className}`}
+                          >
+                            {leadCfg.icon}
+                            {leadCfg.label}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
