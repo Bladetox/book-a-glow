@@ -16,10 +16,11 @@ import { format, subDays, addDays, parseISO } from "date-fns";
 import { toast } from "sonner";
 
 // ─── Sub-modules ───
-import type { LoyaltyRow, EnrichmentMap, EnrollCandidate } from "./loyalty/loyaltyTypes";
+import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings } from "./loyalty/loyaltyTypes";
 import {
   STATUS_STYLE, STATUS_ORDER, DEFAULT_WA_TEMPLATES,
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
+  DEFAULT_TENANT_CRITERIA,
 } from "./loyalty/loyaltyConstants";
 import {
   excelToDate, isoToDisplay,
@@ -34,6 +35,7 @@ import {
 import {
   EnrollModal, EnrollSuccessCelebration,
 } from "./loyalty/LoyaltyEnrollModal";
+import { LoyaltyTenantCriteria }     from "./loyalty/LoyaltyTenantCriteria";
 
 // ────────────────────────────────────────────────────────────────
 // Props
@@ -59,6 +61,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const [settingsDirty, setSettingsDirty]       = useState(false);
 
+  // ── Tenant criteria state ──
+  const [tenantCriteria, setTenantCriteria] = useState<TenantCriteriaSettings>({
+    enabled:       DEFAULT_TENANT_CRITERIA.enabled,
+    serviceIds:    DEFAULT_TENANT_CRITERIA.service_ids,
+    minBookings:   DEFAULT_TENANT_CRITERIA.min_bookings,
+    lookbackDays:  DEFAULT_TENANT_CRITERIA.lookback_days,
+  });
+
   // ── UI state ──
   const [search, setSearch]               = useState("");
   const [filterStatus, setFilterStatus]   = useState<string | null>(null);
@@ -68,7 +78,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, string>>({});
   const [expandedCard, setExpandedCard]   = useState<string | null>(null);
 
-  // ── Data: tenant info (business name, read-only) ──
+  // ── Data: tenant info ──
   const { data: tenantInfo } = useQuery({
     queryKey: ["tenant_info", tenantId],
     enabled: !!tenantId,
@@ -107,22 +117,36 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook: map["loyalty.wa_template_time_to_book"] }));
       if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:    map["loyalty.wa_template_on_track"] }));
       if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:   map["loyalty.wa_template_birthday"] }));
+      // Tenant criteria
+      if (map["loyalty.criteria_enabled"])
+        setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
+      if (map["loyalty.criteria_service_ids"])
+        setTenantCriteria(c => ({ ...c, serviceIds: map["loyalty.criteria_service_ids"].split(",").filter(Boolean) }));
+      if (map["loyalty.criteria_min_bookings"])
+        setTenantCriteria(c => ({ ...c, minBookings: Number(map["loyalty.criteria_min_bookings"]) }));
+      if (map["loyalty.criteria_lookback_days"])
+        setTenantCriteria(c => ({ ...c, lookbackDays: Number(map["loyalty.criteria_lookback_days"]) }));
       setSettingsDirty(false);
     },
   } as any);
 
-  // ── Mutation: save settings to app_settings ──
+  // ── Mutation: save ALL settings including criteria ──
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
       const rows = [
-        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),     description: "Loyalty reminder interval in weeks" },
-        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,              description: "Service label used in WA templates" },
-        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),       description: "Min bookings for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),      description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,       description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,    description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,       description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,      description: "WA template: birthday" },
+        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                        description: "Loyalty reminder interval in weeks" },
+        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                 description: "Service label used in WA templates" },
+        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                          description: "Min bookings for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                         description: "Lookback window (days) for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                          description: "WA template: overdue" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                       description: "WA template: time to book" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                          description: "WA template: on track" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                         description: "WA template: birthday" },
+        // Tenant criteria
+        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),               description: "Tenant criteria: enabled" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: tenantCriteria.serviceIds.join(","),           description: "Tenant criteria: qualifying service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),            description: "Tenant criteria: min bookings" },
+        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),           description: "Tenant criteria: lookback days" },
       ];
       const { error } = await supabase
         .from("app_settings")
@@ -134,6 +158,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       setSettingsDirty(false);
       qc.invalidateQueries({ queryKey: ["loyalty_settings", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId] });
+      qc.invalidateQueries({ queryKey: ["loyalty_criteria_candidates", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_enrichment", tenantId] });
     },
     onError: () => toast.error("Failed to save settings"),
@@ -153,6 +178,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       return (data ?? []) as LoyaltyRow[];
     },
   });
+
+  // Enrolled phones set — shared with tenant criteria to avoid offering already-enrolled clients
+  const enrolledPhones = useMemo(
+    () => new Set(loyaltyRows.map(r => normPhone(r.phone)).filter(Boolean)),
+    [loyaltyRows]
+  );
 
   // ── Data: enrichment from bookings ──
   const { data: enrichmentMap = {} } = useQuery<EnrichmentMap>({
@@ -193,8 +224,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // ── Data: enroll candidates from bookings (Nexty-suggested) ──
-  // Uses minBookings + lookbackDays from persisted settings
+  // ── Data: Nexty enroll candidates (all services, Nexty's own logic) ──
   const { data: enrollCandidates = [] } = useQuery<EnrollCandidate[]>({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
@@ -208,17 +238,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         .neq("status", "cancelled");
       if (error) throw error;
 
-      const enrolled = new Set(
-        loyaltyRows.map(r => normPhone(r.phone)).filter(Boolean)
-      );
-
       const grouped: Record<string, { name: string; phone: string; email?: string; count: number; spend: number; lastDate: string }> = {};
       const today = new Date();
 
       for (const b of (bookings ?? [])) {
         const key = resolveKey(b.client_phone, b.client_email, b.client_name, b.booking_date);
         const p   = normPhone(b.client_phone);
-        if (enrolled.has(p)) continue;
+        if (enrolledPhones.has(p)) continue;
         if (!grouped[key]) {
           grouped[key] = { name: b.client_name, phone: b.client_phone ?? "", email: b.client_email ?? "", count: 0, spend: 0, lastDate: b.booking_date };
         }
@@ -230,14 +256,15 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       return Object.values(grouped)
         .filter(g => g.count >= minBookings)
         .map(g => ({
-          client_name: g.name,
-          phone: g.phone,
-          email: g.email,
-          bookingCount: g.count,
-          totalSpend: g.spend,
-          lastBookingDate: g.lastDate,
-          nextDueDate: format(addDays(parseISO(g.lastDate), reminderWeeks * 7), "yyyy-MM-dd"),
+          client_name:          g.name,
+          phone:                g.phone,
+          email:                g.email,
+          bookingCount:         g.count,
+          totalSpend:           g.spend,
+          lastBookingDate:      g.lastDate,
+          nextDueDate:          format(addDays(parseISO(g.lastDate), reminderWeeks * 7), "yyyy-MM-dd"),
           daysSinceLastBooking: Math.floor((today.getTime() - new Date(g.lastDate).getTime()) / 86400000),
+          candidateSource:      "nexty" as const,
         }))
         .sort((a, b) => b.daysSinceLastBooking - a.daysSinceLastBooking)
         .slice(0, 20);
@@ -246,7 +273,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   // ── Enroll mutation ──
   const enrollMutation = useMutation({
-    mutationFn: async (vars: { name: string; phone: string; notes: string; lastBooking: string; nextDue: string; source: 'nexty' | 'manual' }) => {
+    mutationFn: async (vars: { name: string; phone: string; notes: string; lastBooking: string; nextDue: string; source: 'nexty' | 'manual' | 'criteria' }) => {
       const { error } = await supabase.from("loyalty_tracker").insert({
         tenant_id:      tenantId,
         client_name:    vars.name,
@@ -265,6 +292,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       setEnrollCandidate(null);
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId] });
+      qc.invalidateQueries({ queryKey: ["loyalty_criteria_candidates", tenantId] });
     },
     onError: () => toast.error("Failed to enroll client"),
   });
@@ -528,7 +556,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                     : "border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.04]"
                 }`}
               >
-                {/* Row: checkbox + client + source badge + status + WA */}
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
@@ -554,19 +581,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                     {/* Source badge */}
                     {row.source === "nexty" ? (
-                      <span
-                        title="Added by Nexty AI"
-                        className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-amber-500/10 text-amber-400/80 border border-amber-500/15 select-none"
-                      >
-                        Nexty
-                      </span>
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-amber-500/10 text-amber-400/80 border border-amber-500/15 select-none">Nexty</span>
+                    ) : row.source === "criteria" ? (
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-violet-500/10 text-violet-400/80 border border-violet-500/15 select-none">Your pick</span>
                     ) : (
-                      <span
-                        title="Manually enrolled"
-                        className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-white/[0.04] text-white/25 border border-white/[0.07] select-none"
-                      >
-                        Manual
-                      </span>
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-white/[0.04] text-white/25 border border-white/[0.07] select-none">Manual</span>
                     )}
 
                     <InlineStatusEditor
@@ -593,7 +612,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   </div>
                 </div>
 
-                {/* Dates row */}
                 <div className="flex items-center gap-3 pl-6">
                   <span className="flex items-center gap-1 text-[10px] text-white/30">
                     <Clock className="w-3 h-3" />
@@ -606,7 +624,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   )}
                 </div>
 
-                {/* Expanded: notes + remove */}
                 {isExpanded && (
                   <div className="flex items-center justify-between gap-2 pl-6 pt-1 border-t border-white/[0.05] mt-1">
                     <InlineNotesEditor
@@ -629,15 +646,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         </div>
       )}
 
-      {/* Nexty — enroll candidates */}
+      {/* ── Nexty suggestions ── */}
       {enrollCandidates.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5 mt-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
             <p className="text-[10px] uppercase tracking-[0.1em] text-white/25">Nexty — suggested to enroll</p>
-            <span className="text-[9px] text-white/15 ml-auto">
-              ≥{minBookings} bookings in last {lookbackDays}d
-            </span>
+            <span className="text-[9px] text-white/15 ml-auto">≥{minBookings} bookings in last {lookbackDays}d · all services</span>
           </div>
           {enrollCandidates.map(c => (
             <button
@@ -658,7 +673,19 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         </div>
       )}
 
-      {/* Manual enroll section */}
+      {/* ── Tenant criteria engine ── */}
+      <LoyaltyTenantCriteria
+        tenantId={tenantId}
+        enrolledPhones={enrolledPhones}
+        settings={tenantCriteria}
+        onSettingsChange={setTenantCriteria}
+        reminderWeeks={reminderWeeks}
+        onEnroll={setEnrollCandidate}
+        dirty={settingsDirty}
+        onMarkDirty={() => setSettingsDirty(true)}
+      />
+
+      {/* Manual enroll */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-1.5 mt-1">
           <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
@@ -666,14 +693,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         </div>
         <button
           onClick={() => setEnrollCandidate({
-            client_name: "",
-            phone: "",
-            email: "",
-            bookingCount: 0,
-            totalSpend: 0,
-            lastBookingDate: "",
-            nextDueDate: "",
+            client_name: "", phone: "", email: "",
+            bookingCount: 0, totalSpend: 0,
+            lastBookingDate: "", nextDueDate: "",
             daysSinceLastBooking: 0,
+            candidateSource: "manual",
           })}
           className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02] transition-all text-left"
         >
@@ -704,7 +728,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             saving={enrollMutation.isPending}
             serviceLabel={serviceLabel}
             onConfirm={(name, phone, notes, lastBooking, nextDue) => {
-              const source: 'nexty' | 'manual' = enrollCandidate.bookingCount > 0 ? 'nexty' : 'manual';
+              const source = enrollCandidate.candidateSource === "criteria"
+                ? "criteria"
+                : enrollCandidate.bookingCount > 0 ? "nexty" : "manual";
               enrollMutation.mutate({ name, phone, notes, lastBooking, nextDue, source });
             }}
           />

@@ -14,8 +14,8 @@ export interface LoyaltyRow {
   last_contacted_at: string | null;
   updated_by: string | null;
   updated_at: string | null;
-  /** 'nexty' = enrolled from Nexty suggestion, 'manual' = added manually */
-  source: 'nexty' | 'manual';
+  /** 'nexty' = enrolled from Nexty suggestion, 'manual' = added manually, 'criteria' = enrolled from tenant criteria */
+  source: 'nexty' | 'manual' | 'criteria';
 }
 
 export interface EnrichmentMap {
@@ -34,6 +34,10 @@ export interface EnrollCandidate {
   lastBookingDate: string;
   nextDueDate?: string;
   daysSinceLastBooking: number;
+  /** Which engine surfaced this candidate */
+  candidateSource: 'nexty' | 'criteria';
+  /** For criteria candidates: which service names matched */
+  matchedServices?: string[];
 }
 
 export interface LoyaltySettings {
@@ -43,4 +47,17 @@ export interface LoyaltySettings {
   wa_template_time_to_book: string;
   wa_template_on_track: string;
   wa_template_birthday: string;
+}
+
+export interface ServiceOption {
+  id: string;
+  name: string;
+  category: string;
+}
+
+export interface TenantCriteriaSettings {
+  enabled: boolean;
+  serviceIds: string[];   // selected service UUIDs
+  minBookings: number;
+  lookbackDays: number;
 }

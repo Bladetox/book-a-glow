@@ -44,6 +44,13 @@ export const DEFAULT_LOYALTY_SETTINGS = {
   wa_template_birthday:     DEFAULT_WA_TEMPLATES.birthday,
 };
 
+export const DEFAULT_TENANT_CRITERIA = {
+  enabled:       false,
+  service_ids:   [] as string[],   // UUIDs of selected services
+  min_bookings:  3,
+  lookback_days: 90,
+};
+
 /** app_settings keys used for loyalty config */
 export const LOYALTY_SETTING_KEYS = [
   "loyalty.reminder_weeks",
@@ -54,4 +61,9 @@ export const LOYALTY_SETTING_KEYS = [
   "loyalty.wa_template_time_to_book",
   "loyalty.wa_template_on_track",
   "loyalty.wa_template_birthday",
+  // Tenant criteria
+  "loyalty.criteria_enabled",
+  "loyalty.criteria_service_ids",
+  "loyalty.criteria_min_bookings",
+  "loyalty.criteria_lookback_days",
 ] as const;
