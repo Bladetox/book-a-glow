@@ -7,12 +7,14 @@ const SUPABASE_ANON_KEY =
 
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 
-// NOTE: 'favicon' removed from exclusions so tenant favicon requests reach this middleware
+// 'favicon' removed so tenant favicon requests reach this middleware.
+// NOTE: we must intercept ALL requests on tenant subdomains — not just
+// text/html — because crawlers (WhatsApp, iMessage, Slack) omit Accept.
 export const config = {
   matcher: "/((?!_vercel|_next/static|_next/image|assets|robots|sitemap|placeholder).*)",
 };
 
-/** Resolve tenant slug from a subdomain hostname, or null for marketing domains. */
+/** Resolve tenant slug from hostname, or null for marketing domains. */
 function resolveTenantSlug(hostname: string): string | null {
   for (const domain of MAIN_DOMAINS) {
     if (hostname.endsWith(`.${domain}`)) {
@@ -54,10 +56,14 @@ export default async function middleware(request: Request): Promise<Response> {
 
   const tenantSlug = resolveTenantSlug(hostname);
 
-  // No tenant slug → marketing site, pass through untouched
+  // Not a tenant subdomain → marketing site, pass through untouched
   if (!tenantSlug) return fetch(request);
 
-  // ── Favicon / apple-touch-icon: redirect to tenant logo ──────────────────
+  // ── Static assets — pass through (JS/CSS bundles, images etc.) ──────────
+  const isAsset = /\.(?:js|css|woff2?|ttf|otf|eot|map|json|webp|avif|gif|mp4|webm|ico)$/.test(path);
+  if (isAsset) return fetch(request);
+
+  // ── Favicon / apple-touch-icon → redirect to tenant logo ────────────
   const isFavicon =
     path.startsWith("/favicon") ||
     path.startsWith("/apple-touch-icon") ||
@@ -69,21 +75,14 @@ export default async function middleware(request: Request): Promise<Response> {
     if (tenant?.logoUrl) {
       return Response.redirect(tenant.logoUrl, 302);
     }
-    // No logo → serve the default file
     return fetch(request);
   }
 
-  // ── PWA manifest ─────────────────────────────────────────────────────────
+  // ── PWA manifest ─────────────────────────────────────────────────
   const isManifest =
     path === "/site.webmanifest" ||
     path === "/manifest.json" ||
     path === "/manifest.webmanifest";
-
-  // ── HTML pages ────────────────────────────────────────────────────────────
-  const accept = request.headers.get("accept") ?? "";
-  const isHtml = accept.includes("text/html");
-
-  if (!isHtml && !isManifest) return fetch(request);
 
   const tenant = await fetchTenant(tenantSlug);
   if (!tenant) return fetch(request);
@@ -93,7 +92,7 @@ export default async function middleware(request: Request): Promise<Response> {
   const description = `Book your appointment with ${name}. Powered by NextSlot.`;
   const canonicalUrl = `https://${hostname}/`;
 
-  // ── Serve dynamic manifest for this tenant ────────────────────────────────
+  // ── Serve dynamic manifest ─────────────────────────────────────────────
   if (isManifest) {
     const mimeType = logoUrl.endsWith(".webp")
       ? "image/webp"
@@ -132,10 +131,20 @@ export default async function middleware(request: Request): Promise<Response> {
     });
   }
 
-  // ── Patch static index.html for HTML requests ─────────────────────────────
+  // ── All other requests → serve patched index.html ─────────────────────
+  // Fetch the raw index.html from Vercel's origin, bypassing edge cache.
+  // We add a unique cache-buster so Vercel doesn't serve us a stale copy.
   const indexUrl = new URL(request.url);
   indexUrl.pathname = "/";
-  const htmlRes = await fetch(indexUrl.toString(), { headers: { accept: "text/html" } });
+  indexUrl.search = `?__cb=${Date.now()}`;
+
+  const htmlRes = await fetch(indexUrl.toString(), {
+    headers: {
+      accept: "text/html",
+      "cache-control": "no-cache, no-store",
+      pragma: "no-cache",
+    },
+  });
   if (!htmlRes.ok) return fetch(request);
   let html = await htmlRes.text();
 
@@ -163,29 +172,29 @@ export default async function middleware(request: Request): Promise<Response> {
     `$1${esc(canonicalUrl)}$2`
   );
 
-  // Favicon link tags — replace href on ALL icon link tags regardless of type/sizes
+  // Favicon link tags — replace href regardless of attribute order or sizes
   if (logoUrl) {
-    // <link rel="icon" ... href="..."> — any type or sizes
     html = html.replace(
       /(<link\s[^>]*rel="icon"[^>]*\shref=")[^"]*(")/g,
       `$1${esc(logoUrl)}$2`
     );
-    // <link rel="shortcut icon" href="...">
     html = html.replace(
       /(<link\s[^>]*rel="shortcut icon"[^>]*\shref=")[^"]*(")/g,
       `$1${esc(logoUrl)}$2`
     );
-    // <link rel="apple-touch-icon" ... href="...">
     html = html.replace(
       /(<link\s[^>]*rel="apple-touch-icon"[^>]*\shref=")[^"]*(")/g,
       `$1${esc(logoUrl)}$2`
     );
   }
 
+  // Tell Vercel NOT to cache this patched response at the edge — each
+  // tenant subdomain needs its own dynamic HTML, not a shared cached copy.
   return new Response(html, {
     headers: {
       "content-type": "text/html; charset=utf-8",
-      "cache-control": "public, max-age=300, stale-while-revalidate=60",
+      "cache-control": "no-store",
+      "x-tenant": tenantSlug,
     },
   });
 }
