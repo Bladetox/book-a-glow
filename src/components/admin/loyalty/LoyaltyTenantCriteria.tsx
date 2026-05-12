@@ -43,7 +43,7 @@ export function LoyaltyTenantCriteria({
   const [showConfig, setShowConfig]   = useState(false);
   const [expandCat, setExpandCat]     = useState<string | null>("waxing");
 
-  // ── Load services catalogue ──
+  // ── Load services catalogue — FIX: filter by tenant_id to prevent cross-tenant leakage ──
   const { data: services = [] } = useQuery<ServiceOption[]>({
     queryKey: ["services_catalogue", tenantId],
     enabled: !!tenantId,
@@ -52,6 +52,7 @@ export function LoyaltyTenantCriteria({
       const { data, error } = await supabase
         .from("services")
         .select("id, name, category")
+        .eq("tenant_id", tenantId)
         .order("category", { ascending: true })
         .order("name",     { ascending: true });
       if (error) throw error;

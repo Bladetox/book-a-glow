@@ -95,7 +95,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const businessName = tenantInfo?.name ?? "";
 
   // ── Data: loyalty settings from app_settings ──
-  useQuery({
+  // FIX: TQ v5 removed onSuccess from useQuery — hydrate state in useEffect instead.
+  const { data: settingsRows } = useQuery({
     queryKey: ["loyalty_settings", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
@@ -105,30 +106,32 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         .eq("tenant_id", tenantId)
         .in("key", LOYALTY_SETTING_KEYS as unknown as string[]);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as { key: string; value: string }[];
     },
-    onSuccess: (rows: { key: string; value: string }[]) => {
-      const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-      if (map["loyalty.reminder_weeks"])           setReminderWeeks(Number(map["loyalty.reminder_weeks"]));
-      if (map["loyalty.service_label"])            setServiceLabel(map["loyalty.service_label"]);
-      if (map["loyalty.min_bookings"])             setMinBookings(Number(map["loyalty.min_bookings"]));
-      if (map["loyalty.lookback_days"])            setLookbackDays(Number(map["loyalty.lookback_days"]));
-      if (map["loyalty.wa_template_overdue"])      setWaTemplates(t => ({ ...t, overdue:    map["loyalty.wa_template_overdue"] }));
-      if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook: map["loyalty.wa_template_time_to_book"] }));
-      if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:    map["loyalty.wa_template_on_track"] }));
-      if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:   map["loyalty.wa_template_birthday"] }));
-      // Tenant criteria
-      if (map["loyalty.criteria_enabled"])
-        setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
-      if (map["loyalty.criteria_service_ids"])
-        setTenantCriteria(c => ({ ...c, serviceIds: map["loyalty.criteria_service_ids"].split(",").filter(Boolean) }));
-      if (map["loyalty.criteria_min_bookings"])
-        setTenantCriteria(c => ({ ...c, minBookings: Number(map["loyalty.criteria_min_bookings"]) }));
-      if (map["loyalty.criteria_lookback_days"])
-        setTenantCriteria(c => ({ ...c, lookbackDays: Number(map["loyalty.criteria_lookback_days"]) }));
-      setSettingsDirty(false);
-    },
-  } as any);
+  });
+
+  useEffect(() => {
+    if (!settingsRows) return;
+    const map = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
+    if (map["loyalty.reminder_weeks"])           setReminderWeeks(Number(map["loyalty.reminder_weeks"]));
+    if (map["loyalty.service_label"])            setServiceLabel(map["loyalty.service_label"]);
+    if (map["loyalty.min_bookings"])             setMinBookings(Number(map["loyalty.min_bookings"]));
+    if (map["loyalty.lookback_days"])            setLookbackDays(Number(map["loyalty.lookback_days"]));
+    if (map["loyalty.wa_template_overdue"])      setWaTemplates(t => ({ ...t, overdue:    map["loyalty.wa_template_overdue"] }));
+    if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook: map["loyalty.wa_template_time_to_book"] }));
+    if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:    map["loyalty.wa_template_on_track"] }));
+    if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:   map["loyalty.wa_template_birthday"] }));
+    // Tenant criteria
+    if (map["loyalty.criteria_enabled"])
+      setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
+    if (map["loyalty.criteria_service_ids"])
+      setTenantCriteria(c => ({ ...c, serviceIds: map["loyalty.criteria_service_ids"].split(",").filter(Boolean) }));
+    if (map["loyalty.criteria_min_bookings"])
+      setTenantCriteria(c => ({ ...c, minBookings: Number(map["loyalty.criteria_min_bookings"]) }));
+    if (map["loyalty.criteria_lookback_days"])
+      setTenantCriteria(c => ({ ...c, lookbackDays: Number(map["loyalty.criteria_lookback_days"]) }));
+    setSettingsDirty(false);
+  }, [settingsRows]);
 
   // ── Mutation: save ALL settings including criteria ──
   const saveSettingsMutation = useMutation({
@@ -651,8 +654,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5 mt-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
-            <p className="text-[10px] uppercase tracking-[0.1em] text-white/25">Nexty — suggested to enroll</p>
-            <span className="text-[9px] text-white/15 ml-auto">≥{minBookings} bookings in last {lookbackDays}d · all services</span>
+            <p className="text-[10px] uppercase tracking-[0.1em] text-white/25">Nexty — suggested clients</p>
           </div>
           {enrollCandidates.map(c => (
             <button
@@ -662,10 +664,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-[12px] font-medium text-white/70">{c.client_name}</span>
-                <span className="text-[10px] text-white/30">{c.bookingCount} bookings · R {c.totalSpend.toLocaleString()}</span>
+                <span className="text-[10px] text-white/30">
+                  {c.bookingCount} bookings · {c.daysSinceLastBooking}d ago
+                </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-amber-500/10 text-amber-400/80 border border-amber-500/15">Nexty</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-amber-500/10 text-amber-400/80 border border-amber-500/15">
+                  Nexty
+                </span>
                 <UserPlus className="w-4 h-4 text-amber-400/50 shrink-0" />
               </div>
             </button>
@@ -673,79 +679,52 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         </div>
       )}
 
-      {/* ── Tenant criteria engine ── */}
+      {/* ── Tenant criteria suggestions ── */}
       <LoyaltyTenantCriteria
         tenantId={tenantId}
         enrolledPhones={enrolledPhones}
         settings={tenantCriteria}
-        onSettingsChange={setTenantCriteria}
+        onSettingsChange={s => { setTenantCriteria(s); setSettingsDirty(true); }}
         reminderWeeks={reminderWeeks}
         onEnroll={setEnrollCandidate}
         dirty={settingsDirty}
         onMarkDirty={() => setSettingsDirty(true)}
       />
 
-      {/* Manual enroll */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1.5 mt-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-          <p className="text-[10px] uppercase tracking-[0.1em] text-white/25">Manually add a client</p>
-        </div>
-        <button
-          onClick={() => setEnrollCandidate({
-            client_name: "", phone: "", email: "",
-            bookingCount: 0, totalSpend: 0,
-            lastBookingDate: "", nextDueDate: "",
-            daysSinceLastBooking: 0,
-            candidateSource: "manual",
-          })}
-          className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02] transition-all text-left"
-        >
-          <span className="text-[12px] text-white/40">Add client to loyalty programme…</span>
-          <UserPlus className="w-4 h-4 text-white/25 shrink-0" />
-        </button>
-      </div>
-
-      {/* Bulk bar */}
-      <AnimatePresence>
-        <LoyaltyBulkBar
-          selected={selectedIds}
-          rows={loyaltyRows}
-          effectiveStatusMap={effectiveStatusMap}
-          businessName={businessName}
-          serviceLabel={serviceLabel}
-          templates={waTemplates}
-          onClear={() => setSelectedIds([])}
-        />
-      </AnimatePresence>
+      {/* Bulk action bar */}
+      <LoyaltyBulkBar
+        selectedIds={selectedIds}
+        tenantId={tenantId}
+        onClear={() => setSelectedIds([])}
+        onDone={() => {
+          setSelectedIds([]);
+          qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
+        }}
+      />
 
       {/* Enroll modal */}
-      <AnimatePresence>
-        {enrollCandidate && (
-          <EnrollModal
-            candidate={enrollCandidate}
-            onClose={() => setEnrollCandidate(null)}
-            saving={enrollMutation.isPending}
-            serviceLabel={serviceLabel}
-            onConfirm={(name, phone, notes, lastBooking, nextDue) => {
-              const source = enrollCandidate.candidateSource === "criteria"
-                ? "criteria"
-                : enrollCandidate.bookingCount > 0 ? "nexty" : "manual";
-              enrollMutation.mutate({ name, phone, notes, lastBooking, nextDue, source });
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {enrollCandidate && (
+        <EnrollModal
+          candidate={enrollCandidate}
+          reminderWeeks={reminderWeeks}
+          isPending={enrollMutation.isPending}
+          onConfirm={(name, phone, notes, lastBooking, nextDue) =>
+            enrollMutation.mutate({
+              name, phone, notes, lastBooking, nextDue,
+              source: enrollCandidate.candidateSource === "criteria" ? "criteria"
+                    : enrollCandidate.candidateSource === "nexty"    ? "nexty"
+                    : "manual",
+            })
+          }
+          onClose={() => setEnrollCandidate(null)}
+        />
+      )}
 
-      {/* Enroll success */}
-      <AnimatePresence>
-        {enrolledName && (
-          <EnrollSuccessCelebration
-            name={enrolledName}
-            onDone={() => setEnrolledName(null)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Success celebration */}
+      <EnrollSuccessCelebration
+        name={enrolledName}
+        onDone={() => setEnrolledName(null)}
+      />
     </div>
   );
 }
