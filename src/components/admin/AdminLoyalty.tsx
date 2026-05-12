@@ -37,14 +37,14 @@ import {
 // AdminLoyalty
 // ────────────────────────────────────────────────────────────────
 export default function AdminLoyalty() {
-  const { tenant } = useTenant();
-  const tenantId   = tenant?.id ?? "";
-  const qc         = useQueryClient();
+  // useTenant() returns { tenantId, userId } — NOT a tenant object
+  const { tenantId } = useTenant();
+  const qc = useQueryClient();
 
   // ── Settings state ──
   const [reminderWeeks, setReminderWeeks]   = useState(4);
   const [serviceLabel, setServiceLabel]     = useState("wax");
-  const [businessName, setBusinessName]     = useState(tenant?.business_name ?? "");
+  const [businessName, setBusinessName]     = useState("");
   const [showSettings, setShowSettings]     = useState(false);
   const [waTemplates, setWaTemplates]       = useState(DEFAULT_WA_TEMPLATES);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
@@ -57,6 +57,26 @@ export default function AdminLoyalty() {
   const [enrolledName, setEnrolledName]   = useState<string | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, string>>({});
   const [expandedCard, setExpandedCard]   = useState<string | null>(null);
+
+  // ── Data: tenant info (business name, etc.) ──
+  useQuery({
+    queryKey: ["tenant_info", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("name")
+        .eq("id", tenantId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: { name: string } | null) => {
+      if (data?.name && !businessName) {
+        setBusinessName(data.name);
+      }
+    },
+  } as any);
 
   // ── Data: loyalty tracker rows ──
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery<LoyaltyRow[]>({
@@ -255,25 +275,29 @@ export default function AdminLoyalty() {
           <div className="flex flex-col gap-3 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.02]">
             <p className="text-[11px] font-semibold text-white/50 tracking-[0.08em] uppercase">Tracker Settings</p>
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "Reminder interval (weeks)", value: reminderWeeks, min: 1, max: 12, set: setReminderWeeks },
-              ].map(s => (
-                <div key={s.label} className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">{s.label}</label>
-                  <input type="number" min={s.min} max={s.max} value={s.value}
-                    onChange={e => s.set(Number(e.target.value))}
-                    className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
-                </div>
-              ))}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Service label</label>
-                <input value={serviceLabel} onChange={e => setServiceLabel(e.target.value)}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+                <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Reminder interval (weeks)</label>
+                <input
+                  type="number" min={1} max={12} value={reminderWeeks}
+                  onChange={e => setReminderWeeks(Number(e.target.value))}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40"
+                />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Business name</label>
-                <input value={businessName} onChange={e => setBusinessName(e.target.value)}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40" />
+                <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Service label</label>
+                <input
+                  value={serviceLabel}
+                  onChange={e => setServiceLabel(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40"
+                />
+              </div>
+              <div className="flex flex-col gap-1 col-span-2">
+                <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Business name (used in WA messages)</label>
+                <input
+                  value={businessName}
+                  onChange={e => setBusinessName(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40"
+                />
               </div>
             </div>
             <button
@@ -290,7 +314,8 @@ export default function AdminLoyalty() {
                   {(["overdue", "timeToBook", "onTrack", "birthday"] as const).map(key => (
                     <div key={key} className="flex flex-col gap-1">
                       <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">{key}</label>
-                      <textarea value={waTemplates[key]}
+                      <textarea
+                        value={waTemplates[key]}
                         onChange={e => setWaTemplates(t => ({ ...t, [key]: e.target.value }))}
                         rows={2}
                         className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-[11px] text-white/70 resize-none focus:outline-none focus:border-emerald-400/40"
@@ -310,7 +335,8 @@ export default function AdminLoyalty() {
       {/* Status filter pills */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {([null, "BIRTHDAY", "OVERDUE", "TIME TO BOOK", "ON TRACK", "UNKNOWN"] as const).map(s => (
-          <button key={String(s)}
+          <button
+            key={String(s)}
             onClick={() => setFilterStatus(s)}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-all ${
               filterStatus === s
@@ -330,13 +356,16 @@ export default function AdminLoyalty() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
         <input
-          value={search} onChange={e => setSearch(e.target.value)}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
           placeholder="Search name or phone…"
           className="w-full pl-8 pr-8 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/30"
         />
         {search && (
-          <button onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
+          >
             <X className="w-3.5 h-3.5" />
           </button>
         )}
@@ -350,7 +379,11 @@ export default function AdminLoyalty() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 gap-2">
           <Users className="w-8 h-8 text-white/10" />
-          <p className="text-[12px] text-white/25">No clients match your filters</p>
+          <p className="text-[12px] text-white/25">
+            {loyaltyRows.length === 0
+              ? "No clients enrolled yet — enroll from the suggestions below"
+              : "No clients match your filters"}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -386,14 +419,18 @@ export default function AdminLoyalty() {
                   />
 
                   <InlineClientEditor
-                    rowId={row.id} name={row.client_name} phone={row.phone}
+                    rowId={row.id}
+                    name={row.client_name}
+                    phone={row.phone}
                     tenantId={tenantId}
                     onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] })}
                   />
 
                   <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                     <InlineStatusEditor
-                      rowId={row.id} current={row.status ?? ""} effectiveNorm={status}
+                      rowId={row.id}
+                      current={row.status ?? ""}
+                      effectiveNorm={status}
                       tenantId={tenantId}
                       onOptimisticUpdate={s => setOptimisticStatus(m => ({ ...m, [row.id]: s }))}
                       onUpdated={() => {
@@ -403,8 +440,11 @@ export default function AdminLoyalty() {
                     />
                     {row.phone && (
                       <WaButton
-                        name={row.client_name} status={status} phone={row.phone}
-                        businessName={businessName} serviceLabel={serviceLabel}
+                        name={row.client_name}
+                        status={status}
+                        phone={row.phone}
+                        businessName={businessName}
+                        serviceLabel={serviceLabel}
                         templates={waTemplates}
                       />
                     )}
@@ -428,11 +468,15 @@ export default function AdminLoyalty() {
                 {isExpanded && (
                   <div className="flex items-center justify-between gap-2 pl-6 pt-1 border-t border-white/[0.05] mt-1">
                     <InlineNotesEditor
-                      rowId={row.id} current={row.notes} tenantId={tenantId}
+                      rowId={row.id}
+                      current={row.notes}
+                      tenantId={tenantId}
                       onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] })}
                     />
                     <UnregisterButton
-                      rowId={row.id} clientName={row.client_name} tenantId={tenantId}
+                      rowId={row.id}
+                      clientName={row.client_name}
+                      tenantId={tenantId}
                       onDeleted={() => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] })}
                     />
                   </div>
