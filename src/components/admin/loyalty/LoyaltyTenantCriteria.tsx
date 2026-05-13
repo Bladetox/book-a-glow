@@ -106,19 +106,21 @@ export function LoyaltyTenantCriteria({
       const serviceNameMap: Record<string, string> = {};
       for (const s of services) serviceNameMap[s.id] = s.name;
 
+      // FIX 1: select `total_amount` (actual column name) instead of `total_price`
+      // to prevent spend always accumulating as NaN.
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("client_name, client_phone, client_email, booking_date, total_price, status, service_ids")
+        .select("client_name, client_phone, client_email, booking_date, total_amount, status, service_ids")
         .eq("tenant_id", tenantId)
         .gte("booking_date", cutoff)
         .neq("status", "cancelled");
       if (error) throw error;
 
-      // FIX: renamed from `grouped` → `clientMap` to avoid shadowing the
+      // FIX 2: renamed from `grouped` → `clientMap` to avoid shadowing the
       // component-scope `grouped` (services by category). The old name caused
       // the queryFn closure to resolve `grouped[key]` as a ServiceOption[]
       // instead of the local accumulator, crashing with
-      // "cannot read properties of undefined (reading 'length')".
+      // "Cannot read properties of undefined (reading 'length')".
       const clientMap: Record<string, {
         name: string; phone: string; email?: string;
         count: number; spend: number; lastDate: string;
@@ -158,7 +160,7 @@ export function LoyaltyTenantCriteria({
           };
         }
         clientMap[key].count++;
-        clientMap[key].spend += b.total_price ?? 0;
+        clientMap[key].spend += b.total_amount ?? 0;
         if (b.booking_date > clientMap[key].lastDate) clientMap[key].lastDate = b.booking_date;
         matchedIds.forEach((id: string) => clientMap[key].matchedServiceIds.add(id));
       }
