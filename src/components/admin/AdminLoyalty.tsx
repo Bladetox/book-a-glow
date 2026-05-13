@@ -95,7 +95,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const businessName = tenantInfo?.name ?? "";
 
   // ── Data: loyalty settings from app_settings ──
-  // FIX: TQ v5 removed onSuccess from useQuery — hydrate state in useEffect instead.
   const { data: settingsRows } = useQuery({
     queryKey: ["loyalty_settings", tenantId],
     enabled: !!tenantId,
@@ -334,6 +333,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   };
 
   const isLoading = loadingLoyalty || loadingCandidates || loadingEnrichment;
+
+  // ── Shared invalidate helper for card-level mutations ──
+  const invalidateLoyalty = () =>
+    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
 
   // ────────────────────────────────────────────────────────────────
   // Render
@@ -615,13 +618,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
                       <WaButton
-                        row={row}
+                        name={row.client_name}
                         status={status}
-                        waTemplates={waTemplates}
-                        serviceLabel={serviceLabel}
-                        reminderWeeks={reminderWeeks}
+                        phone={row.phone ?? ""}
                         businessName={businessName}
-                        resolveKey={resolveKey}
+                        serviceLabel={serviceLabel}
+                        templates={waTemplates}
                       />
                       <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                     </div>
@@ -631,12 +633,37 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   {isExpanded && (
                     <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <InlineStatusEditor row={row} tenantId={tenantId ?? ""} qc={qc} setOptimistic={setOptimisticStatus} />
-                        <InlineClientEditor row={row} tenantId={tenantId ?? ""} qc={qc} />
+                        <InlineStatusEditor
+                          rowId={row.id}
+                          current={row.status}
+                          effectiveNorm={status}
+                          tenantId={tenantId ?? ""}
+                          onOptimisticUpdate={newStatus =>
+                            setOptimisticStatus(prev => ({ ...prev, [row.id]: newStatus }))
+                          }
+                          onUpdated={invalidateLoyalty}
+                        />
+                        <InlineClientEditor
+                          rowId={row.id}
+                          name={row.client_name}
+                          phone={row.phone ?? null}
+                          tenantId={tenantId ?? ""}
+                          onUpdated={invalidateLoyalty}
+                        />
                       </div>
-                      <InlineNotesEditor row={row} tenantId={tenantId ?? ""} qc={qc} />
+                      <InlineNotesEditor
+                        rowId={row.id}
+                        current={row.notes ?? null}
+                        tenantId={tenantId ?? ""}
+                        onUpdated={invalidateLoyalty}
+                      />
                       <div className="flex justify-end pt-1">
-                        <UnregisterButton row={row} tenantId={tenantId ?? ""} qc={qc} />
+                        <UnregisterButton
+                          rowId={row.id}
+                          clientName={row.client_name}
+                          tenantId={tenantId ?? ""}
+                          onDeleted={invalidateLoyalty}
+                        />
                       </div>
                     </div>
                   )}
