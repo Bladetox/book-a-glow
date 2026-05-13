@@ -230,12 +230,19 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         if (!key) continue;
         if (!map[key]) {
           map[key] = {
-            client_name:  b.client_name ?? "",
-            phone:        b.client_phone ?? "",
-            bookingCount: 0,
+            client_name:          b.client_name ?? "",
+            phone:                b.client_phone ?? "",
+            bookingCount:         0,
+            totalSpend:           0,
+            lastBookingDate:      b.booking_date ?? "",
+            daysSinceLastBooking: 0,
+            candidateSource:      "nexty",
           };
         }
         map[key].bookingCount++;
+        if (b.booking_date > (map[key].lastBookingDate ?? "")) {
+          map[key].lastBookingDate = b.booking_date ?? "";
+        }
       }
       return Object.values(map)
         .filter(c => c.bookingCount >= minBookings && !enrolledPhones.has(normPhone(c.phone)));
@@ -280,6 +287,15 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return rows;
   }, [loyaltyRows, filterStatus, search, reminderWeeks]);
 
+  // ── Effective status map for bulk bar ──
+  const effectiveStatusMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const row of loyaltyRows) {
+      m[row.id] = optimisticStatus[row.id] ?? effectiveStatus(row, null, reminderWeeks);
+    }
+    return m;
+  }, [loyaltyRows, optimisticStatus, reminderWeeks]);
+
   // ── Mutation: enroll client ──
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { source: string; notes?: string }) => {
@@ -318,31 +334,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   // ── Bulk actions ──
   const toggleSelect = (id: string) =>
     setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
-
-  const bulkUpdateStatus = async (status: string) => {
-    const { error } = await supabase
-      .from("loyalty_tracker")
-      .update({ status, updated_at: new Date().toISOString() })
-      .in("id", selectedIds)
-      .eq("tenant_id", tenantId);
-    if (error) { toast.error("Bulk update failed"); return; }
-    setSelectedIds([]);
-    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-    toast.success(`${selectedIds.length} clients updated`);
-  };
-
-  const bulkDelete = async () => {
-    if (!confirm(`Delete ${selectedIds.length} client(s)?`)) return;
-    const { error } = await supabase
-      .from("loyalty_tracker")
-      .delete()
-      .in("id", selectedIds)
-      .eq("tenant_id", tenantId);
-    if (error) { toast.error("Bulk delete failed"); return; }
-    setSelectedIds([]);
-    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-    toast.success("Clients removed from programme");
-  };
 
   // ── CSV export ──
   const handleExport = () =>
@@ -554,10 +545,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
         {/* ── Bulk action bar ── */}
         <LoyaltyBulkBar
-          selectedIds={selectedIds}
+          selected={selectedIds}
+          rows={loyaltyRows}
+          effectiveStatusMap={effectiveStatusMap}
+          businessName={businessName}
+          serviceLabel={serviceLabel}
+          templates={waTemplates}
           onClear={() => setSelectedIds([])}
-          onBulkStatus={bulkUpdateStatus}
-          onBulkDelete={bulkDelete}
         />
 
         {/* ── Nexty AI link ── */}
