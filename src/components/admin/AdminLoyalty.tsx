@@ -33,7 +33,7 @@ import { LoyaltyBulkBar }           from "./loyalty/LoyaltyBulkBar";
 import { MessagingHowTo }            from "./loyalty/MessagingHowTo";
 import {
   InlineStatusEditor, InlineClientEditor,
-  InlineNotesEditor, UnregisterButton, WaButton,
+  InlineNotesEditor, InlineBirthdayEditor, UnregisterButton, WaButton,
 } from "./loyalty/LoyaltyClientCard";
 import {
   EnrollModal, EnrollSuccessCelebration,
@@ -49,7 +49,6 @@ interface AdminLoyaltyProps {
 
 // ──────────────────────────────────────────────────────────────────
 // Dark-glass STATUS_STYLE overrides
-// (churned / vip / active removed — these are no longer valid pill statuses)
 // ──────────────────────────────────────────────────────────────────
 const DARK_PILL: Record<string, { bg: string; text: string }> = {
   on_track:       { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
@@ -324,7 +323,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         tenant_id:       tenantId,
         client_name:     candidate.client_name,
         phone:           candidate.phone,
-        // Store as on_track — effectiveStatus() will compute the real status at render time
         status:          "on_track",
         source:          candidate.candidateSource ?? "manual",
         notes:           candidate.notes ?? null,
@@ -679,6 +677,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                           </div>
                         ))}
                       </div>
+
+                      {/* Birthday editor — tap the cake icon to set/edit */}
+                      <InlineBirthdayEditor
+                        rowId={row.id}
+                        current={(row as any).birthday ?? null}
+                        tenantId={tenantId ?? ""}
+                        onUpdated={invalidateLoyalty}
+                      />
 
                       <InlineNotesEditor
                         rowId={row.id}
