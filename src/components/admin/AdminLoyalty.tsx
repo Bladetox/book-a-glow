@@ -244,10 +244,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Derived: filtered & sorted loyalty rows ──
+  // FIX: pass (r, null, reminderWeeks) — not (r, reminderWeeks) — so liveLastDate
+  // is correctly undefined/null and reminderWeeks lands in the right parameter slot.
+  // Passing reminderWeeks (a number) as liveLastDate caused `.length` to be called
+  // on a number → "cannot read properties of undefined (reading 'length')".
   const filteredRows = useMemo(() => {
     let rows = loyaltyRows.filter(r => {
       if (filterStatus) {
-        const eff = effectiveStatus(r, reminderWeeks);
+        const eff = effectiveStatus(r, null, reminderWeeks);
         if (eff !== filterStatus) return false;
       }
       if (search) {
@@ -261,8 +265,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       return true;
     });
     rows = [...rows].sort((a, b) => {
-      const ea = STATUS_ORDER[effectiveStatus(a, reminderWeeks)] ?? 99;
-      const eb = STATUS_ORDER[effectiveStatus(b, reminderWeeks)] ?? 99;
+      const ea = STATUS_ORDER[effectiveStatus(a, null, reminderWeeks)] ?? 99;
+      const eb = STATUS_ORDER[effectiveStatus(b, null, reminderWeeks)] ?? 99;
       return ea - eb;
     });
     return rows;
@@ -296,7 +300,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const r of loyaltyRows) {
-      const s = effectiveStatus(r, reminderWeeks);
+      const s = effectiveStatus(r, null, reminderWeeks);
       counts[s] = (counts[s] ?? 0) + 1;
     }
     return counts;
@@ -579,7 +583,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             {filteredRows.map(row => {
               const phone = normPhone(row.phone);
               const enrich = enrichment[phone] ?? { bookingCount: row.booking_count ?? 0, lastVisitDate: row.last_visit_date ?? null, nextDueDate: row.next_due_date ?? null, birthday: null };
-              const status = optimisticStatus[row.id] ?? effectiveStatus(row, reminderWeeks);
+              const status = optimisticStatus[row.id] ?? effectiveStatus(row, null, reminderWeeks);
               const style = STATUS_STYLE[status] ?? STATUS_STYLE["active"];
               const isExpanded = expandedCard === row.id;
               const isSelected = selectedIds.includes(row.id);
