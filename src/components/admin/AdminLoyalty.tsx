@@ -125,7 +125,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     if (map["loyalty.criteria_enabled"])
       setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
     if (map["loyalty.criteria_service_ids"])
-      setTenantCriteria(c => ({ ...c, serviceIds: map["loyalty.criteria_service_ids"].split(",").filter(Boolean) }));
+      setTenantCriteria(c => ({ ...c, serviceIds: (map["loyalty.criteria_service_ids"] ?? "").split(",").filter(Boolean) }));
     if (map["loyalty.criteria_min_bookings"])
       setTenantCriteria(c => ({ ...c, minBookings: Number(map["loyalty.criteria_min_bookings"]) }));
     if (map["loyalty.criteria_lookback_days"])
@@ -147,7 +147,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                         description: "WA template: birthday" },
         // Tenant criteria
         { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),               description: "Tenant criteria: enabled" },
-        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: tenantCriteria.serviceIds.join(","),           description: "Tenant criteria: qualifying service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),           description: "Tenant criteria: qualifying service IDs" },
         { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),            description: "Tenant criteria: min bookings" },
         { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),           description: "Tenant criteria: lookback days" },
       ];
@@ -184,547 +184,488 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   // Enrolled phones set — shared with tenant criteria to avoid offering already-enrolled clients
   const enrolledPhones = useMemo(
-    () => new Set(loyaltyRows.map(r => normPhone(r.phone)).filter(Boolean)),
-    [loyaltyRows]
+    () => new Set((loyaltyRows ?? []).map(r => normPhone(r.phone)).filter(Boolean)),
+    [loyaltyRows],
   );
 
-  // ── Data: enrichment from bookings ──
-  const { data: enrichmentMap = {} } = useQuery<EnrichmentMap>({
+  // ── Data: enrichment map (booking counts, last visit, birthday) ──
+  const { data: enrichment = {} as EnrichmentMap, isLoading: loadingEnrichment } = useQuery<EnrichmentMap>({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const cutoff = format(subDays(new Date(), reminderWeeks * 7 * 3), "yyyy-MM-dd");
-      const { data: bookings, error } = await supabase
-        .from("bookings")
-        .select("client_phone, booking_date, status")
-        .eq("tenant_id", tenantId)
-        .gte("booking_date", cutoff);
+      const { data, error } = await supabase
+        .from("loyalty_tracker")
+        .select("phone, booking_count, last_visit_date, next_due_date, birthday")
+        .eq("tenant_id", tenantId);
       if (error) throw error;
-
       const map: EnrichmentMap = {};
-      const today = format(new Date(), "yyyy-MM-dd");
-
-      for (const b of (bookings ?? [])) {
-        const key = normPhone(b.client_phone);
-        if (!key) continue;
-        const existing = map[key];
-        const isUpcoming = b.booking_date >= today && b.status !== "cancelled";
-        const isPast     = b.booking_date < today;
-
-        if (!existing) {
-          map[key] = {
-            liveLastDate: isPast ? b.booking_date : null,
-            upcomingDate: isUpcoming ? b.booking_date : null,
-          };
-        } else {
-          if (isPast && (!existing.liveLastDate || b.booking_date > existing.liveLastDate))
-            existing.liveLastDate = b.booking_date;
-          if (isUpcoming && (!existing.upcomingDate || b.booking_date < existing.upcomingDate))
-            existing.upcomingDate = b.booking_date;
-        }
+      for (const r of data ?? []) {
+        if (r.phone) map[normPhone(r.phone)] = {
+          bookingCount:  r.booking_count  ?? 0,
+          lastVisitDate: r.last_visit_date ?? null,
+          nextDueDate:   r.next_due_date   ?? null,
+          birthday:      r.birthday        ?? null,
+        };
       }
       return map;
     },
   });
 
-  // ── Data: Nexty enroll candidates (all services, Nexty's own logic) ──
-  const { data: enrollCandidates = [] } = useQuery<EnrollCandidate[]>({
-    queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
+  // ── Data: enroll candidates (booking history) ──
+  const { data: candidates = [], isLoading: loadingCandidates } = useQuery<EnrollCandidate[]>({
+    queryKey: ["loyalty_candidates", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const cutoff = format(subDays(new Date(), lookbackDays), "yyyy-MM-dd");
-      const { data: bookings, error } = await supabase
+      const since = subDays(new Date(), lookbackDays).toISOString();
+      const { data, error } = await supabase
         .from("bookings")
-        .select("client_name, client_phone, client_email, booking_date, total_price, status")
+        .select("client_name, phone, service_type, date")
         .eq("tenant_id", tenantId)
-        .gte("booking_date", cutoff)
-        .neq("status", "cancelled");
+        .gte("date", since);
       if (error) throw error;
 
-      const grouped: Record<string, { name: string; phone: string; email?: string; count: number; spend: number; lastDate: string }> = {};
-      const today = new Date();
-
-      for (const b of (bookings ?? [])) {
-        const key = resolveKey(b.client_phone, b.client_email, b.client_name, b.booking_date);
-        const p   = normPhone(b.client_phone);
-        if (enrolledPhones.has(p)) continue;
-        if (!grouped[key]) {
-          grouped[key] = { name: b.client_name, phone: b.client_phone ?? "", email: b.client_email ?? "", count: 0, spend: 0, lastDate: b.booking_date };
-        }
-        grouped[key].count++;
-        grouped[key].spend += b.total_price ?? 0;
-        if (b.booking_date > grouped[key].lastDate) grouped[key].lastDate = b.booking_date;
+      const map: Record<string, EnrollCandidate> = {};
+      for (const b of data ?? []) {
+        const key = normPhone(b.phone ?? "");
+        if (!map[key]) map[key] = { name: b.client_name ?? "", phone: b.phone ?? "", bookingCount: 0 };
+        map[key].bookingCount++;
       }
-
-      return Object.values(grouped)
-        .filter(g => g.count >= minBookings)
-        .map(g => ({
-          client_name:          g.name,
-          phone:                g.phone,
-          email:                g.email,
-          bookingCount:         g.count,
-          totalSpend:           g.spend,
-          lastBookingDate:      g.lastDate,
-          nextDueDate:          format(addDays(parseISO(g.lastDate), reminderWeeks * 7), "yyyy-MM-dd"),
-          daysSinceLastBooking: Math.floor((today.getTime() - new Date(g.lastDate).getTime()) / 86400000),
-          candidateSource:      "nexty" as const,
-        }))
-        .sort((a, b) => b.daysSinceLastBooking - a.daysSinceLastBooking)
-        .slice(0, 20);
+      return Object.values(map)
+        .filter(c => c.bookingCount >= minBookings && !enrolledPhones.has(normPhone(c.phone)));
     },
   });
 
-  // ── Enroll mutation ──
+  // ── Derived: filtered & sorted loyalty rows ──
+  const filteredRows = useMemo(() => {
+    let rows = loyaltyRows.filter(r => {
+      if (filterStatus) {
+        const eff = effectiveStatus(r, reminderWeeks);
+        if (eff !== filterStatus) return false;
+      }
+      if (search) {
+        const q = search.toLowerCase();
+        return (
+          r.client_name?.toLowerCase().includes(q) ||
+          r.phone?.toLowerCase().includes(q) ||
+          r.source?.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+    rows = [...rows].sort((a, b) => {
+      const ea = STATUS_ORDER[effectiveStatus(a, reminderWeeks)] ?? 99;
+      const eb = STATUS_ORDER[effectiveStatus(b, reminderWeeks)] ?? 99;
+      return ea - eb;
+    });
+    return rows;
+  }, [loyaltyRows, filterStatus, search, reminderWeeks]);
+
+  // ── Mutation: enroll client ──
   const enrollMutation = useMutation({
-    mutationFn: async (vars: { name: string; phone: string; notes: string; lastBooking: string; nextDue: string; source: 'nexty' | 'manual' | 'criteria' }) => {
+    mutationFn: async (candidate: EnrollCandidate & { source: string; notes?: string }) => {
       const { error } = await supabase.from("loyalty_tracker").insert({
-        tenant_id:      tenantId,
-        client_name:    vars.name,
-        phone:          vars.phone,
-        notes:          vars.notes,
-        last_wax_date:  vars.lastBooking || null,
-        next_due_date:  vars.nextDue     || null,
-        status:         "ON TRACK",
-        source:         vars.source,
-        updated_at:     new Date().toISOString(),
+        tenant_id:    tenantId,
+        client_name:  candidate.name,
+        phone:        candidate.phone,
+        status:       "active",
+        source:       candidate.source,
+        notes:        candidate.notes ?? null,
+        booking_count: candidate.bookingCount,
       });
       if (error) throw error;
     },
-    onSuccess: (_, vars) => {
-      setEnrolledName(vars.name);
+    onSuccess: (_, candidate) => {
+      setEnrolledName(candidate.name);
       setEnrollCandidate(null);
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_criteria_candidates", tenantId] });
     },
-    onError: () => toast.error("Failed to enroll client"),
+    onError: () => toast.error("Enrolment failed"),
   });
 
-  // ── Derived / computed ──
-  const effectiveStatusMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const r of loyaltyRows) {
-      const enr = enrichmentMap[normPhone(r.phone)] ?? {};
-      m[r.id] = optimisticStatus[r.id] ??
-        effectiveStatus(r, enr.liveLastDate, reminderWeeks, !!enr.upcomingDate);
-    }
-    return m;
-  }, [loyaltyRows, enrichmentMap, reminderWeeks, optimisticStatus]);
-
-  const filtered = useMemo(() => {
-    let rows = loyaltyRows.filter(r => {
-      if (filterStatus && effectiveStatusMap[r.id] !== filterStatus) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return r.client_name.toLowerCase().includes(q) ||
-               (r.phone ?? "").includes(q);
-      }
-      return true;
-    });
-    rows = [...rows].sort((a, b) =>
-      (STATUS_ORDER[effectiveStatusMap[a.id]] ?? 99) -
-      (STATUS_ORDER[effectiveStatusMap[b.id]] ?? 99)
-    );
-    return rows;
-  }, [loyaltyRows, search, filterStatus, effectiveStatusMap]);
-
+  // ── Status counts for filter pills ──
   const statusCounts = useMemo(() => {
-    const c: Record<string, number> = {};
+    const counts: Record<string, number> = {};
     for (const r of loyaltyRows) {
-      const s = effectiveStatusMap[r.id] ?? "UNKNOWN";
-      c[s] = (c[s] ?? 0) + 1;
+      const s = effectiveStatus(r, reminderWeeks);
+      counts[s] = (counts[s] ?? 0) + 1;
     }
-    return c;
-  }, [loyaltyRows, effectiveStatusMap]);
+    return counts;
+  }, [loyaltyRows, reminderWeeks]);
 
-  // ── Render ──
+  // ── Bulk actions ──
+  const toggleSelect = (id: string) =>
+    setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+
+  const bulkUpdateStatus = async (status: string) => {
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .update({ status, updated_at: new Date().toISOString() })
+      .in("id", selectedIds)
+      .eq("tenant_id", tenantId);
+    if (error) { toast.error("Bulk update failed"); return; }
+    setSelectedIds([]);
+    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
+    toast.success(`${selectedIds.length} clients updated`);
+  };
+
+  const bulkDelete = async () => {
+    if (!confirm(`Delete ${selectedIds.length} client(s)?`)) return;
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .delete()
+      .in("id", selectedIds)
+      .eq("tenant_id", tenantId);
+    if (error) { toast.error("Bulk delete failed"); return; }
+    setSelectedIds([]);
+    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
+    toast.success("Clients removed from programme");
+  };
+
+  // ── CSV export ──
+  const handleExport = () =>
+    exportCSV(filteredRows, enrichment, reminderWeeks);
+
+  // ── Dirty tracking for criteria/settings ──
+  const handleCriteriaChange = (next: TenantCriteriaSettings) => {
+    setTenantCriteria(next);
+    setSettingsDirty(true);
+  };
+
+  const isLoading = loadingLoyalty || loadingCandidates || loadingEnrichment;
+
+  // ────────────────────────────────────────────────────────────────
+  // Render
+  // ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-4 px-1">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-white/80">Loyalty Tracker</h2>
-          <p className="text-[11px] text-white/30">{loyaltyRows.length} clients enrolled</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {onNavigate && (
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Loyalty Programme</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {loyaltyRows.length} client{loyaltyRows.length !== 1 ? "s" : ""} enrolled
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => onNavigate("Recommendations")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/[0.06] border border-amber-500/[0.15] text-[11px] text-amber-400/70 hover:text-amber-300 hover:bg-amber-500/[0.1] transition-colors"
-              title="Open Nexty AI Insights"
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
             >
-              <Bot className="w-3.5 h-3.5" />
-              Nexty Insights
-              <ExternalLink className="w-3 h-3 opacity-50" />
+              <Download className="w-4 h-4" /> Export CSV
             </button>
-          )}
-          <button
-            onClick={() => exportCSV(filtered, enrichmentMap, reminderWeeks)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/50 hover:text-white/80 transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" /> Export
-          </button>
-          <button
-            onClick={() => setShowSettings(s => !s)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/50 hover:text-white/80 transition-colors"
-          >
-            <Settings2 className="w-3.5 h-3.5" /> Settings
-          </button>
-        </div>
-      </div>
-
-      {/* Settings panel */}
-      <AnimatePresence>
-        {showSettings && (
-          <div className="flex flex-col gap-3 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-white/50 tracking-[0.08em] uppercase">Programme Settings</p>
-              {businessName && (
-                <span className="text-[10px] text-white/25 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 inline-block" />
-                  {businessName}
-                </span>
-              )}
-            </div>
-
-            {/* Row 1: reminder + service label */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Reminder interval (weeks)</label>
-                <input
-                  type="number" min={1} max={12} value={reminderWeeks}
-                  onChange={e => { setReminderWeeks(Number(e.target.value)); setSettingsDirty(true); }}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Service label</label>
-                <input
-                  value={serviceLabel}
-                  onChange={e => { setServiceLabel(e.target.value); setSettingsDirty(true); }}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40"
-                />
-              </div>
-            </div>
-
-            {/* Row 2: Nexty suggestion criteria */}
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.1em] text-amber-400/50 mb-2 flex items-center gap-1">
-                <Bot className="w-3 h-3" /> Nexty suggestion criteria
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Min bookings to surface</label>
-                  <input
-                    type="number" min={1} max={20} value={minBookings}
-                    onChange={e => { setMinBookings(Number(e.target.value)); setSettingsDirty(true); }}
-                    className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-amber-400/40"
-                  />
-                  <span className="text-[9px] text-white/20">Default: 2 bookings</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Lookback window (days)</label>
-                  <input
-                    type="number" min={30} max={730} step={30} value={lookbackDays}
-                    onChange={e => { setLookbackDays(Number(e.target.value)); setSettingsDirty(true); }}
-                    className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-amber-400/40"
-                  />
-                  <span className="text-[9px] text-white/20">Default: 180 days (6 months)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* WA templates toggle */}
             <button
-              onClick={() => setShowTemplateEditor(s => !s)}
-              className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/70 transition-colors mt-1"
-            >
-              <Bot className="w-3.5 h-3.5" />
-              {showTemplateEditor ? "Hide" : "Edit"} WA message templates
-              <ChevronDown className={`w-3 h-3 transition-transform ${showTemplateEditor ? "rotate-180" : ""}`} />
-            </button>
-
-            <AnimatePresence>
-              {showTemplateEditor && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-[9px] text-white/20 uppercase tracking-widest">Available variables: {'{name}'} · {'{service}'} · {'{business}'}</p>
-                  {(["overdue", "timeToBook", "onTrack", "birthday"] as const).map(key => (
-                    <div key={key} className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">{key}</label>
-                      <textarea
-                        value={waTemplates[key]}
-                        onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); setSettingsDirty(true); }}
-                        rows={2}
-                        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-[11px] text-white/70 resize-none focus:outline-none focus:border-emerald-400/40"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AnimatePresence>
-
-            {/* Save button */}
-            <button
-              onClick={() => saveSettingsMutation.mutate()}
-              disabled={!settingsDirty || saveSettingsMutation.isPending}
-              className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-medium transition-all ${
-                settingsDirty
-                  ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30"
-                  : "bg-white/[0.03] border border-white/[0.06] text-white/20 cursor-not-allowed"
+              onClick={() => setShowSettings(s => !s)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                showSettings
+                  ? "bg-purple-50 border-purple-200 text-purple-700"
+                  : "border-gray-200 hover:bg-gray-50 text-gray-600"
               }`}
             >
-              {saveSettingsMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Save className="w-3.5 h-3.5" />
-              )}
-              {saveSettingsMutation.isPending ? "Saving…" : settingsDirty ? "Save settings" : "Saved"}
+              <Settings2 className="w-4 h-4" />
+              Settings
+              {settingsDirty && <span className="w-2 h-2 rounded-full bg-orange-400 ml-1" />}
             </button>
           </div>
-        )}
-      </AnimatePresence>
-
-      {/* Messaging tip */}
-      <MessagingHowTo tenantId={tenantId} />
-
-      {/* Status filter pills */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {([null, "BIRTHDAY", "OVERDUE", "TIME TO BOOK", "ON TRACK", "UNKNOWN"] as const).map(s => (
-          <button
-            key={String(s)}
-            onClick={() => setFilterStatus(s)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-all ${
-              filterStatus === s
-                ? s ? STATUS_STYLE[s] : "bg-white/[0.1] text-white/80 border-white/[0.2]"
-                : "bg-white/[0.03] text-white/30 border-white/[0.06] hover:border-white/[0.12] hover:text-white/50"
-            }`}
-          >
-            {s === null ? "All" : s}
-            {s && statusCounts[s] ? (
-              <span className="opacity-60">{statusCounts[s]}</span>
-            ) : null}
-          </button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search name or phone…"
-          className="w-full pl-8 pr-8 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/30"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* Client cards */}
-      {loadingLoyalty ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-5 h-5 animate-spin text-white/20" />
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-2">
-          <Users className="w-8 h-8 text-white/10" />
-          <p className="text-[12px] text-white/25">
-            {loyaltyRows.length === 0
-              ? "No clients enrolled yet — enroll from the suggestions below"
-              : "No clients match your filters"}
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {filtered.map(row => {
-            const enr    = enrichmentMap[normPhone(row.phone)] ?? {};
-            const status = effectiveStatusMap[row.id] ?? "UNKNOWN";
-            const isSelected = selectedIds.includes(row.id);
-            const isExpanded = expandedCard === row.id;
 
-            return (
-              <div
-                key={row.id}
-                onClick={() => setExpandedCard(isExpanded ? null : row.id)}
-                className={`relative flex flex-col gap-2 p-3 rounded-2xl border transition-all cursor-pointer ${
-                  isSelected
-                    ? "border-emerald-500/30 bg-emerald-500/[0.04]"
-                    : "border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.04]"
-                }`}
+        {/* ── Settings Panel ── */}
+        {showSettings && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-800">Programme Settings</h2>
+              <button
+                onClick={() => saveSettingsMutation.mutate()}
+                disabled={saveSettingsMutation.isPending || !settingsDirty}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={e => {
-                      e.stopPropagation();
-                      setSelectedIds(ids =>
-                        e.target.checked ? [...ids, row.id] : ids.filter(i => i !== row.id)
-                      );
-                    }}
-                    onClick={e => e.stopPropagation()}
-                    className="mt-1 accent-emerald-400 shrink-0"
-                  />
+                {saveSettingsMutation.isPending
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Save className="w-3.5 h-3.5" />}
+                Save
+              </button>
+            </div>
 
-                  <InlineClientEditor
-                    rowId={row.id}
-                    name={row.client_name}
-                    phone={row.phone}
-                    tenantId={tenantId}
-                    onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] })}
-                  />
+            {/* Core settings grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Reminder Interval (weeks)</span>
+                <input
+                  type="number" min={1} max={52}
+                  value={reminderWeeks}
+                  onChange={e => { setReminderWeeks(Number(e.target.value)); setSettingsDirty(true); }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Service Label</span>
+                <input
+                  type="text"
+                  value={serviceLabel}
+                  onChange={e => { setServiceLabel(e.target.value); setSettingsDirty(true); }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Min Bookings (Nexty)</span>
+                <input
+                  type="number" min={1}
+                  value={minBookings}
+                  onChange={e => { setMinBookings(Number(e.target.value)); setSettingsDirty(true); }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </label>
+            </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                    {/* Source badge */}
-                    {row.source === "nexty" ? (
-                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-amber-500/10 text-amber-400/80 border border-amber-500/15 select-none">Nexty</span>
-                    ) : row.source === "criteria" ? (
-                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-violet-500/10 text-violet-400/80 border border-violet-500/15 select-none">Your pick</span>
-                    ) : (
-                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide bg-white/[0.04] text-white/25 border border-white/[0.07] select-none">Manual</span>
-                    )}
-
-                    <InlineStatusEditor
-                      rowId={row.id}
-                      current={row.status ?? ""}
-                      effectiveNorm={status}
-                      tenantId={tenantId}
-                      onOptimisticUpdate={s => setOptimisticStatus(m => ({ ...m, [row.id]: s }))}
-                      onUpdated={() => {
-                        setOptimisticStatus(m => { const n = { ...m }; delete n[row.id]; return n; });
-                        qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-                      }}
-                    />
-                    {row.phone && (
-                      <WaButton
-                        name={row.client_name}
-                        status={status}
-                        phone={row.phone}
-                        businessName={businessName}
-                        serviceLabel={serviceLabel}
-                        templates={waTemplates}
+            {/* WA Template editor toggle */}
+            <div>
+              <button
+                onClick={() => setShowTemplateEditor(s => !s)}
+                className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-purple-700 transition-colors"
+              >
+                <ChevronDown className={`w-4 h-4 transition-transform ${showTemplateEditor ? "rotate-180" : ""}`} />
+                WhatsApp Message Templates
+              </button>
+              {showTemplateEditor && (
+                <div className="mt-3 space-y-3">
+                  {(["overdue","timeToBook","onTrack","birthday"] as const).map(key => (
+                    <label key={key} className="block space-y-1">
+                      <span className="text-xs font-medium text-gray-500 capitalize">{key.replace(/([A-Z])/g,' $1')}</span>
+                      <textarea
+                        rows={2}
+                        value={waTemplates[key]}
+                        onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); setSettingsDirty(true); }}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
-                    )}
-                  </div>
+                    </label>
+                  ))}
+                  <MessagingHowTo />
                 </div>
+              )}
+            </div>
 
-                <div className="flex items-center gap-3 pl-6">
-                  <span className="flex items-center gap-1 text-[10px] text-white/30">
-                    <Clock className="w-3 h-3" />
-                    Last: {enr.liveLastDate ? isoToDisplay(enr.liveLastDate) : excelToDate(row.last_wax_date)}
-                  </span>
-                  {enr.upcomingDate && (
-                    <span className="flex items-center gap-1 text-[10px] text-emerald-400/70">
-                      <CalendarCheck className="w-3 h-3" /> Booked {isoToDisplay(enr.upcomingDate)}
-                    </span>
-                  )}
-                </div>
-
-                {isExpanded && (
-                  <div className="flex items-center justify-between gap-2 pl-6 pt-1 border-t border-white/[0.05] mt-1">
-                    <InlineNotesEditor
-                      rowId={row.id}
-                      current={row.notes}
-                      tenantId={tenantId}
-                      onUpdated={() => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] })}
-                    />
-                    <UnregisterButton
-                      rowId={row.id}
-                      clientName={row.client_name}
-                      tenantId={tenantId}
-                      onDeleted={() => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] })}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Nexty suggestions ── */}
-      {enrollCandidates.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5 mt-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
-            <p className="text-[10px] uppercase tracking-[0.1em] text-white/25">Nexty — suggested clients</p>
+            {/* Tenant criteria */}
+            <LoyaltyTenantCriteria
+              tenantId={tenantId ?? ""}
+              value={tenantCriteria}
+              onChange={handleCriteriaChange}
+            />
           </div>
-          {enrollCandidates.map(c => (
+        )}
+
+        {/* ── Status filter pills ── */}
+        <div className="flex gap-2 flex-wrap">
+          {["active","overdue","churned","time_to_book","vip"].map(s => (
             <button
-              key={c.phone + c.client_name}
-              onClick={() => setEnrollCandidate(c)}
-              className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-amber-500/[0.12] hover:border-amber-500/25 hover:bg-amber-500/[0.02] transition-all text-left"
+              key={s}
+              onClick={() => setFilterStatus(f => f === s ? null : s)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                filterStatus === s
+                  ? `${STATUS_STYLE[s]?.bg ?? "bg-gray-100"} ${STATUS_STYLE[s]?.text ?? "text-gray-700"} border-transparent`
+                  : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
             >
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[12px] font-medium text-white/70">{c.client_name}</span>
-                <span className="text-[10px] text-white/30">
-                  {c.bookingCount} bookings · {c.daysSinceLastBooking}d ago
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-amber-500/10 text-amber-400/80 border border-amber-500/15">
-                  Nexty
-                </span>
-                <UserPlus className="w-4 h-4 text-amber-400/50 shrink-0" />
-              </div>
+              {s.replace("_"," ")} {statusCounts[s] ? `(${statusCounts[s]})` : ""}
             </button>
           ))}
+          {filterStatus && (
+            <button onClick={() => setFilterStatus(null)} className="px-3 py-1.5 rounded-full text-xs border border-gray-200 text-gray-500 hover:bg-gray-50">
+              Clear filter
+            </button>
+          )}
         </div>
-      )}
 
-      {/* ── Tenant criteria suggestions ── */}
-      <LoyaltyTenantCriteria
-        tenantId={tenantId}
-        enrolledPhones={enrolledPhones}
-        settings={tenantCriteria}
-        onSettingsChange={s => { setTenantCriteria(s); setSettingsDirty(true); }}
-        reminderWeeks={reminderWeeks}
-        onEnroll={setEnrollCandidate}
-        dirty={settingsDirty}
-        onMarkDirty={() => setSettingsDirty(true)}
-      />
+        {/* ── Search bar ── */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, phone or source…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          )}
+        </div>
 
-      {/* Bulk action bar */}
-      <LoyaltyBulkBar
-        selectedIds={selectedIds}
-        tenantId={tenantId}
-        onClear={() => setSelectedIds([])}
-        onDone={() => {
-          setSelectedIds([]);
-          qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-        }}
-      />
+        {/* ── Enroll candidates ── */}
+        {candidates.length > 0 && (
+          <div className="bg-white border border-blue-100 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2 text-blue-700">
+              <UserPlus className="w-4 h-4" />
+              <span className="font-medium text-sm">{candidates.length} client{candidates.length !== 1 ? "s" : ""} eligible for enrolment</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {candidates.slice(0, 8).map(c => (
+                <button
+                  key={c.phone}
+                  onClick={() => setEnrollCandidate(c)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <UserPlus className="w-3 h-3" />
+                  {c.name || c.phone} · {c.bookingCount} bookings
+                </button>
+              ))}
+              {candidates.length > 8 && (
+                <span className="flex items-center px-3 py-1.5 text-xs text-gray-500">
+                  +{candidates.length - 8} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
-      {/* Enroll modal */}
-      {enrollCandidate && (
-        <EnrollModal
-          candidate={enrollCandidate}
-          reminderWeeks={reminderWeeks}
-          isPending={enrollMutation.isPending}
-          onConfirm={(name, phone, notes, lastBooking, nextDue) =>
-            enrollMutation.mutate({
-              name, phone, notes, lastBooking, nextDue,
-              source: enrollCandidate.candidateSource === "criteria" ? "criteria"
-                    : enrollCandidate.candidateSource === "nexty"    ? "nexty"
-                    : "manual",
-            })
-          }
-          onClose={() => setEnrollCandidate(null)}
+        {/* ── Bulk action bar ── */}
+        <LoyaltyBulkBar
+          selectedIds={selectedIds}
+          onClear={() => setSelectedIds([])}
+          onBulkStatus={bulkUpdateStatus}
+          onBulkDelete={bulkDelete}
         />
-      )}
 
-      {/* Success celebration */}
-      <EnrollSuccessCelebration
-        name={enrolledName}
-        onDone={() => setEnrolledName(null)}
-      />
+        {/* ── Nexty AI link ── */}
+        {onNavigate && (
+          <button
+            onClick={() => onNavigate("ai")}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 rounded-xl text-sm text-purple-700 hover:from-purple-100 hover:to-blue-100 transition-colors w-full"
+          >
+            <Bot className="w-4 h-4" />
+            <span className="font-medium">Ask Nexty for loyalty insights & re-engagement ideas</span>
+            <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-60" />
+          </button>
+        )}
+
+        {/* ── Loyalty client list ── */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16 text-gray-400">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading loyalty data…
+          </div>
+        ) : filteredRows.length === 0 ? (
+          <div className="text-center py-16 text-gray-400 space-y-2">
+            <Users className="w-10 h-10 mx-auto opacity-40" />
+            <p className="font-medium">
+              {filterStatus || search ? "No clients match your filter" : "No clients enrolled yet"}
+            </p>
+            {!filterStatus && !search && (
+              <p className="text-sm">Eligible clients will appear above when they meet your booking criteria.</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredRows.map(row => {
+              const phone = normPhone(row.phone);
+              const enrich = enrichment[phone] ?? { bookingCount: row.booking_count ?? 0, lastVisitDate: row.last_visit_date ?? null, nextDueDate: row.next_due_date ?? null, birthday: null };
+              const status = optimisticStatus[row.id] ?? effectiveStatus(row, reminderWeeks);
+              const style = STATUS_STYLE[status] ?? STATUS_STYLE["active"];
+              const isExpanded = expandedCard === row.id;
+              const isSelected = selectedIds.includes(row.id);
+
+              return (
+                <div
+                  key={row.id}
+                  className={`bg-white border rounded-xl shadow-sm transition-all ${
+                    isSelected ? "border-purple-300 ring-1 ring-purple-200" : "border-gray-200"
+                  }`}
+                >
+                  {/* Card header */}
+                  <div
+                    className="flex items-center gap-3 p-4 cursor-pointer"
+                    onClick={() => setExpandedCard(id => id === row.id ? null : row.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onClick={e => e.stopPropagation()}
+                      onChange={() => toggleSelect(row.id)}
+                      className="w-4 h-4 rounded border-gray-300 text-purple-600"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-gray-900 truncate">{row.client_name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}>
+                          {status.replace("_"," ")}
+                        </span>
+                        {row.source === "tenant_criteria" && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">criteria</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
+                        <span>{row.phone}</span>
+                        {enrich.lastVisitDate && (
+                          <span className="flex items-center gap-1">
+                            <CalendarCheck className="w-3 h-3" />
+                            Last: {isoToDisplay(enrich.lastVisitDate)}
+                          </span>
+                        )}
+                        {enrich.nextDueDate && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Due: {isoToDisplay(enrich.nextDueDate)}
+                          </span>
+                        )}
+                        <span>{enrich.bookingCount} booking{enrich.bookingCount !== 1 ? "s" : ""}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                      <WaButton
+                        row={row}
+                        status={status}
+                        waTemplates={waTemplates}
+                        serviceLabel={serviceLabel}
+                        reminderWeeks={reminderWeeks}
+                        businessName={businessName}
+                        resolveKey={resolveKey}
+                      />
+                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <InlineStatusEditor row={row} tenantId={tenantId ?? ""} qc={qc} setOptimistic={setOptimisticStatus} />
+                        <InlineClientEditor row={row} tenantId={tenantId ?? ""} qc={qc} />
+                      </div>
+                      <InlineNotesEditor row={row} tenantId={tenantId ?? ""} qc={qc} />
+                      <div className="flex justify-end pt-1">
+                        <UnregisterButton row={row} tenantId={tenantId ?? ""} qc={qc} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Enroll modal ── */}
+        <AnimatePresence>
+          {enrollCandidate && (
+            <EnrollModal
+              candidate={enrollCandidate}
+              isPending={enrollMutation.isPending}
+              onConfirm={(source, notes) => enrollMutation.mutate({ ...enrollCandidate, source, notes })}
+              onClose={() => setEnrollCandidate(null)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ── Success celebration ── */}
+        <AnimatePresence>
+          {enrolledName && (
+            <EnrollSuccessCelebration name={enrolledName} onDone={() => setEnrolledName(null)} />
+          )}
+        </AnimatePresence>
+
+      </div>
     </div>
   );
 }
