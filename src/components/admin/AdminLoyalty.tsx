@@ -218,7 +218,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       const since = format(subDays(new Date(), effectiveLookback), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
-        .select("client_name, phone, created_at, service_price")
+        .select("client_name, phone, date, service_price")
         .eq("tenant_id", tenantId)
         .gte("date", since)
         .not("phone", "is", null)
@@ -229,7 +229,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       for (const b of (data ?? [])) {
         const key = normPhone(b.phone);
         if (!grouped[key]) grouped[key] = { client_name: b.client_name ?? "", phone: b.phone, bookings: [] };
-        grouped[key].bookings.push({ date: b.created_at, price: Number(b.service_price ?? 0) });
+        grouped[key].bookings.push({ date: b.date, price: Number(b.service_price ?? 0) });
       }
 
       return Object.values(grouped)
@@ -245,19 +245,21 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enrichment ──
+  // FIX: use `date` column (the actual appointment date) instead of `created_at`
+  // so booking counts and last-visited dates are correct for all enrolled clients.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const enrichSince = format(subDays(new Date(), 365), "yyyy-MM-dd");
+      const enrichSince = format(subDays(new Date(), 730), "yyyy-MM-dd"); // look back 2 years
       const { data, error } = await supabase
         .from("bookings")
-        .select("phone, created_at, service_price")
+        .select("phone, date, service_price")
         .eq("tenant_id", tenantId)
-        .gte("created_at", enrichSince)
+        .gte("date", enrichSince)          // ← was .gte("created_at", ...) — FIXED
         .not("phone", "is", null)
-        .limit(500);
+        .limit(1000);                       // increased limit for full history
       if (error) throw error;
 
       const map: EnrichmentMap = {};
@@ -265,8 +267,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         const key = normPhone(b.phone);
         if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
         map[key].bookingCount++;
-        if (!map[key].lastVisitDate || b.created_at > map[key].lastVisitDate!) {
-          map[key].lastVisitDate = b.created_at;
+        // Compare date strings directly ("YYYY-MM-DD" sorts lexicographically)
+        if (!map[key].lastVisitDate || b.date > map[key].lastVisitDate!) {
+          map[key].lastVisitDate = b.date;  // ← was b.created_at — FIXED
         }
       }
       return map;
@@ -631,13 +634,16 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       {isSelected && <span className="w-2 h-2 rounded-sm bg-emerald-400" />}
                     </button>
 
-                    <InlineClientEditor
-                      rowId={row.id}
-                      name={row.client_name ?? "Unknown"}
-                      phone={row.phone}
-                      tenantId={tenantId ?? ""}
-                      onUpdated={invalidateLoyalty}
-                    />
+                    {/* FIX: wrap name in a clamped container so it never breaks the card layout */}
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <InlineClientEditor
+                        rowId={row.id}
+                        name={row.client_name ?? "Unknown"}
+                        phone={row.phone}
+                        tenantId={tenantId ?? ""}
+                        onUpdated={invalidateLoyalty}
+                      />
+                    </div>
 
                     <InlineStatusEditor
                       rowId={row.id}
