@@ -20,7 +20,7 @@ import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings
 import {
   STATUS_STYLE, STATUS_ORDER, DEFAULT_WA_TEMPLATES,
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
-  DEFAULT_TENANT_CRITERIA,
+  DEFAULT_TENANT_CRITERIA, PILL_TO_EFFECTIVE,
 } from "./loyalty/loyaltyConstants";
 import {
   excelToDate, isoToDisplay,
@@ -37,16 +37,16 @@ import {
 } from "./loyalty/LoyaltyEnrollModal";
 import { LoyaltyTenantCriteria }     from "./loyalty/LoyaltyTenantCriteria";
 
-// ────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────
 // Props
-// ────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────
 interface AdminLoyaltyProps {
   onNavigate?: (view: string) => void;
 }
 
-// ────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────
 // AdminLoyalty
-// ────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────
 export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const { tenantId } = useTenant();
   const qc = useQueryClient();
@@ -211,7 +211,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enroll candidates (booking history) ──
-  // FIX: use correct bookings column names (client_name, client_phone, booking_date)
   const { data: candidates = [], isLoading: loadingCandidates } = useQuery<EnrollCandidate[]>({
     queryKey: ["loyalty_candidates", tenantId],
     enabled: !!tenantId,
@@ -244,15 +243,24 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Derived: filtered & sorted loyalty rows ──
-  // FIX: pass (r, null, reminderWeeks) — not (r, reminderWeeks) — so liveLastDate
-  // is correctly undefined/null and reminderWeeks lands in the right parameter slot.
-  // Passing reminderWeeks (a number) as liveLastDate caused `.length` to be called
-  // on a number → "cannot read properties of undefined (reading 'length')".
+  //
+  // filterStatus is stored as the pill key (e.g. "overdue", "time_to_book").
+  // effectiveStatus() returns uppercase (e.g. "OVERDUE", "TIME TO BOOK").
+  // We translate via PILL_TO_EFFECTIVE before comparing so the filter actually works.
+  //
+  // Special case: "churned" and "vip" are raw DB statuses that effectiveStatus
+  // will never return directly, so we also fall back to matching r.status for those.
   const filteredRows = useMemo(() => {
     let rows = loyaltyRows.filter(r => {
       if (filterStatus) {
         const eff = effectiveStatus(r, null, reminderWeeks);
-        if (eff !== filterStatus) return false;
+        const targetEff = PILL_TO_EFFECTIVE[filterStatus];
+        // For statuses that don't map through effectiveStatus (churned, vip),
+        // fall back to comparing against the raw DB status.
+        const rawMatch = (filterStatus === "churned" || filterStatus === "vip")
+          ? (r.status ?? "").toLowerCase() === filterStatus
+          : false;
+        if (!rawMatch && eff !== targetEff) return false;
       }
       if (search) {
         const q = search.toLowerCase();
@@ -297,14 +305,15 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Status counts for filter pills ──
+  // Counts use the raw DB status field so the pill numbers stay accurate.
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const r of loyaltyRows) {
-      const s = effectiveStatus(r, null, reminderWeeks);
-      counts[s] = (counts[s] ?? 0) + 1;
+      const rawStatus = (r.status ?? "unknown").toLowerCase();
+      counts[rawStatus] = (counts[rawStatus] ?? 0) + 1;
     }
     return counts;
-  }, [loyaltyRows, reminderWeeks]);
+  }, [loyaltyRows]);
 
   // ── Bulk actions ──
   const toggleSelect = (id: string) =>
@@ -351,9 +360,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const invalidateLoyalty = () =>
     qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
 
-  // ────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────
   // Render
-  // ────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -489,7 +498,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
               }`}
             >
-              {s.replace("_"," ")} {statusCounts[s] ? `(${statusCounts[s]})` : ""}
+              {s.replace(/_/g," ")} {statusCounts[s] ? `(${statusCounts[s]})` : ""}
             </button>
           ))}
           {filterStatus && (
@@ -611,7 +620,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-gray-900 truncate">{row.client_name}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}>
-                          {status.replace("_"," ")}
+                          {status.replace(/_/g," ")}
                         </span>
                         {row.source === "tenant_criteria" && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">criteria</span>
@@ -680,7 +689,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                           rowId={row.id}
                           clientName={row.client_name}
                           tenantId={tenantId ?? ""}
-                          onDeleted={invalidateLoyalty}
+                          onUnregistered={invalidateLoyalty}
                         />
                       </div>
                     </div>
@@ -696,17 +705,22 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           {enrollCandidate && (
             <EnrollModal
               candidate={enrollCandidate}
-              isPending={enrollMutation.isPending}
-              onConfirm={(source, notes) => enrollMutation.mutate({ ...enrollCandidate, source, notes })}
               onClose={() => setEnrollCandidate(null)}
+              onEnroll={(source, notes) =>
+                enrollMutation.mutate({ ...enrollCandidate, source, notes })
+              }
+              isPending={enrollMutation.isPending}
             />
           )}
         </AnimatePresence>
 
-        {/* ── Success celebration ── */}
+        {/* ── Enroll success celebration ── */}
         <AnimatePresence>
           {enrolledName && (
-            <EnrollSuccessCelebration name={enrolledName} onDone={() => setEnrolledName(null)} />
+            <EnrollSuccessCelebration
+              name={enrolledName}
+              onDone={() => setEnrolledName(null)}
+            />
           )}
         </AnimatePresence>
 
