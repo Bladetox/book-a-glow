@@ -5,8 +5,6 @@
  *
  * Keys are included in BOTH the uppercase form returned by effectiveStatus()
  * AND the lowercase/underscore form used by the filter pills in AdminLoyalty.
- * Previously this was a flat string, but AdminLoyalty accesses .bg / .text,
- * so undefined.length crashed on Safari ("a.length is not an object").
  */
 export const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
   // ── Uppercase keys (returned by effectiveStatus) ──
@@ -27,6 +25,20 @@ export const STATUS_STYLE: Record<string, { bg: string; text: string; border: st
   unknown:         { bg: "bg-white/5",        text: "text-white/30",    border: "border-white/10" },
 };
 
+/**
+ * PILL_TO_EFFECTIVE — maps the lowercase pill key used in filter buttons
+ * to the uppercase string returned by effectiveStatus().
+ * Used to compare filterStatus against effectiveStatus() output.
+ */
+export const PILL_TO_EFFECTIVE: Record<string, string> = {
+  active:       "ON TRACK",
+  overdue:      "OVERDUE",
+  time_to_book: "TIME TO BOOK",
+  vip:          "ON TRACK",   // VIP clients show as ON TRACK in effectiveStatus
+  churned:      "UNKNOWN",    // Churned maps to UNKNOWN effective status
+  birthday:     "BIRTHDAY",
+};
+
 /** Ordered list of selectable statuses for the inline status editor */
 export const STATUS_OPTIONS = [
   "ON TRACK",
@@ -38,11 +50,21 @@ export const STATUS_OPTIONS = [
 export type LoyaltyStatus = typeof STATUS_OPTIONS[number];
 
 export const STATUS_ORDER: Record<string, number> = {
+  // Uppercase (from effectiveStatus)
   BIRTHDAY:       0,
   OVERDUE:        1,
   "TIME TO BOOK": 2,
   "ON TRACK":     3,
   UNKNOWN:        4,
+  // Lowercase (from raw DB status — fallback safety)
+  birthday:       0,
+  overdue:        1,
+  time_to_book:   2,
+  active:         3,
+  on_track:       3,
+  vip:            3,
+  churned:        4,
+  unknown:        4,
 };
 
 export const DEFAULT_WA_TEMPLATES = {
