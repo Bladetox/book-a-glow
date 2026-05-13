@@ -187,23 +187,25 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     [loyaltyRows],
   );
 
-  // ── Data: enrichment map (booking counts, last visit, birthday) ──
+  // ── Data: enrichment map (next due date, birthday) ──
+  // NOTE: booking_count and last_visit_date do NOT exist on loyalty_tracker.
+  // We only select columns that are actually present in the schema.
   const { data: enrichment = {} as EnrichmentMap, isLoading: loadingEnrichment } = useQuery<EnrichmentMap>({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("loyalty_tracker")
-        .select("phone, booking_count, last_visit_date, next_due_date, birthday")
+        .select("phone, next_due_date, birthday")
         .eq("tenant_id", tenantId);
       if (error) throw error;
       const map: EnrichmentMap = {};
-      for (const r of data ?? []) {
+      for (const r of (data ?? [])) {
         if (r.phone) map[normPhone(r.phone)] = {
-          bookingCount:  r.booking_count  ?? 0,
-          lastVisitDate: r.last_visit_date ?? null,
-          nextDueDate:   r.next_due_date   ?? null,
-          birthday:      r.birthday        ?? null,
+          bookingCount:  0,
+          lastVisitDate: null,
+          nextDueDate:   r.next_due_date ?? null,
+          birthday:      r.birthday      ?? null,
         };
       }
       return map;
@@ -225,7 +227,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (error) throw error;
 
       const map: Record<string, EnrollCandidate> = {};
-      for (const b of data ?? []) {
+      for (const b of (data ?? [])) {
         const key = normPhone(b.client_phone ?? "");
         if (!key) continue;
         if (!map[key]) {
@@ -306,7 +308,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         status:       "active",
         source:       candidate.source,
         notes:        candidate.notes ?? null,
-        booking_count: candidate.bookingCount,
       });
       if (error) throw error;
     },
@@ -585,7 +586,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           <div className="space-y-3">
             {filteredRows.map(row => {
               const phone = normPhone(row.phone);
-              const enrich = enrichment[phone] ?? { bookingCount: row.booking_count ?? 0, lastVisitDate: row.last_visit_date ?? null, nextDueDate: row.next_due_date ?? null, birthday: null };
+              const enrich = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: row.next_due_date ?? null, birthday: null };
               const status = optimisticStatus[row.id] ?? effectiveStatus(row, null, reminderWeeks);
               const style = STATUS_STYLE[status] ?? STATUS_STYLE["active"];
               const isExpanded = expandedCard === row.id;
@@ -634,7 +635,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                             Due: {isoToDisplay(enrich.nextDueDate)}
                           </span>
                         )}
-                        <span>{enrich.bookingCount} booking{enrich.bookingCount !== 1 ? "s" : ""}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>

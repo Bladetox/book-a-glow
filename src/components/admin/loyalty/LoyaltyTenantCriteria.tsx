@@ -106,8 +106,6 @@ export function LoyaltyTenantCriteria({
       const serviceNameMap: Record<string, string> = {};
       for (const s of services) serviceNameMap[s.id] = s.name;
 
-      // FIX 1: select `total_amount` (actual column name) instead of `total_price`
-      // to prevent spend always accumulating as NaN.
       const { data: bookings, error } = await supabase
         .from("bookings")
         .select("client_name, client_phone, client_email, booking_date, total_amount, status, service_ids")
@@ -116,11 +114,9 @@ export function LoyaltyTenantCriteria({
         .neq("status", "cancelled");
       if (error) throw error;
 
-      // FIX 2: renamed from `grouped` → `clientMap` to avoid shadowing the
-      // component-scope `grouped` (services by category). The old name caused
-      // the queryFn closure to resolve `grouped[key]` as a ServiceOption[]
-      // instead of the local accumulator, crashing with
-      // "Cannot read properties of undefined (reading 'length')".
+      // clientMap accumulates per-client booking stats.
+      // Named clientMap (not `grouped`) to avoid shadowing the component-scope
+      // `grouped` variable (services by category).
       const clientMap: Record<string, {
         name: string; phone: string; email?: string;
         count: number; spend: number; lastDate: string;
@@ -128,6 +124,9 @@ export function LoyaltyTenantCriteria({
       }> = {};
 
       for (const b of (bookings ?? [])) {
+        // Parse service_ids — stored as a text column containing a JSON array string
+        // e.g. '["uuid1","uuid2"]' or null. Guard all edge cases so .filter() never
+        // runs on undefined — fixes: "undefined is not an object (evaluating 'a.length')"
         let bookingServiceIds: string[] = [];
         try {
           const raw = b.service_ids;
@@ -144,6 +143,8 @@ export function LoyaltyTenantCriteria({
         } catch {
           bookingServiceIds = [];
         }
+        // Final safety net — ensure it's always an array before calling .filter()
+        if (!Array.isArray(bookingServiceIds)) bookingServiceIds = [];
 
         const matchedIds = bookingServiceIds.filter((id: string) => selectedSet.has(id));
         if (matchedIds.length === 0) continue;
@@ -178,7 +179,7 @@ export function LoyaltyTenantCriteria({
           nextDueDate:          format(addDays(parseISO(g.lastDate), reminderWeeks * 7), "yyyy-MM-dd"),
           daysSinceLastBooking: Math.floor((today.getTime() - new Date(g.lastDate).getTime()) / 86400000),
           candidateSource:      "criteria" as const,
-          matchedServices:      [...g.matchedServiceIds].map(id => serviceNameMap[id] ?? id),
+          matchedServices:      [...(g.matchedServiceIds ?? new Set())].map(id => serviceNameMap[id] ?? id),
         }))
         .sort((a, b) => b.bookingCount - a.bookingCount)
         .slice(0, 30);
