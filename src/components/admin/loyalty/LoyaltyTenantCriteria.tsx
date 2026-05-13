@@ -43,7 +43,7 @@ export function LoyaltyTenantCriteria({
   const [showConfig, setShowConfig]   = useState(false);
   const [expandCat, setExpandCat]     = useState<string | null>("waxing");
 
-  // ── Load services catalogue — FIX: filter by tenant_id to prevent cross-tenant leakage ──
+  // ── Load services catalogue ──
   const { data: services = [] } = useQuery<ServiceOption[]>({
     queryKey: ["services_catalogue", tenantId],
     enabled: !!tenantId,
@@ -60,7 +60,7 @@ export function LoyaltyTenantCriteria({
     },
   });
 
-  // Group services by category
+  // Group services by category — NOTE: this `grouped` is component-scope
   const grouped = useMemo(() => {
     const m: Record<string, ServiceOption[]> = {};
     for (const s of services) {
@@ -101,10 +101,8 @@ export function LoyaltyTenantCriteria({
     queryFn: async () => {
       const cutoff = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
 
-      // Build a set of selected service IDs for fast lookup
       const selectedSet = new Set(settings.serviceIds ?? []);
 
-      // Build service name map for display
       const serviceNameMap: Record<string, string> = {};
       for (const s of services) serviceNameMap[s.id] = s.name;
 
@@ -116,21 +114,24 @@ export function LoyaltyTenantCriteria({
         .neq("status", "cancelled");
       if (error) throw error;
 
-      const grouped: Record<string, {
+      // FIX: renamed from `grouped` → `clientMap` to avoid shadowing the
+      // component-scope `grouped` (services by category). The old name caused
+      // the queryFn closure to resolve `grouped[key]` as a ServiceOption[]
+      // instead of the local accumulator, crashing with
+      // "cannot read properties of undefined (reading 'length')".
+      const clientMap: Record<string, {
         name: string; phone: string; email?: string;
         count: number; spend: number; lastDate: string;
         matchedServiceIds: Set<string>;
       }> = {};
 
       for (const b of (bookings ?? [])) {
-        // Parse service_ids — handles native array, JSON string, CSV string, or null/undefined
         let bookingServiceIds: string[] = [];
         try {
           const raw = b.service_ids;
           if (Array.isArray(raw)) {
             bookingServiceIds = raw.map(String).filter(Boolean);
           } else if (typeof raw === "string" && raw.trim()) {
-            // Try JSON first, fall back to CSV
             try {
               const parsed = JSON.parse(raw);
               bookingServiceIds = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)];
@@ -138,12 +139,10 @@ export function LoyaltyTenantCriteria({
               bookingServiceIds = raw.split(",").map((s: string) => s.trim()).filter(Boolean);
             }
           }
-          // else raw is null/undefined → stays as []
         } catch {
           bookingServiceIds = [];
         }
 
-        // Only count if at least one of the booking's services is in tenant's selected set
         const matchedIds = bookingServiceIds.filter((id: string) => selectedSet.has(id));
         if (matchedIds.length === 0) continue;
 
@@ -151,21 +150,21 @@ export function LoyaltyTenantCriteria({
         if (enrolledPhones.has(p)) continue;
 
         const key = resolveKey(b.client_phone, b.client_email, b.client_name, b.booking_date);
-        if (!grouped[key]) {
-          grouped[key] = {
+        if (!clientMap[key]) {
+          clientMap[key] = {
             name: b.client_name, phone: b.client_phone ?? "",
             email: b.client_email ?? "", count: 0, spend: 0,
             lastDate: b.booking_date, matchedServiceIds: new Set(),
           };
         }
-        grouped[key].count++;
-        grouped[key].spend += b.total_price ?? 0;
-        if (b.booking_date > grouped[key].lastDate) grouped[key].lastDate = b.booking_date;
-        matchedIds.forEach((id: string) => grouped[key].matchedServiceIds.add(id));
+        clientMap[key].count++;
+        clientMap[key].spend += b.total_price ?? 0;
+        if (b.booking_date > clientMap[key].lastDate) clientMap[key].lastDate = b.booking_date;
+        matchedIds.forEach((id: string) => clientMap[key].matchedServiceIds.add(id));
       }
 
       const today = new Date();
-      return Object.values(grouped)
+      return Object.values(clientMap)
         .filter(g => g.count >= settings.minBookings)
         .map(g => ({
           client_name:          g.name,
