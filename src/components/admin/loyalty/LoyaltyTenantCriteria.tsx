@@ -123,13 +123,24 @@ export function LoyaltyTenantCriteria({
       }> = {};
 
       for (const b of (bookings ?? [])) {
-        // Parse service_ids — may be JSON array string or CSV
+        // Parse service_ids — handles native array, JSON string, CSV string, or null/undefined
         let bookingServiceIds: string[] = [];
         try {
-          const parsed = JSON.parse(b.service_ids ?? "[]");
-          bookingServiceIds = Array.isArray(parsed) ? parsed : [String(parsed)];
+          const raw = b.service_ids;
+          if (Array.isArray(raw)) {
+            bookingServiceIds = raw.map(String).filter(Boolean);
+          } else if (typeof raw === "string" && raw.trim()) {
+            // Try JSON first, fall back to CSV
+            try {
+              const parsed = JSON.parse(raw);
+              bookingServiceIds = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)];
+            } catch {
+              bookingServiceIds = raw.split(",").map((s: string) => s.trim()).filter(Boolean);
+            }
+          }
+          // else raw is null/undefined → stays as []
         } catch {
-          bookingServiceIds = (b.service_ids ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
+          bookingServiceIds = [];
         }
 
         // Only count if at least one of the booking's services is in tenant's selected set
