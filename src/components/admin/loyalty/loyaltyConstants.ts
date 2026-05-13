@@ -48,15 +48,36 @@ export const PILL_LABEL: Record<string, string> = {
 };
 
 /**
- * STATUS_ORDER — lower number sorts first in the client list.
+ * STATUS_ORDER — array used for iterating filter pills in display order.
+ * Use STATUS_SORT_RANK for numeric sorting.
  */
-export const STATUS_ORDER: Record<string, number> = {
+export const STATUS_ORDER: string[] = [
+  "active",
+  "overdue",
+  "time_to_book",
+  "churned",
+  "birthday",
+  "vip",
+];
+
+/**
+ * STATUS_SORT_RANK — numeric rank for sorting rows (lower = higher priority).
+ */
+export const STATUS_SORT_RANK: Record<string, number> = {
+  birthday:      0,
   BIRTHDAY:      0,
+  overdue:       1,
   OVERDUE:       1,
+  time_to_book:  2,
   "TIME TO BOOK": 2,
+  active:        3,
   "ON TRACK":    3,
+  on_track:      3,
+  churned:       4,
   CHURNED:       4,
+  vip:           5,
   VIP:           5,
+  unknown:       99,
   UNKNOWN:       99,
 };
 
