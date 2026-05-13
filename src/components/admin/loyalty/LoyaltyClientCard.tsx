@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Pencil, Check, X, StickyNote, Trash2, Loader2, MessageCircle,
+  Pencil, Check, X, StickyNote, Trash2, Loader2, MessageCircle, Cake,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,7 +72,6 @@ export const InlineStatusEditor = ({
     else { toast.success("Status updated"); onUpdated(); }
   };
 
-  // Resolve the style key: prefer exact match, fallback to unknown
   const styleKey = (effectiveNorm in STATUS_STYLE
     ? effectiveNorm
     : effectiveNorm.toLowerCase().replace(/ /g, "_") in STATUS_STYLE
@@ -81,11 +80,8 @@ export const InlineStatusEditor = ({
   ) as keyof typeof STATUS_STYLE;
 
   const styleObj = STATUS_STYLE[styleKey];
-
-  // Display label: use PILL_LABEL if available, otherwise humanise the key
   const displayKey = effectiveNorm.toLowerCase().replace(/ /g, "_");
   const displayLabel = PILL_LABEL[displayKey] ?? effectiveNorm.replace(/_/g, " ").replace(/ /g, " ");
-
   const storedNorm = normaliseStatus(current);
 
   return (
@@ -119,7 +115,6 @@ export const InlineStatusEditor = ({
                 }`}
               >
                 {storedNorm === s && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
-                {/* Use PILL_LABEL for friendly display in the dropdown */}
                 <span>{PILL_LABEL[s] ?? s.replace(/_/g, " ")}</span>
               </button>
             ))}
@@ -181,6 +176,93 @@ export const InlineNotesEditor = ({
   );
 };
 
+// ─── InlineBirthdayEditor ───
+// Allows tenants to set/edit a client's birthday on the loyalty card.
+export const InlineBirthdayEditor = ({
+  rowId, current, tenantId, onUpdated,
+}: {
+  rowId: string;
+  current: string | null;  // stored as "YYYY-MM-DD" or null
+  tenantId: string;
+  onUpdated: () => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue]     = useState(current ?? "");
+  const [saving, setSaving]   = useState(false);
+
+  // Format for display: "12 Jan" or "12 Jan 1990"
+  function formatBirthday(iso: string | null): string {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso + "T00:00:00");
+      return d.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: iso.length > 7 ? "numeric" : undefined });
+    } catch {
+      return iso;
+    }
+  }
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("loyalty_tracker")
+      .update({ birthday: value || null, updated_at: new Date().toISOString() })
+      .eq("id", rowId).eq("tenant_id", tenantId);
+    setSaving(false);
+    if (error) toast.error("Failed to save birthday");
+    else {
+      toast.success(value ? `Birthday saved \uD83C\uDF82` : "Birthday cleared");
+      setEditing(false);
+      onUpdated();
+    }
+  };
+
+  if (!editing) return (
+    <button
+      onClick={e => { e.stopPropagation(); setValue(current ?? ""); setEditing(true); }}
+      className="flex items-center gap-2 w-full group text-left py-0.5" title="Set birthday"
+    >
+      <Cake className="w-3 h-3 shrink-0 text-pink-400/40 group-hover:text-pink-400/70 transition-colors" />
+      <span className="text-[11px] leading-snug group-hover:text-white/60 transition-colors"
+        style={{ color: current ? "rgba(249,168,212,0.7)" : undefined }}
+      >
+        {current
+          ? formatBirthday(current)
+          : <span className="italic text-white/20">Add birthday…</span>
+        }
+      </span>
+      {current && (
+        <Pencil className="w-2 h-2 text-white/20 opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
+      )}
+    </button>
+  );
+
+  return (
+    <div className="flex items-center gap-2 w-full" onClick={e => e.stopPropagation()}>
+      <input
+        autoFocus
+        type="date"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+        className="text-[11px] bg-white/[0.06] border border-white/[0.12] rounded-xl px-3 py-1.5 text-white/80 focus:outline-none focus:border-pink-400/40 flex-1 min-w-0 [color-scheme:dark]"
+      />
+      <button
+        onClick={save}
+        disabled={saving}
+        className="w-7 h-7 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 hover:bg-pink-500/20 transition-all shrink-0"
+      >
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+      </button>
+      <button
+        onClick={() => setEditing(false)}
+        className="w-7 h-7 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-all shrink-0"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+};
+
 // ─── InlineClientEditor ───
 export const InlineClientEditor = ({
   rowId, name, phone, tenantId, onUpdated,
@@ -215,7 +297,7 @@ export const InlineClientEditor = ({
   };
 
   return (
-    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+    <div className="flex flex-col gap-1 flex-1 min-w-0">
       {editingField === "name" ? (
         <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
           <input autoFocus value={nameValue} onChange={e => setNameValue(e.target.value)}
@@ -234,7 +316,8 @@ export const InlineClientEditor = ({
           onClick={e => { e.stopPropagation(); setEditingField("name"); }}
           className="text-left text-sm font-semibold text-white/85 hover:text-white transition-colors group flex items-center gap-1.5"
         >
-          <span className="line-clamp-1 break-words min-w-0">{name}</span>
+          {/* FIX: removed line-clamp-1 — show full name+surname, wrap if needed */}
+          <span className="break-words min-w-0 leading-snug">{name}</span>
           <Pencil className="w-2.5 h-2.5 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
         </button>
       )}
@@ -265,7 +348,6 @@ export const InlineClientEditor = ({
 };
 
 // ─── UnregisterButton ───
-// Props corrected: clientName (not client_name), onDeleted (not onUnregistered)
 export const UnregisterButton = ({
   rowId, clientName, tenantId, onDeleted,
 }: {
