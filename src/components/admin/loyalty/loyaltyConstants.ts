@@ -1,11 +1,30 @@
 // ─── Loyalty Constants ───
 
-export const STATUS_STYLE: Record<string, string> = {
-  BIRTHDAY:      "bg-pink-500/10 text-pink-300 border-pink-500/20",
-  OVERDUE:       "bg-red-500/10 text-red-300 border-red-500/20",
-  "TIME TO BOOK": "bg-amber-500/10 text-amber-300 border-amber-500/20",
-  "ON TRACK":    "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-  UNKNOWN:       "bg-white/5 text-white/30 border-white/10",
+/**
+ * STATUS_STYLE — maps status keys to { bg, text, border } class strings.
+ *
+ * Keys are included in BOTH the uppercase form returned by effectiveStatus()
+ * AND the lowercase/underscore form used by the filter pills in AdminLoyalty.
+ * Previously this was a flat string, but AdminLoyalty accesses .bg / .text,
+ * so undefined.length crashed on Safari ("a.length is not an object").
+ */
+export const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
+  // ── Uppercase keys (returned by effectiveStatus) ──
+  BIRTHDAY:        { bg: "bg-pink-500/10",    text: "text-pink-300",    border: "border-pink-500/20" },
+  OVERDUE:         { bg: "bg-red-500/10",     text: "text-red-300",     border: "border-red-500/20" },
+  "TIME TO BOOK":  { bg: "bg-amber-500/10",   text: "text-amber-300",   border: "border-amber-500/20" },
+  "ON TRACK":      { bg: "bg-emerald-500/10", text: "text-emerald-300", border: "border-emerald-500/20" },
+  UNKNOWN:         { bg: "bg-white/5",        text: "text-white/30",    border: "border-white/10" },
+
+  // ── Lowercase / underscore keys (used by filter pills & status counts) ──
+  active:          { bg: "bg-emerald-500/10", text: "text-emerald-300", border: "border-emerald-500/20" },
+  overdue:         { bg: "bg-red-500/10",     text: "text-red-300",     border: "border-red-500/20" },
+  time_to_book:    { bg: "bg-amber-500/10",   text: "text-amber-300",   border: "border-amber-500/20" },
+  churned:         { bg: "bg-gray-500/10",    text: "text-gray-400",    border: "border-gray-500/20" },
+  vip:             { bg: "bg-purple-500/10",  text: "text-purple-300",  border: "border-purple-500/20" },
+  birthday:        { bg: "bg-pink-500/10",    text: "text-pink-300",    border: "border-pink-500/20" },
+  on_track:        { bg: "bg-emerald-500/10", text: "text-emerald-300", border: "border-emerald-500/20" },
+  unknown:         { bg: "bg-white/5",        text: "text-white/30",    border: "border-white/10" },
 };
 
 /** Ordered list of selectable statuses for the inline status editor */
