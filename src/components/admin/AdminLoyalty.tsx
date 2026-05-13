@@ -211,6 +211,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enroll candidates (booking history) ──
+  // FIX: use correct bookings column names (client_name, client_phone, booking_date)
   const { data: candidates = [], isLoading: loadingCandidates } = useQuery<EnrollCandidate[]>({
     queryKey: ["loyalty_candidates", tenantId],
     enabled: !!tenantId,
@@ -218,15 +219,23 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       const since = subDays(new Date(), lookbackDays).toISOString();
       const { data, error } = await supabase
         .from("bookings")
-        .select("client_name, phone, service_type, date")
+        .select("client_name, client_phone, booking_date")
         .eq("tenant_id", tenantId)
-        .gte("date", since);
+        .gte("booking_date", since)
+        .neq("status", "cancelled");
       if (error) throw error;
 
       const map: Record<string, EnrollCandidate> = {};
       for (const b of data ?? []) {
-        const key = normPhone(b.phone ?? "");
-        if (!map[key]) map[key] = { name: b.client_name ?? "", phone: b.phone ?? "", bookingCount: 0 };
+        const key = normPhone(b.client_phone ?? "");
+        if (!key) continue;
+        if (!map[key]) {
+          map[key] = {
+            client_name:  b.client_name ?? "",
+            phone:        b.client_phone ?? "",
+            bookingCount: 0,
+          };
+        }
         map[key].bookingCount++;
       }
       return Object.values(map)
@@ -264,7 +273,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     mutationFn: async (candidate: EnrollCandidate & { source: string; notes?: string }) => {
       const { error } = await supabase.from("loyalty_tracker").insert({
         tenant_id:    tenantId,
-        client_name:  candidate.name ?? candidate.client_name,
+        client_name:  candidate.client_name ?? "",
         phone:        candidate.phone,
         status:       "active",
         source:       candidate.source,
@@ -274,7 +283,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (error) throw error;
     },
     onSuccess: (_, candidate) => {
-      setEnrolledName(candidate.name ?? candidate.client_name ?? "");
+      setEnrolledName(candidate.client_name ?? "");
       setEnrollCandidate(null);
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId] });
@@ -450,7 +459,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               )}
             </div>
 
-            {/* ── Tenant criteria — correct props ── */}
+            {/* ── Tenant criteria ── */}
             <LoyaltyTenantCriteria
               tenantId={tenantId ?? ""}
               enrolledPhones={enrolledPhones}
@@ -518,7 +527,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors"
                 >
                   <UserPlus className="w-3 h-3" />
-                  {c.name || c.phone} · {c.bookingCount} bookings
+                  {c.client_name || c.phone} · {c.bookingCount} bookings
                 </button>
               ))}
               {candidates.length > 8 && (
