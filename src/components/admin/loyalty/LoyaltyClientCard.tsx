@@ -5,16 +5,25 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { STATUS_STYLE, STATUS_OPTIONS } from "./loyaltyConstants";
+import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
 import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
 
 // ─── WaButton ───
 export const WaButton = ({
   name, status, phone, businessName, serviceLabel, templates,
 }: {
-  name: string; status: string; phone: string;
-  businessName: string; serviceLabel: string;
-  templates: { overdue: string; timeToBook: string; onTrack: string; birthday: string };
+  name: string;
+  status: string;
+  phone: string;
+  businessName: string;
+  serviceLabel: string;
+  templates: {
+    overdue: string;
+    timeToBook: string;
+    onTrack: string;
+    birthday: string;
+    longOverdue?: string;
+  };
 }) => {
   const msg = buildWaMessage(name, status, businessName, serviceLabel, templates);
   return (
@@ -38,7 +47,10 @@ export const WaButton = ({
 export const InlineStatusEditor = ({
   rowId, current, effectiveNorm, tenantId, onOptimisticUpdate, onUpdated,
 }: {
-  rowId: string; current: string; effectiveNorm: string; tenantId: string;
+  rowId: string;
+  current: string | null;
+  effectiveNorm: string;
+  tenantId: string;
   onOptimisticUpdate: (newStatus: string) => void;
   onUpdated: () => void;
 }) => {
@@ -60,8 +72,20 @@ export const InlineStatusEditor = ({
     else { toast.success("Status updated"); onUpdated(); }
   };
 
-  const key = (effectiveNorm in STATUS_STYLE ? effectiveNorm : "active") as keyof typeof STATUS_STYLE;
-  const styleObj = STATUS_STYLE[key];
+  // Resolve the style key: prefer exact match, fallback to unknown
+  const styleKey = (effectiveNorm in STATUS_STYLE
+    ? effectiveNorm
+    : effectiveNorm.toLowerCase().replace(/ /g, "_") in STATUS_STYLE
+      ? effectiveNorm.toLowerCase().replace(/ /g, "_")
+      : "unknown"
+  ) as keyof typeof STATUS_STYLE;
+
+  const styleObj = STATUS_STYLE[styleKey];
+
+  // Display label: use PILL_LABEL if available, otherwise humanise the key
+  const displayKey = effectiveNorm.toLowerCase().replace(/ /g, "_");
+  const displayLabel = PILL_LABEL[displayKey] ?? effectiveNorm.replace(/_/g, " ").replace(/ /g, " ");
+
   const storedNorm = normaliseStatus(current);
 
   return (
@@ -76,7 +100,7 @@ export const InlineStatusEditor = ({
         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer transition-all hover:opacity-80 ${styleObj?.bg ?? ""} ${styleObj?.text ?? ""}`}
       >
         {saving && <Loader2 className="w-3 h-3 animate-spin" />}
-        {key.replace(/_/g, " ")}
+        {displayLabel}
         <Pencil className={`w-2.5 h-2.5 transition-opacity ${hovered ? "opacity-60" : "opacity-0"}`} />
       </button>
       <AnimatePresence>
@@ -86,7 +110,7 @@ export const InlineStatusEditor = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 4 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full mt-1.5 left-0 z-20 flex flex-col gap-0.5 rounded-2xl border border-white/[0.1] bg-[#161616] shadow-2xl p-1.5 min-w-[140px]"
+            className="absolute top-full mt-1.5 left-0 z-20 flex flex-col gap-0.5 rounded-2xl border border-white/[0.1] bg-[#161616] shadow-2xl p-1.5 min-w-[160px]"
           >
             {STATUS_OPTIONS.map(s => (
               <button key={s} onClick={() => handleSelect(s)}
@@ -95,7 +119,8 @@ export const InlineStatusEditor = ({
                 }`}
               >
                 {storedNorm === s && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
-                <span>{s.replace(/_/g, " ")}</span>
+                {/* Use PILL_LABEL for friendly display in the dropdown */}
+                <span>{PILL_LABEL[s] ?? s.replace(/_/g, " ")}</span>
               </button>
             ))}
           </motion.div>
@@ -240,10 +265,14 @@ export const InlineClientEditor = ({
 };
 
 // ─── UnregisterButton ───
+// Props corrected: clientName (not client_name), onDeleted (not onUnregistered)
 export const UnregisterButton = ({
   rowId, clientName, tenantId, onDeleted,
 }: {
-  rowId: string; clientName: string; tenantId: string; onDeleted: () => void;
+  rowId: string;
+  clientName: string;
+  tenantId: string;
+  onDeleted: () => void;
 }) => {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting]     = useState(false);

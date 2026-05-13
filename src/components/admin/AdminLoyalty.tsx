@@ -12,7 +12,7 @@ import {
   Clock, Download, Settings2, Save,
   Users, CalendarCheck, ChevronDown, Bot, ExternalLink,
 } from "lucide-react";
-import { format, subDays, addDays, parseISO } from "date-fns";
+import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
 
 // ─── Shared design-system primitives ───
@@ -23,7 +23,7 @@ import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings
 import {
   STATUS_STYLE, STATUS_ORDER, DEFAULT_WA_TEMPLATES,
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
-  DEFAULT_TENANT_CRITERIA, PILL_TO_EFFECTIVE,
+  DEFAULT_TENANT_CRITERIA, PILL_TO_EFFECTIVE, PILL_LABEL,
 } from "./loyalty/loyaltyConstants";
 import {
   excelToDate, isoToDisplay,
@@ -49,19 +49,20 @@ interface AdminLoyaltyProps {
 
 // ──────────────────────────────────────────────────────────────────
 // Dark-glass STATUS_STYLE overrides
+// (churned / vip / active removed — these are no longer valid pill statuses)
 // ──────────────────────────────────────────────────────────────────
 const DARK_PILL: Record<string, { bg: string; text: string }> = {
-  active:       { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
-  ACTIVE:       { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
-  overdue:      { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
-  OVERDUE:      { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
-  "time to book": { bg: "bg-amber-400/10 border border-amber-400/20",   text: "text-amber-400" },
-  "TIME TO BOOK": { bg: "bg-amber-400/10 border border-amber-400/20",   text: "text-amber-400" },
-  time_to_book: { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
-  churned:      { bg: "bg-white/[0.05] border border-white/[0.08]",     text: "text-white/40" },
-  CHURNED:      { bg: "bg-white/[0.05] border border-white/[0.08]",     text: "text-white/40" },
-  vip:          { bg: "bg-sky-500/10 border border-sky-500/20",         text: "text-sky-400" },
-  VIP:          { bg: "bg-sky-500/10 border border-sky-500/20",         text: "text-sky-400" },
+  on_track:       { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
+  "ON TRACK":     { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
+  overdue:        { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
+  OVERDUE:        { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
+  long_overdue:   { bg: "bg-orange-600/15 border border-orange-600/25",   text: "text-orange-400" },
+  LONG_OVERDUE:   { bg: "bg-orange-600/15 border border-orange-600/25",   text: "text-orange-400" },
+  "time to book": { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
+  "TIME TO BOOK": { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
+  time_to_book:   { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
+  birthday:       { bg: "bg-pink-500/10 border border-pink-500/20",       text: "text-pink-300" },
+  BIRTHDAY:       { bg: "bg-pink-500/10 border border-pink-500/20",       text: "text-pink-300" },
 };
 
 function darkPill(status: string) {
@@ -138,14 +139,15 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   useEffect(() => {
     if (!settingsRows) return;
     const map = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
-    if (map["loyalty.reminder_weeks"])           setReminderWeeks(Number(map["loyalty.reminder_weeks"]));
-    if (map["loyalty.service_label"])            setServiceLabel(map["loyalty.service_label"]);
-    if (map["loyalty.min_bookings"])             setMinBookings(Number(map["loyalty.min_bookings"]));
-    if (map["loyalty.lookback_days"])            setLookbackDays(Number(map["loyalty.lookback_days"]));
-    if (map["loyalty.wa_template_overdue"])      setWaTemplates(t => ({ ...t, overdue:    map["loyalty.wa_template_overdue"] }));
-    if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook: map["loyalty.wa_template_time_to_book"] }));
-    if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:    map["loyalty.wa_template_on_track"] }));
-    if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:   map["loyalty.wa_template_birthday"] }));
+    if (map["loyalty.reminder_weeks"])            setReminderWeeks(Number(map["loyalty.reminder_weeks"]));
+    if (map["loyalty.service_label"])             setServiceLabel(map["loyalty.service_label"]);
+    if (map["loyalty.min_bookings"])              setMinBookings(Number(map["loyalty.min_bookings"]));
+    if (map["loyalty.lookback_days"])             setLookbackDays(Number(map["loyalty.lookback_days"]));
+    if (map["loyalty.wa_template_overdue"])       setWaTemplates(t => ({ ...t, overdue:     map["loyalty.wa_template_overdue"] }));
+    if (map["loyalty.wa_template_time_to_book"])  setWaTemplates(t => ({ ...t, timeToBook:  map["loyalty.wa_template_time_to_book"] }));
+    if (map["loyalty.wa_template_on_track"])      setWaTemplates(t => ({ ...t, onTrack:     map["loyalty.wa_template_on_track"] }));
+    if (map["loyalty.wa_template_birthday"])      setWaTemplates(t => ({ ...t, birthday:    map["loyalty.wa_template_birthday"] }));
+    if (map["loyalty.wa_template_long_overdue"])  setWaTemplates(t => ({ ...t, longOverdue: map["loyalty.wa_template_long_overdue"] }));
     if (map["loyalty.criteria_enabled"])
       setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
     if (map["loyalty.criteria_service_ids"])
@@ -161,18 +163,19 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
       const rows = [
-        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                              description: "Loyalty reminder interval in weeks" },
-        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                       description: "Service label used in WA templates" },
-        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                description: "Min bookings for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                               description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                             description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                               description: "WA template: birthday" },
-        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                     description: "Tenant criteria: enabled" },
-        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),         description: "Tenant criteria: service IDs" },
-        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                  description: "Tenant criteria: min bookings" },
-        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                 description: "Tenant criteria: lookback days" },
+        { tenant_id: tenantId, key: "loyalty.reminder_weeks",            value: String(reminderWeeks),                              description: "Loyalty reminder interval in weeks" },
+        { tenant_id: tenantId, key: "loyalty.service_label",             value: serviceLabel,                                       description: "Service label used in WA templates" },
+        { tenant_id: tenantId, key: "loyalty.min_bookings",              value: String(minBookings),                                description: "Min bookings for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.lookback_days",             value: String(lookbackDays),                               description: "Lookback window (days) for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",       value: waTemplates.overdue,                                description: "WA template: overdue" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book",  value: waTemplates.timeToBook,                             description: "WA template: time to book" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",      value: waTemplates.onTrack,                                description: "WA template: on track" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",      value: waTemplates.birthday,                               description: "WA template: birthday" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue",  value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue, description: "WA template: not seen in a while" },
+        { tenant_id: tenantId, key: "loyalty.criteria_enabled",          value: String(tenantCriteria.enabled),                     description: "Tenant criteria: enabled" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",      value: (tenantCriteria.serviceIds ?? []).join(","),         description: "Tenant criteria: service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",     value: String(tenantCriteria.minBookings),                  description: "Tenant criteria: min bookings" },
+        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",    value: String(tenantCriteria.lookbackDays),                 description: "Tenant criteria: lookback days" },
       ];
       const { error } = await supabase
         .from("app_settings")
@@ -188,7 +191,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: loyalty rows ──
-  // FIX: added .limit(300) as a safety cap to prevent unbounded fetches.
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery({
     queryKey: ["loyalty_tracker", tenantId],
     enabled: !!tenantId,
@@ -208,7 +210,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const enrolledPhones = useMemo(() => new Set(loyaltyRows.map(r => normPhone(r.phone))), [loyaltyRows]);
 
   // ── Data: enroll candidates ──
-  // FIX: reduced lookback to 365 days and added .limit(500) to prevent slow scans.
   const { data: candidates = [], isLoading: loadingCandidates } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
@@ -244,11 +245,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // ── Data: enrichment (booking count + spend + last booking) ──
-  // FIX: reduced lookback from 730 → 365 days and added .limit(500) to avoid
-  // fetching thousands of rows on page load. Enrichment data loads in the background
-  // and does NOT block the main loyalty list from rendering.
-  const { data: enrichment = {} as EnrichmentMap, isLoading: loadingEnrichment } = useQuery({
+  // ── Data: enrichment ──
+  const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
     staleTime: 10 * 60 * 1000,
@@ -266,11 +264,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       const map: EnrichmentMap = {};
       for (const b of (data ?? [])) {
         const key = normPhone(b.phone);
-        if (!map[key]) map[key] = { bookingCount: 0, totalSpend: 0, lastBookingDate: null };
+        if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
         map[key].bookingCount++;
-        map[key].totalSpend += Number(b.service_price ?? 0);
-        if (!map[key].lastBookingDate || b.created_at > map[key].lastBookingDate!) {
-          map[key].lastBookingDate = b.created_at;
+        if (!map[key].lastVisitDate || b.created_at > map[key].lastVisitDate!) {
+          map[key].lastVisitDate = b.created_at;
         }
       }
       return map;
@@ -283,7 +280,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     if (filterStatus) {
       rows = rows.filter(r => {
         const eff = effectiveStatus(r, null, reminderWeeks).toLowerCase().replace(/ /g, "_");
-        return eff === filterStatus || eff === PILL_TO_EFFECTIVE[filterStatus];
+        return eff === filterStatus;
       });
     }
     if (search.trim()) {
@@ -316,7 +313,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return m;
   }, [loyaltyRows, optimisticStatus, reminderWeeks]);
 
-  // ── Select helpers ──
   const toggleSelect = (id: string) =>
     setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
 
@@ -325,16 +321,17 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
       const now = new Date().toISOString();
       const { error } = await supabase.from("loyalty_tracker").insert({
-        tenant_id:      tenantId,
-        client_name:    candidate.client_name,
-        phone:          candidate.phone,
-        status:         "active",
-        source:         candidate.source ?? "manual",
-        notes:          candidate.notes ?? null,
+        tenant_id:       tenantId,
+        client_name:     candidate.client_name,
+        phone:           candidate.phone,
+        // Store as on_track — effectiveStatus() will compute the real status at render time
+        status:          "on_track",
+        source:          candidate.candidateSource ?? "manual",
+        notes:           candidate.notes ?? null,
         last_visit_date: candidate.lastBookingDate ?? null,
-        next_due_date:  candidate.nextDueDate ?? null,
-        created_at:     now,
-        updated_at:     now,
+        next_due_date:   candidate.nextDueDate ?? null,
+        created_at:      now,
+        updated_at:      now,
       });
       if (error) throw error;
     },
@@ -347,18 +344,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     onError: () => toast.error("Failed to enroll client"),
   });
 
-  // ── Export ──
-  const handleExport = () => {
-    exportCSV(filteredRows, enrichment, reminderWeeks);
-  };
+  const handleExport = () => exportCSV(filteredRows, enrichment, reminderWeeks);
 
-  // ── Invalidate helpers ──
   const invalidateLoyalty = () => {
     qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
   };
 
-  // FIX: only block the list on loyaltyRows loading — enrichment loads silently
-  // in the background and fills in once ready, so the list is visible immediately.
   const isLoading = loadingLoyalty;
 
   const handleCriteriaChange = (next: TenantCriteriaSettings) => {
@@ -415,7 +406,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               />
             </div>
 
-            {/* Core settings grid — 1 col mobile, 2 col tablet, 3 col desktop */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <label className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
@@ -452,7 +442,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               </label>
             </div>
 
-            {/* WA Template editor toggle */}
+            {/* WA Template editor */}
             <div>
               <button
                 onClick={() => setShowTemplateEditor(s => !s)}
@@ -463,14 +453,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               </button>
               {showTemplateEditor && (
                 <div className="mt-3 space-y-3">
-                  {(["overdue","timeToBook","onTrack","birthday"] as const).map(key => (
+                  {(["overdue", "longOverdue", "timeToBook", "onTrack", "birthday"] as const).map(key => (
                     <label key={key} className="flex flex-col gap-1.5">
                       <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                        {key.replace(/([A-Z])/g,' $1')}
+                        {key === "longOverdue" ? "Not Seen in a While" : key.replace(/([A-Z])/g, " $1")}
                       </span>
                       <textarea
                         rows={3}
-                        value={waTemplates[key]}
+                        value={waTemplates[key] ?? ""}
                         onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); setSettingsDirty(true); }}
                         className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none font-mono"
                       />
@@ -480,7 +470,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               )}
             </div>
 
-            {/* Tenant criteria */}
             <LoyaltyTenantCriteria
               tenantId={tenantId ?? ""}
               settings={tenantCriteria}
@@ -488,18 +477,16 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               onMarkDirty={() => setSettingsDirty(true)}
             />
 
-            {/* Messaging how-to */}
             <MessagingHowTo />
           </div>
         )}
 
-        {/* ── Status filter pills — horizontally scrollable, no flex-wrap overflow ── */}
-        <div
-          className="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
-        >
+        {/* ── Status filter pills ── */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {STATUS_ORDER.map(status => {
             const count = statusCounts[status] ?? 0;
             const isActive = filterStatus === status;
+            const label = PILL_LABEL[status] ?? status.replace(/_/g, " ");
             return (
               <button
                 key={status}
@@ -510,7 +497,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                     : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
                 }`}
               >
-                {status.replace(/_/g, " ")}
+                {label}
                 {count > 0 && (
                   <span className={`text-[10px] tabular-nums ${isActive ? "text-white/60" : "text-white/25"}`}>
                     ({count})
@@ -616,9 +603,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         ) : (
           <div className="space-y-2">
             {filteredRows.map(row => {
-              const phone    = normPhone(row.phone);
-              const enrich   = enrichment[phone] ?? { bookingCount: 0, totalSpend: 0, lastBookingDate: null };
-              const effStatus = optimisticStatus[row.id] ?? effectiveStatus(row, null, reminderWeeks);
+              const phone      = normPhone(row.phone);
+              const enrich     = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
+              const effStatus  = optimisticStatus[row.id] ?? effectiveStatus(row, enrich.lastVisitDate, reminderWeeks);
               const isSelected = selectedIds.includes(row.id);
               const isExpanded = expandedCard === row.id;
 
@@ -632,9 +619,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       : "border-white/[0.06] bg-white/[0.025] hover:bg-white/[0.04]"
                   }`}
                 >
-                  {/* ── Card top row ── */}
+                  {/* Card top row */}
                   <div className="flex items-center gap-3 px-4 py-3.5 min-w-0 overflow-hidden">
-                    {/* Checkbox */}
                     <button
                       onClick={e => { e.stopPropagation(); toggleSelect(row.id); }}
                       className={`w-4.5 h-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
@@ -647,7 +633,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       {isSelected && <span className="w-2 h-2 rounded-sm bg-emerald-400" />}
                     </button>
 
-                    {/* Name + phone */}
                     <InlineClientEditor
                       rowId={row.id}
                       name={row.client_name ?? "Unknown"}
@@ -656,7 +641,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       onUpdated={invalidateLoyalty}
                     />
 
-                    {/* Status pill */}
                     <InlineStatusEditor
                       rowId={row.id}
                       current={row.status}
@@ -666,29 +650,27 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       onUpdated={invalidateLoyalty}
                     />
 
-                    {/* WA button */}
                     <WaButton
                       name={row.client_name ?? ""}
                       status={effStatus}
-                      phone={row.phone}
+                      phone={row.phone ?? ""}
                       businessName={businessName}
                       serviceLabel={serviceLabel}
                       templates={waTemplates}
                     />
                   </div>
 
-                  {/* ── Expanded details ── */}
+                  {/* Expanded details */}
                   {isExpanded && (
                     <div
                       className="px-4 pb-4 pt-0 space-y-3 border-t border-white/[0.04]"
                       onClick={e => e.stopPropagation()}
                     >
-                      {/* Stats row */}
                       <div className="flex flex-wrap gap-x-4 gap-y-2 pt-3">
                         {[
                           { icon: CalendarCheck, label: "Bookings",   value: enrich.bookingCount },
-                          { icon: Clock,         label: "Last booked", value: enrich.lastBookingDate ? isoToDisplay(enrich.lastBookingDate) : "—" },
-                          { icon: CalendarCheck, label: "Next due",    value: row.next_due_date ? isoToDisplay(row.next_due_date) : "—" },
+                          { icon: Clock,         label: "Last booked", value: enrich.lastVisitDate ? isoToDisplay(enrich.lastVisitDate) : "—" },
+                          { icon: CalendarCheck, label: "Next due",    value: row.next_due_date ? isoToDisplay(String(row.next_due_date)) : "—" },
                         ].map(({ icon: Icon, label, value }) => (
                           <div key={label} className="flex items-center gap-1.5 text-[11px] text-white/40">
                             <Icon className="w-3 h-3 shrink-0" />
@@ -698,7 +680,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                         ))}
                       </div>
 
-                      {/* Notes */}
                       <InlineNotesEditor
                         rowId={row.id}
                         current={row.notes ?? null}
@@ -706,11 +687,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                         onUpdated={invalidateLoyalty}
                       />
 
-                      {/* Unregister */}
                       <UnregisterButton
                         rowId={row.id}
+                        clientName={row.client_name ?? "this client"}
                         tenantId={tenantId ?? ""}
-                        onUnregistered={invalidateLoyalty}
+                        onDeleted={invalidateLoyalty}
                       />
                     </div>
                   )}
@@ -735,7 +716,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 client_name:     name,
                 phone,
                 notes,
-                source:          "manual",
+                candidateSource: "manual",
                 lastBookingDate: lastBooking,
                 nextDueDate:     nextDue,
               })
