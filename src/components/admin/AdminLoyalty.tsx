@@ -169,10 +169,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                               description: "WA template: birthday" },
         { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                     description: "Tenant criteria: enabled" },
         { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),         description: "Tenant criteria: service IDs" },
-        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                 description: "Tenant criteria: min bookings" },
-        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                description: "Tenant criteria: lookback days" },
+        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                  description: "Tenant criteria: min bookings" },
+        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                 description: "Tenant criteria: lookback days" },
       ];
-      const { error } = await supabase.from("app_settings").upsert(rows, { onConflict: "tenant_id,key" });
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert(rows, { onConflict: "tenant_id,key" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -183,10 +185,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     onError: () => toast.error("Failed to save settings"),
   });
 
-  // ── Data: loyalty tracker rows ──
+  // ── Data: loyalty rows ──
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery({
     queryKey: ["loyalty_tracker", tenantId],
     enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("loyalty_tracker")
@@ -204,6 +207,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const { data: candidates = [], isLoading: loadingCandidates } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const since = format(subDays(new Date(), lookbackDays), "yyyy-MM-dd");
       const { data, error } = await supabase
@@ -228,9 +232,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           client_name:        g.client_name,
           bookingCount:       g.bookings.length,
           totalSpend:         g.bookings.reduce((s, b) => s + b.price, 0),
-          daysSinceLastBooking: Math.floor((Date.now() - new Date(g.bookings.sort((a,b)=>b.date.localeCompare(a.date))[0].date).getTime()) / 86400000),
-          lastBookingDate:    g.bookings.sort((a,b)=>b.date.localeCompare(a.date))[0].date.split("T")[0],
-          nextDueDate:        format(addDays(new Date(g.bookings.sort((a,b)=>b.date.localeCompare(a.date))[0].date), reminderWeeks * 7), "yyyy-MM-dd"),
+          ...(() => { const lastDate = g.bookings.slice().sort((a,b)=>b.date.localeCompare(a.date))[0].date; return { daysSinceLastBooking: Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000), lastBookingDate: lastDate.split("T")[0], nextDueDate: format(addDays(new Date(lastDate), reminderWeeks * 7), "yyyy-MM-dd") }; })(),
         })) as EnrollCandidate[];
     },
   });
@@ -239,11 +241,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const { data: enrichment = {} as EnrichmentMap, isLoading: loadingEnrichment } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
+      const enrichSince = format(subDays(new Date(), 730), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
         .select("phone, created_at, service_price")
         .eq("tenant_id", tenantId)
+        .gte("created_at", enrichSince)
         .not("phone", "is", null);
       if (error) throw error;
 
@@ -278,15 +283,20 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         (r.source ?? "").toLowerCase().includes(q)
       );
     }
-    rows.sort((a, b) => {
-      const ea = STATUS_ORDER[effectiveStatus(a, null, reminderWeeks)] ?? 99;
-      const eb = STATUS_ORDER[effectiveStatus(b, null, reminderWeeks)] ?? 99;
-      return ea - eb;
-    });
     return rows;
   }, [loyaltyRows, filterStatus, search, reminderWeeks]);
 
-  // ── Effective status map for bulk bar ──
+  // ── Status counts for filter pills ──
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const row of loyaltyRows) {
+      const eff = effectiveStatus(row, null, reminderWeeks).toLowerCase().replace(/ /g, "_");
+      counts[eff] = (counts[eff] ?? 0) + 1;
+    }
+    return counts;
+  }, [loyaltyRows, reminderWeeks]);
+
+  // ── Effective status map (for bulk bar) ──
   const effectiveStatusMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const row of loyaltyRows) {
@@ -295,60 +305,53 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return m;
   }, [loyaltyRows, optimisticStatus, reminderWeeks]);
 
-  // ── Mutation: enroll client ──
+  // ── Select helpers ──
+  const toggleSelect = (id: string) =>
+    setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+
+  // ── Enroll mutation ──
   const enrollMutation = useMutation({
-    mutationFn: async (candidate: EnrollCandidate & { source: string; notes?: string }) => {
+    mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
+      const now = new Date().toISOString();
       const { error } = await supabase.from("loyalty_tracker").insert({
-        tenant_id:    tenantId,
-        client_name:  candidate.client_name ?? "",
-        phone:        candidate.phone,
-        status:       "active",
-        source:       candidate.source,
-        notes:        candidate.notes ?? null,
+        tenant_id:      tenantId,
+        client_name:    candidate.client_name,
+        phone:          candidate.phone,
+        status:         "active",
+        source:         candidate.source ?? "manual",
+        notes:          candidate.notes ?? null,
+        last_visit_date: candidate.lastBookingDate ?? null,
+        next_due_date:  candidate.nextDueDate ?? null,
+        created_at:     now,
+        updated_at:     now,
       });
       if (error) throw error;
     },
     onSuccess: (_, candidate) => {
-      setEnrolledName(candidate.client_name ?? "");
+      setEnrolledName(candidate.client_name);
       setEnrollCandidate(null);
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-      qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId] });
-      qc.invalidateQueries({ queryKey: ["loyalty_criteria_candidates", tenantId] });
+      qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays] });
     },
-    onError: () => toast.error("Enrolment failed"),
+    onError: () => toast.error("Failed to enroll client"),
   });
 
-  // ── Status counts for filter pills ──
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const r of loyaltyRows) {
-      const eff = effectiveStatus(r, null, reminderWeeks)
-        .toLowerCase()
-        .replace(/ /g, "_");
-      counts[eff] = (counts[eff] ?? 0) + 1;
-    }
-    return counts;
-  }, [loyaltyRows, reminderWeeks]);
-
-  // ── Bulk actions ──
-  const toggleSelect = (id: string) =>
-    setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
-
-  // ── CSV export ──
-  const handleExport = () =>
+  // ── Export ──
+  const handleExport = () => {
     exportCSV(filteredRows, enrichment, reminderWeeks);
+  };
 
-  // ── Dirty tracking for criteria/settings ──
+  // ── Invalidate helpers ──
+  const invalidateLoyalty = () => {
+    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
+  };
+
+  const isLoading = loadingLoyalty || loadingEnrichment;
+
   const handleCriteriaChange = (next: TenantCriteriaSettings) => {
     setTenantCriteria(next);
     setSettingsDirty(true);
   };
-
-  const isLoading = loadingLoyalty || loadingCandidates || loadingEnrichment;
-
-  // ── Shared invalidate helper for card-level mutations ──
-  const invalidateLoyalty = () =>
-    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
 
   // ──────────────────────────────────────────────────────────────────
   // Render
@@ -362,7 +365,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           title="Loyalty Programme"
           subtitle={`${loyaltyRows.length} client${loyaltyRows.length !== 1 ? "s" : ""} enrolled`}
           action={
-            <div className="flex gap-2 flex-wrap items-center">
+            <div className="flex gap-2 flex-nowrap items-center">
               <button
                 onClick={handleExport}
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold border border-white/[0.08] rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/60 transition-colors"
@@ -453,50 +456,53 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                         {key.replace(/([A-Z])/g,' $1')}
                       </span>
                       <textarea
-                        rows={2}
+                        rows={3}
                         value={waTemplates[key]}
                         onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); setSettingsDirty(true); }}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none font-mono"
                       />
                     </label>
                   ))}
-                  <MessagingHowTo />
                 </div>
               )}
             </div>
 
-            {/* ── Tenant criteria ── */}
+            {/* Tenant criteria */}
             <LoyaltyTenantCriteria
               tenantId={tenantId ?? ""}
-              enrolledPhones={enrolledPhones}
               settings={tenantCriteria}
               onSettingsChange={handleCriteriaChange}
-              reminderWeeks={reminderWeeks}
-              onEnroll={setEnrollCandidate}
-              dirty={settingsDirty}
               onMarkDirty={() => setSettingsDirty(true)}
             />
+
+            {/* Messaging how-to */}
+            <MessagingHowTo />
           </div>
         )}
 
         {/* ── Status filter pills — horizontally scrollable, no flex-wrap overflow ── */}
         <div
           className="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
-          style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" as const }}
         >
-          {["active","overdue","churned","time_to_book","vip"].map(s => {
-            const pill = darkPill(s);
+          {STATUS_ORDER.map(status => {
+            const count = statusCounts[status] ?? 0;
+            const isActive = filterStatus === status;
             return (
               <button
-                key={s}
-                onClick={() => setFilterStatus(f => f === s ? null : s)}
-                className={`px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
-                  filterStatus === s
-                    ? `${pill.bg} ${pill.text}`
-                    : "bg-white/[0.04] border-white/[0.06] text-white/50 hover:bg-white/[0.08] hover:text-white/70"
+                key={status}
+                onClick={() => setFilterStatus(s => s === status ? null : status)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
+                  isActive
+                    ? "bg-white/[0.12] border-white/[0.20] text-white/90"
+                    : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
                 }`}
               >
-                {s.replace(/_/g," ")}{statusCounts[s] ? ` (${statusCounts[s]})` : ""}
+                {status.replace(/_/g, " ")}
+                {count > 0 && (
+                  <span className={`text-[10px] tabular-nums ${isActive ? "text-white/60" : "text-white/25"}`}>
+                    ({count})
+                  </span>
+                )}
               </button>
             );
           })}
@@ -574,7 +580,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             className="flex items-center gap-2 px-4 py-3 bg-white/[0.04] border border-white/[0.06] rounded-2xl text-xs font-semibold text-white/55 hover:bg-white/[0.07] hover:text-white/75 transition-colors w-full"
           >
             <Bot className="w-3.5 h-3.5 text-white/35" />
-            <span>Ask Nexty for loyalty insights & re-engagement ideas</span>
+            <span>Ask Nexty for loyalty insights &amp; re-engagement ideas</span>
             <ExternalLink className="w-3 h-3 ml-auto opacity-40" />
           </button>
         )}
@@ -614,7 +620,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   }`}
                 >
                   {/* ── Card top row ── */}
-                  <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex items-center gap-3 px-4 py-3.5 min-w-0 overflow-hidden">
                     {/* Checkbox */}
                     <button
                       onClick={e => { e.stopPropagation(); toggleSelect(row.id); }}
@@ -665,7 +671,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       onClick={e => e.stopPropagation()}
                     >
                       {/* Stats row */}
-                      <div className="flex flex-wrap gap-3 pt-3">
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 pt-3">
                         {[
                           { icon: CalendarCheck, label: "Bookings",   value: enrich.bookingCount },
                           { icon: Clock,         label: "Last booked", value: enrich.lastBookingDate ? isoToDisplay(enrich.lastBookingDate) : "—" },
