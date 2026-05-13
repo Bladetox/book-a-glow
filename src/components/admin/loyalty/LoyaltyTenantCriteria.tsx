@@ -74,9 +74,10 @@ export function LoyaltyTenantCriteria({
 
   // ── Toggle a single service ──
   function toggleService(id: string) {
-    const next = settings.serviceIds.includes(id)
-      ? settings.serviceIds.filter(x => x !== id)
-      : [...settings.serviceIds, id];
+    const safeIds = settings.serviceIds ?? [];
+    const next = safeIds.includes(id)
+      ? safeIds.filter(x => x !== id)
+      : [...safeIds, id];
     onSettingsChange({ ...settings, serviceIds: next });
     onMarkDirty();
   }
@@ -84,23 +85,24 @@ export function LoyaltyTenantCriteria({
   // ── Toggle whole category ──
   function toggleCategory(cat: string) {
     const ids = grouped[cat].map(s => s.id);
-    const allSelected = ids.every(id => settings.serviceIds.includes(id));
+    const safeServiceIds = settings.serviceIds ?? [];
+    const allSelected = ids.every(id => safeServiceIds.includes(id));
     const next = allSelected
-      ? settings.serviceIds.filter(id => !ids.includes(id))
-      : [...new Set([...settings.serviceIds, ...ids])];
+      ? safeServiceIds.filter(id => !ids.includes(id))
+      : [...new Set([...safeServiceIds, ...ids])];
     onSettingsChange({ ...settings, serviceIds: next });
     onMarkDirty();
   }
 
   // ── Criteria candidate query ──
   const { data: criteriaCandidates = [], isLoading } = useQuery<EnrollCandidate[]>({
-    queryKey: ["loyalty_criteria_candidates", tenantId, settings.serviceIds.join(","), settings.minBookings, settings.lookbackDays],
-    enabled: !!tenantId && settings.enabled && settings.serviceIds.length > 0,
+    queryKey: ["loyalty_criteria_candidates", tenantId, (settings.serviceIds ?? []).join(","), settings.minBookings, settings.lookbackDays],
+    enabled: !!tenantId && settings.enabled && (settings.serviceIds ?? []).length > 0,
     queryFn: async () => {
       const cutoff = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
 
       // Build a set of selected service IDs for fast lookup
-      const selectedSet = new Set(settings.serviceIds);
+      const selectedSet = new Set(settings.serviceIds ?? []);
 
       // Build service name map for display
       const serviceNameMap: Record<string, string> = {};
@@ -171,7 +173,7 @@ export function LoyaltyTenantCriteria({
     },
   });
 
-  const selectedCount = settings.serviceIds.length;
+  const selectedCount = (settings.serviceIds ?? []).length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -191,32 +193,29 @@ export function LoyaltyTenantCriteria({
           {/* Enable toggle */}
           <button
             onClick={() => { onSettingsChange({ ...settings, enabled: !settings.enabled }); onMarkDirty(); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] border transition-all ${
-              settings.enabled
-                ? "bg-violet-500/15 border-violet-500/25 text-violet-300"
-                : "bg-white/[0.03] border-white/[0.08] text-white/30"
+            className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+              settings.enabled ? "bg-violet-500/40" : "bg-white/[0.08]"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${ settings.enabled ? "bg-violet-400" : "bg-white/20" }`} />
-            {settings.enabled ? "On" : "Off"}
+            <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
+              settings.enabled ? "translate-x-3.5" : "translate-x-0.5"
+            }`} />
           </button>
-          {/* Config toggle */}
           <button
             onClick={() => setShowConfig(s => !s)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] border border-white/[0.08] text-white/30 hover:text-white/60 transition-colors"
+            className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/60 transition-colors"
           >
             <Settings2 className="w-3 h-3" />
-            Configure
-            {showConfig ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showConfig ? "Hide" : "Configure"}
           </button>
         </div>
       </div>
 
       {/* Config panel */}
       {showConfig && (
-        <div className="flex flex-col gap-4 p-4 rounded-2xl border border-violet-500/[0.12] bg-violet-500/[0.02]">
+        <div className="flex flex-col gap-3 p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
 
-          {/* Thresholds */}
+          {/* Min bookings + lookback */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Min bookings</label>
@@ -225,7 +224,6 @@ export function LoyaltyTenantCriteria({
                 onChange={e => { onSettingsChange({ ...settings, minBookings: Number(e.target.value) }); onMarkDirty(); }}
                 className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-violet-400/40"
               />
-              <span className="text-[9px] text-white/20">e.g. 3 wax bookings</span>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Lookback (days)</label>
@@ -234,83 +232,64 @@ export function LoyaltyTenantCriteria({
                 onChange={e => { onSettingsChange({ ...settings, lookbackDays: Number(e.target.value) }); onMarkDirty(); }}
                 className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/80 focus:outline-none focus:border-violet-400/40"
               />
-              <span className="text-[9px] text-white/20">e.g. 90 days (3 months)</span>
             </div>
           </div>
 
           {/* Service picker */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] uppercase tracking-[0.1em] text-white/30">Services that qualify</label>
-              {selectedCount > 0 && (
-                <button
-                  onClick={() => { onSettingsChange({ ...settings, serviceIds: [] }); onMarkDirty(); }}
-                  className="text-[9px] text-white/20 hover:text-white/50 transition-colors"
-                >
-                  Clear all
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
-              {categories.map(cat => {
-                const catServices = grouped[cat];
-                const catIds = catServices.map(s => s.id);
-                const allChecked = catIds.every(id => settings.serviceIds.includes(id));
-                const someChecked = catIds.some(id => settings.serviceIds.includes(id));
-                const isOpen = expandCat === cat;
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-white/30 mb-1">Qualifying services</p>
+            {categories.length === 0 ? (
+              <p className="text-[11px] text-white/20">No services found</p>
+            ) : (
+              categories.map(cat => {
+                const catIds    = grouped[cat].map(s => s.id);
+                const safeIds   = settings.serviceIds ?? [];
+                const allSel    = catIds.every(id => safeIds.includes(id));
+                const someSel   = catIds.some(id => safeIds.includes(id));
+                const isOpen    = expandCat === cat;
 
                 return (
                   <div key={cat} className="rounded-xl border border-white/[0.06] overflow-hidden">
                     {/* Category row */}
-                    <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02]">
-                      {/* Category checkbox */}
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] cursor-pointer hover:bg-white/[0.04] transition-colors"
+                      onClick={() => setExpandCat(isOpen ? null : cat)}
+                    >
                       <button
-                        onClick={() => toggleCategory(cat)}
-                        className={`w-4 h-4 rounded flex items-center justify-center border transition-all shrink-0 ${
-                          allChecked
-                            ? "bg-violet-500/30 border-violet-500/40"
-                            : someChecked
-                              ? "bg-violet-500/10 border-violet-500/20"
-                              : "border-white/[0.12] bg-white/[0.02]"
+                        onClick={e => { e.stopPropagation(); toggleCategory(cat); }}
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                          allSel
+                            ? "bg-violet-500/30 border-violet-500/50"
+                            : someSel
+                              ? "bg-violet-500/10 border-violet-500/30"
+                              : "border-white/[0.12] bg-transparent"
                         }`}
                       >
-                        {allChecked && <Check className="w-2.5 h-2.5 text-violet-300" />}
-                        {!allChecked && someChecked && <span className="w-1.5 h-0.5 bg-violet-400 rounded-full" />}
+                        {allSel  && <Check className="w-2.5 h-2.5 text-violet-300" />}
+                        {someSel && !allSel && <span className="w-1.5 h-1.5 rounded-sm bg-violet-400/60" />}
                       </button>
-                      <span className="text-[11px] font-medium text-white/60 flex-1">{fmtCategory(cat)}</span>
-                      <span className="text-[9px] text-white/20">{catIds.filter(id => settings.serviceIds.includes(id)).length}/{catServices.length}</span>
-                      <button
-                        onClick={() => setExpandCat(isOpen ? null : cat)}
-                        className="text-white/20 hover:text-white/50 transition-colors"
-                      >
-                        {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      </button>
+                      <span className="text-[11px] text-white/60 flex-1">{fmtCategory(cat)}</span>
+                      <span className="text-[10px] text-white/20">{catIds.filter(id => safeIds.includes(id)).length}/{catIds.length}</span>
+                      {isOpen ? <ChevronUp className="w-3 h-3 text-white/20" /> : <ChevronDown className="w-3 h-3 text-white/20" />}
                     </div>
 
-                    {/* Service list */}
+                    {/* Services list */}
                     {isOpen && (
                       <div className="flex flex-col divide-y divide-white/[0.04]">
-                        {catServices.map(svc => {
-                          const checked = settings.serviceIds.includes(svc.id);
+                        {grouped[cat].map(svc => {
+                          const safeServiceIds = settings.serviceIds ?? [];
+                          const sel = safeServiceIds.includes(svc.id);
                           return (
                             <button
                               key={svc.id}
                               onClick={() => toggleService(svc.id)}
-                              className={`flex items-center gap-2.5 px-4 py-2 text-left transition-colors ${
-                                checked ? "bg-violet-500/[0.04]" : "hover:bg-white/[0.02]"
-                              }`}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-white/[0.03] transition-colors text-left"
                             >
-                              <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 transition-all ${
-                                checked
-                                  ? "bg-violet-500/30 border-violet-400/40"
-                                  : "border-white/[0.12]"
+                              <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                                sel ? "bg-violet-500/30 border-violet-500/50" : "border-white/[0.12]"
                               }`}>
-                                {checked && <Check className="w-2.5 h-2.5 text-violet-300" />}
+                                {sel && <Check className="w-2.5 h-2.5 text-violet-300" />}
                               </span>
-                              <span className={`text-[11px] ${ checked ? "text-white/80" : "text-white/40" }`}>
-                                {svc.name}
-                              </span>
+                              <span className={`text-[11px] ${sel ? "text-white/70" : "text-white/40"}`}>{svc.name}</span>
                             </button>
                           );
                         })}
@@ -318,60 +297,45 @@ export function LoyaltyTenantCriteria({
                     )}
                   </div>
                 );
-              })}
-            </div>
+              })
+            )}
           </div>
         </div>
       )}
 
-      {/* Criteria candidates list */}
-      {settings.enabled && settings.serviceIds.length > 0 && (
-        <>
+      {/* Candidate list */}
+      {settings.enabled && (settings.serviceIds ?? []).length > 0 && (
+        <div className="flex flex-col gap-1.5">
           {isLoading ? (
-            <p className="text-[10px] text-white/20 py-2 text-center">Scanning bookings…</p>
+            <p className="text-[11px] text-white/20 py-2">Finding candidates…</p>
           ) : criteriaCandidates.length === 0 ? (
-            <p className="text-[10px] text-white/20 py-2 text-center">
-              No clients match your criteria yet
-            </p>
+            <p className="text-[11px] text-white/20 py-2">No candidates match your criteria yet</p>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[9px] text-white/15 text-right">
-                ≥{settings.minBookings} qualifying bookings in last {settings.lookbackDays}d
-              </p>
-              {criteriaCandidates.map(c => (
-                <button
-                  key={c.phone + c.client_name}
-                  onClick={() => onEnroll(c)}
-                  className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-violet-500/[0.12] hover:border-violet-500/25 hover:bg-violet-500/[0.02] transition-all text-left"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[12px] font-medium text-white/70">{c.client_name}</span>
-                    <span className="text-[10px] text-white/30">
-                      {c.bookingCount} bookings · R {c.totalSpend.toLocaleString()}
-                    </span>
+            criteriaCandidates.map(c => (
+              <button
+                key={c.phone + c.client_name}
+                onClick={() => onEnroll(c)}
+                className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-violet-500/[0.12] hover:border-violet-500/25 hover:bg-violet-500/[0.02] transition-all text-left"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[12px] font-medium text-white/70">{c.client_name}</span>
+                  <span className="text-[10px] text-white/30">
+                    {c.bookingCount} bookings · {c.daysSinceLastBooking}d ago
                     {c.matchedServices && c.matchedServices.length > 0 && (
-                      <span className="text-[9px] text-violet-400/50">
-                        {c.matchedServices.slice(0, 3).join(" · ")}{c.matchedServices.length > 3 ? ` +${c.matchedServices.length - 3}` : ""}
-                      </span>
+                      <> · {c.matchedServices.slice(0, 2).join(", ")}{c.matchedServices.length > 2 ? ` +${c.matchedServices.length - 2}` : ""}</>
                     )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-violet-500/10 text-violet-400/80 border border-violet-500/15">
-                      Your pick
-                    </span>
-                    <UserPlus className="w-4 h-4 text-violet-400/50 shrink-0" />
-                  </div>
-                </button>
-              ))}
-            </div>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-violet-500/10 text-violet-400/80 border border-violet-500/15">
+                    Your pick
+                  </span>
+                  <UserPlus className="w-4 h-4 text-violet-400/50 shrink-0" />
+                </div>
+              </button>
+            ))
           )}
-        </>
-      )}
-
-      {settings.enabled && settings.serviceIds.length === 0 && (
-        <p className="text-[10px] text-white/20 py-1 text-center">
-          Select at least one service above to start scanning
-        </p>
+        </div>
       )}
     </div>
   );
