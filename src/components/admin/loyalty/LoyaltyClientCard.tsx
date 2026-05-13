@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS } from "./loyaltyConstants";
 import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
-import type { LoyaltyRow } from "./loyaltyTypes";
 
 // ─── WaButton ───
 export const WaButton = ({
@@ -57,8 +56,9 @@ export const InlineStatusEditor = ({
     else { toast.success("Status updated"); onUpdated(); }
   };
 
-  const displayNorm  = (effectiveNorm as keyof typeof STATUS_STYLE) in STATUS_STYLE ? effectiveNorm as keyof typeof STATUS_STYLE : "UNKNOWN";
-  const storedNorm   = normaliseStatus(current);
+  const key = (effectiveNorm in STATUS_STYLE ? effectiveNorm : "active") as keyof typeof STATUS_STYLE;
+  const styleObj = STATUS_STYLE[key];
+  const storedNorm = normaliseStatus(current);
 
   return (
     <div
@@ -69,12 +69,10 @@ export const InlineStatusEditor = ({
       {open && <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />}
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-all ${
-          STATUS_STYLE[displayNorm] ?? STATUS_STYLE["UNKNOWN"]
-        } hover:opacity-80`}
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-all hover:opacity-80 ${styleObj?.bg ?? ""} ${styleObj?.text ?? ""}`}
       >
         {saving && <Loader2 className="w-3 h-3 animate-spin" />}
-        {displayNorm}
+        {key}
         <Pencil className={`w-2.5 h-2.5 transition-opacity ${hovered ? "opacity-50" : "opacity-0"}`} />
       </button>
       <AnimatePresence>
