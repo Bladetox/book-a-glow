@@ -36,9 +36,9 @@ export function normPhone(p: string | null | undefined): string {
 export function normaliseStatus(
   raw: string | null | undefined
 ): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" {
-  const s = (raw ?? "").toUpperCase().replace(/[^A-Z ]/g, "").trim();
-  if (s.includes("ON TRACK")) return "ON TRACK";
-  if (s.includes("TIME TO BOOK")) return "TIME TO BOOK";
+  const s = (raw ?? "").toUpperCase().replace(/[^A-Z _]/g, "").trim();
+  if (s.includes("ON TRACK") || s.includes("ON_TRACK")) return "ON TRACK";
+  if (s.includes("TIME TO BOOK") || s.includes("TIME_TO_BOOK")) return "TIME TO BOOK";
   if (s.includes("OVERDUE")) return "OVERDUE";
   return "UNKNOWN";
 }
@@ -58,7 +58,6 @@ function isBirthdaySoon(birthday: string | null | undefined): boolean {
   try {
     const today = startOfDay(new Date());
     const year = today.getFullYear();
-    // Normalise to MM-DD
     const mmdd = birthday.length >= 10 ? birthday.slice(5, 10) : birthday.slice(0, 5);
     const thisYear = new Date(`${year}-${mmdd}T00:00:00`);
     const nextYear = new Date(`${year + 1}-${mmdd}T00:00:00`);
@@ -72,38 +71,59 @@ function isBirthdaySoon(birthday: string | null | undefined): boolean {
 /**
  * effectiveStatus
  *
- * @param r            - loyalty tracker row
- * @param liveLastDate - ISO date string (YYYY-MM-DD) or null/undefined.
- *                       Must be a string — never pass a number here.
- * @param reminderWeeks - weeks between visits (number)
- * @param hasUpcoming   - client has an upcoming booking
+ * Priority order:
+ * 1. BIRTHDAY  — birthday within 7 days (highest priority, actionable)
+ * 2. ON TRACK  — has upcoming booking already
+ * 3. LONG_OVERDUE — past due by more than 2× the reminder window ("not seen in a while")
+ * 4. OVERDUE   — past their next due date
+ * 5. TIME TO BOOK — within the reminder window of their due date
+ * 6. ON TRACK  — due date is still comfortably in the future
+ * 7. UNKNOWN   — no date data available
+ *
+ * Note: "churned" and "vip" are NOT auto-computed — they are legacy manual
+ * statuses that no longer appear in the filter pills. If a row has these
+ * stored as the raw status and no date data exists, they fall through to UNKNOWN.
  */
 export function effectiveStatus(
   r: LoyaltyRow,
   liveLastDate: string | null | undefined,
   reminderWeeks?: number,
   hasUpcoming?: boolean
-): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" | "BIRTHDAY" {
-  // Birthday takes highest priority
+): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "LONG_OVERDUE" | "UNKNOWN" | "BIRTHDAY" {
+  // 1. Birthday takes highest priority
   if (isBirthdaySoon(r.birthday)) return "BIRTHDAY";
+
+  // 2. Already has an upcoming booking — no need to nudge
   if (hasUpcoming) return "ON TRACK";
-  const stored = normaliseStatus(r.status);
-  // Guard: only treat liveLastDate as a date string if it really is one
+
   const safeLastDate = (typeof liveLastDate === "string" && liveLastDate.length >= 10)
     ? liveLastDate
     : null;
+
   const nextDueIso = (safeLastDate && reminderWeeks)
     ? format(addDays(new Date(safeLastDate + "T00:00:00"), reminderWeeks * 7), "yyyy-MM-dd")
     : excelToISO(r.next_due_date);
+
   if (nextDueIso) {
-    const due   = startOfDay(parseISO(nextDueIso));
-    const today = startOfDay(new Date());
-    if (isAfter(today, due)) return "OVERDUE";
+    const due      = startOfDay(parseISO(nextDueIso));
+    const today    = startOfDay(new Date());
+    const rWeeks   = reminderWeeks ?? 4;
+    const ttbWindow = timeToBookDays(rWeeks);
+
+    if (isAfter(today, due)) {
+      // Past due — check if it's been more than 2× the reminder window
+      const daysOverdue = differenceInDays(today, due);
+      if (daysOverdue > rWeeks * 7 * 2) return "LONG_OVERDUE";
+      return "OVERDUE";
+    }
+
     const daysUntil = differenceInDays(due, today);
-    const ttbWindow = timeToBookDays(reminderWeeks ?? 4);
     if (daysUntil <= ttbWindow) return "TIME TO BOOK";
     return "ON TRACK";
   }
+
+  // Fallback to stored status if no date data
+  const stored = normaliseStatus(r.status);
   if (stored === "OVERDUE")      return "OVERDUE";
   if (stored === "TIME TO BOOK") return "TIME TO BOOK";
   if (stored === "ON TRACK")     return "ON TRACK";
@@ -132,10 +152,9 @@ export function exportCSV(
   enrichmentMap: EnrichmentMap,
   reminderWeeks: number
 ): void {
-  const headers = ["Name", "Phone", "Status", "Last Date", "Next Due", "Notes", "Last Contacted"];
+  const headers = ["Name", "Phone", "Status", "Last Visit", "Next Due", "Notes", "Last Contacted"];
   const body = rows.map(r => {
     const enr = enrichmentMap[normPhone(r.phone)] ?? null;
-    // Use lastVisitDate from enrichment (populated by AdminLoyalty's enrichment query)
     const lastVisit = enr?.lastVisitDate ?? null;
     const status = effectiveStatus(r, lastVisit, reminderWeeks, false);
     const lastDate = lastVisit
@@ -174,12 +193,13 @@ export function buildWaMessage(
   status: string,
   businessName: string,
   serviceLabel: string,
-  templates: { overdue: string; timeToBook: string; onTrack: string; birthday: string }
+  templates: { overdue: string; timeToBook: string; onTrack: string; birthday: string; longOverdue?: string }
 ): string {
   const biz = businessName || "us";
   const svc = serviceLabel || "appointment";
   const sub = (tpl: string) =>
     tpl.replace(/\{name\}/g, name).replace(/\{business\}/g, biz).replace(/\{service\}/g, svc);
+  if (status === "LONG_OVERDUE") return sub(templates.longOverdue ?? templates.overdue);
   if (status === "OVERDUE")      return sub(templates.overdue);
   if (status === "TIME TO BOOK") return sub(templates.timeToBook);
   if (status === "BIRTHDAY")     return sub(templates.birthday);

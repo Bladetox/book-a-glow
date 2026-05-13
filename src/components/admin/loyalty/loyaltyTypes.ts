@@ -58,6 +58,7 @@ export interface LoyaltySettings {
   wa_template_time_to_book: string;
   wa_template_on_track: string;
   wa_template_birthday: string;
+  wa_template_long_overdue: string;
 }
 
 export interface ServiceOption {
@@ -72,3 +73,16 @@ export interface TenantCriteriaSettings {
   minBookings: number;
   lookbackDays: number;
 }
+
+/**
+ * EffectiveStatus — all possible values returned by effectiveStatus().
+ * Note: 'churned' and 'vip' are NOT included — they are legacy manual-only
+ * statuses that the system no longer auto-assigns.
+ */
+export type EffectiveStatus =
+  | "ON TRACK"
+  | "TIME TO BOOK"
+  | "OVERDUE"
+  | "LONG_OVERDUE"
+  | "BIRTHDAY"
+  | "UNKNOWN";
