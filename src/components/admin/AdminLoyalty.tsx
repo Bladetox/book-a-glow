@@ -64,7 +64,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   // ── Tenant criteria state ──
   const [tenantCriteria, setTenantCriteria] = useState<TenantCriteriaSettings>({
     enabled:       DEFAULT_TENANT_CRITERIA.enabled,
-    serviceIds:    DEFAULT_TENANT_CRITERIA.service_ids,
+    serviceIds:    DEFAULT_TENANT_CRITERIA.service_ids ?? [],
     minBookings:   DEFAULT_TENANT_CRITERIA.min_bookings,
     lookbackDays:  DEFAULT_TENANT_CRITERIA.lookback_days,
   });
@@ -136,19 +136,19 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
       const rows = [
-        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                        description: "Loyalty reminder interval in weeks" },
-        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                 description: "Service label used in WA templates" },
-        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                          description: "Min bookings for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                         description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                          description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                       description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                          description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                         description: "WA template: birthday" },
+        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                              description: "Loyalty reminder interval in weeks" },
+        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                       description: "Service label used in WA templates" },
+        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                description: "Min bookings for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                               description: "Lookback window (days) for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                description: "WA template: overdue" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                             description: "WA template: time to book" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                description: "WA template: on track" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                               description: "WA template: birthday" },
         // Tenant criteria
-        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),               description: "Tenant criteria: enabled" },
-        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),           description: "Tenant criteria: qualifying service IDs" },
-        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),            description: "Tenant criteria: min bookings" },
-        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),           description: "Tenant criteria: lookback days" },
+        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                     description: "Tenant criteria: enabled" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),         description: "Tenant criteria: qualifying service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                 description: "Tenant criteria: min bookings" },
+        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                description: "Tenant criteria: lookback days" },
       ];
       const { error } = await supabase
         .from("app_settings")
@@ -264,7 +264,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     mutationFn: async (candidate: EnrollCandidate & { source: string; notes?: string }) => {
       const { error } = await supabase.from("loyalty_tracker").insert({
         tenant_id:    tenantId,
-        client_name:  candidate.name,
+        client_name:  candidate.name ?? candidate.client_name,
         phone:        candidate.phone,
         status:       "active",
         source:       candidate.source,
@@ -274,7 +274,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (error) throw error;
     },
     onSuccess: (_, candidate) => {
-      setEnrolledName(candidate.name);
+      setEnrolledName(candidate.name ?? candidate.client_name ?? "");
       setEnrollCandidate(null);
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId] });
@@ -450,11 +450,16 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               )}
             </div>
 
-            {/* Tenant criteria */}
+            {/* ── Tenant criteria — correct props ── */}
             <LoyaltyTenantCriteria
               tenantId={tenantId ?? ""}
-              value={tenantCriteria}
-              onChange={handleCriteriaChange}
+              enrolledPhones={enrolledPhones}
+              settings={tenantCriteria}
+              onSettingsChange={handleCriteriaChange}
+              reminderWeeks={reminderWeeks}
+              onEnroll={setEnrollCandidate}
+              dirty={settingsDirty}
+              onMarkDirty={() => setSettingsDirty(true)}
             />
           </div>
         )}
