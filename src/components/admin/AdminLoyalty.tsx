@@ -15,6 +15,9 @@ import {
 import { format, subDays, addDays, parseISO } from "date-fns";
 import { toast } from "sonner";
 
+// ─── Shared design-system primitives ───
+import { EmptyState, AdminPageHeader, SaveButton } from "./AdminSharedUI";
+
 // ─── Sub-modules ───
 import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings } from "./loyalty/loyaltyTypes";
 import {
@@ -42,6 +45,28 @@ import { LoyaltyTenantCriteria }     from "./loyalty/LoyaltyTenantCriteria";
 // ──────────────────────────────────────────────────────────────────
 interface AdminLoyaltyProps {
   onNavigate?: (view: string) => void;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Dark-glass STATUS_STYLE overrides
+// Maps effective status key → pill classes that fit the dark theme
+// ──────────────────────────────────────────────────────────────────
+const DARK_PILL: Record<string, { bg: string; text: string }> = {
+  active:       { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
+  ACTIVE:       { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
+  overdue:      { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
+  OVERDUE:      { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
+  "time to book": { bg: "bg-amber-400/10 border border-amber-400/20",   text: "text-amber-400" },
+  "TIME TO BOOK": { bg: "bg-amber-400/10 border border-amber-400/20",   text: "text-amber-400" },
+  time_to_book: { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
+  churned:      { bg: "bg-white/[0.05] border border-white/[0.08]",     text: "text-white/40" },
+  CHURNED:      { bg: "bg-white/[0.05] border border-white/[0.08]",     text: "text-white/40" },
+  vip:          { bg: "bg-sky-500/10 border border-sky-500/20",         text: "text-sky-400" },
+  VIP:          { bg: "bg-sky-500/10 border border-sky-500/20",         text: "text-sky-400" },
+};
+
+function darkPill(status: string) {
+  return DARK_PILL[status] ?? DARK_PILL[status.toLowerCase()] ?? { bg: "bg-white/[0.05] border border-white/[0.08]", text: "text-white/40" };
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -188,8 +213,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   );
 
   // ── Data: enrichment map (next due date, birthday) ──
-  // NOTE: booking_count and last_visit_date do NOT exist on loyalty_tracker.
-  // We only select columns that are actually present in the schema.
   const { data: enrichment = {} as EnrichmentMap, isLoading: loadingEnrichment } = useQuery<EnrichmentMap>({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
@@ -252,20 +275,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Derived: filtered & sorted loyalty rows ──
-  //
-  // filterStatus is stored as the pill key (e.g. "overdue", "time_to_book").
-  // effectiveStatus() returns uppercase (e.g. "OVERDUE", "TIME TO BOOK").
-  // We translate via PILL_TO_EFFECTIVE before comparing so the filter actually works.
-  //
-  // Special case: "churned" and "vip" are raw DB statuses that effectiveStatus
-  // will never return directly, so we also fall back to matching r.status for those.
   const filteredRows = useMemo(() => {
     let rows = loyaltyRows.filter(r => {
       if (filterStatus) {
         const eff = effectiveStatus(r, null, reminderWeeks);
         const targetEff = PILL_TO_EFFECTIVE[filterStatus];
-        // For statuses that don't map through effectiveStatus (churned, vip),
-        // fall back to comparing against the raw DB status.
         const rawMatch = (filterStatus === "churned" || filterStatus === "vip")
           ? (r.status ?? "").toLowerCase() === filterStatus
           : false;
@@ -322,15 +336,18 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Status counts for filter pills ──
-  // Counts use the raw DB status field so the pill numbers stay accurate.
+  // FIX: use effectiveStatus() not raw r.status — raw DB values don't reflect
+  // computed overdue/time-to-book states derived from next_due_date + reminderWeeks.
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const r of loyaltyRows) {
-      const rawStatus = (r.status ?? "unknown").toLowerCase();
-      counts[rawStatus] = (counts[rawStatus] ?? 0) + 1;
+      const eff = effectiveStatus(r, null, reminderWeeks)
+        .toLowerCase()
+        .replace(/ /g, "_");
+      counts[eff] = (counts[eff] ?? 0) + 1;
     }
     return counts;
-  }, [loyaltyRows]);
+  }, [loyaltyRows, reminderWeeks]);
 
   // ── Bulk actions ──
   const toggleSelect = (id: string) =>
@@ -356,83 +373,84 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   // Render
   // ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="min-h-screen p-4 md:p-6">
+      <div className="max-w-5xl mx-auto space-y-5">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Loyalty Programme</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {loyaltyRows.length} client{loyaltyRows.length !== 1 ? "s" : ""} enrolled
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
-            >
-              <Download className="w-4 h-4" /> Export CSV
-            </button>
-            <button
-              onClick={() => setShowSettings(s => !s)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
-                showSettings
-                  ? "bg-purple-50 border-purple-200 text-purple-700"
-                  : "border-gray-200 hover:bg-gray-50 text-gray-600"
-              }`}
-            >
-              <Settings2 className="w-4 h-4" />
-              Settings
-              {settingsDirty && <span className="w-2 h-2 rounded-full bg-orange-400 ml-1" />}
-            </button>
-          </div>
-        </div>
+        <AdminPageHeader
+          title="Loyalty Programme"
+          subtitle={`${loyaltyRows.length} client${loyaltyRows.length !== 1 ? "s" : ""} enrolled`}
+          action={
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold border border-white/[0.08] rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/60 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" /> Export CSV
+              </button>
+              <button
+                onClick={() => setShowSettings(s => !s)}
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border transition-colors ${
+                  showSettings
+                    ? "bg-white/[0.10] border-white/[0.15] text-white/90"
+                    : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-white/60"
+                }`}
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                Settings
+                {settingsDirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-0.5" />}
+              </button>
+            </div>
+          }
+        />
 
         {/* ── Settings Panel ── */}
         {showSettings && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-5 shadow-sm">
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl p-5 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800">Programme Settings</h2>
-              <button
+              <h2 className="text-sm font-bold text-white/80">Programme Settings</h2>
+              <SaveButton
                 onClick={() => saveSettingsMutation.mutate()}
-                disabled={saveSettingsMutation.isPending || !settingsDirty}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saveSettingsMutation.isPending
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Save className="w-3.5 h-3.5" />}
-                Save
-              </button>
+                loading={saveSettingsMutation.isPending}
+                disabled={!settingsDirty}
+                label="Save"
+                icon={<Save className="w-3 h-3" />}
+              />
             </div>
 
             {/* Core settings grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <label className="space-y-1">
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Reminder Interval (weeks)</span>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                  Reminder Interval (weeks)
+                </span>
                 <input
                   type="number" min={1} max={52}
                   value={reminderWeeks}
                   onChange={e => { setReminderWeeks(Number(e.target.value)); setSettingsDirty(true); }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
                 />
               </label>
-              <label className="space-y-1">
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Service Label</span>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                  Service Label
+                </span>
                 <input
                   type="text"
                   value={serviceLabel}
                   onChange={e => { setServiceLabel(e.target.value); setSettingsDirty(true); }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
                 />
               </label>
-              <label className="space-y-1">
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Min Bookings (Nexty)</span>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                  Min Bookings (Nexty)
+                </span>
                 <input
                   type="number" min={1}
                   value={minBookings}
                   onChange={e => { setMinBookings(Number(e.target.value)); setSettingsDirty(true); }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
                 />
               </label>
             </div>
@@ -441,21 +459,23 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             <div>
               <button
                 onClick={() => setShowTemplateEditor(s => !s)}
-                className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-purple-700 transition-colors"
+                className="flex items-center gap-2 text-xs font-semibold text-white/50 hover:text-white/80 transition-colors"
               >
-                <ChevronDown className={`w-4 h-4 transition-transform ${showTemplateEditor ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTemplateEditor ? "rotate-180" : ""}`} />
                 WhatsApp Message Templates
               </button>
               {showTemplateEditor && (
                 <div className="mt-3 space-y-3">
                   {(["overdue","timeToBook","onTrack","birthday"] as const).map(key => (
-                    <label key={key} className="block space-y-1">
-                      <span className="text-xs font-medium text-gray-500 capitalize">{key.replace(/([A-Z])/g,' $1')}</span>
+                    <label key={key} className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                        {key.replace(/([A-Z])/g,' $1')}
+                      </span>
                       <textarea
                         rows={2}
                         value={waTemplates[key]}
                         onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); setSettingsDirty(true); }}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none"
                       />
                     </label>
                   ))}
@@ -480,21 +500,27 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
         {/* ── Status filter pills ── */}
         <div className="flex gap-2 flex-wrap">
-          {["active","overdue","churned","time_to_book","vip"].map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(f => f === s ? null : s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                filterStatus === s
-                  ? `${STATUS_STYLE[s]?.bg ?? "bg-gray-100"} ${STATUS_STYLE[s]?.text ?? "text-gray-700"} border-transparent`
-                  : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {s.replace(/_/g," ")} {statusCounts[s] ? `(${statusCounts[s]})` : ""}
-            </button>
-          ))}
+          {["active","overdue","churned","time_to_book","vip"].map(s => {
+            const pill = darkPill(s);
+            return (
+              <button
+                key={s}
+                onClick={() => setFilterStatus(f => f === s ? null : s)}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
+                  filterStatus === s
+                    ? `${pill.bg} ${pill.text}`
+                    : "bg-white/[0.04] border-white/[0.06] text-white/50 hover:bg-white/[0.08] hover:text-white/70"
+                }`}
+              >
+                {s.replace(/_/g," ")}{statusCounts[s] ? ` (${statusCounts[s]})` : ""}
+              </button>
+            );
+          })}
           {filterStatus && (
-            <button onClick={() => setFilterStatus(null)} className="px-3 py-1.5 rounded-full text-xs border border-gray-200 text-gray-500 hover:bg-gray-50">
+            <button
+              onClick={() => setFilterStatus(null)}
+              className="px-3 py-1.5 rounded-full text-[11px] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
+            >
               Clear filter
             </button>
           )}
@@ -502,41 +528,43 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
         {/* ── Search bar ── */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
           <input
             type="text"
             placeholder="Search by name, phone or source…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+            className="w-full pl-9 pr-9 py-2.5 border border-white/[0.08] rounded-2xl text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 bg-white/[0.04] transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2">
+              <X className="w-3.5 h-3.5 text-white/30 hover:text-white/60 transition-colors" />
             </button>
           )}
         </div>
 
         {/* ── Enroll candidates ── */}
         {candidates.length > 0 && (
-          <div className="bg-white border border-blue-100 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-blue-700">
-              <UserPlus className="w-4 h-4" />
-              <span className="font-medium text-sm">{candidates.length} client{candidates.length !== 1 ? "s" : ""} eligible for enrolment</span>
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl p-4 space-y-3">
+            <div className="flex items-center gap-2 text-white/60">
+              <UserPlus className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold">
+                {candidates.length} client{candidates.length !== 1 ? "s" : ""} eligible for enrolment
+              </span>
             </div>
             <div className="flex flex-wrap gap-2">
               {candidates.slice(0, 8).map(c => (
                 <button
                   key={c.phone}
                   onClick={() => setEnrollCandidate(c)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-white/70 rounded-xl text-xs font-medium transition-colors"
                 >
-                  <UserPlus className="w-3 h-3" />
+                  <UserPlus className="w-3 h-3 text-white/40" />
                   {c.client_name || c.phone} · {c.bookingCount} bookings
                 </button>
               ))}
               {candidates.length > 8 && (
-                <span className="flex items-center px-3 py-1.5 text-xs text-gray-500">
+                <span className="flex items-center px-3 py-1.5 text-xs text-white/30">
                   +{candidates.length - 8} more
                 </span>
               )}
@@ -559,44 +587,46 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         {onNavigate && (
           <button
             onClick={() => onNavigate("ai")}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 rounded-xl text-sm text-purple-700 hover:from-purple-100 hover:to-blue-100 transition-colors w-full"
+            className="flex items-center gap-2 px-4 py-3 bg-white/[0.04] border border-white/[0.06] rounded-2xl text-xs font-semibold text-white/55 hover:bg-white/[0.07] hover:text-white/75 transition-colors w-full"
           >
-            <Bot className="w-4 h-4" />
-            <span className="font-medium">Ask Nexty for loyalty insights & re-engagement ideas</span>
-            <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-60" />
+            <Bot className="w-3.5 h-3.5 text-white/35" />
+            <span>Ask Nexty for loyalty insights & re-engagement ideas</span>
+            <ExternalLink className="w-3 h-3 ml-auto opacity-40" />
           </button>
         )}
 
         {/* ── Loyalty client list ── */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-16 text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading loyalty data…
+          <div className="flex items-center justify-center py-16 text-white/30">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading loyalty data…
           </div>
         ) : filteredRows.length === 0 ? (
-          <div className="text-center py-16 text-gray-400 space-y-2">
-            <Users className="w-10 h-10 mx-auto opacity-40" />
-            <p className="font-medium">
-              {filterStatus || search ? "No clients match your filter" : "No clients enrolled yet"}
-            </p>
-            {!filterStatus && !search && (
-              <p className="text-sm">Eligible clients will appear above when they meet your booking criteria.</p>
-            )}
-          </div>
+          <EmptyState
+            icon={Users}
+            title={filterStatus || search ? "No clients match your filter" : "No clients enrolled yet"}
+            description={
+              !filterStatus && !search
+                ? "Eligible clients will appear above when they meet your booking criteria."
+                : undefined
+            }
+          />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filteredRows.map(row => {
-              const phone = normPhone(row.phone);
-              const enrich = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: row.next_due_date ?? null, birthday: null };
-              const status = optimisticStatus[row.id] ?? effectiveStatus(row, null, reminderWeeks);
-              const style = STATUS_STYLE[status] ?? STATUS_STYLE["active"];
+              const phone    = normPhone(row.phone);
+              const enrich   = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: row.next_due_date ?? null, birthday: null };
+              const status   = optimisticStatus[row.id] ?? effectiveStatus(row, null, reminderWeeks);
+              const pill     = darkPill(status);
               const isExpanded = expandedCard === row.id;
               const isSelected = selectedIds.includes(row.id);
 
               return (
                 <div
                   key={row.id}
-                  className={`bg-white border rounded-xl shadow-sm transition-all ${
-                    isSelected ? "border-purple-300 ring-1 ring-purple-200" : "border-gray-200"
+                  className={`bg-white/[0.03] border rounded-3xl transition-all ${
+                    isSelected
+                      ? "border-white/20 ring-1 ring-white/10"
+                      : "border-white/[0.06] hover:border-white/[0.10]"
                   }`}
                 >
                   {/* Card header */}
@@ -609,19 +639,21 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       checked={isSelected}
                       onClick={e => e.stopPropagation()}
                       onChange={() => toggleSelect(row.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-purple-600"
+                      className="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-white accent-white"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-gray-900 truncate">{row.client_name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}>
+                        <span className="font-semibold text-white/90 text-sm truncate">{row.client_name}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${pill.bg} ${pill.text}`}>
                           {status.replace(/_/g," ")}
                         </span>
                         {row.source === "tenant_criteria" && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">criteria</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 font-medium">
+                            criteria
+                          </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
+                      <div className="flex items-center gap-3 mt-0.5 text-[11px] text-white/35 flex-wrap">
                         <span>{row.phone}</span>
                         {enrich.lastVisitDate && (
                           <span className="flex items-center gap-1">
@@ -646,13 +678,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                         serviceLabel={serviceLabel}
                         templates={waTemplates}
                       />
-                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`w-4 h-4 text-white/20 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                     </div>
                   </div>
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3">
+                    <div className="border-t border-white/[0.05] px-4 pb-4 pt-3 space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <InlineStatusEditor
                           rowId={row.id}
