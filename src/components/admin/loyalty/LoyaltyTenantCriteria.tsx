@@ -13,12 +13,12 @@ import { normPhone, resolveKey } from "./loyaltyHelpers";
 
 interface Props {
   tenantId: string;
-  enrolledPhones: Set<string>;         // phones already in loyalty_tracker
+  enrolledPhones?: Set<string>;        // optional — defaults to empty Set
   settings: TenantCriteriaSettings;
   onSettingsChange: (s: TenantCriteriaSettings) => void;
-  reminderWeeks: number;
-  onEnroll: (candidate: EnrollCandidate) => void;
-  dirty: boolean;
+  reminderWeeks?: number;              // optional — defaults to 4
+  onEnroll?: (candidate: EnrollCandidate) => void;
+  dirty?: boolean;
   onMarkDirty: () => void;
 }
 
@@ -32,16 +32,18 @@ function fmtCategory(cat: string): string {
 
 export function LoyaltyTenantCriteria({
   tenantId,
-  enrolledPhones,
+  enrolledPhones = new Set(),
   settings,
   onSettingsChange,
-  reminderWeeks,
+  reminderWeeks = 4,
   onEnroll,
-  dirty,
   onMarkDirty,
 }: Props) {
   const [showConfig, setShowConfig]   = useState(false);
   const [expandCat, setExpandCat]     = useState<string | null>("waxing");
+
+  // Safe accessor — always an array
+  const safeServiceIds: string[] = settings.serviceIds ?? [];
 
   // ── Load services catalogue ──
   const { data: services = [] } = useQuery<ServiceOption[]>({
@@ -74,34 +76,34 @@ export function LoyaltyTenantCriteria({
 
   // ── Toggle a single service ──
   function toggleService(id: string) {
-    const safeIds = settings.serviceIds ?? [];
-    const next = safeIds.includes(id)
-      ? safeIds.filter(x => x !== id)
-      : [...safeIds, id];
+    const current = settings.serviceIds ?? [];
+    const next = current.includes(id)
+      ? current.filter(x => x !== id)
+      : [...current, id];
     onSettingsChange({ ...settings, serviceIds: next });
     onMarkDirty();
   }
 
   // ── Toggle whole category ──
   function toggleCategory(cat: string) {
-    const ids = grouped[cat].map(s => s.id);
-    const safeServiceIds = settings.serviceIds ?? [];
-    const allSelected = ids.every(id => safeServiceIds.includes(id));
+    const ids = (grouped[cat] ?? []).map(s => s.id);
+    const current = settings.serviceIds ?? [];
+    const allSelected = ids.every(id => current.includes(id));
     const next = allSelected
-      ? safeServiceIds.filter(id => !ids.includes(id))
-      : [...new Set([...safeServiceIds, ...ids])];
+      ? current.filter(id => !ids.includes(id))
+      : [...new Set([...current, ...ids])];
     onSettingsChange({ ...settings, serviceIds: next });
     onMarkDirty();
   }
 
   // ── Criteria candidate query ──
   const { data: criteriaCandidates = [], isLoading } = useQuery<EnrollCandidate[]>({
-    queryKey: ["loyalty_criteria_candidates", tenantId, (settings.serviceIds ?? []).join(","), settings.minBookings, settings.lookbackDays],
-    enabled: !!tenantId && settings.enabled && (settings.serviceIds ?? []).length > 0,
+    queryKey: ["loyalty_criteria_candidates", tenantId, safeServiceIds.join(","), settings.minBookings, settings.lookbackDays],
+    enabled: !!tenantId && settings.enabled && safeServiceIds.length > 0,
     queryFn: async () => {
       const cutoff = format(subDays(new Date(), settings.lookbackDays), "yyyy-MM-dd");
 
-      const selectedSet = new Set(settings.serviceIds ?? []);
+      const selectedSet = new Set(safeServiceIds);
 
       const serviceNameMap: Record<string, string> = {};
       for (const s of services) serviceNameMap[s.id] = s.name;
@@ -149,8 +151,9 @@ export function LoyaltyTenantCriteria({
         const matchedIds = bookingServiceIds.filter((id: string) => selectedSet.has(id));
         if (matchedIds.length === 0) continue;
 
+        const safeEnrolledPhones = enrolledPhones instanceof Set ? enrolledPhones : new Set<string>();
         const p = normPhone(b.client_phone);
-        if (enrolledPhones.has(p)) continue;
+        if (safeEnrolledPhones.has(p)) continue;
 
         const key = resolveKey(b.client_phone, b.client_email, b.client_name, b.booking_date);
         if (!clientMap[key]) {
@@ -186,7 +189,7 @@ export function LoyaltyTenantCriteria({
     },
   });
 
-  const selectedCount = (settings.serviceIds ?? []).length;
+  const selectedCount = safeServiceIds.length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -255,11 +258,11 @@ export function LoyaltyTenantCriteria({
               <p className="text-[11px] text-white/20">No services found</p>
             ) : (
               categories.map(cat => {
-                const catIds    = grouped[cat].map(s => s.id);
-                const safeIds   = settings.serviceIds ?? [];
-                const allSel    = catIds.every(id => safeIds.includes(id));
-                const someSel   = catIds.some(id => safeIds.includes(id));
-                const isOpen    = expandCat === cat;
+                const catIds  = (grouped[cat] ?? []).map(s => s.id);
+                const current = settings.serviceIds ?? [];
+                const allSel  = catIds.every(id => current.includes(id));
+                const someSel = catIds.some(id => current.includes(id));
+                const isOpen  = expandCat === cat;
 
                 return (
                   <div key={cat} className="rounded-xl border border-white/[0.06] overflow-hidden">
@@ -281,16 +284,15 @@ export function LoyaltyTenantCriteria({
                         {someSel && !allSel && <span className="w-1.5 h-1.5 rounded-sm bg-violet-400/60" />}
                       </button>
                       <span className="text-[11px] text-white/60 flex-1">{fmtCategory(cat)}</span>
-                      <span className="text-[10px] text-white/20">{catIds.filter(id => safeIds.includes(id)).length}/{catIds.length}</span>
+                      <span className="text-[10px] text-white/20">{catIds.filter(id => current.includes(id)).length}/{catIds.length}</span>
                       {isOpen ? <ChevronUp className="w-3 h-3 text-white/20" /> : <ChevronDown className="w-3 h-3 text-white/20" />}
                     </div>
 
                     {/* Services list */}
                     {isOpen && (
                       <div className="flex flex-col divide-y divide-white/[0.04]">
-                        {grouped[cat].map(svc => {
-                          const safeServiceIds = settings.serviceIds ?? [];
-                          const sel = safeServiceIds.includes(svc.id);
+                        {(grouped[cat] ?? []).map(svc => {
+                          const sel = (settings.serviceIds ?? []).includes(svc.id);
                           return (
                             <button
                               key={svc.id}
@@ -317,7 +319,7 @@ export function LoyaltyTenantCriteria({
       )}
 
       {/* Candidate list */}
-      {settings.enabled && (settings.serviceIds ?? []).length > 0 && (
+      {settings.enabled && safeServiceIds.length > 0 && (
         <div className="flex flex-col gap-1.5">
           {isLoading ? (
             <p className="text-[11px] text-white/20 py-2">Finding candidates…</p>
@@ -327,7 +329,7 @@ export function LoyaltyTenantCriteria({
             criteriaCandidates.map(c => (
               <button
                 key={c.phone + c.client_name}
-                onClick={() => onEnroll(c)}
+                onClick={() => onEnroll?.(c)}
                 className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-violet-500/[0.12] hover:border-violet-500/25 hover:bg-violet-500/[0.02] transition-all text-left"
               >
                 <div className="flex flex-col gap-0.5">
