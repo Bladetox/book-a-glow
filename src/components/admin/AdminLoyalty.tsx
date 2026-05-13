@@ -689,7 +689,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                           rowId={row.id}
                           clientName={row.client_name}
                           tenantId={tenantId ?? ""}
-                          onUnregistered={invalidateLoyalty}
+                          onDeleted={invalidateLoyalty}
                         />
                       </div>
                     </div>
