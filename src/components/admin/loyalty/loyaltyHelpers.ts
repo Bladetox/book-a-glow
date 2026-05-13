@@ -1,4 +1,4 @@
-import { format, addDays, isAfter, parseISO, startOfDay, differenceInDays, isSameDay } from "date-fns";
+import { format, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import type { LoyaltyRow, EnrichmentMap } from "./loyaltyTypes";
 
 // ─── Date helpers ───
@@ -69,9 +69,18 @@ function isBirthdaySoon(birthday: string | null | undefined): boolean {
   }
 }
 
+/**
+ * effectiveStatus
+ *
+ * @param r            - loyalty tracker row
+ * @param liveLastDate - ISO date string (YYYY-MM-DD) or null/undefined.
+ *                       Must be a string — never pass a number here.
+ * @param reminderWeeks - weeks between visits (number)
+ * @param hasUpcoming   - client has an upcoming booking
+ */
 export function effectiveStatus(
   r: LoyaltyRow,
-  liveLastDate?: string | null,
+  liveLastDate: string | null | undefined,
   reminderWeeks?: number,
   hasUpcoming?: boolean
 ): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" | "UNKNOWN" | "BIRTHDAY" {
@@ -79,7 +88,10 @@ export function effectiveStatus(
   if (isBirthdaySoon(r.birthday)) return "BIRTHDAY";
   if (hasUpcoming) return "ON TRACK";
   const stored = normaliseStatus(r.status);
-  const safeLastDate = liveLastDate && liveLastDate.length >= 10 ? liveLastDate : null;
+  // Guard: only treat liveLastDate as a date string if it really is one
+  const safeLastDate = (typeof liveLastDate === "string" && liveLastDate.length >= 10)
+    ? liveLastDate
+    : null;
   const nextDueIso = (safeLastDate && reminderWeeks)
     ? format(addDays(new Date(safeLastDate + "T00:00:00"), reminderWeeks * 7), "yyyy-MM-dd")
     : excelToISO(r.next_due_date);
@@ -100,7 +112,6 @@ export function effectiveStatus(
 
 /**
  * resolveKey: phone-first, email-second, name+date composite fallback.
- * Fixes duplicate enrolments when both phone and email are missing.
  */
 export function resolveKey(
   phone: string | null | undefined,
@@ -123,15 +134,17 @@ export function exportCSV(
 ): void {
   const headers = ["Name", "Phone", "Status", "Last Date", "Next Due", "Notes", "Last Contacted"];
   const body = rows.map(r => {
-    const enr = enrichmentMap[normPhone(r.phone)] ?? {};
-    const status = effectiveStatus(r, enr.liveLastDate, reminderWeeks, !!enr.upcomingDate);
-    const lastDate = enr.liveLastDate
-      ? isoToDisplay(enr.liveLastDate)
+    const enr = enrichmentMap[normPhone(r.phone)] ?? null;
+    // Use lastVisitDate from enrichment (populated by AdminLoyalty's enrichment query)
+    const lastVisit = enr?.lastVisitDate ?? null;
+    const status = effectiveStatus(r, lastVisit, reminderWeeks, false);
+    const lastDate = lastVisit
+      ? isoToDisplay(lastVisit)
       : excelToDate(r.last_wax_date);
-    const nextDue = enr.liveLastDate && reminderWeeks
+    const nextDue = (lastVisit && reminderWeeks)
       ? isoToDisplay(
           format(
-            addDays(new Date(enr.liveLastDate + "T00:00:00"), reminderWeeks * 7),
+            addDays(new Date(lastVisit + "T00:00:00"), reminderWeeks * 7),
             "yyyy-MM-dd"
           )
         )

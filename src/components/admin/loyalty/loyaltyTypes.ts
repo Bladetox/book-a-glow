@@ -14,15 +14,26 @@ export interface LoyaltyRow {
   last_contacted_at: string | null;
   updated_by: string | null;
   updated_at: string | null;
+  booking_count?: number | null;
+  last_visit_date?: string | null;
+  next_due_date_calc?: string | null;
   /** 'nexty' = enrolled from Nexty suggestion, 'manual' = added manually, 'criteria' = enrolled from tenant criteria */
   source: 'nexty' | 'manual' | 'criteria';
 }
 
+/**
+ * EnrichmentMap key = normPhone(phone)
+ * Populated by the loyalty_enrichment query in AdminLoyalty.
+ */
+export interface EnrichmentEntry {
+  bookingCount: number;
+  lastVisitDate: string | null;
+  nextDueDate: string | null;
+  birthday: string | null;
+}
+
 export interface EnrichmentMap {
-  [key: string]: {
-    liveLastDate: string | null;
-    upcomingDate: string | null;
-  };
+  [key: string]: EnrichmentEntry;
 }
 
 export interface EnrollCandidate {
