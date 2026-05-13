@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, X, Loader2, MessageCircle } from "lucide-react";
+import { Send, X, Loader2, MessageCircle, Users } from "lucide-react";
 import { buildWaMessage, waLink } from "./loyaltyHelpers";
 import type { LoyaltyRow } from "./loyaltyTypes";
 
@@ -28,10 +28,8 @@ function useSequentialWaSend() {
   ) => {
     if (links.length === 0) return;
 
-    // Test if popups are allowed
     const test = window.open("", "_blank");
     if (!test) {
-      // Blocked — show fallback modal
       setFallbackLinks(links);
       setShowFallback(true);
       return;
@@ -44,7 +42,6 @@ function useSequentialWaSend() {
       const { href } = links[idx++];
       window.open(href, "_blank", "noopener,noreferrer");
       if (idx < links.length) {
-        // Wait for user to return focus before opening the next
         const onFocus = () => {
           window.removeEventListener("focus", onFocus);
           setTimeout(openNext, 400);
@@ -58,7 +55,7 @@ function useSequentialWaSend() {
   return { sendAll, fallbackLinks, showFallback, setShowFallback };
 }
 
-// ─── Fallback modal when popups are blocked ───
+// ─── Fallback modal ───
 const FallbackModal = ({
   links, onClose,
 }: {
@@ -72,24 +69,32 @@ const FallbackModal = ({
   >
     <motion.div
       initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-      className="w-full sm:max-w-sm rounded-2xl border border-white/[0.1] bg-[#0f0f0f] p-5 flex flex-col gap-3"
+      transition={{ type: "spring", stiffness: 340, damping: 32 }}
+      className="w-full sm:max-w-sm rounded-2xl border border-white/[0.1] bg-[#0f0f0f] p-5 flex flex-col gap-4"
       onClick={e => e.stopPropagation()}
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-white/80">Open WhatsApp links manually</p>
-        <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">
-          <X className="w-4 h-4" />
+        <div>
+          <p className="text-sm font-semibold text-white/80">Open WhatsApp manually</p>
+          <p className="text-[11px] text-white/35 mt-0.5">Your browser blocked auto-open. Tap each link below.</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
-      <p className="text-[11px] text-white/40">Your browser blocked the auto-open. Tap each link below:</p>
-      <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+      <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
         {links.map(({ name, href }) => (
           <a key={href} href={href} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition-colors"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all group"
           >
-            <MessageCircle className="w-3.5 h-3.5 shrink-0" style={{ color: "#25D366" }} />
-            <span className="text-[12px] text-white/70 flex-1 truncate">{name}</span>
-            <span className="text-[10px] text-emerald-400/60">Open →</span>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(37,211,102,0.12)" }}>
+              <MessageCircle className="w-3.5 h-3.5" style={{ color: "#25D366" }} />
+            </div>
+            <span className="text-[12px] text-white/70 flex-1 truncate font-medium">{name}</span>
+            <span className="text-[10px] text-emerald-400/60 group-hover:text-emerald-400 transition-colors">Open →</span>
           </a>
         ))}
       </div>
@@ -127,27 +132,42 @@ export const LoyaltyBulkBar = ({
         )}
       </AnimatePresence>
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-3 rounded-2xl border border-white/[0.12] bg-[#111111]/95 backdrop-blur-md shadow-2xl"
-      >
-        <span className="text-[12px] text-white/50 font-medium">
-          {selected.length} selected
-        </span>
-        <div className="w-px h-4 bg-white/[0.12]" />
-        <button
-          onClick={handleBulkSend}
-          disabled={sending}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-colors disabled:opacity-40"
-          style={{ background: "rgba(37,211,102,0.13)", color: "#25D366" }}
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl border border-white/[0.14] bg-[#111111]/95 backdrop-blur-md shadow-2xl"
         >
-          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          {sending ? "Opening…" : "Send WA to selected"}
-        </button>
-        <button onClick={onClear} className="text-white/25 hover:text-white/60 transition-colors">
-          <X className="w-4 h-4" />
-        </button>
-      </motion.div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-5 h-5 rounded-full bg-white/[0.08] flex items-center justify-center">
+              <Users className="w-2.5 h-2.5 text-white/60" />
+            </div>
+            <span className="text-[12px] text-white/60 font-semibold tabular-nums">
+              {selected.length} selected
+            </span>
+          </div>
+          <div className="w-px h-5 bg-white/[0.10]" />
+          <button
+            onClick={handleBulkSend}
+            disabled={sending}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all active:scale-95 disabled:opacity-40"
+            style={{ background: "rgba(37,211,102,0.15)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}
+          >
+            {sending
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Opening…</>
+              : <><Send className="w-3.5 h-3.5" /> Send WA to {selected.length}</>}
+          </button>
+          <button
+            onClick={onClear}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white/25 hover:text-white/70 hover:bg-white/[0.08] transition-all"
+            aria-label="Clear selection"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </motion.div>
+      </AnimatePresence>
     </>
   );
 };

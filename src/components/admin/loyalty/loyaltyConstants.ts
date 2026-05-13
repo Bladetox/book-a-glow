@@ -2,9 +2,6 @@
 
 /**
  * STATUS_STYLE — maps status keys to { bg, text, border } class strings.
- *
- * Keys are included in BOTH the uppercase form returned by effectiveStatus()
- * AND the lowercase/underscore form used by the filter pills in AdminLoyalty.
  */
 export const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
   // ── Uppercase keys (returned by effectiveStatus) ──
@@ -28,71 +25,54 @@ export const STATUS_STYLE: Record<string, { bg: string; text: string; border: st
 /**
  * PILL_TO_EFFECTIVE — maps the lowercase pill key used in filter buttons
  * to the uppercase string returned by effectiveStatus().
- * Used to compare filterStatus against effectiveStatus() output.
  */
 export const PILL_TO_EFFECTIVE: Record<string, string> = {
   active:       "ON TRACK",
   overdue:      "OVERDUE",
   time_to_book: "TIME TO BOOK",
-  vip:          "ON TRACK",   // VIP clients show as ON TRACK in effectiveStatus
-  churned:      "UNKNOWN",    // Churned maps to UNKNOWN effective status
+  churned:      "CHURNED",
+  vip:          "VIP",
   birthday:     "BIRTHDAY",
+  on_track:     "ON TRACK",
+  unknown:      "UNKNOWN",
 };
 
-/** Ordered list of selectable statuses for the inline status editor */
+/** Display label for a pill key */
+export const PILL_LABEL: Record<string, string> = {
+  active:       "On Track",
+  overdue:      "Overdue",
+  time_to_book: "Time to Book",
+  churned:      "Churned",
+  vip:          "VIP",
+  birthday:     "Birthday",
+};
+
+/**
+ * STATUS_ORDER — lower number sorts first in the client list.
+ */
+export const STATUS_ORDER: Record<string, number> = {
+  BIRTHDAY:      0,
+  OVERDUE:       1,
+  "TIME TO BOOK": 2,
+  "ON TRACK":    3,
+  CHURNED:       4,
+  VIP:           5,
+  UNKNOWN:       99,
+};
+
 export const STATUS_OPTIONS = [
-  "ON TRACK",
-  "TIME TO BOOK",
-  "OVERDUE",
-  "BIRTHDAY",
+  "active", "time_to_book", "overdue", "churned", "vip",
 ] as const;
 
-export type LoyaltyStatus = typeof STATUS_OPTIONS[number];
-
-export const STATUS_ORDER: Record<string, number> = {
-  // Uppercase (from effectiveStatus)
-  BIRTHDAY:       0,
-  OVERDUE:        1,
-  "TIME TO BOOK": 2,
-  "ON TRACK":     3,
-  UNKNOWN:        4,
-  // Lowercase (from raw DB status — fallback safety)
-  birthday:       0,
-  overdue:        1,
-  time_to_book:   2,
-  active:         3,
-  on_track:       3,
-  vip:            3,
-  churned:        4,
-  unknown:        4,
-};
-
+// ── WA templates ──
 export const DEFAULT_WA_TEMPLATES = {
-  overdue:     "Hi {name}, it's been a while since your last {service} at {business}! We'd love to have you back 💛 Reply to book your next appointment.",
-  timeToBook:  "Hi {name}, you're almost due for your next {service} at {business}! Book now to keep your results on track ✨",
-  onTrack:     "Hi {name}! Just checking in from {business} — you're all on track 🌟 See you at your next {service}!",
-  birthday:    "Happy Birthday {name}! 🎂 As a special gift from {business}, enjoy a treat on your next visit. Book when you're ready 💕",
+  overdue:    "Hi {name}, we've missed you at {business}! It's been a while since your last {service} — would love to have you back. 💛",
+  timeToBook: "Hi {name}! Just a friendly reminder from {business} — it's almost time for your next {service}. Ready to book? 😊",
+  onTrack:    "Hi {name}! Thanks for being a loyal {business} client. We're so glad to have you. See you at your next {service}! 🌸",
+  birthday:   "Happy Birthday {name}! 🎂 Wishing you a beautiful day. As a thank-you from all of us at {business}, enjoy a little extra love at your next visit!",
 };
 
-export const DEFAULT_LOYALTY_SETTINGS = {
-  reminder_weeks:           4,
-  service_label:            "wax",
-  min_bookings:             2,
-  lookback_days:            180,
-  wa_template_overdue:      DEFAULT_WA_TEMPLATES.overdue,
-  wa_template_time_to_book: DEFAULT_WA_TEMPLATES.timeToBook,
-  wa_template_on_track:     DEFAULT_WA_TEMPLATES.onTrack,
-  wa_template_birthday:     DEFAULT_WA_TEMPLATES.birthday,
-};
-
-export const DEFAULT_TENANT_CRITERIA = {
-  enabled:       false,
-  service_ids:   [] as string[],   // UUIDs of selected services
-  min_bookings:  3,
-  lookback_days: 90,
-};
-
-/** app_settings keys used for loyalty config */
+// ── App setting keys persisted via app_settings table ──
 export const LOYALTY_SETTING_KEYS = [
   "loyalty.reminder_weeks",
   "loyalty.service_label",
@@ -102,9 +82,22 @@ export const LOYALTY_SETTING_KEYS = [
   "loyalty.wa_template_time_to_book",
   "loyalty.wa_template_on_track",
   "loyalty.wa_template_birthday",
-  // Tenant criteria
   "loyalty.criteria_enabled",
   "loyalty.criteria_service_ids",
   "loyalty.criteria_min_bookings",
   "loyalty.criteria_lookback_days",
 ] as const;
+
+export const DEFAULT_LOYALTY_SETTINGS = {
+  reminder_weeks: 6,
+  service_label:  "appointment",
+  min_bookings:   3,
+  lookback_days:  90,
+};
+
+export const DEFAULT_TENANT_CRITERIA = {
+  enabled:       false,
+  service_ids:   [] as string[],
+  min_bookings:  2,
+  lookback_days: 60,
+};
