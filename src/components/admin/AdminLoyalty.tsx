@@ -106,6 +106,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const { data: tenantInfo } = useQuery({
     queryKey: ["tenant_info", tenantId],
     enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenants")
@@ -122,6 +123,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const { data: settingsRows } = useQuery({
     queryKey: ["loyalty_settings", tenantId],
     enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("app_settings")
@@ -186,6 +188,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: loyalty rows ──
+  // FIX: added .limit(300) as a safety cap to prevent unbounded fetches.
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery({
     queryKey: ["loyalty_tracker", tenantId],
     enabled: !!tenantId,
@@ -195,7 +198,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         .from("loyalty_tracker")
         .select("*")
         .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(300);
       if (error) throw error;
       return (data ?? []) as LoyaltyRow[];
     },
@@ -204,18 +208,21 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const enrolledPhones = useMemo(() => new Set(loyaltyRows.map(r => normPhone(r.phone))), [loyaltyRows]);
 
   // ── Data: enroll candidates ──
+  // FIX: reduced lookback to 365 days and added .limit(500) to prevent slow scans.
   const { data: candidates = [], isLoading: loadingCandidates } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const since = format(subDays(new Date(), lookbackDays), "yyyy-MM-dd");
+      const effectiveLookback = Math.min(lookbackDays, 365);
+      const since = format(subDays(new Date(), effectiveLookback), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
         .select("client_name, phone, created_at, service_price")
         .eq("tenant_id", tenantId)
         .gte("date", since)
-        .not("phone", "is", null);
+        .not("phone", "is", null)
+        .limit(500);
       if (error) throw error;
 
       const grouped: Record<string, { client_name: string; phone: string; bookings: { date: string; price: number }[] }> = {};
@@ -238,18 +245,22 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enrichment (booking count + spend + last booking) ──
+  // FIX: reduced lookback from 730 → 365 days and added .limit(500) to avoid
+  // fetching thousands of rows on page load. Enrichment data loads in the background
+  // and does NOT block the main loyalty list from rendering.
   const { data: enrichment = {} as EnrichmentMap, isLoading: loadingEnrichment } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const enrichSince = format(subDays(new Date(), 730), "yyyy-MM-dd");
+      const enrichSince = format(subDays(new Date(), 365), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
         .select("phone, created_at, service_price")
         .eq("tenant_id", tenantId)
         .gte("created_at", enrichSince)
-        .not("phone", "is", null);
+        .not("phone", "is", null)
+        .limit(500);
       if (error) throw error;
 
       const map: EnrichmentMap = {};
@@ -346,7 +357,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
   };
 
-  const isLoading = loadingLoyalty || loadingEnrichment;
+  // FIX: only block the list on loyaltyRows loading — enrichment loads silently
+  // in the background and fills in once ready, so the list is visible immediately.
+  const isLoading = loadingLoyalty;
 
   const handleCriteriaChange = (next: TenantCriteriaSettings) => {
     setTenantCriteria(next);

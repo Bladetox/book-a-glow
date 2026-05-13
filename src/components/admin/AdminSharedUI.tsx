@@ -297,6 +297,8 @@ export const EmptyState = ({
 );
 
 // ── AdminPageHeader ───────────────────────────────────────────────────────────
+// FIX: added min-w-0 + overflow-hidden to the title div so the title text
+// truncates gracefully instead of pushing the action buttons off-screen on mobile.
 export const AdminPageHeader = ({
   title,
   subtitle,
@@ -306,11 +308,11 @@ export const AdminPageHeader = ({
   subtitle?: string;
   action?: React.ReactNode;
 }) => (
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h3 className="text-lg font-bold text-white/90">{title}</h3>
+  <div className="flex items-start justify-between gap-3 min-w-0">
+    <div className="min-w-0 overflow-hidden">
+      <h3 className="text-lg font-bold text-white/90 truncate">{title}</h3>
       {subtitle && (
-        <p className="text-xs text-white/30 font-medium mt-0.5">{subtitle}</p>
+        <p className="text-xs text-white/30 font-medium mt-0.5 truncate">{subtitle}</p>
       )}
     </div>
     {action && <div className="shrink-0">{action}</div>}
