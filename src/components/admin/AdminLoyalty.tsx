@@ -10,7 +10,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, Search, X, UserPlus,
   Download, Settings2, Save,
-  Users, ChevronDown, Bot,
+  Users, ChevronDown,
   ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock, PlusCircle, ChevronUp,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
@@ -52,6 +52,63 @@ const LOYALTY_INSIGHT_IDS = new Set([
   "repeat_cancellers",
   "cancellation_leakage",
 ]);
+
+// ──────────────────────────────────────────────────────────────────
+// Mini gold orb — identical to the one in AdminDashboard.
+// Used in the "Ask Nexty" accordion header.
+// ──────────────────────────────────────────────────────────────────
+function MiniNextyOrb() {
+  return (
+    <span className="nexty-mini-orb" aria-hidden="true">
+      <style>{`
+        .nexty-mini-orb {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+        }
+        .nexty-mini-orb::before {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(209,153,0,0.4) 0%, transparent 70%);
+          animation: nexty-mini-pulse 2.8s ease-in-out infinite;
+        }
+        .nexty-mini-orb::after {
+          content: '';
+          position: absolute;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background:
+            radial-gradient(circle at 32% 28%, rgba(255,240,180,0.9) 0%, transparent 38%),
+            radial-gradient(circle at 50% 50%, #fdab43 0%, #d19900 45%, #8a5b00 100%);
+          box-shadow:
+            inset -1px -2px 4px rgba(0,0,0,0.45),
+            inset  1px  1px 3px rgba(255,235,160,0.25),
+            0 2px 8px rgba(209,153,0,0.5);
+          animation: nexty-mini-breathe 4s ease-in-out infinite;
+        }
+        @keyframes nexty-mini-pulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%       { opacity: 1;    transform: scale(1.2); }
+        }
+        @keyframes nexty-mini-breathe {
+          0%, 100% { filter: brightness(1); }
+          50%       { filter: brightness(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nexty-mini-orb::before,
+          .nexty-mini-orb::after { animation: none; }
+        }
+      `}</style>
+    </span>
+  );
+}
 
 // ──────────────────────────────────────────────────────────────────
 // Inline Nexty loyalty insights panel
@@ -103,9 +160,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
         onClick={() => setOpen(s => !s)}
         className="flex items-center gap-2.5 w-full px-4 py-3 hover:bg-white/[0.04] transition-colors"
       >
-        <div className="flex items-center justify-center w-7 h-7 rounded-xl bg-amber-500/10">
-          <Bot className="w-3.5 h-3.5 text-amber-400" />
-        </div>
+        <MiniNextyOrb />
         <span className="text-xs font-semibold text-white/60 flex-1 text-left">
           Ask Nexty for loyalty insights &amp; re-engagement ideas
         </span>
@@ -705,7 +760,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             placeholder="Search by name, phone or source…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-9 py-2.5 border border-white/[0.08] rounded-2xl text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 bg-white/[0.04] transition-colors"
+            className="w-full pl-9 pr-9 py-2.5 border border-white/[0.08] rounded-2xl text-sm text-white/80 placeholder:text/white/25 focus:outline-none focus:border-white/20 bg-white/[0.04] transition-colors"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2">
