@@ -51,6 +51,13 @@
  *      DB-safe value. The loyalty_tracker_status_check constraint only allows
  *      'ON TRACK' | 'TIME TO BOOK' | 'OVERDUE'. Fixed: use toDbStatus() to map
  *      computed/display statuses (LONG_OVERDUE, BIRTHDAY, UNKNOWN) to allowed values.
+ *
+ *   9. Proxy-booking fix (May 2026): clients sometimes book on behalf of someone else
+ *      (e.g. Ghadijah booking for her mother-in-law Dhilnawaaz). Booking history and
+ *      loyalty candidates are now attributed to the recipient (guest) rather than the
+ *      booker (client) when guest_phone differs from client_phone.
+ *      Dedup key: last 9 digits of phone (normPhone), consistent throughout candidates
+ *      query, enrichment map, and enrolled-phones set.
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -79,7 +86,8 @@ import {
 } from "./loyalty/loyaltyConstants";
 import {
   isoToDisplay,
-  normPhone, effectiveStatus, exportCSV, toDbStatus,
+  normPhone, recipientPhone, recipientName,
+  effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
 import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
 import { MessagingHowTo }        from "./loyalty/MessagingHowTo";
@@ -704,6 +712,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   );
 
   // ── Data: Nexty enrol candidates ──
+  // Attribution rule: credit the RECIPIENT (guest) not the booker (client).
+  // If guest_phone differs from client_phone, the booking is a proxy booking
+  // (e.g. Ghadijah booking for her mother-in-law Dhilnawaaz). In that case
+  // the visit history belongs to the guest.
+  // Dedup key: normPhone (last 9 digits) — consistent with enrolledPhones set.
   const { data: nextyCandidates = [] } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
@@ -721,10 +734,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
       const grouped: Record<string, { client_name: string; phone: string; bookings: { date: string; price: number }[] }> = {};
       for (const b of (data ?? [])) {
-        const phone = b.client_phone || b.guest_phone || null;
+        // Resolve to the person who received the service
+        const phone = recipientPhone(b.client_phone, b.guest_phone);
         if (!phone) continue;
         const key  = normPhone(phone);
-        const name = b.client_name || b.guest_name || "";
+        if (key.length < 7) continue;
+        const name = recipientName(b.client_name, b.guest_name, b.client_phone, b.guest_phone);
         if (!grouped[key]) grouped[key] = { client_name: name, phone, bookings: [] };
         grouped[key].bookings.push({ date: b.booking_date, price: Number(b.total_amount ?? 0) });
       }
@@ -749,6 +764,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enrichment ──
+  // Same attribution rule: index enrichment data against the recipient's phone.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
@@ -779,10 +795,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         }
       };
       for (const b of (data ?? [])) {
-        addToMap(b.client_phone, b.client_email, b.booking_date);
-        if (b.guest_phone || b.guest_email) {
-          addToMap(b.guest_phone, b.guest_email, b.booking_date);
-        }
+        // Determine recipient phone/email for this booking
+        const rPhone = recipientPhone(b.client_phone, b.guest_phone);
+        const rEmail = normPhone(b.guest_phone).length >= 7 && normPhone(b.guest_phone) !== normPhone(b.client_phone)
+          ? b.guest_email   // proxy booking — use guest email
+          : b.client_email; // self-booking — use client email
+        addToMap(rPhone, rEmail, b.booking_date);
       }
       return map;
     },
@@ -839,8 +857,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
       const now = new Date().toISOString();
-      // Compute the initial status from booking date if available, then sanitise
-      // to a value allowed by the loyalty_tracker_status_check constraint.
       const computed = candidate.lastBookingDate
         ? effectiveStatus(
             { status: null, birthday: null, next_due_date: null, last_wax_date: candidate.lastBookingDate } as LoyaltyRow,
@@ -982,7 +998,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               >
                 <p className="text-[11px] text-white/30 leading-relaxed">
                   The <strong className="text-white/50">service label</strong> fills the{" "}
-                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{service}"}</code>{" "}
+                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'service\'}"}</code>{" "}
                   placeholder in your WhatsApp message templates.
                 </p>
                 <div className="flex flex-col gap-2">
@@ -1063,9 +1079,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               >
                 <p className="text-[11px] text-white/30 leading-relaxed">
                   Use{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{name}"}</code>,{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{business}"}</code> and{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{service}"}</code>{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'name\'}"}</code>,{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'business\'}"}</code> and{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'service\'}"}</code>{" "}
                   as placeholders. WhatsApp links are generated automatically when you tap{" "}
                   <span className="text-green-400/70">WA</span> on a client card.
                 </p>
