@@ -17,51 +17,17 @@
  *
  * Phase 2 fixes (May 2026)
  * ────────────────────────
- *   FIX-A  Wire onCandidatesChange: LoyaltyTenantCriteria now fires a callback whenever
- *          criteriaCandidates changes. AdminLoyalty stores those in state and passes them
- *          to CandidatesBar, replacing the broken hardcoded criteria=[].
- *
- *   FIX-B  enrolledPhones dual-phone fix: the Set is now built from BOTH client_phone and
- *          guest_phone columns so clients like Hanga (who booked under a different phone
- *          number) can no longer slip through as candidates.
- *
- *   FIX-C  "Enrolled" filter pill: prepended to the pill row. Selecting it sets
- *          filterStatus = "enrolled" which bypasses effectiveStatus and shows all
- *          loyalty_tracker rows (i.e. everyone already enrolled).
- *
- *   FIX-D  Default open on "Enrolled": filterStatus initial state changed from null
- *          to "enrolled" so the page opens showing the full enrolled list.
- *
- *   FIX-E  nextyCandidates queryKey now includes enrolledPhones.size so the query
- *          re-runs once the enrolled Set is populated (was returning stale results
- *          on first render when enrolledPhones was still empty).
- *
- *   FIX-F  Dedup loyaltyRows by normalised phone before rendering. Clients who were
- *          accidentally enrolled multiple times (e.g. Caylin) now appear only once.
- *          The most recently created row is kept; older duplicates are hidden from
- *          the UI (not deleted from DB).
- *
- *   FIX-G  enrollMutation guards against re-enrolment: if the phone is already in
- *          enrolledPhones, the mutation shows a toast instead of inserting a duplicate.
- *
- *   FIX-H  Phone normalisation on enrol: enrollMutation now calls
- *          normalisePhoneForStorage() before inserting into loyalty_tracker so every
- *          new row is stored in clean E.164 (+27XXXXXXXXX). Falls back to raw value
- *          if normalisation returns null (e.g. very short / non-ZA numbers).
- *
- *   FIX-I  Enrolled filter data-source contract: the enrolled list is drawn
- *          EXCLUSIVELY from loyalty_tracker rows (dedupedLoyaltyRows). It never
- *          pulls from the bookings or clients tables directly. Sub-status pills
- *          (overdue, long_overdue, time_to_book, on_track, birthday) are mutually
- *          exclusive subsets computed via effectiveStatus() over the same set.
- *
- *   FIX-J  Sub-status mutual exclusivity confirmed: effectiveStatus() returns exactly
- *          one value per row so a client can only appear under one pill at a time.
- *          long_overdue clients do NOT appear in the overdue or on_track pills.
- *
- *   FIX-K  CandidatesBar source differentiation: heading now clearly states how many
- *          candidates come from tenant criteria vs Nexty. Nexty chips display a
- *          MiniNextyOrb icon; criteria chips retain their violet badge.
+ *   FIX-A  Wire onCandidatesChange
+ *   FIX-B  enrolledPhones dual-phone fix
+ *   FIX-C  "Enrolled" filter pill
+ *   FIX-D  Default open on "Enrolled"
+ *   FIX-E  nextyCandidates queryKey includes enrolledPhones.size
+ *   FIX-F  Dedup loyaltyRows by normalised phone
+ *   FIX-G  enrollMutation guards against re-enrolment
+ *   FIX-H  Phone normalisation on enrol (normalisePhoneForStorage)
+ *   FIX-I  Enrolled filter data-source contract (loyalty_tracker only)
+ *   FIX-J  Sub-status mutual exclusivity confirmed
+ *   FIX-K  CandidatesBar source differentiation (criteria vs Nexty)
  *
  * Earlier bug-fixes
  * ─────────────────
@@ -485,14 +451,12 @@ function FloatingSaveBar({
 // CandidatesBar — unified enrolment candidates tray.
 //
 // DATA CONTRACT (FIX-K):
-//   • `criteria` — clients who meet the TENANT's own service-based criteria
-//     (e.g. "booked waxing ≥ 2 times in last 60 days"). Sourced from
-//     LoyaltyTenantCriteria via onCandidatesChange. Rendered in violet.
+//   • `criteria` — clients who meet the TENANT's own service-based criteria.
+//     Sourced from LoyaltyTenantCriteria via onCandidatesChange. Violet styling.
 //
-//   • `nexty` — clients Nexty recommends based on overall booking frequency
-//     (minBookings threshold across any service, lookback window). Rendered
-//     with the gold Nexty orb. Nexty candidates that also appear in `criteria`
-//     are hidden from the Nexty list to avoid duplication.
+//   • `nexty` — clients Nexty recommends based on overall booking frequency.
+//     Rendered with the gold Nexty orb. Nexty candidates that also appear in
+//     `criteria` are hidden to avoid duplication.
 //
 // Neither list includes clients already in loyalty_tracker (enrolledPhones
 // is filtered upstream before these arrays reach this component).
@@ -516,7 +480,6 @@ function CandidatesBar({
 
   if (all.length === 0) return null;
 
-  // ── Build a clear heading that names each source (FIX-K) ──
   const criteriaCount = criteria.length;
   const nextyCount    = nextyFiltered.length;
   let headingDetail: React.ReactNode;
@@ -752,9 +715,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: loyalty rows ──
-  // FIX-I: The enrolled list is drawn EXCLUSIVELY from loyalty_tracker.
-  // It does NOT pull from the bookings or clients tables directly.
-  // A client appears here only because a tenant (or Nexty) explicitly enrolled them.
+  // FIX-I: Drawn EXCLUSIVELY from loyalty_tracker — never from bookings/clients.
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery({
     queryKey: ["loyalty_tracker", tenantId],
     enabled: !!tenantId,
@@ -771,10 +732,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // FIX-F: Dedup loyaltyRows by normalised phone.
-  // Rows are ordered by created_at DESC so the first occurrence per phone
-  // is always the most recently enrolled row. Duplicates are hidden from
-  // the UI (not deleted from the DB).
+  // FIX-F: Dedup by normalised phone — most recent row wins.
   const dedupedLoyaltyRows = useMemo(() => {
     const seen = new Set<string>();
     return loyaltyRows.filter(row => {
@@ -785,9 +743,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     });
   }, [loyaltyRows]);
 
-  // FIX-B: enrolledPhones built from BOTH phone columns in bookings so dual-phone
-  // clients (e.g. Hanga) cannot slip through as enrolment candidates.
-  // We also keep the loyalty_tracker phone set for the criteria component.
+  // FIX-B: enrolledPhones from both phone columns in bookings.
   const { data: allBookingPhones = [] } = useQuery({
     queryKey: ["all_booking_phones", tenantId],
     enabled: !!tenantId,
@@ -804,26 +760,18 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   const enrolledPhones = useMemo(() => {
-    // Start with all phones that are already in the loyalty tracker
     const set = new Set(loyaltyRows.map(r => normPhone(r.phone)));
-    // For every enrolled tracker phone, also add any booking phone that normalises
-    // to the same 9-digit suffix — this catches the same person booking under a
-    // slightly different number format.
     const trackerNorms = set;
     for (const b of allBookingPhones) {
       const cp = normPhone(b.client_phone);
       const gp = normPhone(b.guest_phone);
-      // If either phone matches an enrolled tracker phone, add the other too
       if (trackerNorms.has(cp) && gp.length >= 7) set.add(gp);
       if (trackerNorms.has(gp) && cp.length >= 7) set.add(cp);
     }
     return set;
   }, [loyaltyRows, allBookingPhones]);
 
-  // FIX-E: Include enrolledPhones.size in the queryKey so this re-runs
-  // once loyaltyRows/allBookingPhones have loaded and the Set is populated.
-  // Previously the query ran on first render with an empty enrolledPhones Set,
-  // causing already-enrolled clients to appear as candidates.
+  // FIX-E: queryKey includes enrolledPhones.size so it re-runs after Set populates.
   const { data: nextyCandidates = [] } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays, enrolledPhones.size],
     enabled: !!tenantId,
@@ -918,18 +866,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // ── Filtered rows (uses dedupedLoyaltyRows) ──
-  //
-  // DATA CONTRACT (FIX-I + FIX-J):
-  //   filterStatus === "enrolled"   → ALL dedupedLoyaltyRows (complete programme list)
-  //   filterStatus === <sub-status> → exclusive subset: only rows whose effectiveStatus
-  //                                   matches that pill. effectiveStatus() returns a single
-  //                                   value per row so pills are mutually exclusive.
-  //   filterStatus === null         → same as "enrolled" (shown when filter is cleared)
-  //
-  // IMPORTANT: rows always come from dedupedLoyaltyRows (loyalty_tracker only).
-  // Never filter from bookings or clients tables here — this list represents
-  // clients the TENANT has explicitly enrolled in the loyalty programme.
+  // ── Filtered rows ──
+  // FIX-I + FIX-J: enrolled = all dedupedLoyaltyRows; sub-status pills are exclusive subsets.
   const filteredRows = useMemo(() => {
     let rows = [...dedupedLoyaltyRows];
     if (filterStatus && filterStatus !== "enrolled") {
@@ -979,14 +917,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
-      // FIX-G: Guard against re-enrolment — show a toast instead of inserting a duplicate row.
+      // FIX-G: Guard against re-enrolment
       if (enrolledPhones.has(normPhone(candidate.phone))) {
         throw new Error("already_enrolled");
       }
-
-      // FIX-H: Normalise the phone to E.164 (+27XXXXXXXXX) before storing.
-      // Falls back to the raw value only if normalisation returns null (e.g.
-      // very short numbers or non-ZA international numbers without a leading +).
+      // FIX-H: Normalise phone to E.164 before storing
       const normalisedPhone = normalisePhoneForStorage(candidate.phone) ?? candidate.phone;
 
       const now = new Date().toISOString();
@@ -1135,7 +1070,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               >
                 <p className="text-[11px] text-white/30 leading-relaxed">
                   The <strong className="text-white/50">service label</strong> fills the{" "}
-                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'service\'}"}</code>{" "}
+                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
                   placeholder in your WhatsApp message templates.
                 </p>
                 <div className="flex flex-col gap-2">
@@ -1217,9 +1152,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               >
                 <p className="text-[11px] text-white/30 leading-relaxed">
                   Use{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'name\'}"}</code>,{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'business\'}"}</code> and{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\'service\'}"}</code>{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'name\\'}"}</code>,{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'business\\'}"}</code> and{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
                   as placeholders. WhatsApp links are generated automatically when you tap{" "}
                   <span className="text-green-400/70">WA</span> on a client card.
                 </p>
@@ -1257,8 +1192,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
         {/* ── Status filter pills ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {/* FIX-C / FIX-I: "Enrolled" pill — shows ALL loyalty_tracker rows.
-              This list is sourced ONLY from loyalty_tracker, never from bookings/clients. */}
+          {/* FIX-C / FIX-I: "Enrolled" pill — ALL loyalty_tracker rows, no other source */}
           <button
             onClick={() => setFilterStatus(s => s === "enrolled" ? null : "enrolled")}
             className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
@@ -1275,8 +1209,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             </span>
           </button>
 
-          {/* FIX-J: Sub-status pills — each shows an exclusive subset of enrolled clients.
-              effectiveStatus() returns exactly one value per row so these never overlap. */}
+          {/* FIX-J: Sub-status pills — mutually exclusive enrolled subsets */}
           {STATUS_ORDER.map(status => {
             const count    = statusCounts[status] ?? 0;
             const isActive = filterStatus === status;
@@ -1303,129 +1236,4 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           {filterStatus && (
             <button
               onClick={() => setFilterStatus(null)}
-              className="px-3 py-1.5 shrink-0 rounded-full text-[11px] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
-            >
-              Clear filter
-            </button>
-          )}
-        </div>
-
-        {/* ── Search bar ── */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
-          <input
-            type="text"
-            placeholder="Search by name, phone or source…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-9 py-2.5 border border-white/[0.08] rounded-2xl text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 bg-white/[0.04] transition-colors"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2">
-              <X className="w-3.5 h-3.5 text-white/30 hover:text-white/60 transition-colors" />
-            </button>
-          )}
-        </div>
-
-        {/* ── Candidates bar — FIX-A + FIX-K: criteria sourced live, sources clearly differentiated ── */}
-        <CandidatesBar
-          nexty={nextyCandidates}
-          criteria={criteriaCandidates}
-          onEnroll={c => setEnrollCandidate(c)}
-        />
-
-        {/* ── Bulk action bar ── */}
-        <LoyaltyBulkBar
-          selected={selectedIds}
-          rows={loyaltyRows}
-          effectiveStatusMap={effectiveStatusMap}
-          businessName={businessName}
-          serviceLabel={serviceLabel}
-          templates={waTemplates}
-          onClear={() => setSelectedIds([])}
-        />
-
-        {/* ── Nexty loyalty insights panel ── */}
-        <NextyLoyaltyPanel onNavigate={onNavigate} />
-
-        {/* ── Loyalty client list ── */}
-        {loadingLoyalty ? (
-          <div className="flex items-center justify-center py-16 text-white/30">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading loyalty data…
-          </div>
-        ) : filteredRows.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title={filterStatus || search ? "No clients match your filter" : "No clients enrolled yet"}
-            description={
-              !filterStatus && !search
-                ? "Eligible clients will appear above when they meet your booking criteria."
-                : undefined
-            }
-          />
-        ) : (
-          <div className="space-y-2">
-            {filteredRows.map(row => {
-              const phone     = normPhone(row.phone);
-              const enrich    = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
-              const effStatus = optimisticStatus[row.id] ?? effectiveStatus(row, enrich.lastVisitDate, reminderWeeks);
-              return (
-                <LoyaltyClientCard
-                  key={row.id}
-                  row={row}
-                  enrich={enrich}
-                  effStatus={effStatus}
-                  reminderWeeks={reminderWeeks}
-                  isSelected={selectedIds.includes(row.id)}
-                  isExpanded={expandedCard === row.id}
-                  tenantId={tenantId ?? ""}
-                  businessName={businessName}
-                  serviceLabel={serviceLabel}
-                  waTemplates={waTemplates}
-                  onToggleSelect={() => toggleSelect(row.id)}
-                  onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
-                  onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
-                  onUpdated={invalidateLoyalty}
-                  isoToDisplay={isoToDisplay}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ── Floating save bar ── */}
-      <FloatingSaveBar
-        dirty={settingsDirty}
-        saving={saveSettingsMutation.isPending}
-        onSave={() => saveSettingsMutation.mutate()}
-        onDiscard={handleDiscard}
-      />
-
-      {/* ── Enrol modal ── */}
-      <AnimatePresence>
-        {enrollCandidate && (
-          <EnrollModal
-            candidate={enrollCandidate}
-            serviceLabel={serviceLabel}
-            saving={enrollMutation.isPending}
-            onClose={() => setEnrollCandidate(null)}
-            onConfirm={(name, phone, notes, lastBooking, nextDue) =>
-              enrollMutation.mutate({
-                ...enrollCandidate,
-                client_name:     name,
-                phone,
-                notes,
-                candidateSource: enrollCandidate.candidateSource ?? "manual",
-                lastBookingDate: lastBooking,
-                nextDueDate:     nextDue,
-              })
-            }
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Enrol success celebration ── */}
-      <AnimatePresence>
-        {enrolledName && (
-          <EnrollSuccessCelebrat
+              className="px-3 py-1.5 shrink-0 rounded-full text-[11px] border border-white/[0.06] text-white/40 hover:text-white/60
