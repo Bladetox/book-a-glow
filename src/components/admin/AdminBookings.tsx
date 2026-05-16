@@ -13,10 +13,11 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfDay } from "date-fns";
 import {
-  Clock, User, Scissors, Phone, Mail, MapPin,
+  Clock, User, Scissors, Phone, Mail, MapPin, Car,
   Check, X, Trash2, ChevronDown, ChevronUp,
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
-  SendHorizonal, Search, AlertTriangle, Edit3, Sparkles, MoreHorizontal
+  SendHorizonal, Search, AlertTriangle, Edit3, Sparkles, MoreHorizontal,
+  Tag, XCircle
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
@@ -27,27 +28,36 @@ import { toast } from "sonner";
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
+// ── FIX 4: All 8 CHECK-constraint statuses covered ───────────────────────────
 const statusDisplayLabel: Record<BookingRow["status"], string> = {
-  pending:   "pending",
-  confirmed: "confirmed",
-  completed: "serviced",
-  cancelled: "cancelled",
+  pending:         "pending",
+  pending_payment: "awaiting payment",
+  confirmed:       "confirmed",
+  in_progress:     "in progress",
+  completed:       "serviced",
+  complete:        "serviced",
+  cancelled:       "cancelled",
+  no_show:         "no show",
 };
 
 const statusBorderAccent: Record<BookingRow["status"], string> = {
-  pending:   "border-l-2 border-l-amber-500/50",
-  confirmed: "border-l-2 border-l-emerald-500/30",
-  completed: "border-l-2 border-l-sky-500/20",
-  cancelled: "border-l-2 border-l-red-500/20",
+  pending:         "border-l-2 border-l-amber-500/50",
+  pending_payment: "border-l-2 border-l-orange-500/40",
+  confirmed:       "border-l-2 border-l-emerald-500/30",
+  in_progress:     "border-l-2 border-l-sky-400/40",
+  completed:       "border-l-2 border-l-sky-500/20",
+  complete:        "border-l-2 border-l-sky-500/20",
+  cancelled:       "border-l-2 border-l-red-500/20",
+  no_show:         "border-l-2 border-l-red-400/30",
 };
 
 const statusTagColor = (
   status: BookingRow["status"]
 ): "amber" | "emerald" | "sky" | "red" | "default" => {
-  if (status === "pending")   return "amber";
-  if (status === "confirmed") return "emerald";
-  if (status === "completed") return "sky";
-  if (status === "cancelled") return "red";
+  if (status === "pending" || status === "pending_payment") return "amber";
+  if (status === "confirmed")                               return "emerald";
+  if (status === "completed" || status === "complete" || status === "in_progress") return "sky";
+  if (status === "cancelled" || status === "no_show")       return "red";
   return "default";
 };
 
@@ -85,7 +95,6 @@ const toWhatsAppBalanceHref = (
 };
 
 // ── OverflowMenu ─────────────────────────────────────────────────────────────
-// Tier 3: destructive + admin actions hidden behind a ··· popover.
 interface OverflowMenuProps {
   isClientBlocked: boolean;
   isCancelled: boolean;
@@ -128,7 +137,6 @@ const OverflowMenu = ({ isClientBlocked, isCancelled, onBlock, onCancel, onDelet
             className="absolute right-0 bottom-full mb-2 z-30 w-44 rounded-2xl border border-white/[0.10] bg-[#111] shadow-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            {/* Block / Unblock */}
             <button
               onClick={() => { setOpen(false); onBlock(); }}
               className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium transition-colors ${
@@ -143,7 +151,6 @@ const OverflowMenu = ({ isClientBlocked, isCancelled, onBlock, onCancel, onDelet
               }
             </button>
 
-            {/* Cancel */}
             {!isCancelled && (
               <button
                 onClick={() => { setOpen(false); onCancel(); }}
@@ -155,7 +162,6 @@ const OverflowMenu = ({ isClientBlocked, isCancelled, onBlock, onCancel, onDelet
 
             <div className="mx-3 border-t border-white/[0.06]" />
 
-            {/* Delete */}
             <button
               onClick={() => { setOpen(false); onDelete(); }}
               className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-colors"
@@ -466,37 +472,34 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     return () => { cancelled = true; };
   }, [rescheduleDate, reschedulingBooking, tenantId]);
 
+  // ── FIX 5: Completed tab includes both `completed` and `complete`;
+  //           Cancelled tab includes `cancelled` and `no_show`;
+  //           Pending includes `pending` and `pending_payment`.
   const filtered = useMemo(() => {
     return bookings.filter(b => {
-      if (activeFilter === "All") {
-        if (searchQuery.trim()) {
-          return b.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (b.ref ?? "").toLowerCase().includes(searchQuery.toLowerCase());
-        }
-        return true;
-      }
-      if (activeFilter === "Today") {
-        const matchDate = b.date === todayStr;
-        if (searchQuery.trim()) return matchDate && b.client.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchDate;
-      }
-      const matchStatus = b.status === activeFilter.toLowerCase();
-      if (searchQuery.trim()) return matchStatus && b.client.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchStatus;
+      const matchesSearch = !searchQuery.trim() ||
+        b.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (b.ref ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+
+      if (activeFilter === "All")      return matchesSearch;
+      if (activeFilter === "Today")    return b.date === todayStr && matchesSearch;
+      if (activeFilter === "Pending")  return (b.status === "pending" || b.status === "pending_payment") && matchesSearch;
+      if (activeFilter === "Confirmed") return b.status === "confirmed" && matchesSearch;
+      if (activeFilter === "Completed") return (b.status === "completed" || b.status === "complete" || b.status === "in_progress") && matchesSearch;
+      if (activeFilter === "Cancelled") return (b.status === "cancelled" || b.status === "no_show") && matchesSearch;
+      return matchesSearch;
     });
   }, [bookings, activeFilter, todayStr, searchQuery]);
 
   const counts: Record<FilterType, number> = {
     All:       bookings.length,
     Today:     bookings.filter(b => b.date === todayStr).length,
-    Pending:   bookings.filter(b => b.status === "pending").length,
+    Pending:   bookings.filter(b => b.status === "pending" || b.status === "pending_payment").length,
     Confirmed: bookings.filter(b => b.status === "confirmed").length,
-    Completed: bookings.filter(b => b.status === "completed").length,
-    Cancelled: bookings.filter(b => b.status === "cancelled").length,
+    Completed: bookings.filter(b => b.status === "completed" || b.status === "complete" || b.status === "in_progress").length,
+    Cancelled: bookings.filter(b => b.status === "cancelled" || b.status === "no_show").length,
   };
-
-  // ── All handlers are untouched — logic preserved exactly ──────────────────
 
   const handleStatusChange = async (bookingId: string, status: string) => {
     try {
@@ -542,15 +545,17 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     setEditDraft({ ...b });
   };
 
+  // ── FIX 1 + 2: Correct schema column mapping for all three note fields ──────
   const saveInlineEdit = async () => {
     if (!editingInlineId || !editDraft) return;
     try {
       const updates: Record<string, unknown> = {
-        client_notes: editDraft.notes,
-        staff_notes: editDraft.staffNotes,
-        client_name: editDraft.client,
-        client_phone: editDraft.phone,
-        client_email: editDraft.email,
+        notes:            editDraft.notes,        // schema: notes (freeform/internal)
+        client_notes:     editDraft.clientNotes,  // schema: client_notes (client-facing)
+        staff_notes:      editDraft.staffNotes,   // schema: staff_notes
+        client_name:      editDraft.client,
+        client_phone:     editDraft.phone,
+        client_email:     editDraft.email,
         call_out_address: editDraft.address,
       };
       await updateFields.mutateAsync({ bookingId: editingInlineId, updates });
@@ -611,7 +616,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  // Payment lifecycle only — does NOT change appointment status.
   const handleMarkFullyPaid = async (b: BookingRow) => {
     if (markingPaidId === b.id) return;
     setMarkingPaidId(b.id);
@@ -633,7 +637,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
-  // Appointment lifecycle only — records that the service was physically delivered.
   const handleMarkServiced = async (b: BookingRow) => {
     if (markingServicedId === b.id) return;
     setMarkingServicedId(b.id);
@@ -665,13 +668,19 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     );
   }
 
-  const totalRevenue = bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.total, 0);
-  const totalOutstanding = bookings.filter(b => b.status !== "cancelled").reduce((a, b) => a + b.balance, 0);
+  const totalRevenue = bookings
+    .filter(b => b.status !== "cancelled" && b.status !== "no_show")
+    .reduce((a, b) => a + b.total, 0);
+  const totalOutstanding = bookings
+    .filter(b => b.status !== "cancelled" && b.status !== "no_show")
+    .reduce((a, b) => a + b.balance, 0);
   const dueToday = bookings
     .filter(b =>
       b.date === todayStr &&
       b.status !== "cancelled" &&
+      b.status !== "no_show" &&
       b.status !== "completed" &&
+      b.status !== "complete" &&
       b.balance > 0 &&
       !b.fullPaymentReceived
     )
@@ -680,7 +689,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   return (
     <div className="flex flex-col gap-8 pb-12">
 
-      {/* ── Confirm dialogs — all logic unchanged ─────────────────────────── */}
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete booking?"
@@ -903,12 +911,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                   const isMarkingServiced = markingServicedId === b.id;
                   const blockStatus = blockStatusMap[b.id];
                   const isClientBlocked = blockStatus?.isBlocked ?? false;
-                  const canMarkServiced = b.status !== "cancelled" && b.status !== "completed" && b.date <= todayStr;
+                  const canMarkServiced = b.status !== "cancelled" && b.status !== "no_show" && b.status !== "completed" && b.status !== "complete" && b.date <= todayStr;
                   const serviceList = (b.service ?? "").split(", ").filter(Boolean);
 
-                  // ── Tier 1: derive the single primary CTA for this booking ──────
                   const primaryCTA = (() => {
-                    if (b.status === "pending") {
+                    if (b.status === "pending" || b.status === "pending_payment") {
                       return (
                         <button
                           onClick={e => { e.stopPropagation(); setConfirmConfirm(b); }}
@@ -954,7 +961,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       layout
                       className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-hidden ${statusBorderAccent[b.status]}`}
                     >
-                      {/* ── Card header (collapsed view) ─────────────────── */}
+                      {/* ── Card header ──────────────────────────────────── */}
                       <div
                         className="p-4 sm:p-5 flex items-start gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
                         onClick={() => setExpandedId(isExpanded ? null : b.id)}
@@ -974,6 +981,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
                             {isClientBlocked && <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />}
+                            {b.isCallOut && <Car className="w-3 h-3 text-violet-400/70 shrink-0" title="Call-out booking" />}
                             <AdminTag label={statusDisplayLabel[b.status]} color={statusTagColor(b.status)} />
                             <PaymentTag
                               fullPaymentReceived={b.fullPaymentReceived}
@@ -1004,12 +1012,39 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                 {/* Detail grid */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                  <DetailRow icon={User} label="Client" value={b.client} />
-                                  <DetailRow icon={Phone} label="Phone" value={b.phone} />
-                                  <DetailRow icon={Mail} label="Email" value={b.email} />
+                                  <DetailRow icon={User}  label="Client"  value={b.client} />
+                                  <DetailRow icon={Phone} label="Phone"   value={b.phone} />
+                                  <DetailRow icon={Mail}  label="Email"   value={b.email} />
                                   <DetailRow icon={MapPin} label="Address" value={b.address} />
-                                  <DetailRow icon={Clock} label="Ref" value={b.ref} />
+                                  <DetailRow icon={Clock} label="Ref"     value={b.ref} />
+                                  {/* FIX 6a: Call-out details */}
+                                  {b.isCallOut && (
+                                    <DetailRow
+                                      icon={Car}
+                                      label="Call-out"
+                                      value={[
+                                        b.callOutAddress,
+                                        b.callOutDistanceKm ? `${b.callOutDistanceKm}km` : "",
+                                        b.callOutFee ? `R${b.callOutFee} fee` : "",
+                                      ].filter(Boolean).join(" · ")}
+                                    />
+                                  )}
+                                  {/* FIX 6b: Lead source */}
+                                  {b.leadSource && (
+                                    <DetailRow icon={Tag} label="Lead Source" value={b.leadSource} />
+                                  )}
                                 </div>
+
+                                {/* FIX 6c: Cancellation reason — shown only when cancelled/no_show */}
+                                {(b.status === "cancelled" || b.status === "no_show") && b.cancellationReason && (
+                                  <div className="flex items-start gap-2 rounded-xl bg-red-500/[0.06] border border-red-500/[0.12] px-3 py-2.5">
+                                    <XCircle className="w-3 h-3 text-red-400/60 mt-0.5 shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-[10px] text-red-400/50">Cancellation reason</p>
+                                      <p className="text-xs text-red-300/70">{b.cancellationReason}</p>
+                                    </div>
+                                  </div>
+                                )}
 
                                 {serviceList.length > 0 && (
                                   <div className="flex flex-col gap-1.5">
@@ -1048,16 +1083,17 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </div>
                                 </div>
 
-                                {(b.notes || b.staffNotes) && (
+                                {/* Notes — staff notes take priority, client notes as fallback */}
+                                {(b.staffNotes || b.notes || b.clientNotes) && (
                                   <div className="flex items-start gap-2 text-xs text-white/40 mt-1">
                                     <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                                    <span>{b.staffNotes || b.notes}</span>
+                                    <span>{b.staffNotes || b.clientNotes || b.notes}</span>
                                   </div>
                                 )}
 
                                 <div className="text-[10px] text-white/20">Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}</div>
 
-                                {/* Edit accordion — unchanged */}
+                                {/* Edit accordion */}
                                 <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
                                   <button
                                     onClick={e => {
@@ -1085,8 +1121,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                             <EditField label="Address" value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
                                           </div>
                                           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Notes</p>
-                                          <EditField label="Staff Notes" value={editDraft.staffNotes || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
-                                          <EditField label="Client Notes" value={editDraft.notes || ""} onChange={v => setEditDraft(d => ({ ...d, notes: v }))} />
+                                          {/* FIX 2: Staff Notes → staffNotes, Client Notes → clientNotes */}
+                                          <EditField label="Staff Notes"  value={editDraft.staffNotes  || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
+                                          <EditField label="Client Notes" value={editDraft.clientNotes || ""} onChange={v => setEditDraft(d => ({ ...d, clientNotes: v }))} />
                                           <div className="flex items-center justify-end gap-2 pt-1">
                                             <SaveButton label="Cancel" variant="secondary" onClick={e => { e.stopPropagation(); cancelInlineEdit(); }} />
                                             <SaveButton label="Save Changes" icon={<Edit3 className="w-3 h-3" />} onClick={e => { e.stopPropagation(); saveInlineEdit(); }} />
@@ -1097,7 +1134,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </AnimatePresence>
                                 </div>
 
-                                {/* ── TIER 1: Primary CTA ───────────────────────── */}
                                 {primaryCTA && (
                                   <div className="pt-1">
                                     {primaryCTA}
@@ -1107,8 +1143,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 {/* ── TIER 2: Secondary icon-button strip ───────── */}
                                 <div className="flex items-center gap-2 flex-wrap">
 
-                                  {/* Reschedule */}
-                                  {b.status !== "cancelled" && (
+                                  {b.status !== "cancelled" && b.status !== "no_show" && (
                                     <button
                                       onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
                                       aria-label="Reschedule"
@@ -1120,8 +1155,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </button>
                                   )}
 
-                                  {/* Add Service */}
-                                  {b.status !== "cancelled" && (
+                                  {b.status !== "cancelled" && b.status !== "no_show" && (
                                     <button
                                       onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
                                       aria-label="Add service"
@@ -1133,8 +1167,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </button>
                                   )}
 
-                                  {/* Mark Fully Paid — payment lifecycle only */}
-                                  {b.status !== "cancelled" && !b.fullPaymentReceived && b.balance > 0 && (
+                                  {b.status !== "cancelled" && b.status !== "no_show" && !b.fullPaymentReceived && b.balance > 0 && (
                                     <button
                                       disabled={isMarkingPaid}
                                       onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }}
@@ -1147,7 +1180,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </button>
                                   )}
 
-                                  {/* WhatsApp reminder — only if phone exists */}
                                   {b.phone && (
                                     <a
                                       href={toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref ?? "")}
@@ -1163,15 +1195,15 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </a>
                                   )}
 
-                                  {/* WhatsApp balance link — only if phone + outstanding balance + yoco_final_link */}
-                                  {b.phone && b.balance > 0 && !b.fullPaymentReceived && (b as any).yocoFinalLink && (
+                                  {/* FIX 3: removed (b as any) cast — yocoFinalLink is typed */}
+                                  {b.phone && b.balance > 0 && !b.fullPaymentReceived && b.yocoFinalLink && (
                                     <a
                                       href={toWhatsAppBalanceHref(
                                         b.phone,
                                         b.client,
                                         b.balance,
                                         b.service,
-                                        (b as any).yocoFinalLink,
+                                        b.yocoFinalLink,
                                         tenantId ?? "",
                                       )}
                                       target="_blank"
@@ -1186,13 +1218,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </a>
                                   )}
 
-                                  {/* Spacer pushes overflow menu to the right */}
                                   <div className="flex-1" />
 
-                                  {/* ── TIER 3: Overflow menu (··· ) ──────────── */}
                                   <OverflowMenu
                                     isClientBlocked={isClientBlocked}
-                                    isCancelled={b.status === "cancelled"}
+                                    isCancelled={b.status === "cancelled" || b.status === "no_show"}
                                     onBlock={() => setBlockModalBooking(b)}
                                     onCancel={() => setConfirmCancel(b)}
                                     onDelete={() => setConfirmDelete(b)}
@@ -1248,13 +1278,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   );
 };
 
-const DetailRow = ({ icon: Icon, label, value, wrap }: { icon: React.ElementType; label: string; value: string; wrap?: boolean }) => (
+const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
   value ? (
     <div className="flex items-start gap-2">
       <Icon className="w-3 h-3 text-white/25 mt-0.5 shrink-0" />
       <div className="min-w-0">
         <p className="text-[10px] text-white/25">{label}</p>
-        <p className={`text-xs text-white/65 ${wrap ? "" : "truncate"}`}>{value}</p>
+        <p className="text-xs text-white/65 truncate">{value}</p>
       </div>
     </div>
   ) : null
