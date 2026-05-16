@@ -16,12 +16,17 @@ export const EnrollModal = ({
   serviceLabel: string;
 }) => {
   const [step, setStep]               = useState(0);
-  const [name, setName]               = useState(candidate.client_name);
-  const [phone, setPhone]             = useState(candidate.phone);
+  const [name, setName]               = useState(candidate.client_name ?? "");
+  const [phone, setPhone]             = useState(candidate.phone ?? "");
   const [notes, setNotes]             = useState("");
   const [lastBooking, setLastBooking] = useState(candidate.lastBookingDate ?? "");
   const [nextDue, setNextDue]         = useState(candidate.nextDueDate ?? "");
   const canNext0 = name.trim().length > 0;
+
+  // Null-safe derived values
+  const bookingCount        = candidate.bookingCount ?? 0;
+  const totalSpend          = candidate.totalSpend ?? 0;
+  const daysSinceLastBooking = candidate.daysSinceLastBooking ?? null;
 
   return (
     <motion.div
@@ -32,13 +37,27 @@ export const EnrollModal = ({
       <motion.div
         initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 340, damping: 32 }}
-        className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl border border-white/[0.1] bg-[#0f0f0f] flex flex-col max-h-[90vh] overflow-hidden"
+        className="
+          w-full sm:max-w-sm
+          rounded-t-3xl sm:rounded-3xl
+          border border-white/[0.1]
+          bg-[#0f0f0f]
+          flex flex-col
+          max-h-[92dvh] sm:max-h-[85vh]
+          overflow-hidden
+        "
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         onClick={e => e.stopPropagation()}
       >
+        {/* Drag handle (mobile visual cue) */}
+        <div className="flex justify-center pt-2.5 pb-0 sm:hidden shrink-0">
+          <div className="w-10 h-1 rounded-full bg-white/[0.12]" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-0">
+        <div className="flex items-center justify-between px-5 pt-4 pb-0 shrink-0">
           <div>
-            <p className="text-sm font-bold text-white/85">Enroll in Loyalty</p>
+            <p className="text-sm font-bold text-white/85">Enrol in Loyalty</p>
             <p className="text-[11px] text-white/35 mt-0.5">{ENROLL_STEPS[step]}</p>
           </div>
           <button
@@ -50,7 +69,7 @@ export const EnrollModal = ({
         </div>
 
         {/* Step progress bar */}
-        <div className="px-5 pt-4">
+        <div className="px-5 pt-4 shrink-0">
           <div className="flex gap-1.5">
             {ENROLL_STEPS.map((_, idx) => (
               <div
@@ -66,41 +85,48 @@ export const EnrollModal = ({
           </p>
         </div>
 
-        {/* Booking summary badge */}
-        <div className="px-5 pt-3">
-          <div className="rounded-xl bg-emerald-400/[0.07] border border-emerald-400/[0.15] px-3.5 py-2.5 flex items-center gap-3">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400/70 shrink-0" />
-            <span className="text-[11px] text-emerald-400/80 leading-relaxed">
-              {candidate.bookingCount} bookings · R {candidate.totalSpend.toLocaleString()} total · last booked {candidate.daysSinceLastBooking}d ago
-            </span>
+        {/* Booking summary badge — only shown when data is available */}
+        {(bookingCount > 0 || totalSpend > 0) && (
+          <div className="px-5 pt-3 shrink-0">
+            <div className="rounded-xl bg-emerald-400/[0.07] border border-emerald-400/[0.15] px-3.5 py-2.5 flex items-center gap-3">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400/70 shrink-0" />
+              <span className="text-[11px] text-emerald-400/80 leading-relaxed">
+                {bookingCount} booking{bookingCount !== 1 ? "s" : ""}
+                {totalSpend > 0 ? ` · R ${totalSpend.toLocaleString("en-ZA")}` : ""}
+                {daysSinceLastBooking != null ? ` · last booked ${daysSinceLastBooking}d ago` : ""}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Step content */}
-        <div className="px-5 pt-4 pb-2 overflow-y-auto flex-1">
+        {/* Step content — scrollable */}
+        <div className="px-5 pt-4 pb-2 overflow-y-auto flex-1 min-h-0">
           {step === 0 && (
             <div className="flex flex-col gap-3.5">
-              {[
-                { label: "Client Name", value: name, onChange: setName, type: "text" },
-                { label: "Phone (with country code)", value: phone, onChange: setPhone, type: "tel" },
-              ].map(f => (
+              {([
+                { label: "Client Name", value: name, onChange: setName, type: "text", placeholder: "e.g. Sarah Johnson" },
+                { label: "WhatsApp Number (with country code)", value: phone, onChange: setPhone, type: "tel", placeholder: "e.g. +27821234567" },
+              ] as { label: string; value: string; onChange: (v: string) => void; type: string; placeholder: string }[]).map(f => (
                 <div key={f.label} className="flex flex-col gap-1.5">
                   <label className="text-[10px] tracking-[0.1em] uppercase text-white/35 font-semibold">{f.label}</label>
                   <input
                     type={f.type}
                     value={f.value}
+                    placeholder={f.placeholder}
                     onChange={e => f.onChange(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all placeholder:text-white/20"
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-3 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all placeholder:text-white/20"
                   />
                 </div>
               ))}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] tracking-[0.1em] uppercase text-white/35 font-semibold">Notes <span className="text-white/20 normal-case tracking-normal">(optional)</span></label>
+                <label className="text-[10px] tracking-[0.1em] uppercase text-white/35 font-semibold">
+                  Notes <span className="text-white/20 normal-case tracking-normal">(optional)</span>
+                </label>
                 <input
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   placeholder="e.g. regular every 4 weeks"
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-3 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all"
                 />
               </div>
             </div>
@@ -108,13 +134,18 @@ export const EnrollModal = ({
 
           {step === 1 && (
             <div className="flex flex-col gap-3.5">
+              <p className="text-[11px] text-white/30 leading-relaxed">
+                These dates help us track when to nudge this client for their next visit. Both fields are optional — you can always update them later.
+              </p>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] tracking-[0.1em] uppercase text-white/35 font-semibold">Last {serviceLabel || "service"} Date</label>
+                <label className="text-[10px] tracking-[0.1em] uppercase text-white/35 font-semibold">
+                  Last {serviceLabel || "service"} Date
+                </label>
                 <input
                   type="date"
                   value={lastBooking}
                   onChange={e => setLastBooking(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-3 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all [color-scheme:dark]"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -123,36 +154,41 @@ export const EnrollModal = ({
                   type="date"
                   value={nextDue}
                   onChange={e => setNextDue(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-3 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 focus:bg-white/[0.06] transition-all [color-scheme:dark]"
                 />
               </div>
             </div>
           )}
 
           {step === 2 && (
-            <div className="flex flex-col gap-1.5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
+            <div className="flex flex-col gap-0 rounded-2xl border border-white/[0.07] bg-white/[0.025] overflow-hidden">
               {[
-                { label: "Name",      value: name },
-                { label: "Phone",     value: phone },
+                { label: "Name",      value: name || "—" },
+                { label: "Phone",     value: phone || "—" },
                 { label: "Last date", value: lastBooking || "—" },
                 { label: "Next due",  value: nextDue || "—" },
                 { label: "Notes",     value: notes || "—" },
-              ].map(row => (
-                <div key={row.label} className="flex items-start justify-between gap-4 py-1.5 border-b border-white/[0.04] last:border-0">
+              ].map((row, i, arr) => (
+                <div
+                  key={row.label}
+                  className={`flex items-start justify-between gap-4 px-4 py-3 ${
+                    i < arr.length - 1 ? "border-b border-white/[0.04]" : ""
+                  }`}
+                >
                   <span className="text-[10px] uppercase tracking-[0.1em] text-white/30 shrink-0 font-semibold">{row.label}</span>
-                  <span className="text-[12px] text-white/75 text-right font-medium">{row.value}</span>
+                  <span className="text-[12px] text-white/75 text-right font-medium break-all">{row.value}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Navigation buttons */}
-        <div className="flex gap-2 px-5 py-4 border-t border-white/[0.05]">
+        {/* Navigation buttons — always visible, above safe area */}
+        <div className="flex gap-2 px-5 pt-3 pb-4 border-t border-white/[0.05] shrink-0">
           {step > 0 && (
             <button
               onClick={() => setStep(s => s - 1)}
-              className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-white/40 text-sm font-semibold hover:bg-white/[0.04] hover:text-white/60 transition-all"
+              className="flex-1 py-3 rounded-xl border border-white/[0.08] text-white/40 text-sm font-semibold hover:bg-white/[0.04] hover:text-white/60 transition-all active:scale-[0.98]"
             >
               ← Back
             </button>
@@ -161,7 +197,7 @@ export const EnrollModal = ({
             <button
               onClick={() => setStep(s => s + 1)}
               disabled={step === 0 && !canNext0}
-              className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-bold hover:bg-emerald-500/25 transition-all disabled:opacity-40 active:scale-[0.98]"
+              className="flex-1 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-bold hover:bg-emerald-500/25 transition-all disabled:opacity-40 active:scale-[0.98]"
             >
               Continue →
             </button>
@@ -169,10 +205,10 @@ export const EnrollModal = ({
             <button
               onClick={() => onConfirm(name, phone, notes, lastBooking, nextDue)}
               disabled={saving || !name.trim()}
-              className="flex-1 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold hover:bg-emerald-500/30 transition-all disabled:opacity-40 active:scale-[0.98] flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold hover:bg-emerald-500/30 transition-all disabled:opacity-40 active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-              {saving ? "Enrolling…" : "Confirm & Enroll"}
+              {saving ? "Enrolling…" : "Confirm & Enrol"}
             </button>
           )}
         </div>
