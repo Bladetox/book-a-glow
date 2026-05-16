@@ -829,18 +829,20 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 <LoyaltyClientCard
                   key={row.id}
                   row={row}
-                  enrichData={enrich}
-                  effectiveStatus={effectiveStatusMap[row.id] ?? "on_track"}
+                  enrich={enrich}
+                  effStatus={effectiveStatusMap[row.id] ?? "on_track"}
                   reminderWeeks={reminderWeeks}
                   serviceLabel={serviceLabel}
                   businessName={businessName}
                   waTemplates={waTemplates}
                   isSelected={selectedIds.includes(row.id)}
                   isExpanded={expandedCard === row.id}
+                  tenantId={tenantId ?? ""}
                   onToggleSelect={() => toggleSelect(row.id)}
                   onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
-                  onStatusChange={(id, status) => setOptimisticStatus(m => ({ ...m, [id]: status }))}
-                  onRefresh={invalidateLoyalty}
+                  onOptimisticUpdate={(newStatus) => setOptimisticStatus(m => ({ ...m, [row.id]: newStatus }))}
+                  onUpdated={invalidateLoyalty}
+                  isoToDisplay={isoToDisplay}
                 />
               );
             })}
