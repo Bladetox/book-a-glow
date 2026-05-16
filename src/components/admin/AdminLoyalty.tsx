@@ -46,6 +46,11 @@
  *
  *   7. Enrol insert used `last_visit_date` which does not exist in loyalty_tracker;
  *      correct column name is `last_wax_date`.
+ *
+ *   8. Enrol insert passed a raw computed status (e.g. "on_track") instead of a
+ *      DB-safe value. The loyalty_tracker_status_check constraint only allows
+ *      'ON TRACK' | 'TIME TO BOOK' | 'OVERDUE'. Fixed: use toDbStatus() to map
+ *      computed/display statuses (LONG_OVERDUE, BIRTHDAY, UNKNOWN) to allowed values.
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -74,7 +79,7 @@ import {
 } from "./loyalty/loyaltyConstants";
 import {
   isoToDisplay,
-  normPhone, effectiveStatus, exportCSV,
+  normPhone, effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
 import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
 import { MessagingHowTo }        from "./loyalty/MessagingHowTo";
@@ -834,14 +839,23 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
       const now = new Date().toISOString();
+      // Compute the initial status from booking date if available, then sanitise
+      // to a value allowed by the loyalty_tracker_status_check constraint.
+      const computed = candidate.lastBookingDate
+        ? effectiveStatus(
+            { status: null, birthday: null, next_due_date: null, last_wax_date: candidate.lastBookingDate } as LoyaltyRow,
+            candidate.lastBookingDate,
+            reminderWeeks,
+          )
+        : "ON TRACK";
       const { error } = await supabase.from("loyalty_tracker").insert({
         tenant_id:     tenantId,
         client_name:   candidate.client_name,
         phone:         candidate.phone,
-        status:        "on_track",
+        status:        toDbStatus(computed),
         source:        candidate.candidateSource ?? "manual",
         notes:         candidate.notes ?? null,
-        last_wax_date: candidate.lastBookingDate ?? null,  // ← correct column name
+        last_wax_date: candidate.lastBookingDate ?? null,
         next_due_date: candidate.nextDueDate ?? null,
         created_at:    now,
         updated_at:    now,
