@@ -338,8 +338,15 @@ export function useDashboardData() {
     () => bookings.filter((b: any) => b.status !== "cancelled"),
     [bookings]
   );
-  const cancelled = useMemo(
-    () => bookings.filter((b: any) => b.status === "cancelled"),
+
+  // Bug 2 fix — cancelled AND no_show are both lost slots.
+  // Every booking required payment/deposit upfront, so both statuses represent
+  // a slot that did not deliver a service. The tenant's actual revenue impact
+  // depends on their individual cancellation terms (stored in app_settings),
+  // which vary per tenant and cannot be parsed programmatically. revenueLost
+  // therefore reflects the full booked value at stake for all lost slots.
+  const lostBookings = useMemo(
+    () => bookings.filter((b: any) => b.status === "cancelled" || b.status === "no_show"),
     [bookings]
   );
 
@@ -460,11 +467,6 @@ export function useDashboardData() {
       if (key) prevKeySet.add(key);
     });
 
-    const countMap = new Map<string, number>();
-    active.forEach((b: any) => {
-      const key = resolveClientKey(b);
-      countMap.set(key, (countMap.get(key) || 0) + 1);
-    });
     const keySet = new Set(active.map((b: any) => resolveClientKey(b)));
     const retained = [...keySet].filter(k => prevKeySet.has(k)).length;
 
@@ -552,8 +554,8 @@ export function useDashboardData() {
     ).length;
     if (pendingDeposits > 0)
       list.push({ text: `${pendingDeposits} deposit${pendingDeposits > 1 ? "s" : ""} still pending`, type: "warning" });
-    if (cancelled.length > 0)
-      list.push({ text: `${cancelled.length} cancellation${cancelled.length > 1 ? "s" : ""} this month`, type: "info" });
+    if (lostBookings.length > 0)
+      list.push({ text: `${lostBookings.length} cancellation${lostBookings.length > 1 ? "s" : ""} / no-show${lostBookings.length > 1 ? "s" : ""} this month`, type: "info" });
     stockItems.forEach((s: any) => {
       list.push({
         text: `${s.item_name} - ${s.stock_on_hand <= 2 ? "critical" : "low"} stock (${s.stock_on_hand})`,
@@ -561,7 +563,7 @@ export function useDashboardData() {
       });
     });
     return list;
-  }, [bookings, cancelled, stockItems]);
+  }, [bookings, lostBookings, stockItems]);
 
   // ─── return ───────────────────────────────────────────────────────────────
   return {
@@ -583,14 +585,25 @@ export function useDashboardData() {
     health: {
       fillRate,
       staffLoading,
+      // Bug 1 fix — avgBasket now uses confirmed payment revenue (monthRevenue)
+      // divided by active appointment count, not the sum of booking.total_amount
+      // which includes unpaid/pending totals and overstates the true average.
       avgBasket:
-        active.length > 0
-          ? Math.round(active.reduce((s: number, b: any) => s + Number(b.total_amount), 0) / active.length)
+        active.length > 0 && monthRevenue > 0
+          ? Math.round(monthRevenue / active.length)
           : 0,
       totalAppointments: active.length,
+      // Bug 2 fix — cancellationRate numerator now includes no_show.
+      // Both cancelled and no_show are lost slots; every booking required
+      // upfront payment so both represent real business impact.
+      // Denominator is all bookings (total slots attempted this month).
       cancellationRate:
-        bookings.length > 0 ? Math.round((cancelled.length / bookings.length) * 100) : 0,
-      revenueLost: cancelled.reduce((s: number, b: any) => s + Number(b.total_amount), 0),
+        bookings.length > 0 ? Math.round((lostBookings.length / bookings.length) * 100) : 0,
+      // revenueLost reflects the full booked value at stake for all lost slots.
+      // Actual retained amount depends on each tenant's cancellation terms
+      // (stored in app_settings) which vary per tenant and cannot be parsed
+      // programmatically here.
+      revenueLost: lostBookings.reduce((s: number, b: any) => s + Number(b.total_amount), 0),
     },
     clients: {
       total:         clientKeySet.size,
