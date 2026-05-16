@@ -3,14 +3,15 @@
  * All sub-components, helpers, types, and constants live in ./loyalty/
  */
 import { useState, useMemo, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, Search, X, UserPlus,
   Download, Settings2, Save,
-  Users, ChevronDown, Bot, ExternalLink,
+  Users, ChevronDown, Bot,
+  ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock, PlusCircle, ChevronUp,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -36,6 +37,200 @@ import {
   EnrollModal, EnrollSuccessCelebration,
 } from "./loyalty/LoyaltyEnrollModal";
 import { LoyaltyTenantCriteria } from "./loyalty/LoyaltyTenantCriteria";
+import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
+
+// ──────────────────────────────────────────────────────────────────
+// Loyalty-relevant insight IDs from useNextyInsights
+// ──────────────────────────────────────────────────────────────────
+const LOYALTY_INSIGHT_IDS = new Set([
+  "loyalty_gap",
+  "outside_settings_regulars",
+  "quiet_day",
+  "rebooking_rate",
+  "new_client_conversion",
+  "top_client_concentration",
+  "repeat_cancellers",
+  "cancellation_leakage",
+]);
+
+// ──────────────────────────────────────────────────────────────────
+// Inline Nexty loyalty insights panel
+// ──────────────────────────────────────────────────────────────────
+const PRIORITY_STYLES: Record<string, { dot: string; iconBg: string; iconColor: string; label: string }> = {
+  critical:  { dot: "#ff5757", iconBg: "rgba(255,87,87,0.08)",   iconColor: "#ff5757",  label: "Critical"  },
+  important: { dot: "#f59e0b", iconBg: "rgba(245,158,11,0.08)", iconColor: "#f59e0b",  label: "Important" },
+  info:      { dot: "#60a5fa", iconBg: "rgba(96,165,250,0.08)",  iconColor: "#60a5fa",  label: "Info"      },
+};
+
+function InsightIcon({ type, priority }: { type: string; priority: string }) {
+  const cls = "w-3.5 h-3.5";
+  if (priority === "critical") return <AlertTriangle className={cls} />;
+  if (type === "retention")    return <UserCheck     className={cls} />;
+  if (type === "capacity")     return <Clock         className={cls} />;
+  if (type === "margin")       return <TrendingUp    className={cls} />;
+  return <PlusCircle className={cls} />;
+}
+
+function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void }) {
+  const { data: allInsights, isLoading } = useNextyInsights();
+  const [open, setOpen]         = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const { tenantId } = useTenant();
+
+  const insights: NextyInsight[] = useMemo(
+    () => (allInsights ?? []).filter(i => LOYALTY_INSIGHT_IDS.has(i.id)),
+    [allInsights],
+  );
+
+  const persistAction = async (insightId: string) => {
+    const now     = new Date();
+    const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from("nexty_insight_actions").upsert({
+      tenant_id:   tenantId,
+      insight_id:  insightId,
+      action_type: "actioned",
+      acted_at:    now.toISOString(),
+      expires_at:  expires,
+    }, { onConflict: "tenant_id,insight_id,action_type" });
+  };
+
+  const badge = insights.length > 0 ? insights.length : null;
+
+  return (
+    <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl overflow-hidden">
+      {/* Toggle button */}
+      <button
+        onClick={() => setOpen(s => !s)}
+        className="flex items-center gap-2.5 w-full px-4 py-3 hover:bg-white/[0.04] transition-colors"
+      >
+        <div className="flex items-center justify-center w-7 h-7 rounded-xl bg-amber-500/10">
+          <Bot className="w-3.5 h-3.5 text-amber-400" />
+        </div>
+        <span className="text-xs font-semibold text-white/60 flex-1 text-left">
+          Ask Nexty for loyalty insights &amp; re-engagement ideas
+        </span>
+        {isLoading && <Loader2 className="w-3.5 h-3.5 text-white/20 animate-spin" />}
+        {!isLoading && badge !== null && (
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400">
+            {badge}
+          </span>
+        )}
+        {open
+          ? <ChevronUp   className="w-3.5 h-3.5 text-white/25" />
+          : <ChevronDown className="w-3.5 h-3.5 text-white/25" />}
+      </button>
+
+      {/* Collapsible insights */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="nexty-loyalty-panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/[0.06] p-4 space-y-3">
+              {isLoading && (
+                <div className="flex items-center gap-2 text-white/30 text-xs py-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analysing your loyalty data…
+                </div>
+              )}
+
+              {!isLoading && insights.length === 0 && (
+                <div className="text-xs text-white/30 py-2">
+                  No loyalty insights right now. Keep enrolling clients and Nexty will surface opportunities as your data grows.
+                </div>
+              )}
+
+              {!isLoading && insights.map((ins) => {
+                const p          = PRIORITY_STYLES[ins.priority] ?? PRIORITY_STYLES.info;
+                const isExpanded = expanded.has(ins.id);
+                const isLong     = ins.message.length > 180;
+                const bodyText   = isExpanded || !isLong
+                  ? ins.message
+                  : `${ins.message.slice(0, 180)}…`;
+
+                return (
+                  <motion.div
+                    key={ins.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white/[0.03] border border-white/[0.05] rounded-2xl overflow-hidden"
+                  >
+                    {/* Card header */}
+                    <div className="flex items-start gap-2.5 p-3 pb-2">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{ background: p.iconBg, color: p.iconColor }}
+                      >
+                        <InsightIcon type={ins.type} priority={ins.priority} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span
+                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={{ background: p.dot }}
+                          />
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-[0.1em]"
+                            style={{ color: p.dot }}
+                          >
+                            {p.label}
+                          </span>
+                          {ins.impactRand && (
+                            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/15">
+                              <TrendingUp className="w-2.5 h-2.5" />
+                              R{ins.impactRand.toLocaleString("en-ZA")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs font-semibold text-white/85 leading-snug">
+                          {ins.title}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card body */}
+                    <div className="px-3 pb-2 text-xs text-white/50 leading-relaxed">
+                      {bodyText}
+                    </div>
+
+                    {/* Card footer */}
+                    <div className="border-t border-white/[0.04] px-3 py-1.5 flex items-center gap-2 flex-wrap">
+                      {ins.actionLabel && ins.actionView && onNavigate && (
+                        <button
+                          onClick={() => { persistAction(ins.id); onNavigate(ins.actionView!); }}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-xs font-medium text-white/70 hover:text-white/90 hover:bg-white/[0.08] transition-colors"
+                        >
+                          {ins.actionLabel}
+                          <ArrowRight className="w-2.5 h-2.5 opacity-50" />
+                        </button>
+                      )}
+                      {isLong && (
+                        <button
+                          onClick={() => setExpanded(prev => {
+                            const next = new Set(prev);
+                            if (next.has(ins.id)) next.delete(ins.id); else next.add(ins.id);
+                            return next;
+                          })}
+                          className="text-[11px] text-white/30 hover:text-white/50 transition-colors px-1"
+                        >
+                          {isExpanded ? "Show less" : "More details"}
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // ──────────────────────────────────────────────────────────────────
 // Props
@@ -230,7 +425,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enrichment ──
-  // Uses `date` column (actual appointment date) — not created_at.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
@@ -560,17 +754,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           onClear={() => setSelectedIds([])}
         />
 
-        {/* ── Nexty AI link ── */}
-        {onNavigate && (
-          <button
-            onClick={() => onNavigate("ai")}
-            className="flex items-center gap-2 px-4 py-3 bg-white/[0.04] border border-white/[0.06] rounded-2xl text-xs font-semibold text-white/55 hover:bg-white/[0.07] hover:text-white/75 transition-colors w-full"
-          >
-            <Bot className="w-3.5 h-3.5 text-white/35" />
-            <span>Ask Nexty for loyalty insights &amp; re-engagement ideas</span>
-            <ExternalLink className="w-3 h-3 ml-auto opacity-40" />
-          </button>
-        )}
+        {/* ── Nexty loyalty insights panel ── */}
+        <NextyLoyaltyPanel onNavigate={onNavigate} />
 
         {/* ── Loyalty client list ── */}
         {loadingLoyalty ? (
