@@ -9,8 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Loader2, Search, X, UserPlus,
-  Clock, Download, Settings2, Save,
-  Users, CalendarCheck, ChevronDown, Bot, ExternalLink,
+  Download, Settings2, Save,
+  Users, ChevronDown, Bot, ExternalLink,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -21,51 +21,27 @@ import { EmptyState, AdminPageHeader, SaveButton } from "./AdminSharedUI";
 // ─── Sub-modules ───
 import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings } from "./loyalty/loyaltyTypes";
 import {
-  STATUS_STYLE, STATUS_ORDER, DEFAULT_WA_TEMPLATES,
+  STATUS_ORDER, DEFAULT_WA_TEMPLATES,
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
-  DEFAULT_TENANT_CRITERIA, PILL_TO_EFFECTIVE, PILL_LABEL,
+  DEFAULT_TENANT_CRITERIA, PILL_LABEL,
 } from "./loyalty/loyaltyConstants";
 import {
-  excelToDate, isoToDisplay,
-  normPhone, effectiveStatus, resolveKey, exportCSV,
+  isoToDisplay,
+  normPhone, effectiveStatus, exportCSV,
 } from "./loyalty/loyaltyHelpers";
-import { LoyaltyBulkBar }           from "./loyalty/LoyaltyBulkBar";
-import { MessagingHowTo }            from "./loyalty/MessagingHowTo";
-import {
-  InlineStatusEditor, InlineClientEditor,
-  InlineNotesEditor, InlineBirthdayEditor, UnregisterButton, WaButton,
-} from "./loyalty/LoyaltyClientCard";
+import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
+import { MessagingHowTo }        from "./loyalty/MessagingHowTo";
+import { LoyaltyClientCard }     from "./loyalty/LoyaltyClientCard";
 import {
   EnrollModal, EnrollSuccessCelebration,
 } from "./loyalty/LoyaltyEnrollModal";
-import { LoyaltyTenantCriteria }     from "./loyalty/LoyaltyTenantCriteria";
+import { LoyaltyTenantCriteria } from "./loyalty/LoyaltyTenantCriteria";
 
 // ──────────────────────────────────────────────────────────────────
 // Props
 // ──────────────────────────────────────────────────────────────────
 interface AdminLoyaltyProps {
   onNavigate?: (view: string) => void;
-}
-
-// ──────────────────────────────────────────────────────────────────
-// Dark-glass STATUS_STYLE overrides
-// ──────────────────────────────────────────────────────────────────
-const DARK_PILL: Record<string, { bg: string; text: string }> = {
-  on_track:       { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
-  "ON TRACK":     { bg: "bg-emerald-500/10 border border-emerald-500/20", text: "text-emerald-400" },
-  overdue:        { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
-  OVERDUE:        { bg: "bg-red-500/10 border border-red-500/20",         text: "text-red-400" },
-  long_overdue:   { bg: "bg-orange-600/15 border border-orange-600/25",   text: "text-orange-400" },
-  LONG_OVERDUE:   { bg: "bg-orange-600/15 border border-orange-600/25",   text: "text-orange-400" },
-  "time to book": { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
-  "TIME TO BOOK": { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
-  time_to_book:   { bg: "bg-amber-400/10 border border-amber-400/20",     text: "text-amber-400" },
-  birthday:       { bg: "bg-pink-500/10 border border-pink-500/20",       text: "text-pink-300" },
-  BIRTHDAY:       { bg: "bg-pink-500/10 border border-pink-500/20",       text: "text-pink-300" },
-};
-
-function darkPill(status: string) {
-  return DARK_PILL[status] ?? DARK_PILL[status.toLowerCase()] ?? { bg: "bg-white/[0.05] border border-white/[0.08]", text: "text-white/40" };
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -76,31 +52,31 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const qc = useQueryClient();
 
   // ── Settings state (persisted via app_settings) ──
-  const [reminderWeeks, setReminderWeeks]       = useState(DEFAULT_LOYALTY_SETTINGS.reminder_weeks);
-  const [serviceLabel, setServiceLabel]         = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
-  const [minBookings, setMinBookings]           = useState(DEFAULT_LOYALTY_SETTINGS.min_bookings);
-  const [lookbackDays, setLookbackDays]         = useState(DEFAULT_LOYALTY_SETTINGS.lookback_days);
-  const [waTemplates, setWaTemplates]           = useState(DEFAULT_WA_TEMPLATES);
-  const [showSettings, setShowSettings]         = useState(false);
+  const [reminderWeeks, setReminderWeeks]           = useState(DEFAULT_LOYALTY_SETTINGS.reminder_weeks);
+  const [serviceLabel, setServiceLabel]             = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
+  const [minBookings, setMinBookings]               = useState(DEFAULT_LOYALTY_SETTINGS.min_bookings);
+  const [lookbackDays, setLookbackDays]             = useState(DEFAULT_LOYALTY_SETTINGS.lookback_days);
+  const [waTemplates, setWaTemplates]               = useState(DEFAULT_WA_TEMPLATES);
+  const [showSettings, setShowSettings]             = useState(false);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
-  const [settingsDirty, setSettingsDirty]       = useState(false);
+  const [settingsDirty, setSettingsDirty]           = useState(false);
 
   // ── Tenant criteria state ──
   const [tenantCriteria, setTenantCriteria] = useState<TenantCriteriaSettings>({
-    enabled:       DEFAULT_TENANT_CRITERIA.enabled,
-    serviceIds:    DEFAULT_TENANT_CRITERIA.service_ids ?? [],
-    minBookings:   DEFAULT_TENANT_CRITERIA.min_bookings,
-    lookbackDays:  DEFAULT_TENANT_CRITERIA.lookback_days,
+    enabled:      DEFAULT_TENANT_CRITERIA.enabled,
+    serviceIds:   DEFAULT_TENANT_CRITERIA.service_ids ?? [],
+    minBookings:  DEFAULT_TENANT_CRITERIA.min_bookings,
+    lookbackDays: DEFAULT_TENANT_CRITERIA.lookback_days,
   });
 
   // ── UI state ──
-  const [search, setSearch]               = useState("");
-  const [filterStatus, setFilterStatus]   = useState<string | null>(null);
-  const [selectedIds, setSelectedIds]     = useState<string[]>([]);
+  const [search, setSearch]                   = useState("");
+  const [filterStatus, setFilterStatus]       = useState<string | null>(null);
+  const [selectedIds, setSelectedIds]         = useState<string[]>([]);
   const [enrollCandidate, setEnrollCandidate] = useState<EnrollCandidate | null>(null);
-  const [enrolledName, setEnrolledName]   = useState<string | null>(null);
+  const [enrolledName, setEnrolledName]       = useState<string | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, string>>({});
-  const [expandedCard, setExpandedCard]   = useState<string | null>(null);
+  const [expandedCard, setExpandedCard]       = useState<string | null>(null);
 
   // ── Data: tenant info ──
   const { data: tenantInfo } = useQuery({
@@ -138,15 +114,15 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   useEffect(() => {
     if (!settingsRows) return;
     const map = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
-    if (map["loyalty.reminder_weeks"])            setReminderWeeks(Number(map["loyalty.reminder_weeks"]));
-    if (map["loyalty.service_label"])             setServiceLabel(map["loyalty.service_label"]);
-    if (map["loyalty.min_bookings"])              setMinBookings(Number(map["loyalty.min_bookings"]));
-    if (map["loyalty.lookback_days"])             setLookbackDays(Number(map["loyalty.lookback_days"]));
-    if (map["loyalty.wa_template_overdue"])       setWaTemplates(t => ({ ...t, overdue:     map["loyalty.wa_template_overdue"] }));
-    if (map["loyalty.wa_template_time_to_book"])  setWaTemplates(t => ({ ...t, timeToBook:  map["loyalty.wa_template_time_to_book"] }));
-    if (map["loyalty.wa_template_on_track"])      setWaTemplates(t => ({ ...t, onTrack:     map["loyalty.wa_template_on_track"] }));
-    if (map["loyalty.wa_template_birthday"])      setWaTemplates(t => ({ ...t, birthday:    map["loyalty.wa_template_birthday"] }));
-    if (map["loyalty.wa_template_long_overdue"])  setWaTemplates(t => ({ ...t, longOverdue: map["loyalty.wa_template_long_overdue"] }));
+    if (map["loyalty.reminder_weeks"])           setReminderWeeks(Number(map["loyalty.reminder_weeks"]));
+    if (map["loyalty.service_label"])            setServiceLabel(map["loyalty.service_label"]);
+    if (map["loyalty.min_bookings"])             setMinBookings(Number(map["loyalty.min_bookings"]));
+    if (map["loyalty.lookback_days"])            setLookbackDays(Number(map["loyalty.lookback_days"]));
+    if (map["loyalty.wa_template_overdue"])      setWaTemplates(t => ({ ...t, overdue:     map["loyalty.wa_template_overdue"] }));
+    if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook:  map["loyalty.wa_template_time_to_book"] }));
+    if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:     map["loyalty.wa_template_on_track"] }));
+    if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:    map["loyalty.wa_template_birthday"] }));
+    if (map["loyalty.wa_template_long_overdue"]) setWaTemplates(t => ({ ...t, longOverdue: map["loyalty.wa_template_long_overdue"] }));
     if (map["loyalty.criteria_enabled"])
       setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
     if (map["loyalty.criteria_service_ids"])
@@ -162,19 +138,19 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
       const rows = [
-        { tenant_id: tenantId, key: "loyalty.reminder_weeks",            value: String(reminderWeeks),                              description: "Loyalty reminder interval in weeks" },
-        { tenant_id: tenantId, key: "loyalty.service_label",             value: serviceLabel,                                       description: "Service label used in WA templates" },
-        { tenant_id: tenantId, key: "loyalty.min_bookings",              value: String(minBookings),                                description: "Min bookings for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.lookback_days",             value: String(lookbackDays),                               description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",       value: waTemplates.overdue,                                description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book",  value: waTemplates.timeToBook,                             description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",      value: waTemplates.onTrack,                                description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",      value: waTemplates.birthday,                               description: "WA template: birthday" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue",  value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue, description: "WA template: not seen in a while" },
-        { tenant_id: tenantId, key: "loyalty.criteria_enabled",          value: String(tenantCriteria.enabled),                     description: "Tenant criteria: enabled" },
-        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",      value: (tenantCriteria.serviceIds ?? []).join(","),         description: "Tenant criteria: service IDs" },
-        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",     value: String(tenantCriteria.minBookings),                  description: "Tenant criteria: min bookings" },
-        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",    value: String(tenantCriteria.lookbackDays),                 description: "Tenant criteria: lookback days" },
+        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                                           description: "Loyalty reminder interval in weeks" },
+        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                                    description: "Service label used in WA templates" },
+        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                             description: "Min bookings for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                                            description: "Lookback window (days) for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                             description: "WA template: overdue" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                                          description: "WA template: time to book" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                             description: "WA template: on track" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                            description: "WA template: birthday" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue,      description: "WA template: not seen in a while" },
+        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                                  description: "Tenant criteria: enabled" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),                      description: "Tenant criteria: service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                              description: "Tenant criteria: min bookings" },
+        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                             description: "Tenant criteria: lookback days" },
       ];
       const { error } = await supabase
         .from("app_settings")
@@ -206,10 +182,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  const enrolledPhones = useMemo(() => new Set(loyaltyRows.map(r => normPhone(r.phone))), [loyaltyRows]);
+  const enrolledPhones = useMemo(
+    () => new Set(loyaltyRows.map(r => normPhone(r.phone))),
+    [loyaltyRows],
+  );
 
   // ── Data: enroll candidates ──
-  const { data: candidates = [], isLoading: loadingCandidates } = useQuery({
+  const { data: candidates = [] } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
     staleTime: 10 * 60 * 1000,
@@ -234,32 +213,37 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
       return Object.values(grouped)
         .filter(g => g.bookings.length >= minBookings && !enrolledPhones.has(normPhone(g.phone)))
-        .map(g => ({
-          phone:              g.phone,
-          client_name:        g.client_name,
-          bookingCount:       g.bookings.length,
-          totalSpend:         g.bookings.reduce((s, b) => s + b.price, 0),
-          ...(() => { const lastDate = g.bookings.slice().sort((a,b)=>b.date.localeCompare(a.date))[0].date; return { daysSinceLastBooking: Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000), lastBookingDate: lastDate.split("T")[0], nextDueDate: format(addDays(new Date(lastDate), reminderWeeks * 7), "yyyy-MM-dd") }; })(),
-        })) as EnrollCandidate[];
+        .map(g => {
+          const sorted   = g.bookings.slice().sort((a, b) => b.date.localeCompare(a.date));
+          const lastDate = sorted[0].date;
+          return {
+            phone:                g.phone,
+            client_name:          g.client_name,
+            bookingCount:         g.bookings.length,
+            totalSpend:           g.bookings.reduce((s, b) => s + b.price, 0),
+            daysSinceLastBooking: Math.floor((Date.now() - new Date(lastDate).getTime()) / 86_400_000),
+            lastBookingDate:      lastDate.split("T")[0],
+            nextDueDate:          format(addDays(new Date(lastDate), reminderWeeks * 7), "yyyy-MM-dd"),
+          };
+        }) as EnrollCandidate[];
     },
   });
 
   // ── Data: enrichment ──
-  // FIX: use `date` column (the actual appointment date) instead of `created_at`
-  // so booking counts and last-visited dates are correct for all enrolled clients.
+  // Uses `date` column (actual appointment date) — not created_at.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const enrichSince = format(subDays(new Date(), 730), "yyyy-MM-dd"); // look back 2 years
+      const enrichSince = format(subDays(new Date(), 730), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
         .select("phone, date, service_price")
         .eq("tenant_id", tenantId)
-        .gte("date", enrichSince)          // ← was .gte("created_at", ...) — FIXED
+        .gte("date", enrichSince)
         .not("phone", "is", null)
-        .limit(1000);                       // increased limit for full history
+        .limit(1000);
       if (error) throw error;
 
       const map: EnrichmentMap = {};
@@ -267,9 +251,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         const key = normPhone(b.phone);
         if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
         map[key].bookingCount++;
-        // Compare date strings directly ("YYYY-MM-DD" sorts lexicographically)
         if (!map[key].lastVisitDate || b.date > map[key].lastVisitDate!) {
-          map[key].lastVisitDate = b.date;  // ← was b.created_at — FIXED
+          map[key].lastVisitDate = b.date;
         }
       }
       return map;
@@ -281,7 +264,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     let rows = [...loyaltyRows];
     if (filterStatus) {
       rows = rows.filter(r => {
-        const eff = effectiveStatus(r, null, reminderWeeks).toLowerCase().replace(/ /g, "_");
+        const phone  = normPhone(r.phone);
+        const enrich = enrichment[phone] ?? null;
+        const eff    = effectiveStatus(r, enrich?.lastVisitDate ?? null, reminderWeeks)
+          .toLowerCase().replace(/ /g, "_");
         return eff === filterStatus;
       });
     }
@@ -290,30 +276,35 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       rows = rows.filter(r =>
         (r.client_name ?? "").toLowerCase().includes(q) ||
         (r.phone ?? "").includes(q) ||
-        (r.source ?? "").toLowerCase().includes(q)
+        (r.source ?? "").toLowerCase().includes(q),
       );
     }
     return rows;
-  }, [loyaltyRows, filterStatus, search, reminderWeeks]);
+  }, [loyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
 
   // ── Status counts for filter pills ──
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of loyaltyRows) {
-      const eff = effectiveStatus(row, null, reminderWeeks).toLowerCase().replace(/ /g, "_");
+      const phone  = normPhone(row.phone);
+      const enrich = enrichment[phone] ?? null;
+      const eff    = effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks)
+        .toLowerCase().replace(/ /g, "_");
       counts[eff] = (counts[eff] ?? 0) + 1;
     }
     return counts;
-  }, [loyaltyRows, reminderWeeks]);
+  }, [loyaltyRows, reminderWeeks, enrichment]);
 
   // ── Effective status map (for bulk bar) ──
   const effectiveStatusMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const row of loyaltyRows) {
-      m[row.id] = optimisticStatus[row.id] ?? effectiveStatus(row, null, reminderWeeks);
+      const phone  = normPhone(row.phone);
+      const enrich = enrichment[phone] ?? null;
+      m[row.id]    = optimisticStatus[row.id] ?? effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks);
     }
     return m;
-  }, [loyaltyRows, optimisticStatus, reminderWeeks]);
+  }, [loyaltyRows, optimisticStatus, reminderWeeks, enrichment]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
@@ -345,13 +336,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     onError: () => toast.error("Failed to enroll client"),
   });
 
-  const handleExport = () => exportCSV(filteredRows, enrichment, reminderWeeks);
-
-  const invalidateLoyalty = () => {
-    qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-  };
-
-  const isLoading = loadingLoyalty;
+  const handleExport  = () => exportCSV(filteredRows, enrichment, reminderWeeks);
+  const invalidateLoyalty = () => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
 
   const handleCriteriaChange = (next: TenantCriteriaSettings) => {
     setTenantCriteria(next);
@@ -485,9 +471,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         {/* ── Status filter pills ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {STATUS_ORDER.map(status => {
-            const count = statusCounts[status] ?? 0;
+            const count    = statusCounts[status] ?? 0;
             const isActive = filterStatus === status;
-            const label = PILL_LABEL[status] ?? status.replace(/_/g, " ");
+            const label    = PILL_LABEL[status] ?? status.replace(/_/g, " ");
             return (
               <button
                 key={status}
@@ -587,7 +573,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         )}
 
         {/* ── Loyalty client list ── */}
-        {isLoading ? (
+        {loadingLoyalty ? (
           <div className="flex items-center justify-center py-16 text-white/30">
             <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading loyalty data…
           </div>
@@ -604,110 +590,27 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         ) : (
           <div className="space-y-2">
             {filteredRows.map(row => {
-              const phone      = normPhone(row.phone);
-              const enrich     = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
-              const effStatus  = optimisticStatus[row.id] ?? effectiveStatus(row, enrich.lastVisitDate, reminderWeeks);
-              const isSelected = selectedIds.includes(row.id);
-              const isExpanded = expandedCard === row.id;
-
+              const phone     = normPhone(row.phone);
+              const enrich    = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
+              const effStatus = optimisticStatus[row.id] ?? effectiveStatus(row, enrich.lastVisitDate, reminderWeeks);
               return (
-                <div
+                <LoyaltyClientCard
                   key={row.id}
-                  onClick={() => setExpandedCard(id => id === row.id ? null : row.id)}
-                  className={`relative rounded-2xl border transition-all cursor-pointer ${
-                    isSelected
-                      ? "border-emerald-500/30 bg-emerald-500/[0.04]"
-                      : "border-white/[0.06] bg-white/[0.025] hover:bg-white/[0.04]"
-                  }`}
-                >
-                  {/* Card top row */}
-                  <div className="flex items-center gap-3 px-4 py-3.5 min-w-0 overflow-hidden">
-                    <button
-                      onClick={e => { e.stopPropagation(); toggleSelect(row.id); }}
-                      className={`w-4.5 h-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
-                        isSelected
-                          ? "bg-emerald-500/20 border-emerald-500/40"
-                          : "border-white/[0.12] bg-white/[0.03] hover:border-white/[0.25]"
-                      }`}
-                      aria-label={isSelected ? "Deselect" : "Select"}
-                    >
-                      {isSelected && <span className="w-2 h-2 rounded-sm bg-emerald-400" />}
-                    </button>
-
-                    {/* FIX: wrap name in a clamped container so it never breaks the card layout */}
-                    <div className="flex-1 min-w-0 overflow-hidden">
-                      <InlineClientEditor
-                        rowId={row.id}
-                        name={row.client_name ?? "Unknown"}
-                        phone={row.phone}
-                        tenantId={tenantId ?? ""}
-                        onUpdated={invalidateLoyalty}
-                      />
-                    </div>
-
-                    <InlineStatusEditor
-                      rowId={row.id}
-                      current={row.status}
-                      effectiveNorm={effStatus}
-                      tenantId={tenantId ?? ""}
-                      onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
-                      onUpdated={invalidateLoyalty}
-                    />
-
-                    <WaButton
-                      name={row.client_name ?? ""}
-                      status={effStatus}
-                      phone={row.phone ?? ""}
-                      businessName={businessName}
-                      serviceLabel={serviceLabel}
-                      templates={waTemplates}
-                    />
-                  </div>
-
-                  {/* Expanded details */}
-                  {isExpanded && (
-                    <div
-                      className="px-4 pb-4 pt-0 space-y-3 border-t border-white/[0.04]"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <div className="flex flex-wrap gap-x-4 gap-y-2 pt-3">
-                        {[
-                          { icon: CalendarCheck, label: "Bookings",   value: enrich.bookingCount },
-                          { icon: Clock,         label: "Last booked", value: enrich.lastVisitDate ? isoToDisplay(enrich.lastVisitDate) : "—" },
-                          { icon: CalendarCheck, label: "Next due",    value: row.next_due_date ? isoToDisplay(String(row.next_due_date)) : "—" },
-                        ].map(({ icon: Icon, label, value }) => (
-                          <div key={label} className="flex items-center gap-1.5 text-[11px] text-white/40">
-                            <Icon className="w-3 h-3 shrink-0" />
-                            <span className="text-white/25">{label}:</span>
-                            <span className="text-white/60">{value}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Birthday editor — tap the cake icon to set/edit */}
-                      <InlineBirthdayEditor
-                        rowId={row.id}
-                        current={(row as any).birthday ?? null}
-                        tenantId={tenantId ?? ""}
-                        onUpdated={invalidateLoyalty}
-                      />
-
-                      <InlineNotesEditor
-                        rowId={row.id}
-                        current={row.notes ?? null}
-                        tenantId={tenantId ?? ""}
-                        onUpdated={invalidateLoyalty}
-                      />
-
-                      <UnregisterButton
-                        rowId={row.id}
-                        clientName={row.client_name ?? "this client"}
-                        tenantId={tenantId ?? ""}
-                        onDeleted={invalidateLoyalty}
-                      />
-                    </div>
-                  )}
-                </div>
+                  row={row}
+                  enrich={enrich}
+                  effStatus={effStatus}
+                  isSelected={selectedIds.includes(row.id)}
+                  isExpanded={expandedCard === row.id}
+                  tenantId={tenantId ?? ""}
+                  businessName={businessName}
+                  serviceLabel={serviceLabel}
+                  waTemplates={waTemplates}
+                  onToggleSelect={() => toggleSelect(row.id)}
+                  onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
+                  onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
+                  onUpdated={invalidateLoyalty}
+                  isoToDisplay={isoToDisplay}
+                />
               );
             })}
           </div>
