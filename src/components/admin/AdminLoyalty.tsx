@@ -19,7 +19,7 @@
  * ────────────────────────
  *   FIX-A  Wire onCandidatesChange: LoyaltyTenantCriteria now fires a callback whenever
  *          criteriaCandidates changes. AdminLoyalty stores those in state and passes them
- *          to CandidatesBar, replacing the broken hardcoded criteria={[]}.
+ *          to CandidatesBar, replacing the broken hardcoded criteria=[].
  *
  *   FIX-B  enrolledPhones dual-phone fix: the Set is now built from BOTH client_phone and
  *          guest_phone columns so clients like Hanga (who booked under a different phone
@@ -31,6 +31,18 @@
  *
  *   FIX-D  Default open on "Enrolled": filterStatus initial state changed from null
  *          to "enrolled" so the page opens showing the full enrolled list.
+ *
+ *   FIX-E  nextyCandidates queryKey now includes enrolledPhones.size so the query
+ *          re-runs once the enrolled Set is populated (was returning stale results
+ *          on first render when enrolledPhones was still empty).
+ *
+ *   FIX-F  Dedup loyaltyRows by normalised phone before rendering. Clients who were
+ *          accidentally enrolled multiple times (e.g. Caylin) now appear only once.
+ *          The most recently created row is kept; older duplicates are hidden from
+ *          the UI (not deleted from DB).
+ *
+ *   FIX-G  enrollMutation guards against re-enrolment: if the phone is already in
+ *          enrolledPhones, the mutation shows a toast instead of inserting a duplicate.
  *
  * Earlier bug-fixes
  * ─────────────────
@@ -696,6 +708,20 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
+  // FIX-F: Dedup loyaltyRows by normalised phone.
+  // Rows are ordered by created_at DESC so the first occurrence per phone
+  // is always the most recently enrolled row. Duplicates are hidden from
+  // the UI (not deleted from the DB).
+  const dedupedLoyaltyRows = useMemo(() => {
+    const seen = new Set<string>();
+    return loyaltyRows.filter(row => {
+      const key = normPhone(row.phone);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [loyaltyRows]);
+
   // FIX-B: enrolledPhones built from BOTH phone columns in bookings so dual-phone
   // clients (e.g. Hanga) cannot slip through as enrolment candidates.
   // We also keep the loyalty_tracker phone set for the criteria component.
@@ -731,9 +757,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return set;
   }, [loyaltyRows, allBookingPhones]);
 
-  // ── Data: Nexty enrol candidates ──
+  // FIX-E: Include enrolledPhones.size in the queryKey so this re-runs
+  // once loyaltyRows/allBookingPhones have loaded and the Set is populated.
+  // Previously the query ran on first render with an empty enrolledPhones Set,
+  // causing already-enrolled clients to appear as candidates.
   const { data: nextyCandidates = [] } = useQuery({
-    queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
+    queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays, enrolledPhones.size],
     enabled: !!tenantId,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
@@ -826,10 +855,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // ── Filtered rows ──
+  // ── Filtered rows (uses dedupedLoyaltyRows) ──
   // FIX-C: "enrolled" pill bypasses effectiveStatus and shows all loyalty_tracker rows.
+  // FIX-F: We use dedupedLoyaltyRows so each phone appears at most once.
   const filteredRows = useMemo(() => {
-    let rows = [...loyaltyRows];
+    let rows = [...dedupedLoyaltyRows];
     if (filterStatus && filterStatus !== "enrolled") {
       rows = rows.filter(r => {
         const phone  = normPhone(r.phone);
@@ -848,11 +878,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       );
     }
     return rows;
-  }, [loyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
+  }, [dedupedLoyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const row of loyaltyRows) {
+    for (const row of dedupedLoyaltyRows) {
       const phone  = normPhone(row.phone);
       const enrich = enrichment[phone] ?? null;
       const eff    = effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks)
@@ -860,23 +890,27 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       counts[eff] = (counts[eff] ?? 0) + 1;
     }
     return counts;
-  }, [loyaltyRows, reminderWeeks, enrichment]);
+  }, [dedupedLoyaltyRows, reminderWeeks, enrichment]);
 
   const effectiveStatusMap = useMemo(() => {
     const m: Record<string, string> = {};
-    for (const row of loyaltyRows) {
+    for (const row of dedupedLoyaltyRows) {
       const phone  = normPhone(row.phone);
       const enrich = enrichment[phone] ?? null;
       m[row.id]    = optimisticStatus[row.id] ?? effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks);
     }
     return m;
-  }, [loyaltyRows, optimisticStatus, reminderWeeks, enrichment]);
+  }, [dedupedLoyaltyRows, optimisticStatus, reminderWeeks, enrichment]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
 
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
+      // FIX-G: Guard against re-enrolment — show a toast instead of inserting a duplicate row.
+      if (enrolledPhones.has(normPhone(candidate.phone))) {
+        throw new Error("already_enrolled");
+      }
       const now = new Date().toISOString();
       const computed = candidate.lastBookingDate
         ? effectiveStatus(
@@ -903,11 +937,15 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       setEnrolledName(candidate.client_name);
       setEnrollCandidate(null);
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-      qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays] });
+      qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays, enrolledPhones.size] });
     },
     onError: (err) => {
-      console.error("Enrol error:", err);
-      toast.error("Failed to enrol client");
+      if ((err as Error).message === "already_enrolled") {
+        toast.warning("This client is already enrolled in the loyalty programme.");
+      } else {
+        console.error("Enrol error:", err);
+        toast.error("Failed to enrol client");
+      }
     },
   });
 
@@ -926,7 +964,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         {/* ── Header ── */}
         <AdminPageHeader
           title="Loyalty Programme"
-          subtitle={`${loyaltyRows.length} client${loyaltyRows.length !== 1 ? "s" : ""} enrolled`}
+          subtitle={`${dedupedLoyaltyRows.length} client${dedupedLoyaltyRows.length !== 1 ? "s" : ""} enrolled`}
           action={
             <div className="flex gap-2 flex-nowrap items-center">
               <button
@@ -1154,7 +1192,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             <span className={`text-[10px] tabular-nums ${
               filterStatus === "enrolled" ? "text-white/60" : "text-white/25"
             }`}>
-              ({loyaltyRows.length})
+              ({dedupedLoyaltyRows.length})
             </span>
           </button>
 
