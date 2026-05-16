@@ -44,6 +44,25 @@
  *   FIX-G  enrollMutation guards against re-enrolment: if the phone is already in
  *          enrolledPhones, the mutation shows a toast instead of inserting a duplicate.
  *
+ *   FIX-H  Phone normalisation on enrol: enrollMutation now calls
+ *          normalisePhoneForStorage() before inserting into loyalty_tracker so every
+ *          new row is stored in clean E.164 (+27XXXXXXXXX). Falls back to raw value
+ *          if normalisation returns null (e.g. very short / non-ZA numbers).
+ *
+ *   FIX-I  Enrolled filter data-source contract: the enrolled list is drawn
+ *          EXCLUSIVELY from loyalty_tracker rows (dedupedLoyaltyRows). It never
+ *          pulls from the bookings or clients tables directly. Sub-status pills
+ *          (overdue, long_overdue, time_to_book, on_track, birthday) are mutually
+ *          exclusive subsets computed via effectiveStatus() over the same set.
+ *
+ *   FIX-J  Sub-status mutual exclusivity confirmed: effectiveStatus() returns exactly
+ *          one value per row so a client can only appear under one pill at a time.
+ *          long_overdue clients do NOT appear in the overdue or on_track pills.
+ *
+ *   FIX-K  CandidatesBar source differentiation: heading now clearly states how many
+ *          candidates come from tenant criteria vs Nexty. Nexty chips display a
+ *          MiniNextyOrb icon; criteria chips retain their violet badge.
+ *
  * Earlier bug-fixes
  * ─────────────────
  *   1.  LoyaltyTenantCriteria rendered without onEnroll → tapping a candidate did nothing.
@@ -84,7 +103,7 @@ import {
 } from "./loyalty/loyaltyConstants";
 import {
   isoToDisplay,
-  normPhone, recipientPhone, recipientName,
+  normPhone, normalisePhoneForStorage, recipientPhone, recipientName,
   effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
 import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
@@ -464,6 +483,19 @@ function FloatingSaveBar({
 
 // ──────────────────────────────────────────────────────────────────
 // CandidatesBar — unified enrolment candidates tray.
+//
+// DATA CONTRACT (FIX-K):
+//   • `criteria` — clients who meet the TENANT's own service-based criteria
+//     (e.g. "booked waxing ≥ 2 times in last 60 days"). Sourced from
+//     LoyaltyTenantCriteria via onCandidatesChange. Rendered in violet.
+//
+//   • `nexty` — clients Nexty recommends based on overall booking frequency
+//     (minBookings threshold across any service, lookback window). Rendered
+//     with the gold Nexty orb. Nexty candidates that also appear in `criteria`
+//     are hidden from the Nexty list to avoid duplication.
+//
+// Neither list includes clients already in loyalty_tracker (enrolledPhones
+// is filtered upstream before these arrays reach this component).
 // ──────────────────────────────────────────────────────────────────
 function CandidatesBar({
   nexty,
@@ -484,21 +516,46 @@ function CandidatesBar({
 
   if (all.length === 0) return null;
 
-  const total = nexty.length + criteria.length;
+  // ── Build a clear heading that names each source (FIX-K) ──
+  const criteriaCount = criteria.length;
+  const nextyCount    = nextyFiltered.length;
+  let headingDetail: React.ReactNode;
+  if (criteriaCount > 0 && nextyCount > 0) {
+    headingDetail = (
+      <>
+        <span className="text-violet-400/80">
+          {criteriaCount} match{criteriaCount !== 1 ? "" : "es"} your criteria
+        </span>
+        <span className="text-white/20 mx-1">·</span>
+        <span className="text-amber-400/70 flex items-center gap-1">
+          <MiniNextyOrb />{nextyCount} from Nexty
+        </span>
+      </>
+    );
+  } else if (criteriaCount > 0) {
+    headingDetail = (
+      <span className="text-violet-400/80">
+        {criteriaCount} match{criteriaCount !== 1 ? "" : "es"} your criteria
+      </span>
+    );
+  } else {
+    headingDetail = (
+      <span className="text-amber-400/70 flex items-center gap-1">
+        <MiniNextyOrb />{nextyCount} recommended by Nexty
+      </span>
+    );
+  }
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <UserPlus className="w-3.5 h-3.5 text-white/50" />
+      <div className="flex items-center gap-2 flex-wrap">
+        <UserPlus className="w-3.5 h-3.5 text-white/50 shrink-0" />
         <span className="text-xs font-semibold text-white/60">
-          {total} client{total !== 1 ? "s" : ""} eligible for enrolment
+          {criteriaCount + nextyFiltered.length} client{(criteriaCount + nextyFiltered.length) !== 1 ? "s" : ""} eligible for enrolment
         </span>
-        {criteria.length > 0 && (
-          <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/10 text-violet-400/80 border border-violet-500/15">
-            <Sparkles className="w-2.5 h-2.5" />
-            {criteria.length} from your criteria
-          </span>
-        )}
+        <span className="ml-auto flex items-center gap-1.5 text-[11px] font-medium">
+          {headingDetail}
+        </span>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -508,13 +565,16 @@ function CandidatesBar({
             <button
               key={c.phone + c.client_name}
               onClick={() => onEnroll(c)}
+              aria-label={`Enrol ${c.client_name} via ${isCriteria ? "your criteria" : "Nexty recommendation"}`}
               className={`flex items-center gap-1.5 px-3 py-2 shrink-0 rounded-xl text-xs font-medium transition-all
                 ${isCriteria
                   ? "bg-violet-500/[0.08] hover:bg-violet-500/[0.14] border border-violet-500/20 text-violet-300/80"
                   : "bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-white/70"
                 }`}
             >
-              <UserPlus className={`w-3 h-3 shrink-0 ${isCriteria ? "text-violet-400/60" : "text-white/40"}`} />
+              {isCriteria
+                ? <UserPlus className="w-3 h-3 shrink-0 text-violet-400/60" />
+                : <MiniNextyOrb />}
               <span>{c.client_name || c.phone}</span>
               <span className="opacity-50">· {c.bookingCount} visits</span>
               {isCriteria && c.matchedServices && c.matchedServices.length > 0 && (
@@ -525,9 +585,9 @@ function CandidatesBar({
             </button>
           );
         })}
-        {total > 8 && (
+        {(criteriaCount + nextyFiltered.length) > 8 && (
           <span className="flex items-center px-3 py-2 text-xs text-white/25">
-            +{total - 8} more in Settings → Enrolment Rules
+            +{(criteriaCount + nextyFiltered.length) - 8} more in Settings → Enrolment Rules
           </span>
         )}
       </div>
@@ -692,6 +752,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: loyalty rows ──
+  // FIX-I: The enrolled list is drawn EXCLUSIVELY from loyalty_tracker.
+  // It does NOT pull from the bookings or clients tables directly.
+  // A client appears here only because a tenant (or Nexty) explicitly enrolled them.
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery({
     queryKey: ["loyalty_tracker", tenantId],
     enabled: !!tenantId,
@@ -856,8 +919,17 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Filtered rows (uses dedupedLoyaltyRows) ──
-  // FIX-C: "enrolled" pill bypasses effectiveStatus and shows all loyalty_tracker rows.
-  // FIX-F: We use dedupedLoyaltyRows so each phone appears at most once.
+  //
+  // DATA CONTRACT (FIX-I + FIX-J):
+  //   filterStatus === "enrolled"   → ALL dedupedLoyaltyRows (complete programme list)
+  //   filterStatus === <sub-status> → exclusive subset: only rows whose effectiveStatus
+  //                                   matches that pill. effectiveStatus() returns a single
+  //                                   value per row so pills are mutually exclusive.
+  //   filterStatus === null         → same as "enrolled" (shown when filter is cleared)
+  //
+  // IMPORTANT: rows always come from dedupedLoyaltyRows (loyalty_tracker only).
+  // Never filter from bookings or clients tables here — this list represents
+  // clients the TENANT has explicitly enrolled in the loyalty programme.
   const filteredRows = useMemo(() => {
     let rows = [...dedupedLoyaltyRows];
     if (filterStatus && filterStatus !== "enrolled") {
@@ -911,6 +983,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (enrolledPhones.has(normPhone(candidate.phone))) {
         throw new Error("already_enrolled");
       }
+
+      // FIX-H: Normalise the phone to E.164 (+27XXXXXXXXX) before storing.
+      // Falls back to the raw value only if normalisation returns null (e.g.
+      // very short numbers or non-ZA international numbers without a leading +).
+      const normalisedPhone = normalisePhoneForStorage(candidate.phone) ?? candidate.phone;
+
       const now = new Date().toISOString();
       const computed = candidate.lastBookingDate
         ? effectiveStatus(
@@ -922,7 +1000,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       const { error } = await supabase.from("loyalty_tracker").insert({
         tenant_id:     tenantId,
         client_name:   candidate.client_name,
-        phone:         candidate.phone,
+        phone:         normalisedPhone,
         status:        toDbStatus(computed),
         source:        candidate.candidateSource ?? "manual",
         notes:         candidate.notes ?? null,
@@ -1179,7 +1257,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
         {/* ── Status filter pills ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {/* FIX-C: "Enrolled" pill — shows all loyalty_tracker rows */}
+          {/* FIX-C / FIX-I: "Enrolled" pill — shows ALL loyalty_tracker rows.
+              This list is sourced ONLY from loyalty_tracker, never from bookings/clients. */}
           <button
             onClick={() => setFilterStatus(s => s === "enrolled" ? null : "enrolled")}
             className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
@@ -1196,6 +1275,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             </span>
           </button>
 
+          {/* FIX-J: Sub-status pills — each shows an exclusive subset of enrolled clients.
+              effectiveStatus() returns exactly one value per row so these never overlap. */}
           {STATUS_ORDER.map(status => {
             const count    = statusCounts[status] ?? 0;
             const isActive = filterStatus === status;
@@ -1246,7 +1327,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           )}
         </div>
 
-        {/* ── Candidates bar — FIX-A: criteria now live, not hardcoded [] ── */}
+        {/* ── Candidates bar — FIX-A + FIX-K: criteria sourced live, sources clearly differentiated ── */}
         <CandidatesBar
           nexty={nextyCandidates}
           criteria={criteriaCandidates}
@@ -1347,12 +1428,4 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       {/* ── Enrol success celebration ── */}
       <AnimatePresence>
         {enrolledName && (
-          <EnrollSuccessCelebration
-            name={enrolledName}
-            onDone={() => setEnrolledName(null)}
-          />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+          <EnrollSuccessCelebrat
