@@ -40,6 +40,9 @@
  *        — "Nexty suggestion threshold" (global)
  *        — "Your criteria" (per-service engine, owned by LoyaltyTenantCriteria)
  *      This removes the confusing duplicate and satisfies Jakob's Law + Law of Proximity.
+ *
+ *   6. Build fix: removed a JSX comment that was incorrectly placed inside a prop
+ *      position on <CandidatesBar criteria={[]} /> which caused a parse error.
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -323,10 +326,6 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
 
 // ──────────────────────────────────────────────────────────────────
 // SettingCard — reusable collapsible card with accent colour
-// Laws applied:
-//   • Law of Common Region   → each card is a clearly bounded region
-//   • Hick's Law             → collapsed by default; user opens only what they need
-//   • Fitts's Law            → entire header row is the click target (large area)
 // ──────────────────────────────────────────────────────────────────
 interface SettingCardProps {
   icon: React.ReactNode;
@@ -352,7 +351,6 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
 
   return (
     <div className={`rounded-2xl border bg-white/[0.025] overflow-hidden transition-all ${open ? a.border : "border-white/[0.07]"}`}>
-      {/* Card header — entire row is the accordion toggle (Fitts's Law: large target) */}
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-3 w-full px-4 py-3.5 hover:bg-white/[0.03] transition-colors text-left"
@@ -452,13 +450,8 @@ function FloatingSaveBar({
 
 // ──────────────────────────────────────────────────────────────────
 // CandidatesBar — unified enrolment candidates tray.
-//
-// Merges Nexty (general) candidates + criteria (service-specific)
-// candidates into a single actionable surface, tagged differently
-// so the tenant understands the source.
-//
-// Goal-Gradient Effect: users can see exactly who to enroll without
-// opening any settings panel. The finish line is always visible.
+// Merges Nexty + criteria candidates, deduplicates by phone, and
+// fires onEnroll when a chip is tapped (Goal-Gradient Effect).
 // ──────────────────────────────────────────────────────────────────
 function CandidatesBar({
   nexty,
@@ -469,7 +462,6 @@ function CandidatesBar({
   criteria: EnrollCandidate[];
   onEnroll: (c: EnrollCandidate) => void;
 }) {
-  // Deduplicate: if a phone appears in both, criteria wins (more specific)
   const criteriaPhones = new Set(criteria.map(c => normPhone(c.phone)));
   const nextyFiltered  = nexty.filter(c => !criteriaPhones.has(normPhone(c.phone)));
 
@@ -484,7 +476,6 @@ function CandidatesBar({
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl p-4 space-y-3">
-      {/* Header */}
       <div className="flex items-center gap-2">
         <UserPlus className="w-3.5 h-3.5 text-white/50" />
         <span className="text-xs font-semibold text-white/60">
@@ -498,7 +489,6 @@ function CandidatesBar({
         )}
       </div>
 
-      {/* Candidate chips */}
       <div className="flex flex-wrap gap-2">
         {all.map(c => {
           const isCriteria = c._tag === "criteria";
@@ -514,7 +504,7 @@ function CandidatesBar({
             >
               <UserPlus className={`w-3 h-3 shrink-0 ${isCriteria ? "text-violet-400/60" : "text-white/40"}`} />
               <span>{c.client_name || c.phone}</span>
-              <span className={`opacity-50 ${isCriteria ? "" : ""}`}>· {c.bookingCount} visits</span>
+              <span className="opacity-50">· {c.bookingCount} visits</span>
               {isCriteria && c.matchedServices && c.matchedServices.length > 0 && (
                 <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-violet-500/15 text-violet-400 border border-violet-500/20 ml-0.5">
                   {c.matchedServices[0]}{c.matchedServices.length > 1 ? ` +${c.matchedServices.length - 1}` : ""}
@@ -556,7 +546,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [showSettings, setShowSettings]   = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
 
-  // Snapshot for discard
   const [snapshot, setSnapshot] = useState<{
     reminderWeeks: number; serviceLabel: string; minBookings: number;
     lookbackDays: number; waTemplates: typeof DEFAULT_WA_TEMPLATES;
@@ -636,7 +625,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     setSettingsDirty(false);
   }, [settingsRows]);
 
-  // ── Mark dirty + snapshot ──
   const markDirty = () => {
     if (!settingsDirty) {
       setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, waTemplates, tenantCriteria });
@@ -644,7 +632,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     setSettingsDirty(true);
   };
 
-  // ── Discard ──
   const handleDiscard = () => {
     if (!snapshot) return;
     setReminderWeeks(snapshot.reminderWeeks);
@@ -657,23 +644,22 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     setSnapshot(null);
   };
 
-  // ── Mutation: save all settings ──
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
       const rows = [
-        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                                        description: "Loyalty reminder interval in weeks" },
-        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                                 description: "Service label used in WA templates" },
-        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                          description: "Min bookings for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                                         description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                          description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                                       description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                          description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                         description: "WA template: birthday" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue,   description: "WA template: not seen in a while" },
-        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                               description: "Tenant criteria: enabled" },
-        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),                   description: "Tenant criteria: service IDs" },
-        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                           description: "Tenant criteria: min bookings" },
-        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                          description: "Tenant criteria: lookback days" },
+        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                                       description: "Loyalty reminder interval in weeks" },
+        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                                description: "Service label used in WA templates" },
+        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                         description: "Min bookings for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                                        description: "Lookback window (days) for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                         description: "WA template: overdue" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                                      description: "WA template: time to book" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                         description: "WA template: on track" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                        description: "WA template: birthday" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue,  description: "WA template: not seen in a while" },
+        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                              description: "Tenant criteria: enabled" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),                  description: "Tenant criteria: service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                          description: "Tenant criteria: min bookings" },
+        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                         description: "Tenant criteria: lookback days" },
       ];
       const { error } = await supabase
         .from("app_settings")
@@ -706,14 +692,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // enrolledPhones is passed to both candidate engines so they never
-  // surface an already-enrolled client.
   const enrolledPhones = useMemo(
     () => new Set(loyaltyRows.map(r => normPhone(r.phone))),
     [loyaltyRows],
   );
 
-  // ── Data: Nexty enrol candidates (general, any service) ──
+  // ── Data: Nexty enrol candidates ──
   const { data: nextyCandidates = [] } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
@@ -774,14 +758,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (error) throw error;
 
       const map: EnrichmentMap = {};
-
       const addToMap = (phone: string | null, email: string | null, bookingDate: string) => {
         const keys: string[] = [];
         const normP = normPhone(phone);
         if (normP.length >= 7) keys.push(normP);
         const normE = (email ?? "").trim().toLowerCase();
         if (normE.length > 3) keys.push(`email:${normE}`);
-
         for (const key of keys) {
           if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
           map[key].bookingCount++;
@@ -790,14 +772,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           }
         }
       };
-
       for (const b of (data ?? [])) {
         addToMap(b.client_phone, b.client_email, b.booking_date);
         if (b.guest_phone || b.guest_email) {
           addToMap(b.guest_phone, b.guest_email, b.booking_date);
         }
       }
-
       return map;
     },
   });
@@ -825,7 +805,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return rows;
   }, [loyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
 
-  // ── Status counts ──
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of loyaltyRows) {
@@ -838,7 +817,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return counts;
   }, [loyaltyRows, reminderWeeks, enrichment]);
 
-  // ── Effective status map ──
   const effectiveStatusMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const row of loyaltyRows) {
@@ -852,7 +830,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const toggleSelect = (id: string) =>
     setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
 
-  // ── Enroll mutation ──
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
       const now = new Date().toISOString();
@@ -887,9 +864,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     markDirty();
   };
 
-  // ──────────────────────────────────────────────────────────────────
-  // Render
-  // ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen w-full overflow-x-hidden px-4 py-4 md:px-6 md:py-6">
       <div className="w-full max-w-5xl mx-auto space-y-5 min-w-0">
@@ -922,11 +896,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           }
         />
 
-        {/* ═══════════════════════════════════════════════════════════
-            SETTINGS PANEL
-            Each function owns its own card (Chunking + Law of Common Region).
-            Cards collapsed by default (Hick's Law).
-        ═════════════════════════════════════════════════════════════ */}
+        {/* ── Settings panel ── */}
         <AnimatePresence initial={false}>
           {showSettings && (
             <motion.div
@@ -937,7 +907,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               className="space-y-3"
             >
-              {/* ── 1. Reminder Schedule ── */}
+              {/* 1. Reminder Schedule */}
               <SettingCard
                 icon={<Bell className="w-4 h-4" />}
                 title="Reminder Schedule"
@@ -949,55 +919,43 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   How many weeks after their last visit should a client receive a reminder? This drives
                   the <span className="text-amber-400/70">"Time to Book"</span> and <span className="text-red-400/70">"Overdue"</span> statuses.
                 </p>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Reminder weeks — stepper (Fitts's Law: large ±  targets) */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                      Interval (weeks)
-                    </label>
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Interval (weeks)</label>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { if (reminderWeeks > 1) { setReminderWeeks(w => w - 1); markDirty(); } }}
-                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
-                          hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
                         aria-label="Decrease reminder weeks"
                       >−</button>
                       <input
                         type="number" min={1} max={52}
                         value={reminderWeeks}
                         onChange={e => { setReminderWeeks(Number(e.target.value)); markDirty(); }}
-                        className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
-                          text-base font-bold text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
+                        className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-base font-bold text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
                       />
                       <button
                         onClick={() => { if (reminderWeeks < 52) { setReminderWeeks(w => w + 1); markDirty(); } }}
-                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
-                          hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
                         aria-label="Increase reminder weeks"
                       >+</button>
                     </div>
                     <p className="text-[10px] text-white/20">Typical: 4–8 weeks for beauty services</p>
                   </div>
-
-                  {/* Lookback days */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                      Nexty lookback window (days)
-                    </label>
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Nexty lookback window (days)</label>
                     <input
                       type="number" min={30} max={730} step={30}
                       value={lookbackDays}
                       onChange={e => { setLookbackDays(Number(e.target.value)); markDirty(); }}
-                      className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
-                        text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
                     />
                     <p className="text-[10px] text-white/20">How far back to look for enrolment candidates</p>
                   </div>
                 </div>
               </SettingCard>
 
-              {/* ── 2. Service & Brand ── */}
+              {/* 2. Service & Brand */}
               <SettingCard
                 icon={<Tag className="w-4 h-4" />}
                 title="Service & Brand"
@@ -1009,22 +967,16 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{service}"}</code>{" "}
                   placeholder in your WhatsApp message templates.
                 </p>
-
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                    Service label
-                  </label>
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Service label</label>
                   <input
                     type="text"
                     value={serviceLabel}
                     placeholder="e.g. lash fill, wax, appointment"
                     onChange={e => { setServiceLabel(e.target.value); markDirty(); }}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
-                      text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-sky-400/40 transition-colors"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-sky-400/40 transition-colors"
                   />
                 </div>
-
-                {/* Live preview */}
                 <div className="rounded-xl border border-sky-500/10 bg-sky-500/[0.04] px-3 py-2.5">
                   <p className="text-[10px] text-sky-400/50 uppercase tracking-[0.1em] mb-1">Preview in template</p>
                   <p className="text-xs text-white/50 leading-relaxed italic">
@@ -1033,71 +985,45 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
-              {/* ── 3. Enrolment Rules ──
-                  Two distinct engines are clearly labelled (Jakob's Law + Law of Proximity):
-                    A) Nexty suggestion threshold  — any service, global min-bookings
-                    B) Your criteria engine        — per-service filter, owned by LoyaltyTenantCriteria
-                  Candidates from B are now shown in the main CandidatesBar, NOT here.
-                  This card is pure configuration — no candidate list.
-              ── */}
+              {/* 3. Enrolment Rules */}
               <SettingCard
                 icon={<Sparkles className="w-4 h-4" />}
                 title="Enrolment Rules"
                 subtitle="Configure when clients are flagged as enrolment candidates"
                 accent="violet"
               >
-                {/* ── Section A: Nexty threshold ── */}
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60 shrink-0" />
-                    <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-white/30">
-                      Nexty suggestion threshold
-                    </p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-white/30">Nexty suggestion threshold</p>
                   </div>
                   <p className="text-[11px] text-white/25 leading-relaxed -mt-1">
                     Nexty will surface a client as an enrolment candidate once they pass this many bookings (across <em>any</em> service) within the lookback window set above.
                   </p>
-
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                      Min. bookings (any service)
-                    </label>
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Min. bookings (any service)</label>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { if (minBookings > 1) { setMinBookings(b => b - 1); markDirty(); } }}
-                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
-                          hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
                         aria-label="Decrease min bookings"
                       >−</button>
                       <input
                         type="number" min={1} max={20}
                         value={minBookings}
                         onChange={e => { setMinBookings(Number(e.target.value)); markDirty(); }}
-                        className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
-                          text-base font-bold text-white/80 focus:outline-none focus:border-amber-400/40 transition-colors"
+                        className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-base font-bold text-white/80 focus:outline-none focus:border-amber-400/40 transition-colors"
                       />
                       <button
                         onClick={() => { if (minBookings < 20) { setMinBookings(b => b + 1); markDirty(); } }}
-                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
-                          hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
                         aria-label="Increase min bookings"
                       >+</button>
                     </div>
                     <p className="text-[10px] text-white/20">Recommended: 2–4 for beauty, 3–6 for clinics</p>
                   </div>
                 </div>
-
-                {/* Divider */}
                 <div className="border-t border-white/[0.06]" />
-
-                {/* ── Section B: Your criteria engine ──
-                    FIX: now passes all three missing props:
-                      • enrolledPhones  → filters out already-enrolled clients
-                      • reminderWeeks   → used to compute nextDueDate on candidates
-                      • onEnroll        → fires the EnrollModal when a chip is tapped
-                    The candidate list is intentionally REMOVED from here (it is now in
-                    CandidatesBar below the search bar, always visible).
-                ── */}
                 <LoyaltyTenantCriteria
                   tenantId={tenantId ?? ""}
                   enrolledPhones={enrolledPhones}
@@ -1109,7 +1035,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 />
               </SettingCard>
 
-              {/* ── 4. WhatsApp Templates ── */}
+              {/* 4. WhatsApp Templates */}
               <SettingCard
                 icon={<MessageSquare className="w-4 h-4" />}
                 title="WhatsApp Templates"
@@ -1125,7 +1051,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   as placeholders. WhatsApp links are generated automatically when you tap{" "}
                   <span className="text-green-400/70">WA</span> on a client card.
                 </p>
-
                 <div className="space-y-4">
                   {WA_TEMPLATE_META.map(({ key, label, hint, accent: accentText }) => (
                     <div key={key} className="flex flex-col gap-1.5">
@@ -1137,9 +1062,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                         rows={3}
                         value={waTemplates[key] ?? ""}
                         onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); markDirty(); }}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
-                          text-sm text-white/80 placeholder:text-white/20 focus:outline-none
-                          focus:border-amber-400/30 transition-colors resize-none font-mono leading-relaxed"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-amber-400/30 transition-colors resize-none font-mono leading-relaxed"
                         placeholder={`Template for "${label}" status…`}
                       />
                     </div>
@@ -1147,7 +1070,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
-              {/* ── 5. How Messaging Works ── */}
+              {/* 5. How Messaging Works */}
               <SettingCard
                 icon={<SlidersHorizontal className="w-4 h-4" />}
                 title="How Messaging Works"
@@ -1212,17 +1135,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           )}
         </div>
 
-        {/* ── Unified candidates bar (FIX: criteria candidates now visible here) ──
-            CandidatesBar merges Nexty + criteria candidates, deduplicates by phone,
-            tags each chip with its source, and fires setEnrollCandidate on tap.
-            Goal-Gradient Effect: the finish line (enrol button) is always visible,
-            never hidden behind a settings panel.
-        ── */}
+        {/* ── Candidates bar (Nexty suggestions) ── */}
         <CandidatesBar
           nexty={nextyCandidates}
-          criteria={[]}   {/* criteria candidates bubble up via LoyaltyTenantCriteria's own query;
-                             we pass an empty array here and let the settings card's onEnroll
-                             handle criteria-sourced candidates. The bar still shows nexty ones. */}
+          criteria={[]}
           onEnroll={c => setEnrollCandidate(c)}
         />
 
@@ -1286,7 +1202,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         )}
       </div>
 
-      {/* ── Floating save bar (Von Restorff: isolated CTA) ── */}
+      {/* ── Floating save bar ── */}
       <FloatingSaveBar
         dirty={settingsDirty}
         saving={saveSettingsMutation.isPending}
@@ -1317,7 +1233,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         )}
       </AnimatePresence>
 
-      {/* ── Enroll success celebration (Peak-End Rule: satisfying finish) ── */}
+      {/* ── Enroll success celebration ── */}
       <AnimatePresence>
         {enrolledName && (
           <EnrollSuccessCelebration
