@@ -8,11 +8,22 @@ import {
 } from "date-fns";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+// Identity resolution — canonical order:
+// 1. client_name/email/phone — denormalised, kept in sync by trg_sync_guest_to_client trigger
+// 2. guest_name/email/phone  — raw guest input (pre-trigger / INSERT edge cases)
+// 3. profiles join            — registered client fallback
 function resolveClientName(b: any): string {
   return b.client_name || b.guest_name || b.client?.full_name || "Unknown";
 }
+
+// Unique client key for deduplication — prefer stable IDs then email then phone (last 9).
 function resolveClientKey(b: any): string {
-  return b.client_id || b.guest_email || b.guest_phone || b.id;
+  if (b.client_id) return b.client_id;
+  const email = b.client_email || b.guest_email || b.client?.email;
+  if (email) return email.toLowerCase().trim();
+  const phone = b.client_phone || b.guest_phone || b.client?.phone;
+  if (phone) return String(phone).replace(/\D/g, "").slice(-9);
+  return b.id;
 }
 
 const CLIENT_TYPE_LABELS = ["new client", "new", "existing client", "existing"];
@@ -88,7 +99,7 @@ export function useDashboardData() {
   const ninetyDaysAgo = format(subDays(now, 90), "yyyy-MM-dd");
   const fetchFromDate = format(subDays(now, 91), "yyyy-MM-dd");
 
-  // 1. Bookings — current month
+  // 1. Bookings — current month (all identity columns + items for service/balance rendering)
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
@@ -98,20 +109,34 @@ export function useDashboardData() {
         .select(`
           id,
           client_id,
+          staff_id,
           booking_date,
           start_time,
           end_time,
           status,
           total_amount,
+          deposit_amount,
           balance_due,
           deposit_paid,
+          full_payment_received,
+          final_payment_paid,
+          is_call_out,
+          call_out_address,
+          call_out_fee,
+          lead_source,
           client_name,
+          client_email,
+          client_phone,
           guest_name,
           guest_email,
           guest_phone,
-          staff_id,
-          lead_source,
-          client:profiles!bookings_client_id_fkey(full_name, phone),
+          cancellation_reason,
+          client_notes,
+          staff_notes,
+          notes,
+          gcal_event_id,
+          created_at,
+          client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
           items:booking_items(service_name, price, duration_minutes, sort_order)
         `)
         .eq("tenant_id", tenantId)
@@ -124,14 +149,24 @@ export function useDashboardData() {
     },
   });
 
-  // 2. Previous month bookings
+  // 2. Previous month bookings — identity columns needed for client deduplication
   const { data: prevBookings = [], isLoading: l2 } = useQuery({
     queryKey:  ["dash-bookings-prev", tenantId, prevStart],
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("total_amount, status, client_id, guest_email, guest_phone, id")
+        .select(`
+          id,
+          total_amount,
+          status,
+          client_id,
+          client_email,
+          client_phone,
+          guest_email,
+          guest_phone,
+          client:profiles!bookings_client_id_fkey(email, phone)
+        `)
         .eq("tenant_id", tenantId)
         .gte("booking_date", prevStart)
         .lte("booking_date", prevEnd)
@@ -222,7 +257,9 @@ export function useDashboardData() {
     },
   });
 
-  // 8. 90-day bookings — revenue trend fallback (bookings without payments rows)
+  // 8. 90-day bookings — revenue trend fallback.
+  // We include all non-cancelled bookings; the payments table (query 3) takes
+  // precedence in the merge step, so no payment-status gate is needed here.
   const { data: trendBookings = [], isLoading: l6 } = useQuery({
     queryKey:  ["dash-trend-bookings", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
@@ -240,8 +277,6 @@ export function useDashboardData() {
   });
 
   // 9. All-time bookings (non-cancelled) with booking_items — for allTimeTopServices.
-  //    staleTime is long (15 min) because this is historical, changes infrequently.
-  //    We select only the fields needed for service aggregation.
   const { data: allTimeBookings = [], isLoading: l7 } = useQuery({
     queryKey:  ["dash-alltime-bookings", tenantId],
     staleTime: 15 * 60 * 1000,
@@ -259,7 +294,6 @@ export function useDashboardData() {
       return data ?? [];
     },
   });
-
 
   // 10. New vs returning clients split — RPC-based, accurate across all booking history.
   const { data: newVsReturningData } = useQuery({
@@ -347,28 +381,25 @@ export function useDashboardData() {
   const nextAppt = upcoming[0] as any;
 
   // ─── top services (this month) ────────────────────────────────────────────
-  // Built from current-month non-cancelled bookings (query 1 → `active`).
   const topServices = useMemo(
     () => buildTopServices(active),
     [active]
   );
 
   // ─── all-time top services ────────────────────────────────────────────────
-  // Built from query 9 — all non-cancelled bookings across all time.
-  // Uses the same buildTopServices helper so ranking logic is identical.
-  // Shows a loading skeleton in the UI while l7 is true.
   const allTimeTopServices = useMemo(
     () => buildTopServices(allTimeBookings),
     [allTimeBookings]
   );
 
   // ─── revenue trend ────────────────────────────────────────────────────────
+  // bookingMap is the fallback layer — includes all non-cancelled bookings.
+  // paymentsMap overrides per-day with actual confirmed payment amounts.
   const revenueTrend = useMemo(() => {
     const bookingMap: Record<string, number> = {};
     trendBookings.forEach((b: any) => {
       const d = (b.booking_date ?? "").slice(0, 10);
       if (!d || d < ninetyDaysAgo || d > todayStr) return;
-      if (!b.final_payment_paid && !b.full_payment_received) return;
       bookingMap[d] = (bookingMap[d] || 0) + Number(b.total_amount ?? 0);
     });
 
@@ -380,6 +411,7 @@ export function useDashboardData() {
       }
     });
 
+    // Payments table takes precedence over booking totals per day.
     const trendMap: Record<string, number> = { ...bookingMap };
     Object.entries(paymentsMap).forEach(([d, amount]) => {
       trendMap[d] = amount;
@@ -396,8 +428,6 @@ export function useDashboardData() {
   }, [allPayments, trendBookings, ninetyDaysAgo, todayStr]);
 
   // ─── booking heatmap ──────────────────────────────────────────────────────
-  // Slot boundaries are derived from actual staff_availability times,
-  // so the heatmap reflects the real operating hours of the business.
   const heatmap = useMemo(() => {
     const heatSlots = buildHeatSlots(availabilityRows);
     const idx: Record<string, number> = {};

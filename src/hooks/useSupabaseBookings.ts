@@ -18,19 +18,33 @@ export interface BookingRow {
   total: number;
   deposit: number;
   balance: number;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
+  status: "pending" | "pending_payment" | "confirmed" | "in_progress" | "completed" | "complete" | "cancelled" | "no_show";
   depositPaid: boolean;
   fullPaymentReceived: boolean;
   finalPaymentPaid: boolean;
   notes: string;
   staffNotes: string;
+  clientNotes: string;
+  cancellationReason: string;
   isCallOut: boolean;
   callOutFee: number;
   callOutAddress: string;
-  createdAt: string;
+  callOutDistanceKm: number;
+  serviceIds: string;
+  serviceDurationMinutes: number;
+  yocoCheckoutId: string | null;
+  yocoLink: string | null;
+  yocoFinalCheckoutId: string | null;
+  yocoFinalLink: string | null;
   gcalEventId: string | null;
-  tenantId: string;
   leadSource: string | null;
+  staffId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  tenantId: string;
 }
 
 function mapBooking(b: any): BookingRow {
@@ -43,48 +57,79 @@ function mapBooking(b: any): BookingRow {
     (s: number, i: any) => s + (i.duration_minutes || 0), 0
   );
 
+  // Identity resolution — canonical order:
+  // 1. client_name/phone/email — denormalised, kept in sync by trg_sync_guest_to_client trigger
+  // 2. guest_name/phone/email  — raw input before trigger fires (INSERT edge cases)
+  // 3. profiles join            — registered client fallback
   const clientName =
-    b.client_name || b.guest_name || b.client?.full_name || "Unknown";
-  const clientPhone =
-    b.client_phone || b.guest_phone || b.client?.phone || "";
-  const clientEmail =
-    b.client_email || b.guest_email || b.client?.email || "";
+    b.client_name ||
+    b.guest_name ||
+    b.client?.full_name ||
+    "Unknown";
 
-  const balance = b.balance_due != null
-    ? Number(b.balance_due)
-    : Math.max(Number(b.total_amount ?? 0) - Number(b.deposit_amount ?? 0), 0);
+  const clientPhone =
+    b.client_phone ||
+    b.guest_phone ||
+    b.client?.phone ||
+    "";
+
+  const clientEmail =
+    b.client_email ||
+    b.guest_email ||
+    b.client?.email ||
+    "";
+
+  // Address: call-out address takes priority; registered client address as fallback.
+  const address = b.call_out_address || b.client?.address || "";
+
+  // balance_due is a real persisted column (default 0); use it directly.
+  const balance = Number(b.balance_due ?? 0);
 
   const ref = `PB-${(b.id as string).slice(0, 8).toUpperCase()}`;
 
   return {
-    id: b.id,
+    id:                    b.id,
     ref,
-    date: b.booking_date,
-    time: (b.start_time || "").slice(0, 5),
-    endTime: (b.end_time || "").slice(0, 5),
-    client: clientName,
-    clientId: b.client_id ?? null,
-    phone: clientPhone,
-    email: clientEmail,
-    address: b.call_out_address || b.client?.address || "",
-    service: services || "—",
-    duration: totalDuration || Number(b.service_duration_minutes) || 0,
-    total: Number(b.total_amount) || 0,
-    deposit: Number(b.deposit_amount) || 0,
+    date:                  b.booking_date,
+    time:                  (b.start_time  || "").slice(0, 5),
+    endTime:               (b.end_time    || "").slice(0, 5),
+    client:                clientName,
+    clientId:              b.client_id   ?? null,
+    phone:                 clientPhone,
+    email:                 clientEmail,
+    address,
+    service:               services || "—",
+    duration:              totalDuration || Number(b.service_duration_minutes) || 0,
+    total:                 Number(b.total_amount)   || 0,
+    deposit:               Number(b.deposit_amount) || 0,
     balance,
-    status: b.status as BookingRow["status"],
-    depositPaid: b.deposit_paid === true,
-    fullPaymentReceived: b.full_payment_received === true,
-    finalPaymentPaid: b.final_payment_paid === true,
-    notes: b.client_notes || "",
-    staffNotes: b.staff_notes || "",
-    isCallOut: b.is_call_out ?? false,
-    callOutFee: Number(b.call_out_fee) || 0,
-    callOutAddress: b.call_out_address || "",
-    createdAt: b.created_at || "",
-    gcalEventId: b.gcal_event_id ?? null,
-    tenantId: b.tenant_id ?? "",
-    leadSource: b.lead_source ?? null,
+    status:                b.status as BookingRow["status"],
+    depositPaid:           b.deposit_paid          === true,
+    fullPaymentReceived:   b.full_payment_received  === true,
+    finalPaymentPaid:      b.final_payment_paid     === true,
+    notes:                 b.notes                 || "",
+    clientNotes:           b.client_notes          || "",
+    staffNotes:            b.staff_notes           || "",
+    cancellationReason:    b.cancellation_reason   || "",
+    isCallOut:             b.is_call_out            ?? false,
+    callOutFee:            Number(b.call_out_fee)   || 0,
+    callOutAddress:        b.call_out_address       || "",
+    callOutDistanceKm:     Number(b.call_out_distance_km) || 0,
+    serviceIds:            b.service_ids            || "",
+    serviceDurationMinutes: Number(b.service_duration_minutes) || 0,
+    yocoCheckoutId:        b.yoco_checkout_id       ?? null,
+    yocoLink:              b.yoco_link              ?? null,
+    yocoFinalCheckoutId:   b.yoco_final_checkout_id ?? null,
+    yocoFinalLink:         b.yoco_final_link        ?? null,
+    gcalEventId:           b.gcal_event_id          ?? null,
+    leadSource:            b.lead_source            ?? null,
+    staffId:               b.staff_id               ?? null,
+    createdAt:             b.created_at             || "",
+    updatedAt:             b.updated_at             || "",
+    confirmedAt:           b.confirmed_at           ?? null,
+    completedAt:           b.completed_at           ?? null,
+    cancelledAt:           b.cancelled_at           ?? null,
+    tenantId:              b.tenant_id              ?? "",
   };
 }
 
@@ -99,6 +144,7 @@ export function useSupabaseBookings() {
         .select(`
           id,
           client_id,
+          staff_id,
           booking_date,
           start_time,
           end_time,
@@ -115,10 +161,14 @@ export function useSupabaseBookings() {
           call_out_fee,
           client_notes,
           staff_notes,
+          notes,
           cancellation_reason,
+          service_ids,
           service_duration_minutes,
           yoco_checkout_id,
+          yoco_link,
           yoco_final_checkout_id,
+          yoco_final_link,
           client_name,
           client_email,
           client_phone,
@@ -138,7 +188,7 @@ export function useSupabaseBookings() {
         `)
         .eq("tenant_id", tenantId)
         .order("booking_date", { ascending: true })
-        .order("start_time", { ascending: true });
+        .order("start_time",   { ascending: true });
       if (error) throw error;
       return (data ?? []).map(mapBooking);
     },
@@ -192,8 +242,8 @@ export function useRescheduleBooking() {
       booking?: BookingRow;
     }) => {
       const { data, error } = await supabase.rpc("reschedule_booking", {
-        p_booking_id: bookingId,
-        p_new_date: newDate,
+        p_booking_id:     bookingId,
+        p_new_date:       newDate,
         p_new_start_time: newStartTime,
       });
       if (error) throw error;
@@ -209,9 +259,9 @@ export function useRescheduleBooking() {
           await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${supabaseKey}`,
-              apikey: supabaseKey,
+              "Content-Type":  "application/json",
+              Authorization:   `Bearer ${supabaseKey}`,
+              apikey:          supabaseKey,
             },
             body: JSON.stringify({
               tenant_id:        booking.tenantId,
@@ -232,10 +282,10 @@ export function useRescheduleBooking() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
-      qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
-      qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
-      qc.invalidateQueries({ queryKey: ["loyalty", tenantId] });
+      qc.invalidateQueries({ queryKey: ["bookings",                    tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-bookings",               tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-payments-current",       tenantId] });
+      qc.invalidateQueries({ queryKey: ["loyalty",                     tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-"] });
       qc.invalidateQueries({ queryKey: ["public-month-availability"] });
       qc.invalidateQueries({ queryKey: ["public-date-slots"] });
@@ -263,8 +313,8 @@ export function useUpdateBookingFields() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
-      qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
+      qc.invalidateQueries({ queryKey: ["bookings",              tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-bookings",         tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
     },
   });
@@ -284,8 +334,8 @@ export function useDeleteBooking() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
-      qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
+      qc.invalidateQueries({ queryKey: ["bookings",              tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-bookings",         tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
     },
   });
