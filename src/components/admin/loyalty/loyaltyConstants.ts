@@ -81,12 +81,13 @@ export const STATUS_OPTIONS = [
 ] as const;
 
 // ── WA templates ──
+// Supported tokens: {name} {business} {service} {bookingUrl}
 export const DEFAULT_WA_TEMPLATES = {
-  overdue:    "Hi {name}, we've missed you at {business}! It's been a while since your last {service} — would love to have you back. 💛",
-  timeToBook: "Hi {name}! Just a friendly reminder from {business} — it's almost time for your next {service}. Ready to book? 😊",
-  onTrack:    "Hi {name}! Thanks for being a loyal {business} client. We're so glad to have you. See you at your next {service}! 🌸",
-  birthday:   "Happy Birthday {name}! 🎂 Wishing you a beautiful day. As a thank-you from all of us at {business}, enjoy a little extra love at your next visit!",
-  longOverdue: "Hey {name}! 💕 It's been a little while since we've seen you at {business}. We'd love to have you back for your {service} — whenever you're ready, we're here!",
+  overdue:     "Hi {name}, we've missed you at {business}! It's been a while since your last {service} — would love to have you back. 💛 Book here: {bookingUrl}",
+  timeToBook:  "Hi {name}! Just a friendly reminder from {business} — it's almost time for your next {service}. Ready to book? 😊 {bookingUrl}",
+  onTrack:     "Hi {name}! Thanks for being a loyal {business} client. We're so glad to have you. See you at your next {service}! 🌸",
+  birthday:    "Happy Birthday {name}! 🎂 Wishing you a beautiful day. As a thank-you from all of us at {business}, enjoy a little extra love at your next visit!",
+  longOverdue: "Hey {name}! 💕 It's been a little while since we've seen you at {business}. We'd love to have you back for your {service} — whenever you're ready, we're here! {bookingUrl}",
 };
 
 // ── App setting keys persisted via app_settings table ──

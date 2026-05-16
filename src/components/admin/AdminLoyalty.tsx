@@ -12,7 +12,7 @@ import {
   Download, Settings2, Save,
   Users, ChevronDown,
   ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock, PlusCircle, ChevronUp,
-  Bell, Tag, Sparkles, MessageSquare, SlidersHorizontal, ChevronRight,
+  Bell, Tag, Sparkles, MessageSquare, SlidersHorizontal, ChevronRight, Link2,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -30,7 +30,6 @@ import {
   effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
 import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
-import { MessagingHowTo }        from "./loyalty/MessagingHowTo";
 import { LoyaltyClientCard }     from "./loyalty/LoyaltyClientCard";
 import {
   EnrollModal, EnrollSuccessCelebration,
@@ -192,9 +191,10 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
 interface SettingCardProps {
   icon: React.ReactNode; title: string; subtitle: string; accent: string;
   defaultOpen?: boolean; badge?: string | number; children: React.ReactNode;
+  onSave?: () => void; saving?: boolean;
 }
 
-function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge, children }: SettingCardProps) {
+function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge, children, onSave, saving }: SettingCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const accentMap: Record<string, { border: string; iconBg: string; iconText: string; badgeBg: string; badgeText: string }> = {
     emerald: { border: "border-emerald-500/20", iconBg: "bg-emerald-500/10", iconText: "text-emerald-400", badgeBg: "bg-emerald-500/10", badgeText: "text-emerald-400" },
@@ -225,7 +225,21 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
           <motion.div key="body" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }} className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-1 border-t border-white/[0.05] space-y-4">{children}</div>
+            <div className="border-t border-white/[0.05]">
+              <div className="px-4 pb-4 pt-4 space-y-4">{children}</div>
+              {onSave && (
+                <div className="flex justify-end px-4 pb-4 pt-1 border-t border-white/[0.04]">
+                  <button
+                    onClick={onSave}
+                    disabled={saving}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/[0.07] border border-white/[0.12] text-xs font-bold text-white/70 hover:text-white/90 hover:bg-white/[0.10] disabled:opacity-50 transition-all"
+                  >
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {saving ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -336,8 +350,15 @@ function CandidatesBar({ nexty, criteria, onEnroll }: { nexty: EnrollCandidate[]
 interface AdminLoyaltyProps { onNavigate?: (view: string) => void; }
 
 export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
-  const { tenantId } = useTenant();
+  const { tenantId, tenant } = useTenant();
   const qc = useQueryClient();
+
+  // Derive the tenant's public booking URL
+  const bookingUrl = useMemo(() => {
+    const domain = (tenant as any)?.custom_domain;
+    if (domain && domain.trim()) return domain.trim();
+    return `${window.location.origin}/${tenantId}`;
+  }, [tenant, tenantId]);
 
   const [reminderWeeks, setReminderWeeks] = useState(DEFAULT_LOYALTY_SETTINGS.reminder_weeks);
   const [serviceLabel, setServiceLabel]   = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
@@ -443,6 +464,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
     onError: () => toast.error("Failed to save settings"),
   });
+
+  const handleSave = () => saveSettingsMutation.mutate();
+  const isSaving   = saveSettingsMutation.isPending;
 
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery({
     queryKey: ["loyalty_tracker", tenantId], enabled: !!tenantId, staleTime: 5 * 60 * 1000,
@@ -636,8 +660,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             <motion.div key="settings-panel" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }} className="space-y-3"
             >
-              <SettingCard icon={<Bell className="w-4 h-4" />} title="Reminder Schedule"
+              {/* Reminder Schedule */}
+              <SettingCard
+                icon={<Bell className="w-4 h-4" />} title="Reminder Schedule"
                 subtitle={`Clients are nudged every ${reminderWeeks} week${reminderWeeks !== 1 ? "s" : ""}`} accent="emerald" defaultOpen
+                onSave={handleSave} saving={isSaving}
               >
                 <p className="text-[11px] text-white/30 leading-relaxed">
                   How many weeks after their last visit should a client receive a reminder?
@@ -670,8 +697,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
-              <SettingCard icon={<Tag className="w-4 h-4" />} title="Service & Brand"
+              {/* Service & Brand */}
+              <SettingCard
+                icon={<Tag className="w-4 h-4" />} title="Service & Brand"
                 subtitle={`Service label: "${serviceLabel}"`} accent="sky"
+                onSave={handleSave} saving={isSaving}
               >
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Service label</label>
@@ -688,8 +718,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
-              <SettingCard icon={<Sparkles className="w-4 h-4" />} title="Enrolment Rules"
+              {/* Enrolment Rules */}
+              <SettingCard
+                icon={<Sparkles className="w-4 h-4" />} title="Enrolment Rules"
                 subtitle="Configure when clients are flagged as enrolment candidates" accent="violet"
+                onSave={handleSave} saving={isSaving}
               >
                 <div className="flex flex-col gap-3">
                   <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-white/30">Nexty suggestion threshold</p>
@@ -718,9 +751,27 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 />
               </SettingCard>
 
-              <SettingCard icon={<MessageSquare className="w-4 h-4" />} title="WhatsApp Templates"
+              {/* WhatsApp Templates */}
+              <SettingCard
+                icon={<MessageSquare className="w-4 h-4" />} title="WhatsApp Templates"
                 subtitle="Customise the message sent for each status" accent="amber" badge={WA_TEMPLATE_META.length}
+                onSave={handleSave} saving={isSaving}
               >
+                {/* Booking link preview */}
+                <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/15 bg-amber-500/[0.05] px-3.5 py-2.5">
+                  <Link2 className="w-3.5 h-3.5 text-amber-400/60 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold text-amber-400/60 uppercase tracking-[0.1em] mb-0.5">Your booking link <span className="normal-case font-normal text-white/30">— used as <code className="text-amber-300/50">{'{bookingUrl}'}</code> in templates</span></p>
+                    <p className="text-xs text-white/60 font-mono truncate">{bookingUrl}</p>
+                  </div>
+                </div>
+                {/* Token legend */}
+                <div className="flex flex-wrap gap-1.5">
+                  {["{name}", "{business}", "{service}", "{bookingUrl}"].map(tok => (
+                    <span key={tok} className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-white/40">{tok}</span>
+                  ))}
+                  <span className="text-[10px] text-white/20 self-center ml-1">available tokens</span>
+                </div>
                 <div className="space-y-4">
                   {WA_TEMPLATE_META.map(({ key, label, hint, accent: accentText }) => (
                     <div key={key} className="flex flex-col gap-1.5">
@@ -738,11 +789,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
-              <SettingCard icon={<SlidersHorizontal className="w-4 h-4" />} title="How Messaging Works"
-                subtitle="WhatsApp deep-links — no API account needed" accent="pink"
-              >
-                <MessagingHowTo />
-              </SettingCard>
             </motion.div>
           )}
         </AnimatePresence>
@@ -886,8 +932,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         {/* Floating save bar */}
         <FloatingSaveBar
           dirty={settingsDirty}
-          saving={saveSettingsMutation.isPending}
-          onSave={() => saveSettingsMutation.mutate()}
+          saving={isSaving}
+          onSave={handleSave}
           onDiscard={handleDiscard}
         />
 
