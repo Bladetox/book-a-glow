@@ -1,32 +1,26 @@
 /**
- * LoyaltyClientCard.tsx — Redesigned with Laws of UX
+ * LoyaltyClientCard.tsx
  *
- * Laws applied:
- * - Hick’s Law: collapsed row shows ONLY avatar + full name + status + WA. Secondary
- *   actions (notes, birthday, unregister) are behind the expand — reducing decision load.
- * - Fitts’s Law: WA button is larger + full text, status pill is tappable with 40px min-height.
- * - Law of Proximity: identity group (avatar + name + phone) left-aligned together;
- *   action group (status + WA) right-aligned together.
- * - Miller’s Law: max 3 visible actions in collapsed state.
- * - Peak-End Rule: birthday save triggers a 🎂 toast + micro-animation.
- * - Aesthetic-Usability Effect: clean hierarchy, status icons, consistent radius tokens.
- * - Law of Prägnanz: status uses icon + colour + label — not colour alone.
- * - Zeigarnik Effect: OVERDUE / BIRTHDAY statuses show a pulsing dot indicator.
- * - Jakob’s Law: expand chevron is always visible + rotates — familiar affordance.
+ * Expanded panel shows:
+ *   - Name & surname (inline editable)
+ *   - Phone number
+ *   - Bookings count  — from enrichment (bookings table, last 730 d)
+ *   - Last visit      — most recent booking_date from bookings table
+ *   - Next due        — last visit + (reminderWeeks × 7) days
+ *   - Birthday editor
+ *   - Notes editor
  *
- * Mobile fix (May 2026):
- * - Collapsed card uses a stacked 2-row layout on small screens so the name
- *   is never clipped AND the action buttons are always visible.
- * - On md+ the layout reverts to a single horizontal row.
+ * Source field and Unregister button have been removed.
  */
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Pencil, Check, X, StickyNote, Trash2, Loader2,
+  Pencil, Check, X, StickyNote, Loader2,
   MessageCircle, Cake, ChevronDown, AlertCircle,
   CalendarDays, Phone,
 } from "lucide-react";
+import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
@@ -291,7 +285,6 @@ export const InlineClientEditor = ({
 
   return (
     <div className="group flex flex-col gap-0.5 min-w-0 overflow-hidden">
-      {/* Name: single line, truncates with ellipsis, full name in tooltip */}
       <button
         onClick={e => { e.stopPropagation(); setValue(name); setEditing(true); }}
         title={name}
@@ -493,65 +486,6 @@ export const InlineBirthdayEditor = ({
   );
 };
 
-// ─ UnregisterButton ───────────────────────────────────────────────────
-export const UnregisterButton = ({
-  rowId, clientName, tenantId, onDeleted,
-}: {
-  rowId: string;
-  clientName: string;
-  tenantId: string;
-  onDeleted: () => void;
-}) => {
-  const [confirming, setConfirming] = useState(false);
-  const [deleting, setDeleting]     = useState(false);
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    const { error } = await supabase
-      .from("loyalty_tracker")
-      .delete()
-      .eq("id", rowId)
-      .eq("tenant_id", tenantId);
-    setDeleting(false);
-    if (error) toast.error("Failed to unregister client");
-    else { toast.success(`${clientName} removed from loyalty`); onDeleted(); }
-  };
-
-  if (!confirming) return (
-    <button
-      onClick={e => { e.stopPropagation(); setConfirming(true); }}
-      className="flex items-center gap-2 text-xs text-white/25 hover:text-red-400/70
-        transition-colors py-1 rounded-lg"
-    >
-      <Trash2 className="w-3 h-3" />
-      Unregister client
-    </button>
-  );
-
-  return (
-    <div className="flex items-center gap-2 p-3 rounded-xl border border-red-500/20 bg-red-500/[0.04]" onClick={e => e.stopPropagation()}>
-      <span className="text-xs text-white/50 flex-1">
-        Remove <strong className="text-white/70">{clientName}</strong> from loyalty?
-      </span>
-      <button
-        onClick={handleDelete}
-        disabled={deleting}
-        className="px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/25 text-xs font-semibold
-          text-red-400 hover:bg-red-500/25 transition-all shrink-0"
-      >
-        {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Remove"}
-      </button>
-      <button
-        onClick={() => setConfirming(false)}
-        className="px-3 py-1.5 rounded-lg bg-white/[0.04] text-xs text-white/30
-          hover:text-white/60 hover:bg-white/[0.08] transition-all shrink-0"
-      >
-        Cancel
-      </button>
-    </div>
-  );
-};
-
 // ─ LoyaltyClientCard ────────────────────────────────────────────────
 export interface LoyaltyClientCardProps {
   row: {
@@ -580,6 +514,8 @@ export interface LoyaltyClientCardProps {
     birthday: string | null;
   };
   effStatus: string;
+  /** Tenant reminder interval in weeks — used to compute Next Due live */
+  reminderWeeks: number;
   isSelected: boolean;
   isExpanded: boolean;
   tenantId: string;
@@ -600,12 +536,31 @@ export interface LoyaltyClientCardProps {
 }
 
 export const LoyaltyClientCard = ({
-  row, enrich, effStatus, isSelected, isExpanded,
+  row, enrich, effStatus, reminderWeeks,
+  isSelected, isExpanded,
   tenantId, businessName, serviceLabel, waTemplates,
   onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
   const resolvedBirthday = (row as any).birthday ?? enrich.birthday ?? null;
+
+  // ── Derive Last Visit from enrichment (bookings table source of truth) ──
+  const lastVisit = enrich.lastVisitDate ?? row.last_visit_date ?? null;
+
+  // ── Derive Next Due: last visit + reminderWeeks × 7 days ──
+  const nextDue: string | null = (() => {
+    if (lastVisit) {
+      try {
+        return format(
+          addDays(new Date(lastVisit + "T00:00:00"), reminderWeeks * 7),
+          "yyyy-MM-dd",
+        );
+      } catch { /* fall through */ }
+    }
+    // Fallback to stored value if no live date available
+    if (row.next_due_date) return String(row.next_due_date).slice(0, 10);
+    return row.next_due_date_calc ?? null;
+  })();
 
   return (
     <motion.div
@@ -621,17 +576,11 @@ export const LoyaltyClientCard = ({
         }`}
     >
       {/* ===== COLLAPSED ROW ===== */}
-      {/*
-        Mobile  (≤ md): two rows stacked inside the card
-          Row A: checkbox + avatar + name/phone  (full available width)
-          Row B: status pill + WA + chevron      (right-aligned)
-        Desktop (≥ md): single horizontal flex row — same as before
-      */}
       <div
         className="px-3 py-3 cursor-pointer select-none"
         onClick={onToggleExpand}
       >
-        {/* ── Row A: identity ────────────────────────────────────── */}
+        {/* ── Row A: identity ── */}
         <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
           {/* Checkbox */}
           <button
@@ -655,7 +604,7 @@ export const LoyaltyClientCard = ({
             {initials(row.client_name ?? "?")}
           </div>
 
-          {/* Name + phone: flex-1 + min-w-0 so it fills remaining space and truncates */}
+          {/* Name + phone */}
           <div className="flex-1 min-w-0 overflow-hidden">
             <InlineClientEditor
               rowId={row.id}
@@ -666,7 +615,7 @@ export const LoyaltyClientCard = ({
             />
           </div>
 
-          {/* On md+ show actions inline with identity row */}
+          {/* md+: actions inline */}
           <div
             className="hidden md:flex items-center gap-2 shrink-0"
             onClick={e => e.stopPropagation()}
@@ -700,7 +649,7 @@ export const LoyaltyClientCard = ({
           </div>
         </div>
 
-        {/* ── Row B: actions (mobile only) ────────────────────────── */}
+        {/* ── Row B: actions (mobile only) ── */}
         <div
           className="flex md:hidden items-center justify-between gap-2 mt-2.5 pt-2 border-t border-white/[0.05]"
           onClick={e => e.stopPropagation()}
@@ -750,40 +699,26 @@ export const LoyaltyClientCard = ({
               className="px-4 pb-4 pt-0 space-y-3 border-t border-white/[0.05]"
               onClick={e => e.stopPropagation()}
             >
+              {/* ── Key stats ── */}
               <div className="flex flex-wrap gap-x-5 gap-y-2 pt-3">
-                {[
-                  {
-                    label: "Bookings",
-                    value: enrich.bookingCount ?? row.booking_count ?? 0,
-                    highlight: (enrich.bookingCount ?? 0) > 5,
-                  },
-                  {
-                    label: "Last visit",
-                    value: enrich.lastVisitDate
-                      ? isoToDisplay(enrich.lastVisitDate)
-                      : row.last_visit_date
-                        ? isoToDisplay(row.last_visit_date)
-                        : "—",
-                  },
-                  {
-                    label: "Next due",
-                    value: enrich.nextDueDate
-                      ? isoToDisplay(enrich.nextDueDate)
-                      : row.next_due_date
-                        ? isoToDisplay(String(row.next_due_date))
-                        : row.next_due_date_calc
-                          ? isoToDisplay(row.next_due_date_calc)
-                          : "—",
-                  },
-                  { label: "Source", value: row.source ?? "manual" },
-                ].map(({ label, value, highlight }) => (
-                  <div key={label} className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-white/30">{label}:</span>
-                    <span className={highlight ? "text-emerald-400 font-semibold" : "text-white/65"}>
-                      {String(value)}
-                    </span>
-                  </div>
-                ))}
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className="text-white/30">Bookings:</span>
+                  <span className={enrich.bookingCount > 5 ? "text-emerald-400 font-semibold" : "text-white/65"}>
+                    {enrich.bookingCount ?? 0}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className="text-white/30">Last visit:</span>
+                  <span className="text-white/65">
+                    {lastVisit ? isoToDisplay(lastVisit) : "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className="text-white/30">Next due:</span>
+                  <span className="text-white/65">
+                    {nextDue ? isoToDisplay(nextDue) : "—"}
+                  </span>
+                </div>
               </div>
 
               <InlineBirthdayEditor
@@ -799,15 +734,6 @@ export const LoyaltyClientCard = ({
                 tenantId={tenantId}
                 onUpdated={onUpdated}
               />
-
-              <div className="pt-1">
-                <UnregisterButton
-                  rowId={row.id}
-                  clientName={row.client_name ?? "this client"}
-                  tenantId={tenantId}
-                  onDeleted={onUpdated}
-                />
-              </div>
             </div>
           </motion.div>
         )}

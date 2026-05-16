@@ -55,7 +55,6 @@ const LOYALTY_INSIGHT_IDS = new Set([
 
 // ──────────────────────────────────────────────────────────────────
 // Mini gold orb — identical to the one in AdminDashboard.
-// Used in the "Ask Nexty" accordion header.
 // ──────────────────────────────────────────────────────────────────
 function MiniNextyOrb() {
   return (
@@ -155,7 +154,6 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl overflow-hidden">
-      {/* Toggle button */}
       <button
         onClick={() => setOpen(s => !s)}
         className="flex items-center gap-2.5 w-full px-4 py-3 hover:bg-white/[0.04] transition-colors"
@@ -175,7 +173,6 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
           : <ChevronDown className="w-3.5 h-3.5 text-white/25" />}
       </button>
 
-      {/* Collapsible insights */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -214,7 +211,6 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white/[0.03] border border-white/[0.05] rounded-2xl overflow-hidden"
                   >
-                    {/* Card header */}
                     <div className="flex items-start gap-2.5 p-3 pb-2">
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -247,12 +243,10 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                       </div>
                     </div>
 
-                    {/* Card body */}
                     <div className="px-3 pb-2 text-xs text-white/50 leading-relaxed">
                       {bodyText}
                     </div>
 
-                    {/* Card footer */}
                     <div className="border-t border-white/[0.04] px-3 py-1.5 flex items-center gap-2 flex-wrap">
                       {ins.actionLabel && ins.actionView && onNavigate && (
                         <button
@@ -447,18 +441,20 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       const since = format(subDays(new Date(), effectiveLookback), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
-        .select("client_name, phone, date, service_price")
+        .select("client_name, guest_name, client_phone, guest_phone, booking_date, total_amount")
         .eq("tenant_id", tenantId)
-        .gte("date", since)
-        .not("phone", "is", null)
+        .gte("booking_date", since)
         .limit(500);
       if (error) throw error;
 
       const grouped: Record<string, { client_name: string; phone: string; bookings: { date: string; price: number }[] }> = {};
       for (const b of (data ?? [])) {
-        const key = normPhone(b.phone);
-        if (!grouped[key]) grouped[key] = { client_name: b.client_name ?? "", phone: b.phone, bookings: [] };
-        grouped[key].bookings.push({ date: b.date, price: Number(b.service_price ?? 0) });
+        const phone = b.client_phone || b.guest_phone || null;
+        if (!phone) continue;
+        const key = normPhone(phone);
+        const name = b.client_name || b.guest_name || "";
+        if (!grouped[key]) grouped[key] = { client_name: name, phone, bookings: [] };
+        grouped[key].bookings.push({ date: b.booking_date, price: Number(b.total_amount ?? 0) });
       }
 
       return Object.values(grouped)
@@ -480,6 +476,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enrichment ──
+  // Pulls last 730 days of bookings and builds a per-phone lookup covering
+  // client_phone, guest_phone (last 9 digits normalised).
+  // Also captures client_email / guest_email for future cross-matching.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
@@ -488,22 +487,40 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       const enrichSince = format(subDays(new Date(), 730), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("bookings")
-        .select("phone, date, service_price")
+        .select("client_phone, guest_phone, client_email, guest_email, booking_date, total_amount")
         .eq("tenant_id", tenantId)
-        .gte("date", enrichSince)
-        .not("phone", "is", null)
-        .limit(1000);
+        .gte("booking_date", enrichSince)
+        .limit(2000);
       if (error) throw error;
 
       const map: EnrichmentMap = {};
+
+      const addToMap = (phone: string | null, email: string | null, bookingDate: string) => {
+        // Index by normalised phone (last 9 digits)
+        const keys: string[] = [];
+        const normP = normPhone(phone);
+        if (normP.length >= 7) keys.push(normP);
+        // Also index by normalised email for future cross-matching
+        const normE = (email ?? "").trim().toLowerCase();
+        if (normE.length > 3) keys.push(`email:${normE}`);
+
+        for (const key of keys) {
+          if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
+          map[key].bookingCount++;
+          if (!map[key].lastVisitDate || bookingDate > map[key].lastVisitDate!) {
+            map[key].lastVisitDate = bookingDate;
+          }
+        }
+      };
+
       for (const b of (data ?? [])) {
-        const key = normPhone(b.phone);
-        if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
-        map[key].bookingCount++;
-        if (!map[key].lastVisitDate || b.date > map[key].lastVisitDate!) {
-          map[key].lastVisitDate = b.date;
+        // Index under both client and guest phone/email
+        addToMap(b.client_phone, b.client_email, b.booking_date);
+        if (b.guest_phone || b.guest_email) {
+          addToMap(b.guest_phone, b.guest_email, b.booking_date);
         }
       }
+
       return map;
     },
   });
@@ -839,6 +856,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   row={row}
                   enrich={enrich}
                   effStatus={effStatus}
+                  reminderWeeks={reminderWeeks}
                   isSelected={selectedIds.includes(row.id)}
                   isExpanded={expandedCard === row.id}
                   tenantId={tenantId ?? ""}
