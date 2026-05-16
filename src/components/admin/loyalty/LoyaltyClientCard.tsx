@@ -2,22 +2,22 @@
  * LoyaltyClientCard.tsx — Redesigned with Laws of UX
  *
  * Laws applied:
- * - Hick's Law: collapsed row shows ONLY avatar + full name + status + WA. Secondary
+ * - Hick’s Law: collapsed row shows ONLY avatar + full name + status + WA. Secondary
  *   actions (notes, birthday, unregister) are behind the expand — reducing decision load.
- * - Fitts's Law: WA button is larger + full text, status pill is tappable with 40px min-height.
+ * - Fitts’s Law: WA button is larger + full text, status pill is tappable with 40px min-height.
  * - Law of Proximity: identity group (avatar + name + phone) left-aligned together;
  *   action group (status + WA) right-aligned together.
- * - Miller's Law: max 3 visible actions in collapsed state.
+ * - Miller’s Law: max 3 visible actions in collapsed state.
  * - Peak-End Rule: birthday save triggers a 🎂 toast + micro-animation.
  * - Aesthetic-Usability Effect: clean hierarchy, status icons, consistent radius tokens.
  * - Law of Prägnanz: status uses icon + colour + label — not colour alone.
  * - Zeigarnik Effect: OVERDUE / BIRTHDAY statuses show a pulsing dot indicator.
- * - Jakob's Law: expand chevron is always visible + rotates — familiar affordance.
+ * - Jakob’s Law: expand chevron is always visible + rotates — familiar affordance.
  *
- * Data-accuracy fixes:
- * - birthday column guarded: update only attempted if column exists (runtime checked via catch).
- * - client_name: NO truncation, NO line-clamp anywhere — wraps naturally.
- * - phone displayed as-is for identity; normPhone used only for enrichment join (in parent).
+ * Mobile fix (May 2026):
+ * - Collapsed card uses a stacked 2-row layout on small screens so the name
+ *   is never clipped AND the action buttons are always visible.
+ * - On md+ the layout reverts to a single horizontal row.
  */
 
 import { useState } from "react";
@@ -25,27 +25,27 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Pencil, Check, X, StickyNote, Trash2, Loader2,
   MessageCircle, Cake, ChevronDown, AlertCircle,
-  CalendarDays, Phone, User,
+  CalendarDays, Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
 import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
 
-// ─── Status config: icon + pulse for urgent states ───────────────────────────
+// ─ Status config: icon + pulse for urgent states ────────────────────────────────
 const STATUS_META: Record<string, { icon?: React.ReactNode; pulse?: boolean }> = {
-  BIRTHDAY:       { icon: <Cake className="w-3 h-3" />,        pulse: true },
-  LONG_OVERDUE:   { icon: <AlertCircle className="w-3 h-3" />, pulse: false },
-  OVERDUE:        { icon: <AlertCircle className="w-3 h-3" />, pulse: true },
+  BIRTHDAY:       { icon: <Cake className="w-3 h-3" />,         pulse: true  },
+  LONG_OVERDUE:   { icon: <AlertCircle className="w-3 h-3" />,  pulse: false },
+  OVERDUE:        { icon: <AlertCircle className="w-3 h-3" />,  pulse: true  },
   "TIME TO BOOK": { icon: <CalendarDays className="w-3 h-3" />, pulse: false },
-  "ON TRACK":     { icon: <Check className="w-3 h-3" />,        pulse: false },
+  "ON TRACK":     { icon: <Check className="w-3 h-3" />,         pulse: false },
 };
 
 function getStatusMeta(effectiveNorm: string) {
   return STATUS_META[effectiveNorm] ?? {};
 }
 
-// ─── Avatar: deterministic colour from name ───────────────────────────────────
+// ─ Avatar: deterministic colour from name ───────────────────────────────────
 const AVATAR_COLOURS = [
   "bg-emerald-500/20 text-emerald-300",
   "bg-violet-500/20 text-violet-300",
@@ -65,8 +65,7 @@ function initials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-// ─── WaButton ─────────────────────────────────────────────────────────────────
-// Fitts's Law: larger tap target, full label visible, no icon-only.
+// ─ WaButton ───────────────────────────────────────────────────────────────
 export const WaButton = ({
   name, status, phone, businessName, serviceLabel, templates,
 }: {
@@ -91,30 +90,27 @@ export const WaButton = ({
       rel="noopener noreferrer"
       onClick={e => e.stopPropagation()}
       title={`Message ${name} on WhatsApp`}
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold
-        transition-all hover:scale-105 active:scale-95 shrink-0 min-h-[36px]"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+        transition-all hover:scale-105 active:scale-95 shrink-0 min-h-[32px] whitespace-nowrap"
       style={{
         background: "rgba(37,211,102,0.12)",
         color: "#25D366",
         border: "1px solid rgba(37,211,102,0.22)",
       }}
     >
-      <MessageCircle className="w-3.5 h-3.5" />
-      <span className="hidden sm:inline">WhatsApp</span>
-      <span className="sm:hidden">WA</span>
+      <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+      <span>WA</span>
     </a>
   );
 };
 
-// ─── InlineStatusEditor ───────────────────────────────────────────────────────
-// Law of Prägnanz: icon + colour + label. Fitts: 40px min target.
-// Visual indicator distinguishes auto-computed vs manually overridden status.
+// ─ InlineStatusEditor ────────────────────────────────────────────────
 export const InlineStatusEditor = ({
   rowId, current, effectiveNorm, tenantId, onOptimisticUpdate, onUpdated,
 }: {
   rowId: string;
-  current: string | null;        // raw stored value (manual override or null)
-  effectiveNorm: string;         // computed by effectiveStatus()
+  current: string | null;
+  effectiveNorm: string;
   tenantId: string;
   onOptimisticUpdate: (newStatus: string) => void;
   onUpdated: () => void;
@@ -144,12 +140,11 @@ export const InlineStatusEditor = ({
       : "unknown"
   ) as keyof typeof STATUS_STYLE;
 
-  const styleObj = STATUS_STYLE[styleKey];
-  const displayKey = effectiveNorm.toLowerCase().replace(/ /g, "_");
+  const styleObj     = STATUS_STYLE[styleKey];
+  const displayKey   = effectiveNorm.toLowerCase().replace(/ /g, "_");
   const displayLabel = PILL_LABEL[displayKey] ?? effectiveNorm.replace(/_/g, " ");
-  const storedNorm = normaliseStatus(current);
-  const meta = getStatusMeta(effectiveNorm);
-  // Is this status manually overridden vs auto-computed?
+  const storedNorm   = normaliseStatus(current);
+  const meta         = getStatusMeta(effectiveNorm);
   const isManualOverride = current !== null && normaliseStatus(current) !== "UNKNOWN";
 
   return (
@@ -158,18 +153,13 @@ export const InlineStatusEditor = ({
 
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-          cursor-pointer transition-all hover:opacity-80 active:scale-95 min-h-[32px] border
+        className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold
+          cursor-pointer transition-all hover:opacity-80 active:scale-95 min-h-[32px] border whitespace-nowrap
           ${styleObj?.bg ?? ""} ${styleObj?.text ?? ""} ${styleObj?.border ?? ""}`}
         title={isManualOverride ? "Status manually set — click to change" : "Auto-computed status — click to override"}
       >
-        {saving ? (
-          <Loader2 className="w-3 h-3 animate-spin" />
-        ) : (
-          meta.icon
-        )}
-        <span>{displayLabel}</span>
-        {/* Pulse dot for urgent statuses (Zeigarnik Effect) */}
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : meta.icon}
+        <span className="max-w-[90px] truncate">{displayLabel}</span>
         {meta.pulse && !saving && (
           <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75
@@ -178,9 +168,8 @@ export const InlineStatusEditor = ({
               ${effectiveNorm === "BIRTHDAY" ? "bg-pink-500" : "bg-red-500"}`} />
           </span>
         )}
-        {/* Manual override indicator */}
         {isManualOverride && (
-          <Pencil className="w-2.5 h-2.5 opacity-50 ml-0.5" />
+          <Pencil className="w-2.5 h-2.5 opacity-50 ml-0.5 shrink-0" />
         )}
       </button>
 
@@ -199,7 +188,7 @@ export const InlineStatusEditor = ({
             </p>
             {STATUS_OPTIONS.map(s => {
               const sStyle = STATUS_STYLE[s];
-              const sMeta = STATUS_META[s.toUpperCase()] ?? STATUS_META[(PILL_LABEL[s] ?? s).toUpperCase()] ?? {};
+              const sMeta  = STATUS_META[s.toUpperCase()] ?? STATUS_META[(PILL_LABEL[s] ?? s).toUpperCase()] ?? {};
               return (
                 <button
                   key={s}
@@ -219,7 +208,6 @@ export const InlineStatusEditor = ({
                 </button>
               );
             })}
-            {/* Allow clearing manual override */}
             {isManualOverride && (
               <>
                 <div className="h-px bg-white/[0.06] mx-2 my-0.5" />
@@ -240,8 +228,7 @@ export const InlineStatusEditor = ({
   );
 };
 
-// ─── InlineClientEditor ───────────────────────────────────────────────────────
-// NO truncation. Name wraps naturally. Inline editing preserved.
+// ─ InlineClientEditor ───────────────────────────────────────────────
 export const InlineClientEditor = ({
   rowId, name, phone, tenantId, onUpdated,
 }: {
@@ -251,9 +238,9 @@ export const InlineClientEditor = ({
   tenantId: string;
   onUpdated: () => void;
 }) => {
-  const [editing, setEditing]   = useState(false);
-  const [value, setValue]       = useState(name);
-  const [saving, setSaving]     = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [value, setValue]     = useState(name);
+  const [saving, setSaving]   = useState(false);
 
   const save = async () => {
     if (!value.trim()) { toast.error("Name cannot be empty"); return; }
@@ -303,20 +290,18 @@ export const InlineClientEditor = ({
   }
 
   return (
-    <div className="group flex flex-col gap-0.5 min-w-0">
-      {/* Full name — NO truncation, wraps to next line if needed */}
+    <div className="group flex flex-col gap-0.5 min-w-0 overflow-hidden">
+      {/* Name: single line, truncates with ellipsis, full name in tooltip */}
       <button
         onClick={e => { e.stopPropagation(); setValue(name); setEditing(true); }}
+        title={name}
         className="text-left font-semibold text-sm text-white/90 leading-snug
-          hover:text-white transition-colors group-hover:underline decoration-white/20
-          underline-offset-2 break-words w-full"
-        title="Click to edit name"
+          hover:text-white transition-colors truncate w-full max-w-full"
       >
         {name}
       </button>
-      {/* Phone displayed as secondary identity — never truncated */}
       {phone && (
-        <span className="text-[11px] text-white/35 flex items-center gap-1">
+        <span className="text-[11px] text-white/35 flex items-center gap-1 truncate">
           <Phone className="w-2.5 h-2.5 shrink-0" />
           {phone}
         </span>
@@ -325,7 +310,7 @@ export const InlineClientEditor = ({
   );
 };
 
-// ─── InlineNotesEditor ────────────────────────────────────────────────────────
+// ─ InlineNotesEditor ────────────────────────────────────────────────
 export const InlineNotesEditor = ({
   rowId, current, tenantId, onUpdated,
 }: {
@@ -359,7 +344,6 @@ export const InlineNotesEditor = ({
       title="Edit notes"
     >
       <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-white/20 group-hover:text-amber-400/50 transition-colors" />
-      {/* Notes text wraps — no truncation */}
       <span className="text-xs text-white/35 leading-snug group-hover:text-white/60 transition-colors break-words min-w-0">
         {current || <span className="italic text-white/20">Add a note…</span>}
       </span>
@@ -402,8 +386,7 @@ export const InlineNotesEditor = ({
   );
 };
 
-// ─── InlineBirthdayEditor ─────────────────────────────────────────────────────
-// Data accuracy: guards against birthday column not existing via error catch.
+// ─ InlineBirthdayEditor ─────────────────────────────────────────────
 export const InlineBirthdayEditor = ({
   rowId, current, tenantId, onUpdated,
 }: {
@@ -438,9 +421,7 @@ export const InlineBirthdayEditor = ({
       .eq("id", rowId)
       .eq("tenant_id", tenantId);
     setSaving(false);
-
     if (error) {
-      // Guard: if column doesn't exist yet, surface a migration hint
       if (error.message?.includes("birthday") || error.code === "42703") {
         toast.error("Birthday column missing — run DB migration first", {
           description: "Add `birthday text` column to loyalty_tracker",
@@ -449,7 +430,6 @@ export const InlineBirthdayEditor = ({
         toast.error("Failed to save birthday");
       }
     } else {
-      // Peak-End Rule: satisfying celebration on birthday save
       toast.success(value ? "🎂 Birthday saved!" : "Birthday cleared");
       setEditing(false);
       onUpdated();
@@ -513,7 +493,7 @@ export const InlineBirthdayEditor = ({
   );
 };
 
-// ─── UnregisterButton ─────────────────────────────────────────────────────────
+// ─ UnregisterButton ───────────────────────────────────────────────────
 export const UnregisterButton = ({
   rowId, clientName, tenantId, onDeleted,
 }: {
@@ -572,9 +552,7 @@ export const UnregisterButton = ({
   );
 };
 
-// ─── LoyaltyClientCard ────────────────────────────────────────────────────────
-// The main card component — orchestrates all sub-editors.
-// Props mirror exactly what AdminLoyalty passes down.
+// ─ LoyaltyClientCard ────────────────────────────────────────────────
 export interface LoyaltyClientCardProps {
   row: {
     id: string;
@@ -626,9 +604,7 @@ export const LoyaltyClientCard = ({
   tenantId, businessName, serviceLabel, waTemplates,
   onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
-  const colour = avatarColour(row.client_name ?? "?");
-
-  // Resolved birthday: prefer loyalty_tracker.birthday, fall back to enrichment
+  const colour           = avatarColour(row.client_name ?? "?");
   const resolvedBirthday = (row as any).birthday ?? enrich.birthday ?? null;
 
   return (
@@ -644,78 +620,123 @@ export const LoyaltyClientCard = ({
           : "border-white/[0.07] bg-white/[0.025] hover:bg-white/[0.04] hover:border-white/[0.10]"
         }`}
     >
-      {/* ── Collapsed row (Hick's Law: max 3 actions visible) ─────────────── */}
+      {/* ===== COLLAPSED ROW ===== */}
+      {/*
+        Mobile  (≤ md): two rows stacked inside the card
+          Row A: checkbox + avatar + name/phone  (full available width)
+          Row B: status pill + WA + chevron      (right-aligned)
+        Desktop (≥ md): single horizontal flex row — same as before
+      */}
       <div
-        className="flex items-center gap-3 px-4 py-3.5 cursor-pointer select-none"
+        className="px-3 py-3 cursor-pointer select-none"
         onClick={onToggleExpand}
       >
-        {/* Checkbox — Law of Proximity: grouped with identity */}
-        <button
-          onClick={e => { e.stopPropagation(); onToggleSelect(); }}
-          className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all
-            ${isSelected
-              ? "bg-emerald-500/20 border-emerald-500/40"
-              : "border-white/[0.14] bg-white/[0.03] hover:border-white/[0.28]"
-            }`}
-          aria-label={isSelected ? "Deselect" : "Select"}
-        >
-          {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
-        </button>
+        {/* ── Row A: identity ────────────────────────────────────── */}
+        <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+          {/* Checkbox */}
+          <button
+            onClick={e => { e.stopPropagation(); onToggleSelect(); }}
+            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all
+              ${isSelected
+                ? "bg-emerald-500/20 border-emerald-500/40"
+                : "border-white/[0.14] bg-white/[0.03] hover:border-white/[0.28]"
+              }`}
+            aria-label={isSelected ? "Deselect" : "Select"}
+          >
+            {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
+          </button>
 
-        {/* Avatar — always visible, deterministic colour */}
+          {/* Avatar */}
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center
+              text-xs font-bold shrink-0 ${colour}`}
+            aria-hidden="true"
+          >
+            {initials(row.client_name ?? "?")}
+          </div>
+
+          {/* Name + phone: flex-1 + min-w-0 so it fills remaining space and truncates */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <InlineClientEditor
+              rowId={row.id}
+              name={row.client_name ?? "Unknown"}
+              phone={row.phone}
+              tenantId={tenantId}
+              onUpdated={onUpdated}
+            />
+          </div>
+
+          {/* On md+ show actions inline with identity row */}
+          <div
+            className="hidden md:flex items-center gap-2 shrink-0"
+            onClick={e => e.stopPropagation()}
+          >
+            <InlineStatusEditor
+              rowId={row.id}
+              current={row.status}
+              effectiveNorm={effStatus}
+              tenantId={tenantId}
+              onOptimisticUpdate={onOptimisticUpdate}
+              onUpdated={onUpdated}
+            />
+            <WaButton
+              name={row.client_name ?? ""}
+              status={effStatus}
+              phone={row.phone ?? ""}
+              businessName={businessName}
+              serviceLabel={serviceLabel}
+              templates={waTemplates}
+            />
+            <button
+              onClick={e => { e.stopPropagation(); onToggleExpand(); }}
+              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+                text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+              aria-label={isExpanded ? "Collapse" : "Expand details"}
+            >
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Row B: actions (mobile only) ────────────────────────── */}
         <div
-          className={`w-9 h-9 rounded-full flex items-center justify-center
-            text-xs font-bold shrink-0 ${colour}`}
-          aria-hidden="true"
+          className="flex md:hidden items-center justify-between gap-2 mt-2.5 pt-2 border-t border-white/[0.05]"
+          onClick={e => e.stopPropagation()}
         >
-          {initials(row.client_name ?? "?")}
+          <div className="flex items-center gap-2 flex-wrap">
+            <InlineStatusEditor
+              rowId={row.id}
+              current={row.status}
+              effectiveNorm={effStatus}
+              tenantId={tenantId}
+              onOptimisticUpdate={onOptimisticUpdate}
+              onUpdated={onUpdated}
+            />
+            <WaButton
+              name={row.client_name ?? ""}
+              status={effStatus}
+              phone={row.phone ?? ""}
+              businessName={businessName}
+              serviceLabel={serviceLabel}
+              templates={waTemplates}
+            />
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); onToggleExpand(); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+              text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-all ml-auto"
+            aria-label={isExpanded ? "Collapse" : "Expand details"}
+          >
+            <ChevronDown
+              className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+            />
+          </button>
         </div>
-
-        {/* Identity: full name + phone — NO truncation */}
-        <div className="flex-1 min-w-0">
-          <InlineClientEditor
-            rowId={row.id}
-            name={row.client_name ?? "Unknown"}
-            phone={row.phone}
-            tenantId={tenantId}
-            onUpdated={onUpdated}
-          />
-        </div>
-
-        {/* Action group (right) — status pill + WA + chevron */}
-        <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
-          <InlineStatusEditor
-            rowId={row.id}
-            current={row.status}
-            effectiveNorm={effStatus}
-            tenantId={tenantId}
-            onOptimisticUpdate={onOptimisticUpdate}
-            onUpdated={onUpdated}
-          />
-          <WaButton
-            name={row.client_name ?? ""}
-            status={effStatus}
-            phone={row.phone ?? ""}
-            businessName={businessName}
-            serviceLabel={serviceLabel}
-            templates={waTemplates}
-          />
-        </div>
-
-        {/* Expand chevron — Jakob's Law: always visible, rotates to signal state */}
-        <button
-          onClick={e => { e.stopPropagation(); onToggleExpand(); }}
-          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
-            text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-all"
-          aria-label={isExpanded ? "Collapse" : "Expand details"}
-        >
-          <ChevronDown
-            className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-          />
-        </button>
       </div>
 
-      {/* ── Expanded detail panel ────────────────────────────────────────── */}
+      {/* ===== EXPANDED DETAIL PANEL ===== */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -729,7 +750,6 @@ export const LoyaltyClientCard = ({
               className="px-4 pb-4 pt-0 space-y-3 border-t border-white/[0.05]"
               onClick={e => e.stopPropagation()}
             >
-              {/* ── Data points row ── */}
               <div className="flex flex-wrap gap-x-5 gap-y-2 pt-3">
                 {[
                   {
@@ -755,10 +775,7 @@ export const LoyaltyClientCard = ({
                           ? isoToDisplay(row.next_due_date_calc)
                           : "—",
                   },
-                  {
-                    label: "Source",
-                    value: row.source ?? "manual",
-                  },
+                  { label: "Source", value: row.source ?? "manual" },
                 ].map(({ label, value, highlight }) => (
                   <div key={label} className="flex items-center gap-1.5 text-[11px]">
                     <span className="text-white/30">{label}:</span>
@@ -769,7 +786,6 @@ export const LoyaltyClientCard = ({
                 ))}
               </div>
 
-              {/* ── Birthday ── */}
               <InlineBirthdayEditor
                 rowId={row.id}
                 current={resolvedBirthday}
@@ -777,7 +793,6 @@ export const LoyaltyClientCard = ({
                 onUpdated={onUpdated}
               />
 
-              {/* ── Notes ── */}
               <InlineNotesEditor
                 rowId={row.id}
                 current={row.notes ?? null}
@@ -785,7 +800,6 @@ export const LoyaltyClientCard = ({
                 onUpdated={onUpdated}
               />
 
-              {/* ── Danger zone ── */}
               <div className="pt-1">
                 <UnregisterButton
                   rowId={row.id}
