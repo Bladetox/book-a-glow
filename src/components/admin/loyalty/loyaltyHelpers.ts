@@ -43,6 +43,23 @@ export function normaliseStatus(
   return "UNKNOWN";
 }
 
+/**
+ * toDbStatus — maps any computed/display status to a value accepted by the
+ * loyalty_tracker_status_check constraint: 'ON TRACK' | 'TIME TO BOOK' | 'OVERDUE'.
+ *
+ * LONG_OVERDUE  → 'OVERDUE'   (still past-due, just further along)
+ * BIRTHDAY      → 'ON TRACK'  (display-only state, no DB equivalent)
+ * UNKNOWN       → 'ON TRACK'  (safe default when no date data exists)
+ */
+export function toDbStatus(
+  computed: string | null | undefined
+): "ON TRACK" | "TIME TO BOOK" | "OVERDUE" {
+  const s = (computed ?? "").toUpperCase().trim();
+  if (s === "OVERDUE" || s === "LONG_OVERDUE") return "OVERDUE";
+  if (s === "TIME TO BOOK") return "TIME TO BOOK";
+  return "ON TRACK";
+}
+
 function timeToBookDays(reminderWeeks: number): number {
   if (reminderWeeks <= 2) return 3;
   if (reminderWeeks <= 4) return 7;
