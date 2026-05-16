@@ -12,7 +12,7 @@ import {
   Download, Settings2, Save,
   Users, ChevronDown,
   ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock, PlusCircle, ChevronUp,
-  Bell, Tag, Sparkles, MessageSquare, SlidersHorizontal, ChevronRight, Link2,
+  Bell, Tag, Sparkles, MessageSquare, ChevronRight, Link2,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -350,15 +350,12 @@ function CandidatesBar({ nexty, criteria, onEnroll }: { nexty: EnrollCandidate[]
 interface AdminLoyaltyProps { onNavigate?: (view: string) => void; }
 
 export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
-  const { tenantId, tenant } = useTenant();
+  // useTenant only exposes { tenantId, userId } — do not destructure anything else from it
+  const { tenantId } = useTenant();
   const qc = useQueryClient();
 
-  // Derive the tenant's public booking URL
-  const bookingUrl = useMemo(() => {
-    const domain = (tenant as any)?.custom_domain;
-    if (domain && domain.trim()) return domain.trim();
-    return `${window.location.origin}/${tenantId}`;
-  }, [tenant, tenantId]);
+  // Derive the tenant's public booking URL from tenantId only
+  const bookingUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${tenantId ?? ""}`;
 
   const [reminderWeeks, setReminderWeeks] = useState(DEFAULT_LOYALTY_SETTINGS.reminder_weeks);
   const [serviceLabel, setServiceLabel]   = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
@@ -451,7 +448,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                       description: "WA template: birthday" },
         { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue, description: "WA template: not seen in a while" },
         { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                             description: "Tenant criteria: enabled" },
-        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),                 description: "Tenant criteria: service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: Array.isArray(tenantCriteria.serviceIds) ? tenantCriteria.serviceIds.join(",") : "", description: "Tenant criteria: service IDs" },
         { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                         description: "Tenant criteria: min bookings" },
         { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                        description: "Tenant criteria: lookback days" },
       ];
