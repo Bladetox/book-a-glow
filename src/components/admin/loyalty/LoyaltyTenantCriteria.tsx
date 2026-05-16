@@ -2,8 +2,14 @@
  * LoyaltyTenantCriteria
  * Renders the tenant's own criteria settings panel + their filtered candidate list,
  * completely separate from Nexty suggestions.
+ *
+ * Change (May 2026):
+ *   • Added `onCandidatesChange` prop — fires whenever `criteriaCandidates` resolves
+ *     or changes, so AdminLoyalty can pass them into CandidatesBar directly.
+ *     This fixes the bug where criteria={[]} was hardcoded in CandidatesBar because
+ *     the parent had no way to receive the computed candidates.
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, addDays, parseISO } from "date-fns";
@@ -13,11 +19,14 @@ import { normPhone, resolveKey } from "./loyaltyHelpers";
 
 interface Props {
   tenantId: string;
-  enrolledPhones?: Set<string>;        // optional — defaults to empty Set
+  enrolledPhones?: Set<string>;          // optional — defaults to empty Set
   settings: TenantCriteriaSettings;
   onSettingsChange: (s: TenantCriteriaSettings) => void;
-  reminderWeeks?: number;              // optional — defaults to 4
+  reminderWeeks?: number;                // optional — defaults to 4
   onEnroll?: (candidate: EnrollCandidate) => void;
+  /** Called whenever the computed criteria candidates list changes.
+   *  Parent (AdminLoyalty) uses this to pass candidates into CandidatesBar. */
+  onCandidatesChange?: (candidates: EnrollCandidate[]) => void;
   dirty?: boolean;
   onMarkDirty: () => void;
 }
@@ -37,6 +46,7 @@ export function LoyaltyTenantCriteria({
   onSettingsChange,
   reminderWeeks = 4,
   onEnroll,
+  onCandidatesChange,
   onMarkDirty,
 }: Props) {
   const [showConfig, setShowConfig]   = useState(false);
@@ -116,9 +126,6 @@ export function LoyaltyTenantCriteria({
         .neq("status", "cancelled");
       if (error) throw error;
 
-      // clientMap accumulates per-client booking stats.
-      // Named clientMap (not `grouped`) to avoid shadowing the component-scope
-      // `grouped` variable (services by category).
       const clientMap: Record<string, {
         name: string; phone: string; email?: string;
         count: number; spend: number; lastDate: string;
@@ -126,9 +133,6 @@ export function LoyaltyTenantCriteria({
       }> = {};
 
       for (const b of (bookings ?? [])) {
-        // Parse service_ids — stored as a text column containing a JSON array string
-        // e.g. '["uuid1","uuid2"]' or null. Guard all edge cases so .filter() never
-        // runs on undefined — fixes: "undefined is not an object (evaluating 'a.length')"
         let bookingServiceIds: string[] = [];
         try {
           const raw = b.service_ids;
@@ -145,7 +149,6 @@ export function LoyaltyTenantCriteria({
         } catch {
           bookingServiceIds = [];
         }
-        // Final safety net — ensure it's always an array before calling .filter()
         if (!Array.isArray(bookingServiceIds)) bookingServiceIds = [];
 
         const matchedIds = bookingServiceIds.filter((id: string) => selectedSet.has(id));
@@ -188,6 +191,11 @@ export function LoyaltyTenantCriteria({
         .slice(0, 30);
     },
   });
+
+  // ── Bubble candidates up to parent whenever they change ──
+  useEffect(() => {
+    onCandidatesChange?.(criteriaCandidates);
+  }, [criteriaCandidates]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedCount = safeServiceIds.length;
 
@@ -318,7 +326,9 @@ export function LoyaltyTenantCriteria({
         </div>
       )}
 
-      {/* Candidate list */}
+      {/* Candidate list — shown inside settings panel for reference.
+          The same candidates are also surfaced in the main CandidatesBar
+          via onCandidatesChange. */}
       {settings.enabled && safeServiceIds.length > 0 && (
         <div className="flex flex-col gap-1.5">
           {isLoading ? (
