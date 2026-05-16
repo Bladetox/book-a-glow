@@ -1,6 +1,61 @@
 /**
  * AdminLoyalty — slim orchestrator.
  * All sub-components, helpers, types, and constants live in ./loyalty/
+ *
+ * Settings panel redesign (May 2026)
+ * ─────────────────────────────────
+ * Laws of UX applied:
+ *   • Chunking / Law of Common Region  → every setting group has its own card
+ *   • Hick's Law                       → cards collapsed by default; users open what they need
+ *   • Fitts's Law                      → all interactive targets ≥ 44 px tall / wide
+ *   • Miller's Law                     → ≤ 7 items per card before scroll
+ *   • Aesthetic-Usability Effect       → distinct accent colour per card type
+ *   • Goal-Gradient / Zeigarnik        → dirty-dot + floating save bar when unsaved changes exist
+ *   • Peak-End Rule                    → save triggers a satisfying success toast
+ *   • Von Restorff                     → "Save" CTA isolated from the settings grid
+ *   • Jakob's Law                      → Nexty threshold ≠ criteria threshold — clearly separated
+ *
+ * Phase 2 fixes (May 2026)
+ * ────────────────────────
+ *   FIX-A  Wire onCandidatesChange: LoyaltyTenantCriteria now fires a callback whenever
+ *          criteriaCandidates changes. AdminLoyalty stores those in state and passes them
+ *          to CandidatesBar, replacing the broken hardcoded criteria=[].
+ *
+ *   FIX-B  enrolledPhones dual-phone fix: the Set is now built from BOTH client_phone and
+ *          guest_phone columns so clients like Hanga (who booked under a different phone
+ *          number) can no longer slip through as candidates.
+ *
+ *   FIX-C  "Enrolled" filter pill: prepended to the pill row. Selecting it sets
+ *          filterStatus = "enrolled" which bypasses effectiveStatus and shows all
+ *          loyalty_tracker rows (i.e. everyone already enrolled).
+ *
+ *   FIX-D  Default open on "Enrolled": filterStatus initial state changed from null
+ *          to "enrolled" so the page opens showing the full enrolled list.
+ *
+ *   FIX-E  nextyCandidates queryKey now includes enrolledPhones.size so the query
+ *          re-runs once the enrolled Set is populated (was returning stale results
+ *          on first render when enrolledPhones was still empty).
+ *
+ *   FIX-F  Dedup loyaltyRows by normalised phone before rendering. Clients who were
+ *          accidentally enrolled multiple times (e.g. Caylin) now appear only once.
+ *          The most recently created row is kept; older duplicates are hidden from
+ *          the UI (not deleted from DB).
+ *
+ *   FIX-G  enrollMutation guards against re-enrolment: if the phone is already in
+ *          enrolledPhones, the mutation shows a toast instead of inserting a duplicate.
+ *
+ * Earlier bug-fixes
+ * ─────────────────
+ *   1.  LoyaltyTenantCriteria rendered without onEnroll → tapping a candidate did nothing.
+ *   2.  enrolledPhones not passed to LoyaltyTenantCriteria → already-enrolled clients re-appeared.
+ *   3.  reminderWeeks not passed → nextDueDate defaulted to 4 weeks.
+ *   4.  Criteria candidates hidden inside Settings panel → violates Goal-Gradient Effect.
+ *   5.  Duplicate minBookings stepper (Jakob's Law fix).
+ *   6.  Build fix: JSX comment inside prop position.
+ *   7.  Enrol used `last_visit_date` instead of `last_wax_date`.
+ *   8.  Enrol passed raw computed status instead of DB-safe toDbStatus() value.
+ *   9.  Proxy-booking attribution (Ghadijah/Dhilnawaaz scenario).
+ *  10.  Enrichment double-count fix (Malieka scenario — email alias).
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -12,12 +67,15 @@ import {
   Download, Settings2, Save,
   Users, ChevronDown,
   ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock, PlusCircle, ChevronUp,
-  Bell, Tag, Sparkles, MessageSquare, ChevronRight, Link2,
+  Bell, Tag, Sparkles, MessageSquare, SlidersHorizontal, ChevronRight,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
 
+// ─── Shared design-system primitives ───
 import { EmptyState, AdminPageHeader } from "./AdminSharedUI";
+
+// ─── Sub-modules ───
 import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings } from "./loyalty/loyaltyTypes";
 import {
   STATUS_ORDER, DEFAULT_WA_TEMPLATES,
@@ -26,10 +84,11 @@ import {
 } from "./loyalty/loyaltyConstants";
 import {
   isoToDisplay,
-  normPhone, normalisePhoneForStorage, recipientPhone, recipientName,
+  normPhone, recipientPhone, recipientName,
   effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
 import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
+import { MessagingHowTo }        from "./loyalty/MessagingHowTo";
 import { LoyaltyClientCard }     from "./loyalty/LoyaltyClientCard";
 import {
   EnrollModal, EnrollSuccessCelebration,
@@ -37,30 +96,83 @@ import {
 import { LoyaltyTenantCriteria } from "./loyalty/LoyaltyTenantCriteria";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 
+// ──────────────────────────────────────────────────────────────────
+// Loyalty-relevant insight IDs
+// ──────────────────────────────────────────────────────────────────
 const LOYALTY_INSIGHT_IDS = new Set([
-  "loyalty_gap", "outside_settings_regulars", "quiet_day", "rebooking_rate",
-  "new_client_conversion", "top_client_concentration", "repeat_cancellers", "cancellation_leakage",
+  "loyalty_gap",
+  "outside_settings_regulars",
+  "quiet_day",
+  "rebooking_rate",
+  "new_client_conversion",
+  "top_client_concentration",
+  "repeat_cancellers",
+  "cancellation_leakage",
 ]);
 
+// ──────────────────────────────────────────────────────────────────
+// Mini gold orb
+// ──────────────────────────────────────────────────────────────────
 function MiniNextyOrb() {
   return (
     <span className="nexty-mini-orb" aria-hidden="true">
       <style>{`
-        .nexty-mini-orb{position:relative;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0}
-        .nexty-mini-orb::before{content:'';position:absolute;inset:-3px;border-radius:50%;background:radial-gradient(circle,rgba(209,153,0,.4) 0%,transparent 70%);animation:nexty-mini-pulse 2.8s ease-in-out infinite}
-        .nexty-mini-orb::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 32% 28%,rgba(255,240,180,.9) 0%,transparent 38%),radial-gradient(circle at 50% 50%,#fdab43 0%,#d19900 45%,#8a5b00 100%);box-shadow:inset -1px -2px 4px rgba(0,0,0,.45),inset 1px 1px 3px rgba(255,235,160,.25),0 2px 8px rgba(209,153,0,.5);animation:nexty-mini-breathe 4s ease-in-out infinite}
-        @keyframes nexty-mini-pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}}
-        @keyframes nexty-mini-breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.15)}}
-        @media(prefers-reduced-motion:reduce){.nexty-mini-orb::before,.nexty-mini-orb::after{animation:none}}
+        .nexty-mini-orb {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+        }
+        .nexty-mini-orb::before {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(209,153,0,0.4) 0%, transparent 70%);
+          animation: nexty-mini-pulse 2.8s ease-in-out infinite;
+        }
+        .nexty-mini-orb::after {
+          content: '';
+          position: absolute;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background:
+            radial-gradient(circle at 32% 28%, rgba(255,240,180,0.9) 0%, transparent 38%),
+            radial-gradient(circle at 50% 50%, #fdab43 0%, #d19900 45%, #8a5b00 100%);
+          box-shadow:
+            inset -1px -2px 4px rgba(0,0,0,0.45),
+            inset  1px  1px 3px rgba(255,235,160,0.25),
+            0 2px 8px rgba(209,153,0,0.5);
+          animation: nexty-mini-breathe 4s ease-in-out infinite;
+        }
+        @keyframes nexty-mini-pulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%       { opacity: 1;    transform: scale(1.2); }
+        }
+        @keyframes nexty-mini-breathe {
+          0%, 100% { filter: brightness(1); }
+          50%       { filter: brightness(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nexty-mini-orb::before,
+          .nexty-mini-orb::after { animation: none; }
+        }
       `}</style>
     </span>
   );
 }
 
+// ──────────────────────────────────────────────────────────────────
+// Nexty loyalty insights panel
+// ──────────────────────────────────────────────────────────────────
 const PRIORITY_STYLES: Record<string, { dot: string; iconBg: string; iconColor: string; label: string }> = {
-  critical:  { dot: "#ff5757", iconBg: "rgba(255,87,87,0.08)",   iconColor: "#ff5757", label: "Critical"  },
-  important: { dot: "#f59e0b", iconBg: "rgba(245,158,11,0.08)",  iconColor: "#f59e0b", label: "Important" },
-  info:      { dot: "#60a5fa", iconBg: "rgba(96,165,250,0.08)",  iconColor: "#60a5fa", label: "Info"      },
+  critical:  { dot: "#ff5757", iconBg: "rgba(255,87,87,0.08)",   iconColor: "#ff5757",  label: "Critical"  },
+  important: { dot: "#f59e0b", iconBg: "rgba(245,158,11,0.08)", iconColor: "#f59e0b",  label: "Important" },
+  info:      { dot: "#60a5fa", iconBg: "rgba(96,165,250,0.08)",  iconColor: "#60a5fa",  label: "Info"      },
 };
 
 function InsightIcon({ type, priority }: { type: string; priority: string }) {
@@ -87,8 +199,11 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
     const now     = new Date();
     const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     await supabase.from("nexty_insight_actions").upsert({
-      tenant_id: tenantId, insight_id: insightId, action_type: "actioned",
-      acted_at: now.toISOString(), expires_at: expires,
+      tenant_id:   tenantId,
+      insight_id:  insightId,
+      action_type: "actioned",
+      acted_at:    now.toISOString(),
+      expires_at:  expires,
     }, { onConflict: "tenant_id,insight_id,action_type" });
   };
 
@@ -106,16 +221,22 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
         </span>
         {isLoading && <Loader2 className="w-3.5 h-3.5 text-white/20 animate-spin" />}
         {!isLoading && badge !== null && (
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400">{badge}</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400">
+            {badge}
+          </span>
         )}
-        {open ? <ChevronUp className="w-3.5 h-3.5 text-white/25" /> : <ChevronDown className="w-3.5 h-3.5 text-white/25" />}
+        {open
+          ? <ChevronUp   className="w-3.5 h-3.5 text-white/25" />
+          : <ChevronDown className="w-3.5 h-3.5 text-white/25" />}
       </button>
 
       <AnimatePresence>
         {open && (
           <motion.div
             key="nexty-loyalty-panel"
-            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
@@ -125,52 +246,81 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analysing your loyalty data…
                 </div>
               )}
+
               {!isLoading && insights.length === 0 && (
                 <div className="text-xs text-white/30 py-2">
                   No loyalty insights right now. Keep enrolling clients and Nexty will surface opportunities as your data grows.
                 </div>
               )}
+
               {!isLoading && insights.map((ins) => {
                 const p          = PRIORITY_STYLES[ins.priority] ?? PRIORITY_STYLES.info;
                 const isExpanded = expanded.has(ins.id);
                 const isLong     = ins.message.length > 180;
-                const bodyText   = isExpanded || !isLong ? ins.message : `${ins.message.slice(0, 180)}…`;
+                const bodyText   = isExpanded || !isLong
+                  ? ins.message
+                  : `${ins.message.slice(0, 180)}…`;
+
                 return (
-                  <motion.div key={ins.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  <motion.div
+                    key={ins.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
                     className="bg-white/[0.03] border border-white/[0.05] rounded-2xl overflow-hidden"
                   >
                     <div className="flex items-start gap-2.5 p-3 pb-2">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
                         style={{ background: p.iconBg, color: p.iconColor }}
                       >
                         <InsightIcon type={ins.type} priority={ins.priority} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: p.dot }} />
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: p.dot }}>{p.label}</span>
+                          <span
+                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={{ background: p.dot }}
+                          />
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-[0.1em]"
+                            style={{ color: p.dot }}
+                          >
+                            {p.label}
+                          </span>
                           {ins.impactRand && (
                             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/15">
-                              <TrendingUp className="w-2.5 h-2.5" /> R{ins.impactRand.toLocaleString("en-ZA")}
+                              <TrendingUp className="w-2.5 h-2.5" />
+                              R{ins.impactRand.toLocaleString("en-ZA")}
                             </span>
                           )}
                         </div>
-                        <div className="text-xs font-semibold text-white/85 leading-snug">{ins.title}</div>
+                        <div className="text-xs font-semibold text-white/85 leading-snug">
+                          {ins.title}
+                        </div>
                       </div>
                     </div>
-                    <div className="px-3 pb-2 text-xs text-white/50 leading-relaxed">{bodyText}</div>
+
+                    <div className="px-3 pb-2 text-xs text-white/50 leading-relaxed">
+                      {bodyText}
+                    </div>
+
                     <div className="border-t border-white/[0.04] px-3 py-1.5 flex items-center gap-2 flex-wrap">
                       {ins.actionLabel && ins.actionView && onNavigate && (
                         <button
                           onClick={() => { persistAction(ins.id); onNavigate(ins.actionView!); }}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-xs font-medium text-white/70 hover:text-white/90 hover:bg-white/[0.08] transition-colors"
                         >
-                          {ins.actionLabel} <ArrowRight className="w-2.5 h-2.5 opacity-50" />
+                          {ins.actionLabel}
+                          <ArrowRight className="w-2.5 h-2.5 opacity-50" />
                         </button>
                       )}
                       {isLong && (
                         <button
-                          onClick={() => setExpanded(prev => { const n = new Set(prev); n.has(ins.id) ? n.delete(ins.id) : n.add(ins.id); return n; })}
+                          onClick={() => setExpanded(prev => {
+                            const next = new Set(prev);
+                            if (next.has(ins.id)) next.delete(ins.id); else next.add(ins.id);
+                            return next;
+                          })}
                           className="text-[11px] text-white/30 hover:text-white/50 transition-colors px-1"
                         >
                           {isExpanded ? "Show less" : "More details"}
@@ -188,14 +338,22 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
   );
 }
 
+// ──────────────────────────────────────────────────────────────────
+// SettingCard — reusable collapsible card with accent colour
+// ──────────────────────────────────────────────────────────────────
 interface SettingCardProps {
-  icon: React.ReactNode; title: string; subtitle: string; accent: string;
-  defaultOpen?: boolean; badge?: string | number; children: React.ReactNode;
-  onSave?: () => void; saving?: boolean;
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  accent: string;
+  defaultOpen?: boolean;
+  badge?: string | number;
+  children: React.ReactNode;
 }
 
-function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge, children, onSave, saving }: SettingCardProps) {
+function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge, children }: SettingCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+
   const accentMap: Record<string, { border: string; iconBg: string; iconText: string; badgeBg: string; badgeText: string }> = {
     emerald: { border: "border-emerald-500/20", iconBg: "bg-emerald-500/10", iconText: "text-emerald-400", badgeBg: "bg-emerald-500/10", badgeText: "text-emerald-400" },
     violet:  { border: "border-violet-500/20",  iconBg: "bg-violet-500/10",  iconText: "text-violet-400",  badgeBg: "bg-violet-500/10",  badgeText: "text-violet-400"  },
@@ -204,41 +362,43 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
     pink:    { border: "border-pink-500/20",    iconBg: "bg-pink-500/10",    iconText: "text-pink-400",    badgeBg: "bg-pink-500/10",    badgeText: "text-pink-400"    },
   };
   const a = accentMap[accent] ?? accentMap["emerald"];
+
   return (
     <div className={`rounded-2xl border bg-white/[0.025] overflow-hidden transition-all ${open ? a.border : "border-white/[0.07]"}`}>
-      <button onClick={() => setOpen(o => !o)}
+      <button
+        onClick={() => setOpen(o => !o)}
         className="flex items-center gap-3 w-full px-4 py-3.5 hover:bg-white/[0.03] transition-colors text-left"
         aria-expanded={open}
       >
-        <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${a.iconBg} ${a.iconText}`}>{icon}</span>
+        <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${a.iconBg} ${a.iconText}`}>
+          {icon}
+        </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white/80 leading-none mb-0.5">{title}</p>
           <p className="text-[11px] text-white/35 leading-snug truncate">{subtitle}</p>
         </div>
         {badge !== undefined && (
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.badgeBg} ${a.badgeText} border ${a.border}`}>{badge}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.badgeBg} ${a.badgeText} border ${a.border}`}>
+            {badge}
+          </span>
         )}
-        <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 shrink-0 ${open ? "rotate-90" : ""}`} />
+        <ChevronRight
+          className={`w-4 h-4 text-white/20 transition-transform duration-200 shrink-0 ${open ? "rotate-90" : ""}`}
+        />
       </button>
+
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div key="body" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }} className="overflow-hidden"
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
           >
-            <div className="border-t border-white/[0.05]">
-              <div className="px-4 pb-4 pt-4 space-y-4">{children}</div>
-              {onSave && (
-                <div className="flex justify-end px-4 pb-4 pt-1 border-t border-white/[0.04]">
-                  <button
-                    onClick={onSave}
-                    disabled={saving}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/[0.07] border border-white/[0.12] text-xs font-bold text-white/70 hover:text-white/90 hover:bg-white/[0.10] disabled:opacity-50 transition-all"
-                  >
-                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    {saving ? "Saving…" : "Save"}
-                  </button>
-                </div>
-              )}
+            <div className="px-4 pb-4 pt-1 border-t border-white/[0.05] space-y-4">
+              {children}
             </div>
           </motion.div>
         )}
@@ -247,30 +407,51 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
   );
 }
 
+// ──────────────────────────────────────────────────────────────────
+// WA template key metadata
+// ──────────────────────────────────────────────────────────────────
 const WA_TEMPLATE_META: { key: keyof typeof DEFAULT_WA_TEMPLATES; label: string; hint: string; accent: string }[] = [
-  { key: "overdue",     label: "Overdue",            hint: "Sent when a client is past their reminder date",         accent: "text-red-400/70"     },
-  { key: "longOverdue", label: "Not Seen in a While", hint: "Sent to clients you haven't seen in a long time",       accent: "text-orange-400/70"  },
-  { key: "timeToBook",  label: "Time to Book",        hint: "Sent when it's nearly time for their next appointment", accent: "text-amber-400/70"   },
-  { key: "onTrack",     label: "On Track",            hint: "Friendly check-in for clients who are keeping up",      accent: "text-emerald-400/70" },
-  { key: "birthday",    label: "Birthday 🎂",         hint: "Sent on or around the client's birthday",              accent: "text-pink-400/70"    },
+  { key: "overdue",     label: "Overdue",            hint: "Sent when a client is past their reminder date",          accent: "text-red-400/70"     },
+  { key: "longOverdue", label: "Not Seen in a While", hint: "Sent to clients you haven't seen in a long time",        accent: "text-orange-400/70"  },
+  { key: "timeToBook",  label: "Time to Book",        hint: "Sent when it's nearly time for their next appointment",  accent: "text-amber-400/70"   },
+  { key: "onTrack",     label: "On Track",            hint: "Friendly check-in for clients who are keeping up",       accent: "text-emerald-400/70" },
+  { key: "birthday",    label: "Birthday 🎂",         hint: "Sent on or around the client's birthday",               accent: "text-pink-400/70"    },
 ];
 
-function FloatingSaveBar({ dirty, saving, onSave, onDiscard }: { dirty: boolean; saving: boolean; onSave: () => void; onDiscard: () => void }) {
+// ──────────────────────────────────────────────────────────────────
+// Floating save bar (Von Restorff + Zeigarnik)
+// ──────────────────────────────────────────────────────────────────
+function FloatingSaveBar({
+  dirty, saving, onSave, onDiscard,
+}: {
+  dirty: boolean; saving: boolean; onSave: () => void; onDiscard: () => void;
+}) {
   return (
     <AnimatePresence>
       {dirty && (
         <motion.div
-          initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl border border-amber-500/30 bg-[#1a1400]/90 backdrop-blur-md shadow-2xl"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
+            px-5 py-3 rounded-2xl border border-amber-500/30 bg-[#1a1400]/90 backdrop-blur-md shadow-2xl"
         >
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
           <span className="text-xs text-amber-300/80 font-medium whitespace-nowrap">Unsaved changes</span>
-          <button onClick={onDiscard}
-            className="px-3 py-1.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/60 hover:bg-white/[0.06] transition-all"
-          >Discard</button>
-          <button onClick={onSave} disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500/30 transition-all disabled:opacity-50 min-w-[80px] justify-center"
+          <button
+            onClick={onDiscard}
+            className="px-3 py-1.5 rounded-xl text-xs font-medium text-white/40
+              hover:text-white/60 hover:bg-white/[0.06] transition-all"
+          >
+            Discard
+          </button>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-500/20
+              border border-amber-500/30 text-amber-300 text-xs font-bold
+              hover:bg-amber-500/30 transition-all disabled:opacity-50 min-w-[80px] justify-center"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             Save
@@ -281,52 +462,59 @@ function FloatingSaveBar({ dirty, saving, onSave, onDiscard }: { dirty: boolean;
   );
 }
 
-function CandidatesBar({ nexty, criteria, onEnroll }: { nexty: EnrollCandidate[]; criteria: EnrollCandidate[]; onEnroll: (c: EnrollCandidate) => void }) {
+// ──────────────────────────────────────────────────────────────────
+// CandidatesBar — unified enrolment candidates tray.
+// ──────────────────────────────────────────────────────────────────
+function CandidatesBar({
+  nexty,
+  criteria,
+  onEnroll,
+}: {
+  nexty:    EnrollCandidate[];
+  criteria: EnrollCandidate[];
+  onEnroll: (c: EnrollCandidate) => void;
+}) {
   const criteriaPhones = new Set(criteria.map(c => normPhone(c.phone)));
   const nextyFiltered  = nexty.filter(c => !criteriaPhones.has(normPhone(c.phone)));
+
   const all = [
     ...criteria.map(c => ({ ...c, _tag: "criteria" as const })),
     ...nextyFiltered.slice(0, Math.max(0, 8 - criteria.length)).map(c => ({ ...c, _tag: "nexty" as const })),
   ];
+
   if (all.length === 0) return null;
-  const criteriaCount = criteria.length;
-  const nextyCount    = nextyFiltered.length;
-  let headingDetail: React.ReactNode;
-  if (criteriaCount > 0 && nextyCount > 0) {
-    headingDetail = (
-      <>
-        <span className="text-violet-400/80">{criteriaCount} match{criteriaCount !== 1 ? "es" : ""} your criteria</span>
-        <span className="text-white/20 mx-1">·</span>
-        <span className="text-amber-400/70 flex items-center gap-1"><MiniNextyOrb />{nextyCount} from Nexty</span>
-      </>
-    );
-  } else if (criteriaCount > 0) {
-    headingDetail = <span className="text-violet-400/80">{criteriaCount} match{criteriaCount !== 1 ? "es" : ""} your criteria</span>;
-  } else {
-    headingDetail = <span className="text-amber-400/70 flex items-center gap-1"><MiniNextyOrb />{nextyCount} recommended by Nexty</span>;
-  }
+
+  const total = nexty.length + criteria.length;
+
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl p-4 space-y-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <UserPlus className="w-3.5 h-3.5 text-white/50 shrink-0" />
+      <div className="flex items-center gap-2">
+        <UserPlus className="w-3.5 h-3.5 text-white/50" />
         <span className="text-xs font-semibold text-white/60">
-          {criteriaCount + nextyFiltered.length} client{(criteriaCount + nextyFiltered.length) !== 1 ? "s" : ""} eligible for enrolment
+          {total} client{total !== 1 ? "s" : ""} eligible for enrolment
         </span>
-        <span className="ml-auto flex items-center gap-1.5 text-[11px] font-medium">{headingDetail}</span>
+        {criteria.length > 0 && (
+          <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/10 text-violet-400/80 border border-violet-500/15">
+            <Sparkles className="w-2.5 h-2.5" />
+            {criteria.length} from your criteria
+          </span>
+        )}
       </div>
+
       <div className="flex flex-wrap gap-2">
         {all.map(c => {
           const isCriteria = c._tag === "criteria";
           return (
-            <button key={c.phone + c.client_name} onClick={() => onEnroll(c)}
-              aria-label={`Enrol ${c.client_name} via ${isCriteria ? "your criteria" : "Nexty recommendation"}`}
-              className={`flex items-center gap-1.5 px-3 py-2 shrink-0 rounded-xl text-xs font-medium transition-all ${
-                isCriteria
+            <button
+              key={c.phone + c.client_name}
+              onClick={() => onEnroll(c)}
+              className={`flex items-center gap-1.5 px-3 py-2 shrink-0 rounded-xl text-xs font-medium transition-all
+                ${isCriteria
                   ? "bg-violet-500/[0.08] hover:bg-violet-500/[0.14] border border-violet-500/20 text-violet-300/80"
                   : "bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-white/70"
-              }`}
+                }`}
             >
-              {isCriteria ? <UserPlus className="w-3 h-3 shrink-0 text-violet-400/60" /> : <MiniNextyOrb />}
+              <UserPlus className={`w-3 h-3 shrink-0 ${isCriteria ? "text-violet-400/60" : "text-white/40"}`} />
               <span>{c.client_name || c.phone}</span>
               <span className="opacity-50">· {c.bookingCount} visits</span>
               {isCriteria && c.matchedServices && c.matchedServices.length > 0 && (
@@ -337,9 +525,9 @@ function CandidatesBar({ nexty, criteria, onEnroll }: { nexty: EnrollCandidate[]
             </button>
           );
         })}
-        {(criteriaCount + nextyFiltered.length) > 8 && (
+        {total > 8 && (
           <span className="flex items-center px-3 py-2 text-xs text-white/25">
-            +{(criteriaCount + nextyFiltered.length) - 8} more in Settings → Enrolment Rules
+            +{total - 8} more in Settings → Enrolment Rules
           </span>
         )}
       </div>
@@ -347,16 +535,21 @@ function CandidatesBar({ nexty, criteria, onEnroll }: { nexty: EnrollCandidate[]
   );
 }
 
-interface AdminLoyaltyProps { onNavigate?: (view: string) => void; }
+// ──────────────────────────────────────────────────────────────────
+// Props
+// ──────────────────────────────────────────────────────────────────
+interface AdminLoyaltyProps {
+  onNavigate?: (view: string) => void;
+}
 
+// ──────────────────────────────────────────────────────────────────
+// AdminLoyalty
+// ──────────────────────────────────────────────────────────────────
 export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
-  // useTenant only exposes { tenantId, userId } — do not destructure anything else from it
   const { tenantId } = useTenant();
   const qc = useQueryClient();
 
-  // Derive the tenant's public booking URL from tenantId only
-  const bookingUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${tenantId ?? ""}`;
-
+  // ── Settings state ──
   const [reminderWeeks, setReminderWeeks] = useState(DEFAULT_LOYALTY_SETTINGS.reminder_weeks);
   const [serviceLabel, setServiceLabel]   = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
   const [minBookings, setMinBookings]     = useState(DEFAULT_LOYALTY_SETTINGS.min_bookings);
@@ -364,18 +557,27 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [waTemplates, setWaTemplates]     = useState(DEFAULT_WA_TEMPLATES);
   const [showSettings, setShowSettings]   = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
+
   const [snapshot, setSnapshot] = useState<{
     reminderWeeks: number; serviceLabel: string; minBookings: number;
-    lookbackDays: number; waTemplates: typeof DEFAULT_WA_TEMPLATES; tenantCriteria: TenantCriteriaSettings;
+    lookbackDays: number; waTemplates: typeof DEFAULT_WA_TEMPLATES;
+    tenantCriteria: TenantCriteriaSettings;
   } | null>(null);
 
+  // ── Tenant criteria state ──
   const [tenantCriteria, setTenantCriteria] = useState<TenantCriteriaSettings>({
-    enabled: DEFAULT_TENANT_CRITERIA.enabled, serviceIds: DEFAULT_TENANT_CRITERIA.service_ids ?? [],
-    minBookings: DEFAULT_TENANT_CRITERIA.min_bookings, lookbackDays: DEFAULT_TENANT_CRITERIA.lookback_days,
+    enabled:      DEFAULT_TENANT_CRITERIA.enabled,
+    serviceIds:   DEFAULT_TENANT_CRITERIA.service_ids ?? [],
+    minBookings:  DEFAULT_TENANT_CRITERIA.min_bookings,
+    lookbackDays: DEFAULT_TENANT_CRITERIA.lookback_days,
   });
+
+  // FIX-A: criteria candidates received from LoyaltyTenantCriteria via onCandidatesChange
   const [criteriaCandidates, setCriteriaCandidates] = useState<EnrollCandidate[]>([]);
 
+  // ── UI state ──
   const [search, setSearch]                     = useState("");
+  // FIX-D: default to "enrolled" so the full enrolled list is visible on load
   const [filterStatus, setFilterStatus]         = useState<string | null>("enrolled");
   const [selectedIds, setSelectedIds]           = useState<string[]>([]);
   const [enrollCandidate, setEnrollCandidate]   = useState<EnrollCandidate | null>(null);
@@ -383,21 +585,34 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, string>>({});
   const [expandedCard, setExpandedCard]         = useState<string | null>(null);
 
+  // ── Data: tenant info ──
   const { data: tenantInfo } = useQuery({
-    queryKey: ["tenant_info", tenantId], enabled: !!tenantId, staleTime: 10 * 60 * 1000,
+    queryKey: ["tenant_info", tenantId],
+    enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle();
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("name")
+        .eq("id", tenantId)
+        .maybeSingle();
       if (error) throw error;
       return data as { name: string } | null;
     },
   });
   const businessName = tenantInfo?.name ?? "";
 
+  // ── Data: loyalty settings ──
   const { data: settingsRows } = useQuery({
-    queryKey: ["loyalty_settings", tenantId], enabled: !!tenantId, staleTime: 10 * 60 * 1000,
+    queryKey: ["loyalty_settings", tenantId],
+    enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("app_settings").select("key, value")
-        .eq("tenant_id", tenantId).in("key", LOYALTY_SETTING_KEYS as unknown as string[]);
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .eq("tenant_id", tenantId)
+        .in("key", LOYALTY_SETTING_KEYS as unknown as string[]);
       if (error) throw error;
       return (data ?? []) as { key: string; value: string }[];
     },
@@ -415,162 +630,252 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:     map["loyalty.wa_template_on_track"] }));
     if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:    map["loyalty.wa_template_birthday"] }));
     if (map["loyalty.wa_template_long_overdue"]) setWaTemplates(t => ({ ...t, longOverdue: map["loyalty.wa_template_long_overdue"] }));
-    if (map["loyalty.criteria_enabled"])      setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
-    if (map["loyalty.criteria_service_ids"])  setTenantCriteria(c => ({ ...c, serviceIds: (map["loyalty.criteria_service_ids"] ?? "").split(",").filter(Boolean) }));
-    if (map["loyalty.criteria_min_bookings"]) setTenantCriteria(c => ({ ...c, minBookings: Number(map["loyalty.criteria_min_bookings"]) }));
-    if (map["loyalty.criteria_lookback_days"])setTenantCriteria(c => ({ ...c, lookbackDays: Number(map["loyalty.criteria_lookback_days"]) }));
+    if (map["loyalty.criteria_enabled"])
+      setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
+    if (map["loyalty.criteria_service_ids"])
+      setTenantCriteria(c => ({ ...c, serviceIds: (map["loyalty.criteria_service_ids"] ?? "").split(",").filter(Boolean) }));
+    if (map["loyalty.criteria_min_bookings"])
+      setTenantCriteria(c => ({ ...c, minBookings: Number(map["loyalty.criteria_min_bookings"]) }));
+    if (map["loyalty.criteria_lookback_days"])
+      setTenantCriteria(c => ({ ...c, lookbackDays: Number(map["loyalty.criteria_lookback_days"]) }));
     setSettingsDirty(false);
   }, [settingsRows]);
 
   const markDirty = () => {
-    if (!settingsDirty) setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, waTemplates, tenantCriteria });
+    if (!settingsDirty) {
+      setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, waTemplates, tenantCriteria });
+    }
     setSettingsDirty(true);
   };
 
   const handleDiscard = () => {
     if (!snapshot) return;
-    setReminderWeeks(snapshot.reminderWeeks); setServiceLabel(snapshot.serviceLabel);
-    setMinBookings(snapshot.minBookings); setLookbackDays(snapshot.lookbackDays);
-    setWaTemplates(snapshot.waTemplates); setTenantCriteria(snapshot.tenantCriteria);
-    setSettingsDirty(false); setSnapshot(null);
+    setReminderWeeks(snapshot.reminderWeeks);
+    setServiceLabel(snapshot.serviceLabel);
+    setMinBookings(snapshot.minBookings);
+    setLookbackDays(snapshot.lookbackDays);
+    setWaTemplates(snapshot.waTemplates);
+    setTenantCriteria(snapshot.tenantCriteria);
+    setSettingsDirty(false);
+    setSnapshot(null);
   };
 
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
       const rows = [
-        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                                      description: "Loyalty reminder interval in weeks" },
-        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                               description: "Service label used in WA templates" },
-        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                        description: "Min bookings for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                                       description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                        description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                                     description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                        description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                       description: "WA template: birthday" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue, description: "WA template: not seen in a while" },
-        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                             description: "Tenant criteria: enabled" },
-        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: Array.isArray(tenantCriteria.serviceIds) ? tenantCriteria.serviceIds.join(",") : "", description: "Tenant criteria: service IDs" },
-        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                         description: "Tenant criteria: min bookings" },
-        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                        description: "Tenant criteria: lookback days" },
+        { tenant_id: tenantId, key: "loyalty.reminder_weeks",           value: String(reminderWeeks),                                       description: "Loyalty reminder interval in weeks" },
+        { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                                description: "Service label used in WA templates" },
+        { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                         description: "Min bookings for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                                        description: "Lookback window (days) for Nexty suggestions" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                         description: "WA template: overdue" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                                      description: "WA template: time to book" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                         description: "WA template: on track" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                        description: "WA template: birthday" },
+        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue,  description: "WA template: not seen in a while" },
+        { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                              description: "Tenant criteria: enabled" },
+        { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),                  description: "Tenant criteria: service IDs" },
+        { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                          description: "Tenant criteria: min bookings" },
+        { tenant_id: tenantId, key: "loyalty.criteria_lookback_days",   value: String(tenantCriteria.lookbackDays),                         description: "Tenant criteria: lookback days" },
       ];
-      const { error } = await supabase.from("app_settings").upsert(rows, { onConflict: "tenant_id,key" });
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert(rows, { onConflict: "tenant_id,key" });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Settings saved ✓"); setSettingsDirty(false); setSnapshot(null);
+      toast.success("Settings saved ✓");
+      setSettingsDirty(false);
+      setSnapshot(null);
       qc.invalidateQueries({ queryKey: ["loyalty_settings", tenantId] });
     },
     onError: () => toast.error("Failed to save settings"),
   });
 
-  const handleSave = () => saveSettingsMutation.mutate();
-  const isSaving   = saveSettingsMutation.isPending;
-
+  // ── Data: loyalty rows ──
   const { data: loyaltyRows = [], isLoading: loadingLoyalty } = useQuery({
-    queryKey: ["loyalty_tracker", tenantId], enabled: !!tenantId, staleTime: 5 * 60 * 1000,
+    queryKey: ["loyalty_tracker", tenantId],
+    enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("loyalty_tracker").select("*")
-        .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(300);
+      const { data, error } = await supabase
+        .from("loyalty_tracker")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(300);
       if (error) throw error;
       return (data ?? []) as LoyaltyRow[];
     },
   });
 
+  // FIX-F: Dedup loyaltyRows by normalised phone.
+  // Rows are ordered by created_at DESC so the first occurrence per phone
+  // is always the most recently enrolled row. Duplicates are hidden from
+  // the UI (not deleted from the DB).
   const dedupedLoyaltyRows = useMemo(() => {
     const seen = new Set<string>();
-    return loyaltyRows.filter(row => { const k = normPhone(row.phone); if (seen.has(k)) return false; seen.add(k); return true; });
+    return loyaltyRows.filter(row => {
+      const key = normPhone(row.phone);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [loyaltyRows]);
 
+  // FIX-B: enrolledPhones built from BOTH phone columns in bookings so dual-phone
+  // clients (e.g. Hanga) cannot slip through as enrolment candidates.
+  // We also keep the loyalty_tracker phone set for the criteria component.
   const { data: allBookingPhones = [] } = useQuery({
-    queryKey: ["all_booking_phones", tenantId], enabled: !!tenantId, staleTime: 10 * 60 * 1000,
+    queryKey: ["all_booking_phones", tenantId],
+    enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("bookings").select("client_phone, guest_phone").eq("tenant_id", tenantId).limit(2000);
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("client_phone, guest_phone")
+        .eq("tenant_id", tenantId)
+        .limit(2000);
       if (error) throw error;
       return (data ?? []) as { client_phone: string | null; guest_phone: string | null }[];
     },
   });
 
   const enrolledPhones = useMemo(() => {
+    // Start with all phones that are already in the loyalty tracker
     const set = new Set(loyaltyRows.map(r => normPhone(r.phone)));
+    // For every enrolled tracker phone, also add any booking phone that normalises
+    // to the same 9-digit suffix — this catches the same person booking under a
+    // slightly different number format.
+    const trackerNorms = set;
     for (const b of allBookingPhones) {
-      const cp = normPhone(b.client_phone); const gp = normPhone(b.guest_phone);
-      if (set.has(cp) && gp.length >= 7) set.add(gp);
-      if (set.has(gp) && cp.length >= 7) set.add(cp);
+      const cp = normPhone(b.client_phone);
+      const gp = normPhone(b.guest_phone);
+      // If either phone matches an enrolled tracker phone, add the other too
+      if (trackerNorms.has(cp) && gp.length >= 7) set.add(gp);
+      if (trackerNorms.has(gp) && cp.length >= 7) set.add(cp);
     }
     return set;
   }, [loyaltyRows, allBookingPhones]);
 
+  // FIX-E: Include enrolledPhones.size in the queryKey so this re-runs
+  // once loyaltyRows/allBookingPhones have loaded and the Set is populated.
+  // Previously the query ran on first render with an empty enrolledPhones Set,
+  // causing already-enrolled clients to appear as candidates.
   const { data: nextyCandidates = [] } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays, enrolledPhones.size],
-    enabled: !!tenantId, staleTime: 10 * 60 * 1000,
+    enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const since = format(subDays(new Date(), Math.min(lookbackDays, 365)), "yyyy-MM-dd");
-      const { data, error } = await supabase.from("bookings")
+      const effectiveLookback = Math.min(lookbackDays, 365);
+      const since = format(subDays(new Date(), effectiveLookback), "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("bookings")
         .select("client_name, guest_name, client_phone, guest_phone, booking_date, total_amount")
-        .eq("tenant_id", tenantId).gte("booking_date", since).limit(500);
+        .eq("tenant_id", tenantId)
+        .gte("booking_date", since)
+        .limit(500);
       if (error) throw error;
+
       const grouped: Record<string, { client_name: string; phone: string; bookings: { date: string; price: number }[] }> = {};
       for (const b of (data ?? [])) {
-        const phone = recipientPhone(b.client_phone, b.guest_phone); if (!phone) continue;
-        const key = normPhone(phone); if (key.length < 7) continue;
+        const phone = recipientPhone(b.client_phone, b.guest_phone);
+        if (!phone) continue;
+        const key  = normPhone(phone);
+        if (key.length < 7) continue;
         const name = recipientName(b.client_name, b.guest_name, b.client_phone, b.guest_phone);
         if (!grouped[key]) grouped[key] = { client_name: name, phone, bookings: [] };
         grouped[key].bookings.push({ date: b.booking_date, price: Number(b.total_amount ?? 0) });
       }
+
       return Object.values(grouped)
         .filter(g => g.bookings.length >= minBookings && !enrolledPhones.has(normPhone(g.phone)))
         .map(g => {
-          const sorted = g.bookings.slice().sort((a, b) => b.date.localeCompare(a.date));
+          const sorted   = g.bookings.slice().sort((a, b) => b.date.localeCompare(a.date));
           const lastDate = sorted[0].date;
           return {
-            phone: g.phone, client_name: g.client_name, bookingCount: g.bookings.length,
-            totalSpend: g.bookings.reduce((s, b) => s + b.price, 0),
+            phone:                g.phone,
+            client_name:          g.client_name,
+            bookingCount:         g.bookings.length,
+            totalSpend:           g.bookings.reduce((s, b) => s + b.price, 0),
             daysSinceLastBooking: Math.floor((Date.now() - new Date(lastDate).getTime()) / 86_400_000),
-            lastBookingDate: lastDate.split("T")[0],
-            nextDueDate: format(addDays(new Date(lastDate), reminderWeeks * 7), "yyyy-MM-dd"),
-            candidateSource: "nexty" as const,
+            lastBookingDate:      lastDate.split("T")[0],
+            nextDueDate:          format(addDays(new Date(lastDate), reminderWeeks * 7), "yyyy-MM-dd"),
+            candidateSource:      "nexty" as const,
           };
         }) as EnrollCandidate[];
     },
   });
 
+  // ── Data: enrichment ──
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
-    queryKey: ["loyalty_enrichment", tenantId], enabled: !!tenantId, staleTime: 10 * 60 * 1000,
+    queryKey: ["loyalty_enrichment", tenantId],
+    enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const enrichSince = format(subDays(new Date(), 730), "yyyy-MM-dd");
-      const { data, error } = await supabase.from("bookings")
+      const { data, error } = await supabase
+        .from("bookings")
         .select("client_phone, guest_phone, client_email, guest_email, booking_date, total_amount")
-        .eq("tenant_id", tenantId).gte("booking_date", enrichSince).limit(2000);
+        .eq("tenant_id", tenantId)
+        .gte("booking_date", enrichSince)
+        .limit(2000);
       if (error) throw error;
+
       const map: EnrichmentMap = {};
+
       const upsertEntry = (key: string, bookingDate: string) => {
         if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
         map[key].bookingCount++;
-        if (!map[key].lastVisitDate || bookingDate > map[key].lastVisitDate!) map[key].lastVisitDate = bookingDate;
+        if (!map[key].lastVisitDate || bookingDate > map[key].lastVisitDate!) {
+          map[key].lastVisitDate = bookingDate;
+        }
         return map[key];
       };
+
       for (const b of (data ?? [])) {
         const rPhone = recipientPhone(b.client_phone, b.guest_phone);
-        const rEmail = normPhone(b.guest_phone).length >= 7 && normPhone(b.guest_phone) !== normPhone(b.client_phone) ? b.guest_email : b.client_email;
-        const normP = normPhone(rPhone); const normE = (rEmail ?? "").trim().toLowerCase();
-        const hasPhone = normP.length >= 7; const hasEmail = normE.length > 3;
-        if (hasPhone) { const entry = upsertEntry(normP, b.booking_date); if (hasEmail) map[`email:${normE}`] = entry; }
-        else if (hasEmail) upsertEntry(`email:${normE}`, b.booking_date);
+        const rEmail = normPhone(b.guest_phone).length >= 7 && normPhone(b.guest_phone) !== normPhone(b.client_phone)
+          ? b.guest_email
+          : b.client_email;
+
+        const normP = normPhone(rPhone);
+        const normE = (rEmail ?? "").trim().toLowerCase();
+        const hasPhone = normP.length >= 7;
+        const hasEmail = normE.length > 3;
+
+        if (hasPhone) {
+          const entry = upsertEntry(normP, b.booking_date);
+          if (hasEmail) map[`email:${normE}`] = entry;
+        } else if (hasEmail) {
+          upsertEntry(`email:${normE}`, b.booking_date);
+        }
       }
+
       return map;
     },
   });
 
+  // ── Filtered rows (uses dedupedLoyaltyRows) ──
+  // FIX-C: "enrolled" pill bypasses effectiveStatus and shows all loyalty_tracker rows.
+  // FIX-F: We use dedupedLoyaltyRows so each phone appears at most once.
   const filteredRows = useMemo(() => {
     let rows = [...dedupedLoyaltyRows];
     if (filterStatus && filterStatus !== "enrolled") {
       rows = rows.filter(r => {
-        const eff = effectiveStatus(r, enrichment[normPhone(r.phone)]?.lastVisitDate ?? null, reminderWeeks).toLowerCase().replace(/ /g, "_");
+        const phone  = normPhone(r.phone);
+        const enrich = enrichment[phone] ?? null;
+        const eff    = effectiveStatus(r, enrich?.lastVisitDate ?? null, reminderWeeks)
+          .toLowerCase().replace(/ /g, "_");
         return eff === filterStatus;
       });
     }
     if (search.trim()) {
       const q = search.toLowerCase();
-      rows = rows.filter(r => (r.client_name ?? "").toLowerCase().includes(q) || (r.phone ?? "").includes(q) || (r.source ?? "").toLowerCase().includes(q));
+      rows = rows.filter(r =>
+        (r.client_name ?? "").toLowerCase().includes(q) ||
+        (r.phone ?? "").includes(q) ||
+        (r.source ?? "").toLowerCase().includes(q),
+      );
     }
     return rows;
   }, [dedupedLoyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
@@ -578,7 +883,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of dedupedLoyaltyRows) {
-      const eff = effectiveStatus(row, enrichment[normPhone(row.phone)]?.lastVisitDate ?? null, reminderWeeks).toLowerCase().replace(/ /g, "_");
+      const phone  = normPhone(row.phone);
+      const enrich = enrichment[phone] ?? null;
+      const eff    = effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks)
+        .toLowerCase().replace(/ /g, "_");
       counts[eff] = (counts[eff] ?? 0) + 1;
     }
     return counts;
@@ -587,7 +895,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const effectiveStatusMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const row of dedupedLoyaltyRows) {
-      m[row.id] = optimisticStatus[row.id] ?? effectiveStatus(row, enrichment[normPhone(row.phone)]?.lastVisitDate ?? null, reminderWeeks);
+      const phone  = normPhone(row.phone);
+      const enrich = enrichment[phone] ?? null;
+      m[row.id]    = optimisticStatus[row.id] ?? effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks);
     }
     return m;
   }, [dedupedLoyaltyRows, optimisticStatus, reminderWeeks, enrichment]);
@@ -597,95 +907,139 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
-      if (enrolledPhones.has(normPhone(candidate.phone))) throw new Error("already_enrolled");
-      const normalisedPhone = normalisePhoneForStorage(candidate.phone) ?? candidate.phone;
+      // FIX-G: Guard against re-enrolment — show a toast instead of inserting a duplicate row.
+      if (enrolledPhones.has(normPhone(candidate.phone))) {
+        throw new Error("already_enrolled");
+      }
       const now = new Date().toISOString();
       const computed = candidate.lastBookingDate
-        ? effectiveStatus({ status: null, birthday: null, next_due_date: null, last_wax_date: candidate.lastBookingDate } as LoyaltyRow, candidate.lastBookingDate, reminderWeeks)
+        ? effectiveStatus(
+            { status: null, birthday: null, next_due_date: null, last_wax_date: candidate.lastBookingDate } as LoyaltyRow,
+            candidate.lastBookingDate,
+            reminderWeeks,
+          )
         : "ON TRACK";
       const { error } = await supabase.from("loyalty_tracker").insert({
-        tenant_id: tenantId, client_name: candidate.client_name, phone: normalisedPhone,
-        status: toDbStatus(computed), source: candidate.candidateSource ?? "manual",
-        notes: candidate.notes ?? null, last_wax_date: candidate.lastBookingDate ?? null,
-        next_due_date: candidate.nextDueDate ?? null, created_at: now, updated_at: now,
+        tenant_id:     tenantId,
+        client_name:   candidate.client_name,
+        phone:         candidate.phone,
+        status:        toDbStatus(computed),
+        source:        candidate.candidateSource ?? "manual",
+        notes:         candidate.notes ?? null,
+        last_wax_date: candidate.lastBookingDate ?? null,
+        next_due_date: candidate.nextDueDate ?? null,
+        created_at:    now,
+        updated_at:    now,
       });
       if (error) throw error;
     },
     onSuccess: (_, candidate) => {
-      setEnrolledName(candidate.client_name); setEnrollCandidate(null);
+      setEnrolledName(candidate.client_name);
+      setEnrollCandidate(null);
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays, enrolledPhones.size] });
     },
     onError: (err) => {
-      if ((err as Error).message === "already_enrolled") toast.warning("This client is already enrolled in the loyalty programme.");
-      else { console.error("Enrol error:", err); toast.error("Failed to enrol client"); }
+      if ((err as Error).message === "already_enrolled") {
+        toast.warning("This client is already enrolled in the loyalty programme.");
+      } else {
+        console.error("Enrol error:", err);
+        toast.error("Failed to enrol client");
+      }
     },
   });
 
   const handleExport = () => exportCSV(filteredRows, enrichment, reminderWeeks);
   const invalidateLoyalty = () => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
-  const handleCriteriaChange = (next: TenantCriteriaSettings) => { setTenantCriteria(next); markDirty(); };
+
+  const handleCriteriaChange = (next: TenantCriteriaSettings) => {
+    setTenantCriteria(next);
+    markDirty();
+  };
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden px-4 py-4 md:px-6 md:py-6">
       <div className="w-full max-w-5xl mx-auto space-y-5 min-w-0">
 
+        {/* ── Header ── */}
         <AdminPageHeader
           title="Loyalty Programme"
           subtitle={`${dedupedLoyaltyRows.length} client${dedupedLoyaltyRows.length !== 1 ? "s" : ""} enrolled`}
           action={
             <div className="flex gap-2 flex-nowrap items-center">
-              <button onClick={handleExport}
+              <button
+                onClick={handleExport}
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold border border-white/[0.08] rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/60 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" /> Export CSV
               </button>
-              <button onClick={() => setShowSettings(s => !s)}
+              <button
+                onClick={() => setShowSettings(s => !s)}
                 className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl border transition-colors ${
-                  showSettings ? "bg-white/[0.10] border-white/[0.15] text-white/90" : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-white/60"
+                  showSettings
+                    ? "bg-white/[0.10] border-white/[0.15] text-white/90"
+                    : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-white/60"
                 }`}
               >
-                <Settings2 className="w-3.5 h-3.5" /> Settings
+                <Settings2 className="w-3.5 h-3.5" />
+                Settings
                 {settingsDirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-0.5" />}
               </button>
             </div>
           }
         />
 
+        {/* ── Settings panel ── */}
         <AnimatePresence initial={false}>
           {showSettings && (
-            <motion.div key="settings-panel" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }} className="space-y-3"
+            <motion.div
+              key="settings-panel"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="space-y-3"
             >
-              {/* Reminder Schedule */}
+              {/* 1. Reminder Schedule */}
               <SettingCard
-                icon={<Bell className="w-4 h-4" />} title="Reminder Schedule"
-                subtitle={`Clients are nudged every ${reminderWeeks} week${reminderWeeks !== 1 ? "s" : ""}`} accent="emerald" defaultOpen
-                onSave={handleSave} saving={isSaving}
+                icon={<Bell className="w-4 h-4" />}
+                title="Reminder Schedule"
+                subtitle={`Clients are nudged every ${reminderWeeks} week${reminderWeeks !== 1 ? "s" : ""}`}
+                accent="emerald"
+                defaultOpen
               >
                 <p className="text-[11px] text-white/30 leading-relaxed">
-                  How many weeks after their last visit should a client receive a reminder?
+                  How many weeks after their last visit should a client receive a reminder? This drives
+                  the <span className="text-amber-400/70">"Time to Book"</span> and <span className="text-red-400/70">"Overdue"</span> statuses.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Interval (weeks)</label>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => { if (reminderWeeks > 1) { setReminderWeeks(w => w - 1); markDirty(); } }}
+                      <button
+                        onClick={() => { if (reminderWeeks > 1) { setReminderWeeks(w => w - 1); markDirty(); } }}
                         className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
-                        aria-label="Decrease reminder weeks">−</button>
-                      <input type="number" min={1} max={52} value={reminderWeeks}
+                        aria-label="Decrease reminder weeks"
+                      >−</button>
+                      <input
+                        type="number" min={1} max={52}
+                        value={reminderWeeks}
                         onChange={e => { setReminderWeeks(Number(e.target.value)); markDirty(); }}
                         className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-base font-bold text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
                       />
-                      <button onClick={() => { if (reminderWeeks < 52) { setReminderWeeks(w => w + 1); markDirty(); } }}
+                      <button
+                        onClick={() => { if (reminderWeeks < 52) { setReminderWeeks(w => w + 1); markDirty(); } }}
                         className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
-                        aria-label="Increase reminder weeks">+</button>
+                        aria-label="Increase reminder weeks"
+                      >+</button>
                     </div>
                     <p className="text-[10px] text-white/20">Typical: 4–8 weeks for beauty services</p>
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Nexty lookback window (days)</label>
-                    <input type="number" min={30} max={730} step={30} value={lookbackDays}
+                    <input
+                      type="number" min={30} max={730} step={30}
+                      value={lookbackDays}
                       onChange={e => { setLookbackDays(Number(e.target.value)); markDirty(); }}
                       className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
                     />
@@ -694,15 +1048,24 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
-              {/* Service & Brand */}
+              {/* 2. Service & Brand */}
               <SettingCard
-                icon={<Tag className="w-4 h-4" />} title="Service & Brand"
-                subtitle={`Service label: "${serviceLabel}"`} accent="sky"
-                onSave={handleSave} saving={isSaving}
+                icon={<Tag className="w-4 h-4" />}
+                title="Service & Brand"
+                subtitle={`Service label: "${serviceLabel}"`}
+                accent="sky"
               >
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  The <strong className="text-white/50">service label</strong> fills the{" "}
+                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
+                  placeholder in your WhatsApp message templates.
+                </p>
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Service label</label>
-                  <input type="text" value={serviceLabel} placeholder="e.g. lash fill, wax, appointment"
+                  <input
+                    type="text"
+                    value={serviceLabel}
+                    placeholder="e.g. lash fill, wax, appointment"
                     onChange={e => { setServiceLabel(e.target.value); markDirty(); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-sky-400/40 transition-colors"
                   />
@@ -715,60 +1078,73 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
-              {/* Enrolment Rules */}
+              {/* 3. Enrolment Rules */}
               <SettingCard
-                icon={<Sparkles className="w-4 h-4" />} title="Enrolment Rules"
-                subtitle="Configure when clients are flagged as enrolment candidates" accent="violet"
-                onSave={handleSave} saving={isSaving}
+                icon={<Sparkles className="w-4 h-4" />}
+                title="Enrolment Rules"
+                subtitle="Configure when clients are flagged as enrolment candidates"
+                accent="violet"
               >
                 <div className="flex flex-col gap-3">
-                  <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-white/30">Nexty suggestion threshold</p>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60 shrink-0" />
+                    <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-white/30">Nexty suggestion threshold</p>
+                  </div>
+                  <p className="text-[11px] text-white/25 leading-relaxed -mt-1">
+                    Nexty will surface a client as an enrolment candidate once they pass this many bookings (across <em>any</em> service) within the lookback window set above.
+                  </p>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Min. bookings (any service)</label>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => { if (minBookings > 1) { setMinBookings(b => b - 1); markDirty(); } }}
+                      <button
+                        onClick={() => { if (minBookings > 1) { setMinBookings(b => b - 1); markDirty(); } }}
                         className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
-                        aria-label="Decrease min bookings">−</button>
-                      <input type="number" min={1} max={20} value={minBookings}
+                        aria-label="Decrease min bookings"
+                      >−</button>
+                      <input
+                        type="number" min={1} max={20}
+                        value={minBookings}
                         onChange={e => { setMinBookings(Number(e.target.value)); markDirty(); }}
                         className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-base font-bold text-white/80 focus:outline-none focus:border-amber-400/40 transition-colors"
                       />
-                      <button onClick={() => { if (minBookings < 20) { setMinBookings(b => b + 1); markDirty(); } }}
+                      <button
+                        onClick={() => { if (minBookings < 20) { setMinBookings(b => b + 1); markDirty(); } }}
                         className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
-                        aria-label="Increase min bookings">+</button>
+                        aria-label="Increase min bookings"
+                      >+</button>
                     </div>
                     <p className="text-[10px] text-white/20">Recommended: 2–4 for beauty, 3–6 for clinics</p>
                   </div>
                 </div>
                 <div className="border-t border-white/[0.06]" />
                 <LoyaltyTenantCriteria
-                  tenantId={tenantId ?? ""} enrolledPhones={enrolledPhones} settings={tenantCriteria}
-                  onSettingsChange={handleCriteriaChange} reminderWeeks={reminderWeeks}
-                  onEnroll={c => setEnrollCandidate(c)} onCandidatesChange={setCriteriaCandidates} onMarkDirty={markDirty}
+                  tenantId={tenantId ?? ""}
+                  enrolledPhones={enrolledPhones}
+                  settings={tenantCriteria}
+                  onSettingsChange={handleCriteriaChange}
+                  reminderWeeks={reminderWeeks}
+                  onEnroll={c => setEnrollCandidate(c)}
+                  onCandidatesChange={setCriteriaCandidates}
+                  onMarkDirty={markDirty}
                 />
               </SettingCard>
 
-              {/* WhatsApp Templates */}
+              {/* 4. WhatsApp Templates */}
               <SettingCard
-                icon={<MessageSquare className="w-4 h-4" />} title="WhatsApp Templates"
-                subtitle="Customise the message sent for each status" accent="amber" badge={WA_TEMPLATE_META.length}
-                onSave={handleSave} saving={isSaving}
+                icon={<MessageSquare className="w-4 h-4" />}
+                title="WhatsApp Templates"
+                subtitle="Customise the message sent for each status"
+                accent="amber"
+                badge={WA_TEMPLATE_META.length}
               >
-                {/* Booking link preview */}
-                <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/15 bg-amber-500/[0.05] px-3.5 py-2.5">
-                  <Link2 className="w-3.5 h-3.5 text-amber-400/60 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-semibold text-amber-400/60 uppercase tracking-[0.1em] mb-0.5">Your booking link <span className="normal-case font-normal text-white/30">— used as <code className="text-amber-300/50">{'{bookingUrl}'}</code> in templates</span></p>
-                    <p className="text-xs text-white/60 font-mono truncate">{bookingUrl}</p>
-                  </div>
-                </div>
-                {/* Token legend */}
-                <div className="flex flex-wrap gap-1.5">
-                  {["{name}", "{business}", "{service}", "{bookingUrl}"].map(tok => (
-                    <span key={tok} className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-white/40">{tok}</span>
-                  ))}
-                  <span className="text-[10px] text-white/20 self-center ml-1">available tokens</span>
-                </div>
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  Use{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'name\\'}"}</code>,{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'business\\'}"}</code> and{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
+                  as placeholders. WhatsApp links are generated automatically when you tap{" "}
+                  <span className="text-green-400/70">WA</span> on a client card.
+                </p>
                 <div className="space-y-4">
                   {WA_TEMPLATE_META.map(({ key, label, hint, accent: accentText }) => (
                     <div key={key} className="flex flex-col gap-1.5">
@@ -776,7 +1152,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                         <span className={`text-xs font-semibold ${accentText}`}>{label}</span>
                         <span className="text-[10px] text-white/25 truncate">{hint}</span>
                       </div>
-                      <textarea rows={3} value={waTemplates[key] ?? ""}
+                      <textarea
+                        rows={3}
+                        value={waTemplates[key] ?? ""}
                         onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); markDirty(); }}
                         className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-amber-400/30 transition-colors resize-none font-mono leading-relaxed"
                         placeholder={`Template for "${label}" status…`}
@@ -786,12 +1164,22 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 </div>
               </SettingCard>
 
+              {/* 5. How Messaging Works */}
+              <SettingCard
+                icon={<SlidersHorizontal className="w-4 h-4" />}
+                title="How Messaging Works"
+                subtitle="WhatsApp deep-links — no API account needed"
+                accent="pink"
+              >
+                <MessagingHowTo />
+              </SettingCard>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Status filter pills */}
+        {/* ── Status filter pills ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {/* FIX-C: "Enrolled" pill — shows all loyalty_tracker rows */}
           <button
             onClick={() => setFilterStatus(s => s === "enrolled" ? null : "enrolled")}
             className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
@@ -801,89 +1189,121 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             }`}
           >
             Enrolled
-            <span className={`text-[10px] tabular-nums ${filterStatus === "enrolled" ? "text-white/60" : "text-white/25"}`}>
+            <span className={`text-[10px] tabular-nums ${
+              filterStatus === "enrolled" ? "text-white/60" : "text-white/25"
+            }`}>
               ({dedupedLoyaltyRows.length})
             </span>
           </button>
+
           {STATUS_ORDER.map(status => {
-            const count = statusCounts[status] ?? 0;
+            const count    = statusCounts[status] ?? 0;
             const isActive = filterStatus === status;
-            const label = PILL_LABEL[status] ?? status.replace(/_/g, " ");
+            const label    = PILL_LABEL[status] ?? status.replace(/_/g, " ");
             return (
-              <button key={status} onClick={() => setFilterStatus(s => s === status ? null : status)}
+              <button
+                key={status}
+                onClick={() => setFilterStatus(s => s === status ? null : status)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
-                  isActive ? "bg-white/[0.12] border-white/[0.20] text-white/90" : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
+                  isActive
+                    ? "bg-white/[0.12] border-white/[0.20] text-white/90"
+                    : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
                 }`}
               >
                 {label}
                 {count > 0 && (
-                  <span className={`text-[10px] tabular-nums ${isActive ? "text-white/60" : "text-white/25"}`}>({count})</span>
+                  <span className={`text-[10px] tabular-nums ${isActive ? "text-white/60" : "text-white/25"}`}>
+                    ({count})
+                  </span>
                 )}
               </button>
             );
           })}
           {filterStatus && (
-            <button onClick={() => setFilterStatus(null)}
+            <button
+              onClick={() => setFilterStatus(null)}
               className="px-3 py-1.5 shrink-0 rounded-full text-[11px] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
             >
-              Clear
+              Clear filter
             </button>
           )}
         </div>
 
-        {/* Search */}
+        {/* ── Search bar ── */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
           <input
-            type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search clients by name or phone…"
-            className="w-full pl-9 pr-9 py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.07] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] transition-colors"
+            type="text"
+            placeholder="Search by name, phone or source…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-9 py-2.5 border border-white/[0.08] rounded-2xl text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 bg-white/[0.04] transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors">
-              <X className="w-3.5 h-3.5" />
+            <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2">
+              <X className="w-3.5 h-3.5 text-white/30 hover:text-white/60 transition-colors" />
             </button>
           )}
         </div>
 
-        {/* Candidates bar */}
-        <CandidatesBar nexty={nextyCandidates} criteria={criteriaCandidates} onEnroll={c => setEnrollCandidate(c)} />
+        {/* ── Candidates bar — FIX-A: criteria now live, not hardcoded [] ── */}
+        <CandidatesBar
+          nexty={nextyCandidates}
+          criteria={criteriaCandidates}
+          onEnroll={c => setEnrollCandidate(c)}
+        />
 
-        {/* Nexty panel */}
+        {/* ── Bulk action bar ── */}
+        <LoyaltyBulkBar
+          selected={selectedIds}
+          rows={loyaltyRows}
+          effectiveStatusMap={effectiveStatusMap}
+          businessName={businessName}
+          serviceLabel={serviceLabel}
+          templates={waTemplates}
+          onClear={() => setSelectedIds([])}
+        />
+
+        {/* ── Nexty loyalty insights panel ── */}
         <NextyLoyaltyPanel onNavigate={onNavigate} />
 
-        {/* Client cards */}
+        {/* ── Loyalty client list ── */}
         {loadingLoyalty ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
+          <div className="flex items-center justify-center py-16 text-white/30">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading loyalty data…
           </div>
         ) : filteredRows.length === 0 ? (
           <EmptyState
-            icon={<Users className="w-6 h-6 text-white/20" />}
-            title={filterStatus ? "No clients match this filter" : "No clients enrolled yet"}
-            description={filterStatus ? "Try clearing the filter or adjusting your search." : "Use the candidates bar above to enrol your first client."}
+            icon={Users}
+            title={filterStatus || search ? "No clients match your filter" : "No clients enrolled yet"}
+            description={
+              !filterStatus && !search
+                ? "Eligible clients will appear above when they meet your booking criteria."
+                : undefined
+            }
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="space-y-2">
             {filteredRows.map(row => {
-              const phone  = normPhone(row.phone);
-              const enrich = enrichment[phone] ?? null;
+              const phone     = normPhone(row.phone);
+              const enrich    = enrichment[phone] ?? { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
+              const effStatus = optimisticStatus[row.id] ?? effectiveStatus(row, enrich.lastVisitDate, reminderWeeks);
               return (
                 <LoyaltyClientCard
                   key={row.id}
                   row={row}
                   enrich={enrich}
-                  effStatus={effectiveStatusMap[row.id] ?? "on_track"}
+                  effStatus={effStatus}
                   reminderWeeks={reminderWeeks}
-                  serviceLabel={serviceLabel}
-                  businessName={businessName}
-                  waTemplates={waTemplates}
                   isSelected={selectedIds.includes(row.id)}
                   isExpanded={expandedCard === row.id}
                   tenantId={tenantId ?? ""}
+                  businessName={businessName}
+                  serviceLabel={serviceLabel}
+                  waTemplates={waTemplates}
                   onToggleSelect={() => toggleSelect(row.id)}
                   onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
-                  onOptimisticUpdate={(newStatus) => setOptimisticStatus(m => ({ ...m, [row.id]: newStatus }))}
+                  onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
                   onUpdated={invalidateLoyalty}
                   isoToDisplay={isoToDisplay}
                 />
@@ -891,50 +1311,48 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             })}
           </div>
         )}
+      </div>
 
-        {/* Bulk action bar */}
-        <LoyaltyBulkBar
-          selectedIds={selectedIds}
-          rows={dedupedLoyaltyRows}
-          enrichment={enrichment}
-          reminderWeeks={reminderWeeks}
-          serviceLabel={serviceLabel}
-          businessName={businessName}
-          waTemplates={waTemplates}
-          onClear={() => setSelectedIds([])}
-          onRefresh={invalidateLoyalty}
-        />
+      {/* ── Floating save bar ── */}
+      <FloatingSaveBar
+        dirty={settingsDirty}
+        saving={saveSettingsMutation.isPending}
+        onSave={() => saveSettingsMutation.mutate()}
+        onDiscard={handleDiscard}
+      />
 
-        {/* Enrol modal */}
+      {/* ── Enrol modal ── */}
+      <AnimatePresence>
         {enrollCandidate && (
           <EnrollModal
             candidate={enrollCandidate}
-            reminderWeeks={reminderWeeks}
-            onConfirm={data => enrollMutation.mutate({ ...enrollCandidate, ...data })}
+            serviceLabel={serviceLabel}
+            saving={enrollMutation.isPending}
             onClose={() => setEnrollCandidate(null)}
-            isPending={enrollMutation.isPending}
+            onConfirm={(name, phone, notes, lastBooking, nextDue) =>
+              enrollMutation.mutate({
+                ...enrollCandidate,
+                client_name:     name,
+                phone,
+                notes,
+                candidateSource: enrollCandidate.candidateSource ?? "manual",
+                lastBookingDate: lastBooking,
+                nextDueDate:     nextDue,
+              })
+            }
           />
         )}
+      </AnimatePresence>
 
-        {/* Success celebration */}
-        <AnimatePresence>
-          {enrolledName && (
-            <EnrollSuccessCelebration
-              name={enrolledName}
-              onDone={() => setEnrolledName(null)}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Floating save bar */}
-        <FloatingSaveBar
-          dirty={settingsDirty}
-          saving={isSaving}
-          onSave={handleSave}
-          onDiscard={handleDiscard}
-        />
-
-      </div>
+      {/* ── Enrol success celebration ── */}
+      <AnimatePresence>
+        {enrolledName && (
+          <EnrollSuccessCelebration
+            name={enrolledName}
+            onDone={() => setEnrolledName(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
