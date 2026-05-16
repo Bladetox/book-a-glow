@@ -43,6 +43,9 @@
  *
  *   6. Build fix: removed a JSX comment that was incorrectly placed inside a prop
  *      position on <CandidatesBar criteria={[]} /> which caused a parse error.
+ *
+ *   7. Enrol insert used `last_visit_date` which does not exist in loyalty_tracker;
+ *      correct column name is `last_wax_date`.
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -450,8 +453,6 @@ function FloatingSaveBar({
 
 // ──────────────────────────────────────────────────────────────────
 // CandidatesBar — unified enrolment candidates tray.
-// Merges Nexty + criteria candidates, deduplicates by phone, and
-// fires onEnroll when a chip is tapped (Goal-Gradient Effect).
 // ──────────────────────────────────────────────────────────────────
 function CandidatesBar({
   nexty,
@@ -834,16 +835,16 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
       const now = new Date().toISOString();
       const { error } = await supabase.from("loyalty_tracker").insert({
-        tenant_id:       tenantId,
-        client_name:     candidate.client_name,
-        phone:           candidate.phone,
-        status:          "on_track",
-        source:          candidate.candidateSource ?? "manual",
-        notes:           candidate.notes ?? null,
-        last_visit_date: candidate.lastBookingDate ?? null,
-        next_due_date:   candidate.nextDueDate ?? null,
-        created_at:      now,
-        updated_at:      now,
+        tenant_id:     tenantId,
+        client_name:   candidate.client_name,
+        phone:         candidate.phone,
+        status:        "on_track",
+        source:        candidate.candidateSource ?? "manual",
+        notes:         candidate.notes ?? null,
+        last_wax_date: candidate.lastBookingDate ?? null,  // ← correct column name
+        next_due_date: candidate.nextDueDate ?? null,
+        created_at:    now,
+        updated_at:    now,
       });
       if (error) throw error;
     },
@@ -853,7 +854,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
       qc.invalidateQueries({ queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays] });
     },
-    onError: () => toast.error("Failed to enroll client"),
+    onError: (err) => {
+      console.error("Enrol error:", err);
+      toast.error("Failed to enrol client");
+    },
   });
 
   const handleExport = () => exportCSV(filteredRows, enrichment, reminderWeeks);
@@ -1135,7 +1139,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           )}
         </div>
 
-        {/* ── Candidates bar (Nexty suggestions) ── */}
+        {/* ── Candidates bar ── */}
         <CandidatesBar
           nexty={nextyCandidates}
           criteria={[]}
@@ -1210,7 +1214,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         onDiscard={handleDiscard}
       />
 
-      {/* ── Enroll modal ── */}
+      {/* ── Enrol modal ── */}
       <AnimatePresence>
         {enrollCandidate && (
           <EnrollModal
@@ -1233,7 +1237,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         )}
       </AnimatePresence>
 
-      {/* ── Enroll success celebration ── */}
+      {/* ── Enrol success celebration ── */}
       <AnimatePresence>
         {enrolledName && (
           <EnrollSuccessCelebration
