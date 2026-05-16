@@ -58,6 +58,14 @@
  *      booker (client) when guest_phone differs from client_phone.
  *      Dedup key: last 9 digits of phone (normPhone), consistent throughout candidates
  *      query, enrichment map, and enrolled-phones set.
+ *
+ *  10. Enrichment double-count fix (May 2026): addToMap was pushing both the phone key
+ *      and the email key into keys[] and incrementing bookingCount on both for the same
+ *      booking. Clients with both a valid phone AND a valid email (e.g. Malieka) showed
+ *      a count of 2 despite having only 1 booking.
+ *      Fixed: bookingCount is now incremented exactly once on the primary (phone) key.
+ *      The email key is assigned as a reference to the same map entry (alias) so
+ *      cross-lookups still work without any double-counting.
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -765,6 +773,18 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   // ── Data: enrichment ──
   // Same attribution rule: index enrichment data against the recipient's phone.
+  //
+  // FIX (bug #10): bookingCount must be incremented exactly ONCE per booking.
+  // Previously addToMap pushed both the phone key and the email key into keys[]
+  // and incremented bookingCount on both, causing a count of 2 for any client
+  // who had both a valid phone and a valid email (e.g. Malieka: 1 booking → showed 2).
+  //
+  // The corrected logic:
+  //   • If a phone key exists → it is the PRIMARY key; increment bookingCount on it.
+  //     The email key is assigned as a JS object reference (alias) to the SAME entry
+  //     so email-based lookups still resolve correctly without double-counting.
+  //   • If there is no phone key but there is an email key → email is the primary;
+  //     increment bookingCount on it once.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
@@ -780,28 +800,41 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (error) throw error;
 
       const map: EnrichmentMap = {};
-      const addToMap = (phone: string | null, email: string | null, bookingDate: string) => {
-        const keys: string[] = [];
-        const normP = normPhone(phone);
-        if (normP.length >= 7) keys.push(normP);
-        const normE = (email ?? "").trim().toLowerCase();
-        if (normE.length > 3) keys.push(`email:${normE}`);
-        for (const key of keys) {
-          if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
-          map[key].bookingCount++;
-          if (!map[key].lastVisitDate || bookingDate > map[key].lastVisitDate!) {
-            map[key].lastVisitDate = bookingDate;
-          }
+
+      const upsertEntry = (key: string, bookingDate: string) => {
+        if (!map[key]) map[key] = { bookingCount: 0, lastVisitDate: null, nextDueDate: null, birthday: null };
+        map[key].bookingCount++;
+        if (!map[key].lastVisitDate || bookingDate > map[key].lastVisitDate!) {
+          map[key].lastVisitDate = bookingDate;
         }
+        return map[key];
       };
+
       for (const b of (data ?? [])) {
         // Determine recipient phone/email for this booking
         const rPhone = recipientPhone(b.client_phone, b.guest_phone);
         const rEmail = normPhone(b.guest_phone).length >= 7 && normPhone(b.guest_phone) !== normPhone(b.client_phone)
           ? b.guest_email   // proxy booking — use guest email
           : b.client_email; // self-booking — use client email
-        addToMap(rPhone, rEmail, b.booking_date);
+
+        const normP = normPhone(rPhone);
+        const normE = (rEmail ?? "").trim().toLowerCase();
+        const hasPhone = normP.length >= 7;
+        const hasEmail = normE.length > 3;
+
+        if (hasPhone) {
+          // Phone is primary: increment count once, then alias email key to same entry.
+          const entry = upsertEntry(normP, b.booking_date);
+          if (hasEmail) {
+            // Alias: email key points to the same object — no extra increment.
+            map[`email:${normE}`] = entry;
+          }
+        } else if (hasEmail) {
+          // No phone available — email is the only key; increment once.
+          upsertEntry(`email:${normE}`, b.booking_date);
+        }
       }
+
       return map;
     },
   });
