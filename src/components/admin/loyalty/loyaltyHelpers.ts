@@ -28,8 +28,43 @@ export function isoToDisplay(iso: string | null | undefined): string {
 }
 
 // ─── Phone normaliser ───
+// Primary dedup key: last 9 digits (strips country code & formatting).
+// Works for +27 082 / 0829 / 829 variants all resolving to the same key.
 export function normPhone(p: string | null | undefined): string {
   return ((p ?? "").replace(/\D/g, "")).slice(-9);
+}
+
+/**
+ * recipientPhone — for a booking row, return the phone of the person who
+ * RECEIVED the service (guest if distinct, otherwise client).
+ *
+ * Rule: if guest_phone exists AND normPhone(guest_phone) !== normPhone(client_phone),
+ * the booking was a proxy booking → credit goes to the guest.
+ * Otherwise the client is the recipient.
+ */
+export function recipientPhone(
+  clientPhone: string | null | undefined,
+  guestPhone:  string | null | undefined
+): string | null {
+  const normC = normPhone(clientPhone);
+  const normG = normPhone(guestPhone);
+  if (normG.length >= 7 && normG !== normC) return guestPhone ?? null;
+  return clientPhone ?? null;
+}
+
+/**
+ * recipientName — return the name that belongs to the recipient (guest or client).
+ */
+export function recipientName(
+  clientName: string | null | undefined,
+  guestName:  string | null | undefined,
+  clientPhone: string | null | undefined,
+  guestPhone:  string | null | undefined
+): string {
+  const normC = normPhone(clientPhone);
+  const normG = normPhone(guestPhone);
+  if (normG.length >= 7 && normG !== normC) return guestName || clientName || "";
+  return clientName || guestName || "";
 }
 
 // ─── Status helpers ───
