@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { subDays, format } from "date-fns";
+import { normPhone } from "@/components/admin/loyalty/loyaltyHelpers";
 
 export interface OverdueLoyaltyClient {
   id: string;
@@ -32,7 +33,10 @@ function resolveBookingKey(b: any): string {
   const email = b.client_email || b.guest_email;
   if (email) return (email as string).toLowerCase().trim();
   const phone = b.client_phone || b.guest_phone;
-  if (phone) return String(phone).replace(/\D/g, "").slice(-9);
+  if (phone) {
+    const norm = normPhone(String(phone));
+    if (norm.length >= 7) return `phone:${norm}`;
+  }
   return b.id;
 }
 
@@ -40,7 +44,6 @@ export function useClientAlerts(tenantIdProp?: string) {
   return useQuery({
     queryKey: ["client-alerts", tenantIdProp],
     queryFn: async (): Promise<ClientAlerts> => {
-      // Resolve tenantId: prefer prop, then fall back to session user id
       let tenantId = tenantIdProp;
       if (!tenantId) {
         const { data: { session } } = await supabase.auth.getSession();
@@ -69,7 +72,6 @@ export function useClientAlerts(tenantIdProp?: string) {
       });
 
       // 2. Fetch all non-cancelled bookings with full identity columns.
-      //    Ordered descending so the first occurrence per key is the most recent booking.
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
@@ -99,7 +101,7 @@ export function useClientAlerts(tenantIdProp?: string) {
 
       (bookingsData || []).forEach((b) => {
         const key = resolveBookingKey(b);
-        if (clientLastBooking.has(key)) return; // already have the latest
+        if (clientLastBooking.has(key)) return;
 
         const name  = b.client_name  || b.guest_name  || "Unknown";
         const phone = b.client_phone || b.guest_phone || null;

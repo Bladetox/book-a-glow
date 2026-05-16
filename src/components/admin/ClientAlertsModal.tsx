@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import type { OverdueLoyaltyClient, InactiveClient } from "@/hooks/useClientAlerts";
+import { waLink } from "@/components/admin/loyalty/loyaltyHelpers";
 
 // ─── Types ───
 export interface BirthdayClient {
@@ -37,12 +38,6 @@ function buildMsg(name: string, template: string, businessName: string, serviceL
     .replace(/\{name\}/g, name)
     .replace(/\{business\}/g, businessName || "us")
     .replace(/\{service\}/g, serviceLabel || "appointment");
-}
-
-function waLink(phone: string, msg: string): string {
-  const c = phone.replace(/\D/g, "");
-  const num = c.startsWith("27") && c.length >= 11 ? c : "27" + c.replace(/^0/, "");
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -128,7 +123,7 @@ export default function ClientAlertsModal({
   const handleDragMove = (e: React.TouchEvent) => {
     if (!isDragging.current) return;
     const delta = e.touches[0].clientY - dragStartY.current;
-    if (delta > 0) setDragY(delta); // only allow downward drag
+    if (delta > 0) setDragY(delta);
   };
 
   const handleDragEnd = () => {
@@ -178,7 +173,7 @@ export default function ClientAlertsModal({
       tipNote:      "Loyalty → Settings → WhatsApp Message Templates",
       count:        overdueClients.length,
       ctaLabel:     "Go to Loyalty",
-      ctaRoute:     null as string | null, // stays on this page, just close
+      ctaRoute:     null as string | null,
     },
     inactive_90_days: {
       title:        "Inactive 90+ Days",
