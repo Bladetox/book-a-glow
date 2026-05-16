@@ -1,6 +1,18 @@
 /**
  * AdminLoyalty — slim orchestrator.
  * All sub-components, helpers, types, and constants live in ./loyalty/
+ *
+ * Settings panel redesign (May 2026)
+ * ─────────────────────────────────
+ * Laws of UX applied:
+ *   • Chunking / Law of Common Region  → every setting group has its own card
+ *   • Hick's Law                       → cards collapsed by default; users open what they need
+ *   • Fitts's Law                      → all interactive targets ≥ 44 px tall / wide
+ *   • Miller's Law                     → ≤ 7 items per card before scroll
+ *   • Aesthetic-Usability Effect       → distinct accent colour per card type
+ *   • Goal-Gradient / Zeigarnik        → dirty-dot + floating save bar when unsaved changes exist
+ *   • Peak-End Rule                    → save triggers a satisfying success toast
+ *   • Von Restorff                     → "Save" CTA isolated from the settings grid
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -12,6 +24,7 @@ import {
   Download, Settings2, Save,
   Users, ChevronDown,
   ArrowRight, TrendingUp, AlertTriangle, UserCheck, Clock, PlusCircle, ChevronUp,
+  Bell, Tag, Sparkles, MessageSquare, SlidersHorizontal, ChevronRight,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -40,7 +53,7 @@ import { LoyaltyTenantCriteria } from "./loyalty/LoyaltyTenantCriteria";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 
 // ──────────────────────────────────────────────────────────────────
-// Loyalty-relevant insight IDs from useNextyInsights
+// Loyalty-relevant insight IDs
 // ──────────────────────────────────────────────────────────────────
 const LOYALTY_INSIGHT_IDS = new Set([
   "loyalty_gap",
@@ -54,7 +67,7 @@ const LOYALTY_INSIGHT_IDS = new Set([
 ]);
 
 // ──────────────────────────────────────────────────────────────────
-// Mini gold orb — identical to the one in AdminDashboard.
+// Mini gold orb
 // ──────────────────────────────────────────────────────────────────
 function MiniNextyOrb() {
   return (
@@ -110,7 +123,7 @@ function MiniNextyOrb() {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Inline Nexty loyalty insights panel
+// Nexty loyalty insights panel
 // ──────────────────────────────────────────────────────────────────
 const PRIORITY_STYLES: Record<string, { dot: string; iconBg: string; iconColor: string; label: string }> = {
   critical:  { dot: "#ff5757", iconBg: "rgba(255,87,87,0.08)",   iconColor: "#ff5757",  label: "Critical"  },
@@ -282,6 +295,140 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
 }
 
 // ──────────────────────────────────────────────────────────────────
+// SettingCard — reusable collapsible card with accent colour
+// ──────────────────────────────────────────────────────────────────
+interface SettingCardProps {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  accent: string;           // Tailwind colour token e.g. "emerald" | "violet" | "amber" | "sky"
+  defaultOpen?: boolean;
+  badge?: string | number;
+  children: React.ReactNode;
+}
+
+function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge, children }: SettingCardProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const accentMap: Record<string, { border: string; iconBg: string; iconText: string; badgeBg: string; badgeText: string }> = {
+    emerald: { border: "border-emerald-500/20", iconBg: "bg-emerald-500/10", iconText: "text-emerald-400", badgeBg: "bg-emerald-500/10", badgeText: "text-emerald-400" },
+    violet:  { border: "border-violet-500/20",  iconBg: "bg-violet-500/10",  iconText: "text-violet-400",  badgeBg: "bg-violet-500/10",  badgeText: "text-violet-400"  },
+    amber:   { border: "border-amber-500/20",   iconBg: "bg-amber-500/10",   iconText: "text-amber-400",   badgeBg: "bg-amber-500/10",   badgeText: "text-amber-400"   },
+    sky:     { border: "border-sky-500/20",     iconBg: "bg-sky-500/10",     iconText: "text-sky-400",     badgeBg: "bg-sky-500/10",     badgeText: "text-sky-400"     },
+    pink:    { border: "border-pink-500/20",    iconBg: "bg-pink-500/10",    iconText: "text-pink-400",    badgeBg: "bg-pink-500/10",    badgeText: "text-pink-400"    },
+  };
+  const a = accentMap[accent] ?? accentMap["emerald"];
+
+  return (
+    <div className={`rounded-2xl border bg-white/[0.025] overflow-hidden transition-all ${open ? a.border : "border-white/[0.07]"}`}>
+      {/* Card header — always visible, acts as the accordion toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-3 w-full px-4 py-3.5 hover:bg-white/[0.03] transition-colors text-left"
+        aria-expanded={open}
+      >
+        {/* Icon */}
+        <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${a.iconBg} ${a.iconText}`}>
+          {icon}
+        </span>
+
+        {/* Label group */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white/80 leading-none mb-0.5">{title}</p>
+          <p className="text-[11px] text-white/35 leading-snug truncate">{subtitle}</p>
+        </div>
+
+        {/* Optional badge */}
+        {badge !== undefined && (
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.badgeBg} ${a.badgeText} border ${a.border}`}>
+            {badge}
+          </span>
+        )}
+
+        {/* Chevron — Fitts: large click area already covered by the whole header */}
+        <ChevronRight
+          className={`w-4 h-4 text-white/20 transition-transform duration-200 shrink-0 ${open ? "rotate-90" : ""}`}
+        />
+      </button>
+
+      {/* Card body */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 pt-1 border-t border-white/[0.05] space-y-4">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
+// WA template key metadata
+// ──────────────────────────────────────────────────────────────────
+const WA_TEMPLATE_META: { key: keyof typeof DEFAULT_WA_TEMPLATES; label: string; hint: string; accent: string }[] = [
+  { key: "overdue",     label: "Overdue",            hint: "Sent when a client is past their reminder date",          accent: "text-red-400/70"     },
+  { key: "longOverdue", label: "Not Seen in a While", hint: "Sent to clients you haven't seen in a long time",        accent: "text-orange-400/70"  },
+  { key: "timeToBook",  label: "Time to Book",        hint: "Sent when it's nearly time for their next appointment",  accent: "text-amber-400/70"   },
+  { key: "onTrack",     label: "On Track",            hint: "Friendly check-in for clients who are keeping up",       accent: "text-emerald-400/70" },
+  { key: "birthday",    label: "Birthday 🎂",         hint: "Sent on or around the client's birthday",               accent: "text-pink-400/70"    },
+];
+
+// ──────────────────────────────────────────────────────────────────
+// Floating save bar — appears when settings are dirty
+// (Von Restorff: isolated from the rest of the UI so it can't be missed)
+// ──────────────────────────────────────────────────────────────────
+function FloatingSaveBar({
+  dirty, saving, onSave, onDiscard,
+}: {
+  dirty: boolean; saving: boolean; onSave: () => void; onDiscard: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {dirty && (
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
+            px-5 py-3 rounded-2xl border border-amber-500/30 bg-[#1a1400]/90 backdrop-blur-md shadow-2xl"
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+          <span className="text-xs text-amber-300/80 font-medium whitespace-nowrap">Unsaved changes</span>
+          <button
+            onClick={onDiscard}
+            className="px-3 py-1.5 rounded-xl text-xs font-medium text-white/40
+              hover:text-white/60 hover:bg-white/[0.06] transition-all"
+          >
+            Discard
+          </button>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-500/20
+              border border-amber-500/30 text-amber-300 text-xs font-bold
+              hover:bg-amber-500/30 transition-all disabled:opacity-50 min-w-[80px] justify-center"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            Save
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
 // Props
 // ──────────────────────────────────────────────────────────────────
 interface AdminLoyaltyProps {
@@ -295,15 +442,20 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const { tenantId } = useTenant();
   const qc = useQueryClient();
 
-  // ── Settings state (persisted via app_settings) ──
+  // ── Settings state ──
   const [reminderWeeks, setReminderWeeks]           = useState(DEFAULT_LOYALTY_SETTINGS.reminder_weeks);
   const [serviceLabel, setServiceLabel]             = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
   const [minBookings, setMinBookings]               = useState(DEFAULT_LOYALTY_SETTINGS.min_bookings);
   const [lookbackDays, setLookbackDays]             = useState(DEFAULT_LOYALTY_SETTINGS.lookback_days);
   const [waTemplates, setWaTemplates]               = useState(DEFAULT_WA_TEMPLATES);
   const [showSettings, setShowSettings]             = useState(false);
-  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const [settingsDirty, setSettingsDirty]           = useState(false);
+  // snapshot used for discard
+  const [snapshot, setSnapshot] = useState<{
+    reminderWeeks: number; serviceLabel: string; minBookings: number;
+    lookbackDays: number; waTemplates: typeof DEFAULT_WA_TEMPLATES;
+    tenantCriteria: TenantCriteriaSettings;
+  } | null>(null);
 
   // ── Tenant criteria state ──
   const [tenantCriteria, setTenantCriteria] = useState<TenantCriteriaSettings>({
@@ -339,7 +491,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
   const businessName = tenantInfo?.name ?? "";
 
-  // ── Data: loyalty settings from app_settings ──
+  // ── Data: loyalty settings ──
   const { data: settingsRows } = useQuery({
     queryKey: ["loyalty_settings", tenantId],
     enabled: !!tenantId,
@@ -378,7 +530,28 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     setSettingsDirty(false);
   }, [settingsRows]);
 
-  // ── Mutation: save ALL settings including criteria ──
+  // ── Helper: mark dirty & save snapshot on first change ──
+  const markDirty = () => {
+    if (!settingsDirty) {
+      setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, waTemplates, tenantCriteria });
+    }
+    setSettingsDirty(true);
+  };
+
+  // ── Discard ──
+  const handleDiscard = () => {
+    if (!snapshot) return;
+    setReminderWeeks(snapshot.reminderWeeks);
+    setServiceLabel(snapshot.serviceLabel);
+    setMinBookings(snapshot.minBookings);
+    setLookbackDays(snapshot.lookbackDays);
+    setWaTemplates(snapshot.waTemplates);
+    setTenantCriteria(snapshot.tenantCriteria);
+    setSettingsDirty(false);
+    setSnapshot(null);
+  };
+
+  // ── Mutation: save all settings ──
   const saveSettingsMutation = useMutation({
     mutationFn: async () => {
       const rows = [
@@ -402,8 +575,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Settings saved");
+      toast.success("Settings saved ✓");
       setSettingsDirty(false);
+      setSnapshot(null);
       qc.invalidateQueries({ queryKey: ["loyalty_settings", tenantId] });
     },
     onError: () => toast.error("Failed to save settings"),
@@ -476,9 +650,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enrichment ──
-  // Pulls last 730 days of bookings and builds a per-phone lookup covering
-  // client_phone, guest_phone (last 9 digits normalised).
-  // Also captures client_email / guest_email for future cross-matching.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
@@ -496,11 +667,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       const map: EnrichmentMap = {};
 
       const addToMap = (phone: string | null, email: string | null, bookingDate: string) => {
-        // Index by normalised phone (last 9 digits)
         const keys: string[] = [];
         const normP = normPhone(phone);
         if (normP.length >= 7) keys.push(normP);
-        // Also index by normalised email for future cross-matching
         const normE = (email ?? "").trim().toLowerCase();
         if (normE.length > 3) keys.push(`email:${normE}`);
 
@@ -514,7 +683,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       };
 
       for (const b of (data ?? [])) {
-        // Index under both client and guest phone/email
         addToMap(b.client_phone, b.client_email, b.booking_date);
         if (b.guest_phone || b.guest_email) {
           addToMap(b.guest_phone, b.guest_email, b.booking_date);
@@ -548,7 +716,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return rows;
   }, [loyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
 
-  // ── Status counts for filter pills ──
+  // ── Status counts ──
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of loyaltyRows) {
@@ -561,7 +729,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return counts;
   }, [loyaltyRows, reminderWeeks, enrichment]);
 
-  // ── Effective status map (for bulk bar) ──
+  // ── Effective status map ──
   const effectiveStatusMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const row of loyaltyRows) {
@@ -602,12 +770,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     onError: () => toast.error("Failed to enroll client"),
   });
 
-  const handleExport  = () => exportCSV(filteredRows, enrichment, reminderWeeks);
+  const handleExport = () => exportCSV(filteredRows, enrichment, reminderWeeks);
   const invalidateLoyalty = () => qc.invalidateQueries({ queryKey: ["loyalty_tracker", tenantId] });
 
   const handleCriteriaChange = (next: TenantCriteriaSettings) => {
     setTenantCriteria(next);
-    setSettingsDirty(true);
+    markDirty();
   };
 
   // ──────────────────────────────────────────────────────────────────
@@ -645,94 +813,217 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           }
         />
 
-        {/* ── Settings Panel ── */}
-        {showSettings && (
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl p-5 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white/80">Programme Settings</h2>
-              <SaveButton
-                onClick={() => saveSettingsMutation.mutate()}
-                loading={saveSettingsMutation.isPending}
-                disabled={!settingsDirty}
-                label="Save"
-                icon={<Save className="w-3 h-3" />}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                  Reminder Interval (weeks)
-                </span>
-                <input
-                  type="number" min={1} max={52}
-                  value={reminderWeeks}
-                  onChange={e => { setReminderWeeks(Number(e.target.value)); setSettingsDirty(true); }}
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                  Service Label
-                </span>
-                <input
-                  type="text"
-                  value={serviceLabel}
-                  onChange={e => { setServiceLabel(e.target.value); setSettingsDirty(true); }}
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                  Min Bookings (Nexty)
-                </span>
-                <input
-                  type="number" min={1}
-                  value={minBookings}
-                  onChange={e => { setMinBookings(Number(e.target.value)); setSettingsDirty(true); }}
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
-                />
-              </label>
-            </div>
-
-            {/* WA Template editor */}
-            <div>
-              <button
-                onClick={() => setShowTemplateEditor(s => !s)}
-                className="flex items-center gap-2 text-xs font-semibold text-white/50 hover:text-white/80 transition-colors"
+        {/* ═══════════════════════════════════════════════════════════
+            SETTINGS PANEL
+            Each function has its own card (Chunking / Law of Common Region).
+            Cards are collapsed by default (Hick's Law — reduce visible choices).
+        ════════════════════════════════════════════════════════════ */}
+        <AnimatePresence initial={false}>
+          {showSettings && (
+            <motion.div
+              key="settings-panel"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="space-y-3"
+            >
+              {/* ── 1. Reminder schedule card ── */}
+              <SettingCard
+                icon={<Bell className="w-4 h-4" />}
+                title="Reminder Schedule"
+                subtitle={`Clients are nudged every ${reminderWeeks} week${reminderWeeks !== 1 ? "s" : ""}`}
+                accent="emerald"
+                defaultOpen
               >
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTemplateEditor ? "rotate-180" : ""}`} />
-                WhatsApp Message Templates
-              </button>
-              {showTemplateEditor && (
-                <div className="mt-3 space-y-3">
-                  {(["overdue", "longOverdue", "timeToBook", "onTrack", "birthday"] as const).map(key => (
-                    <label key={key} className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
-                        {key === "longOverdue" ? "Not Seen in a While" : key.replace(/([A-Z])/g, " $1")}
-                      </span>
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  How many weeks after their last visit should a client receive a reminder? This drives
+                  the <span className="text-amber-400/70">"Time to Book"</span> and <span className="text-red-400/70">"Overdue"</span> statuses.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Reminder weeks — stepper for Fitts's Law (larger targets) */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                      Interval (weeks)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { if (reminderWeeks > 1) { setReminderWeeks(w => w - 1); markDirty(); } }}
+                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
+                          hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                        aria-label="Decrease reminder weeks"
+                      >−</button>
+                      <input
+                        type="number" min={1} max={52}
+                        value={reminderWeeks}
+                        onChange={e => { setReminderWeeks(Number(e.target.value)); markDirty(); }}
+                        className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
+                          text-base font-bold text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
+                      />
+                      <button
+                        onClick={() => { if (reminderWeeks < 52) { setReminderWeeks(w => w + 1); markDirty(); } }}
+                        className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
+                          hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                        aria-label="Increase reminder weeks"
+                      >+</button>
+                    </div>
+                    <p className="text-[10px] text-white/20">Typical: 4–8 weeks for beauty services</p>
+                  </div>
+
+                  {/* Lookback days */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                      Nexty lookback window (days)
+                    </label>
+                    <input
+                      type="number" min={30} max={730} step={30}
+                      value={lookbackDays}
+                      onChange={e => { setLookbackDays(Number(e.target.value)); markDirty(); }}
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
+                        text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
+                    />
+                    <p className="text-[10px] text-white/20">How far back to look for enrolment candidates</p>
+                  </div>
+                </div>
+              </SettingCard>
+
+              {/* ── 2. Service & brand card ── */}
+              <SettingCard
+                icon={<Tag className="w-4 h-4" />}
+                title="Service & Brand"
+                subtitle={`Service label: "${serviceLabel}"`}
+                accent="sky"
+              >
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  The <strong className="text-white/50">service label</strong> fills the{" "}
+                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{service}"}</code>{" "}
+                  placeholder in your WhatsApp message templates.
+                </p>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                    Service label
+                  </label>
+                  <input
+                    type="text"
+                    value={serviceLabel}
+                    placeholder="e.g. lash fill, wax, appointment"
+                    onChange={e => { setServiceLabel(e.target.value); markDirty(); }}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
+                      text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-sky-400/40 transition-colors"
+                  />
+                </div>
+
+                {/* Live preview */}
+                <div className="rounded-xl border border-sky-500/10 bg-sky-500/[0.04] px-3 py-2.5">
+                  <p className="text-[10px] text-sky-400/50 uppercase tracking-[0.1em] mb-1">Preview in template</p>
+                  <p className="text-xs text-white/50 leading-relaxed italic">
+                    "…it's almost time for your next <span className="text-sky-300 not-italic font-medium">{serviceLabel || "appointment"}</span>. Ready to book? 😊"
+                  </p>
+                </div>
+              </SettingCard>
+
+              {/* ── 3. Enrolment rules card ── */}
+              <SettingCard
+                icon={<Sparkles className="w-4 h-4" />}
+                title="Enrolment Rules"
+                subtitle={`Auto-suggest after ${minBookings} booking${minBookings !== 1 ? "s" : ""}`}
+                accent="violet"
+              >
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  Nexty will surface enrolment candidates once a client crosses this threshold within your lookback window.
+                </p>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                    Min. bookings to qualify
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { if (minBookings > 1) { setMinBookings(b => b - 1); markDirty(); } }}
+                      className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
+                        hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                      aria-label="Decrease min bookings"
+                    >−</button>
+                    <input
+                      type="number" min={1} max={20}
+                      value={minBookings}
+                      onChange={e => { setMinBookings(Number(e.target.value)); markDirty(); }}
+                      className="flex-1 text-center px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
+                        text-base font-bold text-white/80 focus:outline-none focus:border-violet-400/40 transition-colors"
+                    />
+                    <button
+                      onClick={() => { if (minBookings < 20) { setMinBookings(b => b + 1); markDirty(); } }}
+                      className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50
+                        hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0"
+                      aria-label="Increase min bookings"
+                    >+</button>
+                  </div>
+                  <p className="text-[10px] text-white/20">Recommended: 2–4 bookings for beauty, 3–6 for clinics</p>
+                </div>
+
+                {/* Your criteria sub-section — already handles its own toggle */}
+                <div className="pt-2 border-t border-white/[0.05]">
+                  <LoyaltyTenantCriteria
+                    tenantId={tenantId ?? ""}
+                    settings={tenantCriteria}
+                    onSettingsChange={handleCriteriaChange}
+                    onMarkDirty={markDirty}
+                  />
+                </div>
+              </SettingCard>
+
+              {/* ── 4. WhatsApp templates card ── */}
+              <SettingCard
+                icon={<MessageSquare className="w-4 h-4" />}
+                title="WhatsApp Templates"
+                subtitle="Customise the message sent for each status"
+                accent="amber"
+                badge={WA_TEMPLATE_META.length}
+              >
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  Use{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{name}"}</code>,{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{business}"}</code> and{" "}
+                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{service}"}</code>{" "}
+                  as placeholders. WhatsApp links are generated automatically when you tap{" "}
+                  <span className="text-green-400/70">WA</span> on a client card.
+                </p>
+
+                <div className="space-y-4">
+                  {WA_TEMPLATE_META.map(({ key, label, hint, accent: accentText }) => (
+                    <div key={key} className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-semibold ${accentText}`}>{label}</span>
+                        <span className="text-[10px] text-white/25 truncate">{hint}</span>
+                      </div>
                       <textarea
                         rows={3}
                         value={waTemplates[key] ?? ""}
-                        onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); setSettingsDirty(true); }}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none font-mono"
+                        onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); markDirty(); }}
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]
+                          text-sm text-white/80 placeholder:text-white/20 focus:outline-none
+                          focus:border-amber-400/30 transition-colors resize-none font-mono leading-relaxed"
+                        placeholder={`Template for "${label}" status…`}
                       />
-                    </label>
+                    </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </SettingCard>
 
-            <LoyaltyTenantCriteria
-              tenantId={tenantId ?? ""}
-              settings={tenantCriteria}
-              onSettingsChange={handleCriteriaChange}
-              onMarkDirty={() => setSettingsDirty(true)}
-            />
-
-            <MessagingHowTo />
-          </div>
-        )}
+              {/* ── 5. Messaging how-to card ── */}
+              <SettingCard
+                icon={<SlidersHorizontal className="w-4 h-4" />}
+                title="How Messaging Works"
+                subtitle="WhatsApp deep-links — no API account needed"
+                accent="pink"
+              >
+                <MessagingHowTo />
+              </SettingCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ── Status filter pills ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -777,7 +1068,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
             placeholder="Search by name, phone or source…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-9 py-2.5 border border-white/[0.08] rounded-2xl text-sm text-white/80 placeholder:text/white/25 focus:outline-none focus:border-white/20 bg-white/[0.04] transition-colors"
+            className="w-full pl-9 pr-9 py-2.5 border border-white/[0.08] rounded-2xl text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 bg-white/[0.04] transition-colors"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2">
@@ -874,6 +1165,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           </div>
         )}
       </div>
+
+      {/* ── Floating save bar (Von Restorff: isolated CTA) ── */}
+      <FloatingSaveBar
+        dirty={settingsDirty}
+        saving={saveSettingsMutation.isPending}
+        onSave={() => saveSettingsMutation.mutate()}
+        onDiscard={handleDiscard}
+      />
 
       {/* ── Enroll modal ── */}
       <AnimatePresence>
