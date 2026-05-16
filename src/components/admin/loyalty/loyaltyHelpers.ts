@@ -27,9 +27,63 @@ export function isoToDisplay(iso: string | null | undefined): string {
   catch { return iso; }
 }
 
-// ─── Phone normaliser ───
-// Primary dedup key: last 9 digits (strips country code & formatting).
-// Works for +27 082 / 0829 / 829 variants all resolving to the same key.
+// ─── Phone normalisation ────────────────────────────────────────────────────
+
+/**
+ * normalisePhoneForStorage
+ *
+ * Mirrors the logic in the Postgres normalise_phone_za() function so the
+ * frontend and DB always agree on the canonical E.164 format.
+ *
+ * Handles all formats seen in production:
+ *   +27 0XXXXXXXXX  → +27XXXXXXXXX   (invalid leading zero after country code)
+ *   +27 XXXXXXXXX   → +27XXXXXXXXX   (E.164 with space)
+ *   +27XXXXXXXXX    → +27XXXXXXXXX   (already correct)
+ *   0XXXXXXXXX      → +27XXXXXXXXX   (local 10-digit)
+ *   XXXXXXXXX       → +27XXXXXXXXX   (local 9-digit)
+ *   +<other>        → +<digits>      (non-ZA international, spaces stripped)
+ *
+ * Returns null for values that are too short / clearly invalid.
+ */
+export function normalisePhoneForStorage(
+  raw: string | null | undefined,
+  defaultCountryCode = "27"
+): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 9) return null;
+
+  // 270XXXXXXXXX → +27XXXXXXXXX  (12 digits, country code + accidental leading zero)
+  if (digits.length === 12 && digits.startsWith(`${defaultCountryCode}0`)) {
+    return `+${defaultCountryCode}${digits.slice(3)}`;
+  }
+  // 27XXXXXXXXX  → +27XXXXXXXXX  (11 digits, standard E.164 digits)
+  if (digits.length === 11 && digits.startsWith(defaultCountryCode)) {
+    return `+${digits}`;
+  }
+  // 0XXXXXXXXX   → +27XXXXXXXXX  (10 digits, local with leading zero)
+  if (digits.length === 10 && digits.startsWith("0")) {
+    return `+${defaultCountryCode}${digits.slice(1)}`;
+  }
+  // XXXXXXXXX    → +27XXXXXXXXX  (9 digits, no leading zero)
+  if (digits.length === 9) {
+    return `+${defaultCountryCode}${digits}`;
+  }
+  // Non-ZA international (10+ digits, not matching ZA patterns above)
+  if (digits.length >= 10) {
+    return `+${digits}`;
+  }
+
+  return null;
+}
+
+/**
+ * normPhone — dedup key: last 9 digits.
+ *
+ * Now that phones are stored in clean E.164, this is mostly a safety net
+ * for any legacy rows that slipped through before the migration.
+ * Primary dedup key: last 9 digits (strips country code & formatting).
+ */
 export function normPhone(p: string | null | undefined): string {
   return ((p ?? "").replace(/\D/g, "")).slice(-9);
 }
@@ -259,7 +313,13 @@ export function buildWaMessage(
 }
 
 export function waLink(phone: string, msg: string): string {
-  const c = phone.replace(/\D/g, "");
-  const num = (c.startsWith("27") && c.length >= 11) ? c : "27" + c.replace(/^0/, "");
+  // Phones are now stored in clean E.164 (+27XXXXXXXXX).
+  // Strip the leading + and pass the digits directly to wa.me.
+  const digits = phone.replace(/\D/g, "");
+  // Fallback for any legacy non-E.164 values still in the DB:
+  // if it looks like a local ZA number, prepend 27.
+  const num = (digits.startsWith("27") && digits.length >= 11)
+    ? digits
+    : "27" + digits.replace(/^0/, "");
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
