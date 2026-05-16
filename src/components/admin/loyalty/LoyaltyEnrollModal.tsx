@@ -5,6 +5,11 @@ import type { EnrollCandidate } from "./loyaltyTypes";
 
 const ENROLL_STEPS = ["Client Info", "Dates", "Confirm"] as const;
 
+// The app's bottom nav bar is ~60px tall.
+// On mobile the modal backdrop must stop above it so the sheet + button bar
+// are never hidden behind it.  On sm+ (no bottom nav) we use the full screen.
+const BOTTOM_NAV_H = 64; // px — keep in sync with actual nav height
+
 // ─── EnrollModal ───
 export const EnrollModal = ({
   candidate, onClose, onConfirm, saving, serviceLabel,
@@ -24,14 +29,18 @@ export const EnrollModal = ({
   const canNext0 = name.trim().length > 0;
 
   // Null-safe derived values
-  const bookingCount        = candidate.bookingCount ?? 0;
-  const totalSpend          = candidate.totalSpend ?? 0;
+  const bookingCount         = candidate.bookingCount ?? 0;
+  const totalSpend           = candidate.totalSpend ?? 0;
   const daysSinceLastBooking = candidate.daysSinceLastBooking ?? null;
 
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
+      // Backdrop: on mobile stop above the bottom nav bar; on sm+ use full screen
+      className="fixed inset-x-0 top-0 z-50 flex items-end sm:items-center justify-center
+                 bg-black/70 backdrop-blur-sm sm:inset-0"
+      style={{ bottom: `${BOTTOM_NAV_H}px` }}
+      // On sm screens override the inline bottom so backdrop covers full screen
       onClick={onClose}
     >
       <motion.div
@@ -43,10 +52,9 @@ export const EnrollModal = ({
           border border-white/[0.1]
           bg-[#0f0f0f]
           flex flex-col
-          max-h-[92dvh] sm:max-h-[85vh]
+          max-h-full sm:max-h-[85vh]
           overflow-hidden
         "
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle (mobile visual cue) */}
@@ -183,8 +191,8 @@ export const EnrollModal = ({
           )}
         </div>
 
-        {/* Navigation buttons — always visible, above safe area */}
-        <div className="flex gap-2 px-5 pt-3 pb-4 border-t border-white/[0.05] shrink-0">
+        {/* Navigation buttons — always visible, never behind nav bar */}
+        <div className="flex gap-2 px-5 pt-3 pb-5 border-t border-white/[0.05] shrink-0">
           {step > 0 && (
             <button
               onClick={() => setStep(s => s - 1)}
