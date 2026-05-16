@@ -15,57 +15,35 @@
  *   • Von Restorff                     → "Save" CTA isolated from the settings grid
  *   • Jakob's Law                      → Nexty threshold ≠ criteria threshold — clearly separated
  *
- * Bug-fixes (May 2026 patch)
- * ──────────────────────────
- *   1. LoyaltyTenantCriteria was rendered without onEnroll → tapping a candidate did nothing.
- *      Fixed: pass onEnroll={c => setEnrollCandidate(c)} so the modal fires correctly.
+ * Phase 2 fixes (May 2026)
+ * ────────────────────────
+ *   FIX-A  Wire onCandidatesChange: LoyaltyTenantCriteria now fires a callback whenever
+ *          criteriaCandidates changes. AdminLoyalty stores those in state and passes them
+ *          to CandidatesBar, replacing the broken hardcoded criteria={[]}.
  *
- *   2. enrolledPhones was not passed to LoyaltyTenantCriteria → already-enrolled clients
- *      could appear as candidates again.
- *      Fixed: pass enrolledPhones={enrolledPhones}.
+ *   FIX-B  enrolledPhones dual-phone fix: the Set is now built from BOTH client_phone and
+ *          guest_phone columns so clients like Hanga (who booked under a different phone
+ *          number) can no longer slip through as candidates.
  *
- *   3. reminderWeeks was not passed to LoyaltyTenantCriteria → nextDueDate on criteria
- *      candidates defaulted to 4 weeks regardless of tenant setting.
- *      Fixed: pass reminderWeeks={reminderWeeks}.
+ *   FIX-C  "Enrolled" filter pill: prepended to the pill row. Selecting it sets
+ *          filterStatus = "enrolled" which bypasses effectiveStatus and shows all
+ *          loyalty_tracker rows (i.e. everyone already enrolled).
  *
- *   4. Criteria candidates were hidden inside the Settings panel → users couldn't see
- *      "who qualifies" in the main flow (violated Goal-Gradient Effect).
- *      Fixed: criteria candidates are now merged into the main candidates bar below the
- *      search bar, tagged with a "Your criteria" violet pill so they're distinguishable
- *      from Nexty suggestions. The settings card now only contains configuration.
+ *   FIX-D  Default open on "Enrolled": filterStatus initial state changed from null
+ *          to "enrolled" so the page opens showing the full enrolled list.
  *
- *   5. The Enrolment Rules card duplicated a minBookings stepper that controls the NEXTY
- *      global suggestion engine, while LoyaltyTenantCriteria already owns its own
- *      minBookings for the criteria engine. They are now clearly separated with labels:
- *        — "Nexty suggestion threshold" (global)
- *        — "Your criteria" (per-service engine, owned by LoyaltyTenantCriteria)
- *      This removes the confusing duplicate and satisfies Jakob's Law + Law of Proximity.
- *
- *   6. Build fix: removed a JSX comment that was incorrectly placed inside a prop
- *      position on <CandidatesBar criteria={[]} /> which caused a parse error.
- *
- *   7. Enrol insert used `last_visit_date` which does not exist in loyalty_tracker;
- *      correct column name is `last_wax_date`.
- *
- *   8. Enrol insert passed a raw computed status (e.g. "on_track") instead of a
- *      DB-safe value. The loyalty_tracker_status_check constraint only allows
- *      'ON TRACK' | 'TIME TO BOOK' | 'OVERDUE'. Fixed: use toDbStatus() to map
- *      computed/display statuses (LONG_OVERDUE, BIRTHDAY, UNKNOWN) to allowed values.
- *
- *   9. Proxy-booking fix (May 2026): clients sometimes book on behalf of someone else
- *      (e.g. Ghadijah booking for her mother-in-law Dhilnawaaz). Booking history and
- *      loyalty candidates are now attributed to the recipient (guest) rather than the
- *      booker (client) when guest_phone differs from client_phone.
- *      Dedup key: last 9 digits of phone (normPhone), consistent throughout candidates
- *      query, enrichment map, and enrolled-phones set.
- *
- *  10. Enrichment double-count fix (May 2026): addToMap was pushing both the phone key
- *      and the email key into keys[] and incrementing bookingCount on both for the same
- *      booking. Clients with both a valid phone AND a valid email (e.g. Malieka) showed
- *      a count of 2 despite having only 1 booking.
- *      Fixed: bookingCount is now incremented exactly once on the primary (phone) key.
- *      The email key is assigned as a reference to the same map entry (alias) so
- *      cross-lookups still work without any double-counting.
+ * Earlier bug-fixes
+ * ─────────────────
+ *   1.  LoyaltyTenantCriteria rendered without onEnroll → tapping a candidate did nothing.
+ *   2.  enrolledPhones not passed to LoyaltyTenantCriteria → already-enrolled clients re-appeared.
+ *   3.  reminderWeeks not passed → nextDueDate defaulted to 4 weeks.
+ *   4.  Criteria candidates hidden inside Settings panel → violates Goal-Gradient Effect.
+ *   5.  Duplicate minBookings stepper (Jakob's Law fix).
+ *   6.  Build fix: JSX comment inside prop position.
+ *   7.  Enrol used `last_visit_date` instead of `last_wax_date`.
+ *   8.  Enrol passed raw computed status instead of DB-safe toDbStatus() value.
+ *   9.  Proxy-booking attribution (Ghadijah/Dhilnawaaz scenario).
+ *  10.  Enrichment double-count fix (Malieka scenario — email alias).
  */
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -582,9 +560,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     lookbackDays: DEFAULT_TENANT_CRITERIA.lookback_days,
   });
 
+  // FIX-A: criteria candidates received from LoyaltyTenantCriteria via onCandidatesChange
+  const [criteriaCandidates, setCriteriaCandidates] = useState<EnrollCandidate[]>([]);
+
   // ── UI state ──
   const [search, setSearch]                     = useState("");
-  const [filterStatus, setFilterStatus]         = useState<string | null>(null);
+  // FIX-D: default to "enrolled" so the full enrolled list is visible on load
+  const [filterStatus, setFilterStatus]         = useState<string | null>("enrolled");
   const [selectedIds, setSelectedIds]           = useState<string[]>([]);
   const [enrollCandidate, setEnrollCandidate]   = useState<EnrollCandidate | null>(null);
   const [enrolledName, setEnrolledName]         = useState<string | null>(null);
@@ -714,17 +696,42 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  const enrolledPhones = useMemo(
-    () => new Set(loyaltyRows.map(r => normPhone(r.phone))),
-    [loyaltyRows],
-  );
+  // FIX-B: enrolledPhones built from BOTH phone columns in bookings so dual-phone
+  // clients (e.g. Hanga) cannot slip through as enrolment candidates.
+  // We also keep the loyalty_tracker phone set for the criteria component.
+  const { data: allBookingPhones = [] } = useQuery({
+    queryKey: ["all_booking_phones", tenantId],
+    enabled: !!tenantId,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("client_phone, guest_phone")
+        .eq("tenant_id", tenantId)
+        .limit(2000);
+      if (error) throw error;
+      return (data ?? []) as { client_phone: string | null; guest_phone: string | null }[];
+    },
+  });
+
+  const enrolledPhones = useMemo(() => {
+    // Start with all phones that are already in the loyalty tracker
+    const set = new Set(loyaltyRows.map(r => normPhone(r.phone)));
+    // For every enrolled tracker phone, also add any booking phone that normalises
+    // to the same 9-digit suffix — this catches the same person booking under a
+    // slightly different number format.
+    const trackerNorms = set;
+    for (const b of allBookingPhones) {
+      const cp = normPhone(b.client_phone);
+      const gp = normPhone(b.guest_phone);
+      // If either phone matches an enrolled tracker phone, add the other too
+      if (trackerNorms.has(cp) && gp.length >= 7) set.add(gp);
+      if (trackerNorms.has(gp) && cp.length >= 7) set.add(cp);
+    }
+    return set;
+  }, [loyaltyRows, allBookingPhones]);
 
   // ── Data: Nexty enrol candidates ──
-  // Attribution rule: credit the RECIPIENT (guest) not the booker (client).
-  // If guest_phone differs from client_phone, the booking is a proxy booking
-  // (e.g. Ghadijah booking for her mother-in-law Dhilnawaaz). In that case
-  // the visit history belongs to the guest.
-  // Dedup key: normPhone (last 9 digits) — consistent with enrolledPhones set.
   const { data: nextyCandidates = [] } = useQuery({
     queryKey: ["loyalty_candidates", tenantId, minBookings, lookbackDays],
     enabled: !!tenantId,
@@ -742,7 +749,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
       const grouped: Record<string, { client_name: string; phone: string; bookings: { date: string; price: number }[] }> = {};
       for (const b of (data ?? [])) {
-        // Resolve to the person who received the service
         const phone = recipientPhone(b.client_phone, b.guest_phone);
         if (!phone) continue;
         const key  = normPhone(phone);
@@ -772,19 +778,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Data: enrichment ──
-  // Same attribution rule: index enrichment data against the recipient's phone.
-  //
-  // FIX (bug #10): bookingCount must be incremented exactly ONCE per booking.
-  // Previously addToMap pushed both the phone key and the email key into keys[]
-  // and incremented bookingCount on both, causing a count of 2 for any client
-  // who had both a valid phone and a valid email (e.g. Malieka: 1 booking → showed 2).
-  //
-  // The corrected logic:
-  //   • If a phone key exists → it is the PRIMARY key; increment bookingCount on it.
-  //     The email key is assigned as a JS object reference (alias) to the SAME entry
-  //     so email-based lookups still resolve correctly without double-counting.
-  //   • If there is no phone key but there is an email key → email is the primary;
-  //     increment bookingCount on it once.
   const { data: enrichment = {} as EnrichmentMap } = useQuery({
     queryKey: ["loyalty_enrichment", tenantId],
     enabled: !!tenantId,
@@ -811,11 +804,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
       };
 
       for (const b of (data ?? [])) {
-        // Determine recipient phone/email for this booking
         const rPhone = recipientPhone(b.client_phone, b.guest_phone);
         const rEmail = normPhone(b.guest_phone).length >= 7 && normPhone(b.guest_phone) !== normPhone(b.client_phone)
-          ? b.guest_email   // proxy booking — use guest email
-          : b.client_email; // self-booking — use client email
+          ? b.guest_email
+          : b.client_email;
 
         const normP = normPhone(rPhone);
         const normE = (rEmail ?? "").trim().toLowerCase();
@@ -823,14 +815,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         const hasEmail = normE.length > 3;
 
         if (hasPhone) {
-          // Phone is primary: increment count once, then alias email key to same entry.
           const entry = upsertEntry(normP, b.booking_date);
-          if (hasEmail) {
-            // Alias: email key points to the same object — no extra increment.
-            map[`email:${normE}`] = entry;
-          }
+          if (hasEmail) map[`email:${normE}`] = entry;
         } else if (hasEmail) {
-          // No phone available — email is the only key; increment once.
           upsertEntry(`email:${normE}`, b.booking_date);
         }
       }
@@ -840,9 +827,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   });
 
   // ── Filtered rows ──
+  // FIX-C: "enrolled" pill bypasses effectiveStatus and shows all loyalty_tracker rows.
   const filteredRows = useMemo(() => {
     let rows = [...loyaltyRows];
-    if (filterStatus) {
+    if (filterStatus && filterStatus !== "enrolled") {
       rows = rows.filter(r => {
         const phone  = normPhone(r.phone);
         const enrich = enrichment[phone] ?? null;
@@ -1098,6 +1086,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   onSettingsChange={handleCriteriaChange}
                   reminderWeeks={reminderWeeks}
                   onEnroll={c => setEnrollCandidate(c)}
+                  onCandidatesChange={setCriteriaCandidates}
                   onMarkDirty={markDirty}
                 />
               </SettingCard>
@@ -1152,6 +1141,23 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
         {/* ── Status filter pills ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {/* FIX-C: "Enrolled" pill — shows all loyalty_tracker rows */}
+          <button
+            onClick={() => setFilterStatus(s => s === "enrolled" ? null : "enrolled")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
+              filterStatus === "enrolled"
+                ? "bg-white/[0.12] border-white/[0.20] text-white/90"
+                : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
+            }`}
+          >
+            Enrolled
+            <span className={`text-[10px] tabular-nums ${
+              filterStatus === "enrolled" ? "text-white/60" : "text-white/25"
+            }`}>
+              ({loyaltyRows.length})
+            </span>
+          </button>
+
           {STATUS_ORDER.map(status => {
             const count    = statusCounts[status] ?? 0;
             const isActive = filterStatus === status;
@@ -1202,10 +1208,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           )}
         </div>
 
-        {/* ── Candidates bar ── */}
+        {/* ── Candidates bar — FIX-A: criteria now live, not hardcoded [] ── */}
         <CandidatesBar
           nexty={nextyCandidates}
-          criteria={[]}
+          criteria={criteriaCandidates}
           onEnroll={c => setEnrollCandidate(c)}
         />
 
