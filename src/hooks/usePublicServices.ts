@@ -127,7 +127,8 @@ export function usePublicCategories() {
           : raw;
       });
 
-      const unique = [...new Set(expanded)];
+      // Exclude internal categories that should never appear as tabs
+      const unique = [...new Set(expanded)].filter((c) => c !== "add-on");
 
       // Waxing sub-cats always appear FIRST (primary offering),
       // order: Intimate → Body → Face, then all others alphabetically.
