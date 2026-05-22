@@ -1,4 +1,9 @@
 import { BookingState, safetyQuestions } from "@/data/bookingData";
+import {
+  BusinessType,
+  ConsultationQuestionDefinition,
+  defaultConsultationQuestions,
+} from "@/data/defaultConsultationQuestions";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, X } from "lucide-react";
@@ -34,6 +39,157 @@ interface PlaceSuggestion {
   description: string;
 }
 
+// ── Dynamic consultation question renderer ────────────────────────────────────
+
+interface ConsultationQRendererProps {
+  q: ConsultationQuestionDefinition;
+  idx: number;
+  answers: Record<string, import("@/data/bookingData").ConsultationAnswerValue>;
+  details: Record<string, string>;
+  onAnswer: (key: string, value: import("@/data/bookingData").ConsultationAnswerValue) => void;
+  onDetail: (key: string, value: string) => void;
+  inputClass: string;
+}
+
+const ConsultationQRenderer = ({
+  q,
+  idx,
+  answers,
+  details,
+  onAnswer,
+  onDetail,
+  inputClass,
+}: ConsultationQRendererProps) => {
+  const answer = answers[q.key];
+
+  return (
+    <motion.div
+      key={q.key}
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: idx * 0.04 }}
+      className="flex flex-col gap-2"
+    >
+      <p className="text-sm text-foreground">
+        {idx + 1}. {q.label}
+        {q.required && <span className="text-destructive ml-0.5">*</span>}
+      </p>
+
+      {/* yes_no */}
+      {q.type === "yes_no" && (
+        <>
+          <div className="flex gap-2">
+            {([false, true] as const).map((val) => (
+              <motion.button
+                key={String(val)}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => onAnswer(q.key, val)}
+                className={`px-5 py-3 rounded-xl text-xs font-medium transition-all duration-200 min-w-[64px]
+                  ${answer === val
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                {val ? "Yes" : "No"}
+              </motion.button>
+            ))}
+          </div>
+          <AnimatePresence>
+            {answer === true && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden mt-1"
+              >
+                <textarea
+                  className={`${inputClass} min-h-[50px] text-xs py-2`}
+                  placeholder="Please provide details..."
+                  value={details[q.key] ?? ""}
+                  onChange={(e) => onDetail(q.key, e.target.value)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+
+      {/* text */}
+      {q.type === "text" && (
+        <input
+          type="text"
+          className={`${inputClass} text-sm`}
+          placeholder="Your answer..."
+          value={(answer as string) ?? ""}
+          onChange={(e) => onAnswer(q.key, e.target.value)}
+        />
+      )}
+
+      {/* textarea */}
+      {q.type === "textarea" && (
+        <textarea
+          className={`${inputClass} min-h-[60px] text-sm`}
+          placeholder="Your answer..."
+          value={(answer as string) ?? ""}
+          onChange={(e) => onAnswer(q.key, e.target.value)}
+        />
+      )}
+
+      {/* radio */}
+      {q.type === "radio" && q.options && (
+        <div className="flex flex-wrap gap-2">
+          {q.options.map((opt) => (
+            <motion.button
+              key={opt}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => onAnswer(q.key, opt)}
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200
+                ${answer === opt
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                  : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              {opt}
+            </motion.button>
+          ))}
+        </div>
+      )}
+
+      {/* checkbox */}
+      {q.type === "checkbox" && q.options && (
+        <div className="flex flex-wrap gap-2">
+          {q.options.map((opt) => {
+            const selected = Array.isArray(answer) && (answer as string[]).includes(opt);
+            return (
+              <motion.button
+                key={opt}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => {
+                  const prev = Array.isArray(answer) ? (answer as string[]) : [];
+                  onAnswer(
+                    q.key,
+                    selected ? prev.filter((v) => v !== opt) : [...prev, opt]
+                  );
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200
+                  ${selected
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                {opt}
+              </motion.button>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) => {
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
@@ -49,6 +205,82 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const selectingRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // ── Dynamic consultation questions (Stage 5) ─────────────────────────────
+  const [consultationQuestions, setConsultationQuestions] = useState<ConsultationQuestionDefinition[]>([]);
+  const [consultationLoading, setConsultationLoading] = useState(true);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+
+    const loadQuestions = async () => {
+      setConsultationLoading(true);
+      try {
+        // 1. Try custom questions first
+        const { data: customRows } = await supabase
+          .from("consultation_questions")
+          .select("key, label, type, required, enabled, options, sort_order")
+          .eq("tenant_id", tenantId)
+          .eq("enabled", true)
+          .order("sort_order", { ascending: true });
+
+        if (cancelled) return;
+
+        if (customRows && customRows.length > 0) {
+          setConsultationQuestions(
+            customRows.map((r) => ({
+              key: r.key ?? r.label.toLowerCase().replace(/\s+/g, "_").slice(0, 40),
+              label: r.label,
+              type: r.type as ConsultationQuestionDefinition["type"],
+              required: r.required ?? false,
+              options: Array.isArray(r.options) ? (r.options as string[]) : undefined,
+            }))
+          );
+          return;
+        }
+
+        // 2. Fallback: fetch tenant business_type → use defaultConsultationQuestions
+        const { data: tenantRow } = await supabase
+          .from("tenants")
+          .select("business_type")
+          .eq("id", tenantId)
+          .single();
+
+        if (cancelled) return;
+
+        const bt = (tenantRow as any)?.business_type as BusinessType | null;
+        const fallback =
+          bt && defaultConsultationQuestions[bt]
+            ? defaultConsultationQuestions[bt]
+            : defaultConsultationQuestions.general;
+
+        setConsultationQuestions(fallback);
+      } catch {
+        // Silent — render nothing rather than crash
+        if (!cancelled) setConsultationQuestions([]);
+      } finally {
+        if (!cancelled) setConsultationLoading(false);
+      }
+    };
+
+    loadQuestions();
+    return () => { cancelled = true; };
+  }, [tenantId]);
+
+  const handleConsultationAnswer = useCallback(
+    (key: string, value: import("@/data/bookingData").ConsultationAnswerValue) => {
+      onUpdate({ consultationAnswers: { ...booking.consultationAnswers, [key]: value } });
+    },
+    [booking.consultationAnswers, onUpdate]
+  );
+
+  const handleConsultationDetail = useCallback(
+    (key: string, value: string) => {
+      onUpdate({ consultationAnswerDetails: { ...booking.consultationAnswerDetails, [key]: value } });
+    },
+    [booking.consultationAnswerDetails, onUpdate]
+  );
 
   // Whether this tenant has mobile/call-out service enabled
   const mobileServiceEnabled = config.mobileServiceEnabled;
@@ -290,7 +522,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         )}
       </AnimatePresence>
 
-      {/* New client consultation form */}
+      {/* ── New client: dynamic consultation form (Stage 5) ── */}
       <AnimatePresence>
         {booking.isExistingClient === false && (
           <motion.div
@@ -314,66 +546,84 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                 </p>
               </div>
 
-              {safetyQuestions.map((q, i) => (
-                <motion.div
-                  key={q.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex flex-col gap-2"
-                >
-                  <div>
-                    <p className="text-sm text-foreground">{q.id}. {q.question}</p>
-                    {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    {[
-                      { label: "No", value: false },
-                      { label: "Yes", value: true },
-                    ].map((opt) => (
-                      <motion.button
-                        key={String(opt.value)}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() =>
-                          onUpdate({ safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value } })
-                        }
-                        className={`px-5 py-3 rounded-xl text-xs font-medium transition-all duration-200 min-w-[64px]
-                          ${booking.safetyAnswers[q.id] === opt.value
-                            ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                            : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                          }`}
-                      >
-                        {opt.label}
-                      </motion.button>
-                    ))}
-                  </div>
-
-                  {/* Free-text detail — shown for Q1–Q7 only. Q8 is Yes/No only. */}
-                  <AnimatePresence>
-                    {booking.safetyAnswers[q.id] === true && q.id !== 8 && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden mt-1"
-                      >
-                        <textarea
-                          className={`${inputClass} min-h-[50px] text-xs py-2`}
-                          placeholder="Please provide details..."
-                          value={booking.safetyAnswerDetails[q.id] || ""}
-                          onChange={(e) => onUpdate({
-                            safetyAnswerDetails: {
-                              ...booking.safetyAnswerDetails,
-                              [q.id]: e.target.value
-                            }
-                          })}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              ))}
+              {/* Dynamic questions — custom or business-type fallback */}
+              {consultationLoading ? (
+                <p className="text-xs text-muted-foreground animate-pulse">Loading questions\u2026</p>
+              ) : consultationQuestions.length > 0 ? (
+                consultationQuestions.map((q, i) => (
+                  <ConsultationQRenderer
+                    key={q.key}
+                    q={q}
+                    idx={i}
+                    answers={booking.consultationAnswers}
+                    details={booking.consultationAnswerDetails}
+                    onAnswer={handleConsultationAnswer}
+                    onDetail={handleConsultationDetail}
+                    inputClass={inputClass}
+                  />
+                ))
+              ) : (
+                // Ultimate fallback: render the legacy hardcoded safety questions
+                // so the form is never empty (e.g. if both DB and business_type are missing)
+                safetyQuestions.map((q, i) => (
+                  <motion.div
+                    key={q.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex flex-col gap-2"
+                  >
+                    <div>
+                      <p className="text-sm text-foreground">{q.id}. {q.question}</p>
+                      {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      {([
+                        { label: "No", value: false },
+                        { label: "Yes", value: true },
+                      ] as const).map((opt) => (
+                        <motion.button
+                          key={String(opt.value)}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() =>
+                            onUpdate({ safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value } })
+                          }
+                          className={`px-5 py-3 rounded-xl text-xs font-medium transition-all duration-200 min-w-[64px]
+                            ${booking.safetyAnswers[q.id] === opt.value
+                              ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                              : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                          {opt.label}
+                        </motion.button>
+                      ))}
+                    </div>
+                    <AnimatePresence>
+                      {booking.safetyAnswers[q.id] === true && q.id !== 8 && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden mt-1"
+                        >
+                          <textarea
+                            className={`${inputClass} min-h-[50px] text-xs py-2`}
+                            placeholder="Please provide details..."
+                            value={booking.safetyAnswerDetails[q.id] || ""}
+                            onChange={(e) => onUpdate({
+                              safetyAnswerDetails: {
+                                ...booking.safetyAnswerDetails,
+                                [q.id]: e.target.value
+                              }
+                            })}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ))
+              )}
 
               <textarea
                 id="additional-notes"

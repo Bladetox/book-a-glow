@@ -12,6 +12,10 @@ export type Category = {
   label: string;
 };
 
+// consultationAnswers: keyed by question `key` (string).
+// Value is string (text/textarea), boolean (yes_no), or string[] (checkbox).
+export type ConsultationAnswerValue = string | boolean | string[];
+
 export type BookingState = {
   selectedTreatments: string[];
   selectedDate: Date | null;
@@ -25,10 +29,15 @@ export type BookingState = {
   addressVerified: boolean; // true only when address was selected from Google Places
   distanceKm: number | null;
   referralSource: string;
+  // ── Legacy waxing-specific safety form (used by ReviewStep → create_booking_with_consultation) ──
   safetyAnswers: Record<number, boolean | null>;
-  safetyAnswerDetails: Record<number, string>; // free-text detail captured when answer is Yes
+  safetyAnswerDetails: Record<number, string>;
   additionalNotes: string;
   existingClientNotes: string;
+  // ── Dynamic consultation form (Stage 5+) ──
+  // Keyed by ConsultationQuestionDefinition.key
+  consultationAnswers: Record<string, ConsultationAnswerValue>;
+  consultationAnswerDetails: Record<string, string>; // extra detail for yes_no "Yes" answers
 };
 
 export const initialBookingState: BookingState = {
@@ -48,6 +57,8 @@ export const initialBookingState: BookingState = {
   safetyAnswerDetails: {},
   additionalNotes: "",
   existingClientNotes: "",
+  consultationAnswers: {},
+  consultationAnswerDetails: {},
 };
 
 export const safetyQuestions = [
