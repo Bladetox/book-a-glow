@@ -14,8 +14,12 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['"Abril Fatface"', 'serif'],
-        body: ['Montserrat', 'sans-serif'],
+        // Resolved at runtime via CSS variables set in BusinessThemeProvider.
+        // Default (all tenants): Inter
+        // phenomebeauty / sister-studios: Abril Fatface (display) + Montserrat (body)
+        // zoes-beauty-bar: Cormorant Garamond (display) + Montserrat (body)
+        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
+        body:    ['var(--font-body)',    'system-ui', 'sans-serif'],
       },
       transitionTimingFunction: {
         "smooth-slide": "cubic-bezier(0.32, 0.72, 0, 1)",

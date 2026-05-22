@@ -50,6 +50,11 @@ export const useBusinessTheme = () => useContext(BusinessThemeContext);
  *
  * Light/dark toggle: inverts current theme's lightness in place.
  * Same hues, same accents — only luminance flips.
+ *
+ * Font resolution (via CSS variables --font-display / --font-body):
+ * - phenomebeauty + sister-studios → Abril Fatface (display) + Montserrat (body)
+ * - zoes-beauty-bar                → Cormorant Garamond (display) + Montserrat (body)
+ * - all other tenants + marketing  → Inter (display + body)
  */
 export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const resolution = resolveTenantSync();
@@ -114,7 +119,7 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const cssVars = useMemo(() => getThemeCssVars(theme), [theme]);
 
-  // Apply CSS variables to document root
+  // Apply CSS colour variables + dark/light class to document root
   useEffect(() => {
     const root = document.documentElement;
     Object.entries(cssVars).forEach(([key, value]) => {
@@ -131,6 +136,28 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       root.classList.remove("dark");
     }
   }, [cssVars, theme]);
+
+  // Apply tenant-specific fonts via CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+
+    // Default: Inter for all tenants and marketing site
+    let fontDisplay = "Inter, system-ui, sans-serif";
+    let fontBody    = "Inter, system-ui, sans-serif";
+
+    if (tenantSlug === "phenomebeauty" || tenantSlug === "sister-studios") {
+      // Phenomebeauty & Sister Studios — preserve existing brand typography
+      fontDisplay = '"Abril Fatface", system-ui, serif';
+      fontBody    = "Montserrat, system-ui, sans-serif";
+    } else if (tenantSlug === "zoes-beauty-bar") {
+      // Zo Beauty Bar — elegant serif headings + clean sans body (matches menu branding)
+      fontDisplay = '"Cormorant Garamond", system-ui, serif';
+      fontBody    = "Montserrat, system-ui, sans-serif";
+    }
+
+    root.style.setProperty("--font-display", fontDisplay);
+    root.style.setProperty("--font-body", fontBody);
+  }, [tenantSlug]);
 
   // Persist base theme id
   useEffect(() => {
