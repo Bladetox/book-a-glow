@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy,
-  Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell
+  Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell, MapPin, Home
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -168,7 +168,60 @@ const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; la
   </button>
 );
 
-// ─── Main component ──────────────────────────────────────────────────────────────────────────────────────────────────────
+// ─── Service Mode Toggle ─────────────────────────────────────────────────────
+const ServiceModeToggle = ({
+  enabled,
+  onChange,
+}: {
+  enabled: boolean;
+  onChange: (v: boolean) => void;
+}) => (
+  <div className="flex flex-col gap-3">
+    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Service Mode</label>
+    <div className="grid grid-cols-2 gap-2">
+      {/* Fixed Salon */}
+      <button
+        type="button"
+        onClick={() => onChange(false)}
+        className={`flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border transition-all ${
+          !enabled
+            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+            : "border-white/[0.08] bg-white/[0.03] text-white/40 hover:border-white/20"
+        }`}
+      >
+        <Home className="w-5 h-5" />
+        <span className="text-xs font-bold">Fixed Salon</span>
+        <span className="text-[10px] text-center leading-relaxed opacity-70">
+          Clients come to you
+        </span>
+      </button>
+
+      {/* Mobile / Call-outs */}
+      <button
+        type="button"
+        onClick={() => onChange(true)}
+        className={`flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border transition-all ${
+          enabled
+            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+            : "border-white/[0.08] bg-white/[0.03] text-white/40 hover:border-white/20"
+        }`}
+      >
+        <MapPin className="w-5 h-5" />
+        <span className="text-xs font-bold">Call-outs</span>
+        <span className="text-[10px] text-center leading-relaxed opacity-70">
+          You travel to clients
+        </span>
+      </button>
+    </div>
+    <p className="text-[10px] text-white/20 italic px-1">
+      {enabled
+        ? "Clients will enter their address at checkout. A travel fee will be calculated."
+        : "No address required at checkout. Travel fee section is hidden."}
+    </p>
+  </div>
+);
+
+// ─── Main component ──────────────────────────────────────────────────────────
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
@@ -196,6 +249,9 @@ const AdminSettings = () => {
   const customDomain = draft.custom_domain ?? "";
   const defaultBookingUrl = `https://${tenantId}.nextslot.co.za`;
   const activeBookingUrl = customDomain ? `https://${customDomain}` : defaultBookingUrl;
+
+  // Derived: is mobile/call-out service enabled?
+  const mobileEnabled = draft.mobile_service_enabled === "true";
 
   const copyUrl = (url: string) => { navigator.clipboard.writeText(url); toast.success("Copied to clipboard"); };
 
@@ -458,20 +514,70 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Travel Payments" icon={Zap} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
-            <SettingRow id="origin-address" label="Fixed Origin Address" placeholder="123 Studio Way, Cape Town" value={draft.fixed_origin_address} onChange={(v) => update("fixed_origin_address", v)} />
-            <SettingRow id="km-rate" label="Rate Per KM (ZAR)" placeholder="5.50" type="number" value={draft.rate_per_km} onChange={(v) => update("rate_per_km", v)} />
-            <SettingRow id="currency" label="Currency Symbol" placeholder="R" value={draft.currency} onChange={(v) => update("currency", v)} />
+          {/* ── SERVICE MODE + TRAVEL ── */}
+          <SettingsCard title="Service Mode & Travel" icon={MapPin} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
+            {/* Service Mode toggle — always visible */}
+            <ServiceModeToggle
+              enabled={mobileEnabled}
+              onChange={(v) => update("mobile_service_enabled", v ? "true" : "false")}
+            />
+
+            {/* Travel fields — only shown when call-outs are enabled */}
+            <AnimatePresence initial={false}>
+              {mobileEnabled && (
+                <motion.div
+                  key="travel-fields"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-col gap-4 pt-1">
+                    <SettingRow
+                      id="origin-address"
+                      label="Fixed Origin Address"
+                      placeholder="123 Studio Way, Cape Town"
+                      value={draft.fixed_origin_address}
+                      onChange={(v) => update("fixed_origin_address", v)}
+                      hint="Your departure address for calculating travel distance."
+                    />
+                    <SettingRow
+                      id="km-rate"
+                      label="Rate Per KM (ZAR)"
+                      placeholder="5.50"
+                      type="number"
+                      value={draft.rate_per_km}
+                      onChange={(v) => update("rate_per_km", v)}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Currency — always visible */}
+            <SettingRow
+              id="currency"
+              label="Currency Symbol"
+              placeholder="R"
+              value={draft.currency}
+              onChange={(v) => update("currency", v)}
+            />
+
             <div className="flex items-center gap-3">
               <SaveBtn
                 onClick={() => {
-                  upsertSetting.mutate(
-                    { fixed_origin_address: draft.fixed_origin_address ?? "", rate_per_km: draft.rate_per_km ?? "" },
-                    {
-                      onSuccess: () => saveTenantFields("travel", ["currency"]),
-                      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
-                    }
-                  );
+                  const settingFields: Record<string, string> = {
+                    mobile_service_enabled: draft.mobile_service_enabled ?? "false",
+                  };
+                  if (mobileEnabled) {
+                    settingFields.fixed_origin_address = draft.fixed_origin_address ?? "";
+                    settingFields.rate_per_km = draft.rate_per_km ?? "";
+                  }
+                  upsertSetting.mutate(settingFields, {
+                    onSuccess: () => saveTenantFields("travel", ["currency"]),
+                    onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+                  });
                 }}
                 loading={updateTenant.isPending || upsertSetting.isPending}
               />
