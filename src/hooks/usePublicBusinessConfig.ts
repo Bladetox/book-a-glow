@@ -28,6 +28,8 @@ export interface PublicBusinessConfig {
   email: string;
   phone: string;
   address: string;
+  /** The physical salon address shown to clients when Fixed Salon mode is active */
+  salonAddress: string;
   currency: string;
   depositPercent: number;
   ratePerKm: number;
@@ -62,6 +64,7 @@ const defaults: PublicBusinessConfig = {
   email: "",
   phone: "",
   address: "",
+  salonAddress: "",
   currency: "R",
   depositPercent: 50,
   ratePerKm: 3.6,
@@ -176,6 +179,9 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     email: t?.email || s.email || defaults.email,
     phone: t?.phone || s.phone || defaults.phone,
     address: s.fixed_origin_address || t?.address || defaults.address,
+
+    // Salon location — shown to clients on confirmation when Fixed Salon mode is active
+    salonAddress: s.salon_address || t?.address || defaults.salonAddress,
 
     // Operational
     currency: t?.currency || s.currency || defaults.currency,

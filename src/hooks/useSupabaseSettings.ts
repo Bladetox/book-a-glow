@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 
-// ─── Keys the admin UI is allowed to read from app_settings ────────────────
+// ─── Keys the admin UI is allowed to read from app_settings ──────────────────
 // NOTE: Secret values (passwords, api keys) are masked in the UI after saving.
 // They must be in this list so the UI can detect "is this configured?" status.
 const ALLOWED_APP_SETTING_KEYS = [
@@ -19,7 +19,9 @@ const ALLOWED_APP_SETTING_KEYS = [
   "theme_id",
   // Service mode
   "mobile_service_enabled",
-  // Travel
+  // Salon location (shown to clients when Fixed Salon mode is active)
+  "salon_address",
+  // Travel (call-outs mode)
   "fixed_origin_address",
   "rate_per_km",
   "default_distance_km",
@@ -61,7 +63,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   "suggested_addons",
 ] as const;
 
-// ─── Tenant fields safe to expose to the client ─────────────────────────────
+// ─── Tenant fields safe to expose to the client ───────────────────────────────
 const SAFE_TENANT_FIELDS = [
   "id",
   "name",
@@ -82,7 +84,7 @@ const SAFE_TENANT_FIELDS = [
   "updated_at",
 ].join(", ");
 
-// ─── Tenant fields the admin UI is allowed to update ────────────────────────
+// ─── Tenant fields the admin UI is allowed to update ─────────────────────────
 const SAFE_UPDATE_KEYS = new Set([
   "name",
   "email",
@@ -134,8 +136,6 @@ export function useAppSettings() {
       });
 
       // ── Legacy migration: if only min_notice_hours exists, derive minutes ──
-      // Once the admin saves via the new UI, min_notice_minutes will be set
-      // and this fallback will no longer be needed.
       if (!map["min_notice_minutes"] && map["min_notice_hours"]) {
         const hours = parseFloat(map["min_notice_hours"]);
         if (!isNaN(hours)) {
