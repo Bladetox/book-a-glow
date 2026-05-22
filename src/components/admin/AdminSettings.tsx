@@ -168,7 +168,7 @@ const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; la
   </button>
 );
 
-// ─── Service Mode Toggle ─────────────────────────────────────────────────────
+// ─── Service Mode Toggle ─────────────────────────────────────────────────
 const ServiceModeToggle = ({
   enabled,
   onChange,
@@ -216,12 +216,12 @@ const ServiceModeToggle = ({
     <p className="text-[10px] text-white/20 italic px-1">
       {enabled
         ? "Clients will enter their address at checkout. A travel fee will be calculated."
-        : "No address required at checkout. Travel fee section is hidden."}
+        : "Clients will see your salon location on their booking confirmation."}
     </p>
   </div>
 );
 
-// ─── Main component ──────────────────────────────────────────────────────────
+// ─── Main component ────────────────────────────────────────────────────
 const AdminSettings = () => {
   const { data: tenant, isLoading: tenantLoading } = useTenantSettings();
   const { data: appSettings = {}, isLoading: settingsLoading } = useAppSettings();
@@ -352,7 +352,7 @@ const AdminSettings = () => {
       <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Saved</span>
     ) : null;
 
-  // ── Notification preference helpers ────────────────────────────────────
+  // ── Notification preference helpers ──────────────────────────────────
   const notifPrefs: Record<string, boolean> = (tenant as any)?.notification_preferences ?? {
     new_booking: true,
     deposit_received: true,
@@ -516,13 +516,39 @@ const AdminSettings = () => {
 
           {/* ── SERVICE MODE + TRAVEL ── */}
           <SettingsCard title="Service Mode & Travel" icon={MapPin} gradient="from-white/[0.06] to-white/[0.02]" collapsible>
+
             {/* Service Mode toggle — always visible */}
             <ServiceModeToggle
               enabled={mobileEnabled}
               onChange={(v) => update("mobile_service_enabled", v ? "true" : "false")}
             />
 
-            {/* Travel fields — only shown when call-outs are enabled */}
+            {/* Fixed Salon — salon location for clients */}
+            <AnimatePresence initial={false}>
+              {!mobileEnabled && (
+                <motion.div
+                  key="salon-address-field"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-1">
+                    <SettingRow
+                      id="salon-address"
+                      label="Salon Address"
+                      placeholder="14 Studio Lane, Cape Town"
+                      value={draft.salon_address}
+                      onChange={(v) => update("salon_address", v)}
+                      hint="Shown to clients on their booking confirmation so they know where to go."
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Call-outs — travel fields */}
             <AnimatePresence initial={false}>
               {mobileEnabled && (
                 <motion.div
@@ -570,7 +596,9 @@ const AdminSettings = () => {
                   const settingFields: Record<string, string> = {
                     mobile_service_enabled: draft.mobile_service_enabled ?? "false",
                   };
-                  if (mobileEnabled) {
+                  if (!mobileEnabled) {
+                    settingFields.salon_address = draft.salon_address ?? "";
+                  } else {
                     settingFields.fixed_origin_address = draft.fixed_origin_address ?? "";
                     settingFields.rate_per_km = draft.rate_per_km ?? "";
                   }
