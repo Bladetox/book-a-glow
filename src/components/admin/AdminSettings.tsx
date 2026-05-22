@@ -54,6 +54,30 @@ const SectionLabel = ({ label }: { label: string }) => (
   </p>
 );
 
+/**
+ * Safari-safe expand/collapse using CSS grid-rows trick.
+ *
+ * Safari cannot interpolate height:0 → height:auto in Framer Motion
+ * (WebKit does not support animating to intrinsic sizes via JS interpolation).
+ * Instead we animate `grid-template-rows` from "0fr" → "1fr" which Safari
+ * handles correctly, while keeping opacity fade via Framer Motion.
+ */
+const Collapsible = ({ open, children }: { open: boolean; children: React.ReactNode }) => (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateRows: open ? "1fr" : "0fr",
+      transition: "grid-template-rows 0.25s ease, opacity 0.25s ease",
+      opacity: open ? 1 : 0,
+    }}
+  >
+    {/* min-height:0 is required — without it the row never collapses to 0 */}
+    <div style={{ minHeight: 0, overflow: "hidden" }}>
+      {children}
+    </div>
+  </div>
+);
+
 const SettingsCard = ({
   title,
   icon: Icon,
@@ -83,23 +107,18 @@ const SettingsCard = ({
         )}
         <h4 className="text-sm font-bold text-white/80 flex-1">{title}</h4>
         {collapsible && (
-          <ChevronDown className={`w-4 h-4 text-white/25 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className="w-4 h-4 text-white/25"
+            style={{
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.3s ease",
+            }}
+          />
         )}
       </div>
-      <AnimatePresence initial={false}>
-        {(!collapsible || open) && (
-          <motion.div
-            key="content"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="flex flex-col gap-5 px-5 pb-5">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Collapsible open={!collapsible || open}>
+        <div className="flex flex-col gap-5 px-5 pb-5">{children}</div>
+      </Collapsible>
     </div>
   );
 };
@@ -524,62 +543,40 @@ const AdminSettings = () => {
             />
 
             {/* Fixed Salon — salon location for clients */}
-            <AnimatePresence initial={false}>
-              {!mobileEnabled && (
-                <motion.div
-                  key="salon-address-field"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-1">
-                    <SettingRow
-                      id="salon-address"
-                      label="Salon Address"
-                      placeholder="14 Studio Lane, Cape Town"
-                      value={draft.salon_address}
-                      onChange={(v) => update("salon_address", v)}
-                      hint="Shown to clients on their booking confirmation so they know where to go."
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <Collapsible open={!mobileEnabled}>
+              <div className="pt-1">
+                <SettingRow
+                  id="salon-address"
+                  label="Salon Address"
+                  placeholder="14 Studio Lane, Cape Town"
+                  value={draft.salon_address}
+                  onChange={(v) => update("salon_address", v)}
+                  hint="Shown to clients on their booking confirmation so they know where to go."
+                />
+              </div>
+            </Collapsible>
 
             {/* Call-outs — travel fields */}
-            <AnimatePresence initial={false}>
-              {mobileEnabled && (
-                <motion.div
-                  key="travel-fields"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="overflow-hidden"
-                >
-                  <div className="flex flex-col gap-4 pt-1">
-                    <SettingRow
-                      id="origin-address"
-                      label="Fixed Origin Address"
-                      placeholder="123 Studio Way, Cape Town"
-                      value={draft.fixed_origin_address}
-                      onChange={(v) => update("fixed_origin_address", v)}
-                      hint="Your departure address for calculating travel distance."
-                    />
-                    <SettingRow
-                      id="km-rate"
-                      label="Rate Per KM (ZAR)"
-                      placeholder="5.50"
-                      type="number"
-                      value={draft.rate_per_km}
-                      onChange={(v) => update("rate_per_km", v)}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <Collapsible open={mobileEnabled}>
+              <div className="flex flex-col gap-4 pt-1">
+                <SettingRow
+                  id="origin-address"
+                  label="Fixed Origin Address"
+                  placeholder="123 Studio Way, Cape Town"
+                  value={draft.fixed_origin_address}
+                  onChange={(v) => update("fixed_origin_address", v)}
+                  hint="Your departure address for calculating travel distance."
+                />
+                <SettingRow
+                  id="km-rate"
+                  label="Rate Per KM (ZAR)"
+                  placeholder="5.50"
+                  type="number"
+                  value={draft.rate_per_km}
+                  onChange={(v) => update("rate_per_km", v)}
+                />
+              </div>
+            </Collapsible>
 
             {/* Currency — always visible */}
             <SettingRow
