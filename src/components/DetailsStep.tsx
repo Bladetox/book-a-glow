@@ -217,24 +217,28 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     const loadQuestions = async () => {
       setConsultationLoading(true);
       try {
-        // 1. Try custom questions first
+        // 1. Try custom questions from DB — using real live schema columns
         const { data: customRows } = await supabase
           .from("consultation_questions")
-          .select("key, label, type, required, enabled, options, sort_order")
+          .select("id, question, detail, is_active, sort_order")
           .eq("tenant_id", tenantId)
-          .eq("enabled", true)
+          .eq("is_active", true)
           .order("sort_order", { ascending: true });
 
         if (cancelled) return;
 
         if (customRows && customRows.length > 0) {
           setConsultationQuestions(
-            customRows.map((r) => ({
-              key: r.key ?? r.label.toLowerCase().replace(/\s+/g, "_").slice(0, 40),
-              label: r.label,
-              type: r.type as ConsultationQuestionDefinition["type"],
-              required: r.required ?? false,
-              options: Array.isArray(r.options) ? (r.options as string[]) : undefined,
+            customRows.map((r, i) => ({
+              // derive a stable key from sort_order + slugified question
+              key: `q_${r.sort_order ?? i}_${r.question
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "_")
+                .slice(0, 40)}`,
+              label: r.question,
+              type: "yes_no" as ConsultationQuestionDefinition["type"],
+              required: false,
+              options: undefined,
             }))
           );
           return;
