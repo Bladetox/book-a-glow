@@ -260,14 +260,14 @@ export const ConsultationFormBuilder = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <AdminCard title="Consultation Form" icon={ClipboardList}>
+      <AdminCard title="Consultation Form" icon={ClipboardList} collapsible>
         <p className="text-xs text-white/30 animate-pulse py-4 text-center">Loading...</p>
       </AdminCard>
     );
   }
 
   return (
-    <AdminCard title="Consultation Form" icon={ClipboardList} defaultOpen>
+    <AdminCard title="Consultation Form" icon={ClipboardList} collapsible>
       <AdminPageHeader
         title="Client Consultation Questions"
         subtitle="New clients complete this form when booking. If no custom questions are saved, your clients see the standard form for your business type."
