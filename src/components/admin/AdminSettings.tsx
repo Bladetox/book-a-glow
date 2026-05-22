@@ -56,11 +56,8 @@ const SectionLabel = ({ label }: { label: string }) => (
 
 /**
  * Safari-safe expand/collapse using CSS grid-rows trick.
- *
- * Safari cannot interpolate height:0 → height:auto in Framer Motion
- * (WebKit does not support animating to intrinsic sizes via JS interpolation).
- * Instead we animate `grid-template-rows` from "0fr" → "1fr" which Safari
- * handles correctly, while keeping opacity fade via Framer Motion.
+ * The OUTER grid div must NOT have overflow:hidden — only the inner div does.
+ * This prevents WebKit double-clipping which stalls the repaint on mount.
  */
 const Collapsible = ({ open, children }: { open: boolean; children: React.ReactNode }) => (
   <div
@@ -69,9 +66,11 @@ const Collapsible = ({ open, children }: { open: boolean; children: React.ReactN
       gridTemplateRows: open ? "1fr" : "0fr",
       transition: "grid-template-rows 0.25s ease, opacity 0.25s ease",
       opacity: open ? 1 : 0,
+      // overflow must be visible on the grid wrapper — inner div handles clipping
+      overflow: "visible",
     }}
   >
-    {/* min-height:0 is required — without it the row never collapses to 0 */}
+    {/* minHeight:0 + overflow:hidden on the INNER div is what actually clips */}
     <div style={{ minHeight: 0, overflow: "hidden" }}>
       {children}
     </div>
@@ -95,7 +94,9 @@ const SettingsCard = ({
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05] overflow-hidden`}>
+    // overflow-hidden REMOVED — it was causing Safari to clip the Collapsible
+    // before the grid-rows transition could complete on mount
+    <div className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05]`}>
       <div
         className={`flex items-center gap-3 p-5 ${collapsible ? "cursor-pointer select-none" : ""}`}
         onClick={collapsible ? () => setOpen((v) => !v) : undefined}
