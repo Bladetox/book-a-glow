@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy,
-  Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell, MapPin, Home
+  Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell, MapPin, Home,
+  ClipboardList
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -17,6 +18,7 @@ import {
 } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import { ConsultationFormBuilder } from "./ConsultationFormBuilder";
 
 const OVERRUN_PRESETS = [
   { label: "None",   value: "0" },
@@ -639,6 +641,12 @@ const AdminSettings = () => {
             </div>
           </SettingsCard>
         </div>
+      </section>
+
+      {/* ── CONSULTATION FORM ── */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Consultation" />
+        <ConsultationFormBuilder />
       </section>
 
       {/* ── SUBSCRIPTION ── */}

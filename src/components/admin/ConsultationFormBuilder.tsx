@@ -3,7 +3,6 @@
 //   1. Set their business_type (drives fallback questions for clients)
 //   2. Build a custom consultation form (saved to consultation_questions table)
 //   3. Preview what new clients will see if no custom questions are saved
-// Stage 3 — isolated component, wired in Stage 4.
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -16,7 +15,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/hooks/useTenant';
+import { useTenant } from '@/contexts/TenantContext';
 import {
   AdminCard,
   AdminPageHeader,
@@ -30,7 +29,7 @@ import {
   defaultConsultationQuestions,
 } from '@/data/defaultConsultationQuestions';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type QuestionType = 'yes_no' | 'text' | 'textarea' | 'radio' | 'checkbox';
 
@@ -86,11 +85,10 @@ function blankDraft(sortOrder: number): DraftQuestion {
   };
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export const ConsultationFormBuilder = () => {
-  const { tenant } = useTenant();
-  const tenantId = tenant?.id ?? null;
+  const { tenantId } = useTenant();
 
   const [businessType, setBusinessType] = useState<BusinessType | ''>('');
   const [originalBusinessType, setOriginalBusinessType] = useState<BusinessType | ''>('');
@@ -101,13 +99,12 @@ export const ConsultationFormBuilder = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Load existing data ──────────────────────────────────────────────────
+  // ── Load existing data ────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     setError(null);
     try {
-      // Fetch tenant.business_type
       const { data: tenantRow, error: tenantErr } = await supabase
         .from('tenants')
         .select('business_type')
@@ -119,7 +116,6 @@ export const ConsultationFormBuilder = () => {
       setBusinessType(bt);
       setOriginalBusinessType(bt);
 
-      // Fetch saved custom questions
       const { data: rows, error: qErr } = await supabase
         .from('consultation_questions')
         .select('*')
@@ -149,7 +145,7 @@ export const ConsultationFormBuilder = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const updateQuestion = (localKey: string, patch: Partial<DraftQuestion>) => {
     setQuestions((prev) =>
       prev.map((q) => (q.localKey === localKey ? { ...q, ...patch } : q))
@@ -206,13 +202,12 @@ export const ConsultationFormBuilder = () => {
     );
   };
 
-  // ── Save ────────────────────────────────────────────────────────────────
+  // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!tenantId) return;
     setSaving(true);
     setError(null);
     try {
-      // 1. Save business_type if changed
       if (businessType !== originalBusinessType) {
         const { error: btErr } = await supabase
           .from('tenants')
@@ -222,7 +217,6 @@ export const ConsultationFormBuilder = () => {
         setOriginalBusinessType(businessType);
       }
 
-      // 2. Delete all existing custom questions and re-insert (clean upsert)
       const { error: delErr } = await supabase
         .from('consultation_questions')
         .delete()
@@ -239,14 +233,12 @@ export const ConsultationFormBuilder = () => {
           enabled: q.enabled,
           sort_order: i,
         }));
-
         const { error: insErr } = await supabase
           .from('consultation_questions')
           .insert(inserts);
         if (insErr) throw insErr;
       }
 
-      // Reload fresh IDs
       await loadData();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -257,14 +249,15 @@ export const ConsultationFormBuilder = () => {
     }
   };
 
-  // ── Derived ─────────────────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────────────────────
   const fallbackQuestions: ConsultationQuestionDefinition[] =
-    businessType ? (defaultConsultationQuestions[businessType] ?? defaultConsultationQuestions.general)
-                 : defaultConsultationQuestions.general;
+    businessType
+      ? (defaultConsultationQuestions[businessType] ?? defaultConsultationQuestions.general)
+      : defaultConsultationQuestions.general;
 
   const hasCustomQuestions = questions.length > 0;
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <AdminCard title="Consultation Form" icon={ClipboardList}>
@@ -375,7 +368,6 @@ export const ConsultationFormBuilder = () => {
               <GripVertical className="w-3.5 h-3.5 text-white/15 shrink-0" />
               <span className="text-[10px] text-white/25 font-bold shrink-0">Q{idx + 1}</span>
               <div className="flex-1" />
-              {/* Enabled toggle */}
               <button
                 onClick={() => updateQuestion(q.localKey, { enabled: !q.enabled })}
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors ${
@@ -386,7 +378,6 @@ export const ConsultationFormBuilder = () => {
               >
                 {q.enabled ? 'Enabled' : 'Disabled'}
               </button>
-              {/* Required toggle */}
               <button
                 onClick={() => updateQuestion(q.localKey, { required: !q.required })}
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors ${
@@ -397,7 +388,6 @@ export const ConsultationFormBuilder = () => {
               >
                 {q.required ? 'Required' : 'Optional'}
               </button>
-              {/* Move up */}
               <button
                 onClick={() => moveQuestion(q.localKey, -1)}
                 disabled={idx === 0}
@@ -405,7 +395,6 @@ export const ConsultationFormBuilder = () => {
               >
                 <ChevronUp className="w-3.5 h-3.5" />
               </button>
-              {/* Move down */}
               <button
                 onClick={() => moveQuestion(q.localKey, 1)}
                 disabled={idx === questions.length - 1}
@@ -413,7 +402,6 @@ export const ConsultationFormBuilder = () => {
               >
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
-              {/* Delete */}
               <button
                 onClick={() => removeQuestion(q.localKey)}
                 className="p-1 rounded-lg text-red-400/40 hover:text-red-400 transition-colors"
