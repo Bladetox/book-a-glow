@@ -8,6 +8,7 @@ import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
 import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantContext";
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
+import { PwaUpdater } from "@/components/PwaUpdater";
 
 const Index         = lazy(() => import("./pages/Index"));
 const About         = lazy(() => import("./pages/About"));
@@ -117,6 +118,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <PwaUpdater />
             {isSubdomain ? (
               <PublicTenantProvider>
                 <TenantRoutes />
