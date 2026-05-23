@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Loader2, Star } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Star, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
@@ -57,6 +57,12 @@ const PaymentSuccess = () => {
   const isSuccess   = payment === "success";
   const isCancelled = payment === "cancelled";
   const isFinal     = type === "final" || type === "full";
+
+  // Fixed-salon mode: show the salon address when mobile service is NOT enabled
+  const showSalonAddress = !config.mobileServiceEnabled && !!config.salonAddress;
+  const mapsHref = showSalonAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.salonAddress)}`
+    : null;
 
   useEffect(() => {
     if (!isSuccess) { setLoading(false); return; }
@@ -209,6 +215,27 @@ const PaymentSuccess = () => {
                     <span className="text-foreground font-medium">{displayTime}</span>
                   </div>
                 )}
+                {showSalonAddress && (
+                  <div className="flex justify-between text-sm gap-2">
+                    <span className="text-muted-foreground shrink-0">Location</span>
+                    {mapsHref ? (
+                      <a
+                        href={mapsHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary font-medium text-right hover:underline"
+                      >
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        {config.salonAddress}
+                      </a>
+                    ) : (
+                      <span className="flex items-center gap-1 text-foreground font-medium text-right">
+                        <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                        {config.salonAddress}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {paidAmount != null && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total paid</span>
@@ -289,7 +316,7 @@ const PaymentSuccess = () => {
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{config.confirmationIntro}</p>
             )}
 
-            {(displayDate || displayTime || displayDeposit != null) && (
+            {(displayDate || displayTime || displayDeposit != null || showSalonAddress) && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                 className="glass-card-service rounded-2xl p-4 w-full flex flex-col gap-2 text-left">
                 {displayDate && (
@@ -302,6 +329,27 @@ const PaymentSuccess = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Time</span>
                     <span className="text-foreground font-medium">{displayTime}</span>
+                  </div>
+                )}
+                {showSalonAddress && (
+                  <div className="flex justify-between text-sm gap-2">
+                    <span className="text-muted-foreground shrink-0">Location</span>
+                    {mapsHref ? (
+                      <a
+                        href={mapsHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary font-medium text-right hover:underline"
+                      >
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        {config.salonAddress}
+                      </a>
+                    ) : (
+                      <span className="flex items-center gap-1 text-foreground font-medium text-right">
+                        <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                        {config.salonAddress}
+                      </span>
+                    )}
                   </div>
                 )}
                 {displayDeposit != null && (
