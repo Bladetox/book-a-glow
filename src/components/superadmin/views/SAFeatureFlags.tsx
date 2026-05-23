@@ -23,6 +23,7 @@ const FLAG_DEFS: FlagDef[] = [
   { group: "Payments",         key: "deposit_payments",      label: "Deposit Payments",           desc: "Deposit-only Yoco checkout; remainder collected at appointment"       },
   // ── Calendar
   { group: "Calendar",         key: "google_calendar_sync",  label: "Google Calendar Sync",       desc: "OAuth connect; auto-create, update and delete Google Calendar events"  },
+  { group: "Calendar",         key: "add_to_calendar",       label: "Add to Calendar (Client)",   desc: "Attaches an .ics calendar invite to client booking confirmation emails — Starter, Professional & Studio" },
   // ── Reviews & Reputation
   { group: "Reviews",          key: "review_generation",     label: "Review Generation",          desc: "Redirect clients to Google review page after payment"                },
   { group: "Reviews",          key: "gmb_integration",       label: "Google My Business",         desc: "Connect GMB account and reply to reviews from the admin dashboard"    },

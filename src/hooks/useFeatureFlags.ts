@@ -30,6 +30,7 @@ export const FLAG_KEYS = [
   "deposit_payments",
   // ── Calendar
   "google_calendar_sync",
+  "add_to_calendar",
   // ── Reviews & reputation
   "review_generation",
   "gmb_integration",
