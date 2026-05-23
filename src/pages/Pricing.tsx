@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 const tiers = [
   {
     name: "Starter",
-    price: "R399",
+    price: "R299",
     period: "/ month",
     description: "For solo operators ready to ditch the WhatsApp chaos.",
     features: [
@@ -31,7 +31,7 @@ const tiers = [
   },
   {
     name: "Professional",
-    price: "R599",
+    price: "R499",
     period: "/ month",
     description: "For growing businesses that want to know what's actually working.",
     features: [
@@ -319,7 +319,7 @@ const Pricing = () => {
                 style={{ color: "hsl(var(--muted-foreground))" }}
               >
                 Run your bookings for 30 days. Let NextSlot learn your business.
-                Then decide which plan fits. No card. No pressure. Starter from R399 per month.
+                Then decide which plan fits. No card. No pressure. Starter from R299 per month.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 {pricingMode === "manage" ? (
