@@ -17,7 +17,13 @@ export interface Tenant {
   theme_id: string | null;
   currency: string | null;
   /** Persisted in tenants.is_lifetime_free — true means all features always unlocked */
-  is_lifetime_free?: boolean;
+  is_lifetime_free?: boolean | null;
+  /** Subscription lifecycle status: 'trial' | 'active' | 'cancelled' | 'disabled' | etc. */
+  subscription_status?: string | null;
+  /** ISO timestamp when the trial period ends. Null = no expiry set. */
+  trial_ends_at?: string | null;
+  /** Billing plan slug e.g. 'trial' | 'professional' | 'studio' | 'lifetime_free' */
+  plan?: string | null;
 }
 
 export interface TenantSubscription {
@@ -65,7 +71,10 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
 
     supabase
       .from("tenants")
-      .select("*")
+      .select(
+        "id, name, owner_id, email, phone, address, logo_url, is_active, custom_domain, " +
+        "theme_id, currency, is_lifetime_free, subscription_status, trial_ends_at, plan"
+      )
       .eq("owner_id", ownerId)
       .maybeSingle()
       .then(({ data }) => {
@@ -78,8 +87,8 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
     tenant,
     subscription: tenant
       ? {
-          status: (tenant as any).subscription_status ?? null,
-          trial_ends_at: (tenant as any).trial_ends_at ?? null,
+          status: tenant.subscription_status ?? null,
+          trial_ends_at: tenant.trial_ends_at ?? null,
         }
       : null,
     loading,
