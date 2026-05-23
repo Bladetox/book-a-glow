@@ -129,7 +129,7 @@ const Index = () => {
                     ))}
                   </div>
                   <div className="flex flex-wrap gap-3 pt-1">
-                    {["No setup stress", "No payment required", "Works on your phone"].map(tag => (
+                    {["Free setup", "No setup stress", "No payment required", "Works on your phone"].map(tag => (
                       <span
                         key={tag}
                         className="text-[11px] px-2.5 py-1 rounded-full"
