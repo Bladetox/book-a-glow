@@ -6,8 +6,11 @@
  *
  *   1. If tenant.is_lifetime_free === true  →  ALL flags forced true, no DB
  *      query needed.
- *   2. Otherwise fetch the tenant-level overrides from app_settings.
- *   3. Fall back to the global defaults (tenant_id = PLATFORM_TENANT_ID) for
+ *   2. If tenant is on an active trial (status="trial", not yet expired +
+ *      7-day grace) → treat all MISSING flag rows as true. Explicit DB rows
+ *      (superadmin overrides) still win.
+ *   3. Otherwise fetch the tenant-level overrides from app_settings.
+ *   4. Fall back to the global defaults (tenant_id = PLATFORM_TENANT_ID) for
  *      any key that has no tenant-level row.
  *
  * FLAG_KEYS must stay in sync with SAFeatureFlags.tsx FLAG_DEFS.
@@ -55,6 +58,7 @@ export type FlagKey = (typeof FLAG_KEYS)[number];
 export type FeatureFlags = Record<FlagKey, boolean>;
 
 const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
+const GRACE_PERIOD_MS    = 7 * 24 * 60 * 60 * 1000;
 
 const appSettingsKeys = FLAG_KEYS.map((k) => `feature_flag_${k}`);
 
@@ -84,9 +88,21 @@ const ALL_TRUE: FeatureFlags = FLAG_KEYS.reduce((acc, k) => {
   return acc;
 }, {} as FeatureFlags);
 
+/** Returns true when the tenant is within their 30-day trial + 7-day grace window. */
+function isTrialActive(
+  subscriptionStatus: string | null | undefined,
+  trialEndsAt: string | null | undefined,
+): boolean {
+  if (subscriptionStatus !== "trial") return false;
+  if (!trialEndsAt) return true; // no end date set → still active
+  return Date.now() <= new Date(trialEndsAt).getTime() + GRACE_PERIOD_MS;
+}
+
 export function useFeatureFlags(
   tenantId: string | null | undefined,
   isLifetimeFree: boolean | null | undefined,
+  subscriptionStatus?: string | null,
+  trialEndsAt?: string | null,
 ): { flags: FeatureFlags; loading: boolean } {
   const [flags, setFlags] = useState<FeatureFlags>(ALL_TRUE);
   const [loading, setLoading] = useState(true);
@@ -125,8 +141,14 @@ export function useFeatureFlags(
 
       if (cancelled) return;
 
-      // 3. Tenant rows win over global rows.
-      const merged = parseRows(tenantRows ?? [], globalFlags);
+      // 3. Active-trial tenants: all missing flags default to true.
+      //    Explicit DB rows (superadmin overrides) still win over this default.
+      const trialDefaults: Partial<FeatureFlags> = isTrialActive(subscriptionStatus, trialEndsAt)
+        ? { ...ALL_TRUE }
+        : {};
+
+      // Resolution: trialDefaults → globalFlags → tenantRows (highest priority)
+      const merged = parseRows(tenantRows ?? [], { ...trialDefaults, ...globalFlags });
       setFlags(merged);
       setLoading(false);
     })();
@@ -134,7 +156,7 @@ export function useFeatureFlags(
     return () => {
       cancelled = true;
     };
-  }, [tenantId, isLifetimeFree]);
+  }, [tenantId, isLifetimeFree, subscriptionStatus, trialEndsAt]);
 
   return { flags, loading };
 }
