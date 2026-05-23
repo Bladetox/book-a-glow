@@ -79,8 +79,15 @@ function mapBooking(b: any): BookingRow {
     b.client?.email ||
     "";
 
-  // Address: call-out address takes priority; registered client address as fallback.
-  const address = b.call_out_address || b.client?.address || "";
+  // Address resolution — canonical order:
+  // 1. call_out_address — set when is_call_out = true (call-out bookings via booking form)
+  // 2. client?.address  — registered client's profile address (client_id is set)
+  // 3. guest_address    — address added by admin for non-callout guest bookings
+  const address =
+    b.call_out_address ||
+    b.client?.address  ||
+    b.guest_address    ||
+    "";
 
   // balance_due is a real persisted column (default 0); use it directly.
   const balance = Number(b.balance_due ?? 0);
@@ -175,6 +182,7 @@ export function useSupabaseBookings() {
           guest_name,
           guest_email,
           guest_phone,
+          guest_address,
           gcal_event_id,
           lead_source,
           tenant_id,
