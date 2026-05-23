@@ -2,6 +2,7 @@ import { BookingState } from "@/data/bookingData";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { MapPin } from "lucide-react";
 
 interface BookingConfirmationProps {
   booking: BookingState;
@@ -11,6 +12,12 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
   const config = usePublicBusinessConfig();
   const formattedDate = booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "TBC";
   const formattedTime = booking.selectedTime || "TBC";
+
+  // Fixed-salon mode: mobileServiceEnabled is false and a salonAddress is set
+  const isFixedSalon = !config.mobileServiceEnabled && !!config.salonAddress;
+  const mapsHref = isFixedSalon
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.salonAddress)}`
+    : null;
 
   return (
     <motion.div
@@ -55,14 +62,44 @@ const BookingConfirmation = ({ booking }: BookingConfirmationProps) => {
         <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">What happens next</h4>
 
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-semibold text-foreground">The Arrival</span>
-          <span className="text-sm text-muted-foreground">I'll be arriving on {formattedDate} at {formattedTime}.</span>
+          <span className="text-sm font-semibold text-foreground">
+            {isFixedSalon ? "The Date" : "The Arrival"}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {isFixedSalon
+              ? `Your appointment is on ${formattedDate} at ${formattedTime}.`
+              : `I'll be arriving on ${formattedDate} at ${formattedTime}.`}
+          </span>
         </div>
 
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold text-foreground">The Space</span>
-          <span className="text-sm text-muted-foreground">{booking.address || "To be confirmed"}</span>
-          <span className="text-sm text-muted-foreground">No need to overthink it, just find a spot where you feel most comfortable, and I'll handle the rest.</span>
+          {isFixedSalon ? (
+            <>
+              {mapsHref ? (
+                <a
+                  href={mapsHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>{config.salonAddress}</span>
+                </a>
+              ) : (
+                <span className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>{config.salonAddress}</span>
+                </span>
+              )}
+              <span className="text-sm text-muted-foreground">We can't wait to welcome you. Just head on over — everything is ready for you.</span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">{booking.address || "To be confirmed"}</span>
+              <span className="text-sm text-muted-foreground">No need to overthink it, just find a spot where you feel most comfortable, and I'll handle the rest.</span>
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-1">
