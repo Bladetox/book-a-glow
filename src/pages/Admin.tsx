@@ -9,6 +9,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import TrialExpiredPaywall from "@/components/admin/TrialExpiredPaywall";
+import { ArrearsBanner } from "@/components/admin/ArrearsBanner";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
@@ -26,23 +27,6 @@ const AdminHelp             = lazy(() => import("@/components/admin/AdminHelp"))
 const AdminRecommendations  = lazy(() => import("@/components/admin/AdminRecommendations"));
 const AdminConsultations    = lazy(() => import("@/components/admin/AdminConsultations"));
 const AdminSpecialOccasions = lazy(() => import("@/components/admin/AdminSpecialOccasions"));
-
-const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
-
-function isPaywalled(
-  status: string | null,
-  isLifetimeFree: boolean,
-  trialEndsAt: string | null,
-): boolean {
-  if (isLifetimeFree) return false;
-  if (!status) return false;
-  if (status === "active") return false;
-  if (status === "trial") {
-    if (!trialEndsAt) return false;
-    return Date.now() > new Date(trialEndsAt).getTime() + GRACE_PERIOD_MS;
-  }
-  return ["trial_expired", "cancelled", "pending_payment"].includes(status);
-}
 
 class AdminErrorBoundary extends Component<
   { children: ReactNode },
@@ -115,13 +99,17 @@ interface AdminShellProps {
 const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   const isLifetimeFree = tenant?.is_lifetime_free === true;
 
-  // Pass subscription context so trial tenants automatically get all flags on.
-  const { flags, loading: flagsLoading } = useFeatureFlags(
+  const { flags, loading: flagsLoading, accountState } = useFeatureFlags(
     tenant?.id,
     isLifetimeFree,
     subscription?.status,
     subscription?.trial_ends_at,
   );
+
+  // "blocked" = full lockout (cancelled/disabled by admin).
+  // "arrears" = degraded access, bookings/payments only, banner shown.
+  const isBlocked = accountState === "blocked";
+  const isArrears = accountState === "arrears";
 
   const allowedViews = ALL_VIEWS.filter((view) => {
     if ((CORE_VIEWS as readonly string[]).includes(view)) return true;
@@ -150,13 +138,8 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
     if ((ALL_VIEWS as readonly string[]).includes(view)) setActiveView(view as ViewName);
   };
 
-  if (
-    isPaywalled(
-      subscription?.status ?? null,
-      isLifetimeFree,
-      subscription?.trial_ends_at ?? null,
-    )
-  ) {
+  // Hard lockout — admin explicitly cancelled/disabled this tenant.
+  if (isBlocked) {
     return <TrialExpiredPaywall tenantId={tenant?.id ?? ""} />;
   }
 
@@ -179,6 +162,9 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative h-dvh overflow-hidden">
+        {/* Arrears banner — shown below the top header, above content */}
+        {isArrears && <ArrearsBanner />}
+
         <header className="h-16 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
           <div className="flex items-center gap-3">
             <button
@@ -274,9 +260,7 @@ const Admin = () => {
             </div>
           );
         }
-        return (
-          <AdminShell tenant={tenant} subscription={subscription} />
-        );
+        return <AdminShell tenant={tenant} subscription={subscription} />;
       }}
     </TenantProvider>
   );
