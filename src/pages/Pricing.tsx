@@ -5,26 +5,31 @@ import { Link } from "react-router-dom";
 import { Check, Minus, ArrowRight, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+// ── Tier definitions (notIncluded removed — Hick's Law: show only what's included) ──
 const tiers = [
   {
     name: "Starter",
     price: "R299",
     period: "/ month",
     description: "For solo operators ready to ditch the WhatsApp chaos.",
-    features: [
-      "Online booking page, live in minutes",
-      "Service and pricing management",
-      "Availability calendar with smart slot control",
-      "Client profiles and full booking history",
-      "Deposit and balance collection via Yoco",
-      "Email confirmations and reminders",
-      "WhatsApp reminder messages",
-    ],
-    notIncluded: [
-      "Business dashboard and revenue analytics",
-      "Client source tracking",
-      "Google review requests",
-      "Multiple staff profiles",
+    groups: [
+      {
+        label: "Core",
+        features: [
+          "Online booking page, live in minutes",
+          "Service and pricing management",
+          "Availability calendar with smart slot control",
+          "Deposit and balance collection via Yoco",
+        ],
+      },
+      {
+        label: "Clients",
+        features: [
+          "Client profiles and full booking history",
+          "Email confirmations and reminders",
+          "WhatsApp reminder messages",
+        ],
+      },
     ],
     cta: "Start Free Trial",
     featured: false,
@@ -34,19 +39,24 @@ const tiers = [
     price: "R499",
     period: "/ month",
     description: "For growing businesses that want to know what's actually working.",
-    features: [
-      "Everything in Starter",
-      "Full business dashboard and analytics",
-      "Client source tracking (TikTok, Instagram, Google)",
-      "Google review request system",
-      "Loyalty tiers: New, Regular and VIP clients",
-      "Cancellation and retention alerts",
-      "AI-powered add-on suggestions during booking",
-      "Client alerts and blocked client management",
-    ],
-    notIncluded: [
-      "Multiple staff profiles",
-      "Stock and inventory management",
+    groups: [
+      {
+        label: "Everything in Starter, plus",
+        features: [
+          "Full business dashboard and analytics",
+          "Client source tracking (TikTok, Instagram, Google)",
+          "Google review request system",
+        ],
+      },
+      {
+        label: "Growth",
+        features: [
+          "Loyalty tiers: New, Regular and VIP clients",
+          "Cancellation and retention alerts",
+          "AI-powered add-on suggestions during booking",
+          "Client alerts and blocked client management",
+        ],
+      },
     ],
     cta: "Start Free Trial",
     featured: true,
@@ -56,16 +66,24 @@ const tiers = [
     price: "R899",
     period: "/ month",
     description: "For teams, multi-operator setups and studios running at full capacity.",
-    features: [
-      "Everything in Professional",
-      "Multiple staff profiles and individual scheduling",
-      "Stock and inventory management with low-stock alerts",
-      "Barcode and manual stock scanning",
-      "Advanced analytics and booking heatmap",
-      "Google Calendar sync",
-      "Priority support",
+    groups: [
+      {
+        label: "Everything in Professional, plus",
+        features: [
+          "Multiple staff profiles and individual scheduling",
+          "Stock and inventory management with low-stock alerts",
+          "Barcode and manual stock scanning",
+        ],
+      },
+      {
+        label: "Advanced",
+        features: [
+          "Advanced analytics and booking heatmap",
+          "Google Calendar sync",
+          "Priority support",
+        ],
+      },
     ],
-    notIncluded: [],
     cta: "Start Free Trial",
     featured: false,
   },
@@ -102,18 +120,15 @@ const comparisonRows: FeatureRow[] = [
   { label: "Priority support", starter: false, professional: false, studio: true },
 ];
 
+// ── Serial Position Effect: objection-killers first and last ──
 const faqs = [
-  {
-    q: "What happens during the 30-day free trial?",
-    a: "You get full access to the plan you choose. During this time, NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised insights waiting for you.",
-  },
   {
     q: "Do I need a card to start?",
     a: "No. Sign up is completely free. No payment required to start your 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
   },
   {
-    q: "Is there a contract or lock-in?",
-    a: "None. NextSlot is month-to-month. Cancel anytime from your dashboard. No hidden fees, no exit penalties, no awkward phone calls.",
+    q: "What happens during the 30-day free trial?",
+    a: "You get full access to the plan you choose. During this time, NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised insights waiting for you.",
   },
   {
     q: "How long does setup take?",
@@ -124,16 +139,12 @@ const faqs = [
     a: "NextSlot integrates with Yoco, trusted by over 200 000 South African businesses. Clients pay by card at the time of booking. Deposits are collected automatically, no EFT proof-of-payment chasing required.",
   },
   {
-    q: "What is client source tracking?",
-    a: "When a client books, they tell you how they found you: TikTok, Instagram, Google, WhatsApp, or referral. Your dashboard shows which channels are actually converting so you know exactly where to focus your time and money.",
-  },
-  {
-    q: "Can I upgrade or downgrade my plan?",
-    a: "Yes. Change your plan anytime from your account settings. Upgrades apply immediately. Downgrades take effect at the start of your next billing cycle.",
-  },
-  {
     q: "What happens if a client does not pay the deposit?",
     a: "The booking is not confirmed until the deposit is paid. No manual follow-up, no guessing if they are serious. Your calendar only fills with clients who have committed.",
+  },
+  {
+    q: "What is client source tracking?",
+    a: "When a client books, they tell you how they found you: TikTok, Instagram, Google, WhatsApp, or referral. Your dashboard shows which channels are actually converting so you know exactly where to focus your time and money.",
   },
   {
     q: "What is the AI add-on suggestion feature?",
@@ -142,6 +153,14 @@ const faqs = [
   {
     q: "Can I block a client?",
     a: "Yes. On the Professional and Studio plans you can block a client with a reason attached. Blocked clients cannot make a new booking. You stay in control of who walks through your door.",
+  },
+  {
+    q: "Is there a contract or lock-in?",
+    a: "None. NextSlot is month-to-month. Cancel anytime from your dashboard. No hidden fees, no exit penalties, no awkward phone calls.",
+  },
+  {
+    q: "Can I upgrade or downgrade my plan?",
+    a: "Yes. Change your plan anytime from your account settings. Upgrades apply immediately. Downgrades take effect at the start of your next billing cycle.",
   },
 ];
 
@@ -295,6 +314,8 @@ const Pricing = () => {
     <div className="min-h-screen nextslot-theme bg-background">
       <SiteHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* ── Hero ── */}
         <section className="py-16 md:py-24">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div>
@@ -394,6 +415,7 @@ const Pricing = () => {
               )}
             </div>
 
+            {/* Hero card — Aesthetic-Usability: Check icons replace empty dot markers */}
             <div
               className="rounded-2xl p-8 relative overflow-hidden"
               style={{
@@ -417,13 +439,16 @@ const Pricing = () => {
               <ul className="space-y-4">
                 {trialBuilds.map((item) => (
                   <li key={item} className="flex items-start gap-3">
+                    {/* Aesthetic-Usability fix: filled check icon, not empty circle */}
                     <span
                       className="mt-0.5 h-4 w-4 rounded-full shrink-0 flex items-center justify-center"
                       style={{
+                        background: "hsl(var(--accent)/0.15)",
                         border: "1.5px solid hsl(var(--accent)/0.55)",
-                        background: "hsl(var(--accent)/0.08)",
                       }}
-                    />
+                    >
+                      <Check className="h-2.5 w-2.5" style={{ color: "hsl(var(--accent))" }} />
+                    </span>
                     <span
                       className="text-sm leading-relaxed"
                       style={{ color: "hsl(var(--foreground)/0.85)" }}
@@ -447,35 +472,58 @@ const Pricing = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mt-14">
+          {/* Goal-Gradient: directional arrows between steps. Occam's Razor: hidden on mobile */}
+          <div className="hidden md:flex items-center justify-center gap-0 max-w-3xl mx-auto mt-14">
             {[
               { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
               { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
               { num: "03", label: "Get your strategy", sub: "Personalised insights ready when your trial ends." },
-            ].map((step) => (
-              <div key={step.num} className="flex flex-col items-center gap-2 p-5 rounded-2xl border border-border/60 bg-secondary/20">
-                <span className="text-xs font-bold text-accent tracking-widest">{step.num}</span>
-                <p className="text-sm font-semibold">{step.label}</p>
-                <p className="text-xs text-muted-foreground leading-snug">{step.sub}</p>
+            ].map((step, idx) => (
+              <div key={step.num} className="flex items-center flex-1">
+                <div className="flex flex-col items-center gap-2 p-5 rounded-2xl border border-border/60 bg-secondary/20 flex-1">
+                  <span className="text-xs font-bold text-accent tracking-widest">{step.num}</span>
+                  <p className="text-sm font-semibold">{step.label}</p>
+                  <p className="text-xs text-muted-foreground leading-snug text-center">{step.sub}</p>
+                </div>
+                {idx < 2 && (
+                  <ArrowRight className="h-4 w-4 text-accent/40 shrink-0 mx-2" />
+                )}
               </div>
             ))}
           </div>
         </section>
 
-        <section id="plans" className="pb-10">
+        {/* ── Plans — Von Restorff: Professional visually lifted ── */}
+        <section id="plans" className="pb-0">
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {tiers.map((tier) => (
               <div
                 key={tier.name}
                 className={`rounded-xl flex flex-col transition-all duration-300 ${
                   tier.featured
-                    ? "border-2 border-foreground gradient-card shadow-elevated"
+                    ? "relative z-10 shadow-[0_8px_40px_-8px_hsl(var(--accent)/0.35)]"
                     : "border border-border gradient-surface shadow-soft"
                 }`}
+                style={tier.featured ? {
+                  background: "linear-gradient(145deg, hsl(var(--accent)/0.08) 0%, var(--gradient-card) 60%)",
+                  border: "2px solid hsl(var(--accent)/0.50)",
+                  boxShadow: "0 8px 40px -8px hsl(var(--accent)/0.35), 0 0 0 1px hsl(var(--accent)/0.15)",
+                } : {}}
               >
-                <div className={`px-8 pt-8 pb-6 ${tier.featured ? "border-b border-foreground/10" : "border-b border-border/50"}`}>
+                <div className={`px-8 pt-8 pb-6 ${tier.featured ? "border-b border-accent/15" : "border-b border-border/50"}`}>
                   {tier.featured && (
-                    <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-accent mb-3">Most Popular</span>
+                    /* Von Restorff: larger, higher-contrast "Most Popular" badge */
+                    <span
+                      className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-3"
+                      style={{
+                        background: "hsl(var(--accent)/0.15)",
+                        color: "hsl(var(--accent))",
+                        border: "1px solid hsl(var(--accent)/0.35)",
+                      }}
+                    >
+                      <Zap className="h-3 w-3" />
+                      Most Popular
+                    </span>
                   )}
                   <h3 className="text-lg font-semibold mb-1">{tier.name}</h3>
                   <div className="mb-2">
@@ -484,22 +532,26 @@ const Pricing = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">{tier.description}</p>
                 </div>
-                <div className="px-8 py-6 flex-1">
-                  <ul className="space-y-3">
-                    {tier.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2.5 text-sm">
-                        <Check className="h-4 w-4 mt-0.5 text-accent flex-shrink-0" />
-                        {f}
-                      </li>
-                    ))}
-                    {tier.notIncluded.map((f) => (
-                      <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/30">
-                        <Minus className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
+
+                {/* Miller's Law: features chunked under labelled micro-groups */}
+                <div className="px-8 py-6 flex-1 space-y-5">
+                  {tier.groups.map((group) => (
+                    <div key={group.label}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
+                        {group.label}
+                      </p>
+                      <ul className="space-y-2.5">
+                        {group.features.map((f) => (
+                          <li key={f} className="flex items-start gap-2.5 text-sm">
+                            <Check className="h-4 w-4 mt-0.5 text-accent flex-shrink-0" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
+
                 <div className="px-8 pb-8">
                   {(() => {
                     const tierPlan = planKeyMap[tier.name];
@@ -647,7 +699,8 @@ const Pricing = () => {
           </div>
         </section>
 
-        <section className="pb-16 md:pb-20 max-w-4xl mx-auto">
+        {/* ── Comparison — Proximity: flush to plans, no gap ── */}
+        <section className="pb-16 md:pb-20 max-w-4xl mx-auto mt-4">
           <div className="flex justify-center">
             <button
               type="button"
@@ -659,9 +712,10 @@ const Pricing = () => {
             </button>
           </div>
           {showComparison && (
-            <div className="mt-6 overflow-x-auto rounded-2xl border border-border shadow-soft">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-border shadow-soft">
               <table className="w-full text-sm">
                 <thead>
+                  {/* Proximity: sticky tier names mirror the card order above */}
                   <tr className="border-b border-border bg-secondary/40">
                     <th className="text-left py-4 px-5 font-semibold text-sm w-1/2">Feature</th>
                     <th className="text-center py-4 px-3 font-semibold text-sm">Starter</th>
@@ -716,6 +770,7 @@ const Pricing = () => {
           </div>
         </section>
 
+        {/* ── FAQ — Serial Position: objection-killers at positions 1 and 10 ── */}
         <section className="pb-20 md:pb-28 max-w-2xl mx-auto">
           <h2 className="text-2xl font-semibold tracking-tight text-center mb-2">Common questions</h2>
           <p className="text-center text-sm text-muted-foreground mb-10">Straight answers. No sales speak.</p>
@@ -743,6 +798,7 @@ const Pricing = () => {
         </section>
       </main>
 
+      {/* ── Peak-End Rule: high-impact close — the last thing felt before leaving ── */}
       <section className="bg-primary text-primary-foreground py-16 md:py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">30 days free. No card needed.</p>
