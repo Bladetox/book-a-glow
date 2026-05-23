@@ -200,6 +200,9 @@ const CellValue = ({ value }: { value: boolean | string }) => {
     : <Minus className="h-4 w-4 text-foreground/20 mx-auto" />;
 };
 
+// ── Starter tier shorthand for the inline callout ──
+const starterTier = tiers[0];
+
 const Pricing = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showComparison, setShowComparison] = useState(false);
@@ -469,6 +472,87 @@ const Pricing = () => {
                   These insights unlock once your trial data is in. Start free to see yours.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* ── Zeigarnik/Proximity: Starter callout immediately below CTA —
+               closes the "what do I get?" loop before the user scrolls.
+               Jakob's Law: Starter still appears in the grid below for side-by-side comparison. ── */}
+          <div
+            className="mt-10 rounded-2xl p-8 border"
+            style={{
+              background: "hsl(var(--accent)/0.04)",
+              borderColor: "hsl(var(--accent)/0.18)",
+            }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-widest mb-1"
+              style={{ color: "hsl(var(--accent))" }}
+            >
+              Starter — R299 / month
+            </p>
+            <h2 className="text-xl font-semibold tracking-tight mb-1">
+              While others charge you for the basics…
+            </h2>
+            <p className="text-sm mb-6" style={{ color: "hsl(var(--muted-foreground))" }}>
+              Your Starter plan includes:
+            </p>
+            <div className="grid sm:grid-cols-2 gap-6">
+              {starterTier.groups.map((group) => (
+                <div key={group.label}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
+                    {group.label}
+                  </p>
+                  <ul className="space-y-2.5">
+                    {group.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm">
+                        <Check className="h-4 w-4 mt-0.5 text-accent flex-shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="mt-7">
+              {pricingMode === "manage" ? (
+                <button
+                  type="button"
+                  disabled={currentPlan === "starter" || !!submittingPlan}
+                  onClick={() => handlePlanChange("starter")}
+                  className="inline-flex items-center justify-center text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--foreground)/0.75)",
+                  }}
+                >
+                  {currentPlan === "starter" ? "Current Plan" : submittingPlan === "starter" ? "Saving..." : "Select Starter"}
+                  {currentPlan !== "starter" && <ArrowRight className="ml-2 h-3.5 w-3.5" />}
+                </button>
+              ) : (
+                <Link
+                  to="/onboarding"
+                  className="group inline-flex items-center justify-center text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 hover:scale-[1.01] active:scale-[0.98]"
+                  style={{
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--foreground)/0.75)",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
+                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
+                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
+                  }}
+                >
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              )}
+              <p className="text-[11px] text-muted-foreground mt-2">Free for 30 days. No card required.</p>
             </div>
           </div>
 
