@@ -114,7 +114,14 @@ interface AdminShellProps {
 
 const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   const isLifetimeFree = tenant?.is_lifetime_free === true;
-  const { flags, loading: flagsLoading } = useFeatureFlags(tenant?.id, isLifetimeFree);
+
+  // Pass subscription context so trial tenants automatically get all flags on.
+  const { flags, loading: flagsLoading } = useFeatureFlags(
+    tenant?.id,
+    isLifetimeFree,
+    subscription?.status,
+    subscription?.trial_ends_at,
+  );
 
   const allowedViews = ALL_VIEWS.filter((view) => {
     if ((CORE_VIEWS as readonly string[]).includes(view)) return true;
