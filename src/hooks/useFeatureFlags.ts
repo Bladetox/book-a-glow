@@ -5,7 +5,7 @@
  *   1. is_lifetime_free → ALL flags true, skip DB.
  *   2. accountState === "trial"   → all MISSING flags default true (explicit DB rows win).
  *   3. accountState === "arrears" → only ARREARS_ALLOWED flags are true regardless of DB.
- *   4. Otherwise: global defaults → tenant overrides.
+ *   4. accountState === "active"  → global defaults → tenant overrides.
  *
  * FLAG_KEYS must stay in sync with SAFeatureFlags.tsx FLAG_DEFS.
  */
@@ -67,22 +67,33 @@ const appSettingsKeys = FLAG_KEYS.map((k) => `feature_flag_${k}`);
 
 export type AccountState = "active" | "trial" | "arrears" | "blocked";
 
-/** Derive the account state from subscription fields. */
+/**
+ * Derive the account state from subscription fields.
+ *
+ * Null/missing status means the tenant was created before the subscription
+ * system existed — treat as trial so they get full access by default.
+ */
 export function getAccountState(
   status: string | null | undefined,
   trialEndsAt: string | null | undefined,
   isLifetimeFree: boolean | null | undefined,
 ): AccountState {
   if (isLifetimeFree) return "active";
-  if (!status || status === "active") return "active";
-  if (status === "trial") {
-    if (!trialEndsAt) return "trial";
+
+  // Explicitly paid/active.
+  if (status === "active") return "active";
+
+  // null or "trial": check expiry.
+  if (!status || status === "trial") {
+    if (!trialEndsAt) return "trial"; // no end date → still in trial
     const expired = Date.now() > new Date(trialEndsAt).getTime() + GRACE_PERIOD_MS;
     return expired ? "arrears" : "trial";
   }
-  // Explicit admin-set states
+
+  // Explicit admin-set hard lockout.
   if (status === "cancelled" || status === "disabled") return "blocked";
-  // pending_payment, trial_expired, or any unknown → arrears
+
+  // pending_payment, trial_expired, or any unknown → arrears (degraded access).
   return "arrears";
 }
 
@@ -103,12 +114,15 @@ function parseRows(
   return result;
 }
 
-const ALL_TRUE: FeatureFlags = FLAG_KEYS.reduce((acc, k) => { acc[k] = true; return acc; }, {} as FeatureFlags);
+const ALL_TRUE: FeatureFlags = FLAG_KEYS.reduce(
+  (acc, k) => { acc[k] = true; return acc; },
+  {} as FeatureFlags,
+);
 
-const ARREARS_FLAGS: FeatureFlags = FLAG_KEYS.reduce((acc, k) => {
-  acc[k] = ARREARS_ALLOWED.has(k);
-  return acc;
-}, {} as FeatureFlags);
+const ARREARS_FLAGS: FeatureFlags = FLAG_KEYS.reduce(
+  (acc, k) => { acc[k] = ARREARS_ALLOWED.has(k); return acc; },
+  {} as FeatureFlags,
+);
 
 export function useFeatureFlags(
   tenantId: string | null | undefined,
@@ -122,14 +136,14 @@ export function useFeatureFlags(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Lifetime free / fully active with no overrides needed.
+    // Lifetime free — skip DB entirely.
     if (isLifetimeFree === true) {
       setFlags(ALL_TRUE);
       setLoading(false);
       return;
     }
 
-    // Arrears: fixed flag set, no DB query needed.
+    // Arrears / blocked: fixed degraded flag set, no DB query.
     if (accountState === "arrears" || accountState === "blocked") {
       setFlags(ARREARS_FLAGS);
       setLoading(false);
@@ -162,7 +176,8 @@ export function useFeatureFlags(
 
       if (cancelled) return;
 
-      // Trial: missing flags default to true; explicit rows still win.
+      // Trial (including legacy tenants with null status): all missing flags
+      // default true. Explicit DB rows win over this default.
       const trialDefaults: Partial<FeatureFlags> =
         accountState === "trial" ? { ...ALL_TRUE } : {};
 
