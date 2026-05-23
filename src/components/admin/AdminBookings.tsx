@@ -545,18 +545,32 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     setEditDraft({ ...b });
   };
 
-  // ── FIX 1 + 2: Correct schema column mapping for all three note fields ──────
+  // ── Address routing: call_out_address for call-out bookings,
+  //    guest_address for in-studio guest bookings. This prevents
+  //    address data loss for non-callout bookings where call_out_address
+  //    would be ignored if is_call_out is ever corrected to false.
   const saveInlineEdit = async () => {
     if (!editingInlineId || !editDraft) return;
+
+    // Find the original booking to check its call-out status.
+    const original = bookings.find(b => b.id === editingInlineId);
+    const isCallOut = original?.isCallOut ?? false;
+
     try {
       const updates: Record<string, unknown> = {
-        notes:            editDraft.notes,        // schema: notes (freeform/internal)
-        client_notes:     editDraft.clientNotes,  // schema: client_notes (client-facing)
-        staff_notes:      editDraft.staffNotes,   // schema: staff_notes
-        client_name:      editDraft.client,
-        client_phone:     editDraft.phone,
-        client_email:     editDraft.email,
-        call_out_address: editDraft.address,
+        notes:        editDraft.notes,       // schema: notes (freeform/internal)
+        client_notes: editDraft.clientNotes, // schema: client_notes (client-facing)
+        staff_notes:  editDraft.staffNotes,  // schema: staff_notes
+        client_name:  editDraft.client,
+        client_phone: editDraft.phone,
+        client_email: editDraft.email,
+        // Route the address field to the semantically correct column:
+        // - call_out_address: only for call-out bookings (is_call_out = true)
+        // - guest_address:    for in-studio guest bookings (is_call_out = false)
+        ...(isCallOut
+          ? { call_out_address: editDraft.address }
+          : { guest_address: editDraft.address }
+        ),
       };
       await updateFields.mutateAsync({ bookingId: editingInlineId, updates });
       if (editDraft.status) {
@@ -1121,7 +1135,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                             <EditField label="Address" value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
                                           </div>
                                           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Notes</p>
-                                          {/* FIX 2: Staff Notes → staffNotes, Client Notes → clientNotes */}
                                           <EditField label="Staff Notes"  value={editDraft.staffNotes  || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
                                           <EditField label="Client Notes" value={editDraft.clientNotes || ""} onChange={v => setEditDraft(d => ({ ...d, clientNotes: v }))} />
                                           <div className="flex items-center justify-end gap-2 pt-1">
@@ -1195,7 +1208,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     </a>
                                   )}
 
-                                  {/* FIX 3: removed (b as any) cast — yocoFinalLink is typed */}
                                   {b.phone && b.balance > 0 && !b.fullPaymentReceived && b.yocoFinalLink && (
                                     <a
                                       href={toWhatsAppBalanceHref(
