@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mail, KeyRound, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,19 @@ interface AdminLoginProps {
 
 type View = "login" | "forgot";
 
+// ── Resolve tenant slug from hostname ─────────────────────────────────────────
+// Works for both subdomain routing (slug.nextslot.co.za) and
+// custom domains where the full slug is the first path segment fallback.
+function getTenantSlugFromUrl(): string {
+  const host = window.location.hostname; // e.g. zo-beauty-bar.nextslot.co.za
+  const parts = host.split(".");
+  // If subdomain routing: first part is the slug
+  if (parts.length >= 3) return parts[0];
+  // Fallback: first path segment
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  return pathParts[0] ?? "";
+}
+
 const AdminLogin = ({ onLogin }: AdminLoginProps) => {
   const [view, setView] = useState<View>("login");
   const [email, setEmail] = useState("");
@@ -16,6 +29,29 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ── Tenant branding (logo + abbreviation) ─────────────────────────────────
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [abbrev, setAbbrev] = useState<string>(".ns");
+
+  useEffect(() => {
+    const slug = getTenantSlugFromUrl();
+    if (!slug) return;
+
+    supabase
+      .from("tenants")
+      .select("logo_url, name")
+      .eq("id", slug)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        if (data.logo_url) setLogoUrl(data.logo_url);
+        if (data.name) {
+          const derived = data.name.replace(/[^a-zA-Z]/g, "").substring(0, 2).toUpperCase();
+          setAbbrev(derived || ".ns");
+        }
+      });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,8 +134,18 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
         className="w-full max-w-sm"
       >
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl p-8 flex flex-col items-center gap-6">
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center">
-            <span className="font-display text-lg font-bold text-white">.ns</span>
+
+          {/* ── Logo / Avatar ─────────────────────────────────────────────── */}
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center overflow-hidden">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Business logo"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="font-display text-lg font-bold text-white">{abbrev}</span>
+            )}
           </div>
 
           <AnimatePresence mode="wait">
