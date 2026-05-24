@@ -22,7 +22,11 @@ export interface Tenant {
   subscription_status?: string | null;
   /** ISO timestamp when the trial period ends. Null = no expiry set. */
   trial_ends_at?: string | null;
-  /** Billing plan slug e.g. 'trial' | 'professional' | 'studio' | 'lifetime_free' */
+  /**
+   * Billing plan slug e.g. 'trial' | 'professional' | 'studio' | 'lifetime_free'.
+   * NOTE: cosmetic-only display label — useFeatureFlags reads subscription_status
+   * and trial_ends_at, NOT this column. Do not use plan for feature gating.
+   */
   plan?: string | null;
 }
 
@@ -34,6 +38,8 @@ export interface TenantSubscription {
 interface TenantContextValue {
   tenantId: string;
   userId: string;
+  /** Full tenant row — use for feature flag resolution and display. */
+  tenant: Tenant | null;
 }
 
 interface TenantRenderProps {
@@ -99,7 +105,7 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
   }
 
   return (
-    <TenantContext.Provider value={{ tenantId: tenant.id, userId: ownerId }}>
+    <TenantContext.Provider value={{ tenantId: tenant.id, userId: ownerId, tenant }}>
       {children(renderProps)}
     </TenantContext.Provider>
   );

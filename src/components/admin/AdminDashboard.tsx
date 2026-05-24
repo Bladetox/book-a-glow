@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp, TrendingDown, CalendarCheck,
@@ -11,34 +11,11 @@ import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
-import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useNextyInsights } from "@/hooks/useNextyInsights";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
-
-// ---------------------------------------------------------------------------
-// Determines Nexty eligibility directly from the tenants table in Supabase.
-// Eligible plans: lifetime_free, professional, studio OR is_lifetime_free = true.
-// This replaces the previous env-var gate which was not connected to real data.
-// ---------------------------------------------------------------------------
-function useIsNextyEnabled(tenantId: string): boolean {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    if (!tenantId) return;
-    supabase
-      .from("tenants")
-      .select("plan, is_lifetime_free")
-      .eq("id", tenantId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!data) return;
-        const eligiblePlans = ["lifetime_free", "professional", "studio"];
-        setEnabled(data.is_lifetime_free === true || eligiblePlans.includes(data.plan ?? ""));
-      });
-  }, [tenantId]);
-  return enabled;
-}
 
 const ALL_SECTIONS = [
   "hero", "health", "topServices", "alerts",
@@ -672,7 +649,7 @@ const AdminDashboard = ({
   const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
   const data = useDashboardData();
-  const { tenantId } = useTenant();
+  const { tenantId, tenant } = useTenant();
   const {
     data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
     isLoading: alertsLoading,
@@ -680,7 +657,18 @@ const AdminDashboard = ({
 
   const overdueClients = overdueLoyaltyClients;
 
-  const isNextyEnabled = useIsNextyEnabled(tenantId);
+  // ---------------------------------------------------------------------------
+  // Nexty eligibility: driven by the real feature flag system, not a bespoke
+  // plan check. useFeatureFlags reads subscription_status + trial_ends_at +
+  // is_lifetime_free — the same source of truth used everywhere else.
+  // ---------------------------------------------------------------------------
+  const { flags } = useFeatureFlags(
+    tenantId,
+    tenant?.is_lifetime_free,
+    tenant?.subscription_status,
+    tenant?.trial_ends_at,
+  );
+  const isNextyEnabled = flags.ai_insights;
 
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
@@ -805,7 +793,7 @@ const AdminDashboard = ({
         )}
       </AnimatePresence>
 
-      {/* Nexty AI — single teaser row. Full analysis lives in Recommendations. */}
+      {/* Nexty AI — gated by flags.ai_insights from useFeatureFlags (the real source of truth). */}
       {isNextyEnabled && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <button
@@ -892,7 +880,18 @@ const AdminDashboard = ({
             <MetricCard id="mc-appts" icon={CalendarCheck} label="Appointments" value={String(totalAppts)} {...METRIC_COPY.appointments} onExpand={setExpandedCard} />
             <MetricCard id="mc-cancel" icon={XCircle} label="Cancellation Rate" value={cancelDisplay} color={cancelColor} {...METRIC_COPY.cancellations} onExpand={setExpandedCard} />
             <MetricCard id="mc-clients" icon={UserPlus} label="Clients This Month" value={String(totalClients)} {...METRIC_COPY.clients} onExpand={setExpandedCard} />
-            <MetricCard id="mc-ret" icon={Bell} label="Retention" value={retentionDisp} color={retentionColor} {...METRIC_COPY.retention} onExpand={setExpandedCard} />
+            <MetricCard id="mc-returning" icon={UserCheck} label="Returning" value={String(returningCount)} {...METRIC_COPY.returning} onExpand={setExpandedCard} />
+          </div>
+        </motion.section>
+      )}
+
+      {visibility.clientInsights && (
+        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.06 }}>
+          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Client Insights</p>
+          <div className="grid grid-cols-3 gap-3">
+            <ClientMiniCard id="ci-total" icon={UserPlus} value={String(totalClients)} label="Total" iconColor="text-blue-400" valueColor="text-white/90" {...METRIC_COPY.clients} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-returning" icon={UserCheck} value={String(returningCount)} label="Returning" iconColor="text-emerald-400" valueColor="text-emerald-400" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-retention" icon={Star} value={retentionDisp} label="Retention" iconColor="text-amber-400" valueColor={retentionColor} {...METRIC_COPY.retention} onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
@@ -901,61 +900,34 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.08 }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Top Services</p>
-            <div className="flex items-center gap-0.5 rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
-              <button
-                onClick={() => setServicesPeriod("month")}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                  servicesPeriod === "month" ? "bg-white/[0.10] text-white/80" : "text-white/30 hover:text-white/55"
-                }`}
-              >
-                This Month
-              </button>
-              <button
-                onClick={() => setServicesPeriod("alltime")}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                  servicesPeriod === "alltime" ? "bg-white/[0.10] text-white/80" : "text-white/30 hover:text-white/55"
-                }`}
-              >
-                All Time
-              </button>
+            <div className="flex gap-1">
+              {(["month", "alltime"] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setServicesPeriod(p)}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                    servicesPeriod === p ? "bg-white/[0.08] text-white/70" : "text-white/25 hover:text-white/45"
+                  }`}
+                >
+                  {p === "month" ? "This month" : "All time"}
+                </button>
+              ))}
             </div>
           </div>
-
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
-            {servicesPeriod === "alltime" && data.allTimeServicesLoading ? (
-              <div className="flex flex-col gap-2 p-4">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-8 rounded-lg bg-white/[0.04] animate-pulse" />
-                ))}
-              </div>
-            ) : displayedServices.length === 0 ? (
-              <div className="py-10 flex flex-col items-center gap-2">
-                <Star className="w-5 h-5 text-white/10" />
-                <p className="text-xs text-white/25">
-                  {servicesPeriod === "month" ? "No bookings yet this month" : "No booking data found"}
-                </p>
-              </div>
+          <div className="flex flex-col gap-2">
+            {displayedServices.length === 0 ? (
+              <p className="text-xs text-white/20">No service data yet.</p>
             ) : (
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-white/20 border-b border-white/[0.04]">
-                    <th className="text-left px-4 py-2.5 font-medium">#</th>
-                    <th className="text-left px-4 py-2.5 font-medium">Service</th>
-                    <th className="text-right px-4 py-2.5 font-medium w-8">Bkgs</th>
-                    <th className="text-right px-4 py-2.5 font-medium w-20">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayedServices.map((s: any, i: number) => (
-                    <tr key={s.name} className="border-t border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-4 py-3 text-white/25">{i + 1}</td>
-                      <td className="px-4 py-3 text-white/75 font-medium">{s.name}</td>
-                      <td className="px-4 py-3 text-right text-white/50">{s.count}</td>
-                      <td className="px-4 py-3 text-right text-white/70 font-semibold">R {Number(s.revenue).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              displayedServices.slice(0, 5).map((s: { service: string; count: number; revenue: number }, i: number) => (
+                <div key={s.service} className="flex items-center gap-3 py-2 border-b border-white/[0.04] last:border-0">
+                  <span className="text-[10px] font-bold text-white/20 w-4">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white/75 truncate">{s.service}</p>
+                    <p className="text-[10px] text-white/30">{s.count} booking{s.count !== 1 ? "s" : ""}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-emerald-400/80">R {s.revenue.toLocaleString()}</span>
+                </div>
+              ))
             )}
           </div>
         </motion.section>
@@ -963,71 +935,71 @@ const AdminDashboard = ({
 
       {visibility.alerts && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.1 }}>
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">General Alerts</p>
-
-          {alertsLoading ? (
-            <div className="flex flex-col gap-2">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="rounded-xl border px-4 py-3 flex items-start gap-3 animate-pulse bg-white/[0.03] border-white/[0.06]" />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {overdueClients.length > 0 && (
-                <div
+          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Alerts</p>
+          <div className="flex flex-col gap-2">
+            {alertsLoading ? (
+              <div className="flex items-center gap-2 text-white/20 text-xs py-2">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Loading…
+              </div>
+            ) : (
+              <>
+                <button
                   onClick={() => { setAlertModalType("overdue_loyalty"); setAlertModalOpen(true); }}
-                  className="rounded-xl border border-red-500/20 bg-red-500/[0.04] px-4 py-3 flex items-start gap-3 cursor-pointer hover:border-red-500/30 hover:bg-red-500/[0.06] transition-colors"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
-                  <CalendarCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-400" />
-                  <p className="text-xs text-white/60 leading-relaxed flex-1">
-                    {overdueClients.length} client{overdueClients.length !== 1 ? "s" : ""} with overdue loyalty appointments
-                  </p>
-                </div>
-              )}
-
-              {inactiveClients.length > 0 && (
-                <div
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded-lg bg-amber-500/10">
+                      <Bell className="w-3.5 h-3.5 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-white/70">Overdue Loyalty</p>
+                      <p className="text-[10px] text-white/30">{overdueClients.length} client{overdueClients.length !== 1 ? "s" : ""} overdue</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-white/20 shrink-0" />
+                </button>
+                <button
                   onClick={() => { setAlertModalType("inactive_90_days"); setAlertModalOpen(true); }}
-                  className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 flex items-start gap-3 cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/[0.06] transition-colors"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
-                  <p className="text-xs text-white/60 leading-relaxed flex-1">
-                    {inactiveClients.length} client{inactiveClients.length !== 1 ? "s" : ""} haven't booked in 90+ days
-                  </p>
-                </div>
-              )}
-
-              {overdueClients.length === 0 && inactiveClients.length === 0 && (
-                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
-                  <p className="text-xs text-white/40 text-center">No alerts at this time</p>
-                </div>
-              )}
-            </div>
-          )}
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded-lg bg-blue-500/10">
+                      <Clock className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-white/70">Inactive Clients</p>
+                      <p className="text-[10px] text-white/30">{inactiveClients.length} client{inactiveClients.length !== 1 ? "s" : ""} gone quiet (90+ days)</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-white/20 shrink-0" />
+                </button>
+              </>
+            )}
+          </div>
         </motion.section>
       )}
 
       {visibility.revenueGraph && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
-          <RevenueTrendCard
-            revenueTrend={revenueTrend}
-            periodRevenue={monthRevenue}
-            lastPeriodRevenue={lastMonthRev}
-            loading={data.coreLoading}
-          />
+          <RevenueTrendCard data={revenueTrend} />
         </motion.section>
       )}
 
       {visibility.heatmap && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.14 }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Booking Heatmap</p>
-            <button onClick={() => setShowHeatInfo((v) => !v)} className="text-white/20 hover:text-white/50 transition-colors">
-              <Info className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          {showHeatInfo && <SectionInfoPanel lines={METRIC_COPY.heatmap} />}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Booking Heatmap</p>
+              <button
+                onClick={() => setShowHeatInfo((v) => !v)}
+                className="text-white/20 hover:text-white/50 transition-colors"
+                aria-label="Heatmap info"
+              >
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {showHeatInfo && <SectionInfoPanel lines={METRIC_COPY.heatmap} />}
             <BookingHeatmap data={data.heatmap ?? []} />
           </div>
         </motion.section>
@@ -1035,126 +1007,45 @@ const AdminDashboard = ({
 
       {visibility.todayAppointments && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.16 }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Today's Appointments</p>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate("Bookings")}
-                className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/60 transition-colors"
-              >
-                View all in Bookings →
-              </button>
-            )}
-          </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            {(data.todayAppointments ?? []).length === 0 ? (
-              <div className="py-6 flex flex-col items-center gap-2">
-                <CalendarCheck className="w-5 h-5 text-white/10" />
-                <p className="text-xs text-white/25">No appointments today</p>
-              </div>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
+            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-4">Today's Appointments</p>
+            {(data.today?.appointmentsList ?? []).length === 0 ? (
+              <p className="text-xs text-white/20">No appointments today.</p>
             ) : (
-              <AppointmentsList appointments={data.todayAppointments ?? []} onSelect={onSelectAppointment} />
+              <AppointmentsList
+                appointments={data.today?.appointmentsList ?? []}
+                onSelect={onSelectAppointment}
+              />
             )}
-          </div>
-        </motion.section>
-      )}
-
-      {visibility.clientInsights && (
-        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Client Insights</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ClientMiniCard id="ci-total" icon={UserPlus} iconColor="text-sky-400/60" value={String(totalClients)} valueColor="text-sky-400" label="Clients This Month" {...METRIC_COPY.clients} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-ret" icon={UserCheck} iconColor="text-emerald-400/60" value={String(returningCount)} valueColor="text-emerald-400" label="Returning" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-retpct" icon={Percent} iconColor="text-violet-400/60" value={retentionDisp} valueColor="text-violet-400" label="Retention %" {...METRIC_COPY.retention} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-rev" icon={CircleDollarSign} iconColor="text-amber-400/60" value={`R ${Math.round(avgBasket)}`} valueColor="text-amber-400" label="Avg Basket" {...METRIC_COPY.avgBasket} onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
 
       {visibility.leadSource && (
-        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.19 }}>
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Acquisition Channels</p>
-          <motion.div
-            layoutId="mc-lead-source"
-            onClick={() =>
-              setExpandedCard({
-                id: "mc-lead-source",
-                label: "Acquisition Channel",
-                value: topChannel,
-                valueColor: "text-violet-400",
-                extraLines: leadSourceExtraLines,
-                ...METRIC_COPY.leadSource,
-              })
-            }
-            className="rounded-xl border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 340, damping: 30 }}
-            role="button"
-            aria-label="Learn more about Acquisition Channel"
-          >
-            <div className="flex items-start gap-2 p-3 sm:p-4">
-              <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
-                <Megaphone className="w-4 h-4 text-white/50" />
-              </div>
-              <div className="flex flex-col gap-0.5 flex-1 min-w-0 justify-center">
-                <span className="text-[10px] tracking-[0.1em] uppercase text-white/30">Top Acquisition Channel</span>
-                <span className="text-base sm:text-lg font-bold text-violet-400 truncate">{topChannel}</span>
-                {leadSourceSub && <span className="text-[10px] text-white/25">{leadSourceSub}</span>}
-              </div>
-              <div className="shrink-0 mt-1 ml-1">
-                <Info className="w-3 h-3 text-white/15" />
-              </div>
-            </div>
-            {leadSourceBreakdown.length > 1 && (
-              <div className="px-3 sm:px-4 pb-3 flex flex-col gap-1">
-                {leadSourceBreakdown.slice(0, 4).map((r) => {
-                  const pct = totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0;
-                  return (
-                    <div key={r.channel} className="flex items-center gap-2">
-                      <span className="text-[11px] text-white/45 truncate flex-1">{r.channel}</span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="w-16 h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                          <div className="h-full rounded-full bg-violet-400/50" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[10px] text-white/30 w-7 text-right">{pct}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
+        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
+          <MetricCard
+            id="mc-lead"
+            icon={Megaphone}
+            label="Top Acquisition Channel"
+            value={topChannel}
+            sub={leadSourceSub}
+            {...METRIC_COPY.leadSource}
+            onExpand={(c) => setExpandedCard({ ...c, extraLines: leadSourceExtraLines })}
+          />
         </motion.section>
       )}
 
       {visibility.stockAlerts && stockAlerts.length > 0 && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.2 }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Stock Alerts</p>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate("Stock")}
-                className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/60 transition-colors"
-              >
-                View in Stock →
-              </button>
-            )}
-          </div>
+          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Stock Alerts</p>
           <div className="flex flex-col gap-2">
-            {stockAlerts.map((s: any, i: number) => (
-              <div
-                key={i}
-                className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
-                  s.level === "critical" ? "border-red-500/15 bg-red-500/[0.04]" : "border-amber-500/15 bg-amber-500/[0.04]"
-                }`}
-              >
-                <Package className={`w-3.5 h-3.5 shrink-0 ${s.level === "critical" ? "text-red-400/60" : "text-amber-400/60"}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-white/70 truncate">{s.item}</p>
-                  <p className={`text-[10px] ${s.level === "critical" ? "text-red-400/70" : "text-amber-400/70"}`}>
-                    {s.level === "critical" ? "Critical" : "Low"} stock
-                  </p>
+            {stockAlerts.map((item: { id: string; name: string; quantity: number; reorder_point: number }) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-red-500/[0.15] bg-red-500/[0.04] px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Package className="w-3.5 h-3.5 text-red-400/70 shrink-0" />
+                  <span className="text-xs font-medium text-white/70">{item.name}</span>
                 </div>
+                <span className="text-[10px] font-semibold text-red-400">{item.quantity} left</span>
               </div>
             ))}
           </div>
