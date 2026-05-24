@@ -91,14 +91,16 @@ Deno.serve(async (req) => {
     }
 
     // Store against the tenant — match by owner_id (UUID) since id is a slug
-    const { error: updateErr } = await supabase
+    const { data: tenantRow, error: updateErr } = await supabase
       .from("tenants")
       .update({
         yoco_webhook_id,
         yoco_webhook_secret,
         yoco_secret_key,
       })
-      .eq("owner_id", tenant_id);
+      .eq("owner_id", tenant_id)
+      .select("id")
+      .single();
 
     if (updateErr) {
       console.error("Failed to store webhook secret:", updateErr);
@@ -106,6 +108,21 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Webhook registered but failed to save secret", details: updateErr }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Mirror yoco_webhook_secret into app_settings so the UI webhookActive flag resolves correctly
+    const tenantSlug = tenantRow?.id;
+    if (tenantSlug) {
+      const { error: settingsErr } = await supabase
+        .from("app_settings")
+        .upsert(
+          { tenant_id: tenantSlug, key: "yoco_webhook_secret", value: yoco_webhook_secret },
+          { onConflict: "tenant_id,key" }
+        );
+      if (settingsErr) {
+        // Non-fatal — webhook is registered and working; UI will just still show "registering"
+        console.error("Failed to mirror webhook secret to app_settings:", settingsErr);
+      }
     }
 
     console.log(`Webhook registered for tenant ${tenant_id}: ${yoco_webhook_id}`);
