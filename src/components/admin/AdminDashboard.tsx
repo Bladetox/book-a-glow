@@ -982,7 +982,7 @@ const AdminDashboard = ({
 
       {visibility.revenueGraph && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.12 }}>
-          <RevenueTrendCard data={revenueTrend} />
+          <RevenueTrendCard revenueTrend={revenueTrend} />
         </motion.section>
       )}
 
