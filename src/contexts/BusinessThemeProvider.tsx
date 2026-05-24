@@ -53,7 +53,7 @@ export const useBusinessTheme = () => useContext(BusinessThemeContext);
  *
  * Font resolution (via CSS variables --font-display / --font-body):
  * - phenomebeauty + sister-studios → Abril Fatface (display) + Montserrat (body)
- * - zoes-beauty-bar                → Cormorant Garamond (display) + Montserrat (body)
+ * - zo-beauty-bar                  → Cormorant Garamond (display) + Montserrat (body)
  * - all other tenants + marketing  → Inter (display + body)
  */
 export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -149,7 +149,7 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       // Phenomebeauty & Sister Studios — preserve existing brand typography
       fontDisplay = '"Abril Fatface", system-ui, serif';
       fontBody    = "Montserrat, system-ui, sans-serif";
-    } else if (tenantSlug === "zoes-beauty-bar") {
+    } else if (tenantSlug === "zo-beauty-bar") {
       // Zo Beauty Bar — elegant serif headings + clean sans body (matches menu branding)
       fontDisplay = '"Cormorant Garamond", system-ui, serif';
       fontBody    = "Montserrat, system-ui, sans-serif";
