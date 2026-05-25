@@ -1,5 +1,5 @@
 import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
-import { useSuggestedAddons, getActiveSuggestions } from "@/hooks/useSuggestedAddons";
+import { useSuggestedAddons, getActiveSuggestions, getSelectedAddonsForTrigger } from "@/hooks/useSuggestedAddons";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useState, useMemo } from "react";
 import { Loader2, Plus, Minus, Sparkles } from "lucide-react";
@@ -101,7 +101,6 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
             transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
             style={{ overflow: "hidden" }}
           >
-            {/* Inner wrapper keeps padding outside the height animation */}
             <div className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5">
               {/* Strip header */}
               <div className="flex items-center gap-1.5">
@@ -116,10 +115,10 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                   key={s.id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.18, delay: i * 0.06 }}
                   className="flex items-center gap-3 w-full"
                 >
-                  {/* Name + duration */}
                   <div className="flex-1 min-w-0">
                     <span className="block text-sm font-semibold text-foreground leading-snug">
                       {s.name}
@@ -130,60 +129,17 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                       </span>
                     )}
                   </div>
-
-                  {/* Price */}
                   <span className="shrink-0 text-sm font-bold text-foreground">
                     R{s.price}
                   </span>
-
-                  {/* Quantity counter — mirrors main service list */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <AnimatePresence>
-                      {qty(s.id) > 0 && (
-                        <motion.button
-                          key="minus"
-                          initial={{ opacity: 0, scale: 0.7 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.7 }}
-                          transition={{ duration: 0.15 }}
-                          whileTap={{ scale: 0.85 }}
-                          onClick={() => onRemove(s.id)}
-                          className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          aria-label={`Remove one ${s.name}`}
-                        >
-                          <Minus className="w-3 h-3" strokeWidth={2.5} />
-                        </motion.button>
-                      )}
-                    </AnimatePresence>
-
-                    <AnimatePresence>
-                      {qty(s.id) > 0 && (
-                        <motion.span
-                          key="count"
-                          initial={{ opacity: 0, scale: 0.7 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.7 }}
-                          transition={{ duration: 0.15 }}
-                          className="w-5 text-center text-sm font-bold text-foreground"
-                        >
-                          {qty(s.id)}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-
-                    <motion.button
-                      whileTap={{ scale: 0.85 }}
-                      onClick={() => onAdd(s.id)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors ${
-                        qty(s.id) > 0
-                          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/25"
-                      }`}
-                      aria-label={`Add ${s.name}`}
-                    >
-                      <Plus className="w-3 h-3" strokeWidth={2.5} />
-                    </motion.button>
-                  </div>
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => onAdd(s.id)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/25 transition-colors shrink-0"
+                    aria-label={`Add ${s.name}`}
+                  >
+                    <Plus className="w-3 h-3" strokeWidth={2.5} />
+                  </motion.button>
                 </motion.div>
               ))}
             </div>
@@ -209,83 +165,148 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
             visibleTreatments.map((t) => {
               const count = qty(t.id);
               const isSelected = count > 0;
+
+              // Add-ons already selected that belong to this trigger service
+              const nestedAddonIds = addonsConfig
+                ? getSelectedAddonsForTrigger(addonsConfig, t.id, selectedTreatments)
+                : [];
+              const nestedAddons = nestedAddonIds
+                .map((id) => treatments.find((tr) => tr.id === id))
+                .filter((tr): tr is NonNullable<typeof tr> => !!tr);
+
               return (
                 <div
                   key={t.id}
-                  className={`glass-card-service rounded-xl px-4 py-3.5 flex items-center gap-3 w-full transition-all duration-150 ${
+                  className={`glass-card-service rounded-xl px-4 py-3.5 flex flex-col gap-0 w-full transition-all duration-150 ${
                     isSelected ? "selected" : ""
                   }`}
                 >
-                  {/* Name + description + duration */}
-                  <div className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-foreground leading-snug">
-                      {t.name}
+                  {/* Main service row */}
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-foreground leading-snug">
+                        {t.name}
+                      </span>
+                      {t.description && (
+                        <span className="block text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                          {t.description}
+                        </span>
+                      )}
+                      {t.duration > 0 && (
+                        <span className="block text-[10px] text-muted-foreground/60 leading-snug mt-0.5">
+                          {t.duration} min
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="shrink-0 text-sm font-bold text-foreground">
+                      R{t.price}
                     </span>
-                    {t.description && (
-                      <span className="block text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
-                        {t.description}
-                      </span>
-                    )}
-                    {t.duration > 0 && (
-                      <span className="block text-[10px] text-muted-foreground/60 leading-snug mt-0.5">
-                        {t.duration} min
-                      </span>
-                    )}
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <AnimatePresence>
+                        {isSelected && (
+                          <motion.button
+                            key="minus"
+                            initial={{ opacity: 0, scale: 0.7 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.7 }}
+                            transition={{ duration: 0.15 }}
+                            whileTap={{ scale: 0.85 }}
+                            onClick={() => onRemove(t.id)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                            aria-label={`Remove one ${t.name}`}
+                          >
+                            <Minus className="w-3 h-3" strokeWidth={2.5} />
+                          </motion.button>
+                        )}
+                      </AnimatePresence>
+
+                      <AnimatePresence>
+                        {isSelected && (
+                          <motion.span
+                            key="count"
+                            initial={{ opacity: 0, scale: 0.7 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.7 }}
+                            transition={{ duration: 0.15 }}
+                            className="w-5 text-center text-sm font-bold text-foreground"
+                          >
+                            {count}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => onAdd(t.id)}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                            : "border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-primary hover:text-primary"
+                        }`}
+                        aria-label={`Add ${t.name}`}
+                      >
+                        <Plus className="w-3 h-3" strokeWidth={2.5} />
+                      </motion.button>
+                    </div>
                   </div>
 
-                  {/* Price */}
-                  <span className="shrink-0 text-sm font-bold text-foreground">
-                    R{t.price}
-                  </span>
-
-                  {/* Quantity counter */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <AnimatePresence>
-                      {isSelected && (
-                        <motion.button
-                          key="minus"
-                          initial={{ opacity: 0, scale: 0.7 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.7 }}
-                          transition={{ duration: 0.15 }}
-                          whileTap={{ scale: 0.85 }}
-                          onClick={() => onRemove(t.id)}
-                          className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          aria-label={`Remove one ${t.name}`}
+                  {/* Nested selected add-ons */}
+                  <AnimatePresence initial={false}>
+                    {nestedAddons.map((a) => {
+                      const aCount = qty(a.id);
+                      return (
+                        <motion.div
+                          key={a.id}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                          style={{ overflow: "hidden" }}
                         >
-                          <Minus className="w-3 h-3" strokeWidth={2.5} />
-                        </motion.button>
-                      )}
-                    </AnimatePresence>
-
-                    <AnimatePresence>
-                      {isSelected && (
-                        <motion.span
-                          key="count"
-                          initial={{ opacity: 0, scale: 0.7 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.7 }}
-                          transition={{ duration: 0.15 }}
-                          className="w-5 text-center text-sm font-bold text-foreground"
-                        >
-                          {count}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-
-                    <motion.button
-                      whileTap={{ scale: 0.85 }}
-                      onClick={() => onAdd(t.id)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors ${
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-primary hover:text-primary"
-                      }`}
-                      aria-label={`Add ${t.name}`}
-                    >
-                      <Plus className="w-3 h-3" strokeWidth={2.5} />
-                    </motion.button>
-                  </div>
+                          <div className="flex items-center gap-3 w-full pt-2.5 mt-2.5 border-t border-primary/10">
+                            {/* Indent indicator */}
+                            <span className="text-[10px] text-primary/50 shrink-0 select-none">↳</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-xs font-semibold text-foreground/80 leading-snug">
+                                {a.name}
+                              </span>
+                              {a.duration > 0 && (
+                                <span className="block text-[10px] text-muted-foreground/50 leading-snug mt-0.5">
+                                  {a.duration} min
+                                </span>
+                              )}
+                            </div>
+                            <span className="shrink-0 text-xs font-bold text-foreground/70">
+                              R{a.price}
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <motion.button
+                                whileTap={{ scale: 0.85 }}
+                                onClick={() => onRemove(a.id)}
+                                className="w-6 h-6 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                aria-label={`Remove one ${a.name}`}
+                              >
+                                <Minus className="w-2.5 h-2.5" strokeWidth={2.5} />
+                              </motion.button>
+                              <span className="w-4 text-center text-xs font-bold text-foreground">
+                                {aCount}
+                              </span>
+                              <motion.button
+                                whileTap={{ scale: 0.85 }}
+                                onClick={() => onAdd(a.id)}
+                                className="w-6 h-6 rounded-full flex items-center justify-center border border-primary bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                aria-label={`Add another ${a.name}`}
+                              >
+                                <Plus className="w-2.5 h-2.5" strokeWidth={2.5} />
+                              </motion.button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                 </div>
               );
             })
