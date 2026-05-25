@@ -15,8 +15,7 @@ import { useSlotHold } from "@/hooks/useSlotHold";
 import { useTenantHead } from "@/hooks/useTenantHead";
 import { useBrandFont } from "@/hooks/useBrandFont";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState, useCallback } from "react";
-
+import { useState, useCallback, useEffect } from "react";
 const stepVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 80 : -80,
@@ -80,6 +79,14 @@ const Index = () => {
   const slotHold = useSlotHold();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
+  
+  // Single source of truth: clear call-out state when tenant is in salon mode
+  useEffect(() => {
+    if (config.loading) return;
+    if (!config.mobileServiceEnabled && (booking.address || booking.addressVerified)) {
+      updateBooking({ address: "", addressVerified: false, distanceKm: null });
+    }
+  }, [config.mobileServiceEnabled, config.loading]);
 
   // ── Brand font (sister-studios only; null for all other tenants) ──────────
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
