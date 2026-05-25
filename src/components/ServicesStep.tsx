@@ -136,15 +136,54 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                     R{s.price}
                   </span>
 
-                  {/* Add button */}
-                  <motion.button
-                    whileTap={{ scale: 0.85 }}
-                    onClick={() => onAdd(s.id)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/25 transition-colors shrink-0"
-                    aria-label={`Add ${s.name}`}
-                  >
-                    <Plus className="w-3 h-3" strokeWidth={2.5} />
-                  </motion.button>
+                  {/* Quantity counter — mirrors main service list */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <AnimatePresence>
+                      {qty(s.id) > 0 && (
+                        <motion.button
+                          key="minus"
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.15 }}
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => onRemove(s.id)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          aria-label={`Remove one ${s.name}`}
+                        >
+                          <Minus className="w-3 h-3" strokeWidth={2.5} />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                      {qty(s.id) > 0 && (
+                        <motion.span
+                          key="count"
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.15 }}
+                          className="w-5 text-center text-sm font-bold text-foreground"
+                        >
+                          {qty(s.id)}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => onAdd(s.id)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors ${
+                        qty(s.id) > 0
+                          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/25"
+                      }`}
+                      aria-label={`Add ${s.name}`}
+                    >
+                      <Plus className="w-3 h-3" strokeWidth={2.5} />
+                    </motion.button>
+                  </div>
                 </motion.div>
               ))}
             </div>
