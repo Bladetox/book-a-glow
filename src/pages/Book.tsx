@@ -101,7 +101,7 @@ const Index = () => {
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) &&
           booking.isExistingClient !== null;
 
-        const mobileEnabled = (config as any).mobileServiceEnabled === true;
+        const mobileEnabled = config.mobileServiceEnabled === true;
         if (!mobileEnabled) return contactValid;
         return contactValid && booking.addressVerified === true;
       }
