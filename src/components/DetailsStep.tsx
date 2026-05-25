@@ -289,10 +289,8 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   // Whether this tenant has mobile/call-out service enabled
   const mobileServiceEnabled = config.mobileServiceEnabled;
 
-  const existingClientLabel: string =
-    (config as Record<string, string>)["client_type_existing_label"] ?? "Returning Client";
-  const newClientLabel: string =
-    (config as Record<string, string>)["client_type_new_label"] ?? "New Client";
+  const existingClientLabel = config.clientLabelExisting;
+  const newClientLabel = config.clientLabelNew;
   const existingClientNotesPlaceholder: string =
     (config as Record<string, string>)["client_type_existing_notes_placeholder"] ??
     "e.g. any changes since your last visit, preferences\u2026";
