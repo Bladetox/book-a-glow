@@ -277,7 +277,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
         {callOutFee > 0 && (
           <div className="flex items-baseline justify-between py-1.5">
-            <span className="text-sm text-muted-foreground">Call-out fee</span>
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              Call-out fee
+              {booking.distanceKm == null && (
+                <span className="text-[10px] text-yellow-500">(estimated)</span>
+              )}
+            </span>
             <span className="text-sm font-semibold text-foreground">{cur}{callOutFee}</span>
           </div>
         )}
