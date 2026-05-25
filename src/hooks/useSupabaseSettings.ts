@@ -51,14 +51,6 @@ const ALLOWED_APP_SETTING_KEYS = [
   "yoco_secret_key",
   "yoco_webhook_secret",
   "yoco_webhook_id",
-  // SMTP / Email
-  "smtp_host",
-  "smtp_port",
-  "smtp_from",
-  "smtp_user",
-  "smtp_username",
-  "smtp_password",
-  "smtp_from_email",
   // Suggested add-ons (booking flow upsell)
   "suggested_addons",
 ] as const;

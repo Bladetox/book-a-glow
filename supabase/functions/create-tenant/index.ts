@@ -5,11 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ─── Theme copy ───────────────────────────────────────────────────────────────
-// Keyed by the theme_id sent from Onboarding.tsx:
-//   activeTheme.label.toLowerCase().replace(/\s+/g, "_")
-// e.g. "Makeup Artist" → "makeup_artist"
-
 interface ThemeCopy {
   tagline: string;
   subtitle: string;
@@ -73,7 +68,6 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_final_review_cta: "Share your experience",
     success_final_signoff: "See you soon.",
   },
-
   beautician: {
     tagline: "skincare & beauty treatments",
     subtitle: "Book your treatment",
@@ -94,7 +88,6 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_final_review_cta: "Tell others about your experience",
     success_final_signoff: "Take care of that skin.",
   },
-
   tattoo_artist: {
     tagline: "custom tattoo studio",
     subtitle: "Book your appointment",
@@ -115,7 +108,6 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_final_review_cta: "Show off your new ink",
     success_final_signoff: "See you at the studio.",
   },
-
   lash_tech: {
     tagline: "lash extensions & lifts",
     subtitle: "Book your lash appointment",
@@ -136,7 +128,6 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_final_review_cta: "Share your lash transformation",
     success_final_signoff: "See you soon.",
   },
-
   barber: {
     tagline: "precision cuts & grooming",
     subtitle: "Book your cut",
@@ -157,7 +148,6 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_final_review_cta: "Rate your experience",
     success_final_signoff: "Stay sharp.",
   },
-
   nail_tech: {
     tagline: "nails, gel & nail art",
     subtitle: "Book your nail appointment",
@@ -178,7 +168,6 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_final_review_cta: "Show off your nails",
     success_final_signoff: "See you soon.",
   },
-
   standard: {
     tagline: "appointment-based services",
     subtitle: "Book your appointment",
@@ -200,10 +189,6 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_final_signoff: "See you soon.",
   },
 };
-
-// ─── Theme colours ────────────────────────────────────────────────────────────
-// HSL values mirror themes.ts exactly so the booking page renders
-// the correct palette for each tenant out of the box.
 
 const THEME_COLORS: Record<string, ThemeColors> = {
   makeup_artist: {
@@ -292,8 +277,6 @@ const THEME_COLORS: Record<string, ThemeColors> = {
   },
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -353,8 +336,6 @@ function mapCategory(businessType: string): string {
   return CATEGORY_MAP[key] ?? "other";
 }
 
-// ─── Main Handler ─────────────────────────────────────────────────────────────
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -377,11 +358,9 @@ Deno.serve(async (req) => {
     });
 
   try {
-    // ── 1. Verify caller is authenticated ─────────────────────────────────
     const { data: { user }, error: userErr } = await userClient.auth.getUser();
     if (userErr || !user) return json({ error: "Unauthorized" }, 401);
 
-    // ── 2. Parse & validate body ──────────────────────────────────────────
     const rawText = await req.text();
     if (!rawText?.trim()) return json({ error: "Empty request body" }, 400);
 
@@ -399,14 +378,10 @@ Deno.serve(async (req) => {
 
     if (!business_name?.trim()) return json({ error: "business_name is required" }, 400);
 
-    // ── Resolve theme copy + colours ──────────────────────────────────────
-    // theme_id arrives as e.g. "makeup_artist", "lash_tech", "standard".
-    // Fall back to "standard" if unrecognised so new theme IDs never break.
     const resolvedThemeId = (theme_id && THEME_COPY[theme_id]) ? theme_id : "standard";
     const copy   = THEME_COPY[resolvedThemeId];
     const colors = THEME_COLORS[resolvedThemeId];
 
-    // ── 3. Guard: user already owns a tenant? ─────────────────────────────
     const { data: existingTenant } = await admin
       .from("tenants")
       .select("id")
@@ -417,7 +392,6 @@ Deno.serve(async (req) => {
       return json({ error: "User already owns a tenant", tenant_id: existingTenant.id }, 409);
     }
 
-    // ── 4. Generate unique tenant slug ────────────────────────────────────
     const baseSlug = slugify(business_name) || "business";
     const { data: existing } = await admin
       .from("tenants")
@@ -432,7 +406,6 @@ Deno.serve(async (req) => {
       tenantId = `${baseSlug}-${n}`;
     }
 
-    // ── Rollback helper ───────────────────────────────────────────────────
     const rollback = async () => {
       await admin.from("app_settings").delete().eq("tenant_id", tenantId);
       await admin.from("staff_availability").delete().eq("tenant_id", tenantId);
@@ -441,7 +414,6 @@ Deno.serve(async (req) => {
       await admin.from("tenants").delete().eq("id", tenantId);
     };
 
-    // ── 5a. Insert tenant ─────────────────────────────────────────────────
     const { error: tenantErr } = await admin.from("tenants").insert({
       id:                  tenantId,
       name:                business_name.trim(),
@@ -456,7 +428,6 @@ Deno.serve(async (req) => {
     });
     if (tenantErr) throw new Error(`tenant: ${tenantErr.message}`);
 
-    // ── 5b. Insert user_roles (owner) ─────────────────────────────────────
     const { error: roleErr } = await admin.from("user_roles").insert({
       user_id:   user.id,
       tenant_id: tenantId,
@@ -464,7 +435,6 @@ Deno.serve(async (req) => {
     });
     if (roleErr) { await rollback(); throw new Error(`user_roles: ${roleErr.message}`); }
 
-    // ── 5c. Upsert profile ────────────────────────────────────────────────
     const { error: profileErr } = await admin.from("profiles").upsert({
       id:        user.id,
       email:     user.email ?? "",
@@ -474,7 +444,6 @@ Deno.serve(async (req) => {
     }, { onConflict: "id" });
     if (profileErr) { await rollback(); throw new Error(`profile: ${profileErr.message}`); }
 
-    // ── 5d. Upsert services ───────────────────────────────────────────────
     const category = mapCategory(business_type);
     const validServices = (services as any[]).filter((s: any) => s.name?.trim());
 
@@ -493,7 +462,6 @@ Deno.serve(async (req) => {
       if (svcErr) { await rollback(); throw new Error(`services: ${svcErr.message}`); }
     }
 
-    // ── 5e. Insert staff_availability ─────────────────────────────────────
     const availRows: any[] = [];
     for (const [day, hours] of Object.entries(schedule)) {
       if (!hours || hours === "Closed") continue;
@@ -517,9 +485,6 @@ Deno.serve(async (req) => {
       if (availErr) { await rollback(); throw new Error(`availability: ${availErr.message}`); }
     }
 
-    // ── 5g. Seed default app_settings ────────────────────────────────────
-    // Copy and colours are resolved from the chosen theme above.
-    // Sensitive keys (Yoco, SMTP, GCal, Maps) are seeded empty.
     const abbrev = business_name.trim().replace(/[^a-zA-Z]/g, "").substring(0, 2).toUpperCase() || "BZ";
 
     const defaultSettings: { key: string; value: string; description: string | null }[] = [
@@ -543,19 +508,19 @@ Deno.serve(async (req) => {
       // ── Client labels
       { key: "client_label_new",           value: "New Client",                      description: null },
       { key: "client_label_existing",      value: "Existing Client",                 description: null },
-      // ── Booking page copy (theme-aware)
+      // ── Booking page copy
       { key: "cta_label",                  value: copy.cta_label,                    description: null },
       { key: "confirmation_title",         value: copy.confirmation_title,           description: null },
       { key: "confirmation_intro",         value: copy.confirmation_intro,           description: null },
       { key: "confirmation_outro",         value: copy.confirmation_outro,           description: null },
-      // ── Deposit success page (theme-aware)
+      // ── Deposit success page
       { key: "success_deposit_title",      value: copy.success_deposit_title,        description: null },
       { key: "success_deposit_tagline",    value: copy.success_deposit_tagline,      description: null },
       { key: "success_deposit_body",       value: copy.success_deposit_body,         description: null },
       { key: "success_deposit_intent",     value: copy.success_deposit_intent,       description: null },
       { key: "success_deposit_closing",    value: copy.success_deposit_closing,      description: null },
       { key: "success_deposit_signoff",    value: copy.success_deposit_signoff,      description: null },
-      // ── Final success page (theme-aware)
+      // ── Final success page
       { key: "success_final_title",        value: copy.success_final_title,          description: null },
       { key: "success_final_body",         value: copy.success_final_body,           description: null },
       { key: "success_final_rebook",       value: copy.success_final_rebook,         description: null },
@@ -565,13 +530,7 @@ Deno.serve(async (req) => {
       { key: "plan",                       value: "\"free\"",                        description: null },
       // ── Admin / notifications
       { key: "admin_email",                value: user.email ?? "",                  description: "Admin email for notifications" },
-      { key: "app_base_url",              value: "",                                description: "Base URL of the application" },
-      // ── SMTP (blank — configure in admin)
-      { key: "smtp_host",                  value: "",                                description: "SMTP server host" },
-      { key: "smtp_port",                  value: "587",                             description: "SMTP server port" },
-      { key: "smtp_user",                  value: "",                                description: "SMTP username" },
-      { key: "smtp_password",              value: "",                                description: null },
-      { key: "smtp_from_email",            value: user.email ?? "",                  description: null },
+      { key: "app_base_url",               value: "",                                description: "Base URL of the application" },
       // ── Yoco payments (blank — configure in admin)
       { key: "yoco_public_key",            value: "",                                description: null },
       { key: "yoco_secret_key",            value: "",                                description: "Yoco secret key for payment API" },
@@ -583,14 +542,13 @@ Deno.serve(async (req) => {
       { key: "google_review_link",         value: "",                                description: null },
       { key: "google_review_url",          value: "",                                description: null },
       { key: "gcal_connected",             value: "false",                           description: null },
-      { key: "gmb_connected",             value: "false",                           description: null },
+      { key: "gmb_connected",              value: "false",                           description: null },
       // ── Loyalty
       { key: "loyalty_qualifying_service", value: "",                                description: "Loyalty: loyalty_qualifying_service" },
-      { key: "loyalty_min_bookings",       value: "3",                              description: "Loyalty: loyalty_min_bookings" },
-      { key: "loyalty_lookback_days",      value: "90",                             description: "Loyalty: loyalty_lookback_days" },
-      { key: "loyalty_reminder_weeks",     value: "5",                              description: "Loyalty: loyalty_reminder_weeks" },
-      // ── Theme CSS color variables (theme-aware)
-      // The booking page reads these as hsl(var(--background)) etc.
+      { key: "loyalty_min_bookings",       value: "3",                               description: "Loyalty: loyalty_min_bookings" },
+      { key: "loyalty_lookback_days",      value: "90",                              description: "Loyalty: loyalty_lookback_days" },
+      { key: "loyalty_reminder_weeks",     value: "5",                               description: "Loyalty: loyalty_reminder_weeks" },
+      // ── Theme CSS color variables
       { key: "theme_background",           value: colors.background,                 description: "CSS --background HSL value" },
       { key: "theme_foreground",           value: colors.foreground,                 description: "CSS --foreground HSL value" },
       { key: "theme_card",                 value: colors.card,                       description: "CSS --card HSL value" },
@@ -627,7 +585,6 @@ Deno.serve(async (req) => {
       throw new Error(`app_settings: ${settingsErr.message}`);
     }
 
-    // ── 5f. Mark onboarding complete ──────────────────────────────────────
     await admin
       .from("tenants")
       .update({ is_setup_complete: true })

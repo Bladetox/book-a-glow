@@ -1,11 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CreditCard, Calendar, MapPin, Mail,
+  CreditCard, Calendar, MapPin,
   Eye, EyeOff, CheckCircle2,
   Loader2, Edit2, LogOut, ChevronDown, BookOpen, Lock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import type { ReactNode, ElementType, Dispatch, SetStateAction } from "react";
+import type { ReactNode, ElementType } from "react";
 import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -337,11 +337,7 @@ const AdminIntegrations = () => {
   const upsert = useUpsertAppSetting();
 
   const [yocoDraft, setYocoDraft] = useState<Record<string, string>>({});
-  const [smtpDraft, setSmtpDraft] = useState<Record<string, string>>({});
-
   const [yocoEditing, setYocoEditing] = useState(false);
-  const [smtpEditing, setSmtpEditing] = useState(false);
-
   const [savingSection, setSavingSection] = useState<string | null>(null);
   const [guideOpen, setGuideOpen]         = useState(false);
 
@@ -351,20 +347,12 @@ const AdminIntegrations = () => {
       yoco_public_key: settings.yoco_public_key ?? "",
       yoco_secret_key: settings.yoco_secret_key ?? "",
     });
-    setSmtpDraft({
-      smtp_host:       settings.smtp_host       ?? "",
-      smtp_port:       settings.smtp_port       ?? "587",
-      smtp_user:       settings.smtp_user       ?? settings.smtp_username ?? "",
-      smtp_password:   settings.smtp_password   ?? "",
-      smtp_from_email: settings.smtp_from_email ?? settings.smtp_user ?? settings.smtp_username ?? "",
-    });
     if (settings.yoco_public_key || settings.yoco_secret_key) setYocoEditing(false);
-    if (settings.smtp_user || settings.smtp_username)         setSmtpEditing(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
 
   const handleChange =
-    (setter: Dispatch<SetStateAction<Record<string, string>>>) =>
+    (setter: React.Dispatch<React.SetStateAction<Record<string, string>>>) =>
     (key: string, value: string) =>
       setter((prev) => ({ ...prev, [key]: value }));
 
@@ -389,29 +377,9 @@ const AdminIntegrations = () => {
     } finally { setSavingSection(null); }
   };
 
-  const handleGenericSave = async (
-    section: string,
-    draft: Record<string, string>,
-    onSuccess: () => void
-  ) => {
-    const toSave = Object.fromEntries(
-      Object.entries(draft).filter(([, v]) => v && v !== MASK)
-    );
-    if (Object.keys(toSave).length === 0) { toast.error("No values to save."); return; }
-    setSavingSection(section);
-    try {
-      await upsert.mutateAsync(toSave);
-      toast.success("Configuration saved.");
-      onSuccess();
-    } catch (err: any) {
-      toast.error(err.message ?? "Failed to save.");
-    } finally { setSavingSection(null); }
-  };
-
   const yocoConfigured = isConfigured(settings, ["yoco_public_key", "yoco_secret_key"]);
   const webhookActive  = !!settings.yoco_webhook_secret;
   const mapsConfigured = isConfigured(settings, ["google_maps_api_key"]);
-  const smtpConfigured = isConfigured(settings, ["smtp_user", "smtp_username", "smtp_password"]);
 
   if (isLoading) {
     return (
@@ -514,62 +482,6 @@ const AdminIntegrations = () => {
               connected={settings["gcal_connected"] === "true"}
               tenantId={tenantId}
             />
-
-            {/* Gmail / SMTP */}
-            <IntegrationCard
-              icon={Mail}
-              name="Gmail / SMTP"
-              desc="Transactional emails to clients and admin"
-              configured={smtpConfigured}
-              saving={savingSection === "smtp"}
-              editing={smtpEditing}
-              onEdit={() => setSmtpEditing(true)}
-              onSave={() => handleGenericSave("smtp", smtpDraft, () => setSmtpEditing(false))}
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <Field
-                  label="SMTP Host" fieldKey="smtp_host"
-                  placeholder="smtp.gmail.com"
-                  value={smtpDraft.smtp_host ?? ""}
-                  masked={smtpConfigured} editing={smtpEditing}
-                  onChange={handleChange(setSmtpDraft)}
-                  tooltip="For Gmail use: smtp.gmail.com"
-                />
-                <Field
-                  label="Port" fieldKey="smtp_port"
-                  placeholder="587"
-                  value={smtpDraft.smtp_port ?? ""}
-                  masked={smtpConfigured} editing={smtpEditing}
-                  onChange={handleChange(setSmtpDraft)}
-                  tooltip="Use 587 for Gmail (TLS/STARTTLS). Port 465 uses SSL."
-                />
-              </div>
-              <Field
-                label="Username / Email" fieldKey="smtp_user"
-                placeholder="you@gmail.com"
-                value={smtpDraft.smtp_user ?? ""}
-                masked={smtpConfigured} editing={smtpEditing}
-                onChange={handleChange(setSmtpDraft)}
-                tooltip="Your full Gmail address e.g. you@gmail.com"
-              />
-              <Field
-                label="App Password" fieldKey="smtp_password"
-                placeholder="Google App Password" type="password"
-                value={smtpDraft.smtp_password ?? ""}
-                masked={smtpConfigured} editing={smtpEditing}
-                onChange={handleChange(setSmtpDraft)}
-                hint="Use a Google App Password, not your account password"
-                tooltip="NOT your Gmail login password. Go to Google Account > Security > App Passwords to generate a 16-character password."
-              />
-              <Field
-                label="From Email" fieldKey="smtp_from_email"
-                placeholder="noreply@yourbusiness.com"
-                value={smtpDraft.smtp_from_email ?? ""}
-                masked={smtpConfigured} editing={smtpEditing}
-                onChange={handleChange(setSmtpDraft)}
-                tooltip="The email address clients see on booking confirmation emails. Usually your Gmail address."
-              />
-            </IntegrationCard>
 
           </div>
         </section>
