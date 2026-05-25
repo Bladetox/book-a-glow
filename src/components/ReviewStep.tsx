@@ -61,8 +61,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   })();
 
   const servicesTotal = selectedWithQty.reduce((sum, { svc, qty }) => sum + svc.price * qty, 0);
-  const estimatedDistanceKm = Number(booking.distanceKm ?? (booking.address ? config.defaultDistanceKm : 0)) || 0;
-  const callOutFee = booking.address ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
+  const isCallOut = !!booking.address && booking.addressVerified;
+  const estimatedDistanceKm = Number(booking.distanceKm ?? (isCallOut ? config.defaultDistanceKm : 0)) || 0;
+  const callOutFee = isCallOut ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
   const total = servicesTotal + callOutFee;
 
   const depositPercent = config.depositPercent;
@@ -125,9 +126,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         p_booking_date: bookingDate,
         p_start_time: startTime,
         p_service_ids: booking.selectedTreatments,
-        p_is_callout: !!booking.address,
-        p_callout_address: booking.address || null,
-        p_callout_distance_km: estimatedDistanceKm,
+        p_is_callout: isCallOut,
+        p_callout_address: isCallOut ? booking.address : null,
+        p_callout_distance_km: isCallOut ? estimatedDistanceKm : 0,
         p_client_notes: booking.additionalNotes || booking.existingClientNotes || null,
         p_client_type: booking.isExistingClient ? "existing" : "new",
         p_lead_source: booking.referralSource || null,
