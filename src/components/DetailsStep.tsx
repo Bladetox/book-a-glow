@@ -306,15 +306,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     return () => clearTimeout(t);
   }, []);
 
-  // When salon mode is active, clear any address data so it doesn't bleed through to ReviewStep
-  const configLoading = config.loading;
-useEffect(() => {
-  if (configLoading) return;
-  if (!mobileServiceEnabled && (booking.address || booking.addressVerified)) {
-    onUpdate({ address: "", addressVerified: false, distanceKm: null });
-  }
-}, [mobileServiceEnabled, configLoading]);
-
   const prevClientType = useRef<boolean | null>(booking.isExistingClient);
   const conditionalSectionRef = useCallback(
     (node: HTMLDivElement | null) => {
