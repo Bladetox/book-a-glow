@@ -332,7 +332,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
 
 // ── Main component ───────────────────────────────────────────────────────────────
 const AdminIntegrations = () => {
-  const { tenantId } = useTenant();
+  const { tenantId, userId } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
@@ -363,14 +363,49 @@ const AdminIntegrations = () => {
     if (!toSave.yoco_secret_key) { toast.error("Secret key is required."); return; }
     setSavingSection("yoco");
     try {
+      // 1. Persist public key (and any other non-secret fields) to app_settings
       await upsert.mutateAsync(toSave);
+
+      // 2. Persist secret key to tenants row (server-side use only)
       const { error: tenantErr } = await supabase
         .from("tenants")
         .update({ yoco_secret_key: toSave.yoco_secret_key })
         .eq("id", tenantId);
       if (tenantErr) throw tenantErr;
+
+      // 3. Call register-yoco-webhook edge function to:
+      //    - POST to Yoco API and get a real whsec_
+      //    - Store yoco_webhook_id + yoco_webhook_secret on tenants
+      //    - Mirror yoco_webhook_secret to app_settings so the UI badge resolves
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error("Not authenticated — please refresh and try again.");
+
+      const regRes = await fetch(`${supabaseUrl}/functions/v1/register-yoco-webhook`, {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        // register-yoco-webhook expects tenant_id = owner UUID (user.id)
+        body: JSON.stringify({ tenant_id: userId, yoco_secret_key: toSave.yoco_secret_key }),
+      });
+
+      const regJson = await regRes.json();
+
+      if (!regRes.ok) {
+        // Keys are saved; webhook registration failed — warn but don't block
+        console.error("Webhook registration failed:", regJson);
+        toast.warning(
+          "Keys saved, but webhook registration failed. The badge will show 'Registering' until resolved. " +
+          (regJson?.error ?? "")
+        );
+      } else {
+        toast.success("Yoco configuration saved and webhook registered successfully.");
+      }
+
       await refetch();
-      toast.success("Yoco configuration saved. Webhook is being registered automatically.");
       setYocoEditing(false);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to save Yoco configuration.");
