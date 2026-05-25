@@ -89,7 +89,7 @@ export function useSuggestedAddons() {
   });
 }
 
-// ─── Selector helper (used in booking components) ─────────────────────────────
+// ─── Selector helpers (used in booking components) ────────────────────────────
 
 /**
  * Given the current config and the set of currently-selected service IDs,
@@ -112,4 +112,25 @@ export function getActiveSuggestions(
   }
 
   return Array.from(suggested);
+}
+
+/**
+ * Returns add-on IDs that are ALREADY selected and belong to a specific
+ * triggerId. Used to render nested add-on rows inside the parent service card.
+ */
+export function getSelectedAddonsForTrigger(
+  config: SuggestedAddonsConfig,
+  triggerId: string,
+  selectedIds: string[]
+): string[] {
+  const selectedSet = new Set(selectedIds);
+  const result = new Set<string>();
+  for (const rule of config.rules) {
+    if (rule.triggerId === triggerId) {
+      for (const id of rule.suggestIds) {
+        if (selectedSet.has(id) && id !== triggerId) result.add(id);
+      }
+    }
+  }
+  return Array.from(result);
 }
