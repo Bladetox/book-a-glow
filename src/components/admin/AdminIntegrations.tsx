@@ -19,15 +19,12 @@ import {
 } from "@/components/admin/AdminSharedUI";
 import IntegrationsGuidePanel from "@/components/admin/IntegrationsGuidePanel";
 
-// ── Constants ───────────────────────────────────────────────────────────────
 const MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 function isConfigured(settings: Record<string, string>, keys: string[]) {
   return keys.some((k) => !!settings[k]);
 }
 
-// ── Field ─────────────────────────────────────────────────────────────────────
 interface FieldProps {
   label: string;
   fieldKey: string;
@@ -46,9 +43,9 @@ const Field = ({
   value, masked: isMasked, editing, onChange, hint, tooltip,
 }: FieldProps) => {
   const [show, setShow] = useState(false);
-  const isSecret     = type === "password";
+  const isSecret = type === "password";
   const displayValue = isMasked && !editing ? MASK : value;
-  const inputType    = isSecret && !show ? "password" : "text";
+  const inputType = isSecret && !show ? "password" : "text";
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -87,7 +84,6 @@ const Field = ({
   );
 };
 
-// ── IntegrationCard ──────────────────────────────────────────────────────────
 interface IntegrationCardProps {
   icon: ElementType;
   name: string;
@@ -99,7 +95,6 @@ interface IntegrationCardProps {
   onSave?: () => void;
   children: ReactNode;
   statusBadge?: ReactNode;
-  /** When true, hides the edit/save footer entirely */
   readOnly?: boolean;
 }
 
@@ -181,16 +176,15 @@ const IntegrationCard = ({
   );
 };
 
-// ── GoogleCalendarCard ────────────────────────────────────────────────────────
 interface GoogleCalendarCardProps {
   connected: boolean;
   tenantId: string;
 }
 
 const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) => {
-  const [isConnected, setIsConnected]         = useState(connected);
+  const [isConnected, setIsConnected] = useState(connected);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [open, setOpen]                       = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -211,22 +205,22 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
 
   const handleConnect = () => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-    const clientId   = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
     if (!clientId) {
       toast.error("Google Client ID is not configured. Contact support.");
       return;
     }
     const redirectUri = `${supabaseUrl}/functions/v1/google-calendar-callback`;
-    const returnUrl   = `${window.location.origin}/admin?gcal=connected`;
-    const state       = JSON.stringify({ tenantId, returnUrl });
+    const returnUrl = `${window.location.origin}/admin?gcal=connected`;
+    const state = JSON.stringify({ tenantId, returnUrl });
     const oauthParams = new URLSearchParams({
-      client_id:     clientId,
-      redirect_uri:  redirectUri,
+      client_id: clientId,
+      redirect_uri: redirectUri,
       response_type: "code",
-      scope:         "https://www.googleapis.com/auth/calendar.events",
-      access_type:   "offline",
-      prompt:        "consent",
-      state:         btoa(state),
+      scope: "https://www.googleapis.com/auth/calendar.events",
+      access_type: "offline",
+      prompt: "consent",
+      state: btoa(state),
     });
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${oauthParams}`;
   };
@@ -249,7 +243,9 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       toast.success("Google Calendar disconnected.");
     } catch (err: any) {
       toast.error(err.message ?? "Failed to disconnect. Please try again.");
-    } finally { setIsDisconnecting(false); }
+    } finally {
+      setIsDisconnecting(false);
+    }
   };
 
   return (
@@ -330,7 +326,6 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
   );
 };
 
-// ── YocoCard ─────────────────────────────────────────────────────────────────
 interface YocoCardProps {
   settings: Record<string, string>;
   yocoMode: "live" | "test" | null;
@@ -341,31 +336,26 @@ interface YocoCardProps {
 const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const [open, setOpen] = useState(false);
 
-  const [liveDraft, setLiveDraft]     = useState({ public_key: "", secret_key: "" });
+  const [liveDraft, setLiveDraft] = useState({ public_key: "", secret_key: "" });
   const [liveEditing, setLiveEditing] = useState(false);
-  const [savingLive, setSavingLive]   = useState(false);
+  const [savingLive, setSavingLive] = useState(false);
 
-  const [testDraft, setTestDraft]     = useState({ public_key: "", secret_key: "" });
+  const [testDraft, setTestDraft] = useState({ public_key: "", secret_key: "" });
   const [testEditing, setTestEditing] = useState(false);
-  const [savingTest, setSavingTest]   = useState(false);
+  const [savingTest, setSavingTest] = useState(false);
 
   const anyConfigured = !!settings.yoco_public_key || !!settings.yoco_secret_key;
+  const testConfigured = yocoMode === "test" && anyConfigured;
 
-  // FIX: useEffect only resets editing state after a successful save (when
-  // settings refetches and keys are newly present). It does NOT reset editing
-  // state on every render — that was stomping user input.
-  // Tracked via a ref so we only reset on the transition from empty → populated.
   const [prevHadKeys, setPrevHadKeys] = useState(anyConfigured);
   useEffect(() => {
     const nowHasKeys = !!settings.yoco_public_key || !!settings.yoco_secret_key;
     if (!prevHadKeys && nowHasKeys) {
-      // Keys just appeared (first-ever save) — collapse editing
       setLiveEditing(false);
       setTestEditing(false);
     }
     setPrevHadKeys(nowHasKeys);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings]);
+  }, [settings, prevHadKeys]);
 
   const callSaveYocoKeys = async (
     mode: "live" | "test",
@@ -377,8 +367,8 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
     const res = await fetch(`${supabaseUrl}/functions/v1/save-yoco-keys`, {
       method: "POST",
       headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({ mode, public_key, secret_key }),
     });
@@ -396,7 +386,10 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       return;
     }
     const token = await getToken();
-    if (!token) { toast.error("Not authenticated — please refresh."); return; }
+    if (!token) {
+      toast.error("Not authenticated — please refresh.");
+      return;
+    }
     setSavingLive(true);
     try {
       const result = await callSaveYocoKeys("live", liveDraft.public_key, liveDraft.secret_key, token);
@@ -410,7 +403,9 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       setLiveEditing(false);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to save live keys.");
-    } finally { setSavingLive(false); }
+    } finally {
+      setSavingLive(false);
+    }
   };
 
   const handleTestSave = async () => {
@@ -419,7 +414,10 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       return;
     }
     const token = await getToken();
-    if (!token) { toast.error("Not authenticated — please refresh."); return; }
+    if (!token) {
+      toast.error("Not authenticated — please refresh.");
+      return;
+    }
     setSavingTest(true);
     try {
       const result = await callSaveYocoKeys("test", testDraft.public_key, testDraft.secret_key, token);
@@ -429,7 +427,9 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       setTestEditing(false);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to save test keys.");
-    } finally { setSavingTest(false); }
+    } finally {
+      setSavingTest(false);
+    }
   };
 
   const ModeBadge = () => {
@@ -492,18 +492,17 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.04]">
-
               {anyConfigured && (
                 <div className="flex items-center gap-2 px-5 pt-4">
                   <ModeBadge />
                 </div>
               )}
 
-              {/* ── Live Keys Section ────────────────────────────────────── */}
               <div className="flex flex-col gap-3 px-5 pt-5">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Live Keys</p>
                 <Field
-                  label="Public Key" fieldKey="live_public_key"
+                  label="Public Key"
+                  fieldKey="live_public_key"
                   placeholder="pk_live_..."
                   value={liveEditing ? liveDraft.public_key : (yocoMode === "live" || !yocoMode ? (settings.yoco_public_key ?? "") : "")}
                   masked={anyConfigured && (yocoMode === "live" || !yocoMode) && !liveEditing}
@@ -513,8 +512,10 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   tooltip="In the Yoco app, click Sales then Payment Gateway to find your keys."
                 />
                 <Field
-                  label="Secret Key" fieldKey="live_secret_key"
-                  placeholder="sk_live_..." type="password"
+                  label="Secret Key"
+                  fieldKey="live_secret_key"
+                  placeholder="sk_live_..."
+                  type="password"
                   value={liveEditing ? liveDraft.secret_key : (yocoMode === "live" || !yocoMode ? (settings.yoco_secret_key ?? "") : "")}
                   masked={anyConfigured && (yocoMode === "live" || !yocoMode) && !liveEditing}
                   editing={liveEditing}
@@ -543,7 +544,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
 
               <div className="mx-5 my-4 border-t border-white/[0.04]" />
 
-              {/* ── Test Keys Section ────────────────────────────────────── */}
               <div className="flex flex-col gap-3 px-5">
                 <div className="flex items-center gap-2">
                   <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Test Keys</p>
@@ -555,27 +555,30 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   Test mode uses Yoco's sandbox. Webhook auto-registration is not supported in test mode — payments are processed and confirmed via Yoco's test event simulator.
                 </div>
                 <Field
-                  label="Public Key" fieldKey="test_public_key"
+                  label="Public Key"
+                  fieldKey="test_public_key"
                   placeholder="pk_test_..."
                   value={testEditing ? testDraft.public_key : (yocoMode === "test" ? (settings.yoco_public_key ?? "") : "")}
-                  masked={yocoMode === "test" && anyConfigured && !testEditing}
+                  masked={testConfigured && !testEditing}
                   editing={testEditing}
                   onChange={(_, v) => setTestDraft((p) => ({ ...p, public_key: v }))}
                   hint="From Yoco app: Sales > Payment Gateway (Sandbox)"
                   tooltip="Switch to sandbox mode in the Yoco app to find test keys."
                 />
                 <Field
-                  label="Secret Key" fieldKey="test_secret_key"
-                  placeholder="sk_test_..." type="password"
+                  label="Secret Key"
+                  fieldKey="test_secret_key"
+                  placeholder="sk_test_..."
+                  type="password"
                   value={testEditing ? testDraft.secret_key : (yocoMode === "test" ? (settings.yoco_secret_key ?? "") : "")}
-                  masked={yocoMode === "test" && anyConfigured && !testEditing}
+                  masked={testConfigured && !testEditing}
                   editing={testEditing}
                   onChange={(_, v) => setTestDraft((p) => ({ ...p, secret_key: v }))}
                   hint="Server-side only — never exposed to the browser"
                   tooltip="Switch to sandbox mode in the Yoco app to find test keys. Never share this key."
                 />
                 <div className="flex items-center justify-end gap-3 pt-1 pb-5">
-                  {yocoMode === "test" && !testEditing && (
+                  {testConfigured && !testEditing && (
                     <button
                       onClick={() => setTestEditing(true)}
                       className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
@@ -583,7 +586,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                       <Edit2 className="w-3 h-3" /> Edit
                     </button>
                   )}
-                  {(testEditing || yocoMode !== "test") && (
+                  {(testEditing || !testConfigured) && (
                     <SaveButton
                       label={savingTest ? "Saving..." : "Save Test Keys"}
                       loading={savingTest}
@@ -592,7 +595,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   )}
                 </div>
               </div>
-
             </div>
           </motion.div>
         )}
@@ -601,7 +603,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   );
 };
 
-// ── Main component ───────────────────────────────────────────────────────────────
 const AdminIntegrations = () => {
   const { tenantId, userId } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
@@ -610,7 +611,6 @@ const AdminIntegrations = () => {
   const [guideOpen, setGuideOpen] = useState(false);
 
   const yocoMode = (settings.yoco_mode as "live" | "test" | undefined) ?? null;
-
   const mapsConfigured = isConfigured(settings, ["google_maps_api_key"]);
 
   if (isLoading) {
@@ -644,7 +644,6 @@ const AdminIntegrations = () => {
         <section className="flex flex-col gap-3">
           <SectionLabel label="Connected Services" />
           <div className="flex flex-col gap-3">
-
             <YocoCard
               settings={settings}
               yocoMode={yocoMode}
@@ -662,9 +661,7 @@ const AdminIntegrations = () => {
               <div className="flex items-start gap-3 rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3.5">
                 <Lock className="w-3.5 h-3.5 text-white/25 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-[11px] font-semibold text-white/40">
-                    Managed by NextSlot
-                  </p>
+                  <p className="text-[11px] font-semibold text-white/40">Managed by NextSlot</p>
                   <p className="text-[11px] text-white/25 leading-relaxed mt-0.5">
                     This integration is pre-configured and maintained by NextSlot. No action required on your end.
                   </p>
@@ -676,7 +673,6 @@ const AdminIntegrations = () => {
               connected={settings["gcal_connected"] === "true"}
               tenantId={tenantId}
             />
-
           </div>
         </section>
       </div>
