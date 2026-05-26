@@ -3,6 +3,7 @@
   "short_name": "NextSlot",
   "description": "Smart online booking for South African service businesses.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#1a0a2e",
   "theme_color": "#1a0a2e",

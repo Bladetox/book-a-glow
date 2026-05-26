@@ -336,16 +336,18 @@ interface YocoCardProps {
 const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const [open, setOpen] = useState(false);
 
+  const anyConfigured = !!settings.yoco_public_key || !!settings.yoco_secret_key;
+  const testConfigured = yocoMode === "test" && anyConfigured;
+
   const [liveDraft, setLiveDraft] = useState({ public_key: "", secret_key: "" });
   const [liveEditing, setLiveEditing] = useState(false);
   const [savingLive, setSavingLive] = useState(false);
 
   const [testDraft, setTestDraft] = useState({ public_key: "", secret_key: "" });
-  const [testEditing, setTestEditing] = useState(false);
+  // Start in editing mode when no test keys exist yet so the fields are
+  // immediately writable (value is bound to testDraft, not the empty DB value).
+  const [testEditing, setTestEditing] = useState(!testConfigured);
   const [savingTest, setSavingTest] = useState(false);
-
-  const anyConfigured = !!settings.yoco_public_key || !!settings.yoco_secret_key;
-  const testConfigured = yocoMode === "test" && anyConfigured;
 
   const [prevHadKeys, setPrevHadKeys] = useState(anyConfigured);
   useEffect(() => {
@@ -498,6 +500,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                 </div>
               )}
 
+              {/* ── Live Keys ── */}
               <div className="flex flex-col gap-3 px-5 pt-5">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Live Keys</p>
                 <Field
@@ -544,6 +547,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
 
               <div className="mx-5 my-4 border-t border-white/[0.04]" />
 
+              {/* ── Test Keys ── */}
               <div className="flex flex-col gap-3 px-5">
                 <div className="flex items-center gap-2">
                   <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Test Keys</p>
@@ -552,7 +556,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   </span>
                 </div>
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/25 leading-relaxed">
-                  Test mode uses Yoco's sandbox. Webhook auto-registration is not supported in test mode — payments are processed and confirmed via Yoco's test event simulator.
+                  Test mode uses Yoco’s sandbox. Webhook auto-registration is not supported in test mode — payments are processed and confirmed via Yoco’s test event simulator.
                 </div>
                 <Field
                   label="Public Key"
@@ -561,7 +565,10 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   value={testEditing ? testDraft.public_key : (yocoMode === "test" ? (settings.yoco_public_key ?? "") : "")}
                   masked={testConfigured && !testEditing}
                   editing={testEditing}
-                  onChange={(_, v) => setTestDraft((p) => ({ ...p, public_key: v }))}
+                  onChange={(_, v) => {
+                    if (!testEditing) setTestEditing(true);
+                    setTestDraft((p) => ({ ...p, public_key: v }));
+                  }}
                   hint="From Yoco app: Sales > Payment Gateway (Sandbox)"
                   tooltip="Switch to sandbox mode in the Yoco app to find test keys."
                 />
@@ -573,7 +580,10 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   value={testEditing ? testDraft.secret_key : (yocoMode === "test" ? (settings.yoco_secret_key ?? "") : "")}
                   masked={testConfigured && !testEditing}
                   editing={testEditing}
-                  onChange={(_, v) => setTestDraft((p) => ({ ...p, secret_key: v }))}
+                  onChange={(_, v) => {
+                    if (!testEditing) setTestEditing(true);
+                    setTestDraft((p) => ({ ...p, secret_key: v }));
+                  }}
                   hint="Server-side only — never exposed to the browser"
                   tooltip="Switch to sandbox mode in the Yoco app to find test keys. Never share this key."
                 />
