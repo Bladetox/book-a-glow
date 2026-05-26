@@ -56,14 +56,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Resolve Yoco secret key per-tenant from tenants table.
+    // Resolve Yoco secret key per-tenant.
+    // Priority: mode-specific key (yoco_secret_key_live / yoco_secret_key_test)
+    // Fallback: legacy yoco_secret_key column (supports existing tenants like PhenomeBeauty)
     const { data: tenantRow } = await supabase
       .from("tenants")
-      .select("yoco_secret_key")
+      .select("yoco_secret_key, yoco_secret_key_live, yoco_secret_key_test, yoco_mode")
       .eq("id", booking.tenant_id)
       .single();
 
-    const yocoSecret = tenantRow?.yoco_secret_key;
+    const isLive = tenantRow?.yoco_mode === "live";
+    const yocoSecret =
+      (isLive ? tenantRow?.yoco_secret_key_live : tenantRow?.yoco_secret_key_test)
+      || tenantRow?.yoco_secret_key; // fallback for legacy tenants (e.g. PhenomeBeauty)
 
     if (!yocoSecret) {
       return new Response(
@@ -144,8 +149,8 @@ Deno.serve(async (req) => {
     if (!yocoRes.ok) {
       console.error("Yoco error:", yocoData);
       return new Response(
-        JSON.stringify({ error: "Failed to create checkout" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to create Yoco checkout", detail: yocoData }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
