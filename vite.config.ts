@@ -23,38 +23,12 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true,
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        // Never cache cross-origin Supabase requests — the service worker
-        // cannot copy opaque (cross-origin) responses into the cache and
-        // throws cross-origin-copy-response at runtime.
-        // NetworkOnly for auth/storage/functions; NetworkFirst for rest/rpc
-        // with CORS mode so the response is never opaque.
         runtimeCaching: [
           {
-            // Auth, Storage, Edge Functions — must never be served stale
-            urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\/(auth|storage|functions)\//,
+            // All Supabase traffic must bypass the cache entirely.
+            // Caching cross-origin responses causes cross-origin-copy-response.
+            urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\//,
             handler: "NetworkOnly",
-          },
-          {
-            // REST + RPC — allow a short-lived cache but only for real 200s
-            urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\/(rest|rpc)\//,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "supabase-api",
-              networkTimeoutSeconds: 5,
-              fetchOptions: {
-                // Ensures the browser sends a CORS request so the response
-                // is never opaque — opaque responses cannot be cached.
-                mode: "cors",
-              },
-              expiration: {
-                maxEntries: 60,
-                maxAgeSeconds: 60,
-              },
-              cacheableResponse: {
-                // Only cache genuine 200 responses — never status 0 (opaque)
-                statuses: [200],
-              },
-            },
           },
         ],
       },
