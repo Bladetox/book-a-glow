@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   CreditCard, Calendar, MapPin,
   Eye, EyeOff, CheckCircle2,
-  Loader2, Edit2, LogOut, ChevronDown, BookOpen, Lock,
+  Loader2, Edit2, LogOut, ChevronDown, BookOpen, Lock, FlaskConical,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { ReactNode, ElementType } from "react";
@@ -330,90 +330,288 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
   );
 };
 
+// ── YocoCard ─────────────────────────────────────────────────────────────────
+// Renders live + test key sections inside one card.
+// Active mode is read-only — derived from yoco_mode in DB, never a toggle.
+interface YocoCardProps {
+  settings: Record<string, string>;
+  yocoMode: "live" | "test" | null;
+  userId: string;
+  onSaved: () => void;
+}
+
+const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
+  const [open, setOpen] = useState(false);
+
+  // Live section state
+  const [liveDraft, setLiveDraft]       = useState({ public_key: "", secret_key: "" });
+  const [liveEditing, setLiveEditing]   = useState(false);
+  const [savingLive, setSavingLive]     = useState(false);
+
+  // Test section state
+  const [testDraft, setTestDraft]       = useState({ public_key: "", secret_key: "" });
+  const [testEditing, setTestEditing]   = useState(false);
+  const [savingTest, setSavingTest]     = useState(false);
+
+  const liveConfigured = !!settings.yoco_public_key && yocoMode === "live"
+    || (!yocoMode && !!settings.yoco_public_key); // legacy single-key
+  const testConfigured = yocoMode === "test" && !!settings.yoco_public_key;
+  const anyConfigured  = !!settings.yoco_public_key || !!settings.yoco_secret_key;
+
+  useEffect(() => {
+    if (Object.keys(settings).length === 0) return;
+    if (settings.yoco_public_key || settings.yoco_secret_key) {
+      setLiveEditing(false);
+      setTestEditing(false);
+    }
+  }, [settings]);
+
+  const callSaveYocoKeys = async (
+    mode: "live" | "test",
+    public_key: string,
+    secret_key: string,
+    authToken: string
+  ) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const res = await fetch(`${supabaseUrl}/functions/v1/save-yoco-keys`, {
+      method: "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ mode, public_key, secret_key }),
+    });
+    return res.json();
+  };
+
+  const getToken = async (): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  };
+
+  const handleLiveSave = async () => {
+    if (!liveDraft.secret_key || liveDraft.secret_key === MASK) {
+      toast.error("Live secret key is required.");
+      return;
+    }
+    const token = await getToken();
+    if (!token) { toast.error("Not authenticated — please refresh."); return; }
+    setSavingLive(true);
+    try {
+      const result = await callSaveYocoKeys("live", liveDraft.public_key, liveDraft.secret_key, token);
+      if (!result.success) throw new Error(result.error ?? "Save failed");
+      if (result.webhook_registered === false && result.warning) {
+        toast.warning(result.warning);
+      } else {
+        toast.success("Live keys saved and webhook registered.");
+      }
+      onSaved();
+      setLiveEditing(false);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save live keys.");
+    } finally { setSavingLive(false); }
+  };
+
+  const handleTestSave = async () => {
+    if (!testDraft.secret_key || testDraft.secret_key === MASK) {
+      toast.error("Test secret key is required.");
+      return;
+    }
+    const token = await getToken();
+    if (!token) { toast.error("Not authenticated — please refresh."); return; }
+    setSavingTest(true);
+    try {
+      const result = await callSaveYocoKeys("test", testDraft.public_key, testDraft.secret_key, token);
+      if (!result.success) throw new Error(result.error ?? "Save failed");
+      toast.success("Test keys saved. Payments will now use Yoco test mode.");
+      onSaved();
+      setTestEditing(false);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save test keys.");
+    } finally { setSavingTest(false); }
+  };
+
+  // ── Active mode badge ──────────────────────────────────────────────────────
+  const ModeBadge = () => {
+    if (!anyConfigured) return null;
+    if (yocoMode === "test") {
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-400/90 bg-amber-400/10 border border-amber-400/20 rounded-full px-2.5 py-1">
+          <FlaskConical className="w-3 h-3" /> Test Mode Active
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400/90 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-2.5 py-1">
+        <CheckCircle2 className="w-3 h-3" /> Live Mode Active
+      </span>
+    );
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
+    >
+      {/* Card header */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between p-5 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+            <CreditCard className="w-4 h-4 text-white/40" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white/80">Yoco Payments</h4>
+            <p className="text-[10px] text-white/30 mt-0.5 font-medium">
+              Online checkout, deposit &amp; balance collection
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0 ml-2">
+          {anyConfigured
+            ? <AdminTag label="Connected" color="emerald" />
+            : <AdminTag label="Not configured" color="default" />
+          }
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className="w-4 h-4 text-white/25" />
+          </motion.div>
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/[0.04]">
+
+              {/* Active mode indicator */}
+              {anyConfigured && (
+                <div className="flex items-center gap-2 px-5 pt-4">
+                  <ModeBadge />
+                </div>
+              )}
+
+              {/* ── Live Keys Section ────────────────────────────────────── */}
+              <div className="flex flex-col gap-3 px-5 pt-5">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Live Keys</p>
+                <Field
+                  label="Public Key" fieldKey="live_public_key"
+                  placeholder="pk_live_..."
+                  value={liveEditing ? liveDraft.public_key : (yocoMode === "live" || !yocoMode ? (settings.yoco_public_key ?? "") : "")}
+                  masked={anyConfigured && (yocoMode === "live" || !yocoMode)} editing={liveEditing}
+                  onChange={(_, v) => setLiveDraft((p) => ({ ...p, public_key: v }))}
+                  hint="From Yoco app: Sales > Payment Gateway"
+                  tooltip="In the Yoco app, click Sales then Payment Gateway to find your keys."
+                />
+                <Field
+                  label="Secret Key" fieldKey="live_secret_key"
+                  placeholder="sk_live_..." type="password"
+                  value={liveEditing ? liveDraft.secret_key : (yocoMode === "live" || !yocoMode ? (settings.yoco_secret_key ?? "") : "")}
+                  masked={anyConfigured && (yocoMode === "live" || !yocoMode)} editing={liveEditing}
+                  onChange={(_, v) => setLiveDraft((p) => ({ ...p, secret_key: v }))}
+                  hint="Server-side only — never exposed to the browser"
+                  tooltip="In the Yoco app, click Sales then Payment Gateway. Never share this key."
+                />
+                <div className="flex items-center justify-end gap-3 pt-1">
+                  {(anyConfigured && (yocoMode === "live" || !yocoMode)) && !liveEditing && (
+                    <button
+                      onClick={() => setLiveEditing(true)}
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
+                    >
+                      <Edit2 className="w-3 h-3" /> Edit
+                    </button>
+                  )}
+                  {(liveEditing || !(anyConfigured && (yocoMode === "live" || !yocoMode))) && (
+                    <SaveButton
+                      label={savingLive ? "Saving..." : "Save Live Keys"}
+                      loading={savingLive}
+                      onClick={handleLiveSave}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="mx-5 my-4 border-t border-white/[0.04]" />
+
+              {/* ── Test Keys Section ────────────────────────────────────── */}
+              <div className="flex flex-col gap-3 px-5">
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Test Keys</p>
+                  <span className="text-[9px] font-semibold text-amber-400/50 bg-amber-400/[0.06] border border-amber-400/10 rounded-full px-2 py-0.5">
+                    Yoco Sandbox
+                  </span>
+                </div>
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/25 leading-relaxed">
+                  Test mode uses Yoco's sandbox. Webhook auto-registration is not supported in test mode — payments are processed and confirmed via Yoco's test event simulator.
+                </div>
+                <Field
+                  label="Public Key" fieldKey="test_public_key"
+                  placeholder="pk_test_..."
+                  value={testEditing ? testDraft.public_key : (yocoMode === "test" ? (settings.yoco_public_key ?? "") : "")}
+                  masked={yocoMode === "test" && anyConfigured} editing={testEditing}
+                  onChange={(_, v) => setTestDraft((p) => ({ ...p, public_key: v }))}
+                  hint="From Yoco app: Sales > Payment Gateway (Sandbox)"
+                  tooltip="Switch to sandbox mode in the Yoco app to find test keys."
+                />
+                <Field
+                  label="Secret Key" fieldKey="test_secret_key"
+                  placeholder="sk_test_..." type="password"
+                  value={testEditing ? testDraft.secret_key : (yocoMode === "test" ? (settings.yoco_secret_key ?? "") : "")}
+                  masked={yocoMode === "test" && anyConfigured} editing={testEditing}
+                  onChange={(_, v) => setTestDraft((p) => ({ ...p, secret_key: v }))}
+                  hint="Server-side only — never exposed to the browser"
+                  tooltip="Switch to sandbox mode in the Yoco app to find test keys. Never share this key."
+                />
+                <div className="flex items-center justify-end gap-3 pt-1 pb-5">
+                  {yocoMode === "test" && !testEditing && (
+                    <button
+                      onClick={() => setTestEditing(true)}
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
+                    >
+                      <Edit2 className="w-3 h-3" /> Edit
+                    </button>
+                  )}
+                  {(testEditing || yocoMode !== "test") && (
+                    <SaveButton
+                      label={savingTest ? "Saving..." : "Save Test Keys"}
+                      loading={savingTest}
+                      onClick={handleTestSave}
+                    />
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
 // ── Main component ───────────────────────────────────────────────────────────────
 const AdminIntegrations = () => {
   const { tenantId, userId } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
-  const [yocoDraft, setYocoDraft] = useState<Record<string, string>>({});
-  const [yocoEditing, setYocoEditing] = useState(false);
-  const [savingSection, setSavingSection] = useState<string | null>(null);
-  const [guideOpen, setGuideOpen]         = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
-  useEffect(() => {
-    if (isLoading || Object.keys(settings).length === 0) return;
-    setYocoDraft({
-      yoco_public_key: settings.yoco_public_key ?? "",
-      yoco_secret_key: settings.yoco_secret_key ?? "",
-    });
-    if (settings.yoco_public_key || settings.yoco_secret_key) setYocoEditing(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading]);
+  // Derive current active mode from settings — purely read from DB
+  // phenomebeauty: yoco_mode = 'live' → always "live"
+  // zo-beauty-bar: yoco_mode = 'test' → "test"
+  const yocoMode = (settings.yoco_mode as "live" | "test" | undefined) ?? null;
 
-  const handleChange =
-    (setter: React.Dispatch<React.SetStateAction<Record<string, string>>>) =>
-    (key: string, value: string) =>
-      setter((prev) => ({ ...prev, [key]: value }));
-
-  const handleYocoSave = async () => {
-    const toSave = Object.fromEntries(
-      Object.entries(yocoDraft).filter(([, v]) => v && v !== MASK)
-    );
-    if (!toSave.yoco_secret_key) { toast.error("Secret key is required."); return; }
-    setSavingSection("yoco");
-    try {
-      // 1. Persist public key (and any other non-secret fields) to app_settings
-      await upsert.mutateAsync(toSave);
-
-      // 2. Persist secret key to tenants row (server-side use only)
-      const { error: tenantErr } = await supabase
-        .from("tenants")
-        .update({ yoco_secret_key: toSave.yoco_secret_key })
-        .eq("id", tenantId);
-      if (tenantErr) throw tenantErr;
-
-      // 3. Call register-yoco-webhook edge function to:
-      //    - POST to Yoco API and get a real whsec_
-      //    - Store yoco_webhook_id + yoco_webhook_secret on tenants
-      //    - Mirror yoco_webhook_secret to app_settings so the UI badge resolves
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) throw new Error("Not authenticated — please refresh and try again.");
-
-      const regRes = await fetch(`${supabaseUrl}/functions/v1/register-yoco-webhook`, {
-        method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${accessToken}`,
-        },
-        // register-yoco-webhook expects tenant_id = owner UUID (user.id)
-        body: JSON.stringify({ tenant_id: userId, yoco_secret_key: toSave.yoco_secret_key }),
-      });
-
-      const regJson = await regRes.json();
-
-      if (!regRes.ok) {
-        // Keys are saved; webhook registration failed — warn but don't block
-        console.error("Webhook registration failed:", regJson);
-        toast.warning(
-          "Keys saved, but webhook registration failed. The badge will show 'Registering' until resolved. " +
-          (regJson?.error ?? "")
-        );
-      } else {
-        toast.success("Yoco configuration saved and webhook registered successfully.");
-      }
-
-      await refetch();
-      setYocoEditing(false);
-    } catch (err: any) {
-      toast.error(err.message ?? "Failed to save Yoco configuration.");
-    } finally { setSavingSection(null); }
-  };
-
-  const yocoConfigured = isConfigured(settings, ["yoco_public_key", "yoco_secret_key"]);
-  const webhookActive  = !!settings.yoco_webhook_secret;
   const mapsConfigured = isConfigured(settings, ["google_maps_api_key"]);
 
   if (isLoading) {
@@ -448,48 +646,13 @@ const AdminIntegrations = () => {
           <SectionLabel label="Connected Services" />
           <div className="flex flex-col gap-3">
 
-            {/* Yoco */}
-            <IntegrationCard
-              icon={CreditCard}
-              name="Yoco Payments"
-              desc="Online checkout, deposit & balance collection"
-              configured={yocoConfigured}
-              saving={savingSection === "yoco"}
-              editing={yocoEditing}
-              onEdit={() => setYocoEditing(true)}
-              onSave={handleYocoSave}
-              statusBadge={
-                yocoConfigured && !yocoEditing
-                  ? webhookActive
-                    ? <span className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-semibold"><CheckCircle2 className="w-3 h-3" /> Webhook active</span>
-                    : <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-semibold"><Loader2 className="w-3 h-3 animate-spin" /> Webhook registering...</span>
-                  : undefined
-              }
-            >
-              <Field
-                label="Public Key" fieldKey="yoco_public_key"
-                placeholder="pk_live_... or pk_test_..."
-                value={yocoDraft.yoco_public_key ?? ""}
-                masked={yocoConfigured} editing={yocoEditing}
-                onChange={handleChange(setYocoDraft)}
-                hint="From Yoco app: Sales > Payment Gateway"
-                tooltip="In the Yoco app, click Sales then Payment Gateway to find your keys."
-              />
-              <Field
-                label="Secret Key" fieldKey="yoco_secret_key"
-                placeholder="sk_live_... or sk_test_..." type="password"
-                value={yocoDraft.yoco_secret_key ?? ""}
-                masked={yocoConfigured} editing={yocoEditing}
-                onChange={handleChange(setYocoDraft)}
-                hint="Server-side only - never exposed to the browser"
-                tooltip="In the Yoco app, click Sales then Payment Gateway to find your keys. Never share this key."
-              />
-              {(!yocoConfigured || yocoEditing) && (
-                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/30 leading-relaxed italic">
-                  Save once - webhook registration happens automatically in the background. No additional steps required.
-                </div>
-              )}
-            </IntegrationCard>
+            {/* Yoco — live + test sections, active mode indicator */}
+            <YocoCard
+              settings={settings}
+              yocoMode={yocoMode}
+              userId={userId}
+              onSaved={refetch}
+            />
 
             {/* Google Maps - read-only, managed by NextSlot */}
             <IntegrationCard
