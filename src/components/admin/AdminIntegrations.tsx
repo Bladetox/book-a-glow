@@ -27,6 +27,47 @@ function isConfigured(settings: Record<string, string>, keys: string[]) {
   return keys.some((k) => !!settings[k]);
 }
 
+// ── YocoModeToggle ────────────────────────────────────────────────────────────
+interface YocoModeToggleProps {
+  mode: "live" | "test";
+  onChange: (mode: "live" | "test") => void;
+  disabled?: boolean;
+}
+
+const YocoModeToggle = ({ mode, onChange, disabled }: YocoModeToggleProps) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+      Environment
+    </label>
+    <div className="flex items-center gap-2">
+      {(["live", "test"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(m)}
+          className={[
+            "px-4 py-2 rounded-xl text-xs font-bold border transition-colors",
+            mode === m
+              ? m === "live"
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                : "bg-amber-500/15 border-amber-500/30 text-amber-400"
+              : "bg-white/[0.03] border-white/[0.08] text-white/25 hover:text-white/50",
+            disabled ? "opacity-40 cursor-not-allowed" : "",
+          ].join(" ")}
+        >
+          {m === "live" ? "🟢 Live" : "🧪 Test"}
+        </button>
+      ))}
+    </div>
+    <p className="text-[10px] text-white/20 italic px-1">
+      {mode === "live"
+        ? "Live mode — real payments, use sk_live_ keys"
+        : "Test mode — sandbox only, use sk_test_ keys"}
+    </p>
+  </div>
+);
+
 // ── Field ─────────────────────────────────────────────────────────────────────
 interface FieldProps {
   label: string;
@@ -336,8 +377,9 @@ const AdminIntegrations = () => {
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
-  const [yocoDraft, setYocoDraft] = useState<Record<string, string>>({});
-  const [yocoEditing, setYocoEditing] = useState(false);
+  const [yocoDraft, setYocoDraft]       = useState<Record<string, string>>({});
+  const [yocoMode, setYocoMode]         = useState<"live" | "test">("live");
+  const [yocoEditing, setYocoEditing]   = useState(false);
   const [savingSection, setSavingSection] = useState<string | null>(null);
   const [guideOpen, setGuideOpen]         = useState(false);
 
@@ -347,6 +389,15 @@ const AdminIntegrations = () => {
       yoco_public_key: settings.yoco_public_key ?? "",
       yoco_secret_key: settings.yoco_secret_key ?? "",
     });
+    // Resolve current mode: prefer stored yoco_mode, fallback to key-prefix detection,
+    // final fallback to "live" so PhenomeBeauty (existing live tenant) is always safe.
+    const storedMode = settings.yoco_mode as "live" | "test" | undefined;
+    if (storedMode === "live" || storedMode === "test") {
+      setYocoMode(storedMode);
+    } else {
+      const secretKey = settings.yoco_secret_key ?? "";
+      setYocoMode(secretKey.startsWith("sk_test") ? "test" : "live");
+    }
     if (settings.yoco_public_key || settings.yoco_secret_key) setYocoEditing(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
@@ -363,13 +414,24 @@ const AdminIntegrations = () => {
     if (!toSave.yoco_secret_key) { toast.error("Secret key is required."); return; }
     setSavingSection("yoco");
     try {
-      // 1. Persist public key (and any other non-secret fields) to app_settings
-      await upsert.mutateAsync(toSave);
+      // 1. Persist public key (and yoco_mode) to app_settings
+      await upsert.mutateAsync({ ...toSave, yoco_mode: yocoMode });
 
-      // 2. Persist secret key to tenants row (server-side use only)
+      // 2. Persist secret key to tenants row — write BOTH the legacy column AND
+      //    the mode-specific column so the edge function always finds the right key.
+      const tenantUpdate: Record<string, string> = {
+        yoco_secret_key: toSave.yoco_secret_key,  // legacy column — keeps PhenomeBeauty safe
+        yoco_mode:       yocoMode,
+      };
+      if (yocoMode === "live") {
+        tenantUpdate.yoco_secret_key_live = toSave.yoco_secret_key;
+      } else {
+        tenantUpdate.yoco_secret_key_test = toSave.yoco_secret_key;
+      }
+
       const { error: tenantErr } = await supabase
         .from("tenants")
-        .update({ yoco_secret_key: toSave.yoco_secret_key })
+        .update(tenantUpdate)
         .eq("id", tenantId);
       if (tenantErr) throw tenantErr;
 
@@ -466,6 +528,27 @@ const AdminIntegrations = () => {
                   : undefined
               }
             >
+              {/* Mode toggle — shown when editing or not yet configured */}
+              {(!yocoConfigured || yocoEditing) && (
+                <YocoModeToggle
+                  mode={yocoMode}
+                  onChange={setYocoMode}
+                  disabled={savingSection === "yoco"}
+                />
+              )}
+              {/* Mode badge — shown when configured & not editing */}
+              {yocoConfigured && !yocoEditing && (
+                <div className="flex items-center gap-2">
+                  <span className={[
+                    "inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold border",
+                    yocoMode === "live"
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                      : "bg-amber-500/10 border-amber-500/20 text-amber-400",
+                  ].join(" ")}>
+                    {yocoMode === "live" ? "🟢 Live mode" : "🧪 Test mode"}
+                  </span>
+                </div>
+              )}
               <Field
                 label="Public Key" fieldKey="yoco_public_key"
                 placeholder="pk_live_... or pk_test_..."
