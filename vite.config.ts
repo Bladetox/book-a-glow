@@ -23,19 +23,36 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true,
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Never cache cross-origin Supabase requests — the service worker
+        // cannot copy opaque (cross-origin) responses into the cache and
+        // throws cross-origin-copy-response at runtime.
+        // NetworkOnly for auth/storage/functions; NetworkFirst for rest/rpc
+        // with CORS mode so the response is never opaque.
         runtimeCaching: [
           {
+            // Auth, Storage, Edge Functions — must never be served stale
+            urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\/(auth|storage|functions)\//,
+            handler: "NetworkOnly",
+          },
+          {
+            // REST + RPC — allow a short-lived cache but only for real 200s
             urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\/(rest|rpc)\//,
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-api",
               networkTimeoutSeconds: 5,
+              fetchOptions: {
+                // Ensures the browser sends a CORS request so the response
+                // is never opaque — opaque responses cannot be cached.
+                mode: "cors",
+              },
               expiration: {
                 maxEntries: 60,
                 maxAgeSeconds: 60,
               },
               cacheableResponse: {
-                statuses: [0, 200],
+                // Only cache genuine 200 responses — never status 0 (opaque)
+                statuses: [200],
               },
             },
           },
@@ -86,20 +103,13 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           if (!id.includes("node_modules")) return;
-          /* Heavy animation library — own chunk, loaded only when needed */
           if (id.includes("framer-motion"))           return "framer";
-          /* Icon library — large, split away from app code */
           if (id.includes("lucide-react"))             return "icons";
-          /* Radix primitives — shared UI, but large */
           if (id.includes("@radix-ui"))               return "radix";
-          /* Data / query */
           if (id.includes("@supabase"))               return "supabase";
           if (id.includes("@tanstack"))               return "query";
-          /* Charts */
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
-          /* Date utils */
           if (id.includes("date-fns") || id.includes("dayjs")) return "dates";
-          /* Everything else */
           return "vendor";
         },
       },
