@@ -1,4 +1,4 @@
-// C7 — Per-category service reorder is now manual save (mirrors category order UX)
+// C8 — Category Order rows now have inline confirm-delete; per-category service reorder manual save
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -370,6 +370,8 @@ const AdminServices = () => {
   // ── Local category order (unsaved UI state) ───────────────────────────────
   const [localCatOrder, setLocalCatOrder] = useState<string[] | null>(null);
   const [catOrderSaved, setCatOrderSaved] = useState(false);
+  // confirmDeleteCatId: which category row is showing the inline confirm prompt
+  const [confirmDeleteCatId, setConfirmDeleteCatId] = useState<string | null>(null);
   const seededRef = useRef(false);
 
   useEffect(() => {
@@ -429,20 +431,43 @@ const AdminServices = () => {
     );
   };
 
+  // Delete a category: deactivates all its services and removes it from the
+  // saved category_order setting. Services stay in the DB (just inactive).
+  const deleteCategory = useCallback(async (catId: string) => {
+    if (!tenantId) return;
+    // 1. Deactivate all services in this category
+    const { error } = await supabase
+      .from("services")
+      .update({ is_active: false })
+      .eq("category", catId)
+      .eq("tenant_id", tenantId);
+    if (error) {
+      toast.error("Could not deactivate services — try again");
+      return;
+    }
+    // 2. Remove from local order
+    setLocalCatOrder((prev) => {
+      const ids = prev ?? orderedCategories.map((c) => c.id);
+      return ids.filter((id) => id !== catId);
+    });
+    // 3. Persist the updated category_order immediately
+    const newIds = (localCatOrder ?? orderedCategories.map((c) => c.id)).filter((id) => id !== catId);
+    upsertSetting.mutate({ category_order: JSON.stringify(newIds) });
+    setConfirmDeleteCatId(null);
+    // Close the reorder panel if it was open on this category
+    setReorderCatId((prev) => (prev === catId ? null : prev));
+    toast.success("Category deleted and its services deactivated");
+  }, [tenantId, localCatOrder, orderedCategories, upsertSetting]);
+
   // ── Per-category service reorder — LOCAL STATE, manual save ──────────────
-  // localSvcOrder: map of categoryId → ordered Service[] (unsaved UI state)
-  // Seeded from live `services` when a category tab is first opened.
-  // ↑/↓ only mutates this map. Supabase is only written on "Save Order" click.
   const [reorderCatId, setReorderCatId] = useState<string | null>(null);
   const [localSvcOrder, setLocalSvcOrder] = useState<Map<string, Service[]>>(new Map());
   const [svcOrderSaving, setSvcOrderSaving] = useState(false);
   const [svcOrderSaved, setSvcOrderSaved] = useState(false);
 
-  // Seed the local list for a category the first time it is opened
   const openReorderCategory = (catId: string | null) => {
     setReorderCatId(catId);
     if (!catId) return;
-    // Only seed if we don't already have a local list for this category
     setLocalSvcOrder((prev) => {
       if (prev.has(catId)) return prev;
       const sorted = services
@@ -459,12 +484,10 @@ const AdminServices = () => {
     });
   };
 
-  // The list currently shown in the reorder panel
   const reorderCatServices: Service[] = reorderCatId
     ? (localSvcOrder.get(reorderCatId) ?? [])
     : [];
 
-  // Move up/down — only updates local state, no Supabase call
   const moveServiceUp = (index: number) => {
     if (!reorderCatId || index === 0) return;
     setLocalSvcOrder((prev) => {
@@ -488,7 +511,6 @@ const AdminServices = () => {
     });
   };
 
-  // Save Order — writes display_order for every service in the open category
   const saveServiceOrder = useCallback(async () => {
     if (!reorderCatId || !tenantId) return;
     const list = localSvcOrder.get(reorderCatId);
@@ -513,8 +535,6 @@ const AdminServices = () => {
     }
   }, [reorderCatId, localSvcOrder, tenantId]);
 
-  // When live services data changes (e.g. after an edit), clear stale local
-  // order so the panel re-seeds from the updated data on next open.
   const prevServicesRef = useRef(services);
   useEffect(() => {
     if (prevServicesRef.current !== services) {
@@ -703,7 +723,7 @@ const AdminServices = () => {
       />
 
       {/* ═══ SECTION 1: Category Order ══════════════════════════════════════ */}
-      {orderedCategories.length > 1 && (
+      {orderedCategories.length > 0 && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <SectionLabel label="Category Order" />
@@ -722,36 +742,73 @@ const AdminServices = () => {
             Set the order your categories appear in the booking flow. Changes go live after Save Order.
           </p>
           <div className="flex flex-col gap-1.5">
-            {orderedCategories.map((cat, idx) => (
-              <div
-                key={cat.id}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]"
-              >
-                <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{idx + 1}</span>
-                <span className="flex-1 text-sm font-medium text-white/70">{cat.label}</span>
-                <span className="text-[10px] text-white/25 tabular-nums">
-                  {services.filter((s) => s.category === cat.id).length} services
-                </span>
-                <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => moveCategoryUp(idx)}
-                    disabled={idx === 0}
-                    className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
-                    aria-label={`Move ${cat.label} up`}
-                  >
-                    <ArrowUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => moveCategoryDown(idx)}
-                    disabled={idx === orderedCategories.length - 1}
-                    className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
-                    aria-label={`Move ${cat.label} down`}
-                  >
-                    <ArrowDown className="w-3.5 h-3.5" />
-                  </button>
+            {orderedCategories.map((cat, idx) => {
+              const isConfirming = confirmDeleteCatId === cat.id;
+              const svcCount = services.filter((s) => s.category === cat.id).length;
+              return (
+                <div
+                  key={cat.id}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+                >
+                  <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{idx + 1}</span>
+                  <span className="flex-1 text-sm font-medium text-white/70">{cat.label}</span>
+                  <span className="text-[10px] text-white/25 tabular-nums shrink-0">
+                    {svcCount} service{svcCount !== 1 ? "s" : ""}
+                  </span>
+
+                  {/* Arrow buttons — hidden while confirm prompt is open */}
+                  {!isConfirming && (
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => moveCategoryUp(idx)}
+                        disabled={idx === 0}
+                        className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                        aria-label={`Move ${cat.label} up`}
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => moveCategoryDown(idx)}
+                        disabled={idx === orderedCategories.length - 1}
+                        className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                        aria-label={`Move ${cat.label} down`}
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Delete button / confirm prompt */}
+                  <div className="flex items-center gap-1 border-l border-white/[0.06] pl-2">
+                    {isConfirming ? (
+                      <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
+                        <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Delete?</span>
+                        <button
+                          onClick={() => deleteCategory(cat.id)}
+                          className="px-2.5 py-1 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteCatId(null)}
+                          className="p-1.5 rounded-xl hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteCatId(cat.id)}
+                        className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
+                        aria-label={`Delete ${cat.label}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
