@@ -16,7 +16,7 @@ import {
   Clock, User, Scissors, Phone, Mail, MapPin, Car,
   Check, X, Trash2, ChevronDown, ChevronUp,
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
-  SendHorizonal, Search, AlertTriangle, Edit3, Sparkles, MoreHorizontal,
+  Search, AlertTriangle, Edit3, Sparkles, MoreHorizontal,
   Tag, XCircle
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -1001,15 +1001,31 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       );
                     }
                     if (b.status === "confirmed" && b.balance > 0 && !b.fullPaymentReceived) {
+                      // ── Grouped side-by-side: Email + WhatsApp, equal width ──
                       return (
-                        <button
-                          disabled={isRequestingBalance}
-                          onClick={e => { e.stopPropagation(); setConfirmRequestBalance(b); }}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.10] text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {isRequestingBalance ? <Loader2 className="w-4 h-4 animate-spin" /> : <SendHorizonal className="w-4 h-4" />}
-                          Request Final Payment
-                        </button>
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-amber-400/50">Request Final Payment</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {/* Email button */}
+                            <button
+                              disabled={isRequestingBalance}
+                              onClick={e => { e.stopPropagation(); setConfirmRequestBalance(b); }}
+                              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.10] text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {isRequestingBalance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                              <span className="text-xs">via Email</span>
+                            </button>
+                            {/* WhatsApp button */}
+                            <button
+                              disabled={isSendingWhatsAppBalance || !b.phone}
+                              onClick={e => handleWhatsAppBalance(b, e)}
+                              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.10] text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {isSendingWhatsAppBalance ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
+                              <span className="text-xs">via WhatsApp</span>
+                            </button>
+                          </div>
+                        </div>
                       );
                     }
                     if (canMarkServiced) {
@@ -1263,19 +1279,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                       <WhatsAppIcon className="w-3.5 h-3.5" />
                                       <span className="hidden sm:inline">WhatsApp</span>
                                     </a>
-                                  )}
-
-                                  {b.phone && b.balance > 0 && !b.fullPaymentReceived && (
-                                    <button
-                                      disabled={isSendingWhatsAppBalance}
-                                      onClick={e => handleWhatsAppBalance(b, e)}
-                                      aria-label="Send balance link via WhatsApp"
-                                      title="Send balance link via WhatsApp"
-                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] text-xs font-medium text-amber-400/80 hover:bg-amber-500/15 hover:text-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      {isSendingWhatsAppBalance ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <WhatsAppIcon className="w-3.5 h-3.5" />}
-                                      <span className="hidden sm:inline">Send Balance Link</span>
-                                    </button>
                                   )}
 
                                   <div className="flex-1" />
