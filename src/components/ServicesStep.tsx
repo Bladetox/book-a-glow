@@ -50,8 +50,11 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
 
   const activeCat = activeCategory ?? (categories[0]?.id ?? null);
 
+  // All active services in the selected category are shown — is_addon only
+  // controls whether a service appears as a suggestion in the popup, never
+  // whether it is visible in the tab.
   const visibleTreatments = activeCat
-    ? treatments.filter((t) => t.category === activeCat && !t.isAddon)
+    ? treatments.filter((t) => t.category === activeCat)
     : [];
 
   const selectedSet = new Set(selectedTreatments);
@@ -69,7 +72,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
     }
   };
 
-  // Tapping the selected (check) state just removes one instance
+  // Tapping the selected (check) state removes one instance
   const handleServiceToggle = (t: PublicService) => {
     if (selectedSet.has(t.id)) {
       onRemove(t.id);
