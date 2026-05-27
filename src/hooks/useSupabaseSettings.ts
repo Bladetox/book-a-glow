@@ -47,6 +47,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   "gcal_refresh_token",
   "gcal_token_expiry",
   // Yoco Payments
+  "yoco_mode",
   "yoco_public_key",
   "yoco_secret_key",
   "yoco_webhook_secret",
