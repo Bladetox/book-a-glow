@@ -77,11 +77,11 @@ export function usePublicServices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, description, price, duration_minutes, category, is_call_out_available, is_addon")
+        .select("id, name, description, price, duration_minutes, category, is_call_out_available, is_addon, display_order")
         .eq("tenant_id", tenantId)
         .eq("is_active", true)
-        .order("category", { ascending: true })
-        .order("price", { ascending: false });
+        .order("display_order", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((s): PublicService => {
         const rawCat = s.category ?? "";
