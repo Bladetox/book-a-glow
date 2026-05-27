@@ -154,52 +154,59 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
       const bookingId = result?.booking_id;
       if (bookingId) {
-        try {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-          const serviceNames = selectedWithQty
-            .map(({ svc, qty }) => (qty > 1 ? `${qty}× ${svc.name}` : svc.name))
-            .join(", ");
-          const totalDuration = selectedWithQty.reduce((s, { svc, qty }) => s + svc.duration * qty, 0);
+        // Fire-and-forget: GCal must not block the payment redirect.
+        // Any GCal failure is caught silently — the booking row already exists.
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const serviceNames = selectedWithQty
+          .map(({ svc, qty }) => (qty > 1 ? `${qty}× ${svc.name}` : svc.name))
+          .join(", ");
+        const totalDuration = selectedWithQty.reduce((s, { svc, qty }) => s + svc.duration * qty, 0);
 
-          await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${supabaseKey}`,
-              apikey: supabaseKey,
-            },
-            body: JSON.stringify({
-              tenant_id: tenantId,
-              gcal_event_id: null,
-              booking_id: bookingId,
-              new_date: bookingDate,
-              new_start_time: booking.selectedTime ?? "",
-              duration_minutes: totalDuration || 60,
-              client_name: booking.fullName || "Guest",
-              service_name: serviceNames,
-              client_phone: guestPhone || null,
-              location: booking.address || null,
-            }),
-          });
-        } catch (gcalErr) {
-          console.error("GCal create failed:", gcalErr);
-        }
+        void fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+            apikey: supabaseKey,
+          },
+          body: JSON.stringify({
+            tenant_id: tenantId,
+            gcal_event_id: null,
+            booking_id: bookingId,
+            new_date: bookingDate,
+            new_start_time: booking.selectedTime ?? "",
+            duration_minutes: totalDuration || 60,
+            client_name: booking.fullName || "Guest",
+            service_name: serviceNames,
+            client_phone: guestPhone || null,
+            location: booking.address || null,
+          }),
+        }).catch((gcalErr) => console.error("GCal create failed:", gcalErr));
 
         const origin = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
         const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
-        const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-          body: {
-            booking_id: bookingId,
-            tenant_slug: tenantId,
-            success_url: successUrl,
-            cancel_url: cancelUrl,
-            payment_type: paymentChoice,
-          },
-        });
+        // Hard 10-second timeout: if yoco-checkout hangs, surface a retryable error
+        // rather than leaving the user on an infinite spinner.
+        const checkoutTimeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Payment gateway took too long — please try again.")), 10_000)
+        );
+
+        const { data: checkoutData, error: checkoutErr } = await Promise.race([
+          supabase.functions.invoke("yoco-checkout", {
+            body: {
+              booking_id: bookingId,
+              tenant_slug: tenantId,
+              success_url: successUrl,
+              cancel_url: cancelUrl,
+              payment_type: paymentChoice,
+            },
+          }),
+          checkoutTimeout,
+        ]);
 
         if (checkoutErr) throw checkoutErr;
         if (checkoutData?.redirect_url || checkoutData?.redirectUrl || checkoutData?.url) {
@@ -238,12 +245,23 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">Review booking</h3>
+      <div>
+        <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">Review &amp; Pay</h3>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Your booking is not confirmed until payment is completed.</p>
+      </div>
 
       {/* Schedule */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
-        <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Schedule</h4>
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Schedule</h4>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => onGoToStep(1)}
+            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none"
+          >Edit</button>
+        </div>
         <span className="text-sm text-foreground">{booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—"}</span>
         <span className="text-sm text-muted-foreground">{booking.selectedTime || "—"}</span>
       </motion.div>
@@ -251,7 +269,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       {/* Contact */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
-        <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1">Contact</h4>
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Contact</h4>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => onGoToStep(2)}
+            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none"
+          >Edit</button>
+        </div>
         <span className="text-sm text-foreground">{booking.fullName || "—"}</span>
         <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
         <span className="text-sm text-muted-foreground">{booking.email || "—"}</span>
@@ -263,6 +289,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       {/* Summary card */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-0">
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Services</h4>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => onGoToStep(0)}
+            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none"
+          >Edit</button>
+        </div>
         {selectedWithQty.map(({ svc, qty }) => (
           <div key={svc.id} className="flex items-baseline justify-between py-1.5">
             <span className="text-sm text-foreground">
@@ -354,7 +389,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         <p className="text-[10px] text-muted-foreground text-center mb-3">
           By confirming you agree to our{" "}
           <button onClick={() => setShowTerms(true)} className="underline text-foreground hover:text-primary transition-colors font-medium">
-            Terms & Conditions
+            Terms &amp; Conditions
           </button>
         </p>
 
@@ -366,7 +401,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           {submitting
-            ? "Creating Booking…"
+            ? "Securing payment page…"
             : paymentChoice === "full"
             ? `Confirm & Pay ${cur}${total}`
             : `Confirm & Pay Deposit ${cur}${deposit}`
@@ -388,7 +423,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
                 <div>
                   <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">{config.name}</p>
-                  <h3 className="font-display text-lg font-bold text-foreground">Terms & Conditions</h3>
+                  <h3 className="font-display text-lg font-bold text-foreground">Terms &amp; Conditions</h3>
                 </div>
                 <button onClick={() => setShowTerms(false)} className="p-2 rounded-xl hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
                   <X className="w-5 h-5" />
