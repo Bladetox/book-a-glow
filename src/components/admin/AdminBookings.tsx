@@ -78,6 +78,15 @@ const toWhatsAppHref = (phone: string, clientName: string, date: string, time: s
   return `https://wa.me/${digits}?text=${text}`;
 };
 
+// ── Support outreach for cancelled / abandoned bookings ───────────────────────
+const toWhatsAppSupportHref = (phone: string, clientName: string, serviceNames: string) => {
+  const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
+  const text = encodeURIComponent(
+    `Hi ${clientName} 👋\n\nI noticed you tried to make a booking for ${serviceNames}, but it looks like it wasn't completed. Did you experience any challenges?\n\nPlease let me know and I'll be happy to assist! 😊`
+  );
+  return `https://wa.me/${digits}?text=${text}`;
+};
+
 // ── Build WhatsApp balance request message ───────────────────────────────────
 const toWhatsAppBalanceHref = (
   phone: string,
@@ -996,6 +1005,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                     b.status !== "complete" &&
                     b.date <= todayStr;
                   const serviceList = (b.service ?? "").split(", ").filter(Boolean);
+                  // ── Context-aware WhatsApp: support outreach for cancelled/no_show bookings
+                  const isCancelledStatus = b.status === "cancelled" || b.status === "no_show";
 
                   const primaryCTA = (() => {
                     if (b.status === "pending" || b.status === "pending_payment") {
@@ -1276,16 +1287,20 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                   {b.phone && (
                                     <a
-                                      href={toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref ?? "")}
+                                      href={
+                                        isCancelledStatus
+                                          ? toWhatsAppSupportHref(b.phone, b.client, b.service)
+                                          : toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref ?? "")
+                                      }
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={e => e.stopPropagation()}
-                                      aria-label="WhatsApp client"
-                                      title="WhatsApp client"
+                                      aria-label={isCancelledStatus ? "WhatsApp support" : "WhatsApp client"}
+                                      title={isCancelledStatus ? "Send support message" : "WhatsApp client"}
                                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#25D366]/25 bg-[#25D366]/[0.07] text-xs font-medium text-[#25D366]/80 hover:bg-[#25D366]/15 hover:text-[#25D366] transition-colors"
                                     >
                                       <WhatsAppIcon className="w-3.5 h-3.5" />
-                                      <span className="hidden sm:inline">WhatsApp</span>
+                                      <span className="hidden sm:inline">{isCancelledStatus ? "Support" : "WhatsApp"}</span>
                                     </a>
                                   )}
 
