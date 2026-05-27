@@ -58,6 +58,27 @@ const PaymentSuccess = () => {
   const isCancelled = payment === "cancelled";
   const isFinal     = type === "final" || type === "full";
 
+  // ── Clean up orphan GCal event when payment is cancelled ─────────────────
+  useEffect(() => {
+    if (!isCancelled) return;
+    // booking_id may not be in the cancel URL — only attempt if present
+    const cancelBookingId = searchParams.get("booking_id");
+    if (!cancelBookingId) return;
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    fetch(`${supabaseUrl}/functions/v1/delete-gcal-event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${supabaseKey}`,
+        apikey: supabaseKey,
+      },
+      body: JSON.stringify({ booking_id: cancelBookingId }),
+    }).catch((err) => console.error("GCal cleanup on cancel failed:", err));
+  }, [isCancelled, searchParams]);
+
   // Fixed-salon mode: show the salon address when mobile service is NOT enabled
   const showSalonAddress = !config.mobileServiceEnabled && !!config.salonAddress;
   const mapsHref = showSalonAddress
