@@ -56,14 +56,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Resolve Yoco secret key per-tenant from tenants table.
+    // Resolve Yoco secret key per-tenant.
+    // Mode is AUTO-DETECTED from the key prefix — sk_live_ = live, sk_test_ = test.
+    // No manual toggle needed or used.
+    // Priority: mode-specific columns (yoco_secret_key_live / yoco_secret_key_test)
+    // Fallback: legacy yoco_secret_key column (supports existing tenants e.g. PhenomeBeauty)
     const { data: tenantRow } = await supabase
       .from("tenants")
-      .select("yoco_secret_key")
+      .select("yoco_secret_key, yoco_secret_key_live, yoco_secret_key_test, yoco_mode")
       .eq("id", booking.tenant_id)
       .single();
 
-    const yocoSecret = tenantRow?.yoco_secret_key;
+    const resolvedKey =
+      tenantRow?.yoco_secret_key_live ||
+      tenantRow?.yoco_secret_key_test ||
+      tenantRow?.yoco_secret_key; // legacy fallback for PhenomeBeauty and pre-migration tenants
+
+    const isLive = resolvedKey?.startsWith("sk_live_") ?? false;
+    const yocoSecret = resolvedKey;
+
+    console.log(`[yoco-checkout] tenant=${booking.tenant_id} mode=${isLive ? "live" : "test"} key_prefix=${yocoSecret?.slice(0, 12)}...`);
 
     if (!yocoSecret) {
       return new Response(
@@ -89,8 +101,6 @@ Deno.serve(async (req) => {
 
     let amountInCents: number;
     if (payment_type === "balance") {
-      // Use stored balance_due as source of truth.
-      // Fall back to total-deposit for legacy rows where balance_due not yet written.
       if (Number(booking.balance_due) > 0) {
         amountInCents = Math.round(Number(booking.balance_due) * 100);
       } else {
@@ -99,7 +109,6 @@ Deno.serve(async (req) => {
         );
       }
     } else if (payment_type === "full") {
-      // Client chose to pay the full amount upfront — always use DB total
       amountInCents = Math.round(Number(booking.total_amount) * 100);
     } else {
       amountInCents = Math.round(Number(booking.deposit_amount) * 100);
@@ -144,8 +153,8 @@ Deno.serve(async (req) => {
     if (!yocoRes.ok) {
       console.error("Yoco error:", yocoData);
       return new Response(
-        JSON.stringify({ error: "Failed to create checkout" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to create Yoco checkout", detail: yocoData }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
