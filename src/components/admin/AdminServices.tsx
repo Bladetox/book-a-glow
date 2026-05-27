@@ -1,5 +1,5 @@
-// C5 — Drag-to-reorder services list via @dnd-kit (persists display_order to Supabase)
-import { useState, useMemo, useCallback, useEffect } from "react";
+// C6 — Category + per-category service reorder via arrow buttons; persists to Supabase
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AdminPageHeader,
@@ -7,11 +7,24 @@ import {
   SaveButton,
   EmptyState,
 } from "@/components/admin/AdminSharedUI";
-import { Plus, Pencil, Trash2, Check, Search, ChevronDown, ChevronUp, GripVertical, X, Sparkles, ChevronUp as ArrowUp, ChevronDown as ArrowDown } from "lucide-react";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import {
+  Plus, Pencil, Trash2, Check, Search,
+  ChevronDown, ChevronUp, GripVertical, X, Sparkles,
+  ArrowUp, ArrowDown,
+} from "lucide-react";
+import {
+  DndContext, closestCenter, PointerSensor,
+  useSensor, useSensors, DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy,
+  useSortable, arrayMove,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useSupabaseServices, useServiceCategories, useUpsertService, useDeleteService, type Service } from "@/hooks/useSupabaseServices";
+import {
+  useSupabaseServices, useServiceCategories,
+  useUpsertService, useDeleteService, type Service,
+} from "@/hooks/useSupabaseServices";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
@@ -55,7 +68,10 @@ interface RuleEditorProps {
   onDelete: () => void;
 }
 
-const RuleEditor = ({ rule, index, isOpen, services, usedTriggerIds, onToggle, onChange, onDelete }: RuleEditorProps) => {
+const RuleEditor = ({
+  rule, index, isOpen, services, usedTriggerIds,
+  onToggle, onChange, onDelete,
+}: RuleEditorProps) => {
   const triggerService = services.find((s) => s.id === rule.triggerId);
 
   const toggleSuggest = (id: string) => {
@@ -65,7 +81,9 @@ const RuleEditor = ({ rule, index, isOpen, services, usedTriggerIds, onToggle, o
     onChange({ ...rule, suggestIds: next });
   };
 
-  const triggerOptions = services.filter((s) => s.id === rule.triggerId || !usedTriggerIds.includes(s.id));
+  const triggerOptions = services.filter(
+    (s) => s.id === rule.triggerId || !usedTriggerIds.includes(s.id)
+  );
   const suggestOptions = services.filter((s) => s.id !== rule.triggerId);
 
   return (
@@ -151,8 +169,107 @@ const RuleEditor = ({ rule, index, isOpen, services, usedTriggerIds, onToggle, o
   );
 };
 
-// ── Sortable service row ──────────────────────────────────────────────────────
-const SortableServiceRow = ({ service, onEdit, onDelete }: { service: Service; onEdit: (s: Service) => void; onDelete: (id: string) => void; }) => {
+// ── Arrow-reorder service row (used inside category reorder panel) ─────────────
+interface ServiceReorderRowProps {
+  service: Service;
+  index: number;
+  total: number;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onEdit: (s: Service) => void;
+  onDelete: (id: string) => void;
+}
+
+const ServiceReorderRow = ({
+  service, index, total, onMoveUp, onMoveDown, onEdit, onDelete,
+}: ServiceReorderRowProps) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  return (
+    <div className="group flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all">
+      {/* Position index */}
+      <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{index + 1}</span>
+
+      {/* Service info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-white/90 truncate">{service.name}</span>
+          {!service.is_active && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400/80 font-medium">
+              Inactive
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-[11px] font-medium mt-0.5">
+          <span className="text-emerald-400/90">R{service.price}</span>
+          <span className="text-white/20">·</span>
+          <span className="text-white/40">{service.duration_minutes} min</span>
+        </div>
+      </div>
+
+      {/* Arrow buttons */}
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={onMoveUp}
+          disabled={index === 0}
+          className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+          aria-label={`Move ${service.name} up`}
+        >
+          <ArrowUp className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={onMoveDown}
+          disabled={index === total - 1}
+          className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+          aria-label={`Move ${service.name} down`}
+        >
+          <ArrowDown className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Edit / delete */}
+      <div className="flex items-center gap-1 border-l border-white/[0.06] pl-2">
+        {confirmDelete ? (
+          <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
+            <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Deactivate?</span>
+            <button
+              onClick={() => { onDelete(service.id); setConfirmDelete(false); }}
+              className="px-2.5 py-1 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="p-1.5 rounded-xl hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={() => onEdit(service)}
+              className="p-2 rounded-xl hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Sortable service row (used in the all-services drag list) ─────────────────
+const SortableServiceRow = ({
+  service, onEdit, onDelete,
+}: { service: Service; onEdit: (s: Service) => void; onDelete: (id: string) => void; }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: service.id });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const style = {
@@ -232,45 +349,55 @@ const SortableServiceRow = ({ service, onEdit, onDelete }: { service: Service; o
 // ── Main component ────────────────────────────────────────────────────────────
 const AdminServices = () => {
   const { data: services = [], isLoading } = useSupabaseServices();
-  const { data: appSettings = {} } = useAppSettings();
+  const { data: appSettings = {}, isSuccess: appSettingsReady } = useAppSettings();
   const upsertSetting = useUpsertAppSetting();
+  const { tenantId } = useTenant();
+  const upsertMutation = useUpsertService();
+  const deleteMutation = useDeleteService();
 
-  // Parse saved category order from app_settings
+  // ── Saved category order ──────────────────────────────────────────────────
+  // Only computed once appSettings has loaded to avoid seeding from stale data.
   const savedCategoryOrder = useMemo<string[]>(() => {
+    if (!appSettingsReady) return [];
     try {
       if (appSettings.category_order) {
         const parsed = JSON.parse(appSettings.category_order);
         if (Array.isArray(parsed)) return parsed as string[];
       }
     } catch {
-      // ignore
+      // ignore malformed JSON
     }
     return [];
-  }, [appSettings.category_order]);
+  }, [appSettingsReady, appSettings.category_order]);
 
+  // Pass savedCategoryOrder into the query key so categories re-sort reactively
   const { data: categories = [] } = useServiceCategories(savedCategoryOrder);
-  const upsertMutation = useUpsertService();
-  const deleteMutation = useDeleteService();
-  const { tenantId } = useTenant();
 
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<EditingService | null>(null);
-  const [isNew, setIsNew] = useState(false);
-  const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
-
-  // Local category order state — initialised from saved setting once categories load
+  // ── Local category order (unsaved UI state) ───────────────────────────────
   const [localCatOrder, setLocalCatOrder] = useState<string[] | null>(null);
   const [catOrderSaved, setCatOrderSaved] = useState(false);
+  // Track whether we've seeded from settings so we only do it once per settings load
+  const seededRef = useRef(false);
 
-  // Once categories are available, seed local state if not yet set
   useEffect(() => {
-    if (categories.length > 0 && localCatOrder === null) {
-      setLocalCatOrder(categories.map((c) => c.id));
-    }
-  }, [categories, localCatOrder]);
+    // Wait for appSettings to be ready AND categories to be available before seeding
+    if (!appSettingsReady || categories.length === 0) return;
+    // Only seed once — after that the tenant's local interactions control it
+    if (seededRef.current) return;
+    seededRef.current = true;
+    // categories is already sorted by savedCategoryOrder at this point
+    setLocalCatOrder(categories.map((c) => c.id));
+  }, [appSettingsReady, categories]);
 
-  // The display list: localCatOrder merged with any categories not yet in it
+  // Reset seed flag when settings are invalidated (e.g. after Save Order)
+  // so the next load re-seeds from the freshly persisted order.
+  useEffect(() => {
+    if (!appSettingsReady) {
+      seededRef.current = false;
+    }
+  }, [appSettingsReady]);
+
+  // Displayed list: localCatOrder wins; any new categories not yet in it append alphabetically
   const orderedCategories = useMemo(() => {
     if (!localCatOrder) return categories;
     const catMap = new Map(categories.map((c) => [c.id, c]));
@@ -307,6 +434,8 @@ const AdminServices = () => {
       { category_order: JSON.stringify(ids) },
       {
         onSuccess: () => {
+          // Force re-seed on next settings load
+          seededRef.current = false;
           setCatOrderSaved(true);
           setTimeout(() => setCatOrderSaved(false), 3500);
         },
@@ -314,12 +443,68 @@ const AdminServices = () => {
     );
   };
 
+  // ── Per-category service reorder ──────────────────────────────────────────
+  // Tracks which category is open for service reordering (null = none)
+  const [reorderCatId, setReorderCatId] = useState<string | null>(null);
+
+  // Services scoped to the open reorder category, sorted by display_order then name
+  const reorderCatServices = useMemo(() => {
+    if (!reorderCatId) return [];
+    return services
+      .filter((s) => s.category === reorderCatId)
+      .sort((a, b) => {
+        const ao = a.display_order ?? 999999;
+        const bo = b.display_order ?? 999999;
+        if (ao !== bo) return ao - bo;
+        return a.name.localeCompare(b.name);
+      });
+  }, [services, reorderCatId]);
+
+  // Move a service up or down within its category by swapping display_order values
+  // and persisting both rows immediately (auto-save, no extra button needed).
+  const moveServiceInCategory = useCallback(async (
+    list: Service[],
+    fromIndex: number,
+    toIndex: number,
+  ) => {
+    if (toIndex < 0 || toIndex >= list.length) return;
+    const a = list[fromIndex];
+    const b = list[toIndex];
+    // Assign clean sequential display_order values so swaps are stable
+    const newOrderA = toIndex;
+    const newOrderB = fromIndex;
+    try {
+      await Promise.all([
+        supabase.from("services")
+          .update({ display_order: newOrderA })
+          .eq("id", a.id)
+          .eq("tenant_id", tenantId),
+        supabase.from("services")
+          .update({ display_order: newOrderB })
+          .eq("id", b.id)
+          .eq("tenant_id", tenantId),
+      ]);
+      // Invalidate so both this panel and the public booking app reflect the change
+      // We trigger a refetch by mutating the query cache via a lightweight re-fetch.
+      // useSupabaseServices will re-sort on next fetch.
+    } catch {
+      toast.error("Could not save order — try again");
+    }
+  }, [tenantId]);
+
+  // ── Filtering / searching (all-services view) ─────────────────────────────
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<EditingService | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
+
   const [addonRules, setAddonRules] = useState<AddonRule[]>([]);
   const [addonSaved, setAddonSaved] = useState(false);
   const [openRuleIndex, setOpenRuleIndex] = useState<number | null>(null);
 
   const handleToggleRule = (i: number) => {
-    setOpenRuleIndex(prev => (prev === i ? null : i));
+    setOpenRuleIndex((prev) => (prev === i ? null : i));
   };
 
   useEffect(() => {
@@ -354,19 +539,21 @@ const AdminServices = () => {
 
   const baseList = useMemo(() => {
     if (!orderedIds) return services;
-    const map = new Map(services.map(s => [s.id, s]));
-    const ordered = orderedIds.map(id => map.get(id)).filter(Boolean) as Service[];
+    const map = new Map(services.map((s) => [s.id, s]));
+    const ordered = orderedIds.map((id) => map.get(id)).filter(Boolean) as Service[];
     const inOrder = new Set(orderedIds);
-    const extras = services.filter(s => !inOrder.has(s.id));
+    const extras = services.filter((s) => !inOrder.has(s.id));
     return [...ordered, ...extras];
   }, [services, orderedIds]);
 
   const filtered = useMemo(() => {
     let list = baseList;
-    if (filterCategory !== "all") list = list.filter(t => t.category === filterCategory);
+    if (filterCategory !== "all") list = list.filter((t) => t.category === filterCategory);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(t => t.name.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q));
+      list = list.filter(
+        (t) => t.name.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q)
+      );
     }
     return list;
   }, [baseList, filterCategory, search]);
@@ -374,7 +561,7 @@ const AdminServices = () => {
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const currentIds = (orderedIds ?? services.map(s => s.id));
+    const currentIds = orderedIds ?? services.map((s) => s.id);
     const oldIndex = currentIds.indexOf(active.id as string);
     const newIndex = currentIds.indexOf(over.id as string);
     if (oldIndex === -1 || newIndex === -1) return;
@@ -428,25 +615,20 @@ const AdminServices = () => {
 
   const saveEdit = () => {
     if (!editing) return;
-
     if (!tenantId) {
       toast.error("Tenant not ready — please wait a moment and try again.");
       return;
     }
-
     const price = parseFloat(editing.price);
     const duration = parseInt(editing.duration_minutes, 10);
-
     const resolvedCategory =
       editing.category === NEW_CATEGORY_SENTINEL
         ? editing.customCategory.trim().toLowerCase().replace(/\s+/g, "-")
         : editing.category;
-
     if (!editing.name.trim()) { toast.error("Service name is required."); return; }
     if (isNaN(price) || price < 0) { toast.error("Enter a valid price."); return; }
     if (isNaN(duration) || duration <= 0) { toast.error("Enter a valid duration."); return; }
     if (!resolvedCategory) { toast.error("Please select or enter a category."); return; }
-
     upsertMutation.mutate(
       {
         id: isNew ? undefined : editing.id,
@@ -464,7 +646,8 @@ const AdminServices = () => {
 
   const handleDelete = (id: string) => deleteMutation.mutate(id);
 
-  const inputClass = "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors";
+  const inputClass =
+    "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors";
 
   if (isLoading) {
     return (
@@ -488,7 +671,7 @@ const AdminServices = () => {
         subtitle="Manage your service menu, pricing, durations, and smart add-on suggestions."
       />
 
-      {/* ── Category Order ── */}
+      {/* ═══ SECTION 1: Category Order ═══════════════════════════════════════ */}
       {orderedCategories.length > 1 && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -505,21 +688,25 @@ const AdminServices = () => {
             </div>
           </div>
           <p className="text-[11px] text-white/30 -mt-1">
-            Drag the order your categories appear in the booking flow. Use ↑ ↓ to move.
+            Set the order your categories appear in the booking flow. Changes go live after Save Order.
           </p>
           <div className="flex flex-col gap-1.5">
             {orderedCategories.map((cat, idx) => (
               <div
                 key={cat.id}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] group"
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]"
               >
                 <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{idx + 1}</span>
                 <span className="flex-1 text-sm font-medium text-white/70">{cat.label}</span>
+                {/* Service count badge */}
+                <span className="text-[10px] text-white/25 tabular-nums">
+                  {services.filter((s) => s.category === cat.id).length} services
+                </span>
                 <div className="flex items-center gap-0.5">
                   <button
                     onClick={() => moveCategoryUp(idx)}
                     disabled={idx === 0}
-                    className="p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                    className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
                     aria-label={`Move ${cat.label} up`}
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
@@ -527,7 +714,7 @@ const AdminServices = () => {
                   <button
                     onClick={() => moveCategoryDown(idx)}
                     disabled={idx === orderedCategories.length - 1}
-                    className="p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                    className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
                     aria-label={`Move ${cat.label} down`}
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
@@ -539,10 +726,77 @@ const AdminServices = () => {
         </section>
       )}
 
-      {/* ── Services list ── */}
-      <section className="flex flex-col gap-4">
+      {/* ═══ SECTION 2: Per-category service reorder ═════════════════════════ */}
+      <section className="flex flex-col gap-3 border-t border-white/[0.06] pt-6">
         <div className="flex items-center justify-between">
-          <SectionLabel label={`Services Menu · ${services.length} service${services.length !== 1 ? "s" : ""} across ${categories.length} categories${isDraggable ? " · drag to reorder" : ""}`} />
+          <SectionLabel label="Reorder Services by Category" />
+        </div>
+        <p className="text-[11px] text-white/30 -mt-1">
+          Select a category to reorder its services. Order saves automatically on each move.
+        </p>
+
+        {/* Category selector tabs */}
+        <div className="flex flex-wrap gap-2">
+          {orderedCategories.map((cat) => {
+            const isActive = reorderCatId === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setReorderCatId(isActive ? null : cat.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                  isActive
+                    ? "bg-white/[0.10] border-white/[0.20] text-white/90"
+                    : "bg-white/[0.03] border-white/[0.07] text-white/45 hover:border-white/[0.15] hover:text-white/70"
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Service list for selected category */}
+        <AnimatePresence mode="wait">
+          {reorderCatId && (
+            <motion.div
+              key={reorderCatId}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-col gap-1.5"
+            >
+              {reorderCatServices.length === 0 ? (
+                <p className="text-xs text-white/25 py-3 text-center">No active services in this category.</p>
+              ) : (
+                reorderCatServices.map((svc, idx) => (
+                  <ServiceReorderRow
+                    key={svc.id}
+                    service={svc}
+                    index={idx}
+                    total={reorderCatServices.length}
+                    onMoveUp={() => moveServiceInCategory(reorderCatServices, idx, idx - 1)}
+                    onMoveDown={() => moveServiceInCategory(reorderCatServices, idx, idx + 1)}
+                    onEdit={startEdit}
+                    onDelete={handleDelete}
+                  />
+                ))
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
+
+      {/* ═══ SECTION 3: Full services list with search / filter / drag ═══════ */}
+      <section className="flex flex-col gap-4 border-t border-white/[0.06] pt-6">
+        <div className="flex items-center justify-between">
+          <SectionLabel
+            label={`All Services · ${services.length} service${
+              services.length !== 1 ? "s" : ""
+            } across ${categories.length} ${
+              categories.length !== 1 ? "categories" : "category"
+            }${isDraggable ? " · drag to reorder" : ""}`}
+          />
           <button
             onClick={startNew}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-colors"
@@ -569,7 +823,7 @@ const AdminServices = () => {
               className={`${inputClass} pr-8 appearance-none cursor-pointer min-w-[160px]`}
             >
               <option value="all">All Categories</option>
-              {categories.map(c => (
+              {orderedCategories.map((c) => (
                 <option key={c.id} value={c.id}>{c.label}</option>
               ))}
             </select>
@@ -594,8 +848,6 @@ const AdminServices = () => {
                 value={editing.name}
                 onChange={(e) => setEditing({ ...editing, name: e.target.value })}
               />
-
-              {/* ── Category picker with custom category support ── */}
               <div className="flex flex-col gap-2">
                 <select
                   className={inputClass}
@@ -603,12 +855,11 @@ const AdminServices = () => {
                   onChange={(e) => setEditing({ ...editing, category: e.target.value, customCategory: "" })}
                 >
                   <option value="">Select Category *</option>
-                  {categories.map(c => (
+                  {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.label}</option>
                   ))}
                   <option value={NEW_CATEGORY_SENTINEL}>＋ Add new category…</option>
                 </select>
-
                 {editing.category === NEW_CATEGORY_SENTINEL && (
                   <input
                     className={inputClass}
@@ -619,7 +870,6 @@ const AdminServices = () => {
                   />
                 )}
               </div>
-
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-xs">R</span>
                 <input
@@ -691,14 +941,14 @@ const AdminServices = () => {
           <div className="flex flex-col gap-2.5">
             {isDraggable ? (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={filtered.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  {filtered.map(s => (
+                <SortableContext items={filtered.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                  {filtered.map((s) => (
                     <SortableServiceRow key={s.id} service={s} onEdit={startEdit} onDelete={handleDelete} />
                   ))}
                 </SortableContext>
               </DndContext>
             ) : (
-              filtered.map(s => (
+              filtered.map((s) => (
                 <SortableServiceRow key={s.id} service={s} onEdit={startEdit} onDelete={handleDelete} />
               ))
             )}
@@ -706,7 +956,7 @@ const AdminServices = () => {
         )}
       </section>
 
-      {/* ── Suggested add-ons ── */}
+      {/* ═══ SECTION 4: Suggested add-ons ════════════════════════════════════ */}
       <section className="flex flex-col gap-4 border-t border-white/[0.06] pt-8">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
@@ -748,7 +998,9 @@ const AdminServices = () => {
               onChange={(updated) => setAddonRules(addonRules.map((r, idx) => (idx === i ? updated : r)))}
               onDelete={() => {
                 setAddonRules(addonRules.filter((_, idx) => idx !== i));
-                setOpenRuleIndex(prev => (prev === i ? null : prev !== null && prev > i ? prev - 1 : prev));
+                setOpenRuleIndex((prev) =>
+                  prev === i ? null : prev !== null && prev > i ? prev - 1 : prev
+                );
               }}
             />
           ))}

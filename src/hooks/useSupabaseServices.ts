@@ -46,15 +46,17 @@ export function useSupabaseServices() {
 
 /**
  * Returns distinct categories derived from active services.
- * If `categoryOrder` is provided (array of category id strings),
- * categories are sorted to match that order; any category not listed
- * falls back to alphabetical at the end.
+ * categoryOrder is included in the query key so React Query re-sorts
+ * whenever the saved order changes — fixing the stale-sort bug.
+ * If categoryOrder is provided, categories are sorted to match it;
+ * any category not listed falls back to alphabetical at the end.
  */
 export function useServiceCategories(categoryOrder?: string[]) {
   const { tenantId } = useTenant();
 
   return useQuery({
-    queryKey: ["service-categories", tenantId],
+    // Include the order array in the key so the sort updates reactively
+    queryKey: ["service-categories", tenantId, categoryOrder ?? []],
     enabled: !!tenantId,
     queryFn: async () => {
       if (!tenantId) return [];
