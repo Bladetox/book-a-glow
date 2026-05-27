@@ -45,6 +45,15 @@ const PERIOD_COMPARE_LABEL: Record<PeriodLabel, string> = {
   "90D": "prev 90 days",
 };
 
+// ─── Helper: local YYYY-MM-DD string (avoids UTC/SAST off-by-one) ─────────────
+// Using toLocaleDateString("en-CA") returns the date in YYYY-MM-DD format
+// based on the device's local timezone, which is SAST for our users.
+// This prevents .toISOString() from rolling back to yesterday between midnight
+// and 02:00 SAST when UTC is still the previous day.
+function toLocalDateStr(date: Date): string {
+  return date.toLocaleDateString("en-CA"); // en-CA locale gives YYYY-MM-DD
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────────
 
 const Skeleton = () => (
@@ -145,7 +154,10 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue, lastPeriodRevenue, load
     if (revenueTrend[0]?.date) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - selectedDays);
-      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      // Fix: use local date string to stay in SAST — avoids UTC off-by-one
+      // between midnight and 02:00 SAST when .toISOString() would roll back
+      // to yesterday (UTC is still the previous day during that window).
+      const cutoffStr = toLocalDateStr(cutoff);
       return revenueTrend.filter(e => e.date != null && e.date >= cutoffStr);
     }
     // Fallback for legacy data without date field
@@ -173,8 +185,9 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue, lastPeriodRevenue, load
     currentCutoff.setDate(now.getDate() - selectedDays);
     const prevCutoff = new Date();
     prevCutoff.setDate(now.getDate() - selectedDays * 2);
-    const currentCutoffStr = currentCutoff.toISOString().slice(0, 10);
-    const prevCutoffStr    = prevCutoff.toISOString().slice(0, 10);
+    // Fix: use local date strings for both cutoffs — same UTC/SAST correction
+    const currentCutoffStr = toLocalDateStr(currentCutoff);
+    const prevCutoffStr    = toLocalDateStr(prevCutoff);
     const prevTotal = revenueTrend
       .filter(e => e.date != null && e.date >= prevCutoffStr && e.date < currentCutoffStr)
       .reduce((s, d) => s + d.value, 0);
