@@ -189,7 +189,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         const origin = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
-        const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled`;
+        const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
         const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
           body: {
