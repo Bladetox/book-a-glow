@@ -53,12 +53,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
   const [showPairWith, setShowPairWith] = useState(false);
 
-  // ── Show the pair-with popup once on mount if there are suggestions available ──
+  // ── Show the pair-with sheet once on mount ──
   useEffect(() => {
     setShowPairWith(true);
   }, []);
 
-  // ── Build deduplicated add-on list across all selected services ─────────────
+  // ── Build deduplicated add-on list across all selected services ──
   const pairWithAddons = useMemo(() => {
     if (!addonsConfig || !allServices.length) return [];
     const selectedSet = new Set(booking.selectedTreatments);
@@ -404,7 +404,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         </motion.button>
       </motion.div>
 
-      {/* ── Pair your services with — bottom sheet ─────────────────────────── */}
+      {/* ── Pair your services with — bottom sheet ── */}
       <AnimatePresence>
         {showPairWith && hasPairWith && (
           <>
@@ -430,27 +430,27 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               transition={{ type: "spring", stiffness: 380, damping: 38 }}
             >
               {/* Drag handle */}
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-1 shrink-0" />
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
 
-              {/* Header */}
-              <div className="flex items-start justify-between px-5 pt-2 pb-3 shrink-0">
-                <div>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="text-[10px] font-semibold tracking-[0.18em] uppercase text-primary">
+              {/* Header — bold display title, clear context */}
+              <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
+                <div className="flex-1 min-w-0 pr-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                    <h2 className="font-display text-lg font-bold text-foreground leading-tight">
                       Pair your services with
-                    </span>
+                    </h2>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground leading-snug">
                     Clients often add these to their booking
                   </p>
                 </div>
                 <button
                   onClick={() => setShowPairWith(false)}
-                  className="w-7 h-7 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors shrink-0"
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors shrink-0 mt-0.5"
                   aria-label="Close"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
