@@ -22,6 +22,13 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
   const servicesHeading: string =
     (config as Record<string, string>)["services_step_heading"] ?? "Select a service";
 
+  // ── Pre-compute the set of all trigger IDs so ServicesStep can also guard
+  //    nestedAddonIds at the render layer (belt-and-suspenders defence).
+  const triggerIdSet = useMemo(() => {
+    if (!addonsConfig) return new Set<string>();
+    return new Set(addonsConfig.rules.map((r) => r.triggerId));
+  }, [addonsConfig]);
+
   // ── Derive suggestion strip ──────────────────────────────────────────────
   const suggestionStrip = useMemo(() => {
     if (!addonsConfig) return null;
@@ -166,9 +173,14 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
               const count = qty(t.id);
               const isSelected = count > 0;
 
-              // Add-ons already selected that belong to this trigger service
+              // Add-ons already selected that belong to this trigger service.
+              // getSelectedAddonsForTrigger already filters out trigger services,
+              // but we apply the triggerIdSet guard here too as a belt-and-suspenders
+              // defence against any future rule shape edge cases.
               const nestedAddonIds = addonsConfig
-                ? getSelectedAddonsForTrigger(addonsConfig, t.id, selectedTreatments)
+                ? getSelectedAddonsForTrigger(addonsConfig, t.id, selectedTreatments).filter(
+                    (id) => !triggerIdSet.has(id)
+                  )
                 : [];
               const nestedAddons = nestedAddonIds
                 .map((id) => treatments.find((tr) => tr.id === id))

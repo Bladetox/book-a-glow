@@ -116,21 +116,32 @@ export function getActiveSuggestions(
 
 /**
  * Returns add-on IDs that are ALREADY selected and belong to a specific
- * triggerId. Used to render nested add-on rows inside the parent service card.
+ * triggerId's rule — but ONLY if those add-ons are not themselves trigger
+ * services (i.e. have their own rule). This prevents circular/cross-reference
+ * bleed where e.g. Hollywood appears nested inside Brazilian's card.
  */
 export function getSelectedAddonsForTrigger(
   config: SuggestedAddonsConfig,
   triggerId: string,
   selectedIds: string[]
 ): string[] {
+  // Build a set of all IDs that are themselves triggers (main services).
+  // These must never appear as nested add-ons inside another card.
+  const triggerSet = new Set(config.rules.map((r) => r.triggerId));
+
   const selectedSet = new Set(selectedIds);
   const result = new Set<string>();
+
   for (const rule of config.rules) {
     if (rule.triggerId === triggerId) {
       for (const id of rule.suggestIds) {
-        if (selectedSet.has(id) && id !== triggerId) result.add(id);
+        // Must be selected, not the trigger itself, and NOT a trigger service
+        if (selectedSet.has(id) && id !== triggerId && !triggerSet.has(id)) {
+          result.add(id);
+        }
       }
     }
   }
+
   return Array.from(result);
 }
