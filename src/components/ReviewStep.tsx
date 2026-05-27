@@ -404,14 +404,14 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         </motion.button>
       </motion.div>
 
-      {/* ── Pair your services with — bottom sheet ── */}
+      {/* ── Pair your services with — full-height mobile bottom sheet ── */}
       <AnimatePresence>
         {showPairWith && hasPairWith && (
           <>
             {/* Backdrop */}
             <motion.div
               key="pair-backdrop"
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -419,11 +419,11 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               onClick={() => setShowPairWith(false)}
             />
 
-            {/* Sheet */}
+            {/* Sheet — 90dvh so it fills the screen from the bottom on mobile */}
             <motion.div
               key="pair-sheet"
-              className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-2xl bg-background border-t border-border flex flex-col"
-              style={{ maxHeight: "75vh" }}
+              className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
+              style={{ height: "90dvh" }}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -432,7 +432,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               {/* Drag handle */}
               <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
 
-              {/* Header — bold display title, clear context */}
+              {/* Header */}
               <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
                 <div className="flex-1 min-w-0 pr-3">
                   <div className="flex items-center gap-2 mb-1">
@@ -454,7 +454,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                 </button>
               </div>
 
-              {/* Scrollable add-on list */}
+              {/* Scrollable add-on list — flex-1 fills all remaining height */}
               <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-2 scrollbar-hide">
                 {pairWithAddons.map((a) => {
                   const already = booking.selectedTreatments.includes(a.id);
@@ -505,8 +505,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                 })}
               </div>
 
-              {/* Done button */}
-              <div className="px-5 pt-3 pb-6 shrink-0 border-t border-border/30">
+              {/* Done button — pinned to bottom, respects iOS safe area */}
+              <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setShowPairWith(false)}
