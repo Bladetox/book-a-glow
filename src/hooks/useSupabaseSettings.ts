@@ -54,6 +54,8 @@ const ALLOWED_APP_SETTING_KEYS = [
   "yoco_webhook_id",
   // Suggested add-ons (booking flow upsell)
   "suggested_addons",
+  // Category display order
+  "category_order",
 ] as const;
 
 // ─── Tenant fields safe to expose to the client ───────────────────────────────

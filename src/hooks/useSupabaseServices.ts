@@ -44,7 +44,13 @@ export function useSupabaseServices() {
   });
 }
 
-export function useServiceCategories() {
+/**
+ * Returns distinct categories derived from active services.
+ * If `categoryOrder` is provided (array of category id strings),
+ * categories are sorted to match that order; any category not listed
+ * falls back to alphabetical at the end.
+ */
+export function useServiceCategories(categoryOrder?: string[]) {
   const { tenantId } = useTenant();
 
   return useQuery({
@@ -59,7 +65,21 @@ export function useServiceCategories() {
         .eq("is_active", true)
         .order("category");
       if (error) throw error;
-      const unique = [...new Set((data ?? []).map((d) => d.category))].sort();
+      const unique = [...new Set((data ?? []).map((d) => d.category))];
+
+      if (categoryOrder && categoryOrder.length > 0) {
+        unique.sort((a, b) => {
+          const ai = categoryOrder.indexOf(a);
+          const bi = categoryOrder.indexOf(b);
+          if (ai !== -1 && bi !== -1) return ai - bi;
+          if (ai !== -1) return -1;
+          if (bi !== -1) return 1;
+          return a.localeCompare(b);
+        });
+      } else {
+        unique.sort();
+      }
+
       return unique.map((c) => ({
         id: c,
         label: c.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),

@@ -7,7 +7,7 @@ import {
   SaveButton,
   EmptyState,
 } from "@/components/admin/AdminSharedUI";
-import { Plus, Pencil, Trash2, Check, Search, ChevronDown, ChevronUp, GripVertical, X, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Search, ChevronDown, ChevronUp, GripVertical, X, Sparkles, ChevronUp as ArrowUp, ChevronDown as ArrowDown } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -232,18 +232,87 @@ const SortableServiceRow = ({ service, onEdit, onDelete }: { service: Service; o
 // ── Main component ────────────────────────────────────────────────────────────
 const AdminServices = () => {
   const { data: services = [], isLoading } = useSupabaseServices();
-  const { data: categories = [] } = useServiceCategories();
+  const { data: appSettings = {} } = useAppSettings();
+  const upsertSetting = useUpsertAppSetting();
+
+  // Parse saved category order from app_settings
+  const savedCategoryOrder = useMemo<string[]>(() => {
+    try {
+      if (appSettings.category_order) {
+        const parsed = JSON.parse(appSettings.category_order);
+        if (Array.isArray(parsed)) return parsed as string[];
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  }, [appSettings.category_order]);
+
+  const { data: categories = [] } = useServiceCategories(savedCategoryOrder);
   const upsertMutation = useUpsertService();
   const deleteMutation = useDeleteService();
   const { tenantId } = useTenant();
-  const { data: appSettings = {} } = useAppSettings();
-  const upsertSetting = useUpsertAppSetting();
 
   const [filterCategory, setFilterCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<EditingService | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
+
+  // Local category order state — initialised from saved setting once categories load
+  const [localCatOrder, setLocalCatOrder] = useState<string[] | null>(null);
+  const [catOrderSaved, setCatOrderSaved] = useState(false);
+
+  // Once categories are available, seed local state if not yet set
+  useEffect(() => {
+    if (categories.length > 0 && localCatOrder === null) {
+      setLocalCatOrder(categories.map((c) => c.id));
+    }
+  }, [categories, localCatOrder]);
+
+  // The display list: localCatOrder merged with any categories not yet in it
+  const orderedCategories = useMemo(() => {
+    if (!localCatOrder) return categories;
+    const catMap = new Map(categories.map((c) => [c.id, c]));
+    const inOrder = localCatOrder
+      .map((id) => catMap.get(id))
+      .filter(Boolean) as typeof categories;
+    const extras = categories.filter((c) => !localCatOrder.includes(c.id));
+    return [...inOrder, ...extras];
+  }, [categories, localCatOrder]);
+
+  const moveCategoryUp = (index: number) => {
+    if (index === 0) return;
+    setLocalCatOrder((prev) => {
+      const ids = prev ?? orderedCategories.map((c) => c.id);
+      const next = [...ids];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
+  };
+
+  const moveCategoryDown = (index: number) => {
+    setLocalCatOrder((prev) => {
+      const ids = prev ?? orderedCategories.map((c) => c.id);
+      if (index >= ids.length - 1) return ids;
+      const next = [...ids];
+      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+      return next;
+    });
+  };
+
+  const saveCategoryOrder = () => {
+    const ids = localCatOrder ?? orderedCategories.map((c) => c.id);
+    upsertSetting.mutate(
+      { category_order: JSON.stringify(ids) },
+      {
+        onSuccess: () => {
+          setCatOrderSaved(true);
+          setTimeout(() => setCatOrderSaved(false), 3500);
+        },
+      }
+    );
+  };
 
   const [addonRules, setAddonRules] = useState<AddonRule[]>([]);
   const [addonSaved, setAddonSaved] = useState(false);
@@ -419,6 +488,57 @@ const AdminServices = () => {
         subtitle="Manage your service menu, pricing, durations, and smart add-on suggestions."
       />
 
+      {/* ── Category Order ── */}
+      {orderedCategories.length > 1 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <SectionLabel label="Category Order" />
+            <div className="flex items-center gap-3">
+              {catOrderSaved && (
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Saved</span>
+              )}
+              <SaveButton
+                label="Save Order"
+                loading={upsertSetting.isPending}
+                onClick={saveCategoryOrder}
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-white/30 -mt-1">
+            Drag the order your categories appear in the booking flow. Use ↑ ↓ to move.
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {orderedCategories.map((cat, idx) => (
+              <div
+                key={cat.id}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] group"
+              >
+                <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{idx + 1}</span>
+                <span className="flex-1 text-sm font-medium text-white/70">{cat.label}</span>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => moveCategoryUp(idx)}
+                    disabled={idx === 0}
+                    className="p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                    aria-label={`Move ${cat.label} up`}
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => moveCategoryDown(idx)}
+                    disabled={idx === orderedCategories.length - 1}
+                    className="p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                    aria-label={`Move ${cat.label} down`}
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ── Services list ── */}
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
@@ -551,7 +671,6 @@ const AdminServices = () => {
           </motion.div>
         )}
 
-        {/* ── FIX: action is ReactNode (a button element), NOT an object ── */}
         {filtered.length === 0 ? (
           <EmptyState
             icon={Search}
@@ -635,7 +754,6 @@ const AdminServices = () => {
           ))}
         </div>
 
-        {/* ── FIX: no action prop here — EmptyState without action ── */}
         {addonRules.length === 0 && (
           <EmptyState
             icon={Sparkles}
