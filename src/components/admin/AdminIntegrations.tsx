@@ -3,6 +3,7 @@ import {
   CreditCard, Calendar, MapPin,
   Eye, EyeOff, CheckCircle2,
   Loader2, Edit2, LogOut, ChevronDown, BookOpen, Lock, FlaskConical,
+  AlertCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { ReactNode, ElementType } from "react";
@@ -155,7 +156,7 @@ const IntegrationCard = ({
                   {configured && !editing && (
                     <button
                       onClick={onEdit}
-                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
                     >
                       <Edit2 className="w-3 h-3" /> Edit
                     </button>
@@ -335,6 +336,9 @@ interface YocoCardProps {
 
 const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const [open, setOpen] = useState(false);
+  // Test Keys collapsed by default — reduces cognitive load (Hick's Law).
+  // Most tenants only ever configure Live Keys; Test is a developer concern.
+  const [testOpen, setTestOpen] = useState(false);
 
   const anyConfigured = !!settings.yoco_public_key || !!settings.yoco_secret_key;
   const testConfigured = yocoMode === "test" && anyConfigured;
@@ -344,8 +348,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const [savingLive, setSavingLive] = useState(false);
 
   const [testDraft, setTestDraft] = useState({ public_key: "", secret_key: "" });
-  // Start in editing mode when no test keys exist yet so the fields are
-  // immediately writable (value is bound to testDraft, not the empty DB value).
   const [testEditing, setTestEditing] = useState(!testConfigured);
   const [savingTest, setSavingTest] = useState(false);
 
@@ -434,28 +436,44 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
     }
   };
 
-  const ModeBadge = () => {
+  // Inline mode badge — shown in header so mode is visible without opening
+  // the card (Law of Feedback). Also shown inside the body for context.
+  const ModeBadge = ({ size = "md" }: { size?: "sm" | "md" }) => {
     if (!anyConfigured) return null;
+    const base = size === "sm"
+      ? "flex items-center gap-1 text-[9px] font-bold rounded-full px-2 py-0.5"
+      : "flex items-center gap-1.5 text-[10px] font-bold rounded-full px-2.5 py-1";
+    const iconSize = size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
     if (yocoMode === "test") {
       return (
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-400/90 bg-amber-400/10 border border-amber-400/20 rounded-full px-2.5 py-1">
-          <FlaskConical className="w-3 h-3" /> Test Mode Active
+        <span className={`${base} text-amber-400/90 bg-amber-400/10 border border-amber-400/20`}>
+          <FlaskConical className={iconSize} /> Test Mode
         </span>
       );
     }
     return (
-      <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400/90 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-2.5 py-1">
-        <CheckCircle2 className="w-3 h-3" /> Live Mode Active
+      <span className={`${base} text-emerald-400/90 bg-emerald-400/10 border border-emerald-400/20`}>
+        <CheckCircle2 className={iconSize} /> Live Mode
       </span>
     );
   };
+
+  // Border accent colour — payments is the most critical integration;
+  // visual weight distinguishes it from managed/optional cards
+  // (Aesthetic-Usability Effect).
+  const accentBorder = !anyConfigured
+    ? "border-l-2 border-l-amber-400/30"
+    : yocoMode === "test"
+      ? "border-l-2 border-l-amber-400/50"
+      : "border-l-2 border-l-emerald-400/40";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
+      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
     >
+      {/* ── Header — always visible ── */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -470,19 +488,27 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
             <p className="text-[10px] text-white/30 mt-0.5 font-medium">
               Online checkout, deposit &amp; balance collection
             </p>
+            {/* Unconfigured nudge — actionable prompt, not just a status
+                (Jakob's Law: users expect clear next-step affordance). */}
+            {!anyConfigured && (
+              <p className="text-[10px] text-amber-400/60 mt-1 font-medium">
+                Add your Yoco keys to enable online payments
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2.5 shrink-0 ml-2">
-          {anyConfigured
-            ? <AdminTag label="Connected" color="emerald" />
-            : <AdminTag label="Not configured" color="default" />
-          }
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {/* Mode badge visible in header — no need to open card to check
+              which mode is active (Law of Feedback). */}
+          {anyConfigured && <ModeBadge size="sm" />}
+          {!anyConfigured && <AdminTag label="Not configured" color="default" />}
           <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
             <ChevronDown className="w-4 h-4 text-white/25" />
           </motion.div>
         </div>
       </button>
 
+      {/* ── Expandable body ── */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -494,6 +520,8 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.04]">
+
+              {/* Active mode badge inside body for in-context feedback */}
               {anyConfigured && (
                 <div className="flex items-center gap-2 px-5 pt-4">
                   <ModeBadge />
@@ -526,11 +554,13 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   hint="Server-side only — never exposed to the browser"
                   tooltip="In the Yoco app, click Sales then Payment Gateway. Never share this key."
                 />
+                {/* Edit + Save — sized as pill buttons for adequate tap targets
+                    (Fitts's Law: larger, separated targets reduce mis-taps). */}
                 <div className="flex items-center justify-end gap-3 pt-1">
                   {anyConfigured && (yocoMode === "live" || !yocoMode) && !liveEditing && (
                     <button
                       onClick={() => setLiveEditing(true)}
-                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
                     >
                       <Edit2 className="w-3 h-3" /> Edit
                     </button>
@@ -547,64 +577,102 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
 
               <div className="mx-5 my-4 border-t border-white/[0.04]" />
 
-              {/* ── Test Keys ── */}
-              <div className="flex flex-col gap-3 px-5">
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Test Keys</p>
-                  <span className="text-[9px] font-semibold text-amber-400/50 bg-amber-400/[0.06] border border-amber-400/10 rounded-full px-2 py-0.5">
-                    Yoco Sandbox
-                  </span>
-                </div>
-                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 text-[11px] text-white/25 leading-relaxed">
-                  Test mode uses Yoco’s sandbox. Webhook auto-registration is not supported in test mode — payments are processed and confirmed via Yoco’s test event simulator.
-                </div>
-                <Field
-                  label="Public Key"
-                  fieldKey="test_public_key"
-                  placeholder="pk_test_..."
-                  value={testEditing ? testDraft.public_key : (yocoMode === "test" ? (settings.yoco_public_key ?? "") : "")}
-                  masked={testConfigured && !testEditing}
-                  editing={testEditing}
-                  onChange={(_, v) => {
-                    if (!testEditing) setTestEditing(true);
-                    setTestDraft((p) => ({ ...p, public_key: v }));
-                  }}
-                  hint="From Yoco app: Sales > Payment Gateway (Sandbox)"
-                  tooltip="Switch to sandbox mode in the Yoco app to find test keys."
-                />
-                <Field
-                  label="Secret Key"
-                  fieldKey="test_secret_key"
-                  placeholder="sk_test_..."
-                  type="password"
-                  value={testEditing ? testDraft.secret_key : (yocoMode === "test" ? (settings.yoco_secret_key ?? "") : "")}
-                  masked={testConfigured && !testEditing}
-                  editing={testEditing}
-                  onChange={(_, v) => {
-                    if (!testEditing) setTestEditing(true);
-                    setTestDraft((p) => ({ ...p, secret_key: v }));
-                  }}
-                  hint="Server-side only — never exposed to the browser"
-                  tooltip="Switch to sandbox mode in the Yoco app to find test keys. Never share this key."
-                />
-                <div className="flex items-center justify-end gap-3 pt-1 pb-5">
-                  {testConfigured && !testEditing && (
-                    <button
-                      onClick={() => setTestEditing(true)}
-                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold"
+              {/* ── Test Keys — collapsed by default (Hick's Law) ── */}
+              <div className="px-5">
+                <button
+                  type="button"
+                  onClick={() => setTestOpen((o) => !o)}
+                  className="w-full flex items-center justify-between py-1 mb-1 group"
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-bold tracking-widest uppercase text-white/20 group-hover:text-white/35 transition-colors">Test Keys</p>
+                    <span className="text-[9px] font-semibold text-amber-400/50 bg-amber-400/[0.06] border border-amber-400/10 rounded-full px-2 py-0.5">
+                      Yoco Sandbox
+                    </span>
+                    {testConfigured && (
+                      <span className="text-[9px] font-semibold text-amber-400/70 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-0.5">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <motion.div animate={{ rotate: testOpen ? 180 : 0 }} transition={{ duration: 0.18 }}>
+                    <ChevronDown className="w-3.5 h-3.5 text-white/20 group-hover:text-white/40 transition-colors" />
+                  </motion.div>
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {testOpen && (
+                    <motion.div
+                      key="test-body"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="overflow-hidden"
                     >
-                      <Edit2 className="w-3 h-3" /> Edit
-                    </button>
+                      <div className="flex flex-col gap-3 pt-2 pb-5">
+                        <Field
+                          label="Public Key"
+                          fieldKey="test_public_key"
+                          placeholder="pk_test_..."
+                          value={testEditing ? testDraft.public_key : (yocoMode === "test" ? (settings.yoco_public_key ?? "") : "")}
+                          masked={testConfigured && !testEditing}
+                          editing={testEditing}
+                          onChange={(_, v) => {
+                            if (!testEditing) setTestEditing(true);
+                            setTestDraft((p) => ({ ...p, public_key: v }));
+                          }}
+                          hint="From Yoco app: Sales > Payment Gateway (Sandbox)"
+                          tooltip="Switch to sandbox mode in the Yoco app to find test keys."
+                        />
+                        <Field
+                          label="Secret Key"
+                          fieldKey="test_secret_key"
+                          placeholder="sk_test_..."
+                          type="password"
+                          value={testEditing ? testDraft.secret_key : (yocoMode === "test" ? (settings.yoco_secret_key ?? "") : "")}
+                          masked={testConfigured && !testEditing}
+                          editing={testEditing}
+                          onChange={(_, v) => {
+                            if (!testEditing) setTestEditing(true);
+                            setTestDraft((p) => ({ ...p, secret_key: v }));
+                          }}
+                          hint="Server-side only — never exposed to the browser"
+                          tooltip="Switch to sandbox mode in the Yoco app to find test keys. Never share this key."
+                        />
+                        {/* Edit + Save pill buttons */}
+                        <div className="flex items-center justify-end gap-3 pt-1">
+                          {testConfigured && !testEditing && (
+                            <button
+                              onClick={() => setTestEditing(true)}
+                              className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                          )}
+                          {(testEditing || !testConfigured) && (
+                            <SaveButton
+                              label={savingTest ? "Saving..." : "Save Test Keys"}
+                              loading={savingTest}
+                              onClick={handleTestSave}
+                            />
+                          )}
+                        </div>
+                        {/* Sandbox info note — placed after the save button so it
+                            reads as a footnote to the action, not a blocker before
+                            the fields (Law of Proximity). */}
+                        <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
+                          <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
+                          <p className="text-[11px] text-white/25 leading-relaxed">
+                            Test mode uses Yoco's sandbox. Webhook auto-registration is not supported in test mode — payments are processed and confirmed via Yoco's test event simulator.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
                   )}
-                  {(testEditing || !testConfigured) && (
-                    <SaveButton
-                      label={savingTest ? "Saving..." : "Save Test Keys"}
-                      loading={savingTest}
-                      onClick={handleTestSave}
-                    />
-                  )}
-                </div>
+                </AnimatePresence>
               </div>
+
             </div>
           </motion.div>
         )}
