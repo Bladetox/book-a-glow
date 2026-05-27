@@ -20,6 +20,7 @@ import {
   Tag, XCircle
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useUpdateBookingFields, useDeleteBooking, BookingRow } from "@/hooks/useSupabaseBookings";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -351,6 +352,7 @@ interface AdminBookingsProps {
 const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const { data: bookings = [], isLoading } = useSupabaseBookings();
   const { tenantId } = useTenant();
+  const queryClient = useQueryClient();
   const updateStatus = useUpdateBookingStatus();
   const reschedule = useRescheduleBooking();
   const updateFields = useUpdateBookingFields();
@@ -674,6 +676,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     b.status !== "completed" &&
     !b.fullPaymentReceived;
 
+  // ── FIX: Invalidate bookings cache after a service is added so that
+  //         the balance dialog (and all card values) reflect the new total
+  //         immediately — not the stale pre-add amount.
+  const handleServiceAdded = () => {
+    queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -774,7 +783,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         bookingId={addServiceBooking?.id ?? null}
         clientName={addServiceBooking?.client ?? ""}
         onClose={() => setAddServiceBooking(null)}
-        onAdded={() => {}}
+        onAdded={handleServiceAdded}
       />
 
       <BlockClientModal
