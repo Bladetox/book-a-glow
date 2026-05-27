@@ -361,6 +361,20 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
     setPrevHadKeys(nowHasKeys);
   }, [settings, prevHadKeys]);
 
+  // Reset editing state when yocoMode resolves from null (async load).
+  // useState(!testConfigured) only runs at mount when yocoMode is still null,
+  // so testEditing gets permanently stuck as true. This effect fires once
+  // when the real mode value arrives and corrects both editing states.
+  useEffect(() => {
+    if (yocoMode === "test") {
+      setLiveEditing(false);
+      setTestEditing(false);
+    } else if (yocoMode === "live") {
+      setLiveEditing(false);
+      setTestEditing(false);
+    }
+  }, [yocoMode]);
+
   const callSaveYocoKeys = async (
     mode: "live" | "test",
     public_key: string,
