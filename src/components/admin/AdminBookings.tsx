@@ -722,10 +722,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
+  // ── FIX: showRequestBalance excludes both `completed` and `complete` statuses
   const showRequestBalance = (b: BookingRow) =>
     b.balance > 0 &&
     b.status !== "cancelled" &&
     b.status !== "completed" &&
+    b.status !== "complete" &&
     !b.fullPaymentReceived;
 
   // ── Invalidate bookings cache after a service is added so that
@@ -986,7 +988,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                   const isMarkingServiced = markingServicedId === b.id;
                   const blockStatus = blockStatusMap[b.id];
                   const isClientBlocked = blockStatus?.isBlocked ?? false;
-                  const canMarkServiced = b.status !== "cancelled" && b.status !== "no_show" && b.status !== "completed" && b.status !== "complete" && b.date <= todayStr;
+                  // ── canMarkServiced: exclude all terminal/serviced statuses and future dates
+                  const canMarkServiced =
+                    b.status !== "cancelled" &&
+                    b.status !== "no_show" &&
+                    b.status !== "completed" &&
+                    b.status !== "complete" &&
+                    b.date <= todayStr;
                   const serviceList = (b.service ?? "").split(", ").filter(Boolean);
 
                   const primaryCTA = (() => {
@@ -1000,7 +1008,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                         </button>
                       );
                     }
-                    if (b.status === "confirmed" && b.balance > 0 && !b.fullPaymentReceived) {
+                    if (showRequestBalance(b)) {
                       // ── Grouped side-by-side: Email + WhatsApp, equal width ──
                       return (
                         <div className="flex flex-col gap-1.5">
