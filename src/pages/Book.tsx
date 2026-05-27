@@ -159,7 +159,15 @@ const Index = () => {
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
   const durationForSlots = Math.max(totalDuration, 30);
 
-  // ── Brand name style: font + gold colour applied ONLY when set ────────────
+  // ── Cart line items for StickyBottomBar ─────────────────────────────────
+  const cartItems = uniqueSelectedIds.flatMap((id) => {
+    const svc = treatments.find((t) => t.id === id);
+    if (!svc) return [];
+    const qty = booking.selectedTreatments.filter((t) => t === id).length;
+    return [{ service: svc, qty }];
+  });
+
+  // ── Brand name style: font + gold colour applied ONLY when set ──────────
   const brandNameStyle: React.CSSProperties = {
     ...(brandFontFamily  ? { fontFamily: brandFontFamily }               : {}),
     ...(config.brandNameColor ? { color: config.brandNameColor }         : {}),
@@ -294,6 +302,8 @@ const Index = () => {
             canProceed={canProceed()}
             onNext={handleNext}
             onPrev={handlePrev}
+            cartItems={cartItems}
+            onRemoveOne={removeTreatment}
           />
         )}
 
