@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo } from "react";
-import { Sparkles, X, Loader2, CreditCard, CheckCircle2, Plus, Check } from "lucide-react";
+import { Sparkles, X, Loader2, CreditCard, CheckCircle2, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
 import { toast } from "sonner";
@@ -76,6 +76,21 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   }, [addonsConfig, allServices, booking.selectedTreatments]);
 
   const hasPairWith = pairWithAddons.length > 0;
+
+  // ── Helpers to read / mutate add-on quantities in selectedTreatments ──
+  const getAddonQty = (id: string) =>
+    booking.selectedTreatments.filter((t) => t === id).length;
+
+  const incrementAddon = (id: string) =>
+    onUpdate({ selectedTreatments: [...booking.selectedTreatments, id] });
+
+  const decrementAddon = (id: string) => {
+    const idx = booking.selectedTreatments.lastIndexOf(id);
+    if (idx === -1) return;
+    const next = [...booking.selectedTreatments];
+    next.splice(idx, 1);
+    onUpdate({ selectedTreatments: next });
+  };
 
   const selectedWithQty = (() => {
     const seen = new Map<string, number>();
@@ -419,7 +434,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               onClick={() => setShowPairWith(false)}
             />
 
-            {/* Sheet — 90dvh so it fills the screen from the bottom on mobile */}
+            {/* Sheet */}
             <motion.div
               key="pair-sheet"
               className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
@@ -454,17 +469,18 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                 </button>
               </div>
 
-              {/* Scrollable add-on list — flex-1 fills all remaining height */}
-              <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-2 scrollbar-hide">
+              {/* Scrollable add-on list */}
+              <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3 scrollbar-hide">
                 {pairWithAddons.map((a) => {
-                  const already = booking.selectedTreatments.includes(a.id);
+                  const qty = getAddonQty(a.id);
                   return (
                     <div
                       key={a.id}
                       className={`flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors ${
-                        already ? "border-primary/40 bg-primary/8" : "border-border bg-muted/30"
+                        qty > 0 ? "border-primary/40 bg-primary/8" : "border-border bg-muted/30"
                       }`}
                     >
+                      {/* Service info */}
                       <div className="flex-1 min-w-0">
                         <span className="block text-sm font-semibold text-foreground leading-snug">
                           {a.name}
@@ -480,26 +496,45 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                           </span>
                         )}
                       </div>
+
+                      {/* Price */}
                       <span className="shrink-0 text-sm font-bold text-foreground">
-                        {cur}{a.price}
+                        {cur}{a.price * (qty || 1)}
                       </span>
-                      <motion.button
-                        whileTap={{ scale: 0.85 }}
-                        onClick={() => {
-                          if (!already) onUpdate({ selectedTreatments: [...booking.selectedTreatments, a.id] });
-                        }}
-                        disabled={already}
-                        className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors shrink-0 ${
-                          already
-                            ? "border-primary bg-primary text-primary-foreground cursor-default"
-                            : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/25"
-                        }`}
-                        aria-label={already ? `${a.name} added` : `Add ${a.name}`}
-                      >
-                        {already
-                          ? <Check className="w-3 h-3" strokeWidth={2.5} />
-                          : <Plus className="w-3 h-3" strokeWidth={2.5} />}
-                      </motion.button>
+
+                      {/* Quantity stepper: shows plain + when qty=0, − count + when qty>0 */}
+                      {qty === 0 ? (
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => incrementAddon(a.id)}
+                          className="w-8 h-8 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/25 transition-colors shrink-0"
+                          aria-label={`Add ${a.name}`}
+                        >
+                          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        </motion.button>
+                      ) : (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <motion.button
+                            whileTap={{ scale: 0.85 }}
+                            onClick={() => decrementAddon(a.id)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center border border-border/60 bg-muted/50 text-foreground hover:bg-muted transition-colors"
+                            aria-label={`Remove one ${a.name}`}
+                          >
+                            <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                          </motion.button>
+                          <span className="w-5 text-center text-sm font-bold text-foreground tabular-nums">
+                            {qty}
+                          </span>
+                          <motion.button
+                            whileTap={{ scale: 0.85 }}
+                            onClick={() => incrementAddon(a.id)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/25 transition-colors"
+                            aria-label={`Add another ${a.name}`}
+                          >
+                            <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                          </motion.button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
