@@ -10,6 +10,7 @@ export interface PublicService {
   duration: number;
   category: string;
   isCallOutAvailable: boolean;
+  isAddon: boolean;
 }
 
 export interface ServiceCategory {
@@ -76,7 +77,7 @@ export function usePublicServices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, description, price, duration_minutes, category, is_call_out_available")
+        .select("id, name, description, price, duration_minutes, category, is_call_out_available, is_addon")
         .eq("tenant_id", tenantId)
         .eq("is_active", true)
         .order("category", { ascending: true })
@@ -96,6 +97,7 @@ export function usePublicServices() {
           duration: s.duration_minutes,
           category,
           isCallOutAvailable: s.is_call_out_available ?? false,
+          isAddon: s.is_addon ?? false,
         };
       });
     },
@@ -113,9 +115,10 @@ export function usePublicCategories() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("category, name")
+        .select("category, name, is_addon")
         .eq("tenant_id", tenantId)
         .eq("is_active", true)
+        .eq("is_addon", false)       // ← add-on services must not generate category tabs
         .order("category");
       if (error) throw error;
 
