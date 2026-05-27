@@ -369,7 +369,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
   const [rescheduleTime, setRescheduleTime] = useState<string | null>(null);
   const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
-  // ── Tracks which booking is generating a Yoco link for the WhatsApp balance button
+  // Tracks which booking is generating a Yoco link for the WhatsApp balance button
   const [sendingWhatsAppBalanceId, setSendingWhatsAppBalanceId] = useState<string | null>(null);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -550,27 +550,21 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   };
 
   // ── Address routing: call_out_address for call-out bookings,
-  //    guest_address for in-studio guest bookings. This prevents
-  //    address data loss for non-callout bookings where call_out_address
-  //    would be ignored if is_call_out is ever corrected to false.
+  //    guest_address for in-studio guest bookings.
   const saveInlineEdit = async () => {
     if (!editingInlineId || !editDraft) return;
 
-    // Find the original booking to check its call-out status.
     const original = bookings.find(b => b.id === editingInlineId);
     const isCallOut = original?.isCallOut ?? false;
 
     try {
       const updates: Record<string, unknown> = {
-        notes:        editDraft.notes,       // schema: notes (freeform/internal)
-        client_notes: editDraft.clientNotes, // schema: client_notes (client-facing)
-        staff_notes:  editDraft.staffNotes,  // schema: staff_notes
+        notes:        editDraft.notes,
+        client_notes: editDraft.clientNotes,
+        staff_notes:  editDraft.staffNotes,
         client_name:  editDraft.client,
         client_phone: editDraft.phone,
         client_email: editDraft.email,
-        // Route the address field to the semantically correct column:
-        // - call_out_address: only for call-out bookings (is_call_out = true)
-        // - guest_address:    for in-studio guest bookings (is_call_out = false)
         ...(isCallOut
           ? { call_out_address: editDraft.address }
           : { guest_address: editDraft.address }
@@ -677,7 +671,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           yoco_final_link: paymentUrl,
         })
         .eq("id", b.id);
-      // Invalidate so the cached booking row now has yocoFinalLink populated
       queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
       window.open(
         toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
@@ -735,9 +728,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     b.status !== "completed" &&
     !b.fullPaymentReceived;
 
-  // ── FIX: Invalidate bookings cache after a service is added so that
-  //         the balance dialog (and all card values) reflect the new total
-  //         immediately — not the stale pre-add amount.
+  // ── Invalidate bookings cache after a service is added so that
+  //    the balance dialog reflects the new total immediately.
   const handleServiceAdded = () => {
     queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
   };
@@ -1100,7 +1092,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   <DetailRow icon={Mail}  label="Email"   value={b.email} />
                                   <DetailRow icon={MapPin} label="Address" value={b.address} />
                                   <DetailRow icon={Clock} label="Ref"     value={b.ref} />
-                                  {/* FIX 6a: Call-out details */}
                                   {b.isCallOut && (
                                     <DetailRow
                                       icon={Car}
@@ -1112,13 +1103,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                       ].filter(Boolean).join(" · ")}
                                     />
                                   )}
-                                  {/* FIX 6b: Lead source */}
                                   {b.leadSource && (
                                     <DetailRow icon={Tag} label="Lead Source" value={b.leadSource} />
                                   )}
                                 </div>
 
-                                {/* FIX 6c: Cancellation reason — shown only when cancelled/no_show */}
                                 {(b.status === "cancelled" || b.status === "no_show") && b.cancellationReason && (
                                   <div className="flex items-start gap-2 rounded-xl bg-red-500/[0.06] border border-red-500/[0.12] px-3 py-2.5">
                                     <XCircle className="w-3 h-3 text-red-400/60 mt-0.5 shrink-0" />
@@ -1157,4 +1146,222 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     <p className={`text-sm font-bold ${b.fullPaymentReceived && b.balance === 0 ? "text-white/50" : "text-emerald-400"}`}>
                                       {b.fullPaymentReceived && b.balance === 0 ? "Paid ✓" : `R ${b.deposit.toLocaleString()}`}
                                     </p>
-                    
+                                  </div>
+                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                                    <p className="text-[10px] text-white/30">Balance</p>
+                                    <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
+                                      {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {(b.staffNotes || b.notes || b.clientNotes) && (
+                                  <div className="flex items-start gap-2 text-xs text-white/40 mt-1">
+                                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                                    <span>{b.staffNotes || b.clientNotes || b.notes}</span>
+                                  </div>
+                                )}
+
+                                <div className="text-[10px] text-white/20">Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}</div>
+
+                                {/* Edit accordion */}
+                                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      isEditingInline ? cancelInlineEdit() : startInlineEdit(b);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Edit3 className="w-3 h-3 text-white/30" />
+                                      <span className="text-[11px] font-medium text-white/40">Edit guest details &amp; notes</span>
+                                    </div>
+                                    <ChevronDown className={`w-3.5 h-3.5 text-white/20 transition-transform ${isEditingInline ? "rotate-180" : ""}`} />
+                                  </button>
+
+                                  <AnimatePresence>
+                                    {isEditingInline && (
+                                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                        <div className="px-4 pb-4 pt-2 flex flex-col gap-3 border-t border-white/[0.06]">
+                                          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mt-1">Contact Details</p>
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                            <EditField label="Client Name" value={editDraft.client || ""} onChange={v => setEditDraft(d => ({ ...d, client: v }))} />
+                                            <EditField label="Phone" value={editDraft.phone || ""} onChange={v => setEditDraft(d => ({ ...d, phone: v }))} />
+                                            <EditField label="Email" value={editDraft.email || ""} onChange={v => setEditDraft(d => ({ ...d, email: v }))} />
+                                            <EditField label="Address" value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
+                                          </div>
+                                          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Notes</p>
+                                          <EditField label="Staff Notes"  value={editDraft.staffNotes  || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
+                                          <EditField label="Client Notes" value={editDraft.clientNotes || ""} onChange={v => setEditDraft(d => ({ ...d, clientNotes: v }))} />
+                                          <div className="flex items-center justify-end gap-2 pt-1">
+                                            <SaveButton label="Cancel" variant="secondary" onClick={e => { e.stopPropagation(); cancelInlineEdit(); }} />
+                                            <SaveButton label="Save Changes" icon={<Edit3 className="w-3 h-3" />} onClick={e => { e.stopPropagation(); saveInlineEdit(); }} />
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+
+                                {primaryCTA && (
+                                  <div className="pt-1">
+                                    {primaryCTA}
+                                  </div>
+                                )}
+
+                                {/* ── TIER 2: Secondary icon-button strip ───────── */}
+                                <div className="flex items-center gap-2 flex-wrap">
+
+                                  {b.status !== "cancelled" && b.status !== "no_show" && (
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+                                      aria-label="Reschedule"
+                                      title="Reschedule"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors"
+                                    >
+                                      <CalendarClock className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Reschedule</span>
+                                    </button>
+                                  )}
+
+                                  {b.status !== "cancelled" && b.status !== "no_show" && (
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
+                                      aria-label="Add service"
+                                      title="Add service"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-500/25 bg-violet-500/[0.07] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors"
+                                    >
+                                      <PlusCircle className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Add Service</span>
+                                    </button>
+                                  )}
+
+                                  {b.status !== "cancelled" && b.status !== "no_show" && !b.fullPaymentReceived && b.balance > 0 && (
+                                    <button
+                                      disabled={isMarkingPaid}
+                                      onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }}
+                                      aria-label="Mark fully paid"
+                                      title="Mark fully paid"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      {isMarkingPaid ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CircleDollarSign className="w-3.5 h-3.5" />}
+                                      <span className="hidden sm:inline">Mark Paid</span>
+                                    </button>
+                                  )}
+
+                                  {b.phone && (
+                                    <a
+                                      href={toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref ?? "")}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={e => e.stopPropagation()}
+                                      aria-label="WhatsApp client"
+                                      title="WhatsApp client"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#25D366]/25 bg-[#25D366]/[0.07] text-xs font-medium text-[#25D366]/80 hover:bg-[#25D366]/15 hover:text-[#25D366] transition-colors"
+                                    >
+                                      <WhatsAppIcon className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">WhatsApp</span>
+                                    </a>
+                                  )}
+
+                                  {b.phone && b.balance > 0 && !b.fullPaymentReceived && (
+                                    <button
+                                      disabled={isSendingWhatsAppBalance}
+                                      onClick={e => handleWhatsAppBalance(b, e)}
+                                      aria-label="Send balance link via WhatsApp"
+                                      title="Send balance link via WhatsApp"
+                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] text-xs font-medium text-amber-400/80 hover:bg-amber-500/15 hover:text-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      {isSendingWhatsAppBalance ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <WhatsAppIcon className="w-3.5 h-3.5" />}
+                                      <span className="hidden sm:inline">Send Balance Link</span>
+                                    </button>
+                                  )}
+
+                                  <div className="flex-1" />
+
+                                  <OverflowMenu
+                                    isClientBlocked={isClientBlocked}
+                                    isCancelled={b.status === "cancelled" || b.status === "no_show"}
+                                    onBlock={() => setBlockModalBooking(b)}
+                                    onCancel={() => setConfirmCancel(b)}
+                                    onDelete={() => setConfirmDelete(b)}
+                                  />
+                                </div>
+
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                };
+
+                return (
+                  <>
+                    {activeFilter !== "Today" && todayItems.length > 0 && (
+                      <div className="flex items-center gap-3 px-1 pt-1">
+                        <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400/70">Today</span>
+                        <div className="flex-1 h-px bg-emerald-500/15" />
+                      </div>
+                    )}
+                    {(activeFilter === "Today" ? filtered.sort((a, b) => a.time.localeCompare(b.time)) : todayItems).map(b => renderCard(b))}
+
+                    {activeFilter !== "Today" && upcoming.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-3 px-1 pt-2">
+                          <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-sky-400/70">Upcoming</span>
+                          <div className="flex-1 h-px bg-sky-500/15" />
+                        </div>
+                        {upcoming.map(b => renderCard(b))}
+                      </>
+                    )}
+
+                    {activeFilter !== "Today" && past.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-3 px-1 pt-2">
+                          <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/20">Past</span>
+                          <div className="flex-1 h-px bg-white/[0.05]" />
+                        </div>
+                        {past.map(b => renderCard(b))}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+            </AnimatePresence>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};
+
+const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
+  value ? (
+    <div className="flex items-start gap-2">
+      <Icon className="w-3 h-3 text-white/25 mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[10px] text-white/25">{label}</p>
+        <p className="text-xs text-white/65 truncate">{value}</p>
+      </div>
+    </div>
+  ) : null
+);
+
+const EditField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
+  <div className="flex flex-col gap-1.5">
+    <label htmlFor={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`} className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">{label}</label>
+    <input
+      id={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      name={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      type="text"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.18] transition-colors"
+    />
+  </div>
+);
+
+export default AdminBookings;
