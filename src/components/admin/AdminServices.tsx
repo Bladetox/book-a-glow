@@ -1,4 +1,4 @@
-// C6 — Category + per-category service reorder via arrow buttons; persists to Supabase
+// C7 — Per-category service reorder is now manual save (mirrors category order UX)
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -187,10 +187,8 @@ const ServiceReorderRow = ({
 
   return (
     <div className="group flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all">
-      {/* Position index */}
       <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{index + 1}</span>
 
-      {/* Service info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-white/90 truncate">{service.name}</span>
@@ -207,7 +205,6 @@ const ServiceReorderRow = ({
         </div>
       </div>
 
-      {/* Arrow buttons */}
       <div className="flex items-center gap-0.5">
         <button
           onClick={onMoveUp}
@@ -227,7 +224,6 @@ const ServiceReorderRow = ({
         </button>
       </div>
 
-      {/* Edit / delete */}
       <div className="flex items-center gap-1 border-l border-white/[0.06] pl-2">
         {confirmDelete ? (
           <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
@@ -356,7 +352,6 @@ const AdminServices = () => {
   const deleteMutation = useDeleteService();
 
   // ── Saved category order ──────────────────────────────────────────────────
-  // Only computed once appSettings has loaded to avoid seeding from stale data.
   const savedCategoryOrder = useMemo<string[]>(() => {
     if (!appSettingsReady) return [];
     try {
@@ -370,34 +365,26 @@ const AdminServices = () => {
     return [];
   }, [appSettingsReady, appSettings.category_order]);
 
-  // Pass savedCategoryOrder into the query key so categories re-sort reactively
   const { data: categories = [] } = useServiceCategories(savedCategoryOrder);
 
   // ── Local category order (unsaved UI state) ───────────────────────────────
   const [localCatOrder, setLocalCatOrder] = useState<string[] | null>(null);
   const [catOrderSaved, setCatOrderSaved] = useState(false);
-  // Track whether we've seeded from settings so we only do it once per settings load
   const seededRef = useRef(false);
 
   useEffect(() => {
-    // Wait for appSettings to be ready AND categories to be available before seeding
     if (!appSettingsReady || categories.length === 0) return;
-    // Only seed once — after that the tenant's local interactions control it
     if (seededRef.current) return;
     seededRef.current = true;
-    // categories is already sorted by savedCategoryOrder at this point
     setLocalCatOrder(categories.map((c) => c.id));
   }, [appSettingsReady, categories]);
 
-  // Reset seed flag when settings are invalidated (e.g. after Save Order)
-  // so the next load re-seeds from the freshly persisted order.
   useEffect(() => {
     if (!appSettingsReady) {
       seededRef.current = false;
     }
   }, [appSettingsReady]);
 
-  // Displayed list: localCatOrder wins; any new categories not yet in it append alphabetically
   const orderedCategories = useMemo(() => {
     if (!localCatOrder) return categories;
     const catMap = new Map(categories.map((c) => [c.id, c]));
@@ -434,7 +421,6 @@ const AdminServices = () => {
       { category_order: JSON.stringify(ids) },
       {
         onSuccess: () => {
-          // Force re-seed on next settings load
           seededRef.current = false;
           setCatOrderSaved(true);
           setTimeout(() => setCatOrderSaved(false), 3500);
@@ -443,54 +429,99 @@ const AdminServices = () => {
     );
   };
 
-  // ── Per-category service reorder ──────────────────────────────────────────
-  // Tracks which category is open for service reordering (null = none)
+  // ── Per-category service reorder — LOCAL STATE, manual save ──────────────
+  // localSvcOrder: map of categoryId → ordered Service[] (unsaved UI state)
+  // Seeded from live `services` when a category tab is first opened.
+  // ↑/↓ only mutates this map. Supabase is only written on "Save Order" click.
   const [reorderCatId, setReorderCatId] = useState<string | null>(null);
+  const [localSvcOrder, setLocalSvcOrder] = useState<Map<string, Service[]>>(new Map());
+  const [svcOrderSaving, setSvcOrderSaving] = useState(false);
+  const [svcOrderSaved, setSvcOrderSaved] = useState(false);
 
-  // Services scoped to the open reorder category, sorted by display_order then name
-  const reorderCatServices = useMemo(() => {
-    if (!reorderCatId) return [];
-    return services
-      .filter((s) => s.category === reorderCatId)
-      .sort((a, b) => {
-        const ao = a.display_order ?? 999999;
-        const bo = b.display_order ?? 999999;
-        if (ao !== bo) return ao - bo;
-        return a.name.localeCompare(b.name);
-      });
-  }, [services, reorderCatId]);
+  // Seed the local list for a category the first time it is opened
+  const openReorderCategory = (catId: string | null) => {
+    setReorderCatId(catId);
+    if (!catId) return;
+    // Only seed if we don't already have a local list for this category
+    setLocalSvcOrder((prev) => {
+      if (prev.has(catId)) return prev;
+      const sorted = services
+        .filter((s) => s.category === catId)
+        .sort((a, b) => {
+          const ao = a.display_order ?? 999999;
+          const bo = b.display_order ?? 999999;
+          if (ao !== bo) return ao - bo;
+          return a.name.localeCompare(b.name);
+        });
+      const next = new Map(prev);
+      next.set(catId, sorted);
+      return next;
+    });
+  };
 
-  // Move a service up or down within its category by swapping display_order values
-  // and persisting both rows immediately (auto-save, no extra button needed).
-  const moveServiceInCategory = useCallback(async (
-    list: Service[],
-    fromIndex: number,
-    toIndex: number,
-  ) => {
-    if (toIndex < 0 || toIndex >= list.length) return;
-    const a = list[fromIndex];
-    const b = list[toIndex];
-    // Assign clean sequential display_order values so swaps are stable
-    const newOrderA = toIndex;
-    const newOrderB = fromIndex;
+  // The list currently shown in the reorder panel
+  const reorderCatServices: Service[] = reorderCatId
+    ? (localSvcOrder.get(reorderCatId) ?? [])
+    : [];
+
+  // Move up/down — only updates local state, no Supabase call
+  const moveServiceUp = (index: number) => {
+    if (!reorderCatId || index === 0) return;
+    setLocalSvcOrder((prev) => {
+      const list = [...(prev.get(reorderCatId) ?? [])];
+      [list[index - 1], list[index]] = [list[index], list[index - 1]];
+      const next = new Map(prev);
+      next.set(reorderCatId, list);
+      return next;
+    });
+  };
+
+  const moveServiceDown = (index: number) => {
+    if (!reorderCatId) return;
+    setLocalSvcOrder((prev) => {
+      const list = [...(prev.get(reorderCatId) ?? [])];
+      if (index >= list.length - 1) return prev;
+      [list[index], list[index + 1]] = [list[index + 1], list[index]];
+      const next = new Map(prev);
+      next.set(reorderCatId, list);
+      return next;
+    });
+  };
+
+  // Save Order — writes display_order for every service in the open category
+  const saveServiceOrder = useCallback(async () => {
+    if (!reorderCatId || !tenantId) return;
+    const list = localSvcOrder.get(reorderCatId);
+    if (!list || list.length === 0) return;
+    setSvcOrderSaving(true);
     try {
-      await Promise.all([
-        supabase.from("services")
-          .update({ display_order: newOrderA })
-          .eq("id", a.id)
-          .eq("tenant_id", tenantId),
-        supabase.from("services")
-          .update({ display_order: newOrderB })
-          .eq("id", b.id)
-          .eq("tenant_id", tenantId),
-      ]);
-      // Invalidate so both this panel and the public booking app reflect the change
-      // We trigger a refetch by mutating the query cache via a lightweight re-fetch.
-      // useSupabaseServices will re-sort on next fetch.
+      await Promise.all(
+        list.map((svc, idx) =>
+          supabase
+            .from("services")
+            .update({ display_order: idx })
+            .eq("id", svc.id)
+            .eq("tenant_id", tenantId)
+        )
+      );
+      setSvcOrderSaved(true);
+      setTimeout(() => setSvcOrderSaved(false), 3500);
     } catch {
       toast.error("Could not save order — try again");
+    } finally {
+      setSvcOrderSaving(false);
     }
-  }, [tenantId]);
+  }, [reorderCatId, localSvcOrder, tenantId]);
+
+  // When live services data changes (e.g. after an edit), clear stale local
+  // order so the panel re-seeds from the updated data on next open.
+  const prevServicesRef = useRef(services);
+  useEffect(() => {
+    if (prevServicesRef.current !== services) {
+      prevServicesRef.current = services;
+      setLocalSvcOrder(new Map());
+    }
+  }, [services]);
 
   // ── Filtering / searching (all-services view) ─────────────────────────────
   const [filterCategory, setFilterCategory] = useState("all");
@@ -671,7 +702,7 @@ const AdminServices = () => {
         subtitle="Manage your service menu, pricing, durations, and smart add-on suggestions."
       />
 
-      {/* ═══ SECTION 1: Category Order ═══════════════════════════════════════ */}
+      {/* ═══ SECTION 1: Category Order ══════════════════════════════════════ */}
       {orderedCategories.length > 1 && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -698,7 +729,6 @@ const AdminServices = () => {
               >
                 <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{idx + 1}</span>
                 <span className="flex-1 text-sm font-medium text-white/70">{cat.label}</span>
-                {/* Service count badge */}
                 <span className="text-[10px] text-white/25 tabular-nums">
                   {services.filter((s) => s.category === cat.id).length} services
                 </span>
@@ -726,13 +756,25 @@ const AdminServices = () => {
         </section>
       )}
 
-      {/* ═══ SECTION 2: Per-category service reorder ═════════════════════════ */}
+      {/* ═══ SECTION 2: Per-category service reorder ════════════════════════ */}
       <section className="flex flex-col gap-3 border-t border-white/[0.06] pt-6">
         <div className="flex items-center justify-between">
           <SectionLabel label="Reorder Services by Category" />
+          {reorderCatId && (
+            <div className="flex items-center gap-3">
+              {svcOrderSaved && (
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Saved</span>
+              )}
+              <SaveButton
+                label="Save Order"
+                loading={svcOrderSaving}
+                onClick={saveServiceOrder}
+              />
+            </div>
+          )}
         </div>
         <p className="text-[11px] text-white/30 -mt-1">
-          Select a category to reorder its services. Order saves automatically on each move.
+          Select a category, use ↑ ↓ to reorder its services, then click Save Order.
         </p>
 
         {/* Category selector tabs */}
@@ -742,7 +784,7 @@ const AdminServices = () => {
             return (
               <button
                 key={cat.id}
-                onClick={() => setReorderCatId(isActive ? null : cat.id)}
+                onClick={() => openReorderCategory(isActive ? null : cat.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                   isActive
                     ? "bg-white/[0.10] border-white/[0.20] text-white/90"
@@ -767,7 +809,7 @@ const AdminServices = () => {
               className="flex flex-col gap-1.5"
             >
               {reorderCatServices.length === 0 ? (
-                <p className="text-xs text-white/25 py-3 text-center">No active services in this category.</p>
+                <p className="text-xs text-white/25 py-3 text-center">No services in this category.</p>
               ) : (
                 reorderCatServices.map((svc, idx) => (
                   <ServiceReorderRow
@@ -775,8 +817,8 @@ const AdminServices = () => {
                     service={svc}
                     index={idx}
                     total={reorderCatServices.length}
-                    onMoveUp={() => moveServiceInCategory(reorderCatServices, idx, idx - 1)}
-                    onMoveDown={() => moveServiceInCategory(reorderCatServices, idx, idx + 1)}
+                    onMoveUp={() => moveServiceUp(idx)}
+                    onMoveDown={() => moveServiceDown(idx)}
                     onEdit={startEdit}
                     onDelete={handleDelete}
                   />
@@ -787,7 +829,7 @@ const AdminServices = () => {
         </AnimatePresence>
       </section>
 
-      {/* ═══ SECTION 3: Full services list with search / filter / drag ═══════ */}
+      {/* ═══ SECTION 3: Full services list with search / filter / drag ══════ */}
       <section className="flex flex-col gap-4 border-t border-white/[0.06] pt-6">
         <div className="flex items-center justify-between">
           <SectionLabel
@@ -956,7 +998,7 @@ const AdminServices = () => {
         )}
       </section>
 
-      {/* ═══ SECTION 4: Suggested add-ons ════════════════════════════════════ */}
+      {/* ═══ SECTION 4: Suggested add-ons ═══════════════════════════════════ */}
       <section className="flex flex-col gap-4 border-t border-white/[0.06] pt-8">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
