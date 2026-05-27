@@ -173,18 +173,16 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
               const count = qty(t.id);
               const isSelected = count > 0;
 
-              // Add-ons already selected that belong to this trigger service.
-              // getSelectedAddonsForTrigger already filters out trigger services,
-              // but we apply the triggerIdSet guard here too as a belt-and-suspenders
-              // defence against any future rule shape edge cases.
-              const nestedAddonIds = addonsConfig
-                ? getSelectedAddonsForTrigger(addonsConfig, t.id, selectedTreatments).filter(
-                    (id) => !triggerIdSet.has(id)
-                  )
+              // Only compute and show nested add-ons if this card is actually selected.
+              // Without this guard, any card that shares the same suggestIds pool as the
+              // selected trigger (all 7 triggers share the same 4 add-on IDs) would also
+              // render nested rows — even though the user never picked it.
+              const nestedAddons = isSelected && addonsConfig
+                ? getSelectedAddonsForTrigger(addonsConfig, t.id, selectedTreatments)
+                    .filter((id) => !triggerIdSet.has(id))
+                    .map((id) => treatments.find((tr) => tr.id === id))
+                    .filter((tr): tr is NonNullable<typeof tr> => !!tr)
                 : [];
-              const nestedAddons = nestedAddonIds
-                .map((id) => treatments.find((tr) => tr.id === id))
-                .filter((tr): tr is NonNullable<typeof tr> => !!tr);
 
               return (
                 <div
