@@ -2,66 +2,35 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────────────────
 
 /**
  * A single rule: when `triggerId` is selected, suggest `suggestIds`.
+ * Shape is identical to the old app_settings-based config so all
+ * consumers (ServicesStep, getActiveSuggestions, getSelectedAddonsForTrigger)
+ * continue to work without any changes.
  */
 export interface AddonRule {
   triggerId: string;
   suggestIds: string[];
 }
 
-/**
- * New shape stored as JSON under app_settings key "suggested_addons".
- *
- * Backward-compat: if the stored value still contains the OLD flat shape
- * { triggerIds, suggestIds } we normalise it into rules on read so existing
- * data is never broken.
- */
 export interface SuggestedAddonsConfig {
   rules: AddonRule[];
 }
 
 const EMPTY: SuggestedAddonsConfig = { rules: [] };
 
-// ─── Normalise legacy flat shape ──────────────────────────────────────────────
+// ─── Hook ──────────────────────────────────────────────────────────────────────────────────
 
-function normaliseParsed(parsed: unknown): SuggestedAddonsConfig {
-  if (!parsed || typeof parsed !== "object") return EMPTY;
-
-  const p = parsed as Record<string, unknown>;
-
-  // New shape: { rules: [...] }
-  if (Array.isArray(p.rules)) {
-    const rules: AddonRule[] = p.rules
-      .filter(
-        (r): r is AddonRule =>
-          !!r &&
-          typeof r === "object" &&
-          typeof (r as AddonRule).triggerId === "string" &&
-          Array.isArray((r as AddonRule).suggestIds)
-      )
-      .map((r) => ({ triggerId: r.triggerId, suggestIds: r.suggestIds }));
-    return { rules };
-  }
-
-  // Legacy flat shape: { triggerIds: string[], suggestIds: string[] }
-  // Convert each legacy triggerId into its own rule sharing the same suggestIds
-  if (Array.isArray(p.triggerIds) && Array.isArray(p.suggestIds)) {
-    const suggestIds = p.suggestIds as string[];
-    const rules: AddonRule[] = (p.triggerIds as string[]).map((triggerId) => ({
-      triggerId,
-      suggestIds,
-    }));
-    return { rules };
-  }
-
-  return EMPTY;
-}
-
-// ─── Hook ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Reads add-on assignments directly from `service_addon_assignments`
+ * (Option B: relational table per tenant).
+ *
+ * Returns the same SuggestedAddonsConfig shape as before so that
+ * ServicesStep.tsx, getActiveSuggestions, and getSelectedAddonsForTrigger
+ * require zero changes.
+ */
 export function useSuggestedAddons() {
   const { tenantId } = usePublicTenant();
 
@@ -71,25 +40,36 @@ export function useSuggestedAddons() {
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<SuggestedAddonsConfig> => {
       const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
+        .from("service_addon_assignments")
+        .select("service_id, addon_id")
         .eq("tenant_id", tenantId)
-        .eq("key", "suggested_addons")
-        .maybeSingle();
+        .order("display_order", { ascending: true });
 
       if (error) throw error;
-      if (!data?.value) return EMPTY;
+      if (!data || data.length === 0) return EMPTY;
 
-      try {
-        return normaliseParsed(JSON.parse(data.value));
-      } catch {
-        return EMPTY;
+      // Group rows into AddonRule[]: one rule per unique service_id,
+      // accumulating its addon_ids in suggestIds order.
+      const ruleMap = new Map<string, string[]>();
+      for (const row of data) {
+        const existing = ruleMap.get(row.service_id);
+        if (existing) {
+          existing.push(row.addon_id);
+        } else {
+          ruleMap.set(row.service_id, [row.addon_id]);
+        }
       }
+
+      const rules: AddonRule[] = Array.from(ruleMap.entries()).map(
+        ([triggerId, suggestIds]) => ({ triggerId, suggestIds })
+      );
+
+      return { rules };
     },
   });
 }
 
-// ─── Selector helpers (used in booking components) ────────────────────────────
+// ─── Selector helpers (used in ServicesStep — unchanged) ────────────────────────
 
 /**
  * Given the current config and the set of currently-selected service IDs,
