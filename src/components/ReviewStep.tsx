@@ -3,14 +3,16 @@ import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import { useSuggestedAddons } from "@/hooks/useSuggestedAddons";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useState } from "react";
-import { Sparkles, X, Loader2, CreditCard, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Sparkles, X, Loader2, CreditCard, CheckCircle2, Plus, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
 import { toast } from "sonner";
+import type { PublicService } from "@/hooks/usePublicServices";
 
 interface ReviewStepProps {
   booking: BookingState;
@@ -43,11 +45,37 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
+  const { data: addonsConfig } = useSuggestedAddons();
   const queryClient = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
+  const [showPairWith, setShowPairWith] = useState(false);
+
+  // ── Show the pair-with popup once on mount if there are suggestions available ──
+  useEffect(() => {
+    setShowPairWith(true);
+  }, []);
+
+  // ── Build deduplicated add-on list across all selected services ─────────────
+  const pairWithAddons = useMemo(() => {
+    if (!addonsConfig || !allServices.length) return [];
+    const selectedSet = new Set(booking.selectedTreatments);
+    const seen = new Set<string>();
+    const result: PublicService[] = [];
+    for (const rule of addonsConfig.rules) {
+      if (!selectedSet.has(rule.triggerId)) continue;
+      for (const id of rule.suggestIds) {
+        if (seen.has(id) || selectedSet.has(id)) continue;
+        const svc = allServices.find((s) => s.id === id);
+        if (svc) { seen.add(id); result.push(svc); }
+      }
+    }
+    return result;
+  }, [addonsConfig, allServices, booking.selectedTreatments]);
+
+  const hasPairWith = pairWithAddons.length > 0;
 
   const selectedWithQty = (() => {
     const seen = new Map<string, number>();
@@ -79,14 +107,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
     setSubmitting(true);
 
     try {
-      // Guard: services must be selected
       if (!booking.selectedTreatments.length) {
         toast.error("No services selected. Please go back and choose a service.");
         onGoToStep(0);
         return;
       }
 
-      // Guard: date and time must be present
       const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
       const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
       if (!bookingDate || !startTime) {
@@ -105,8 +131,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       const staffId = tenantRow?.owner_id;
       if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
 
-      // Returns full detail text for all consent form fields, including pregnancy.
-      // e.g. "Yes: 4 Months" — full text is preserved so the tenant sees exactly what the client submitted.
       const getAnswerDetail = (id: number) => {
         const answer = booking.safetyAnswers[id];
         if (answer === true) {
@@ -117,7 +141,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         return booking.isExistingClient ? "On File" : "None reported";
       };
 
-      // Guard: avoid sending "+27" when phone is empty
       const guestPhone = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
 
       const { data, error } = await supabase.rpc("create_booking_with_consultation", {
@@ -154,8 +177,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
       const bookingId = result?.booking_id;
       if (bookingId) {
-        // Fire-and-forget: GCal must not block the payment redirect.
-        // Any GCal failure is caught silently — the booking row already exists.
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         const serviceNames = selectedWithQty
@@ -189,8 +210,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
         const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
-        // Hard 10-second timeout: if yoco-checkout hangs, surface a retryable error
-        // rather than leaving the user on an infinite spinner.
         const checkoutTimeout = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Payment gateway took too long — please try again.")), 10_000)
         );
@@ -255,12 +274,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <div className="flex items-center justify-between mb-1">
           <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Schedule</h4>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => onGoToStep(1)}
-            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none"
-          >Edit</button>
+          <button type="button" disabled={submitting} onClick={() => onGoToStep(1)}
+            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none">Edit</button>
         </div>
         <span className="text-sm text-foreground">{booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—"}</span>
         <span className="text-sm text-muted-foreground">{booking.selectedTime || "—"}</span>
@@ -271,12 +286,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <div className="flex items-center justify-between mb-1">
           <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Contact</h4>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => onGoToStep(2)}
-            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none"
-          >Edit</button>
+          <button type="button" disabled={submitting} onClick={() => onGoToStep(2)}
+            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none">Edit</button>
         </div>
         <span className="text-sm text-foreground">{booking.fullName || "—"}</span>
         <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
@@ -286,24 +297,27 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         )}
       </motion.div>
 
-      {/* Summary card */}
+      {/* Services summary */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-0">
         <div className="flex items-center justify-between mb-1">
           <h4 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Services</h4>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => onGoToStep(0)}
-            className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none"
-          >Edit</button>
+          <div className="flex items-center gap-3">
+            {hasPairWith && (
+              <button type="button" onClick={() => setShowPairWith(true)}
+                className="flex items-center gap-1 text-xs text-primary font-semibold hover:opacity-80 transition-opacity">
+                <Sparkles className="w-3 h-3" />
+                Pair with
+              </button>
+            )}
+            <button type="button" disabled={submitting} onClick={() => onGoToStep(0)}
+              className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none">Edit</button>
+          </div>
         </div>
         {selectedWithQty.map(({ svc, qty }) => (
           <div key={svc.id} className="flex items-baseline justify-between py-1.5">
             <span className="text-sm text-foreground">
-              {qty > 1 && (
-                <span className="text-xs font-bold text-primary mr-1">{qty}×</span>
-              )}
+              {qty > 1 && <span className="text-xs font-bold text-primary mr-1">{qty}×</span>}
               {svc.name}
             </span>
             <span className="text-sm font-semibold text-foreground ml-4">{cur}{svc.price * qty}</span>
@@ -314,16 +328,13 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           <div className="flex items-baseline justify-between py-1.5">
             <span className="text-sm text-muted-foreground flex items-center gap-1">
               Call-out fee
-              {booking.distanceKm == null && (
-                <span className="text-[10px] text-yellow-500">(estimated)</span>
-              )}
+              {booking.distanceKm == null && <span className="text-[10px] text-yellow-500">(estimated)</span>}
             </span>
             <span className="text-sm font-semibold text-foreground">{cur}{callOutFee}</span>
           </div>
         )}
 
         <div className="h-px bg-border/50 my-2" />
-
         <div className="flex justify-between items-baseline py-1">
           <span className="text-base font-bold text-foreground">Total</span>
           <span className="text-base font-bold text-foreground">{cur}{total}</span>
@@ -334,38 +345,28 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
         <div className="grid grid-cols-2 gap-2 mb-3">
           {depositPercent < 100 && (
-            <button
-              type="button"
-              onClick={() => setPaymentChoice("deposit")}
+            <button type="button" onClick={() => setPaymentChoice("deposit")}
               className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
                 paymentChoice === "deposit"
                   ? "border-primary bg-primary/10 text-foreground"
                   : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
-              }`}
-            >
-              {paymentChoice === "deposit" && (
-                <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />
-              )}
+              }`}>
+              {paymentChoice === "deposit" && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
               <CreditCard className="w-4 h-4 mb-1.5 opacity-70" />
               <span className="text-xs font-semibold">Deposit only</span>
               <span className="text-sm font-bold mt-0.5">{cur}{deposit}</span>
               <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now • {cur}{balance} on the day</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setPaymentChoice("full")}
+          <button type="button" onClick={() => setPaymentChoice("full")}
             className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
               depositPercent >= 100 ? "col-span-2" : ""
             } ${
               paymentChoice === "full"
                 ? "border-primary bg-primary/10 text-foreground"
                 : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
-            }`}
-          >
-            {paymentChoice === "full" && (
-              <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />
-            )}
+            }`}>
+            {paymentChoice === "full" && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
             <Sparkles className="w-4 h-4 mb-1.5 opacity-70" />
             <span className="text-xs font-semibold">Pay in full</span>
             <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
@@ -377,7 +378,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           <span className="text-muted-foreground">Due now</span>
           <span className="font-bold text-primary">{cur}{amountDueNow}</span>
         </div>
-
         {balanceAfterPay > 0 && (
           <div className="flex justify-between items-baseline py-0.5 text-sm">
             <span className="text-muted-foreground">Remaining on the day</span>
@@ -393,21 +393,132 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           </button>
         </p>
 
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={handleConfirm}
-          disabled={submitting}
-          className="btn-next flex items-center justify-center gap-2 disabled:opacity-50 w-full"
-        >
+        <motion.button whileTap={{ scale: 0.96 }} onClick={handleConfirm} disabled={submitting}
+          className="btn-next flex items-center justify-center gap-2 disabled:opacity-50 w-full">
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           {submitting
             ? "Securing payment page…"
             : paymentChoice === "full"
             ? `Confirm & Pay ${cur}${total}`
-            : `Confirm & Pay Deposit ${cur}${deposit}`
-          }
+            : `Confirm & Pay Deposit ${cur}${deposit}`}
         </motion.button>
       </motion.div>
+
+      {/* ── Pair your services with — bottom sheet ─────────────────────────── */}
+      <AnimatePresence>
+        {showPairWith && hasPairWith && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="pair-backdrop"
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowPairWith(false)}
+            />
+
+            {/* Sheet */}
+            <motion.div
+              key="pair-sheet"
+              className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-2xl bg-background border-t border-border flex flex-col"
+              style={{ maxHeight: "75vh" }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 380, damping: 38 }}
+            >
+              {/* Drag handle */}
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-1 shrink-0" />
+
+              {/* Header */}
+              <div className="flex items-start justify-between px-5 pt-2 pb-3 shrink-0">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span className="text-[10px] font-semibold tracking-[0.18em] uppercase text-primary">
+                      Pair your services with
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Clients often add these to their booking
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowPairWith(false)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors shrink-0"
+                  aria-label="Close"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Scrollable add-on list */}
+              <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-2 scrollbar-hide">
+                {pairWithAddons.map((a) => {
+                  const already = booking.selectedTreatments.includes(a.id);
+                  return (
+                    <div
+                      key={a.id}
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors ${
+                        already ? "border-primary/40 bg-primary/8" : "border-border bg-muted/30"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-sm font-semibold text-foreground leading-snug">
+                          {a.name}
+                        </span>
+                        {a.description && (
+                          <span className="block text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                            {a.description}
+                          </span>
+                        )}
+                        {a.duration > 0 && (
+                          <span className="block text-[10px] text-muted-foreground/60 leading-snug mt-0.5">
+                            {a.duration} min
+                          </span>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-sm font-bold text-foreground">
+                        {cur}{a.price}
+                      </span>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => {
+                          if (!already) onUpdate({ selectedTreatments: [...booking.selectedTreatments, a.id] });
+                        }}
+                        disabled={already}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors shrink-0 ${
+                          already
+                            ? "border-primary bg-primary text-primary-foreground cursor-default"
+                            : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/25"
+                        }`}
+                        aria-label={already ? `${a.name} added` : `Add ${a.name}`}
+                      >
+                        {already
+                          ? <Check className="w-3 h-3" strokeWidth={2.5} />
+                          : <Plus className="w-3 h-3" strokeWidth={2.5} />}
+                      </motion.button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Done button */}
+              <div className="px-5 pt-3 pb-6 shrink-0 border-t border-border/30">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowPairWith(false)}
+                  className="btn-next w-full"
+                >
+                  Done
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Terms modal */}
       <AnimatePresence>
