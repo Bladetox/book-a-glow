@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp, TrendingDown, CalendarCheck,
@@ -47,7 +47,6 @@ function getVisibility(): Record<SectionKey, boolean> {
       ) as Record<SectionKey, boolean>;
     }
   } catch {}
-
   return Object.fromEntries(ALL_SECTIONS.map((s) => [s, true])) as Record<SectionKey, boolean>;
 }
 
@@ -184,7 +183,6 @@ const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } }
 
 // ---------------------------------------------------------------------------
 // Mini gold orb — used in the dashboard Nexty AI Insights section header.
-// Matches the full orb in AdminRecommendations but scaled down to 14px.
 // ---------------------------------------------------------------------------
 function MiniNextyOrb() {
   return (
@@ -236,6 +234,37 @@ function MiniNextyOrb() {
         }
       `}</style>
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Aesthetic-Usability: 7-day sparkline replacing the decorative BarChart3 icon.
+// Renders a tiny SVG polyline from the last 7 revenue data points.
+// ---------------------------------------------------------------------------
+function RevenueSparkline({ trend }: { trend: { value: number }[] }) {
+  const points = trend.slice(-7);
+  if (points.length < 2) return <BarChart3 className="w-5 h-5 text-white/15" />;
+  const max = Math.max(...points.map((p) => p.value), 1);
+  const W = 40;
+  const H = 20;
+  const coords = points
+    .map((p, i) => {
+      const x = (i / (points.length - 1)) * W;
+      const y = H - (p.value / max) * H;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="none" className="shrink-0 opacity-40">
+      <polyline
+        points={coords}
+        stroke="rgba(52,211,153,0.8)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
   );
 }
 
@@ -464,7 +493,6 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
               {row.day}
             </div>
           ))}
-
           {/* One row per time slot */}
           {heatmapSlots.map((slot) => (
             <>
@@ -573,7 +601,6 @@ const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
 
 // ---------------------------------------------------------------------------
 // Nexty AI — compact proactive insight cards shown at the top of the Dashboard.
-// The full Nexty chat UI lives in the dedicated Recommendations nav view.
 // ---------------------------------------------------------------------------
 const priorityIcon: Record<string, React.ElementType> = {
   critical: AlertTriangle,
@@ -633,6 +660,23 @@ const NextyInsightCards = ({ onNavigate }: { onNavigate?: (view: string) => void
   );
 };
 
+// ---------------------------------------------------------------------------
+// Helpers for the hero card
+// ---------------------------------------------------------------------------
+
+/** Returns the number of days in the given month (1-based month). */
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+/** Parses nextAppt safely regardless of whether it contains " - " */
+function parseNextAppt(raw: string | null): { value: string; sub: string | null } {
+  if (!raw) return { value: "—", sub: "no more today" };
+  const idx = raw.indexOf(" - ");
+  if (idx === -1) return { value: raw, sub: null };
+  return { value: raw.slice(0, idx), sub: raw.slice(idx + 3) };
+}
+
 const AdminDashboard = ({
   onSelectAppointment,
   onNavigate,
@@ -657,11 +701,6 @@ const AdminDashboard = ({
 
   const overdueClients = overdueLoyaltyClients;
 
-  // ---------------------------------------------------------------------------
-  // Nexty eligibility: driven by the real feature flag system, not a bespoke
-  // plan check. useFeatureFlags reads subscription_status + trial_ends_at +
-  // is_lifetime_free — the same source of truth used everywhere else.
-  // ---------------------------------------------------------------------------
   const { flags } = useFeatureFlags(
     tenantId,
     tenant?.is_lifetime_free,
@@ -689,33 +728,53 @@ const AdminDashboard = ({
     );
   }
 
-  const monthRevenue = data.revenue?.month ?? 0;
-  const lastMonthRev = data.revenue?.lastMonth ?? 0;
-  const todayRevenue = data.revenue?.today ?? 0;
-  const todayAppts = data.today?.appointments ?? 0;
-  const todayRemaining = data.today?.remaining ?? 0;
-  const nextAppt = data.today?.nextAppointment ?? null;
-  const fillRate = data.health?.fillRate ?? null;
-  const avgBasket = data.health?.avgBasket ?? 0;
-  const totalAppts = data.health?.totalAppointments ?? 0;
-  const cancelRate = data.health?.cancellationRate ?? 0;
-  const totalClients = data.clients?.total ?? 0;
-  const returningCount = data.clients?.returning ?? 0;
-  const retentionRate = data.clients?.retentionRate ?? 0;
-  const revenueTrend = data.revenueTrend ?? [];
-  const stockAlerts = data.stockAlerts ?? [];
+  const monthRevenue   = data.revenue?.month    ?? 0;
+  const lastMonthRev   = data.revenue?.lastMonth ?? 0;
+  const todayRevenue   = data.revenue?.today     ?? 0;
+  const todayAppts     = data.today?.appointments   ?? 0;
+  const todayRemaining = data.today?.remaining      ?? 0;
+  const nextAppt       = data.today?.nextAppointment ?? null;
+  const fillRate       = data.health?.fillRate          ?? null;
+  const avgBasket      = data.health?.avgBasket         ?? 0;
+  const totalAppts     = data.health?.totalAppointments ?? 0;
+  const cancelRate     = data.health?.cancellationRate  ?? 0;
+  const totalClients   = data.clients?.total         ?? 0;
+  const returningCount = data.clients?.returning     ?? 0;
+  const retentionRate  = data.clients?.retentionRate ?? 0;
+  const revenueTrend   = data.revenueTrend  ?? [];
+  const stockAlerts    = data.stockAlerts   ?? [];
   const leadSourceBreakdown: { channel: string; count: number }[] = data.leadSourceBreakdown ?? [];
 
   const displayedServices =
     servicesPeriod === "alltime" ? (data.allTimeTopServices ?? []) : (data.topServices ?? []);
 
   const hasLastMonth = lastMonthRev > 0;
-  const pctChange = hasLastMonth ? Math.round(((monthRevenue - lastMonthRev) / lastMonthRev) * 100) : null;
-  const pctUp = pctChange !== null ? pctChange >= 0 : true;
+  const pctChange    = hasLastMonth ? Math.round(((monthRevenue - lastMonthRev) / lastMonthRev) * 100) : null;
+  const pctUp        = pctChange !== null ? pctChange >= 0 : true;
+
+  // ── Zeigarnik Effect: day-of-month context ──────────────────────────────
+  const today        = new Date();
+  const dayOfMonth   = today.getDate();
+  const totalDays    = daysInMonth(today.getFullYear(), today.getMonth() + 1);
+  const daysLeft     = totalDays - dayOfMonth;
+
+  // ── Peak-End Rule: projected month-end revenue ──────────────────────────
+  const projectedRevenue = dayOfMonth > 0
+    ? Math.round((monthRevenue / dayOfMonth) * totalDays)
+    : null;
+
+  // ── Goal-Gradient Effect: progress toward beating last month ────────────
+  const progressPct = hasLastMonth
+    ? Math.min(Math.round((monthRevenue / lastMonthRev) * 100), 100)
+    : null;
+  const rToGo = hasLastMonth && monthRevenue < lastMonthRev
+    ? lastMonthRev - monthRevenue
+    : null;
+  const beatLastMonth = hasLastMonth && monthRevenue >= lastMonthRev;
 
   const fillRateDisplay = () => {
     if (fillRate === null) return { text: "…", color: "text-white/40" };
-    if (fillRate === 0) return { text: "—", color: "text-white/30" };
+    if (fillRate === 0)    return { text: "—", color: "text-white/30" };
     const pct = Math.round(fillRate * 100);
     return {
       text: `${pct}%`,
@@ -723,23 +782,32 @@ const AdminDashboard = ({
     };
   };
 
-  const fr = fillRateDisplay();
+  const fr           = fillRateDisplay();
   const cancelDisplay = `${Math.round(cancelRate)}%`;
-  const cancelColor = cancelRate > 20 ? "text-red-400" : "text-white/90";
-  const retentionDisp = `${retentionRate}%`;
+  const cancelColor   = cancelRate > 20 ? "text-red-400" : "text-white/90";
+  const retentionDisp  = `${retentionRate}%`;
   const retentionColor = retentionRate >= 40 ? "text-emerald-400" : "text-white/90";
 
-  const topChannel = leadSourceBreakdown[0]?.channel ?? "—";
-  const totalWithSource = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
-  const topChannelPct =
+  const topChannel       = leadSourceBreakdown[0]?.channel ?? "—";
+  const totalWithSource  = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
+  const topChannelPct    =
     totalWithSource > 0 && leadSourceBreakdown[0]
       ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
       : null;
-  const leadSourceSub = topChannelPct !== null ? `${topChannelPct}% of all bookings` : undefined;
+  const leadSourceSub        = topChannelPct !== null ? `${topChannelPct}% of all bookings` : undefined;
   const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map((r) => ({
     term: r.channel,
     def: `${r.count} booking${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
   }));
+
+  // ── Tesler's Law: safe next-appointment parsing ─────────────────────────
+  const parsedNext = parseNextAppt(nextAppt);
+
+  // ── Von Restorff: which today-tile is the actionable outlier? ───────────
+  const now = new Date();
+  const isMorning = now.getHours() < 17;
+  const remainingIsUrgent = todayRemaining === 0 && isMorning && todayAppts > 0;
+  const revenueIsUrgent   = todayRevenue  === 0 && now.getHours() >= 12;
 
   return (
     <div className="flex flex-col gap-6">
@@ -793,7 +861,7 @@ const AdminDashboard = ({
         )}
       </AnimatePresence>
 
-      {/* Nexty AI — gated by flags.ai_insights from useFeatureFlags (the real source of truth). */}
+      {/* Nexty AI — gated by flags.ai_insights */}
       {isNextyEnabled && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <button
@@ -815,58 +883,120 @@ const AdminDashboard = ({
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[10px] tracking-[0.16em] uppercase text-white/25 mb-1">Revenue This Month</p>
-                <p className="text-3xl sm:text-4xl font-bold text-white/95 leading-none">
+
+            {/* ── Month revenue header ── */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1 flex-1 min-w-0">
+                <p className="text-[10px] tracking-[0.16em] uppercase text-white/25">Revenue This Month</p>
+                <p className="text-3xl sm:text-4xl font-bold text-white/95 leading-none tabular-nums">
                   R {monthRevenue.toLocaleString()}
                 </p>
+
+                {/* Zeigarnik Effect: temporal frame */}
+                <p className="text-[10px] text-white/25 tabular-nums">
+                  Day {dayOfMonth} of {totalDays} · {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
+                </p>
+
+                {/* Peak-End Rule: projection */}
+                {projectedRevenue !== null && dayOfMonth < totalDays && (
+                  <p className="text-[11px] text-white/40 tabular-nums">
+                    On track for R {projectedRevenue.toLocaleString()} this month
+                  </p>
+                )}
+
+                {/* MoM delta */}
                 {pctChange !== null && (
-                  <div className={`flex items-center gap-1 mt-2 ${pctUp ? "text-emerald-400" : "text-red-400"}`}>
+                  <div className={`flex items-center gap-1 mt-0.5 ${pctUp ? "text-emerald-400" : "text-red-400"}`}>
                     {pctUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     <span className="text-xs font-semibold">{Math.abs(pctChange)}% vs last month</span>
                   </div>
                 )}
               </div>
-              <BarChart3 className="w-5 h-5 text-white/15" />
+
+              {/* Aesthetic-Usability: 7-day sparkline instead of decorative icon */}
+              <RevenueSparkline trend={revenueTrend} />
             </div>
-            <div className="border-t border-white/[0.05] pt-3">
-              <p className="text-[9px] tracking-[0.14em] uppercase text-white/20 mb-2">Today at a glance</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  {
-                    label: "Bookings Today",
-                    value: String(todayAppts),
-                    color: "text-white/80",
-                    sub: todayAppts === 1 ? "appointment" : "appointments",
-                  },
-                  {
-                    label: "Still to Come",
-                    value: String(todayRemaining),
-                    color: todayRemaining > 0 ? "text-amber-400" : "text-white/40",
-                    sub: "remaining",
-                  },
-                  {
-                    label: "Revenue Today",
-                    value: `R ${todayRevenue.toLocaleString()}`,
-                    color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40",
-                    sub: "paid in",
-                  },
-                  {
-                    label: "Next Client",
-                    value: nextAppt ? nextAppt.split(" - ")[0] : "—",
-                    color: nextAppt ? "text-white/80" : "text-white/25",
-                    sub: nextAppt ? nextAppt.split(" - ").slice(1).join(" ") : "no more today",
-                  },
-                ].map((item) => (
-                  <div key={item.label} className="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                    <span className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</span>
-                    <span className={`text-sm font-bold ${item.color}`}>{item.value}</span>
-                    {item.sub && <span className="text-[9px] text-white/20">{item.sub}</span>}
-                  </div>
-                ))}
+
+            {/* Goal-Gradient Effect: progress bar toward beating last month */}
+            {progressPct !== null && (
+              <div className="flex flex-col gap-1">
+                <div className="h-1 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPct}%` }}
+                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                    className={`h-full rounded-full ${
+                      beatLastMonth ? "bg-emerald-400" : progressPct >= 70 ? "bg-emerald-400/70" : "bg-amber-400/70"
+                    }`}
+                  />
+                </div>
+                <p className="text-[10px] text-white/25 tabular-nums">
+                  {beatLastMonth
+                    ? "Last month beaten ✓"
+                    : rToGo !== null
+                      ? `R ${rToGo.toLocaleString()} to beat last month`
+                      : `${progressPct}% of last month`}
+                </p>
               </div>
+            )}
+
+            {/* Law of Proximity: clear labelled divider between month and today */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 border-t border-white/[0.05]" />
+              <span className="text-[9px] tracking-[0.14em] uppercase text-white/20 shrink-0">Today</span>
+              <div className="flex-1 border-t border-white/[0.05]" />
             </div>
+
+            {/* ── Today at a glance ── */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                {
+                  label: "Bookings Today",
+                  value: String(todayAppts),
+                  color: "text-white/80",
+                  sub: todayAppts === 1 ? "appointment" : "appointments",
+                  urgent: false,
+                },
+                {
+                  // Von Restorff: flag urgent state if all done before 5pm
+                  label: "Still to Come",
+                  value: String(todayRemaining),
+                  color: todayRemaining > 0 ? "text-amber-400" : "text-white/40",
+                  sub: "remaining",
+                  urgent: remainingIsUrgent,
+                },
+                {
+                  // Von Restorff: flag if no revenue by noon
+                  label: "Revenue Today",
+                  value: `R ${todayRevenue.toLocaleString()}`,
+                  color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40",
+                  sub: "paid in",
+                  urgent: revenueIsUrgent,
+                },
+                {
+                  // Tesler's Law: safe parsing
+                  label: "Next Client",
+                  value: parsedNext.value,
+                  color: nextAppt ? "text-white/80" : "text-white/25",
+                  sub: parsedNext.sub ?? undefined,
+                  urgent: false,
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border transition-colors ${
+                    item.urgent
+                      ? "border-amber-500/30 bg-amber-500/[0.04]"
+                      : "border-white/[0.05] bg-white/[0.03]"
+                  }`}
+                >
+                  <span className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</span>
+                  <span className={`text-sm font-bold ${item.color}`}>{item.value}</span>
+                  {item.sub && <span className="text-[9px] text-white/20">{item.sub}</span>}
+                </div>
+              ))}
+            </div>
+
           </div>
         </motion.section>
       )}
@@ -1036,25 +1166,25 @@ const AdminDashboard = ({
       )}
 
       {visibility.stockAlerts && stockAlerts.length > 0 && (
-  <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.2 }}>
-    <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Stock Alerts</p>
-    <div className="flex flex-col gap-2">
-      {stockAlerts.map((item: { item: string; level: "critical" | "low" }, i: number) => (
-        <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-red-500/[0.15] bg-red-500/[0.04] px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <Package className="w-3.5 h-3.5 text-red-400/70 shrink-0" />
-            <span className="text-xs font-medium text-white/70">{item.item}</span>
+        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.2 }}>
+          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Stock Alerts</p>
+          <div className="flex flex-col gap-2">
+            {stockAlerts.map((item: { item: string; level: "critical" | "low" }, i: number) => (
+              <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-red-500/[0.15] bg-red-500/[0.04] px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Package className="w-3.5 h-3.5 text-red-400/70 shrink-0" />
+                  <span className="text-xs font-medium text-white/70">{item.item}</span>
+                </div>
+                <span className={`text-[10px] font-semibold ${item.level === "critical" ? "text-red-400" : "text-amber-400"}`}>
+                  {item.level}
+                </span>
+              </div>
+            ))}
           </div>
-          <span className={`text-[10px] font-semibold ${item.level === "critical" ? "text-red-400" : "text-amber-400"}`}>
-            {item.level}
-          </span>
-        </div>
-      ))}
+        </motion.section>
+      )}
     </div>
-  </motion.section>
-)}
-</div>
-);
+  );
 };
 
 export default AdminDashboard;
