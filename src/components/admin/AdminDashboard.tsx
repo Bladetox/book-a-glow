@@ -414,6 +414,7 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
 
   return (
     <>
+      {/* ── Desktop: days = rows, slots = columns ── */}
       <div className="hidden sm:block overflow-x-auto -mx-1">
         <table className="w-full">
           <thead>
@@ -453,37 +454,36 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
         </table>
       </div>
 
-      <div className="sm:hidden flex flex-col gap-2">
-        {data.map((row) => {
-          const total = row.slots.reduce((a, b) => a + b.intensity, 0);
-          if (total === 0) return null;
-
-          return (
-            <div key={row.day} className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold text-white/40 w-8 shrink-0">{row.day}</span>
-              <div className="flex gap-1 flex-1">
-                {row.slots.map((cell) => {
-                  const opacity = Math.min(cell.intensity / maxIntensity, 1);
-                  return (
-                    <div
-                      key={cell.slot}
-                      className="flex-1 h-8 rounded-md flex items-center justify-center"
-                      style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.85, 0.06)})` }}
-                    >
-                      {cell.intensity > 0 && <span className="text-[9px] font-bold text-white/70">{cell.intensity}</span>}
-                    </div>
-                  );
-                })}
-              </div>
+      {/* ── Mobile: slots = rows, days = columns ── */}
+      <div className="sm:hidden">
+        <div className="grid gap-0.5" style={{ gridTemplateColumns: `auto repeat(${data.length}, 1fr)` }}>
+          {/* Header row: empty corner + day labels */}
+          <div />
+          {data.map((row) => (
+            <div key={row.day} className="text-center text-[9px] font-semibold text-white/30 pb-1">
+              {row.day}
             </div>
-          );
-        })}
+          ))}
 
-        <div className="flex gap-1 px-8">
-          {heatmapSlots.map((s) => (
-            <span key={s} className="flex-1 text-[8px] text-white/20 text-center">
-              {s}
-            </span>
+          {/* One row per time slot */}
+          {heatmapSlots.map((slot) => (
+            <>
+              <div key={`label-${slot}`} className="flex items-center justify-end pr-1.5">
+                <span className="text-[9px] text-white/25 leading-none">{slot}</span>
+              </div>
+              {data.map((row) => {
+                const cell = row.slots.find((s) => s.slot === slot);
+                const intensity = cell?.intensity ?? 0;
+                const opacity = Math.min(intensity / maxIntensity, 1);
+                return (
+                  <div
+                    key={`${row.day}-${slot}`}
+                    className="h-10 rounded-md"
+                    style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.85, 0.06)})` }}
+                  />
+                );
+              })}
+            </>
           ))}
         </div>
       </div>
@@ -1058,4 +1058,3 @@ const AdminDashboard = ({
 };
 
 export default AdminDashboard;
-
