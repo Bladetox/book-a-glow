@@ -21,8 +21,16 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        navigateFallbackDenylist: [/^\/~oauth/],
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Required for SPA deep-route navigation in installed PWA mode.
+        // Without this the service worker intercepts /admin (etc.) and returns
+        // the raw HTML shell as a JS module response, causing:
+        // "'text/html' is not a valid JavaScript MIME type"
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+        // woff2 removed — all fonts are loaded from external CDNs (Fontshare /
+        // Google Fonts) at runtime; no local .woff2 files exist in /public.
+        // Keeping it caused a Workbox glob-pattern warning on every build.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         runtimeCaching: [
           {
             // All Supabase traffic must bypass the cache entirely.
