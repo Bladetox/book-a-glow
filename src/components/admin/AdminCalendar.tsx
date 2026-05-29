@@ -5,11 +5,8 @@ import {
   ChevronRight,
   CalendarDays,
   Clock,
-  User,
-  Loader2,
 } from "lucide-react";
-import { useTenant } from "@/contexts/TenantContext";
-import { useBookingsByMonth } from "@/hooks/useSupabaseDashboard";
+import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,8 +29,8 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-function startOfMonth(year: number, month: number): Date {
-  return new Date(year, month, 1);
+function startOfMonthDow(year: number, month: number): number {
+  return new Date(year, month, 1).getDay();
 }
 
 function daysInMonth(year: number, month: number): number {
@@ -72,7 +69,7 @@ const DayPanel = ({
   bookings: CalendarBooking[];
   onClose: () => void;
 }) => {
-  const [d, m, y] = dateKey.split("-").reverse().map(Number);
+  const [y, m, d] = dateKey.split("-").map(Number);
   const label = `${d} ${MONTHS[m - 1]} ${y}`;
   const sorted = [...bookings].sort((a, b) => a.time.localeCompare(b.time));
 
@@ -138,50 +135,74 @@ const AdminCalendar = ({
   onNavigate?: (view: string) => void;
 }) => {
   const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
+  const [year, setYear]               = useState(today.getFullYear());
+  const [month, setMonth]             = useState(today.getMonth());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const { tenantId } = useTenant();
-  const { data: bookings = [], isLoading } = useBookingsByMonth(tenantId, year, month);
+  // useDashboardData is already called by AdminDashboard — React Query
+  // deduplicates the fetch so this adds zero extra network requests.
+  const dashData = useDashboardData();
+  const { coreLoading } = dashData;
 
-  // Group bookings by date key
+  const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  // Map todayAppointments → CalendarBooking[] (full detail for today)
+  const calBookings: CalendarBooking[] = useMemo(() => {
+    return dashData.todayAppointments.map((a) => ({
+      id:      a.id,
+      date:    todayKey,
+      time:    a.time,
+      client:  a.client,
+      service: a.service,
+      status:  a.status,
+    }));
+  }, [dashData.todayAppointments, todayKey]);
+
+  // Derive busy dates from revenueTrend (has an entry per day with value > 0)
+  const busyDates = useMemo(() => {
+    const set = new Set<string>();
+    dashData.revenueTrend.forEach((t) => {
+      if (t.value > 0) set.add(t.date);
+    });
+    if (calBookings.length > 0) set.add(todayKey);
+    return set;
+  }, [dashData.revenueTrend, calBookings, todayKey]);
+
+  // Group today's bookings by date key for the detail panel
   const byDate = useMemo(() => {
     const map: Record<string, CalendarBooking[]> = {};
-    for (const b of bookings) {
+    for (const b of calBookings) {
       if (!map[b.date]) map[b.date] = [];
       map[b.date].push(b);
     }
     return map;
-  }, [bookings]);
+  }, [calBookings]);
 
-  const firstDow = startOfMonth(year, month).getDay(); // 0 = Sunday
+  const firstDow  = startOfMonthDow(year, month);
   const totalDays = daysInMonth(year, month);
-  const todayKey = toDateKey(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
 
   const prevMonth = () => {
-    if (month === 0) { setYear(y => y - 1); setMonth(11); }
-    else setMonth(m => m - 1);
+    if (month === 0) { setYear((y) => y - 1); setMonth(11); }
+    else setMonth((m) => m - 1);
     setSelectedKey(null);
   };
   const nextMonth = () => {
-    if (month === 11) { setYear(y => y + 1); setMonth(0); }
-    else setMonth(m => m + 1);
+    if (month === 11) { setYear((y) => y + 1); setMonth(0); }
+    else setMonth((m) => m + 1);
     setSelectedKey(null);
   };
 
   const selectedBookings = selectedKey ? (byDate[selectedKey] ?? []) : [];
 
-  // Build grid cells: leading blanks + day cells
+  // Build grid cells: leading blanks + numbered day cells
   const cells: Array<{ day: number | null; key: string | null }> = [];
   for (let i = 0; i < firstDow; i++) cells.push({ day: null, key: null });
   for (let d = 1; d <= totalDays; d++) {
     cells.push({ day: d, key: toDateKey(year, month, d) });
   }
+
+  const isCurrentMonth =
+    year === today.getFullYear() && month === today.getMonth();
 
   return (
     <div className="flex flex-col gap-5">
@@ -237,7 +258,7 @@ const AdminCalendar = ({
         </div>
 
         {/* Loading skeleton */}
-        {isLoading ? (
+        {coreLoading ? (
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: 35 }).map((_, i) => (
               <div
@@ -252,11 +273,11 @@ const AdminCalendar = ({
               if (!cell.day || !cell.key) {
                 return <div key={`blank-${i}`} className="h-12 sm:h-16" />;
               }
-              const key = cell.key;
+              const key         = cell.key;
               const dayBookings = byDate[key] ?? [];
-              const isToday = key === todayKey;
-              const isSelected = key === selectedKey;
-              const hasBookings = dayBookings.length > 0;
+              const isBusy      = busyDates.has(key);
+              const isToday     = key === todayKey;
+              const isSelected  = key === selectedKey;
 
               return (
                 <motion.button
@@ -268,7 +289,7 @@ const AdminCalendar = ({
                       ? "border-white/20 bg-white/[0.07]"
                       : isToday
                         ? "border-emerald-500/30 bg-emerald-500/[0.05]"
-                        : hasBookings
+                        : isBusy
                           ? "border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.05]"
                           : "border-transparent hover:border-white/[0.05] hover:bg-white/[0.02]"
                   }`}
@@ -286,8 +307,8 @@ const AdminCalendar = ({
                     {cell.day}
                   </span>
 
-                  {/* Booking dots */}
-                  {hasBookings && (
+                  {/* Dots — colour-coded for today, generic for other busy days */}
+                  {dayBookings.length > 0 ? (
                     <div className="mt-auto flex flex-wrap gap-0.5 pb-0.5">
                       {dayBookings.slice(0, 3).map((b) => (
                         <span
@@ -303,7 +324,11 @@ const AdminCalendar = ({
                         </span>
                       )}
                     </div>
-                  )}
+                  ) : isBusy ? (
+                    <div className="mt-auto pb-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full block bg-white/20" />
+                    </div>
+                  ) : null}
                 </motion.button>
               );
             })}
@@ -326,28 +351,28 @@ const AdminCalendar = ({
         ))}
       </div>
 
-      {/* ── Month summary strip ── */}
-      {!isLoading && bookings.length > 0 && (
+      {/* ── Today summary strip ── */}
+      {!coreLoading && isCurrentMonth && calBookings.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
             {
-              label: "Total Bookings",
-              value: String(bookings.length),
+              label: "Today's Bookings",
+              value: String(calBookings.length),
               color: "text-white/80",
             },
             {
               label: "Confirmed",
-              value: String(bookings.filter((b) => b.status === "confirmed").length),
+              value: String(calBookings.filter((b) => b.status === "confirmed").length),
               color: "text-emerald-400",
             },
             {
               label: "Pending",
-              value: String(bookings.filter((b) => b.status === "pending").length),
+              value: String(calBookings.filter((b) => b.status === "pending").length),
               color: "text-amber-400",
             },
             {
               label: "Cancelled",
-              value: String(bookings.filter((b) => b.status === "cancelled").length),
+              value: String(calBookings.filter((b) => b.status === "cancelled").length),
               color: "text-red-400",
             },
           ].map((item) => (
