@@ -19,28 +19,10 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       workbox: {
-        // skipWaiting and clientsClaim removed intentionally.
-        // With both enabled, a new SW takes over all open tabs immediately
-        // on deployment. Lazy-loaded chunks from the previous build no longer
-        // exist in the new precache, so the SW returns index.html for those
-        // .js requests, causing: "'text/html' is not a valid JavaScript MIME type".
-        // Without these flags the new SW waits until all tabs are closed before
-        // activating, giving in-flight sessions time to finish cleanly.
-        navigateFallback: "/index.html",
-        navigateFallbackDenylist: [
-          /^\/~oauth/,
-          /^\/api\//,
-          // Never serve the HTML fallback for JS/CSS asset requests.
-          // When a new SW activates mid-session, old chunk URLs no longer
-          // exist in the new precache — without this denylist the SW would
-          // return index.html for those fetches, producing the MIME error.
-          /\.js(\?.*)?$/,
-          /\.css(\?.*)?$/,
-        ],
-        // woff2 removed — all fonts are loaded from external CDNs (Fontshare /
-        // Google Fonts) at runtime; no local .woff2 files exist in /public.
-        // Keeping it caused a Workbox glob-pattern warning on every build.
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        skipWaiting: true,
+        clientsClaim: true,
+        navigateFallbackDenylist: [/^\/~oauth/],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
             // All Supabase traffic must bypass the cache entirely.

@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/((?!assets/|api/|sw\.js|workbox-).+)", "destination": "/" }
+    { "source": "/(.*)", "destination": "/" }
   ],
   "headers": [
     {
