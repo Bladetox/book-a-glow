@@ -4,7 +4,7 @@ import {
   Plus, X, Loader2, Trash2, Edit3, Upload,
   AlertTriangle, MinusCircle, PlusCircle, Search,
   Package, TrendingDown, CircleDollarSign, PackageOpen,
-  ScanLine,
+  ScanLine, ChevronDown, ChevronUp, MoreHorizontal,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,13 +82,18 @@ const AdminStock = () => {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const [showUtilMenu, setShowUtilMenu] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteItem, setDeleteItem] = useState<StockItem | null>(null);
+  // FIX (Peak-End Rule): track which item id is currently animating out after delete
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionItem, setActionItem] = useState<StockItem | null>(null);
   const [actionType, setActionType] = useState<ActionType>("use");
   const [selectedQty, setSelectedQty] = useState<number | null>(null);
   const [customQty, setCustomQty] = useState("");
   const [csvRows, setCsvRows] = useState<any[] | null>(null);
+  // FIX (Miller's Law): single unified alert banner, collapsed by default
+  const [alertsExpanded, setAlertsExpanded] = useState(false);
   const [form, setForm] = useState({
     item_name: "", stock_on_hand: "0", opening_stock: "0",
     reorder_level: "1", cost: "0", notes: "",
@@ -121,6 +126,20 @@ const AdminStock = () => {
       : items,
   [items, search]);
 
+  // FIX (Proximity/Chunking): group consumption items by day header
+  const consumptionByDay = useMemo(() => {
+    const groups: { label: string; items: StockItem[] }[] = [];
+    const withUsage = items.filter(i => Math.max(0, (i.opening_stock ?? 0) - i.stock_on_hand) > 0);
+    if (withUsage.length > 0) {
+      groups.push({ label: "Since Last Restock", items: withUsage });
+    }
+    const noUsage = items.filter(i => Math.max(0, (i.opening_stock ?? 0) - i.stock_on_hand) === 0);
+    if (noUsage.length > 0) {
+      groups.push({ label: "No Usage Yet", items: noUsage });
+    }
+    return groups;
+  }, [items]);
+
   const upsert = useMutation({
     mutationFn: async (item: any) => {
       const { total_cost: _drop, ...safe } = item;
@@ -148,15 +167,23 @@ const AdminStock = () => {
       const { error } = await supabase.from("stock_inventory").delete().eq("id", id);
       if (error) throw error;
     },
+    // FIX (Peak-End Rule): animate the row out first, then clear state after exit completes
+    onMutate: (id: string) => {
+      setDeletingId(id);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock", tenantId] });
       qc.invalidateQueries({ queryKey: ["stock-alerts", tenantId] });
       setDeleteItem(null);
-      toast.success("Item deleted");
+      setDeletingId(null);
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => {
+      setDeletingId(null);
+      toast.error(e.message);
+    },
   });
 
+  // FIX (Doherty Threshold): optimistic update — write predicted stock_on_hand to cache immediately on tap
   const applyAction = useMutation({
     mutationFn: async () => {
       if (!actionItem) return;
@@ -170,6 +197,34 @@ const AdminStock = () => {
       const { error } = await supabase.from("stock_inventory").update(updatePayload).eq("id", actionItem.id);
       if (error) throw error;
     },
+    onMutate: async () => {
+      if (!actionItem) return;
+      const qty = selectedQty ?? parseFloat(customQty);
+      if (!qty || qty <= 0) return;
+
+      await qc.cancelQueries({ queryKey: ["stock", tenantId] });
+      const previous = qc.getQueryData<StockItem[]>(["stock", tenantId]);
+
+      qc.setQueryData<StockItem[]>(["stock", tenantId], old =>
+        (old ?? []).map(i => {
+          if (i.id !== actionItem.id) return i;
+          const newQty = actionType === "use"
+            ? Math.max(0, i.stock_on_hand - qty)
+            : i.stock_on_hand + qty;
+          return {
+            ...i,
+            stock_on_hand: newQty,
+            opening_stock: actionType === "restock" ? newQty : i.opening_stock,
+          };
+        })
+      );
+
+      return { previous };
+    },
+    onError: (e: any, _vars, ctx: any) => {
+      if (ctx?.previous) qc.setQueryData(["stock", tenantId], ctx.previous);
+      toast.error(e.message);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock", tenantId] });
       qc.invalidateQueries({ queryKey: ["stock-alerts", tenantId] });
@@ -177,7 +232,6 @@ const AdminStock = () => {
       toast.success(actionType === "use" ? "Usage logged" : "Stock restocked");
       closeAction();
     },
-    onError: (e: any) => toast.error(e.message),
   });
 
   const importCsv = useMutation({
@@ -275,13 +329,46 @@ const AdminStock = () => {
   return (
     <div className="flex flex-col gap-8 pb-12">
 
+      {/* FIX (Hick's Law): single primary CTA; Scan + CSV demoted into overflow menu */}
       <AdminPageHeader
         title="Stock Management"
         subtitle="Track inventory, usage, restocks, CSV imports, and low-stock alerts."
         action={
-          <div className="flex gap-2 self-start flex-wrap">
-            <SaveButton label="Scan" variant="secondary" icon={<ScanLine className="w-3.5 h-3.5" />} onClick={() => setShowScan(true)} />
-            <SaveButton label="CSV" variant="secondary" icon={<Upload className="w-3.5 h-3.5" />} onClick={() => fileRef.current?.click()} />
+          <div className="flex gap-2 self-start flex-wrap items-center">
+            {/* Utility overflow menu — secondary actions hidden until needed */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUtilMenu(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-semibold text-white/50 hover:text-white/80 hover:bg-white/[0.07] transition-all"
+                aria-label="More actions"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              <AnimatePresence>
+                {showUtilMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    className="absolute right-0 top-full mt-1 z-30 rounded-2xl border border-white/[0.08] bg-[#1a1a1a] p-1.5 flex flex-col gap-0.5 min-w-[140px] shadow-xl"
+                  >
+                    <button
+                      onClick={() => { setShowScan(true); setShowUtilMenu(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors w-full text-left"
+                    >
+                      <ScanLine className="w-3.5 h-3.5" /> Scan Barcode
+                    </button>
+                    <button
+                      onClick={() => { fileRef.current?.click(); setShowUtilMenu(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors w-full text-left"
+                    >
+                      <Upload className="w-3.5 h-3.5" /> Import CSV
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {/* Primary CTA — only one, clearly dominant */}
             <SaveButton label="Add Item" icon={<Plus className="w-3.5 h-3.5" />} onClick={openAdd} />
           </div>
         }
@@ -327,34 +414,67 @@ const AdminStock = () => {
         </div>
       </section>
 
+      {/* FIX (Miller's Law): unified collapsible alert banner — one cognitive chunk instead of two */}
       <AnimatePresence>
-        {outItems.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-3xl border border-red-500/20 bg-red-500/[0.06] px-4 py-3 flex gap-3 items-start">
-            <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-red-400 mb-1">Out of Stock — {outItems.length} item{outItems.length > 1 ? "s" : ""} cannot be used</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                {outItems.map(i => <span key={i.id} className="text-[11px] text-red-300/60">{i.item_name}</span>)}
+        {alertCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className={`rounded-3xl border px-4 py-3 flex flex-col gap-2 ${
+              outItems.length > 0
+                ? "border-red-500/20 bg-red-500/[0.06]"
+                : "border-amber-500/20 bg-amber-500/[0.06]"
+            }`}
+          >
+            <button
+              onClick={() => setAlertsExpanded(v => !v)}
+              className="flex items-center justify-between gap-3 w-full text-left"
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${outItems.length > 0 ? "text-red-400" : "text-amber-400"}`} />
+                <p className={`text-xs font-semibold ${outItems.length > 0 ? "text-red-400" : "text-amber-400"}`}>
+                  {alertCount} alert{alertCount > 1 ? "s" : ""} —&nbsp;
+                  {outItems.length > 0 && `${outItems.length} out of stock`}
+                  {outItems.length > 0 && lowItems.length > 0 && ", "}
+                  {lowItems.length > 0 && `${lowItems.length} running low`}
+                </p>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {lowItems.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-3xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 flex gap-3 items-start">
-            <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-amber-400 mb-1">Order Soon — {lowItems.length} item{lowItems.length > 1 ? "s" : ""} running low</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                {lowItems.map(i => (
-                  <span key={i.id} className="text-[11px] text-amber-300/60">
-                    {i.item_name} <span className="text-amber-400/50">({i.stock_on_hand} left)</span>
-                  </span>
-                ))}
-              </div>
-            </div>
+              {alertsExpanded
+                ? <ChevronUp className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                : <ChevronDown className="w-3.5 h-3.5 text-white/30 shrink-0" />}
+            </button>
+            <AnimatePresence>
+              {alertsExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden flex flex-col gap-2 pt-1"
+                >
+                  {outItems.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-red-400/70 mb-1">Out of stock — cannot be used</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                        {outItems.map(i => <span key={i.id} className="text-[11px] text-red-300/60">{i.item_name}</span>)}
+                      </div>
+                    </div>
+                  )}
+                  {lowItems.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/70 mb-1">Order soon — running low</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                        {lowItems.map(i => (
+                          <span key={i.id} className="text-[11px] text-amber-300/60">
+                            {i.item_name} <span className="text-amber-400/50">({i.stock_on_hand} left)</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
@@ -431,55 +551,76 @@ const AdminStock = () => {
             {filtered.length === 0 && search && (
               <EmptyState
                 icon={Search}
-                title={`No products match “${search}”`}
+                title={`No products match "${search}"`}
                 description="Try a different keyword or clear the search."
               />
             )}
             {filtered.length > 0 && (
               <>
+                {/* Mobile cards */}
                 <div className="flex flex-col gap-3 md:hidden">
-                  {filtered.map(item => {
-                    const isOut = item.stock_on_hand === 0;
-                    const isLow = !isOut && item.stock_on_hand <= item.reorder_level;
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-3xl border p-5 flex flex-col gap-3 ${
-                          isOut ? "border-red-500/20 bg-red-500/[0.03]"
-                            : isLow ? "border-amber-500/20 bg-amber-500/[0.03]"
-                            : "border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02]"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm font-semibold text-white/85 truncate">{item.item_name}</span>
-                            {isOut && <AdminTag label="OUT" color="red" />}
-                            {isLow && <AdminTag label="LOW" color="amber" />}
+                  <AnimatePresence>
+                    {filtered.map(item => {
+                      const isOut = item.stock_on_hand === 0;
+                      const isLow = !isOut && item.stock_on_hand <= item.reorder_level;
+                      const isDeleting = deletingId === item.id;
+                      return (
+                        // FIX (Peak-End Rule): animate row height to 0 on delete before query refetch
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 1, height: "auto" }}
+                          animate={isDeleting ? { opacity: 0, height: 0, marginBottom: 0 } : { opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.28, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div
+                            className={`rounded-3xl border p-5 flex flex-col gap-3 ${
+                              isOut ? "border-red-500/20 bg-red-500/[0.03]"
+                                : isLow ? "border-amber-500/20 bg-amber-500/[0.03]"
+                                : "border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02]"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-sm font-semibold text-white/85 truncate">{item.item_name}</span>
+                                {/* FIX (Von Restorff): OUT = solid filled badge; LOW = outlined ghost badge */}
+                                {isOut && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase bg-red-500 text-white shrink-0">OUT</span>
+                                )}
+                                {isLow && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border border-amber-500/50 text-amber-400 shrink-0">LOW</span>
+                                )}
+                              </div>
+                              <span className={`text-sm font-bold shrink-0 ${isOut ? "text-red-400" : isLow ? "text-amber-400" : "text-white/70"}`}>{item.stock_on_hand}</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-[11px] text-white/40 flex-wrap">
+                              <span>R{item.cost} / unit</span>
+                              <span>Value: R{(item.total_cost ?? item.stock_on_hand * item.cost).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</span>
+                              {item.notes && <span className="truncate">{item.notes}</span>}
+                            </div>
+                            {/* FIX (Fitts's Law): increased touch target height to py-3.5 and gap to gap-3 */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <button onClick={() => openAction(item, "use")} className="flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-semibold text-red-400 hover:bg-red-500/20 active:scale-95 transition-all">
+                                <MinusCircle className="w-3.5 h-3.5" /> Use
+                              </button>
+                              <button onClick={() => openAction(item, "restock")} className="flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all">
+                                <PlusCircle className="w-3.5 h-3.5" /> Restock
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1 justify-end border-t border-white/[0.04] pt-2">
+                              <button onClick={() => startEdit(item)} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/35 hover:text-white/70 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setDeleteItem(item)} className="p-2 rounded-lg hover:bg-white/[0.06] text-red-400/35 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
                           </div>
-                          <span className={`text-sm font-bold shrink-0 ${isOut ? "text-red-400" : isLow ? "text-amber-400" : "text-white/70"}`}>{item.stock_on_hand}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-[11px] text-white/40 flex-wrap">
-                          <span>R{item.cost} / unit</span>
-                          <span>Value: R{(item.total_cost ?? item.stock_on_hand * item.cost).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</span>
-                          {item.notes && <span className="truncate">{item.notes}</span>}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button onClick={() => openAction(item, "use")} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-semibold text-red-400 hover:bg-red-500/20 active:scale-95 transition-all">
-                            <MinusCircle className="w-3.5 h-3.5" /> Use
-                          </button>
-                          <button onClick={() => openAction(item, "restock")} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all">
-                            <PlusCircle className="w-3.5 h-3.5" /> Restock
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-1 justify-end border-t border-white/[0.04] pt-2">
-                          <button onClick={() => startEdit(item)} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/35 hover:text-white/70 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => setDeleteItem(item)} className="p-2 rounded-lg hover:bg-white/[0.06] text-red-400/35 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                 </div>
 
+                {/* Desktop table */}
                 <div className="hidden md:block rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -493,33 +634,50 @@ const AdminStock = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map(item => {
-                        const isOut = item.stock_on_hand === 0;
-                        const isLow = !isOut && item.stock_on_hand <= item.reorder_level;
-                        return (
-                          <tr key={item.id} className={`border-t border-white/[0.04] ${isOut ? "bg-red-500/[0.03]" : isLow ? "bg-amber-500/[0.03]" : ""}`}>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-white/80">{item.item_name}</span>
-                                {isOut && <AdminTag label="OUT" color="red" />}
-                                {isLow && <AdminTag label="LOW" color="amber" />}
-                              </div>
-                            </td>
-                            <td className={`px-4 py-3 text-xs font-medium ${isOut ? "text-red-400" : isLow ? "text-amber-400" : "text-white/60"}`}>{item.stock_on_hand}</td>
-                            <td className="px-4 py-3 text-xs text-white/50">R{item.cost}</td>
-                            <td className="px-4 py-3 text-xs text-white/60">R{(item.total_cost ?? item.stock_on_hand * item.cost).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</td>
-                            <td className="px-4 py-3 text-xs text-white/40">{item.notes || "—"}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex gap-1 justify-end items-center">
-                                <button onClick={() => openAction(item, "use")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors"><MinusCircle className="w-3 h-3" /> Use</button>
-                                <button onClick={() => openAction(item, "restock")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"><PlusCircle className="w-3 h-3" /> Restock</button>
-                                <button onClick={() => startEdit(item)} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"><Edit3 className="w-3 h-3" /></button>
-                                <button onClick={() => setDeleteItem(item)} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-red-400/30 hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      <AnimatePresence>
+                        {filtered.map(item => {
+                          const isOut = item.stock_on_hand === 0;
+                          const isLow = !isOut && item.stock_on_hand <= item.reorder_level;
+                          const isDeleting = deletingId === item.id;
+                          return (
+                            // FIX (Peak-End Rule): table row exit animation on delete
+                            <motion.tr
+                              key={item.id}
+                              layout
+                              initial={{ opacity: 1 }}
+                              animate={isDeleting ? { opacity: 0 } : { opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.22, ease: "easeInOut" }}
+                              className={`border-t border-white/[0.04] ${isOut ? "bg-red-500/[0.03]" : isLow ? "bg-amber-500/[0.03]" : ""}`}
+                            >
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-white/80">{item.item_name}</span>
+                                  {/* FIX (Von Restorff): OUT = solid filled; LOW = outlined */}
+                                  {isOut && (
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase bg-red-500 text-white shrink-0">OUT</span>
+                                  )}
+                                  {isLow && (
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border border-amber-500/50 text-amber-400 shrink-0">LOW</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className={`px-4 py-3 text-xs font-medium ${isOut ? "text-red-400" : isLow ? "text-amber-400" : "text-white/60"}`}>{item.stock_on_hand}</td>
+                              <td className="px-4 py-3 text-xs text-white/50">R{item.cost}</td>
+                              <td className="px-4 py-3 text-xs text-white/60">R{(item.total_cost ?? item.stock_on_hand * item.cost).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</td>
+                              <td className="px-4 py-3 text-xs text-white/40">{item.notes || "—"}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex gap-1 justify-end items-center">
+                                  <button onClick={() => openAction(item, "use")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors"><MinusCircle className="w-3 h-3" /> Use</button>
+                                  <button onClick={() => openAction(item, "restock")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"><PlusCircle className="w-3 h-3" /> Restock</button>
+                                  <button onClick={() => startEdit(item)} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"><Edit3 className="w-3 h-3" /></button>
+                                  <button onClick={() => setDeleteItem(item)} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-red-400/30 hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </AnimatePresence>
                     </tbody>
                     <tfoot>
                       <tr className="border-t border-white/[0.08]">
@@ -534,36 +692,48 @@ const AdminStock = () => {
             )}
           </motion.div>
         ) : (
+          // FIX (Proximity/Chunking): consumption records grouped by usage status with section headers
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-3">
             <p className="text-[10px] text-white/30 px-1">Usage since last restock — based on opening stock vs current on-hand per product.</p>
+            {items.length === 0 ? (
+              <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] px-4 py-8 text-center text-xs text-white/30">No stock items yet.</div>
+            ) : (
+              consumptionByDay.map(group => (
+                <div key={group.label} className="flex flex-col gap-1.5">
+                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 px-1">{group.label}</p>
+                  <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-x-auto">
+                    <table className="w-full text-sm min-w-[500px]">
+                      <thead>
+                        <tr className="border-b border-white/[0.06]">
+                          <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Product</th>
+                          <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Opening</th>
+                          <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Used</th>
+                          <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">On Hand</th>
+                          <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Cost Used</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.items.map(item => {
+                          const used = Math.max(0, (item.opening_stock ?? 0) - item.stock_on_hand);
+                          const costUsed = used * item.cost;
+                          return (
+                            <tr key={item.id} className="border-t border-white/[0.04]">
+                              <td className="px-4 py-3 text-xs text-white/80">{item.item_name}</td>
+                              <td className="px-4 py-3 text-xs text-white/50">{item.opening_stock ?? 0}</td>
+                              <td className="px-4 py-3 text-xs text-white/60">{used > 0 ? used : "—"}</td>
+                              <td className="px-4 py-3 text-xs text-white/60">{item.stock_on_hand}</td>
+                              <td className="px-4 py-3 text-xs text-white/60">{used > 0 ? `R${costUsed.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}` : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))
+            )}
             <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-x-auto">
               <table className="w-full text-sm min-w-[500px]">
-                <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Product</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Opening</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Used</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">On Hand</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Cost Used</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-white/30">No stock items yet.</td></tr>
-                  ) : items.map(item => {
-                    const used = Math.max(0, (item.opening_stock ?? 0) - item.stock_on_hand);
-                    const costUsed = used * item.cost;
-                    return (
-                      <tr key={item.id} className="border-t border-white/[0.04]">
-                        <td className="px-4 py-3 text-xs text-white/80">{item.item_name}</td>
-                        <td className="px-4 py-3 text-xs text-white/50">{item.opening_stock ?? 0}</td>
-                        <td className="px-4 py-3 text-xs text-white/60">{used > 0 ? used : "—"}</td>
-                        <td className="px-4 py-3 text-xs text-white/60">{item.stock_on_hand}</td>
-                        <td className="px-4 py-3 text-xs text-white/60">{used > 0 ? `R${costUsed.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}` : "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
                 <tfoot>
                   <tr className="border-t border-white/[0.08]">
                     <td colSpan={4} className="px-4 py-3 text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Total Cost Used</td>
@@ -663,7 +833,7 @@ const AdminStock = () => {
         {deleteItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-3xl border border-white/[0.08] bg-[#1a1a1a] p-6 max-w-sm w-full flex flex-col gap-3">
-              <p className="text-sm font-bold text-white/80">Delete “{deleteItem.item_name}”?</p>
+              <p className="text-sm font-bold text-white/80">Delete "{deleteItem.item_name}"?</p>
               <p className="text-xs text-white/40">This cannot be undone. All stock data for this product will be permanently removed.</p>
               <div className="flex gap-2 justify-end pt-1">
                 <SaveButton label="Cancel" variant="secondary" onClick={() => setDeleteItem(null)} />
