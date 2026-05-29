@@ -75,9 +75,9 @@ interface CalendarBooking {
 
 interface AvailabilityRow {
   day_of_week: number;
-  start_time: string;
-  end_time: string;
-  is_active: boolean;
+  slot_start_time: string;  // was: start_time
+  slot_end_time: string;    // was: end_time
+  day_enabled: boolean;     // was: is_active
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -952,7 +952,7 @@ export default function AdminCalendar() {
 
         supabase
           .from("staff_availability")
-          .select("day_of_week, start_time, end_time, is_active")
+          .select("day_of_week, slot_start_time, slot_end_time, day_enabled")
           .eq("tenant_id", tenant.id),
       ]);
 
