@@ -246,6 +246,14 @@ const DetailDrawer = ({
     return () => window.removeEventListener("keydown", handler);
   }, [booking, onClose]);
 
+  // Lock body scroll while drawer is open
+  useEffect(() => {
+    if (!booking) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [booking]);
+
   if (!booking) return null;
 
   const ps      = getPaymentStatus(booking);
@@ -288,13 +296,24 @@ const DetailDrawer = ({
             onClick={onClose}
           />
 
-          {/* Drawer */}
+          {/* Drawer
+            ─ On mobile the drawer is full-screen with safe-area-aware padding.
+            ─ On desktop it slides in from the right at max-w-sm.
+            ─ We use inline style for safe-area env() values because Tailwind
+              doesn't ship those utilities by default.
+          */}
           <motion.aside
             key="dr"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            style={{
+              // Respect device safe areas so the drawer never hides under
+              // the status bar (top) or the home indicator / bottom nav (bottom).
+              paddingTop: "env(safe-area-inset-top, 0px)",
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            }}
             className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-[#0e0e0e] border-l border-white/[0.07] flex flex-col overflow-hidden"
             role="dialog"
             aria-label="Booking details"
@@ -321,8 +340,15 @@ const DetailDrawer = ({
               </button>
             </div>
 
-            {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+            {/* ── Scrollable body ──
+              pb-safe adds breathing room above the bottom navigation bar
+              on mobile. We use an inline style fallback in addition to the
+              Tailwind class so that non-supporting browsers still get 80px.
+            */}
+            <div
+              className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 flex flex-col gap-3"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)" }}
+            >
 
               {/* ── Payment card ── */}
               <div className="bg-white/[0.04] rounded-2xl overflow-hidden">
@@ -494,8 +520,8 @@ const DetailDrawer = ({
                 </div>
               )}
 
-              {/* Bottom spacing for thumb room */}
-              <div className="h-4" />
+              {/* Bottom spacer — extra thumb-room above the nav bar */}
+              <div className="h-6 shrink-0" />
             </div>
           </motion.aside>
         </>
