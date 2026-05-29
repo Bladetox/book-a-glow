@@ -8,6 +8,7 @@ import AdminLogin from "@/components/admin/AdminLogin";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminDashboard from "@/components/admin/AdminDashboard";
+import AdminCalendar from "@/components/admin/AdminCalendar";
 import TrialExpiredPaywall from "@/components/admin/TrialExpiredPaywall";
 import { ArrearsBanner } from "@/components/admin/ArrearsBanner";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
@@ -15,7 +16,6 @@ import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
-const AdminCalendar         = lazy(() => import("@/components/admin/AdminCalendar"));
 const AdminServices         = lazy(() => import("@/components/admin/AdminServices"));
 const AdminAvailability     = lazy(() => import("@/components/admin/AdminAvailability"));
 const AdminStock            = lazy(() => import("@/components/admin/AdminStock"));
@@ -109,8 +109,6 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
     subscription?.trial_ends_at,
   );
 
-  // "blocked" = full lockout (cancelled/disabled by admin).
-  // "arrears" = degraded access, bookings/payments only, banner shown.
   const isBlocked = accountState === "blocked";
   const isArrears = accountState === "arrears";
 
@@ -141,7 +139,6 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
     if ((ALL_VIEWS as readonly string[]).includes(view)) setActiveView(view as ViewName);
   };
 
-  // Hard lockout — admin explicitly cancelled/disabled this tenant.
   if (isBlocked) {
     return <TrialExpiredPaywall tenantId={tenant?.id ?? ""} />;
   }
@@ -165,7 +162,6 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative h-dvh overflow-hidden">
-        {/* Arrears banner — shown below the top header, above content */}
         {isArrears && <ArrearsBanner />}
 
         <header className="h-16 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
