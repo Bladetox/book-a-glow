@@ -15,6 +15,7 @@
  *   • View switcher (Month | Week | Day)
  *   • Status filter chips (All, Pending, Confirmed, Completed, Cancelled, No-show)
  *   • Keyboard: ArrowLeft/Right navigate, Escape closes drawer
+ *   • onNavigate prop: back-to-Dashboard button + escapable to any shell view
  *
  * Data:
  *   • useSupabaseBookings()      – live booking list (cached by react-query)
@@ -49,6 +50,7 @@ import {
   CheckCircle2,
   Loader2,
   RefreshCw,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   useSupabaseBookings,
@@ -740,7 +742,11 @@ function TimeGrid({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function AdminCalendar() {
+export default function AdminCalendar({
+  onNavigate,
+}: {
+  onNavigate?: (view: string) => void;
+}) {
   const { data: bookings = [], isLoading } = useSupabaseBookings();
   const reschedule    = useRescheduleBooking();
   const updateStatus  = useUpdateBookingStatus();
@@ -844,8 +850,21 @@ export default function AdminCalendar() {
       {/* ── Top Bar ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 px-4 pt-4 pb-3 border-b border-white/10 flex-shrink-0">
 
-        {/* Row 1: nav + heading + view switcher */}
+        {/* Row 1: back button + nav + heading + view switcher */}
         <div className="flex items-center gap-3 flex-wrap">
+
+          {/* ── Back to Dashboard ── */}
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate("Dashboard")}
+              className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/65 transition-colors mr-1"
+              aria-label="Back to Dashboard"
+            >
+              <LayoutDashboard size={13} />
+              Dashboard
+            </button>
+          )}
+
           {/* Prev / Today / Next */}
           <div className="flex items-center gap-1">
             <button

@@ -199,7 +199,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
             >
               {activeView === "Dashboard"         && <AdminDashboard onNavigate={handleNavigate} />}
               {activeView === "Recommendations"   && flags.ai_insights       && <AdminRecommendations onNavigate={handleNavigate} />}
-              {activeView === "Calendar"           && <AdminCalendar />}
+              {activeView === "Calendar"           && <AdminCalendar onNavigate={handleNavigate} />}
               {activeView === "Bookings"           && <AdminBookings />}
               {activeView === "Services"           && <AdminServices />}
               {activeView === "Availability"       && <AdminAvailability />}
