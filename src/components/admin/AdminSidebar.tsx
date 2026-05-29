@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Heart } from "lucide-react";
+import { ChevronRight, Heart, CalendarDays } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -21,6 +21,7 @@ import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
 const iconMap: Record<string, React.ElementType> = {
   "Dashboard":          DashboardIcon,
+  "Calendar":           CalendarDays,
   "Bookings":           BookingsIcon,
   "Services":           ServicesIcon,
   "Availability":       AvailabilityIcon,
@@ -39,6 +40,7 @@ type NavItem =
 
 const NAV: NavItem[] = [
   { kind: "direct", label: "Dashboard",        view: "Dashboard" },
+  { kind: "direct", label: "Calendar",          view: "Calendar" },
   { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
   { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
   { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty"] },
@@ -99,7 +101,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
 
-  // ── Child item ─────────────────────────────────────────────────────────────
+  // ── Child item ──────────────────────────────────────────────────────────────
   const renderChild = (view: string) => {
     if (!views.includes(view)) return null;
     const Icon       = iconMap[view] || DashboardIcon;
@@ -148,7 +150,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     );
   };
 
-  // ── Direct nav item ────────────────────────────────────────────────────────
+  // ── Direct nav item ──────────────────────────────────────────────────
   const renderDirect = (item: Extract<NavItem, { kind: "direct" }>) => {
     if (!views.includes(item.view)) return null;
     const Icon     = iconMap[item.view] || DashboardIcon;
@@ -179,7 +181,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     );
   };
 
-  // ── Group header + collapsible children ───────────────────────────────────
+  // ── Group header + collapsible children ─────────────────────────────────────
   const renderGroup = (item: Extract<NavItem, { kind: "group" }>) => {
     const visibleChildren = item.children.filter(v => views.includes(v));
     if (visibleChildren.length === 0) return null;
