@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Heart, CalendarDays } from "lucide-react";
+import { ChevronRight, Heart } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -21,7 +21,6 @@ import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
 const iconMap: Record<string, React.ElementType> = {
   "Dashboard":          DashboardIcon,
-  "Calendar":           CalendarDays,
   "Bookings":           BookingsIcon,
   "Services":           ServicesIcon,
   "Availability":       AvailabilityIcon,
@@ -40,7 +39,7 @@ type NavItem =
 
 const NAV: NavItem[] = [
   { kind: "direct", label: "Dashboard",        view: "Dashboard" },
-  { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Calendar", "Bookings", "Availability"] },
+  { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
   { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
   { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty"] },
   { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
