@@ -19,12 +19,13 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
-        // Required for SPA deep-route navigation in installed PWA mode.
-        // Without this the service worker intercepts /admin (etc.) and returns
-        // the raw HTML shell as a JS module response, causing:
-        // "'text/html' is not a valid JavaScript MIME type"
+        // skipWaiting and clientsClaim removed intentionally.
+        // With both enabled, a new SW takes over all open tabs immediately
+        // on deployment. Lazy-loaded chunks from the previous build no longer
+        // exist in the new precache, so the SW returns index.html for those
+        // .js requests, causing: "'text/html' is not a valid JavaScript MIME type".
+        // Without these flags the new SW waits until all tabs are closed before
+        // activating, giving in-flight sessions time to finish cleanly.
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [
           /^\/~oauth/,
