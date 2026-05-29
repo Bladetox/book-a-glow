@@ -100,9 +100,8 @@ const getPaymentStatus = (b: CalendarBooking): PaymentStatus => {
 };
 
 const clientName  = (b: CalendarBooking) =>
-  b.client_name
-    ?? [b.client_first_name, b.client_last_name].filter(Boolean).join(" ")
-    || "Unknown Client";
+  (b.client_name ?? [b.client_first_name, b.client_last_name].filter(Boolean).join(" "))
+  || "Unknown Client";
 
 const clientPhone = (b: CalendarBooking) => b.client_phone ?? null;
 const clientEmail = (b: CalendarBooking) => b.client_email ?? null;
@@ -656,21 +655,21 @@ const MonthGrid = ({
               key={dateStr}
               className={`min-h-[80px] p-1.5 border-r border-b border-white/[0.04] cursor-pointer transition-colors ${isToday ? "bg-amber-500/[0.04]" : "hover:bg-white/[0.02]"}`}
             >
-              <p className={`text-xs mb-1 w-6 h-6 flex items-center justify-center rounded-full mx-auto font-semibold ${isToday ? "bg-amber-500 text-black" : "text-white/40"}`}>
+              <p className={`text-xs mb-1 w-6 h-6 flex items-center justify-center rounded-full mx-auto font-semibold ${isToday ? "bg-amber-400 text-black" : "text-white/40"}`}>
                 {d.getDate()}
               </p>
               <div className="flex flex-col gap-0.5">
-                {dayBks.slice(0, 3).map(b => (
+                {dayBks.slice(0, 2).map(b => (
                   <button
                     key={b.id}
                     onClick={() => onSelect(b)}
-                    className={`w-full text-left text-[9px] px-1.5 py-0.5 rounded truncate font-medium transition-opacity hover:opacity-80 ${chipColour(b)}`}
+                    className={`w-full text-left text-[10px] px-1.5 py-0.5 rounded truncate border ${chipColour(b)}`}
                   >
                     {clientName(b)}
                   </button>
                 ))}
-                {dayBks.length > 3 && (
-                  <p className="text-[9px] text-white/30 text-center">+{dayBks.length - 3}</p>
+                {dayBks.length > 2 && (
+                  <p className="text-[9px] text-white/30 text-center">+{dayBks.length - 2} more</p>
                 )}
               </div>
             </div>
@@ -681,61 +680,73 @@ const MonthGrid = ({
   );
 };
 
-// ─── Date Strip (mobile) ──────────────────────────────────────────────────────
+// ─── Mobile Date Strip ────────────────────────────────────────────────────────
 
-const DateStrip = ({
+const MobileDateStrip = ({
   selected,
-  onChange,
+  onSelect,
+  bookings,
 }: {
   selected: Date;
-  onChange: (d: Date) => void;
+  onSelect: (d: Date) => void;
+  bookings: CalendarBooking[];
 }) => {
-  const days = useMemo(() => Array.from({ length: 181 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i - 90);
-    return d;
-  }), []);
+  const stripRef = useRef<HTMLDivElement>(null);
 
-  const todayRef  = useRef<HTMLButtonElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const days = useMemo(() => {
+    const arr: Date[] = [];
+    const base = new Date();
+    base.setDate(base.getDate() - 30);
+    for (let i = 0; i < 90; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      arr.push(d);
+    }
+    return arr;
+  }, []);
+
+  const hasDot = useMemo(() => {
+    const s = new Set(bookings.map(b => b.booking_date));
+    return s;
+  }, [bookings]);
 
   useEffect(() => {
-    if (todayRef.current && scrollRef.current) {
-      const btn    = todayRef.current;
-      const parent = scrollRef.current;
-      const offset = btn.offsetLeft - parent.offsetWidth / 2 + btn.offsetWidth / 2;
-      parent.scrollTo({ left: offset, behavior: "instant" });
-    }
-  }, []);
+    if (!stripRef.current) return;
+    const todayIdx = days.findIndex(d => d.toDateString() === new Date().toDateString());
+    if (todayIdx < 0) return;
+    const child = stripRef.current.children[todayIdx] as HTMLElement | undefined;
+    if (child) child.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [days]);
 
   return (
     <div
-      ref={scrollRef}
-      className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-hide shrink-0"
-      style={{ scrollbarWidth: "none" }}
+      ref={stripRef}
+      className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-hide shrink-0"
+      style={{ scrollSnapType: "x mandatory" }}
     >
-      {days.map((d, i) => {
-        const isToday    = d.toDateString() === new Date().toDateString();
-        const isSelected = d.toDateString() === selected.toDateString();
+      {days.map(d => {
+        const iso     = d.toISOString().slice(0, 10);
+        const isToday = d.toDateString() === new Date().toDateString();
+        const isSel   = d.toDateString() === selected.toDateString();
+        const dot     = hasDot.has(iso);
         return (
           <button
-            key={i}
-            ref={isToday ? todayRef : undefined}
-            onClick={() => onChange(d)}
-            className={`flex flex-col items-center justify-center rounded-2xl px-3 py-2 min-w-[52px] shrink-0 transition-all active:scale-95 ${
-              isSelected
-                ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
+            key={iso}
+            onClick={() => onSelect(d)}
+            style={{ scrollSnapAlign: "center", minWidth: 44, minHeight: 64 }}
+            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 transition-all shrink-0
+              ${isSel
+                ? "bg-amber-400 text-black"
                 : isToday
-                ? "bg-white/[0.07] text-amber-400 border border-amber-500/30"
-                : "bg-white/[0.03] text-white/50 hover:bg-white/[0.07] hover:text-white/80"
-            }`}
+                  ? "bg-white/[0.08] text-amber-400"
+                  : "text-white/40 hover:bg-white/[0.05]"
+              }`}
           >
-            <span className="text-[9px] uppercase tracking-widest leading-none mb-1">
+            <span className="text-[10px] uppercase font-medium leading-none">
               {d.toLocaleDateString("en-ZA", { weekday: "short" })}
             </span>
-            <span className={`text-sm font-bold leading-none ${isSelected ? "text-black" : ""}`}>
-              {d.getDate()}
-            </span>
+            <span className="text-base font-bold leading-none">{d.getDate()}</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${dot ? (isSel ? "bg-black/40" : "bg-amber-400") : "opacity-0"}`} />
           </button>
         );
       })}
@@ -743,195 +754,233 @@ const DateStrip = ({
   );
 };
 
-// ─── Mobile Day List ──────────────────────────────────────────────────────────
+// ─── AdminCalendar (main export) ──────────────────────────────────────────────
 
-const MobileDayList = ({
-  date,
-  bookings,
-  onSelect,
-}: {
-  date:     Date;
-  bookings: CalendarBooking[];
-  onSelect: (b: CalendarBooking) => void;
-}) => {
-  const dateStr = date.toISOString().slice(0, 10);
-  const day     = bookings
-    .filter(b => b.booking_date === dateStr)
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+export const AdminCalendar = () => {
+  const { tenantId } = useTenant();
 
-  if (day.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center flex-1 gap-3 py-16 text-center px-6">
-        <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center">
-          <CalendarDays className="w-6 h-6 text-white/20" />
-        </div>
-        <p className="text-sm text-white/30">No bookings for this day</p>
-      </div>
-    );
-  }
+  const [view,         setView]         = useState<CalendarView>("day");
+  const [cursor,       setCursor]       = useState(() => new Date());
+  const [bookings,     setBookings]     = useState<CalendarBooking[]>([]);
+  const [availability, setAvailability] = useState<AvailabilityRow[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [selected,     setSelected]     = useState<CalendarBooking | null>(null);
+  const [mobileDay,    setMobileDay]    = useState(() => new Date());
 
-  return (
-    <div className="flex flex-col gap-2 px-4 py-3 overflow-y-auto flex-1">
-      {day.map(b => (
-        <BookingChip key={b.id} booking={b} onClick={() => onSelect(b)} />
-      ))}
-    </div>
-  );
-};
+  // ── Date range for current view ──
+  const { rangeStart, rangeEnd } = useMemo(() => {
+    const d = new Date(cursor);
+    if (view === "day") {
+      return { rangeStart: d.toISOString().slice(0, 10), rangeEnd: d.toISOString().slice(0, 10) };
+    }
+    if (view === "week") {
+      const start = new Date(d);
+      start.setDate(d.getDate() - d.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return { rangeStart: start.toISOString().slice(0, 10), rangeEnd: end.toISOString().slice(0, 10) };
+    }
+    // month
+    const start = new Date(d.getFullYear(), d.getMonth(), 1);
+    const end   = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return { rangeStart: start.toISOString().slice(0, 10), rangeEnd: end.toISOString().slice(0, 10) };
+  }, [cursor, view]);
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+  // ── Mobile range (±45 days) ──
+  const mobileRange = useMemo(() => {
+    const base = new Date();
+    const s = new Date(base); s.setDate(base.getDate() - 30);
+    const e = new Date(base); e.setDate(base.getDate() + 60);
+    return { start: s.toISOString().slice(0, 10), end: e.toISOString().slice(0, 10) };
+  }, []);
 
-export default function AdminCalendar() {
-  const { tenant } = useTenant();
-
-  const [view,     setView]     = useState<CalendarView>("day");
-  const [anchor,   setAnchor]   = useState(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-  const [bookings,  setBookings]  = useState<CalendarBooking[]>([]);
-  const [avail,     setAvail]     = useState<AvailabilityRow[]>([]);
-  const [selected,  setSelected]  = useState<CalendarBooking | null>(null);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState<string | null>(null);
-  const [mobileDay, setMobileDay] = useState<Date>(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-
-  // ── Fetch ────────────────────────────────────────────────────────────────
-  const fetchData = useCallback(async () => {
-    if (!tenant?.id) return;
+  // ── Fetch ──
+  const fetchData = useCallback(async (start: string, end: string) => {
+    if (!tenantId) return;
     setLoading(true);
-    setError(null);
-
-    const past = new Date();
-    past.setDate(past.getDate() - 7);
-
     const [bRes, aRes] = await Promise.all([
       supabase
         .from("bookings_with_client")
-        .select(`
-          id, booking_date, start_time, end_time, status,
-          total_amount, deposit_amount, balance_due,
-          service_name, service_duration_minutes, staff_name,
-          client_name, client_first_name, client_last_name,
-          client_phone, client_email,
-          is_call_out, call_out_address, call_out_fee,
-          client_notes, staff_notes, lead_source
-        `)
-        .eq("tenant_id", tenant.id)
-        .gte("booking_date", past.toISOString().slice(0, 10))
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .gte("booking_date", start)
+        .lte("booking_date", end)
+        .neq("status", "cancelled")
         .order("booking_date", { ascending: true })
         .order("start_time",   { ascending: true }),
       supabase
         .from("staff_availability")
         .select("date, is_open, open_time, close_time")
-        .eq("tenant_id", tenant.id)
-        .gte("date", past.toISOString().slice(0, 10)),
+        .eq("tenant_id", tenantId)
+        .gte("date", start)
+        .lte("date", end),
     ]);
-
-    if (bRes.error) { setError(bRes.error.message); }
-    else            { setBookings(bRes.data as CalendarBooking[]); }
-    if (!aRes.error && aRes.data) { setAvail(aRes.data as AvailabilityRow[]); }
-
+    if (bRes.data) setBookings(bRes.data as CalendarBooking[]);
+    if (aRes.data) setAvailability(aRes.data as AvailabilityRow[]);
     setLoading(false);
-  }, [tenant?.id]);
+  }, [tenantId]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Desktop fetch
+  useEffect(() => {
+    fetchData(rangeStart, rangeEnd);
+  }, [fetchData, rangeStart, rangeEnd]);
 
-  // Suppress unused-variable lint for avail (reserved for future closed-day rendering)
-  void avail;
+  // Mobile fetch (wide range)
+  useEffect(() => {
+    fetchData(mobileRange.start, mobileRange.end);
+  }, [fetchData, mobileRange.start, mobileRange.end]);
 
-  // ── Week days ────────────────────────────────────────────────────────────
-  const weekDays = useMemo(() => {
-    const start = new Date(anchor);
-    start.setDate(start.getDate() - start.getDay());
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
+  // ── Desktop days array ──
+  const desktopDays = useMemo(() => {
+    if (view === "day") return [new Date(cursor)];
+    if (view === "week") {
+      const start = new Date(cursor);
+      start.setDate(cursor.getDate() - cursor.getDay());
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        return d;
+      });
+    }
+    return [];
+  }, [cursor, view]);
+
+  // ── Navigation ──
+  const navigate = (dir: 1 | -1) => {
+    setCursor(d => {
+      const next = new Date(d);
+      if (view === "day")   next.setDate(d.getDate() + dir);
+      if (view === "week")  next.setDate(d.getDate() + dir * 7);
+      if (view === "month") next.setMonth(d.getMonth() + dir);
+      return next;
     });
-  }, [anchor]);
+  };
 
-  const viewDays = view === "week" ? weekDays : [anchor];
+  const headerLabel = useMemo(() => {
+    if (view === "day") {
+      return cursor.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+    if (view === "week") {
+      const start = new Date(cursor);
+      start.setDate(cursor.getDate() - cursor.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return `${start.toLocaleDateString("en-ZA", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}`;
+    }
+    return cursor.toLocaleDateString("en-ZA", { month: "long", year: "numeric" });
+  }, [cursor, view]);
 
-  // ── Desktop nav ──────────────────────────────────────────────────────────
-  const step    = view === "week" ? 7 : 1;
-  const navPrev = () => setAnchor(d => { const n = new Date(d); n.setDate(n.getDate() - step); return n; });
-  const navNext = () => setAnchor(d => { const n = new Date(d); n.setDate(n.getDate() + step); return n; });
+  // ── Mobile day bookings ──
+  const mobileDayBookings = useMemo(() => {
+    const iso = mobileDay.toISOString().slice(0, 10);
+    return bookings
+      .filter(b => b.booking_date === iso)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  }, [bookings, mobileDay]);
 
-  const navLabel = useMemo(() => {
-    if (view === "month") return anchor.toLocaleDateString("en-ZA", { month: "long", year: "numeric" });
-    if (view === "week")  return `${weekDays[0].toLocaleDateString("en-ZA", { day: "numeric", month: "short" })} – ${weekDays[6].toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}`;
-    return anchor.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  }, [view, anchor, weekDays]);
+  // ── Availability helper ──
+  const availForDate = (iso: string) =>
+    availability.find(a => a.date === iso);
 
-  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a] text-white overflow-hidden">
+    <>
+      {/* ── Mobile layout (<768px) ── */}
+      <div className="flex flex-col h-full md:hidden">
+        <MobileDateStrip
+          selected={mobileDay}
+          onSelect={setMobileDay}
+          bookings={bookings}
+        />
 
-      {/* Mobile date strip */}
-      <div className="md:hidden shrink-0">
-        <DateStrip selected={mobileDay} onChange={setMobileDay} />
+        <div className="flex-1 overflow-y-auto px-4 pb-6">
+          {(() => {
+            const iso  = mobileDay.toISOString().slice(0, 10);
+            const avail = availForDate(iso);
+            return (
+              <>
+                {avail && !avail.is_open && (
+                  <div className="mb-3 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs text-white/30 text-center">
+                    Closed
+                  </div>
+                )}
+                {avail?.is_open && avail.open_time && avail.close_time && (
+                  <div className="mb-3 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs text-white/30 text-center tabular-nums">
+                    {fmt.time(avail.open_time)} – {fmt.time(avail.close_time)}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          {loading ? (
+            <div className="flex flex-col gap-2">
+              {[1,2,3].map(i => <Shimmer key={i} className="h-16" />)}
+            </div>
+          ) : mobileDayBookings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <CalendarDays className="w-10 h-10 text-white/10 mb-3" />
+              <p className="text-sm text-white/25">No bookings</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {mobileDayBookings.map(b => (
+                <BookingChip key={b.id} booking={b} onClick={() => setSelected(b)} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Desktop toolbar */}
-      <div className="hidden md:flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
-        <div className="flex items-center gap-2">
-          <button onClick={navPrev} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <p className="text-sm font-semibold text-white/70 min-w-[220px] text-center">{navLabel}</p>
-          <button onClick={navNext} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl p-1">
-          {(["day","week","month"] as CalendarView[]).map(v => (
+      {/* ── Desktop layout (≥768px) ── */}
+      <div className="hidden md:flex flex-col h-full">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center gap-2">
             <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${view === v ? "bg-white/[0.10] text-white/90" : "text-white/40 hover:text-white/70"}`}
+              onClick={() => navigate(-1)}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all"
             >
-              {v}
+              <ChevronLeft className="w-4 h-4" />
             </button>
-          ))}
-        </div>
-      </div>
+            <button
+              onClick={() => navigate(1)}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <p className="text-sm font-semibold text-white/70 ml-1">{headerLabel}</p>
+          </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl p-1">
+            {(["day", "week", "month"] as CalendarView[]).map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all
+                  ${view === v ? "bg-white/[0.10] text-white" : "text-white/35 hover:text-white/60"}`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
         {loading ? (
-          <div className="flex flex-col gap-3 p-4">
-            {Array.from({ length: 4 }, (_, i) => <Shimmer key={i} className="h-16" />)}
+          <div className="flex-1 p-4 grid grid-cols-3 gap-3">
+            {[1,2,3,4,5,6].map(i => <Shimmer key={i} className="h-32" />)}
           </div>
-        ) : error ? (
-          <div className="flex items-center justify-center flex-1 p-8">
-            <p className="text-sm text-red-400/70 text-center">{error}</p>
-          </div>
+        ) : view === "month" ? (
+          <MonthGrid bookings={bookings} onSelect={setSelected} />
         ) : (
-          <>
-            {/* Mobile */}
-            <div className="md:hidden flex-1 overflow-hidden flex flex-col">
-              <MobileDayList date={mobileDay} bookings={bookings} onSelect={setSelected} />
-            </div>
-            {/* Desktop */}
-            <div className="hidden md:flex flex-1 min-h-0 overflow-hidden flex-col">
-              {view === "month" ? (
-                <MonthGrid bookings={bookings} onSelect={setSelected} />
-              ) : (
-                <TimeGrid days={viewDays} bookings={bookings} onSelect={setSelected} />
-              )}
-            </div>
-          </>
+          <TimeGrid days={desktopDays} bookings={bookings} onSelect={setSelected} />
         )}
       </div>
 
-      {/* Detail Drawer */}
+      {/* Detail drawer (shared) */}
       <DetailDrawer booking={selected} onClose={() => setSelected(null)} />
-    </div>
+    </>
   );
-}
+};
+
+export default AdminCalendar;
