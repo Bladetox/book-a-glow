@@ -163,11 +163,11 @@ const HOUR_PX    = 64; // px per hour
 
 // Shared spring for card → drawer morph (Doherty threshold)
 const DRAWER_SPRING = {
-  type: "spring" as const,
-  stiffness: 400,
-  damping: 32,
-  restSpeed: 0.5,
-  restDelta: 0.5,
+    type: "spring" as const,
+    stiffness: 320,   // was 400
+    damping: 36,      // was 32
+    restSpeed: 2,     // was 0.5
+    restDelta: 2,     // was 0.5
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -287,7 +287,7 @@ const DetailDrawer = ({
         <motion.div
           layoutId={`booking-${booking.id}`}
           transition={DRAWER_SPRING}
-          className="m-3 md:m-4 mt-10 md:mt-12 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-100px)] pointer-events-auto overflow-hidden"
+          className="m-3 md:m-4 mt-10 md:mt-12 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-160px)] pointer-events-auto overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
