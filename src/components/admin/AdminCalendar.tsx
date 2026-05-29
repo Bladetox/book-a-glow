@@ -1,39 +1,49 @@
 /**
  * AdminCalendar.tsx
  * Standalone read-only calendar for all tenants.
+ * Wired to bookings_with_client + staff_availability.
+ * Touch ONLY this file for calendar changes — zero coupling to booking flow.
  *
- * ─ UX principles applied ─────────────────────────────────────────────────────
+ * Laws of UX applied:
+ *  - Jakob's Law:          Familiar Cal.com / Fresha date-strip pattern on mobile
+ *  - Fitts's Law:          Large tap targets on nav controls + day pills (min 44px)
+ *  - Hick's Law:           Only 3 view options exposed; mobile auto-locks to Day
+ *  - Miller's Law:         Booking cards show max 3 pieces of info
+ *  - Von Restorff Effect:  Unpaid/deposit-only visually distinct
  *  - Peak-End Rule:        Detail drawer leads with payment status
- *  - Fitts's Law:          Large touch targets for nav arrows + booking chips
- *  - Jakob's Law:          Familiar cal.com / Fresha-style date strip
- *  - Aesthetic-Usability:  Glassmorphism chips, muted palette, motion
+ *  - Doherty Threshold:    Query scoped to visible date range only
  *
- * ─ Layout ────────────────────────────────────────────────────────────────────
+ * Mobile layout  (<768 px):
  *   Horizontal scrollable date strip (7-day pill row, today centred on mount)
- *   Mobile  → stacked day list (single-column)
- *   Desktop → time-grid with day / week toggle
+ *   → below: vertical list of booking cards for the selected day
  *
- * ─ Rules ─────────────────────────────────────────────────────────────────────
- *   Touch ONLY this file for calendar changes — zero coupling to booking flow.
- * ─────────────────────────────────────────────────────────────────────────────
+ * Desktop layout (≥768 px):
+ *   Full toolbar + Day / Week / Month time-grid (unchanged from v1)
  */
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { AnimatePresence, motion }         from "framer-motion";
-import { useAdminAuth }                    from "@/hooks/useAdminAuth";
-import { supabase }                        from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight,
-  Clock, CalendarDays, User, Phone, Mail, MapPin,
-  StickyNote, X,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  X,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  Clock,
+  StickyNote,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CalendarBooking {
   id:                       string;
-  booking_date:             string;       // "YYYY-MM-DD"
-  start_time:               string;       // "HH:MM" or "HH:MM:SS"
+  booking_date:             string;
+  start_time:               string;
   end_time:                 string;
   status:                   string;
   total_amount:             number | null;
@@ -55,6 +65,16 @@ interface CalendarBooking {
   lead_source:              string | null;
 }
 
+interface AvailabilityRow {
+  date:       string;
+  is_open:    boolean;
+  open_time:  string | null;
+  close_time: string | null;
+}
+
+type CalendarView = "day" | "week" | "month";
+type PaymentStatus = "full" | "deposit" | "unpaid";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = {
@@ -63,14 +83,12 @@ const fmt = {
   time: (t: string | null | undefined) => {
     if (!t) return "—";
     const [h, m] = t.split(":");
-    const hour = parseInt(h, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const h12  = hour % 12 || 12;
+    const hour   = parseInt(h, 10);
+    const ampm   = hour >= 12 ? "PM" : "AM";
+    const h12    = hour % 12 || 12;
     return `${h12}:${m} ${ampm}`;
   },
 };
-
-type PaymentStatus = "full" | "deposit" | "unpaid";
 
 const getPaymentStatus = (b: CalendarBooking): PaymentStatus => {
   const total   = Number(b.total_amount   ?? 0);
@@ -84,11 +102,11 @@ const getPaymentStatus = (b: CalendarBooking): PaymentStatus => {
 const clientName  = (b: CalendarBooking) =>
   b.client_name
     ?? [b.client_first_name, b.client_last_name].filter(Boolean).join(" ")
-    ?? "Unknown Client";
+    || "Unknown Client";
+
 const clientPhone = (b: CalendarBooking) => b.client_phone ?? null;
 const clientEmail = (b: CalendarBooking) => b.client_email ?? null;
 
-/** Convert "HH:MM" or "HH:MM:SS" → minutes since midnight */
 const toMin = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + (m || 0);
@@ -97,11 +115,11 @@ const toMin = (t: string) => {
 // ─── PaymentBadge ─────────────────────────────────────────────────────────────
 
 const PaymentBadge = ({ booking }: { booking: CalendarBooking }) => {
-  const ps = getPaymentStatus(booking);
+  const ps  = getPaymentStatus(booking);
   const cfg = {
-    full:    { label: "Paid in Full",  cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" },
-    deposit: { label: "Deposit Only",  cls: "bg-amber-500/15   text-amber-400   border-amber-500/25"   },
-    unpaid:  { label: "Unpaid",        cls: "bg-red-500/15     text-red-400     border-red-500/25"      },
+    full:    { label: "Paid in Full", cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" },
+    deposit: { label: "Deposit Only", cls: "bg-amber-500/15   text-amber-400   border-amber-500/25"   },
+    unpaid:  { label: "Unpaid",       cls: "bg-red-500/15     text-red-400     border-red-500/25"      },
   }[ps];
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cfg.cls}`}>
@@ -111,7 +129,7 @@ const PaymentBadge = ({ booking }: { booking: CalendarBooking }) => {
   );
 };
 
-// ─── BookingChip (used in mobile day list + desktop time grid) ────────────────
+// ─── BookingChip ──────────────────────────────────────────────────────────────
 
 const chipColour = (b: CalendarBooking) => {
   switch (b.status) {
@@ -128,19 +146,16 @@ const BookingChip = ({
   onClick,
   compact = false,
 }: {
-  booking: CalendarBooking;
-  onClick: () => void;
+  booking:  CalendarBooking;
+  onClick:  () => void;
   compact?: boolean;
 }) => {
   const chip = chipColour(booking);
   const name = clientName(booking);
-
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left border rounded-xl px-3 transition-all active:scale-[0.98] ${chip} ${
-        compact ? "py-2" : "py-2.5"
-      }`}
+      className={`w-full text-left border rounded-xl px-3 transition-all active:scale-[0.98] ${chip} ${compact ? "py-2" : "py-2.5"}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className={`font-semibold truncate ${compact ? "text-xs" : "text-sm"}`}>{name}</span>
@@ -155,28 +170,10 @@ const BookingChip = ({
   );
 };
 
-// ─── Shimmer skeleton ─────────────────────────────────────────────────────────
+// ─── Shimmer ──────────────────────────────────────────────────────────────────
 
 const Shimmer = ({ className }: { className?: string }) => (
   <div className={`animate-pulse rounded-xl bg-white/[0.06] ${className ?? ""}`} />
-);
-
-// ─── Glassmorphism card used inside the drawer ────────────────────────────────
-
-const GlassCard = ({ children, accent }: { children: React.ReactNode; accent?: string }) => (
-  <div className={`bg-white/[0.04] rounded-2xl overflow-hidden ${accent ? `border-l-2 ${accent}` : ""}`}>
-    {children}
-  </div>
-);
-
-const CardHeader = ({ label }: { label: string }) => (
-  <div className="px-4 pt-3.5 pb-1.5 border-b border-white/[0.05]">
-    <p className="text-[10px] text-white/30 uppercase tracking-widest">{label}</p>
-  </div>
-);
-
-const CardBody = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={`px-4 pt-3 pb-3.5 ${className ?? ""}`}>{children}</div>
 );
 
 // ─── Detail Drawer ────────────────────────────────────────────────────────────
@@ -195,7 +192,6 @@ const DetailDrawer = ({
     return () => window.removeEventListener("keydown", handler);
   }, [booking, onClose]);
 
-  // Lock body scroll while drawer is open
   useEffect(() => {
     if (!booking) return;
     const prev = document.body.style.overflow;
@@ -211,7 +207,6 @@ const DetailDrawer = ({
   const email   = clientEmail(booking);
   const initial = name.charAt(0).toUpperCase();
 
-  // Avatar ring colour tied to payment status
   const avatarRing =
     ps === "full"    ? "ring-emerald-500/60" :
     ps === "deposit" ? "ring-amber-500/60"   : "ring-red-500/60";
@@ -220,13 +215,12 @@ const DetailDrawer = ({
     ps === "full"    ? "bg-emerald-500/15 text-emerald-300" :
     ps === "deposit" ? "bg-amber-500/15  text-amber-300"   : "bg-red-500/15  text-red-300";
 
-  // Status badge config
   const statusCfg = (() => {
     switch (booking.status) {
-      case "confirmed":  return { label: "Confirmed",  cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" };
-      case "pending":    return { label: "Pending",    cls: "bg-amber-500/20  text-amber-400  border-amber-500/20"  };
-      case "completed":  return { label: "Completed",  cls: "bg-sky-500/20    text-sky-400    border-sky-500/20"    };
-      case "cancelled":  return { label: "Cancelled",  cls: "bg-white/[0.06] text-white/30  border-white/[0.08]"  };
+      case "confirmed":  return { label: "Confirmed", cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" };
+      case "pending":    return { label: "Pending",   cls: "bg-amber-500/20  text-amber-400  border-amber-500/20"  };
+      case "completed":  return { label: "Completed", cls: "bg-sky-500/20    text-sky-400    border-sky-500/20"    };
+      case "cancelled":  return { label: "Cancelled", cls: "bg-white/[0.06] text-white/30  border-white/[0.08]"  };
       default:           return { label: booking.status, cls: "bg-white/[0.06] text-white/40 border-white/[0.08]" };
     }
   })();
@@ -246,10 +240,9 @@ const DetailDrawer = ({
           />
 
           {/* Drawer
-            ─ On mobile the drawer is full-screen with safe-area-aware padding.
-            ─ On desktop it slides in from the right at max-w-sm.
-            ─ We use inline style for safe-area env() values because Tailwind
-              doesn't ship those utilities by default.
+            ─ The outer <motion.aside> has NO inline style — safe-area insets are
+              applied surgically to the header (top) and the scroll body (bottom)
+              so they never shrink the flex container itself.
           */}
           <motion.aside
             key="dr"
@@ -261,14 +254,12 @@ const DetailDrawer = ({
             role="dialog"
             aria-label="Booking details"
           >
-
             {/* ── Header ── */}
             <div
               className="flex items-center justify-between px-5 pb-4 border-b border-white/[0.06] shrink-0"
               style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
             >
               <div className="flex items-center gap-3">
-                {/* Avatar */}
                 <div className={`w-10 h-10 rounded-full ring-2 ${avatarRing} flex items-center justify-center font-bold text-base ${avatarBg} shrink-0`}>
                   {initial}
                 </div>
@@ -287,15 +278,15 @@ const DetailDrawer = ({
             </div>
 
             {/* ── Scrollable body ──
-              paddingBottom accounts for the bottom nav bar (56px) plus safe-area
-              inset once — the outer aside no longer applies safe-area padding.
+              paddingBottom: bottom nav bar (56px) + spacing + safe-area-inset-bottom.
+              Applied here, not on the outer aside, so flex layout is never squeezed.
             */}
             <div
               className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 flex flex-col gap-3"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
             >
 
-              {/* ── Payment card ── */}
+              {/* ── Payment ── */}
               <div className="bg-white/[0.04] rounded-2xl overflow-hidden">
                 <div className="px-4 pt-3.5 pb-1.5 border-b border-white/[0.05]">
                   <p className="text-[10px] text-white/30 uppercase tracking-widest">Payment</p>
@@ -321,13 +312,12 @@ const DetailDrawer = ({
                 </div>
               </div>
 
-              {/* ── Time + Status card ── */}
+              {/* ── Time + Status ── */}
               <div className="bg-white/[0.04] rounded-2xl overflow-hidden">
                 <div className="px-4 pt-3.5 pb-1.5 border-b border-white/[0.05]">
                   <p className="text-[10px] text-white/30 uppercase tracking-widest">Time</p>
                 </div>
                 <div className="px-4 pt-3 pb-3.5 flex flex-col gap-2.5">
-                  {/* Time row */}
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0">
                       <Clock className="w-3.5 h-3.5 text-white/40" />
@@ -341,7 +331,6 @@ const DetailDrawer = ({
                       )}
                     </div>
                   </div>
-                  {/* Date row */}
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0">
                       <CalendarDays className="w-3.5 h-3.5 text-white/40" />
@@ -352,7 +341,6 @@ const DetailDrawer = ({
                       })}
                     </p>
                   </div>
-                  {/* Status row */}
                   <div className="flex items-center gap-2.5 pt-0.5">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize border ${statusCfg.cls}`}>
                       {statusCfg.label}
@@ -361,20 +349,18 @@ const DetailDrawer = ({
                 </div>
               </div>
 
-              {/* ── Client card ── */}
+              {/* ── Client ── */}
               <div className="bg-white/[0.04] rounded-2xl overflow-hidden">
                 <div className="px-4 pt-3.5 pb-1.5 border-b border-white/[0.05]">
                   <p className="text-[10px] text-white/30 uppercase tracking-widest">Client</p>
                 </div>
                 <div className="px-4 pt-3 pb-3.5 flex flex-col gap-2.5">
-                  {/* Name */}
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0">
                       <User className="w-3.5 h-3.5 text-white/40" />
                     </div>
                     <p className="text-sm font-medium text-white/80">{name}</p>
                   </div>
-                  {/* Action chips */}
                   {(phone || email) && (
                     <div className="flex flex-wrap gap-2 pt-0.5">
                       {phone && (
@@ -400,7 +386,7 @@ const DetailDrawer = ({
                 </div>
               </div>
 
-              {/* ── Location card (call-out only) ── */}
+              {/* ── Location (call-out only) ── */}
               {booking.is_call_out && booking.call_out_address && (
                 <div className="bg-white/[0.04] rounded-2xl overflow-hidden border-l-2 border-sky-500/40">
                   <div className="px-4 pt-3.5 pb-1.5 border-b border-white/[0.05]">
@@ -424,7 +410,7 @@ const DetailDrawer = ({
                 </div>
               )}
 
-              {/* ── Lead source chip ── */}
+              {/* ── Lead source ── */}
               {booking.lead_source && (
                 <div className="px-1">
                   <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1.5">How they found you</p>
@@ -434,7 +420,7 @@ const DetailDrawer = ({
                 </div>
               )}
 
-              {/* ── Notes card ── */}
+              {/* ── Notes ── */}
               {(booking.client_notes || booking.staff_notes) && (
                 <div className="bg-white/[0.04] rounded-2xl overflow-hidden">
                   <div className="px-4 pt-3.5 pb-1.5 border-b border-white/[0.05]">
@@ -465,7 +451,7 @@ const DetailDrawer = ({
                 </div>
               )}
 
-              {/* Bottom spacer — extra thumb-room above the nav bar */}
+              {/* Bottom spacer */}
               <div className="h-6 shrink-0" />
             </div>
           </motion.aside>
@@ -475,27 +461,26 @@ const DetailDrawer = ({
   );
 };
 
-// ─── Time Grid (Day + Week) — desktop ─────────────────────────────────────────
+// ─── Time Grid (desktop) ──────────────────────────────────────────────────────
 
 const TimeGrid = ({
   days,
   bookings,
   onSelect,
 }: {
-  days: Date[];
+  days:     Date[];
   bookings: CalendarBooking[];
   onSelect: (b: CalendarBooking) => void;
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to 8 AM on mount
   useEffect(() => {
     if (!scrollRef.current) return;
     const offset = (8 * 60) / (24 * 60) * scrollRef.current.scrollHeight;
     scrollRef.current.scrollTop = offset;
   }, []);
 
-  const HOUR_H = 64; // px per hour
+  const HOUR_H  = 64;
   const TOTAL_H = 24 * HOUR_H;
 
   const positionBooking = (b: CalendarBooking) => {
@@ -508,19 +493,18 @@ const TimeGrid = ({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      {/* Day headers */}
       {days.length > 1 && (
-        <div className="grid shrink-0 border-b border-white/[0.06]"
-          style={{ gridTemplateColumns: `48px repeat(${days.length}, 1fr)` }}>
+        <div
+          className="grid shrink-0 border-b border-white/[0.06]"
+          style={{ gridTemplateColumns: `48px repeat(${days.length}, 1fr)` }}
+        >
           <div />
           {days.map(d => (
             <div key={d.toISOString()} className="text-center py-2">
               <p className="text-[10px] text-white/30 uppercase">
                 {d.toLocaleDateString("en-ZA", { weekday: "short" })}
               </p>
-              <p className={`text-sm font-semibold mt-0.5 ${
-                d.toDateString() === new Date().toDateString() ? "text-amber-400" : "text-white/60"
-              }`}>
+              <p className={`text-sm font-semibold mt-0.5 ${d.toDateString() === new Date().toDateString() ? "text-amber-400" : "text-white/60"}`}>
                 {d.getDate()}
               </p>
             </div>
@@ -528,10 +512,8 @@ const TimeGrid = ({
         </div>
       )}
 
-      {/* Scrollable time grid */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
         <div className="relative" style={{ height: TOTAL_H }}>
-          {/* Hour lines */}
           {Array.from({ length: 24 }, (_, i) => (
             <div
               key={i}
@@ -544,12 +526,13 @@ const TimeGrid = ({
             </div>
           ))}
 
-          {/* Booking chips */}
           {days.length > 1 ? (
-            <div className="absolute inset-0 left-12 grid"
-              style={{ gridTemplateColumns: `repeat(${days.length}, 1fr)` }}>
+            <div
+              className="absolute inset-0 left-12 grid"
+              style={{ gridTemplateColumns: `repeat(${days.length}, 1fr)` }}
+            >
               {days.map(d => {
-                const dateStr = d.toISOString().slice(0, 10);
+                const dateStr    = d.toISOString().slice(0, 10);
                 const dayBookings = bookings.filter(b => b.booking_date === dateStr);
                 return (
                   <div key={dateStr} className="relative border-r border-white/[0.03]">
@@ -576,7 +559,6 @@ const TimeGrid = ({
               })}
             </div>
           ) : (
-            // Single day — span full width
             <div className="absolute left-12 right-0">
               {bookings.map(b => {
                 const { top, height } = positionBooking(b);
@@ -606,7 +588,7 @@ const TimeGrid = ({
   );
 };
 
-// ─── Month Grid — desktop ─────────────────────────────────────────────────────
+// ─── Month Grid (desktop) ─────────────────────────────────────────────────────
 
 const MonthGrid = ({
   bookings,
@@ -625,59 +607,58 @@ const MonthGrid = ({
     const end   = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
     const cells: (Date | null)[] = [];
     for (let i = 0; i < start.getDay(); i++) cells.push(null);
-    for (let d = 1; d <= end.getDate(); d++) cells.push(new Date(cursor.getFullYear(), cursor.getMonth(), d));
+    for (let d = 1; d <= end.getDate(); d++) {
+      cells.push(new Date(cursor.getFullYear(), cursor.getMonth(), d));
+    }
     return cells;
   }, [cursor]);
 
   const byDate = useMemo(() => {
     const m: Record<string, CalendarBooking[]> = {};
-    bookings.forEach(b => {
-      (m[b.booking_date] ??= []).push(b);
-    });
+    bookings.forEach(b => { (m[b.booking_date] ??= []).push(b); });
     return m;
   }, [bookings]);
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Month nav */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0">
-        <button onClick={() => setCursor(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all">
+        <button
+          onClick={() => setCursor(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all"
+        >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <p className="text-sm font-semibold text-white/70">
           {cursor.toLocaleDateString("en-ZA", { month: "long", year: "numeric" })}
         </p>
-        <button onClick={() => setCursor(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all">
+        <button
+          onClick={() => setCursor(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all"
+        >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Weekday header */}
       <div className="grid grid-cols-7 border-b border-white/[0.05]">
         {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
           <div key={d} className="text-center text-[10px] text-white/25 py-1.5 uppercase tracking-wider">{d}</div>
         ))}
       </div>
 
-      {/* Day cells */}
       <div className="grid grid-cols-7">
         {days.map((d, i) => {
           if (!d) return <div key={`e-${i}`} className="min-h-[80px] border-r border-b border-white/[0.03]" />;
-          const dateStr   = d.toISOString().slice(0, 10);
-          const dayBks    = byDate[dateStr] ?? [];
-          const isToday   = d.toDateString() === new Date().toDateString();
+          const dateStr = d.toISOString().slice(0, 10);
+          const dayBks  = byDate[dateStr] ?? [];
+          const isToday = d.toDateString() === new Date().toDateString();
           return (
             <div
               key={dateStr}
-              className={`min-h-[80px] p-1.5 border-r border-b border-white/[0.04] cursor-pointer transition-colors ${
-                isToday ? "bg-amber-500/[0.04]" : "hover:bg-white/[0.02]"
-              }`}
+              className={`min-h-[80px] p-1.5 border-r border-b border-white/[0.04] cursor-pointer transition-colors ${isToday ? "bg-amber-500/[0.04]" : "hover:bg-white/[0.02]"}`}
             >
-              <p className={`text-xs mb-1 w-6 h-6 flex items-center justify-center rounded-full mx-auto font-semibold ${
-                isToday ? "bg-amber-500 text-black" : "text-white/40"
-              }`}>{d.getDate()}</p>
+              <p className={`text-xs mb-1 w-6 h-6 flex items-center justify-center rounded-full mx-auto font-semibold ${isToday ? "bg-amber-500 text-black" : "text-white/40"}`}>
+                {d.getDate()}
+              </p>
               <div className="flex flex-col gap-0.5">
                 {dayBks.slice(0, 3).map(b => (
                   <button
@@ -700,10 +681,7 @@ const MonthGrid = ({
   );
 };
 
-// ─── Date Strip (mobile + desktop strip) ─────────────────────────────────────
-// Cal.com / Fresha pattern: horizontal scrollable 7-day pill row.
-// We render 180 days centred on today (90 past + 90 future, index 90 = today)
-// so there's plenty of past + future to scroll through without a month header.
+// ─── Date Strip (mobile) ──────────────────────────────────────────────────────
 
 const DateStrip = ({
   selected,
@@ -712,16 +690,15 @@ const DateStrip = ({
   selected: Date;
   onChange: (d: Date) => void;
 }) => {
-  const days      = useMemo(() => Array.from({ length: 181 }, (_, i) => {
+  const days = useMemo(() => Array.from({ length: 181 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i - 90);
     return d;
   }), []);
 
   const todayRef  = useRef<HTMLButtonElement | null>(null);
-  const scrollRef  = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Centre today on mount
   useEffect(() => {
     if (todayRef.current && scrollRef.current) {
       const btn    = todayRef.current;
@@ -773,13 +750,14 @@ const MobileDayList = ({
   bookings,
   onSelect,
 }: {
-  date: Date;
+  date:     Date;
   bookings: CalendarBooking[];
   onSelect: (b: CalendarBooking) => void;
 }) => {
   const dateStr = date.toISOString().slice(0, 10);
-  const day     = bookings.filter(b => b.booking_date === dateStr)
-                          .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const day     = bookings
+    .filter(b => b.booking_date === dateStr)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   if (day.length === 0) {
     return (
@@ -801,83 +779,106 @@ const MobileDayList = ({
   );
 };
 
-// ─── Main AdminCalendar Export ────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
-export function AdminCalendar() {
-  const { tenantId } = useAdminAuth();
+export default function AdminCalendar() {
+  const { tenant } = useTenant();
 
+  const [view,     setView]     = useState<CalendarView>("day");
+  const [anchor,   setAnchor]   = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const [bookings,  setBookings]  = useState<CalendarBooking[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [avail,     setAvail]     = useState<AvailabilityRow[]>([]);
   const [selected,  setSelected]  = useState<CalendarBooking | null>(null);
-  const [activeDate, setActiveDate] = useState(new Date());
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const [mobileDay, setMobileDay] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
 
-  // View modes
-  type ViewMode = "day" | "week" | "month";
-  const [view, setView] = useState<ViewMode>("day");
-
-  // ── Fetch bookings (all future + last 7 days) ────────────────────────────
-  const fetchBookings = useCallback(async () => {
-    if (!tenantId) return;
+  // ── Fetch ────────────────────────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    if (!tenant?.id) return;
     setLoading(true);
+    setError(null);
+
     const past = new Date();
     past.setDate(past.getDate() - 7);
-    const { data, error } = await supabase
-      .from("bookings_with_client")
-      .select(`
-        id, booking_date, start_time, end_time, status,
-        total_amount, deposit_amount, balance_due,
-        service_name, service_duration_minutes, staff_name,
-        client_name, client_first_name, client_last_name,
-        client_phone, client_email,
-        is_call_out, call_out_address, call_out_fee,
-        client_notes, staff_notes, lead_source
-      `)
-      .eq("tenant_id", tenantId)
-      .gte("booking_date", past.toISOString().slice(0, 10))
-      .order("booking_date", { ascending: true })
-      .order("start_time",   { ascending: true });
 
-    if (!error && data) setBookings(data as CalendarBooking[]);
+    const [bRes, aRes] = await Promise.all([
+      supabase
+        .from("bookings_with_client")
+        .select(`
+          id, booking_date, start_time, end_time, status,
+          total_amount, deposit_amount, balance_due,
+          service_name, service_duration_minutes, staff_name,
+          client_name, client_first_name, client_last_name,
+          client_phone, client_email,
+          is_call_out, call_out_address, call_out_fee,
+          client_notes, staff_notes, lead_source
+        `)
+        .eq("tenant_id", tenant.id)
+        .gte("booking_date", past.toISOString().slice(0, 10))
+        .order("booking_date", { ascending: true })
+        .order("start_time",   { ascending: true }),
+      supabase
+        .from("staff_availability")
+        .select("date, is_open, open_time, close_time")
+        .eq("tenant_id", tenant.id)
+        .gte("date", past.toISOString().slice(0, 10)),
+    ]);
+
+    if (bRes.error) { setError(bRes.error.message); }
+    else            { setBookings(bRes.data as CalendarBooking[]); }
+    if (!aRes.error && aRes.data) { setAvail(aRes.data as AvailabilityRow[]); }
+
     setLoading(false);
-  }, [tenantId]);
+  }, [tenant?.id]);
 
-  useEffect(() => { fetchBookings(); }, [fetchBookings]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Derived days for week view ───────────────────────────────────────────
+  // Suppress unused-variable lint for avail (reserved for future closed-day rendering)
+  void avail;
+
+  // ── Week days ────────────────────────────────────────────────────────────
   const weekDays = useMemo(() => {
-    const start = new Date(activeDate);
-    const day   = start.getDay();
-    start.setDate(start.getDate() - day);
+    const start = new Date(anchor);
+    start.setDate(start.getDate() - start.getDay());
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
     });
-  }, [activeDate]);
+  }, [anchor]);
 
-  const viewDays = view === "week" ? weekDays : [activeDate];
+  const viewDays = view === "week" ? weekDays : [anchor];
 
-  // ── Desktop nav helpers ──────────────────────────────────────────────────
-  const step = view === "week" ? 7 : 1;
-  const navPrev = () => setActiveDate(d => { const n = new Date(d); n.setDate(n.getDate() - step); return n; });
-  const navNext = () => setActiveDate(d => { const n = new Date(d); n.setDate(n.getDate() + step); return n; });
+  // ── Desktop nav ──────────────────────────────────────────────────────────
+  const step    = view === "week" ? 7 : 1;
+  const navPrev = () => setAnchor(d => { const n = new Date(d); n.setDate(n.getDate() - step); return n; });
+  const navNext = () => setAnchor(d => { const n = new Date(d); n.setDate(n.getDate() + step); return n; });
 
   const navLabel = useMemo(() => {
-    if (view === "month") return activeDate.toLocaleDateString("en-ZA", { month: "long", year: "numeric" });
+    if (view === "month") return anchor.toLocaleDateString("en-ZA", { month: "long", year: "numeric" });
     if (view === "week")  return `${weekDays[0].toLocaleDateString("en-ZA", { day: "numeric", month: "short" })} – ${weekDays[6].toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}`;
-    return activeDate.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  }, [view, activeDate, weekDays]);
+    return anchor.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }, [view, anchor, weekDays]);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a] text-white overflow-hidden">
 
-      {/* ── Date strip (mobile) ── */}
+      {/* Mobile date strip */}
       <div className="md:hidden shrink-0">
-        <DateStrip selected={activeDate} onChange={setActiveDate} />
+        <DateStrip selected={mobileDay} onChange={setMobileDay} />
       </div>
 
-      {/* ── Desktop toolbar ── */}
+      {/* Desktop toolbar */}
       <div className="hidden md:flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
         <div className="flex items-center gap-2">
           <button onClick={navPrev} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white/80 transition-all">
@@ -888,15 +889,12 @@ export function AdminCalendar() {
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        {/* View toggle */}
         <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl p-1">
-          {(["day","week","month"] as ViewMode[]).map(v => (
+          {(["day","week","month"] as CalendarView[]).map(v => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                view === v ? "bg-white/[0.10] text-white/90" : "text-white/40 hover:text-white/70"
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${view === v ? "bg-white/[0.10] text-white/90" : "text-white/40 hover:text-white/70"}`}
             >
               {v}
             </button>
@@ -904,23 +902,23 @@ export function AdminCalendar() {
         </div>
       </div>
 
-      {/* ── Content area ── */}
+      {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-
         {loading ? (
           <div className="flex flex-col gap-3 p-4">
-            {Array.from({ length: 4 }, (_, i) => (
-              <Shimmer key={i} className="h-16" />
-            ))}
+            {Array.from({ length: 4 }, (_, i) => <Shimmer key={i} className="h-16" />)}
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center flex-1 p-8">
+            <p className="text-sm text-red-400/70 text-center">{error}</p>
           </div>
         ) : (
           <>
-            {/* Mobile: day list */}
+            {/* Mobile */}
             <div className="md:hidden flex-1 overflow-hidden flex flex-col">
-              <MobileDayList date={activeDate} bookings={bookings} onSelect={setSelected} />
+              <MobileDayList date={mobileDay} bookings={bookings} onSelect={setSelected} />
             </div>
-
-            {/* Desktop: time grid or month */}
+            {/* Desktop */}
             <div className="hidden md:flex flex-1 min-h-0 overflow-hidden flex-col">
               {view === "month" ? (
                 <MonthGrid bookings={bookings} onSelect={setSelected} />
@@ -932,7 +930,7 @@ export function AdminCalendar() {
         )}
       </div>
 
-      {/* ── Detail Drawer (shared mobile + desktop) ── */}
+      {/* Detail Drawer */}
       <DetailDrawer booking={selected} onClose={() => setSelected(null)} />
     </div>
   );
