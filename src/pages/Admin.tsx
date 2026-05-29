@@ -15,6 +15,7 @@ import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
+const AdminCalendar         = lazy(() => import("@/components/admin/AdminCalendar"));
 const AdminServices         = lazy(() => import("@/components/admin/AdminServices"));
 const AdminAvailability     = lazy(() => import("@/components/admin/AdminAvailability"));
 const AdminStock            = lazy(() => import("@/components/admin/AdminStock"));
@@ -63,6 +64,7 @@ class AdminErrorBoundary extends Component<
 
 const CORE_VIEWS = [
   "Dashboard",
+  "Calendar",
   "Bookings",
   "Services",
   "Availability",
@@ -74,6 +76,7 @@ const CORE_VIEWS = [
 
 const ALL_VIEWS = [
   "Dashboard",
+  "Calendar",
   "Recommendations",
   "Bookings",
   "Services",
@@ -195,6 +198,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
               }
             >
               {activeView === "Dashboard"         && <AdminDashboard onNavigate={handleNavigate} />}
+              {activeView === "Calendar"           && <AdminCalendar />}
               {activeView === "Recommendations"   && flags.ai_insights       && <AdminRecommendations onNavigate={handleNavigate} />}
               {activeView === "Bookings"           && <AdminBookings />}
               {activeView === "Services"           && <AdminServices />}
