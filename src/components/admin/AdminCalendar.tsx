@@ -270,11 +270,10 @@ const DetailDrawer = ({
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 320, damping: 34 }}
-        className="fixed right-0 inset-y-0 z-50 w-full max-w-sm bg-[#111] border-l border-white/[0.08] flex flex-col overflow-hidden"
+        className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-[#111] border-l border-white/[0.08] flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-label="Booking details"
-        style={{ maxHeight: "100vh" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
@@ -308,7 +307,7 @@ const DetailDrawer = ({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 pt-6 pb-20 flex flex-col gap-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5 pb-6">
           {/* Status + Payment grouped at the top for quick decisions */}
           <section>
             <div className="flex items-center justify-between gap-3 mb-3">
