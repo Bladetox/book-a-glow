@@ -161,6 +161,15 @@ const GRID_END   = 21;
 const GRID_MINS  = (GRID_END - GRID_START) * 60;
 const HOUR_PX    = 64; // px per hour
 
+// Shared spring for card → drawer morph (Doherty threshold)
+const DRAWER_SPRING = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 32,
+  restSpeed: 0.5,
+  restDelta: 0.5,
+};
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 const ViewToggle = ({
@@ -275,7 +284,11 @@ const DetailDrawer = ({
         aria-modal="true"
         aria-label="Booking details"
       >
-        <div className="m-3 md:m-4 mt-10 md:mt-12 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-140px)] pointer-events-auto">
+        <motion.div
+          layoutId={`booking-${booking.id}`}
+          transition={DRAWER_SPRING}
+          className="m-3 md:m-4 mt-10 md:mt-12 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-140px)] pointer-events-auto overflow-hidden"
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
             <div className="min-w-0">
@@ -495,7 +508,7 @@ const DetailDrawer = ({
               </section>
             )}
           </div>
-        </div>
+        </motion.div>
       </motion.aside>
     </AnimatePresence>
   );
@@ -612,11 +625,12 @@ const TimeGrid = ({
                 return (
                   <motion.button
                     key={b.id}
+                    layoutId={`booking-${b.id}`}
                     style={positionStyle(b)}
                     onClick={() => onSelect(b)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                    transition={DRAWER_SPRING}
                     className={`rounded-lg px-2 py-1 text-left overflow-hidden cursor-pointer z-10 ${chip}`}
                   >
                     <p className="text-[11px] font-semibold leading-tight truncate">{name}</p>
@@ -706,13 +720,16 @@ const MonthView = ({
                     const ps   = getPaymentStatus(b);
                     const chip = statusChipClass(b.status, ps);
                     return (
-                      <button
+                      <motion.button
                         key={b.id}
+                        layoutId={`booking-${b.id}`}
                         onClick={(e) => { e.stopPropagation(); onSelect(b); }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={DRAWER_SPRING}
                         className={`w-full text-left text-[10px] px-1.5 py-0.5 rounded mb-0.5 truncate font-medium ${chip}`}
                       >
                         {clientName(b)}
-                      </button>
+                      </motion.button>
                     );
                   })}
                   {dayBkgs.length > 3 && (
@@ -874,10 +891,11 @@ const MobileDayList = ({
             return (
               <motion.button
                 key={b.id}
+                layoutId={`booking-${b.id}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18, delay: i * 0.04 }}
+                transition={{ ...DRAWER_SPRING, duration: 0.18, delay: i * 0.04 }}
                 onClick={() => onSelect(b)}
                 whileTap={{ scale: 0.98 }}
                 className={`w-full text-left flex items-stretch gap-3 p-3.5 rounded-2xl border transition-all active:opacity-80 ${chip}`}
