@@ -307,7 +307,7 @@ const DetailDrawer = ({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5 pb-6">
+        <div className="flex-1 overflow-y-auto px-5 pt-5 pb-20 flex flex-col gap-5">
           {/* Status + Payment grouped at the top for quick decisions */}
           <section>
             <div className="flex items-center justify-between gap-3 mb-3">
