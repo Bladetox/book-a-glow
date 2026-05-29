@@ -275,7 +275,7 @@ const DetailDrawer = ({
         aria-modal="true"
         aria-label="Booking details"
       >
-        <div className="m-3 md:m-4 mt-8 md:mt-10 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-80px)] pointer-events-auto">
+        <div className="m-3 md:m-4 mt-10 md:mt-12 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-120px)] pointer-events-auto">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
             <div className="min-w-0">
