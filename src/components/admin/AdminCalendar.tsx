@@ -275,224 +275,226 @@ const DetailDrawer = ({
         aria-modal="true"
         aria-label="Booking details"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
-          <div className="min-w-0">
-            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">
-              Booking
-            </p>
-            <h2 className="text-sm font-semibold text-white/90 truncate">
-              {clientName(booking)}
-            </h2>
-            {/* One-line summary for quick scanning on mobile */}
-            <p className="mt-1 text-[11px] text-white/40 truncate">
-              {fmt.time(booking.start_time)} – {fmt.time(booking.end_time)} ·{" "}
-              {new Date(booking.booking_date + "T00:00:00").toLocaleDateString(
-                "en-ZA",
-                {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                },
-              )}
-            </p>
+        <div className="m-3 md:m-4 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-24px)]">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
+            <div className="min-w-0">
+              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">
+                Booking
+              </p>
+              <h2 className="text-sm font-semibold text-white/90 truncate">
+                {clientName(booking)}
+              </h2>
+              {/* One-line summary for quick scanning on mobile */}
+              <p className="mt-1 text-[11px] text-white/40 truncate">
+                {fmt.time(booking.start_time)} – {fmt.time(booking.end_time)} ·{" "}
+                {new Date(booking.booking_date + "T00:00:00").toLocaleDateString(
+                  "en-ZA",
+                  {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  },
+                )}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="ml-3 w-9 h-9 flex items-center justify-center rounded-xl text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-all shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="ml-3 w-9 h-9 flex items-center justify-center rounded-xl text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-all shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 pt-5 pb-20 flex flex-col gap-5">
-          {/* Status + Payment grouped at the top for quick decisions */}
-          <section>
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="flex flex-col gap-1">
-                <p className="text-[10px] text-white/25 uppercase tracking-widest">
-                  Status
-                </p>
-                <span
-                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
-                    booking.status === "confirmed"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : booking.status === "pending"
-                        ? "bg-amber-500/20 text-amber-400"
-                        : booking.status === "completed"
-                          ? "bg-blue-500/20 text-blue-400"
-                          : booking.status === "cancelled"
-                            ? "bg-white/[0.06] text-white/30"
-                            : "bg-white/[0.06] text-white/50"
-                  }`}
-                >
-                  {booking.status}
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-5 pt-5 pb-20 flex flex-col gap-5">
+            {/* Status + Payment grouped at the top for quick decisions */}
+            <section>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex flex-col gap-1">
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest">
+                    Status
+                  </p>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
+                      booking.status === "confirmed"
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : booking.status === "pending"
+                          ? "bg-amber-500/20 text-amber-400"
+                          : booking.status === "completed"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : booking.status === "cancelled"
+                              ? "bg-white/[0.06] text-white/30"
+                              : "bg-white/[0.06] text-white/50"
+                    }`}
+                  >
+                    {booking.status}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest">
+                    Payment
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <PaymentBadge booking={booking} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white/[0.03] rounded-xl p-3">
+                  <p className="text-[10px] text-white/30 mb-1">
+                    Total booking amount
+                  </p>
+                  <p className="text-sm font-semibold text-white/80">
+                    {fmt.currency(booking.total_amount)}
+                  </p>
+                </div>
+                <div className="bg-white/[0.03] rounded-xl p-3">
+                  <p className="text-[10px] text-white/30 mb-1">Deposit</p>
+                  <p className="text-sm font-semibold text-white/80">
+                    {fmt.currency(booking.deposit_amount)}
+                  </p>
+                </div>
+                {showBalance && (
+                  <div className="col-span-2 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl p-3">
+                    <p className="text-[10px] text-amber-400/60 mb-1">
+                      Balance due
+                    </p>
+                    <p className="text-sm font-semibold text-amber-300">
+                      {fmt.currency(booking.balance_due)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="border-t border-white/[0.04] pt-4">
+              <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
+                When
+              </p>
+              <div className="flex items-center gap-2 text-sm text-white/70">
+                <Clock className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                <span>
+                  {fmt.time(booking.start_time)} – {fmt.time(booking.end_time)}
                 </span>
               </div>
-
-              <div className="flex flex-col items-end gap-1">
-                <p className="text-[10px] text-white/25 uppercase tracking-widest">
-                  Payment
-                </p>
-                <div className="flex items-center gap-2">
-                  <PaymentBadge booking={booking} />
-                </div>
+              <div className="flex items-center gap-2 text-sm text-white/70 mt-1.5">
+                <CalendarDays className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                <span className="truncate">
+                  {new Date(
+                    booking.booking_date + "T00:00:00",
+                  ).toLocaleDateString("en-ZA", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white/[0.03] rounded-xl p-3">
-                <p className="text-[10px] text-white/30 mb-1">
-                  Total booking amount
+              {booking.service_duration_minutes && (
+                <p className="text-xs text-white/30 mt-1 pl-5">
+                  {booking.service_duration_minutes} min
                 </p>
-                <p className="text-sm font-semibold text-white/80">
-                  {fmt.currency(booking.total_amount)}
-                </p>
-              </div>
-              <div className="bg-white/[0.03] rounded-xl p-3">
-                <p className="text-[10px] text-white/30 mb-1">Deposit</p>
-                <p className="text-sm font-semibold text-white/80">
-                  {fmt.currency(booking.deposit_amount)}
-                </p>
-              </div>
-              {showBalance && (
-                <div className="col-span-2 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl p-3">
-                  <p className="text-[10px] text-amber-400/60 mb-1">
-                    Balance due
-                  </p>
-                  <p className="text-sm font-semibold text-amber-300">
-                    {fmt.currency(booking.balance_due)}
-                  </p>
-                </div>
               )}
-            </div>
-          </section>
+            </section>
 
-          <section className="border-t border-white/[0.04] pt-4">
-            <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
-              When
-            </p>
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Clock className="w-3.5 h-3.5 text-white/30 shrink-0" />
-              <span>
-                {fmt.time(booking.start_time)} – {fmt.time(booking.end_time)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-white/70 mt-1.5">
-              <CalendarDays className="w-3.5 h-3.5 text-white/30 shrink-0" />
-              <span className="truncate">
-                {new Date(
-                  booking.booking_date + "T00:00:00",
-                ).toLocaleDateString("en-ZA", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-            {booking.service_duration_minutes && (
-              <p className="text-xs text-white/30 mt-1 pl-5">
-                {booking.service_duration_minutes} min
+            <section className="border-t border-white/[0.04] pt-4">
+              <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
+                Client details
               </p>
-            )}
-          </section>
-
-          <section className="border-t border-white/[0.04] pt-4">
-            <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
-              Client details
-            </p>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm text-white/70">
-                <User className="w-3.5 h-3.5 text-white/30 shrink-0" />
-                <span className="truncate">{clientName(booking)}</span>
-              </div>
-              {clientPhone(booking) && (
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-sm text-white/70">
-                  <Phone className="w-3.5 h-3.5 text-white/30 shrink-0" />
-                  <a
-                    href={`tel:${clientPhone(booking)}`}
-                    className="hover:text-white/90 transition-colors truncate"
-                  >
-                    {clientPhone(booking)}
-                  </a>
+                  <User className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                  <span className="truncate">{clientName(booking)}</span>
                 </div>
-              )}
-              {clientEmail(booking) && (
-                <div className="flex items-center gap-2 text-sm text-white/60">
-                  <Mail className="w-3.5 h-3.5 text-white/30 shrink-0" />
-                  <a
-                    href={`mailto:${clientEmail(booking)}`}
-                    className="truncate hover:text-white/90 transition-colors"
-                  >
-                    {clientEmail(booking)}
-                  </a>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {booking.is_call_out && booking.call_out_address && (
-            <section className="border-t border-white/[0.04] pt-4">
-              <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
-                Location
-              </p>
-              <div className="flex items-start gap-2 text-sm text-white/70">
-                <MapPin className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
-                <div>
-                  <p className="break-words">{booking.call_out_address}</p>
-                  {booking.call_out_fee != null && (
-                    <p className="text-xs text-white/30 mt-0.5">
-                      Call-out fee: {fmt.currency(booking.call_out_fee)}
-                    </p>
-                  )}
-                </div>
+                {clientPhone(booking) && (
+                  <div className="flex items-center gap-2 text-sm text-white/70">
+                    <Phone className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                    <a
+                      href={`tel:${clientPhone(booking)}`}
+                      className="hover:text-white/90 transition-colors truncate"
+                    >
+                      {clientPhone(booking)}
+                    </a>
+                  </div>
+                )}
+                {clientEmail(booking) && (
+                  <div className="flex items-center gap-2 text-sm text-white/60">
+                    <Mail className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                    <a
+                      href={`mailto:${clientEmail(booking)}`}
+                      className="truncate hover:text-white/90 transition-colors"
+                    >
+                      {clientEmail(booking)}
+                    </a>
+                  </div>
+                )}
               </div>
             </section>
-          )}
 
-          {booking.lead_source && (
-            <section className="border-t border-white/[0.04] pt-4">
-              <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
-                How they found you
-              </p>
-              <p className="text-sm text-white/60 break-words">
-                {booking.lead_source}
-              </p>
-            </section>
-          )}
-
-          {(booking.client_notes || booking.staff_notes) && (
-            <section className="border-t border-white/[0.04] pt-4">
-              <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
-                Notes
-              </p>
-              {booking.client_notes && (
-                <div className="flex items-start gap-2 mb-2">
-                  <StickyNote className="w-3.5 h-3.5 text-white/25 shrink-0 mt-0.5" />
+            {booking.is_call_out && booking.call_out_address && (
+              <section className="border-t border-white/[0.04] pt-4">
+                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
+                  Location
+                </p>
+                <div className="flex items-start gap-2 text-sm text-white/70">
+                  <MapPin className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[10px] text-white/30 mb-0.5">Client</p>
-                    <p className="text-sm text-white/60 whitespace-pre-wrap break-words">
-                      {booking.client_notes}
-                    </p>
+                    <p className="break-words">{booking.call_out_address}</p>
+                    {booking.call_out_fee != null && (
+                      <p className="text-xs text-white/30 mt-0.5">
+                        Call-out fee: {fmt.currency(booking.call_out_fee)}
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
-              {booking.staff_notes && (
-                <div className="flex items-start gap-2">
-                  <StickyNote className="w-3.5 h-3.5 text-white/25 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] text-white/30 mb-0.5">Staff</p>
-                    <p className="text-sm text-white/60 whitespace-pre-wrap break-words">
-                      {booking.staff_notes}
-                    </p>
+              </section>
+            )}
+
+            {booking.lead_source && (
+              <section className="border-t border-white/[0.04] pt-4">
+                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
+                  How they found you
+                </p>
+                <p className="text-sm text-white/60 break-words">
+                  {booking.lead_source}
+                </p>
+              </section>
+            )}
+
+            {(booking.client_notes || booking.staff_notes) && (
+              <section className="border-t border-white/[0.04] pt-4">
+                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
+                  Notes
+                </p>
+                {booking.client_notes && (
+                  <div className="flex items-start gap-2 mb-2">
+                    <StickyNote className="w-3.5 h-3.5 text-white/25 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] text-white/30 mb-0.5">Client</p>
+                      <p className="text-sm text-white/60 whitespace-pre-wrap break-words">
+                        {booking.client_notes}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </section>
-          )}
+                )}
+                {booking.staff_notes && (
+                  <div className="flex items-start gap-2">
+                    <StickyNote className="w-3.5 h-3.5 text-white/25 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] text-white/30 mb-0.5">Staff</p>
+                      <p className="text-sm text-white/60 whitespace-pre-wrap break-words">
+                        {booking.staff_notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
         </div>
       </motion.aside>
     </AnimatePresence>
