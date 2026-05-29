@@ -5,13 +5,20 @@
  * Touch ONLY this file for calendar changes — zero coupling to booking flow.
  *
  * Laws of UX applied:
- *  - Jakob's Law:          Familiar Google-Calendar-style layout
- *  - Fitts's Law:          Large tap targets on nav controls
- *  - Hick's Law:           Only 3 view options exposed
- *  - Miller's Law:         Booking chips show max 2 pieces of info
+ *  - Jakob's Law:          Familiar Cal.com / Fresha date-strip pattern on mobile
+ *  - Fitts's Law:          Large tap targets on nav controls + day pills (min 44px)
+ *  - Hick's Law:           Only 3 view options exposed; mobile auto-locks to Day
+ *  - Miller's Law:         Booking cards show max 3 pieces of info
  *  - Von Restorff Effect:  Unpaid/deposit-only visually distinct
  *  - Peak-End Rule:        Detail drawer leads with payment status
  *  - Doherty Threshold:    Query scoped to visible date range only
+ *
+ * Mobile layout  (<768 px):
+ *   Horizontal scrollable date strip (7-day pill row, today centred on mount)
+ *   → below: vertical list of booking cards for the selected day
+ *
+ * Desktop layout (≥768 px):
+ *   Full toolbar + Day / Week / Month time-grid (unchanged from v1)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -67,7 +74,7 @@ interface CalendarBooking {
 }
 
 interface AvailabilityRow {
-  day_of_week: number;           // 0=Sun … 6=Sat
+  day_of_week: number;
   start_time: string;
   end_time: string;
   is_active: boolean;
@@ -135,25 +142,18 @@ const paymentLabel: Record<string, { text: string; classes: string }> = {
   unpaid:  { text: "Unpaid",        classes: "bg-red-500/20    text-red-400"     },
 };
 
-// Status colour for the event chip
 const statusChipClass = (status: string, payStatus: string): string => {
   if (status === "cancelled") return "bg-white/[0.04] border border-white/[0.08] text-white/25";
   if (status === "completed") return "bg-blue-500/20  border border-blue-500/20  text-blue-300";
   if (status === "pending")   return "bg-amber-500/20 border border-amber-500/20 text-amber-300";
-  // confirmed — vary by payment so unpaid pops (Von Restorff)
   if (payStatus === "unpaid")  return "bg-red-500/15   border border-red-500/25   text-red-300";
   if (payStatus === "deposit") return "bg-amber-500/15 border border-amber-500/20 text-amber-200";
   return "bg-emerald-500/15 border border-emerald-500/20 text-emerald-200";
 };
 
-const clientName = (b: CalendarBooking) =>
-  b.canonical_name || b.guest_name || "Guest";
-
-const clientPhone = (b: CalendarBooking) =>
-  b.canonical_phone || b.guest_phone || null;
-
-const clientEmail = (b: CalendarBooking) =>
-  b.canonical_email || b.guest_email || null;
+const clientName  = (b: CalendarBooking) => b.canonical_name  || b.guest_name  || "Guest";
+const clientPhone = (b: CalendarBooking) => b.canonical_phone || b.guest_phone || null;
+const clientEmail = (b: CalendarBooking) => b.canonical_email || b.guest_email || null;
 
 // Hours shown on the time-grid (07:00 – 21:00)
 const GRID_START = 7;
@@ -203,17 +203,17 @@ const NavButton = ({
   children: React.ReactNode;
   label: string;
 }) => (
-  // Fitts's Law: minimum 44×44px tap target
   <button
     onClick={onClick}
     aria-label={label}
-    className="w-9 h-9 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.06] active:bg-white/[0.10] transition-all duration-150"
+    className="w-11 h-11 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.06] active:bg-white/[0.10] transition-all duration-150"
   >
     {children}
   </button>
 );
 
-// Payment badge used inside the detail drawer
+// ─── Payment Badge ────────────────────────────────────────────────────────────
+
 const PaymentBadge = ({ booking }: { booking: CalendarBooking }) => {
   const ps  = getPaymentStatus(booking);
   const cfg = paymentLabel[ps];
@@ -239,7 +239,6 @@ const DetailDrawer = ({
   booking: CalendarBooking | null;
   onClose: () => void;
 }) => {
-  // Close on Escape
   useEffect(() => {
     if (!booking) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -251,7 +250,6 @@ const DetailDrawer = ({
     <AnimatePresence>
       {booking && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="bd"
             initial={{ opacity: 0 }}
@@ -261,7 +259,6 @@ const DetailDrawer = ({
             onClick={onClose}
           />
 
-          {/* Drawer */}
           <motion.aside
             key="dr"
             initial={{ x: "100%" }}
@@ -290,7 +287,6 @@ const DetailDrawer = ({
             {/* Body — Peak-End Rule: payment status leads */}
             <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
 
-              {/* Payment status — most actionable, shown first */}
               <section>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">Payment</p>
                 <div className="flex items-center gap-3">
@@ -314,7 +310,6 @@ const DetailDrawer = ({
                 </div>
               </section>
 
-              {/* Time */}
               <section>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">Time</p>
                 <div className="flex items-center gap-2 text-sm text-white/70">
@@ -338,7 +333,6 @@ const DetailDrawer = ({
                 )}
               </section>
 
-              {/* Status */}
               <section>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">Status</p>
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
@@ -352,7 +346,6 @@ const DetailDrawer = ({
                 </span>
               </section>
 
-              {/* Client */}
               <section>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">Client</p>
                 <div className="flex flex-col gap-2">
@@ -380,7 +373,6 @@ const DetailDrawer = ({
                 </div>
               </section>
 
-              {/* Call-out */}
               {booking.is_call_out && booking.call_out_address && (
                 <section>
                   <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">Location</p>
@@ -398,7 +390,6 @@ const DetailDrawer = ({
                 </section>
               )}
 
-              {/* Lead source */}
               {booking.lead_source && (
                 <section>
                   <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">How they found you</p>
@@ -406,7 +397,6 @@ const DetailDrawer = ({
                 </section>
               )}
 
-              {/* Notes */}
               {(booking.client_notes || booking.staff_notes) && (
                 <section>
                   <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">Notes</p>
@@ -438,7 +428,7 @@ const DetailDrawer = ({
   );
 };
 
-// ─── Time Grid (Day + Week) ────────────────────────────────────────────────────
+// ─── Time Grid (Day + Week) — desktop ─────────────────────────────────────────
 
 const TimeGrid = ({
   days,
@@ -451,7 +441,6 @@ const TimeGrid = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to first booking or 8 AM on mount
   useEffect(() => {
     if (!scrollRef.current) return;
     const offset = (8 - GRID_START) * HOUR_PX;
@@ -484,9 +473,7 @@ const TimeGrid = ({
           <div
             key={fmt.date(d)}
             className={`flex-1 text-center py-2 ${
-              isToday(d)
-                ? "text-white/90"
-                : "text-white/30"
+              isToday(d) ? "text-white/90" : "text-white/30"
             }`}
           >
             <p className="text-[10px] uppercase tracking-widest">
@@ -527,7 +514,6 @@ const TimeGrid = ({
           {/* Day columns */}
           {days.map((d) => (
             <div key={fmt.date(d)} className="flex-1 relative border-l border-white/[0.04]">
-              {/* Hour lines */}
               {hours.map((h) => (
                 <div
                   key={h}
@@ -535,8 +521,6 @@ const TimeGrid = ({
                   style={{ top: (h - GRID_START) * HOUR_PX }}
                 />
               ))}
-
-              {/* Half-hour lines */}
               {hours.map((h) => (
                 <div
                   key={`${h}-half`}
@@ -544,18 +528,14 @@ const TimeGrid = ({
                   style={{ top: (h - GRID_START) * HOUR_PX + HOUR_PX / 2 }}
                 />
               ))}
-
-              {/* Today highlight */}
               {isToday(d) && (
                 <div className="absolute inset-0 bg-white/[0.015] pointer-events-none" />
               )}
-
-              {/* Booking chips */}
               {bookingsForDay(d).map((b) => {
-                const ps    = getPaymentStatus(b);
-                const chip  = statusChipClass(b.status, ps);
-                const name  = clientName(b);
-                const pCfg  = paymentLabel[ps];
+                const ps   = getPaymentStatus(b);
+                const chip = statusChipClass(b.status, ps);
+                const name = clientName(b);
+                const pCfg = paymentLabel[ps];
                 return (
                   <motion.button
                     key={b.id}
@@ -566,7 +546,6 @@ const TimeGrid = ({
                     transition={{ type: "spring", stiffness: 400, damping: 28 }}
                     className={`rounded-lg px-2 py-1 text-left overflow-hidden cursor-pointer z-10 ${chip}`}
                   >
-                    {/* Miller's Law: max 2 pieces on chip */}
                     <p className="text-[11px] font-semibold leading-tight truncate">{name}</p>
                     <p className={`text-[9px] leading-tight truncate mt-0.5 ${pCfg.classes.split(" ")[1]}`}>
                       {fmt.time(b.start_time)}
@@ -583,7 +562,7 @@ const TimeGrid = ({
   );
 };
 
-// ─── Month View ───────────────────────────────────────────────────────────────
+// ─── Month View — desktop ─────────────────────────────────────────────────────
 
 const MonthView = ({
   anchor,
@@ -599,11 +578,9 @@ const MonthView = ({
   const year  = anchor.getFullYear();
   const month = anchor.getMonth();
 
-  // First Monday on or before the 1st of the month
   const firstDay  = new Date(year, month, 1);
   const gridStart = startOfWeek(firstDay);
 
-  // 6 weeks × 7 days
   const cells: Date[] = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
   const weeks: Date[][] = Array.from({ length: 6 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
 
@@ -614,7 +591,6 @@ const MonthView = ({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Day-of-week header */}
       <div className="grid grid-cols-7 border-b border-white/[0.06] shrink-0">
         {DOW.map((d) => (
           <div key={d} className="text-center py-2 text-[10px] text-white/25 uppercase tracking-widest">
@@ -623,7 +599,6 @@ const MonthView = ({
         ))}
       </div>
 
-      {/* Grid */}
       <div className="flex-1 overflow-y-auto">
         {weeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7 border-b border-white/[0.04]">
@@ -654,7 +629,6 @@ const MonthView = ({
                     {d.getDate()}
                   </p>
 
-                  {/* Show up to 3 chips; +N indicator for rest */}
                   {dayBkgs.slice(0, 3).map((b) => {
                     const ps   = getPaymentStatus(b);
                     const chip = statusChipClass(b.status, ps);
@@ -683,6 +657,221 @@ const MonthView = ({
   );
 };
 
+// ─── Mobile Date Strip ────────────────────────────────────────────────────────
+// Cal.com / Fresha pattern: horizontal scrollable 7-day pill row.
+// The strip always shows a 35-day window (5 weeks) centred on today,
+// so there's plenty of past + future to scroll through without a month header.
+
+const STRIP_DAYS   = 35; // total days in the strip pool
+const STRIP_OFFSET = 7;  // days before today in the pool
+
+const MobileDateStrip = ({
+  selected,
+  bookings,
+  onSelect,
+}: {
+  selected: Date;
+  bookings: CalendarBooking[];
+  onSelect: (d: Date) => void;
+}) => {
+  const scrollRef  = useRef<HTMLDivElement>(null);
+  const todayRef   = useRef<HTMLButtonElement>(null);
+
+  // Build pool once — centred on today
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const pool: Date[] = Array.from({ length: STRIP_DAYS }, (_, i) =>
+    addDays(today, i - STRIP_OFFSET)
+  );
+
+  // Dot colours for a day — returns the dominant status colour
+  const dotColor = (d: Date): string | null => {
+    const dayBkgs = bookings.filter((b) => b.booking_date === fmt.date(d));
+    if (!dayBkgs.length) return null;
+    const hasUnpaid  = dayBkgs.some((b) => getPaymentStatus(b) === "unpaid"  && b.status !== "cancelled");
+    const hasDeposit = dayBkgs.some((b) => getPaymentStatus(b) === "deposit" && b.status !== "cancelled");
+    if (hasUnpaid)  return "bg-red-400";
+    if (hasDeposit) return "bg-amber-400";
+    return "bg-emerald-400";
+  };
+
+  // Scroll today pill into view on mount (centred)
+  useEffect(() => {
+    if (todayRef.current && scrollRef.current) {
+      const pill   = todayRef.current;
+      const strip  = scrollRef.current;
+      const offset = pill.offsetLeft - strip.clientWidth / 2 + pill.clientWidth / 2;
+      strip.scrollLeft = offset;
+    }
+  }, []);
+
+  return (
+    <div
+      ref={scrollRef}
+      className="flex gap-1.5 overflow-x-auto scrollbar-none px-3 py-2"
+      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+    >
+      {pool.map((d) => {
+        const active = isSameDay(d, selected);
+        const todayD = isToday(d);
+        const dot    = dotColor(d);
+        const dateKey = fmt.date(d);
+
+        return (
+          <button
+            key={dateKey}
+            ref={todayD ? todayRef : undefined}
+            onClick={() => onSelect(d)}
+            className={`flex flex-col items-center shrink-0 w-11 py-2 rounded-2xl transition-all duration-150 ${
+              active
+                ? "bg-white text-black"
+                : todayD
+                  ? "bg-white/[0.08] text-white"
+                  : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
+            }`}
+            style={{ minHeight: 60 }}
+          >
+            <span className={`text-[10px] font-medium uppercase tracking-wide leading-none mb-1 ${active ? "text-black/50" : ""}`}>
+              {d.toLocaleDateString("en-ZA", { weekday: "short" }).slice(0, 3)}
+            </span>
+            <span className={`text-base font-bold leading-none ${active ? "text-black" : todayD ? "text-white" : "text-white/60"}`}>
+              {d.getDate()}
+            </span>
+            {/* Booking dot indicator */}
+            <span className="mt-1.5 h-1.5 flex items-center justify-center">
+              {dot && (
+                <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-black/30" : dot}`} />
+              )}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ─── Mobile Day Slot List ─────────────────────────────────────────────────────
+// Vertical list of booking cards for the selected day.
+// Empty state is warm, not a blank void.
+
+const MobileDayList = ({
+  date,
+  bookings,
+  loading,
+  onSelect,
+}: {
+  date: Date;
+  bookings: CalendarBooking[];
+  loading: boolean;
+  onSelect: (b: CalendarBooking) => void;
+}) => {
+  const dayBkgs = bookings
+    .filter((b) => b.booking_date === fmt.date(date))
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+  const dateLabel = fmt.longDate(date);
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Date label */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] shrink-0">
+        <p className="text-xs font-semibold text-white/60">{dateLabel}</p>
+        {loading && <Loader2 className="w-3.5 h-3.5 text-white/20 animate-spin" />}
+        <span className="text-xs text-white/25">
+          {dayBkgs.length} booking{dayBkgs.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Slot list */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2">
+        {dayBkgs.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-white/20">
+            <CalendarDays className="w-8 h-8" />
+            <p className="text-sm text-center">No bookings on this day</p>
+          </div>
+        )}
+
+        <AnimatePresence initial={false}>
+          {dayBkgs.map((b, i) => {
+            const ps   = getPaymentStatus(b);
+            const chip = statusChipClass(b.status, ps);
+            const pCfg = paymentLabel[ps];
+            const name = clientName(b);
+
+            return (
+              <motion.button
+                key={b.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, delay: i * 0.04 }}
+                onClick={() => onSelect(b)}
+                whileTap={{ scale: 0.98 }}
+                className={`w-full text-left flex items-stretch gap-3 p-3.5 rounded-2xl border transition-all active:opacity-80 ${chip}`}
+              >
+                {/* Time column */}
+                <div className="flex flex-col items-center shrink-0 w-12 gap-0.5 pt-0.5">
+                  <span className="text-[11px] font-semibold leading-none">
+                    {fmt.time(b.start_time)}
+                  </span>
+                  <span className="text-[9px] opacity-50 leading-none">
+                    {fmt.time(b.end_time)}
+                  </span>
+                  {b.service_duration_minutes && (
+                    <span className="text-[9px] opacity-35 leading-none mt-0.5">
+                      {b.service_duration_minutes}m
+                    </span>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="w-px bg-current opacity-10 shrink-0" />
+
+                {/* Content column */}
+                <div className="flex-1 flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold truncate">{name}</span>
+                    {b.is_call_out && (
+                      <span className="text-[10px] shrink-0 flex items-center gap-0.5 opacity-60">
+                        <MapPin className="w-3 h-3" />
+                        Out
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Payment pill */}
+                  <span className={`self-start inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${pCfg.classes}`}>
+                    <span className={`w-1 h-1 rounded-full ${
+                      ps === "full"    ? "bg-emerald-400" :
+                      ps === "deposit" ? "bg-amber-400"   : "bg-red-400"
+                    }`} />
+                    {pCfg.text}
+                  </span>
+
+                  {/* Total */}
+                  {b.total_amount != null && (
+                    <span className="text-[11px] opacity-50">
+                      {fmt.currency(b.total_amount)}
+                      {b.balance_due != null && Number(b.balance_due) > 0 && (
+                        <span className="text-amber-400 ml-1">
+                          · {fmt.currency(b.balance_due)} due
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+
+                {/* Chevron */}
+                <ChevronRight className="w-4 h-4 opacity-20 shrink-0 self-center" />
+              </motion.button>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
+
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
 const Legend = () => (
@@ -703,27 +892,91 @@ const Legend = () => (
   </div>
 );
 
+// ─── Mobile Month Header ──────────────────────────────────────────────────────
+// Shows "May 2026" with prev/next month arrows above the date strip on mobile.
+
+const MobileMonthNav = ({
+  selected,
+  onPrev,
+  onNext,
+  onToday,
+}: {
+  selected: Date;
+  onPrev: () => void;
+  onNext: () => void;
+  onToday: () => void;
+}) => {
+  const todayIsSelected = isToday(selected);
+  return (
+    <div className="flex items-center justify-between px-2 pt-1 shrink-0">
+      <NavButton onClick={onPrev} label="Previous month">
+        <ChevronLeft className="w-4 h-4" />
+      </NavButton>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-white/80">
+          {selected.toLocaleDateString("en-ZA", { month: "long", year: "numeric" })}
+        </span>
+        {!todayIsSelected && (
+          <button
+            onClick={onToday}
+            className="text-[10px] text-white/30 hover:text-white/60 px-2 py-0.5 rounded-lg hover:bg-white/[0.06] transition-all"
+          >
+            Today
+          </button>
+        )}
+      </div>
+
+      <NavButton onClick={onNext} label="Next month">
+        <ChevronRight className="w-4 h-4" />
+      </NavButton>
+    </div>
+  );
+};
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 const AdminCalendar = () => {
   const { tenantId } = useTenant();
 
+  // Desktop state
   const [view,     setView]     = useState<CalendarView>("week");
   const [anchor,   setAnchor]   = useState<Date>(new Date());
+
+  // Mobile state — selected day defaults to today
+  const [mobileDay, setMobileDay] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
   const [bookings, setBookings] = useState<CalendarBooking[]>([]);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const [selected, setSelected] = useState<CalendarBooking | null>(null);
 
-  // Compute visible date range
-  const { rangeStart, rangeEnd, days, title } = useCallback(() => {
+  // ── Determine fetch range ──────────────────────────────────────────────────
+  // On mobile: always fetch the current visible 35-day strip window.
+  // On desktop: fetch the view range (day / week / month).
+  // We detect "mobile" via a media-query match inside the component so the
+  // same component works in both contexts without prop drilling.
+
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    setIsMobile(mq.matches);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Compute desktop range
+  const desktopRange = useCallback(() => {
     if (view === "day") {
-      return {
-        rangeStart: fmt.date(anchor),
-        rangeEnd:   fmt.date(anchor),
-        days:       [anchor],
-        title:      fmt.longDate(anchor),
-      };
+      return { rangeStart: fmt.date(anchor), rangeEnd: fmt.date(anchor), days: [anchor], title: fmt.longDate(anchor) };
     }
     if (view === "week") {
       const mon = startOfWeek(anchor);
@@ -735,20 +988,27 @@ const AdminCalendar = () => {
         title: `${fmt.shortDate(mon)} – ${fmt.shortDate(sun)} ${sun.getFullYear()}`,
       };
     }
-    // month
     const y = anchor.getFullYear();
     const m = anchor.getMonth();
     const first = new Date(y, m, 1);
     const last  = new Date(y, m + 1, 0);
-    return {
-      rangeStart: fmt.date(first),
-      rangeEnd:   fmt.date(last),
-      days:       [],
-      title:      fmt.monthYear(anchor),
-    };
-  }, [view, anchor])();
+    return { rangeStart: fmt.date(first), rangeEnd: fmt.date(last), days: [], title: fmt.monthYear(anchor) };
+  }, [view, anchor]);
 
-  // Fetch bookings for visible range — Doherty Threshold: tight query
+  // Compute mobile strip range (35 days centred on today)
+  const mobileRange = useCallback(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = addDays(today, -STRIP_OFFSET);
+    const end   = addDays(today, STRIP_DAYS - STRIP_OFFSET - 1);
+    return { rangeStart: fmt.date(start), rangeEnd: fmt.date(end) };
+  }, []);
+
+  const { rangeStart, rangeEnd, days = [], title = "" } = isMobile
+    ? { ...mobileRange(), days: [], title: "" }
+    : desktopRange();
+
+  // Fetch bookings
   useEffect(() => {
     if (!tenantId) return;
     let cancelled = false;
@@ -783,7 +1043,7 @@ const AdminCalendar = () => {
     return () => { cancelled = true; };
   }, [tenantId, rangeStart, rangeEnd]);
 
-  // Navigation
+  // Desktop navigation
   const navigate = (dir: -1 | 1) => {
     setAnchor((prev) => {
       const next = new Date(prev);
@@ -796,7 +1056,7 @@ const AdminCalendar = () => {
 
   const goToday = () => setAnchor(new Date());
 
-  // Month → Day drill-down
+  // Month → Day drill-down on desktop
   const handleDayClick = (d: Date) => {
     setAnchor(d);
     setView("day");
@@ -809,68 +1069,134 @@ const AdminCalendar = () => {
     return anchor.getFullYear() === t.getFullYear() && anchor.getMonth() === t.getMonth();
   }, [view, anchor]);
 
+  // Mobile month navigation — advances the entire strip pool 35 days
+  const mobilePrevMonth = () => {
+    setMobileDay((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() - 1);
+      return d;
+    });
+  };
+  const mobileNextMonth = () => {
+    setMobileDay((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() + 1);
+      return d;
+    });
+  };
+  const mobilGoToday = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    setMobileDay(d);
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <div className="flex flex-col h-full gap-4">
 
-      {/* ── Toolbar ──────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
-        <div className="flex items-center gap-2 flex-1">
-          <NavButton onClick={() => navigate(-1)} label="Previous">
-            <ChevronLeft className="w-4 h-4" />
-          </NavButton>
-          <NavButton onClick={() => navigate(1)} label="Next">
-            <ChevronRight className="w-4 h-4" />
-          </NavButton>
-
-          <button
-            onClick={goToday}
-            disabled={isCurrentPeriod()}
-            className="px-3 py-1.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-default transition-all duration-150"
-          >
-            Today
-          </button>
-
-          <h2 className="text-sm font-semibold text-white/80 ml-1 truncate">{title}</h2>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {loading && <Loader2 className="w-4 h-4 text-white/20 animate-spin" />}
-          <ViewToggle view={view} onChange={setView} />
-        </div>
-      </div>
-
       {/* ── Error state ───────────────────────────────────────── */}
       {error && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+        <div className="flex items-center gap-3 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 shrink-0">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>Failed to load bookings: {error}</span>
         </div>
       )}
 
-      {/* ── Calendar area ─────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden flex flex-col">
-        {view === "month" ? (
-          <MonthView
-            anchor={anchor}
+      {/* ════════════════════════════════════════════════════════
+          MOBILE LAYOUT  (<768 px)
+          Date strip on top, booking cards below
+      ════════════════════════════════════════════════════════ */}
+      <div className="flex flex-col flex-1 min-h-0 md:hidden">
+        {/* Month nav */}
+        <MobileMonthNav
+          selected={mobileDay}
+          onPrev={mobilePrevMonth}
+          onNext={mobileNextMonth}
+          onToday={mobilGoToday}
+        />
+
+        {/* Date strip */}
+        <MobileDateStrip
+          selected={mobileDay}
+          bookings={bookings}
+          onSelect={setMobileDay}
+        />
+
+        {/* Booking cards */}
+        <div className="flex-1 min-h-0 bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden flex flex-col mt-2">
+          <MobileDayList
+            date={mobileDay}
             bookings={bookings}
-            onSelect={setSelected}
-            onDayClick={handleDayClick}
-          />
-        ) : (
-          <TimeGrid
-            days={days}
-            bookings={bookings}
+            loading={loading}
             onSelect={setSelected}
           />
-        )}
+        </div>
+
+        {/* Legend */}
+        <div className="shrink-0 pt-1 pb-2">
+          <Legend />
+        </div>
       </div>
 
-      {/* ── Legend ───────────────────────────────────────────── */}
-      <div className="shrink-0">
-        <Legend />
+      {/* ════════════════════════════════════════════════════════
+          DESKTOP LAYOUT  (≥768 px)
+          Full toolbar + time-grid / month-grid
+      ════════════════════════════════════════════════════════ */}
+      <div className="hidden md:flex md:flex-col md:flex-1 md:min-h-0 gap-4">
+
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 flex-1">
+            <NavButton onClick={() => navigate(-1)} label="Previous">
+              <ChevronLeft className="w-4 h-4" />
+            </NavButton>
+            <NavButton onClick={() => navigate(1)} label="Next">
+              <ChevronRight className="w-4 h-4" />
+            </NavButton>
+
+            <button
+              onClick={goToday}
+              disabled={isCurrentPeriod()}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-default transition-all duration-150"
+            >
+              Today
+            </button>
+
+            <h2 className="text-sm font-semibold text-white/80 ml-1 truncate">{title}</h2>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {loading && <Loader2 className="w-4 h-4 text-white/20 animate-spin" />}
+            <ViewToggle view={view} onChange={setView} />
+          </div>
+        </div>
+
+        {/* Calendar area */}
+        <div className="flex-1 min-h-0 bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden flex flex-col">
+          {view === "month" ? (
+            <MonthView
+              anchor={anchor}
+              bookings={bookings}
+              onSelect={setSelected}
+              onDayClick={handleDayClick}
+            />
+          ) : (
+            <TimeGrid
+              days={days}
+              bookings={bookings}
+              onSelect={setSelected}
+            />
+          )}
+        </div>
+
+        {/* Legend */}
+        <div className="shrink-0">
+          <Legend />
+        </div>
       </div>
 
-      {/* ── Detail drawer ────────────────────────────────────── */}
+      {/* ── Detail drawer — shared across both layouts ────────── */}
       <DetailDrawer booking={selected} onClose={() => setSelected(null)} />
     </div>
   );
