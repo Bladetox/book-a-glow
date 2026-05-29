@@ -26,7 +26,16 @@ export default defineConfig(({ mode }) => ({
         // the raw HTML shell as a JS module response, causing:
         // "'text/html' is not a valid JavaScript MIME type"
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+        navigateFallbackDenylist: [
+          /^\/~oauth/,
+          /^\/api\//,
+          // Never serve the HTML fallback for JS/CSS asset requests.
+          // When a new SW activates mid-session, old chunk URLs no longer
+          // exist in the new precache — without this denylist the SW would
+          // return index.html for those fetches, producing the MIME error.
+          /\.js(\?.*)?$/,
+          /\.css(\?.*)?$/,
+        ],
         // woff2 removed — all fonts are loaded from external CDNs (Fontshare /
         // Google Fonts) at runtime; no local .woff2 files exist in /public.
         // Keeping it caused a Workbox glob-pattern warning on every build.
