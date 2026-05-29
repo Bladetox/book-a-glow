@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, CalendarCheck,
   AlertTriangle, Star, ShoppingBag, Eye,
   BarChart3, CircleDollarSign, UserPlus, UserCheck, Percent,
-  XCircle, Package, Bell, Clock, Info, X, Megaphone,
+  XCircle, Bell, Clock, Info, X, Megaphone,
   Loader2, ArrowRight
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
@@ -15,6 +15,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useNextyInsights } from "@/hooks/useNextyInsights";
 import BusinessHealthSection, { MetricExpandOverlay, type ExpandedCard } from "@/components/admin/BusinessHealthSection";
+import DashboardStockAlerts from "@/components/admin/DashboardStockAlerts";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 
@@ -1030,23 +1031,8 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
-      {visibility.stockAlerts && stockAlerts.length > 0 && (
-        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.2 }}>
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Stock Alerts</p>
-          <div className="flex flex-col gap-2">
-            {stockAlerts.map((item: { item: string; level: "critical" | "low" }, i: number) => (
-              <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-red-500/[0.15] bg-red-500/[0.04] px-4 py-3">
-                <div className="flex items-center gap-2.5">
-                  <Package className="w-3.5 h-3.5 text-red-400/70 shrink-0" />
-                  <span className="text-xs font-medium text-white/70">{item.item}</span>
-                </div>
-                <span className={`text-[10px] font-semibold ${item.level === "critical" ? "text-red-400" : "text-amber-400"}`}>
-                  {item.level}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.section>
+      {visibility.stockAlerts && (
+        <DashboardStockAlerts stockAlerts={stockAlerts} onNavigate={onNavigate} />
       )}
     </div>
   );
