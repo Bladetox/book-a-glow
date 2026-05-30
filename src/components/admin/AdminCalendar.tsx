@@ -164,10 +164,10 @@ const HOUR_PX    = 64; // px per hour
 // Shared spring for card → drawer morph (Doherty threshold)
 const DRAWER_SPRING = {
     type: "spring" as const,
-    stiffness: 320,   // was 400
-    damping: 36,      // was 32
-    restSpeed: 10,     // was 2
-    restDelta: 2,     // was 0.5
+    stiffness: 320,
+    damping: 36,
+    restSpeed: 10,
+    restDelta: 2,
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -261,6 +261,10 @@ const DetailDrawer = ({
 
   const showBalance =
     booking.balance_due != null && Number(booking.balance_due) > 0;
+
+  const mapsUrl = booking.call_out_address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.call_out_address)}`
+    : null;
 
   return (
     <AnimatePresence>
@@ -456,7 +460,18 @@ const DetailDrawer = ({
                 <div className="flex items-start gap-2 text-sm text-white/70">
                   <MapPin className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
                   <div>
-                    <p className="break-words">{booking.call_out_address}</p>
+                    {mapsUrl ? (
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="break-words underline underline-offset-2 decoration-white/30 hover:decoration-white/70"
+                      >
+                        {booking.call_out_address}
+                      </a>
+                    ) : (
+                      <p className="break-words">{booking.call_out_address}</p>
+                    )}
                     {booking.call_out_fee != null && (
                       <p className="text-xs text-white/30 mt-0.5">
                         Call-out fee: {fmt.currency(booking.call_out_fee)}
