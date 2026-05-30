@@ -23,6 +23,23 @@ interface ReviewStepProps {
 
 type PaymentChoice = "deposit" | "full";
 
+// ── Step labels shown inside the button while processing ──────────────────────
+type SubmitPhase =
+  | "idle"
+  | "creating"   // RPC: create_booking_with_consultation
+  | "gateway";   // Edge function: yoco-checkout
+
+function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: PaymentChoice): string {
+  switch (phase) {
+    case "creating": return "Creating your booking…";
+    case "gateway":  return "Opening payment gateway…";
+    default:
+      return choice === "full"
+        ? `Confirm & Pay ${cur}${amount}`
+        : `Confirm & Pay Deposit ${cur}${amount}`;
+  }
+}
+
 function friendlyBookingError(err: any): string {
   const raw: string = err?.message ?? "";
   if (/time.*already booked|slot.*taken|no longer available|is not available/i.test(raw))
@@ -49,9 +66,13 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const queryClient = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [phase, setPhase] = useState<SubmitPhase>("idle");
+  const submitting = phase !== "idle";
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
   const [showPairWith, setShowPairWith] = useState(false);
+
+  // Track the booking ID created during this session so we never create twice.
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
   // ── Show the pair-with sheet once on mount ──
   useEffect(() => {
@@ -119,7 +140,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
   const handleConfirm = async () => {
     if (submitting) return;
-    setSubmitting(true);
+    setPhase("creating");
 
     try {
       if (!booking.selectedTreatments.length) {
@@ -136,61 +157,69 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         return;
       }
 
-      const clientId = null;
-      const { data: tenantRow } = await supabase
-        .from("tenants")
-        .select("owner_id")
-        .eq("id", tenantId)
-        .single();
+      // ── If a booking was already created but payment failed, skip re-creating ──
+      let bookingId = pendingBookingId;
 
-      const staffId = tenantRow?.owner_id;
-      if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
+      if (!bookingId) {
+        const clientId = null;
+        const { data: tenantRow } = await supabase
+          .from("tenants")
+          .select("owner_id")
+          .eq("id", tenantId)
+          .single();
 
-      const getAnswerDetail = (id: number) => {
-        const answer = booking.safetyAnswers[id];
-        if (answer === true) {
-          const detail = booking.safetyAnswerDetails[id];
-          return detail ? `Yes: ${detail}` : "Yes (Flagged)";
-        }
-        if (answer === false) return "No";
-        return booking.isExistingClient ? "On File" : "None reported";
-      };
+        const staffId = tenantRow?.owner_id;
+        if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
 
-      const guestPhone = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
+        const getAnswerDetail = (id: number) => {
+          const answer = booking.safetyAnswers[id];
+          if (answer === true) {
+            const detail = booking.safetyAnswerDetails[id];
+            return detail ? `Yes: ${detail}` : "Yes (Flagged)";
+          }
+          if (answer === false) return "No";
+          return booking.isExistingClient ? "On File" : "None reported";
+        };
 
-      const { data, error } = await supabase.rpc("create_booking_with_consultation", {
-        p_client_id: clientId,
-        p_staff_id: staffId,
-        p_booking_date: bookingDate,
-        p_start_time: startTime,
-        p_service_ids: booking.selectedTreatments,
-        p_is_callout: isCallOut,
-        p_callout_address: isCallOut ? booking.address : null,
-        p_callout_distance_km: isCallOut ? estimatedDistanceKm : 0,
-        p_client_notes: booking.additionalNotes || booking.existingClientNotes || null,
-        p_client_type: booking.isExistingClient ? "existing" : "new",
-        p_lead_source: booking.referralSource || null,
-        p_skin_conditions: getAnswerDetail(1),
-        p_medications: getAnswerDetail(2),
-        p_allergies: getAnswerDetail(3),
-        p_health_conditions: getAnswerDetail(5),
-        p_pregnancy: getAnswerDetail(4),
-        p_additional_notes: booking.additionalNotes || null,
-        p_environmental_exposure: getAnswerDetail(6),
-        p_physical_factors: getAnswerDetail(7),
-        p_hair_length_ok: booking.safetyAnswers[8] === false ? "No" : "Yes",
-        p_guest_name: booking.fullName || null,
-        p_guest_email: booking.email || null,
-        p_guest_phone: guestPhone,
-        p_total_amount: total,
-        p_deposit_amount: amountDueNow,
-      });
+        const guestPhone = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
 
-      if (error) throw error;
-      const result = (data as any)?.[0];
-      if (result && !result.success) throw new Error(result.message);
+        const { data, error } = await supabase.rpc("create_booking_with_consultation", {
+          p_client_id: clientId,
+          p_staff_id: staffId,
+          p_booking_date: bookingDate,
+          p_start_time: startTime,
+          p_service_ids: booking.selectedTreatments,
+          p_is_callout: isCallOut,
+          p_callout_address: isCallOut ? booking.address : null,
+          p_callout_distance_km: isCallOut ? estimatedDistanceKm : 0,
+          p_client_notes: booking.additionalNotes || booking.existingClientNotes || null,
+          p_client_type: booking.isExistingClient ? "existing" : "new",
+          p_lead_source: booking.referralSource || null,
+          p_skin_conditions: getAnswerDetail(1),
+          p_medications: getAnswerDetail(2),
+          p_allergies: getAnswerDetail(3),
+          p_health_conditions: getAnswerDetail(5),
+          p_pregnancy: getAnswerDetail(4),
+          p_additional_notes: booking.additionalNotes || null,
+          p_environmental_exposure: getAnswerDetail(6),
+          p_physical_factors: getAnswerDetail(7),
+          p_hair_length_ok: booking.safetyAnswers[8] === false ? "No" : "Yes",
+          p_guest_name: booking.fullName || null,
+          p_guest_email: booking.email || null,
+          p_guest_phone: guestPhone,
+          p_total_amount: total,
+          p_deposit_amount: amountDueNow,
+        });
 
-      const bookingId = result?.booking_id;
+        if (error) throw error;
+        const result = (data as any)?.[0];
+        if (result && !result.success) throw new Error(result.message);
+
+        bookingId = result?.booking_id ?? null;
+        // Store so retries skip the RPC and go straight to payment
+        if (bookingId) setPendingBookingId(bookingId);
+      }
+
       if (bookingId) {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -215,18 +244,25 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
             duration_minutes: totalDuration || 60,
             client_name: booking.fullName || "Guest",
             service_name: serviceNames,
-            client_phone: guestPhone || null,
+            client_phone: booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null,
             location: booking.address || null,
           }),
         }).catch((gcalErr) => console.error("GCal create failed:", gcalErr));
+
+        // ── Switch label to "Opening payment gateway…" before the Yoco call ──
+        setPhase("gateway");
 
         const origin = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
         const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
+        // ── Raised from 10 s → 30 s to survive Edge Function cold-starts ──
         const checkoutTimeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Payment gateway took too long — please try again.")), 10_000)
+          setTimeout(
+            () => reject(new Error("Payment gateway took too long — please try again.")),
+            30_000
+          )
         );
 
         const { data: checkoutData, error: checkoutErr } = await Promise.race([
@@ -245,7 +281,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         if (checkoutErr) throw checkoutErr;
         if (checkoutData?.redirect_url || checkoutData?.redirectUrl || checkoutData?.url) {
           await releaseHold();
-          window.location.href = checkoutData.redirect_url ?? checkoutData.redirectUrl ?? checkoutData.url;
+          window.location.href =
+            checkoutData.redirect_url ?? checkoutData.redirectUrl ?? checkoutData.url;
           return;
         } else {
           throw new Error("Payment gateway did not return a redirect URL. Please try again.");
@@ -265,13 +302,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         queryClient.invalidateQueries({ queryKey: ["public-date-slots"] });
         queryClient.invalidateQueries({ queryKey: ["public-month-availability"] });
         onUpdate({ selectedDate: null, selectedTime: null });
+        // Clear the pending booking ID so a new slot triggers a fresh RPC
+        setPendingBookingId(null);
         toast.error("That time slot was just taken. Please pick a new time.");
         onGoToStep(1);
       } else {
         toast.error(friendlyBookingError(err));
       }
     } finally {
-      setSubmitting(false);
+      setPhase("idle");
     }
   };
 
@@ -411,11 +450,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         <motion.button whileTap={{ scale: 0.96 }} onClick={handleConfirm} disabled={submitting}
           className="btn-next flex items-center justify-center gap-2 disabled:opacity-50 w-full">
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          {submitting
-            ? "Securing payment page…"
-            : paymentChoice === "full"
-            ? `Confirm & Pay ${cur}${total}`
-            : `Confirm & Pay Deposit ${cur}${deposit}`}
+          {phaseLabel(phase, cur, paymentChoice === "full" ? total : deposit, paymentChoice)}
         </motion.button>
       </motion.div>
 
