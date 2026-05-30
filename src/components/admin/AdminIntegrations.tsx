@@ -343,8 +343,16 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const anyConfigured = !!settings.yoco_public_key || !!settings.yoco_secret_key;
   const testConfigured = yocoMode === "test" && anyConfigured;
 
+  // liveHasKeys: true only when the currently saved keys are live keys.
+  // Used to gate masking and the Edit button — decoupled from anyConfigured
+  // so that a tenant in test mode can freely enter live keys without the
+  // live section appearing frozen/empty.
+  const liveHasKeys = anyConfigured && (yocoMode === "live" || !yocoMode);
+
   const [liveDraft, setLiveDraft] = useState({ public_key: "", secret_key: "" });
-  const [liveEditing, setLiveEditing] = useState(false);
+  // When mode is "test" there are no saved live keys yet — open editing
+  // immediately so the fields are ready to accept input on first open.
+  const [liveEditing, setLiveEditing] = useState(yocoMode === "test");
   const [savingLive, setSavingLive] = useState(false);
 
   const [testDraft, setTestDraft] = useState({ public_key: "", secret_key: "" });
@@ -362,12 +370,14 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   }, [settings, prevHadKeys]);
 
   // Reset editing state when yocoMode resolves from null (async load).
-  // useState(!testConfigured) only runs at mount when yocoMode is still null,
-  // so testEditing gets permanently stuck as true. This effect fires once
-  // when the real mode value arrives and corrects both editing states.
+  // useState initialises before the async settings load returns, so this
+  // effect fires once when the real mode value arrives and corrects both
+  // editing states accordingly.
   useEffect(() => {
     if (yocoMode === "test") {
-      setLiveEditing(false);
+      // In test mode: live keys have never been saved — keep the live
+      // section open/editing so the tenant can enter them immediately.
+      setLiveEditing(true);
       setTestEditing(false);
     } else if (yocoMode === "live") {
       setLiveEditing(false);
@@ -549,8 +559,8 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   label="Public Key"
                   fieldKey="live_public_key"
                   placeholder="pk_live_..."
-                  value={liveEditing ? liveDraft.public_key : (yocoMode === "live" || !yocoMode ? (settings.yoco_public_key ?? "") : "")}
-                  masked={anyConfigured && (yocoMode === "live" || !yocoMode) && !liveEditing}
+                  value={liveEditing ? liveDraft.public_key : (liveHasKeys ? (settings.yoco_public_key ?? "") : "")}
+                  masked={liveHasKeys && !liveEditing}
                   editing={liveEditing}
                   onChange={(_, v) => setLiveDraft((p) => ({ ...p, public_key: v }))}
                   hint="From Yoco app: Sales > Payment Gateway"
@@ -561,8 +571,8 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   fieldKey="live_secret_key"
                   placeholder="sk_live_..."
                   type="password"
-                  value={liveEditing ? liveDraft.secret_key : (yocoMode === "live" || !yocoMode ? (settings.yoco_secret_key ?? "") : "")}
-                  masked={anyConfigured && (yocoMode === "live" || !yocoMode) && !liveEditing}
+                  value={liveEditing ? liveDraft.secret_key : (liveHasKeys ? (settings.yoco_secret_key ?? "") : "")}
+                  masked={liveHasKeys && !liveEditing}
                   editing={liveEditing}
                   onChange={(_, v) => setLiveDraft((p) => ({ ...p, secret_key: v }))}
                   hint="Server-side only — never exposed to the browser"
@@ -571,7 +581,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                 {/* Edit + Save — sized as pill buttons for adequate tap targets
                     (Fitts's Law: larger, separated targets reduce mis-taps). */}
                 <div className="flex items-center justify-end gap-3 pt-1">
-                  {anyConfigured && (yocoMode === "live" || !yocoMode) && !liveEditing && (
+                  {liveHasKeys && !liveEditing && (
                     <button
                       onClick={() => setLiveEditing(true)}
                       className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
@@ -579,7 +589,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                       <Edit2 className="w-3 h-3" /> Edit
                     </button>
                   )}
-                  {(liveEditing || !(anyConfigured && (yocoMode === "live" || !yocoMode))) && (
+                  {(liveEditing || !liveHasKeys) && (
                     <SaveButton
                       label={savingLive ? "Saving..." : "Save Live Keys"}
                       loading={savingLive}
