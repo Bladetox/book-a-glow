@@ -266,6 +266,10 @@ const DetailDrawer = ({
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.call_out_address)}`
     : null;
 
+  const primaryServiceLabel = booking.service_ids
+    ? booking.service_ids.split(",")[0]
+    : "—";
+
   return (
     <AnimatePresence>
       <motion.div
@@ -416,6 +420,15 @@ const DetailDrawer = ({
                   {booking.service_duration_minutes} min
                 </p>
               )}
+            </section>
+
+            <section className="border-t border-white/[0.04] pt-4">
+              <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
+                Services
+              </p>
+              <p className="text-sm text-white/70 break-words">
+                {primaryServiceLabel}
+              </p>
             </section>
 
             <section className="border-t border-white/[0.04] pt-4">
@@ -879,7 +892,7 @@ const MobileDayList = ({
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Date label */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] shrink-0">
+      <div className="flex items=center justify-between px-4 py-2 border-b border-white/[0.06] shrink-0">
         <p className="text-xs font-semibold text-white/60">{dateLabel}</p>
         {loading && <Loader2 className="w-3.5 h-3.5 text-white/20 animate-spin" />}
         <span className="text-xs text-white/25">
