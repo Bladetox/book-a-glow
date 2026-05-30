@@ -362,12 +362,16 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const [prevHadKeys, setPrevHadKeys] = useState(anyConfigured);
   useEffect(() => {
     const nowHasKeys = !!settings.yoco_public_key || !!settings.yoco_secret_key;
-    if (!prevHadKeys && nowHasKeys) {
+    // Only collapse editing when keys transition from absent → present AND
+    // the active mode is not "test".  In test mode the live section must
+    // stay open so tenants can enter their live keys without hitting a
+    // frozen / empty form.
+    if (!prevHadKeys && nowHasKeys && yocoMode !== "test") {
       setLiveEditing(false);
       setTestEditing(false);
     }
     setPrevHadKeys(nowHasKeys);
-  }, [settings, prevHadKeys]);
+  }, [settings, prevHadKeys, yocoMode]);
 
   // Reset editing state when yocoMode resolves from null (async load).
   // useState initialises before the async settings load returns, so this
@@ -380,10 +384,14 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       setLiveEditing(true);
       setTestEditing(false);
     } else if (yocoMode === "live") {
-      setLiveEditing(false);
+      // Only lock the live section when live keys are already saved.
+      // If liveHasKeys is false (e.g. mode is "live" but webhook_id is
+      // missing or keys were never written), keep editing open so the
+      // tenant can enter their keys and trigger webhook registration.
+      setLiveEditing(!liveHasKeys);
       setTestEditing(false);
     }
-  }, [yocoMode]);
+  }, [yocoMode, liveHasKeys]);
 
   const callSaveYocoKeys = async (
     mode: "live" | "test",
