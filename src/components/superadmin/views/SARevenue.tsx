@@ -4,7 +4,7 @@ import {
   DollarSign, TrendingUp, CreditCard, ArrowUpRight, ArrowDownRight,
   BarChart3, Loader2, Activity, Receipt, Plus, CheckCircle2,
   ExternalLink, AlertTriangle, Clock, XCircle, ChevronDown,
-  Copy, Send, Zap,
+  Copy, Send, Zap, Link2, LinkOff,
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
@@ -96,6 +96,30 @@ const StatusBadge = ({ status, autoPaid }: { status: string; autoPaid?: boolean 
     </span>
   );
 };
+
+// ─── Yoco Link Indicator ──────────────────────────────────────────────────────
+
+function YocoLinkIndicator({ hasLink }: { hasLink: boolean }) {
+  return hasLink ? (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md border"
+      style={{ color: "#00c853", background: "rgba(0,200,83,0.08)", borderColor: "rgba(0,200,83,0.18)" }}
+      title="Yoco payment link attached"
+    >
+      <Link2 className="w-2.5 h-2.5" />
+      LINKED
+    </span>
+  ) : (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md border"
+      style={{ color: "#f59e0b", background: "rgba(245,158,11,0.08)", borderColor: "rgba(245,158,11,0.18)" }}
+      title="No Yoco payment link — add one via the invoice"
+    >
+      <LinkOff className="w-2.5 h-2.5" />
+      NO LINK
+    </span>
+  );
+}
 
 // ─── Copy Link Button ─────────────────────────────────────────────────────────
 
@@ -730,21 +754,22 @@ function PlatformSubscriptionsTab() {
                     <td className="px-4 py-3 text-[11px]" style={{ color: inv.status === "overdue" ? "#ef4444" : "rgba(255,255,255,0.35)" }}>{fmtDate(inv.due_date)}</td>
                     <td className="px-4 py-3"><StatusBadge status={inv.status} autoPaid={inv.auto_paid} /></td>
                     <td className="px-4 py-3">
-                      {inv.yoco_payment_link ? (
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={inv.yoco_payment_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[10px] text-blue-400/70 hover:text-blue-400 transition-colors"
-                          >
-                            <ExternalLink className="w-3 h-3" />Open
-                          </a>
-                          <CopyLinkButton url={inv.yoco_payment_link} />
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-white/20">—</span>
-                      )}
+                      <div className="flex flex-col gap-1.5">
+                        <YocoLinkIndicator hasLink={!!inv.yoco_payment_link} />
+                        {inv.yoco_payment_link && (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={inv.yoco_payment_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] text-blue-400/70 hover:text-blue-400 transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />Open
+                            </a>
+                            <CopyLinkButton url={inv.yoco_payment_link} />
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
