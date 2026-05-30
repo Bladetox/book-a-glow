@@ -166,7 +166,7 @@ const DRAWER_SPRING = {
     type: "spring" as const,
     stiffness: 320,   // was 400
     damping: 36,      // was 32
-    restSpeed: 2,     // was 0.5
+    restSpeed: 10,     // was 2
     restDelta: 2,     // was 0.5
 };
 
@@ -287,7 +287,7 @@ const DetailDrawer = ({
         <motion.div
           layoutId={`booking-${booking.id}`}
           transition={DRAWER_SPRING}
-          className="m-3 md:m-4 mt-14 md:mt-16 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-100px)] pointer-events-auto overflow-hidden"
+          className="m-3 md:m-4 mt-18 md:mt-20 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-100px)] pointer-events-auto overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
