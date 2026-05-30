@@ -46,8 +46,8 @@ import {
 type CalendarView = "day" | "week" | "month";
 
 interface CalendarBooking {
-  id: string;
-  booking_date: string;          // "YYYY-MM-DD"
+  id: ;
+  booking_date: ;          // "YYYY-MM-DD"
   start_time: string;            // "HH:MM:SS"
   end_time: string;
   status: string;
@@ -190,11 +190,11 @@ const HOUR_PX    = 64; // px per hour
 
 // Shared spring for card → drawer morph (Doherty threshold)
 const DRAWER_SPRING = {
-    type: "spring" as const,
-    stiffness: 320,
-    damping: 36,
-    restSpeed: 10,
-    restDelta: 2,
+  type: "spring" as const,
+  stiffness: 260,
+  damping: 40,
+  restSpeed: 10,
+  restDelta: 2,
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -275,7 +275,7 @@ const DetailDrawer = ({
   booking: CalendarBooking | null;
   onClose: () => void;
 }) => {
-  const [serviceNames, setServiceNames] = useState<string[]>([]);
+  const [serviceNames, setServiceNames] = useState<[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
 
   useEffect(() => {
@@ -351,7 +351,7 @@ const DetailDrawer = ({
               {/* One-line summary for quick scanning on mobile */}
               <p className="mt-1 text-[11px] text-white/40 truncate">
                 {fmt.time(booking.start_time)} – {fmt.time(booking.end_time)} ·{" "}
-                {new Date(booking.booking_date + "T00:00:00").toLocaleDateString(
+                {new Date(booking.booking_date + "T00:00:00").toLocaleDate(
                   "en-ZA",
                   {
                     weekday: "short",
@@ -449,7 +449,7 @@ const DetailDrawer = ({
                 <span className="truncate">
                   {new Date(
                     booking.booking_date + "T00:00:00",
-                  ).toLocaleDateString("en-ZA", {
+                  ).toLocaleDate("en-ZA", {
                     weekday: "long",
                     day: "numeric",
                     month: "long",
@@ -614,7 +614,7 @@ const TimeGrid = ({
     if (!scrollRef.current) return;
     const offset = (8 - GRID_START) * HOUR_PX;
     scrollRef.current.scrollTop = offset;
-  }, [days[0]?.toDateString()]);
+  }, [days[0]?.toDate()]);
 
   const hours = Array.from({ length: GRID_END - GRID_START }, (_, i) => GRID_START + i);
 
@@ -646,7 +646,7 @@ const TimeGrid = ({
             }`}
           >
             <p className="text-[10px] uppercase tracking-widest">
-              {d.toLocaleDateString("en-ZA", { weekday: "short" })}
+              {d.toLocaleDate("en-ZA", { weekday: "short" })}
             </p>
             <p
               className={`text-lg font-semibold leading-none mt-0.5 ${
@@ -858,7 +858,7 @@ const MobileDateStrip = ({
   );
 
   // Dot colours for a day — returns the dominant status colour
-  const dotColor = (d: Date): string | null => {
+  const dotColor = (d: Date):  | null => {
     const dayBkgs = bookings.filter((b) => b.booking_date === fmt.date(d));
     if (!dayBkgs.length) return null;
     const hasUnpaid  = dayBkgs.some((b) => getPaymentStatus(b) === "unpaid"  && b.status !== "cancelled");
@@ -905,7 +905,7 @@ const MobileDateStrip = ({
             style={{ minHeight: 60 }}
           >
             <span className={`text-[10px] font-medium uppercase tracking-wide leading-none mb-1 ${active ? "text-black/50" : ""}`}>
-              {d.toLocaleDateString("en-ZA", { weekday: "short" }).slice(0, 3)}
+              {d.toLocaleDate("en-ZA", { weekday: "short" }).slice(0, 3)}
             </span>
             <span className={`text-base font-bold leading-none ${active ? "text-black" : todayD ? "text-white" : "text-white/60"}`}>
               {d.getDate()}
@@ -1089,7 +1089,7 @@ const MobileMonthNav = ({
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-white/80">
-          {selected.toLocaleDateString("en-ZA", { month: "long", year: "numeric" })}
+          {selected.toLocaleDate("en-ZA", { month: "long", year: "numeric" })}
         </span>
         {!todayIsSelected && (
           <button
@@ -1126,7 +1126,7 @@ const AdminCalendar = () => {
 
   const [bookings, setBookings] = useState<CalendarBooking[]>([]);
   const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [error,    setError]    = useState< | null>(null);
   const [selected, setSelected] = useState<CalendarBooking | null>(null);
 
   // ── Determine fetch range ──────────────────────────────────────────────────
