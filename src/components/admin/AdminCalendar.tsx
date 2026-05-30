@@ -129,6 +129,33 @@ const timeToMinutes = (t: string): number => {
   return h * 60 + m;
 };
 
+// Map service_ids (UUIDs / CSV / JSON) to human-readable service names
+const resolveServiceNames = async (raw: string | null) => {
+  if (!raw) return [] as string[];
+
+  let ids: string[] = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      ids = parsed.map((v) => String(v));
+    } else {
+      ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  } catch {
+    ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+
+  if (!ids.length) return [] as string[];
+
+  const { data: services, error } = await supabase
+    .from("services")
+    .select("name")
+    .in("id", ids);
+
+  if (error || !services) return [] as string[];
+  return (services as { name: string }[]).map((s) => s.name);
+};
+
 // Payment status logic — Von Restorff: make the "different" ones stand out
 const getPaymentStatus = (b: CalendarBooking): "full" | "deposit" | "unpaid" => {
   if (b.full_payment_received || b.final_payment_paid) return "full";
@@ -248,13 +275,32 @@ const DetailDrawer = ({
   booking: CalendarBooking | null;
   onClose: () => void;
 }) => {
+  const [serviceNames, setServiceNames] = useState<string[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+
   useEffect(() => {
     if (!booking) return;
+
+    let cancelled = false;
+    const load = async () => {
+      setServicesLoading(true);
+      const names = await resolveServiceNames(booking.service_ids);
+      if (!cancelled) {
+        setServiceNames(names);
+        setServicesLoading(false);
+      }
+    };
+
+    load();
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("keydown", handler);
+    };
   }, [booking, onClose]);
 
   if (!booking) return null;
@@ -265,10 +311,6 @@ const DetailDrawer = ({
   const mapsUrl = booking.call_out_address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.call_out_address)}`
     : null;
-
-  const serviceLabels = booking.service_ids
-    ? booking.service_ids.split(",").map((s) => s.trim()).filter(Boolean)
-    : [];
 
   return (
     <AnimatePresence>
@@ -426,9 +468,11 @@ const DetailDrawer = ({
               <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
                 Services
               </p>
-              {serviceLabels.length ? (
+              {servicesLoading ? (
+                <p className="text-xs text-white/40">Loading services…</p>
+              ) : serviceNames.length ? (
                 <ul className="text-sm text-white/70 flex flex-wrap gap-1.5">
-                  {serviceLabels.map((label) => (
+                  {serviceNames.map((label) => (
                     <li
                       key={label}
                       className="px-2 py-0.5 rounded-full bg-white/[0.04] text-[11px]"
