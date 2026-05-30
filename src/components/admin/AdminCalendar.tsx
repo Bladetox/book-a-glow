@@ -266,9 +266,9 @@ const DetailDrawer = ({
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.call_out_address)}`
     : null;
 
-  const primaryServiceLabel = booking.service_ids
-    ? booking.service_ids.split(",")[0]
-    : "—";
+  const serviceLabels = booking.service_ids
+    ? booking.service_ids.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
 
   return (
     <AnimatePresence>
@@ -426,9 +426,20 @@ const DetailDrawer = ({
               <p className="text-[10px] text-white/25 uppercase tracking-widest mb-2">
                 Services
               </p>
-              <p className="text-sm text-white/70 break-words">
-                {primaryServiceLabel}
-              </p>
+              {serviceLabels.length ? (
+                <ul className="text-sm text-white/70 flex flex-wrap gap-1.5">
+                  {serviceLabels.map((label) => (
+                    <li
+                      key={label}
+                      className="px-2 py-0.5 rounded-full bg-white/[0.04] text-[11px]"
+                    >
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-white/40">—</p>
+              )}
             </section>
 
             <section className="border-t border-white/[0.04] pt-4">
