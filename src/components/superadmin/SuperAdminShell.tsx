@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Building2, DollarSign, Settings,
   ShieldAlert, Bell, Flag, Activity, Menu, X, LogOut, Zap,
   ChevronRight, Loader2, Radio, CalendarDays, Wrench, TrendingUp,
-  Heart, GitBranch, Puzzle,
+  Heart, GitBranch, Puzzle, CreditCard,
 } from "lucide-react";
 
 // ─── Lazy Views ────────────────────────────────────────────────────────────────
@@ -23,13 +23,15 @@ const SAGrowth          = lazy(() => import("./views/SAGrowth"));
 const SATenantHealth    = lazy(() => import("./views/SATenantHealth"));
 const SACohortRetention = lazy(() => import("./views/SACohortRetention"));
 const SAFeatureAdoption = lazy(() => import("./views/SAFeatureAdoption"));
+const SAPaymentConfig   = lazy(() => import("./views/SAPaymentConfig"));
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ViewId =
   | "overview" | "users" | "bookings" | "revenue"
   | "health" | "audit" | "broadcast" | "webhooks"
   | "flags" | "settings" | "troubleshoot" | "growth"
-  | "tenant-health" | "cohort-retention" | "feature-adoption";
+  | "tenant-health" | "cohort-retention" | "feature-adoption"
+  | "payment-config";
 
 interface NavItem  { id: ViewId; label: string; icon: ElementType; badge?: string; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -60,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
   ]},
   { label: "Config", items: [
     { id: "flags",             label: "Feature Flags",      icon: Flag },
+    { id: "payment-config",    label: "Payment Config",     icon: CreditCard },
     { id: "settings",          label: "Settings",           icon: Settings },
   ]},
 ];
@@ -98,6 +101,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
       case "tenant-health":     return <SATenantHealth />;
       case "cohort-retention":  return <SACohortRetention />;
       case "feature-adoption":  return <SAFeatureAdoption />;
+      case "payment-config":    return <SAPaymentConfig />;
       default:                  return <SAOverview />;
     }
   };
