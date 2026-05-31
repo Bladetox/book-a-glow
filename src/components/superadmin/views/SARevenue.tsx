@@ -4,7 +4,7 @@ import {
   DollarSign, TrendingUp, CreditCard, ArrowUpRight, ArrowDownRight,
   BarChart3, Loader2, Activity, Receipt, Plus, CheckCircle2,
   ExternalLink, AlertTriangle, Clock, XCircle, ChevronDown,
-  Copy, Send, Zap, Link2, LinkOff, ShieldCheck, ShieldAlert, Settings,
+  Copy, Send, Zap, Link2, Unlink, ShieldCheck, ShieldAlert, Settings,
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
@@ -115,7 +115,7 @@ function YocoLinkIndicator({ hasLink }: { hasLink: boolean }) {
       style={{ color: "#f59e0b", background: "rgba(245,158,11,0.08)", borderColor: "rgba(245,158,11,0.18)" }}
       title="No Yoco payment link — add one via the invoice"
     >
-      <LinkOff className="w-2.5 h-2.5" />
+      <Unlink className="w-2.5 h-2.5" />
       NO LINK
     </span>
   );
