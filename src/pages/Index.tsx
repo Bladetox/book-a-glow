@@ -1,547 +1,501 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
-import {
-  ArrowRight, Play, Check,
-  Clock, Shield, MapPinned, Zap,
-} from "lucide-react";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
-const DashboardPreview = lazy(() => import("@/components/site/DashboardPreview"));
-
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1400&q=80";
-
-const GOLD = "hsl(38 40% 58%)";
-
-const trustBadges = [
-  { Icon: Clock,     label: "Try free for 30 days. No card required." },
-  { Icon: Shield,    label: "POPIA ready." },
-  { Icon: MapPinned, label: "Built for South African service businesses." },
-  { Icon: Zap,       label: "Set up in under 10 minutes." },
-];
-
-const howSteps = [
-  {
-    num: "01",
-    title: "Set up your booking system",
-    desc: "Your services, pricing, and availability go live in minutes. No technical skills needed.",
-  },
-  {
-    num: "02",
-    title: "Let clients book and pay themselves",
-    desc: "No back and forth. No manual follow-ups. Works on your phone.",
-  },
-  {
-    num: "03",
-    title: "Start seeing patterns",
-    desc: "You'll know what's working, what's not, and what to do next.",
-  },
-];
+const GOLD = "#D4A574";
+const GOLD_DARK = "#B8915F";
 
 const Index = () => {
-  const [_loaded, setLoaded] = useState(false);
+  const [activeFeature, setActiveFeature] = useState(0);
+  const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+
+  const features = [
+    { id: 0, name: "Nexty AI Insights", label: "AI-POWERED" },
+    { id: 1, name: "Smart Calendar", label: "FULL FEATURE" },
+    { id: 2, name: "Client Management", label: "FULL FEATURE" },
+    { id: 3, name: "Loyalty Program", label: "NEXTY-POWERED" },
+    { id: 4, name: "Stock & Inventory", label: "FULL FEATURE" },
+    { id: 5, name: "Consultation Forms", label: "FULL FEATURE" },
+    { id: 6, name: "Availability Control", label: "FULL FEATURE" },
+    { id: 7, name: "Payments + Deposits", label: "SA PAYMENTS" },
+    { id: 8, name: "Customisable Dashboard", label: "FULL FEATURE" },
+  ];
+
+  useEffect(() => {
+    const startAutoPlay = () => {
+      if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+      autoPlayRef.current = setInterval(() => {
+        setActiveFeature((prev) => (prev + 1) % features.length);
+      }, 5000);
+    };
+    startAutoPlay();
+    return () => {
+      if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+    };
+  }, [features.length]);
+
+  const handleFeatureClick = (idx: number) => {
+    setActiveFeature(idx);
+    if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+    autoPlayRef.current = setInterval(() => {
+      setActiveFeature((prev) => (prev + 1) % features.length);
+    }, 5000);
+  };
 
   return (
-    <div className="min-h-screen nextslot-theme bg-background text-foreground">
+    <div className="min-h-screen bg-black text-white" style={{ fontFamily: 'Inter, sans-serif' }}>
       <SiteHeader />
-
       <main>
-
-        {/* SECTION 1: HERO */}
-        <section className="relative min-h-[600px] md:min-h-[680px] flex items-center overflow-hidden">
-          <div className="absolute inset-0 z-0">
-            <img
-              src={HERO_IMAGE}
-              alt=""
-              aria-hidden="true"
-              fetchPriority="high"
-              decoding="async"
-              className="w-full h-full object-cover object-center"
-            />
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(105deg, hsl(var(--background)/0.95) 0%, hsl(var(--background)/0.85) 52%, hsl(var(--background)/0.28) 100%)",
-              }}
-            />
-          </div>
-
-          <div className="relative z-10 w-full py-24 md:py-32 px-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="max-w-2xl text-left space-y-7">
-
-                <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
-                  Built for service businesses
-                </p>
-
-                <h1 className="text-4xl md:text-6xl font-semibold leading-tight">
-                  You're fully booked. But your income still feels random.
-                </h1>
-
-                <p className="text-lg text-muted-foreground max-w-xl">
-                  NextSlot shows you exactly where your bookings, revenue, and best clients come from. Stop guessing and start growing.
-                </p>
-
-                <p className="text-sm font-medium" style={{ color: GOLD }}>
-                  Bookings, payments, and insights in one system that tells you what to do next.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-start gap-4 pt-1">
-                  <Link
-                    to="/onboarding"
-                    className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                    style={{
-                      background: "hsl(var(--foreground))",
-                      color: "hsl(var(--background))",
-                      boxShadow: "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)",
-                    }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.boxShadow =
-                        "0 0 0 1px hsl(38 40% 58% / 0.55), 0 6px 20px -2px hsl(38 40% 58% / 0.40)";
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.boxShadow =
-                        "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)";
-                    }}
-                  >
-                    Get clarity in under 10 minutes
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-
-                  <Link
-                    to="/demo"
-                    className="inline-flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-3"
-                  >
-                    <Play className="h-4 w-4" />
-                    Watch how it works
-                  </Link>
-                </div>
-
-                <div className="pt-2 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
-                    {trustBadges.map(({ Icon, label }) => (
-                      <div key={label} className="flex items-center gap-2">
-                        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: GOLD }} />
-                        <span className="text-xs text-muted-foreground">{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-3 pt-1">
-                    {["Free setup", "No setup stress", "No payment required", "Works on your phone"].map(tag => (
-                      <span
-                        key={tag}
-                        className="text-[11px] px-2.5 py-1 rounded-full"
-                        style={{
-                          background: "hsl(38 40% 58% / 0.10)",
-                          border: "1px solid hsl(38 40% 58% / 0.25)",
-                          color: GOLD,
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
+        {/* HERO SECTION */}
+        <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black px-6 py-24">
+          <div className="max-w-6xl mx-auto text-center relative z-10">
+            <div className="inline-block mb-8 px-4 py-2 rounded-full" style={{ border: `1px solid ${GOLD}`, color: GOLD }}>
+              <span className="text-xs font-semibold tracking-widest uppercase">PRO-ACTIVE INTELLIGENCE</span>
             </div>
-          </div>
-        </section>
-
-        {/* SECTION 2: THE FREEDOM TRAP */}
-        <section
-          className="py-20 px-6"
-          style={{ background: "hsl(220 20% 6%)" }}
-        >
-          <div className="max-w-3xl mx-auto space-y-8 text-center">
-
-            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
-              The truth nobody talks about
+            
+            <h1 className="text-5xl md:text-7xl font-light mb-6" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+              Your dashboard<br />
+              should be <span style={{ color: GOLD, fontStyle: 'italic' }}>speaking.</span>
+            </h1>
+            
+            <p className="text-gray-400 max-w-2xl mx-auto mb-8 text-lg leading-relaxed">
+              Most platforms show you what's happened. NextSlot tells you what's happening. With proactive insights, 
+              real-time revenue intelligence, and alerts that surface opportunities before they're missed, 
+              you'll always know where to focus next.
             </p>
-
-            <h2 className="text-2xl md:text-3xl font-semibold text-white leading-snug">
-              You left to have freedom.<br />
-              Nobody warned you about the prison you build without systems.
-            </h2>
-
-            <div className="space-y-5 text-left max-w-2xl mx-auto">
-              <p className="text-white/65 text-base leading-relaxed">
-                If your business runs on manual effort: WhatsApp bookings, chasing deposits, gut-feel decisions. You're not building a business. You're building a job that follows you home. No off switch. No family time. No rest.
-              </p>
-              <p className="text-white/65 text-base leading-relaxed">
-                Your clients don't pay you to be a booking clerk. They pay you for the experience. When admin steals your energy, you can't show up the way they signed up for.
-              </p>
-              <p className="text-white/80 text-base leading-relaxed font-medium">
-                The difference between a business that gives you freedom and one that owns you isn't your talent. It's whether your system can run without you carrying it every single day.
-              </p>
-            </div>
-
-          </div>
-        </section>
-
-        {/* SECTION 3: DASHBOARD (visual proof) */}
-        <section className="px-6 pb-24 pt-16">
-          <div className="max-w-5xl mx-auto text-center space-y-6">
-
-            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
-              Your business, finally visible
-            </p>
-
-            <h2 className="text-2xl md:text-3xl font-semibold">
-              This is where your business stops feeling random.
-            </h2>
-
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Not just data. Clear signals on what's working and what to do next.
-            </p>
-
-            <div className="flex flex-wrap justify-center gap-3 pb-2">
-              {[
-                { label: "Top service: 42% of revenue", color: GOLD },
-                { label: "Repeat clients: 68%", color: "hsl(142 71% 45%)" },
-                { label: "Best source: TikTok (46%)", color: "hsl(210 100% 60%)" },
-              ].map(({ label, color }) => (
-                <div
-                  key={label}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-                  style={{
-                    background: `${color}18`,
-                    border: `1px solid ${color}45`,
-                    color,
-                  }}
-                >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: color }}
-                  />
-                  {label}
-                </div>
-              ))}
-            </div>
-
-            <Suspense
-              fallback={
-                <div className="w-full h-[320px] bg-secondary/40 rounded-2xl animate-pulse" />
-              }
-            >
-              <DashboardPreview onLoad={() => setLoaded(true)} />
-            </Suspense>
-
-          </div>
-        </section>
-
-        {/* SECTION 4: TWO TRUTHS, ONE SYSTEM */}
-        <section className="py-20 px-6 bg-secondary/30">
-          <div className="max-w-4xl mx-auto space-y-10">
-
-            <div className="text-center space-y-2">
-              <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
-                Wherever you are in the journey
-              </p>
-              <h2 className="text-2xl md:text-3xl font-semibold">
-                NextSlot meets you where you are.
-              </h2>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-white/10">
-
-              {/* Left - Established operator */}
-              <div
-                className="p-8 space-y-4"
-                style={{ background: "hsl(220 20% 8%)" }}
-              >
-                <p className="text-xs uppercase tracking-widest font-bold text-white/40">
-                  Already running a business?
-                </p>
-                <p className="text-white/80 text-base leading-relaxed">
-                  The chaos doesn't go away on its own. But once you can see your business clearly. What's working, what's costing you, who your best clients are. The decisions become obvious.
-                </p>
-                <p className="text-white/50 text-sm leading-relaxed">
-                  A system isn't the opposite of connection. It gives you back your Mondays. Time to check in on loyal clients, to show up fully in every session, to protect the thing your clients actually came for.
-                </p>
-                <p className="text-sm font-semibold" style={{ color: GOLD }}>
-                  Stop being the clerk. Go back to being the expert.
-                </p>
-              </div>
-
-              {/* Right - New starter */}
-              <div
-                className="p-8 space-y-4"
-                style={{ background: "hsl(220 20% 5%)" }}
-              >
-                <p className="text-xs uppercase tracking-widest font-bold text-white/40">
-                  Just getting started?
-                </p>
-                <p className="text-white/80 text-base leading-relaxed">
-                  Every booking you take without a system is a habit that becomes a problem. The chaos doesn't arrive all at once. It builds quietly while you're busy being brilliant at what you do.
-                </p>
-                <p className="text-white/50 text-sm leading-relaxed">
-                  The operators who scale cleanly are never the most talented ones in the room. They're the ones who set up the foundation before they needed it.
-                </p>
-                <p className="text-sm font-semibold" style={{ color: GOLD }}>
-                  Build it right from day one.
-                </p>
-              </div>
-
-            </div>
-
-            {/* Shared CTA beneath both */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
               <Link
                 to="/onboarding"
-                className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                style={{
-                  background: "hsl(var(--foreground))",
-                  color: "hsl(var(--background))",
-                  boxShadow: "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow =
-                    "0 0 0 1px hsl(38 40% 58% / 0.55), 0 6px 20px -2px hsl(38 40% 58% / 0.40)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow =
-                    "0 0 0 1px hsl(38 40% 58% / 0.35), 0 4px 14px -2px hsl(38 40% 58% / 0.30)";
-                }}
+                className="px-8 py-4 rounded-xl font-semibold transition-all hover:scale-105"
+                style={{ backgroundColor: GOLD, color: '#000' }}
               >
-                Start free. 30 days, no card required.
-                <ArrowRight className="h-4 w-4" />
+                Start for free
+              </Link>
+              <Link to="/demo" className="px-8 py-4 text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                See how it works <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
-
+            
+            <p className="text-sm text-gray-500">No Payment Required · 30-day trial · Set up in under 10 minutes</p>
+          </div>
+          
+          {/* Card World - Visual Dashboard Cards */}
+          <div className="absolute inset-0 pointer-events-none opacity-40">
+            <div className="absolute top-1/4 left-1/4 w-64 h-40 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl" />
+            <div className="absolute top-1/3 right-1/4 w-72 h-48 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl" />
           </div>
         </section>
 
-        {/* SECTION 5: HOW IT WORKS */}
-        <section className="py-20 px-6">
-          <div className="max-w-2xl mx-auto space-y-10">
+        {/* INTEGRATION TICKER */}
+        <div className="bg-white text-black py-3 overflow-hidden">
+          <div className="flex items-center gap-12 animate-scroll whitespace-nowrap">
+            {[
+              "PAYMENT GATEWAY INTEGRATION",
+              "WHATSAPP REMINDERS",
+              "GOOGLE CALENDAR SYNC",
+              "POPIA COMPLIANT",
+              "NO SETUP FEES",
+              "BUILT FOR SOUTH AFRICAN BUSINESSES",
+              "REAL-TIME REVENUE INTELLIGENCE",
+              "AI-POWERED INSIGHTS",
+            ].concat([
+              "PAYMENT GATEWAY INTEGRATION",
+              "WHATSAPP REMINDERS",
+              "GOOGLE CALENDAR SYNC",
+              "POPIA COMPLIANT",
+              "NO SETUP FEES",
+              "BUILT FOR SOUTH AFRICAN BUSINESSES",
+              "REAL-TIME REVENUE INTELLIGENCE",
+              "AI-POWERED INSIGHTS",
+            ]).map((text, i) => (
+              <span key={i} className="text-xs font-semibold tracking-wider" style={{ color: GOLD_DARK }}>
+                {text}
+              </span>
+            ))}
+          </div>
+        </div>
 
-            <div className="space-y-2 text-center">
-              <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>Simple by design</p>
-              <h2 className="text-2xl md:text-3xl font-semibold leading-tight">How it works</h2>
-              <p className="text-muted-foreground text-sm">
-                From signup to your first automated booking in under 10 minutes.
+        {/* NEXTY AI SECTION */}
+        <section className="bg-black py-24 px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-16">
+              <div className="inline-block mb-4 px-4 py-2 rounded-full" style={{ border: `1px solid ${GOLD}`, color: GOLD }}>
+                <span className="text-xs font-semibold tracking-widest uppercase">NEXTY AI · BUSINESS GROWTH ADVISOR</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-light mb-4" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                A business advisor<br />
+                built into <span style={{ color: GOLD, fontStyle: 'italic' }}>every screen.</span>
+              </h2>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                Every time you open your dashboard, Nexty scans your bookings, revenue, retention, and capacity. 
+                Then tells you exactly what's holding you back and what to do about it.
               </p>
             </div>
-
-            <ol className="space-y-8">
-              {howSteps.map((step, i) => (
-                <li key={step.num} className="flex gap-5">
-                  <div className="shrink-0 flex flex-col items-center">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{
-                        background: "hsl(38 40% 58% / 0.12)",
-                        border: "1.5px solid hsl(38 40% 58% / 0.45)",
-                        color: GOLD,
-                      }}
-                    >
-                      {step.num}
-                    </div>
-                    {i < howSteps.length - 1 && (
-                      <div
-                        className="w-px flex-1 mt-2"
-                        style={{ background: "hsl(38 40% 58% / 0.20)", minHeight: "32px" }}
-                      />
-                    )}
-                  </div>
-                  <div className="pb-2">
-                    <h3 className="font-semibold mb-1">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-            <p className="text-center text-sm text-muted-foreground italic">
-              Most businesses get their first booking within hours. Then they wonder why they waited.
-            </p>
-
+            
+            {/* Nexty AI Card */}
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 border" style={{ borderColor: '#333' }}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-sm" style={{ color: GOLD }}>Nexty AI</div>
+                <div className="text-xs text-gray-500">Updated just now · 4 insights found</div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="p-4 bg-black rounded-xl border border-red-900/30">
+                  <div className="text-xs font-bold mb-2" style={{ color: '#EF4444' }}>CRITICAL · IMPACT: R 4,800+</div>
+                  <p className="text-sm text-gray-300 mb-3">
+                    Your cancellation rate jumped to 22% this month. At your current basket of R 580, every cancelled booking costs you R 580. 
+                    Introduce a 30% deposit to protect revenue.
+                  </p>
+                  <button className="text-xs font-semibold" style={{ color: GOLD }}>Go to Settings</button>
+                </div>
+                
+                <div className="p-4 bg-black rounded-xl border border-emerald-900/30">
+                  <div className="text-xs font-bold mb-2" style={{ color: '#10B981' }}>GROWTH · CAPACITY OPPORTUNITY</div>
+                  <p className="text-sm text-gray-300 mb-3">
+                    You have 14 open slots on Thursday afternoons across this month. At your average basket, filling just 6 would add R 3,480. 
+                    Consider a Thursday loyalty special.
+                  </p>
+                  <button className="text-xs font-semibold" style={{ color: GOLD }}>View heatmap</button>
+                </div>
+                
+                <div className="p-4 bg-black rounded-xl border border-blue-900/30">
+                  <div className="text-xs font-bold mb-2" style={{ color: '#3B82F6' }}>RETENTION · 38% RATE, BELOW TARGET</div>
+                  <p className="text-sm text-gray-300 mb-3">
+                    Your retention rate is 38%, just below the 40% beauty benchmark. Enrolling your top 12 unregistered regulars in loyalty 
+                    would push this above target within 30 days.
+                  </p>
+                  <button className="text-xs font-semibold" style={{ color: GOLD }}>Enrol now</button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* SECTION 6: PROOF + FINAL CTA */}
-        <section className="py-20 px-6 bg-secondary/20">
-          <div className="max-w-4xl mx-auto space-y-10 text-center">
+        {/* REVENUE INTELLIGENCE */}
+        <section className="bg-gradient-to-b from-black to-gray-900 py-24 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <div className="inline-block mb-4 px-4 py-2 rounded-full" style={{ border: `1px solid ${GOLD}`, color: GOLD }}>
+                <span className="text-xs font-semibold tracking-widest uppercase">REVENUE INTELLIGENCE</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-light mb-4" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                Not a report card.<br />
+                <span style={{ color: GOLD, fontStyle: 'italic' }}>A running coach.</span>
+              </h2>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                NextSlot doesn't just show you revenue, it contextualises every number, projects your month-end, 
+                and tells you exactly how far you are from beating last month.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 border" style={{ borderColor: '#333' }}>
+                <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">REVENUE THIS MONTH</div>
+                <div className="text-5xl font-bold mb-4" style={{ color: GOLD }}>R 22,840</div>
+                <div className="text-sm text-gray-400 mb-2">Day 18 of 31  ·  13 days remaining</div>
+                <div className="text-lg text-white mb-2">On track for R 39,200 by month-end</div>
+                <div className="text-sm" style={{ color: '#10B981' }}>+23% vs last month</div>
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: '#333' }}>
+                  <div className="text-sm" style={{ color: GOLD }}>R 4,160 to beat last month · 82% there</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border" style={{ borderColor: '#333' }}>
+                  <div className="text-xs text-gray-500 mb-1 uppercase">BOOKINGS</div>
+                  <div className="text-4xl font-bold mb-1">7</div>
+                  <div className="text-xs text-gray-500">today</div>
+                </div>
+                <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border" style={{ borderColor: '#333' }}>
+                  <div className="text-xs text-gray-500 mb-1 uppercase">REVENUE</div>
+                  <div className="text-4xl font-bold mb-1" style={{ color: '#10B981' }}>R 1,950</div>
+                  <div className="text-xs text-gray-500">paid in</div>
+                </div>
+                <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border" style={{ borderColor: '#333' }}>
+                  <div className="text-xs text-gray-500 mb-1 uppercase">STILL TO COME</div>
+                  <div className="text-4xl font-bold mb-1">4</div>
+                  <div className="text-xs text-gray-500">remaining</div>
+                </div>
+                <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border" style={{ borderColor: '#333' }}>
+                  <div className="text-xs text-gray-500 mb-1 uppercase">NEXT CLIENT</div>
+                  <div className="text-2xl font-bold mb-1">11:30</div>
+                  <div className="text-xs text-gray-500">Jess · Full Set</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
-              Real business. Real results.
-            </p>
-
-            <h2 className="text-2xl md:text-3xl font-semibold">
-              What happens in the first 30 days
+        {/* PROACTIVE ALERTS */}
+        <section className="bg-black py-24 px-6">
+          <div className="max-w-5xl mx-auto text-center">
+            <div className="inline-block mb-4 px-4 py-2 rounded-full" style={{ border: `1px solid ${GOLD}`, color: GOLD }}>
+              <span className="text-xs font-semibold tracking-widest uppercase">PROACTIVE ALERTS</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-light mb-6" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+              If it's costing <span style={{ color: GOLD, fontStyle: 'italic' }}>you money</span>, <br />it should not be hiding.
             </h2>
-
-            <div className="grid md:grid-cols-2 gap-6 text-left">
-
-              <div
-                className="p-6 rounded-2xl bg-background"
-                style={{
-                  border: "1px solid hsl(38 40% 58% / 0.55)",
-                  boxShadow: "0 2px 8px hsl(38 40% 58% / 0.10)",
-                }}
-              >
-                <h3 className="font-semibold mb-4 text-sm text-muted-foreground uppercase tracking-wider">
-                  Before NextSlot
-                </h3>
-                <ul className="space-y-3 text-sm text-muted-foreground">
-                  <li>Bookings scattered across WhatsApp</li>
-                  <li>Deposits manually requested and tracked</li>
-                  <li>No idea which marketing actually worked</li>
-                  <li>Fully booked but income felt unpredictable</li>
-                </ul>
+            <p className="text-gray-400 max-w-3xl mx-auto text-lg mb-12">
+              Your dashboard doesn't wait for you to notice problems. Overdue loyalty clients, 90-day inactive guests, 
+              birthday windows closing, rising cancellation rates. NextSlot surfaces all of it the moment you open the app.
+            </p>
+            
+            <div className="grid md:grid-cols-3 gap-6 text-left">
+              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border" style={{ borderColor: '#333' }}>
+                <div className="text-sm font-semibold mb-2">Every alert is <span style={{ color: GOLD }}>one tap from action</span></div>
+                <p className="text-sm text-gray-400">WhatsApp drafts pre-loaded, booking and payment links ready</p>
               </div>
+              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border" style={{ borderColor: '#333' }}>
+                <div className="text-sm font-semibold mb-2">Client birthdays & occasions</div>
+                <p className="text-sm text-gray-400">Tracked automatically and surfaced when they matter</p>
+              </div>
+              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border" style={{ borderColor: '#333' }}>
+                <div className="text-sm font-semibold mb-2">Loyalty rewards tracked</div>
+                <p className="text-sm text-gray-400">Never miss a client who has earned a free treatment</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-              <div
-                className="p-6 rounded-2xl"
-                style={{
-                  background: "hsl(38 40% 58% / 0.07)",
-                  border: "1.5px solid hsl(38 40% 58% / 0.75)",
-                  boxShadow: "0 4px 24px hsl(38 40% 58% / 0.18)",
-                }}
-              >
-                <h3 className="font-bold mb-4 text-sm uppercase tracking-wider" style={{ color: GOLD }}>
-                  After 30 Days
-                </h3>
-                <ul className="space-y-3 text-sm font-medium">
+        {/* BOOKING HEATMAP */}
+        <section className="bg-gradient-to-b from-gray-900 to-black py-24 px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-16">
+              <div className="inline-block mb-4 px-4 py-2 rounded-full" style={{ border: `1px solid ${GOLD}`, color: GOLD }}>
+                <span className="text-xs font-semibold tracking-widest uppercase">BOOKING INTELLIGENCE</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-light mb-4" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                Know when<br />
+                <span style={{ color: GOLD, fontStyle: 'italic' }}>your clients want you.</span>
+              </h2>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                The booking heatmap shows every day and time slot colour-coded by demand. Know your peaks. Fill your quiet slots. 
+                Never discount a prime window again.
+              </p>
+            </div>
+            
+            {/* Heatmap */}
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 border" style={{ borderColor: '#333' }}>
+              <div className="text-xs text-gray-500 mb-4 uppercase tracking-wider">BOOKING HEATMAP · THIS MONTH</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-center text-sm">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th className="px-2 py-2 text-xs text-gray-500">08–10</th>
+                      <th className="px-2 py-2 text-xs text-gray-500">10–12</th>
+                      <th className="px-2 py-2 text-xs text-gray-500">12–14</th>
+                      <th className="px-2 py-2 text-xs text-gray-500">14–16</th>
+                      <th className="px-2 py-2 text-xs text-gray-500">16–18</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { day: 'Mon', slots: [6, 9, 5, 7, 4] },
+                      { day: 'Tue', slots: [2, 3, 2, 1, 2] },
+                      { day: 'Wed', slots: [7, 11, 8, 9, 6] },
+                      { day: 'Thu', slots: [4, 6, 5, 3, 4] },
+                      { day: 'Fri', slots: [10, 14, 12, 13, 9] },
+                      { day: 'Sat', slots: [15, 18, 16, 14, 11] },
+                      { day: 'Sun', slots: [3, 4, 2, 2, 1] },
+                    ].map((row, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-2 text-xs font-semibold">{row.day}</td>
+                        {row.slots.map((count, j) => {
+                          const intensity = count < 4 ? 'bg-gray-800' : count < 8 ? 'bg-yellow-900/40' : count < 12 ? 'bg-yellow-700/60' : 'bg-yellow-500/80';
+                          return (
+                            <td key={j} className="px-2 py-2">
+                              <div className={`${intensity} rounded px-2 py-1 text-xs`}>{count}</div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-6 text-sm text-gray-400">
+                <span style={{ color: GOLD }}>Sat 10–12 is your busiest slot</span> — Never discount this. 
+                Tue afternoons are wide open, run a targeted offer or take the rest of the day off to recharge.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FEATURES CAROUSEL */}
+        <section className="bg-black py-24 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <div className="inline-block mb-4 px-4 py-2 rounded-full" style={{ border: `1px solid ${GOLD}`, color: GOLD }}>
+                <span className="text-xs font-semibold tracking-widest uppercase">EVERYTHING IN ONE PLACE</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-light mb-4" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                The full stack for<br />
+                <span style={{ color: GOLD, fontStyle: 'italic' }}>service businesses</span>
+              </h2>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                Bookings, calendar, stock, loyalty, and Intelligent insights, all inside one dashboard, all talking to each other.
+              </p>
+            </div>
+            
+            {/* Feature Tabs */}
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              {features.map((feature, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleFeatureClick(idx)}
+                  className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+                    activeFeature === idx ? 'bg-white text-black' : 'bg-gray-900 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {feature.name}
+                </button>
+              ))}
+            </div>
+            
+            {/* Feature Display */}
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 border" style={{ borderColor: '#333' }}>
+              {activeFeature === 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="text-xs font-semibold" style={{ color: GOLD }}>AI-POWERED</div>
+                    <div className="text-xs text-gray-500">ALWAYS LEARNING</div>
+                  </div>
+                  <h3 className="text-2xl font-semibold mb-4">Nexty AI Insights</h3>
+                  <p className="text-gray-400 mb-6">
+                    Proactive Critical, Growth, Retention, and Operations insights, ranked by rand impact. 
+                    Your Pro-active Intelligent business advisor, always on, never asleep.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-black rounded-lg">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#EF4444' }} />
+                      <div className="text-xs">CRITICAL: 3 clients lapsed 14+ days. R1,200 at risk</div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-black rounded-lg">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10B981' }} />
+                      <div className="text-xs">GROWTH: Tuesday 10–12pm converts 2.4× better. Add premium tier</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {activeFeature === 1 && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="text-xs font-semibold" style={{ color: GOLD }}>FULL FEATURE</div>
+                    <div className="text-xs text-gray-500">LIVE BOOKING</div>
+                  </div>
+                  <h3 className="text-2xl font-semibold mb-4">Smart Calendar</h3>
+                  <p className="text-gray-400 mb-6">
+                    Day, week, and month views. Mobile date strip. Payment status visible at a glance. 
+                    Reschedule in two taps. Call-out bookings tracked separately.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-black rounded-lg">
+                      <div className="text-xs text-gray-500 mb-2">09:00</div>
+                      <div className="font-semibold">Amara Dube</div>
+                      <div className="text-sm text-gray-400">Brazilian Blowout · 2h</div>
+                      <div className="text-xs mt-2" style={{ color: '#10B981' }}>Paid</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Add other feature content similarly */}
+              {activeFeature >= 2 && (
+                <div>
+                  <div className="text-xs font-semibold mb-6" style={{ color: GOLD }}>{features[activeFeature].label}</div>
+                  <h3 className="text-2xl font-semibold mb-4">{features[activeFeature].name}</h3>
+                  <p className="text-gray-400">Full feature details coming soon...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* COMPARISON TABLE */}
+        <section className="bg-gradient-to-b from-gray-900 to-black py-24 px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-16">
+              <div className="inline-block mb-4 px-4 py-2 rounded-full" style={{ border: `1px solid ${GOLD}`, color: GOLD }}>
+                <span className="text-xs font-semibold tracking-widest uppercase">WHY NEXTSLOT</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-light mb-4" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                The dashboard others<br />
+                <span style={{ color: GOLD, fontStyle: 'italic' }}>forgot to build.</span>
+              </h2>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: '#333' }}>
+                    <th className="text-left py-4 px-4 font-semibold">Feature</th>
+                    <th className="text-center py-4 px-4 font-semibold text-gray-500">Other booking tools</th>
+                    <th className="text-center py-4 px-4 font-semibold" style={{ color: GOLD }}>NextSlot</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {[
-                    "Clients book and pay automatically",
-                    "Dashboard shows exactly where revenue comes from",
-                    "Top services identified instantly",
-                    "Clear next steps, every single week",
-                  ].map(item => (
-                    <li key={item} className="flex items-start gap-2">
-                      <span style={{ color: GOLD }} className="mt-0.5 shrink-0">&#10003;</span>
-                      {item}
-                    </li>
+                    ['Online booking page', '✓', '✓'],
+                    ['Basic dashboard & stats', '✓', '✓'],
+                    ['Revenue projection this month', '—', '✓'],
+                    ['Goal-gradient: R X to beat last month', '—', '✓'],
+                    ['Proactive AI business insights', '—', '✓ Nexty AI'],
+                    ['Booking heatmap (demand by day/time)', '—', '✓'],
+                    ['Inactive client alerts (90 days)', '—', '✓'],
+                    ['Loyalty program with AI enrolment', 'Some tools', '✓ AI-suggested'],
+                    ['Lead source / acquisition tracking', '—', '✓'],
+                    ['Stock alerts on dashboard', '—', '✓'],
+                    ['Built for South African businesses', 'Rarely', '✓ Yoco · ZAR · POPIA'],
+                  ].map((row, i) => (
+                    <tr key={i} className="border-b" style={{ borderColor: '#222' }}>
+                      <td className="py-4 px-4 text-gray-300">{row[0]}</td>
+                      <td className="py-4 px-4 text-center text-gray-500">{row[1]}</td>
+                      <td className="py-4 px-4 text-center font-semibold" style={{ color: GOLD }}>{row[2]}</td>
+                    </tr>
                   ))}
-                </ul>
-              </div>
-
+                </tbody>
+              </table>
             </div>
-
-            {/* Quote */}
-            <div
-              className="mx-auto max-w-xl py-8 px-6 rounded-2xl text-center"
-              style={{
-                background: "hsl(38 40% 58% / 0.06)",
-                border: "1px solid hsl(38 40% 58% / 0.25)",
-              }}
-            >
-              <div className="flex justify-center mb-4">
-                <div className="h-px w-10" style={{ background: GOLD }} />
-              </div>
-              <p className="text-xl sm:text-2xl font-semibold leading-snug italic">
-                "For the first time, the business felt like it was running itself."
-              </p>
-              <p className="mt-4 text-sm font-medium" style={{ color: GOLD }}>
-                PhenomeBeauty, Cape Town
-              </p>
-              <div className="flex justify-center mt-4">
-                <div className="h-px w-10" style={{ background: GOLD }} />
-              </div>
-            </div>
-
-            <div>
-              <Link
-                to="/case-study/phenomebeauty"
-                className="group inline-flex flex-col items-center gap-1 rounded-2xl px-8 py-5 text-center transition-all duration-200 hover:scale-[1.02]"
-                style={{
-                  background: "hsl(var(--background))",
-                  border: "1.5px solid hsl(38 40% 58% / 0.40)",
-                  boxShadow: "0 4px 20px hsl(38 40% 58% / 0.10)",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px hsl(38 40% 58% / 0.22)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "hsl(38 40% 58% / 0.65)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px hsl(38 40% 58% / 0.10)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "hsl(38 40% 58% / 0.40)";
-                }}
-              >
-                <span className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>PhenomeBeauty</span>
-                <span className="text-base font-semibold">See exactly how it happened, step by step</span>
-                <span className="text-sm text-muted-foreground">From WhatsApp chaos to a business that runs itself.</span>
-                <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold group-hover:gap-2.5 transition-all" style={{ color: GOLD }}>
-                  Read the full story <ArrowRight className="h-4 w-4" />
-                </span>
-              </Link>
-            </div>
-
           </div>
         </section>
 
         {/* FINAL CTA */}
-        <section className="py-24 px-6 bg-black text-white text-center">
-          <div className="max-w-2xl mx-auto space-y-6">
-
-            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: GOLD }}>
-              Stop being the clerk. Go back to being the expert.
-            </p>
-
-            <h2 className="text-3xl md:text-4xl font-semibold">
-              Your clients pay you for the experience.<br />
-              <span className="text-white/50">Not the admin.</span>
+        <section className="bg-black py-24 px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-4xl md:text-5xl font-light mb-6" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+              Stop watching numbers.<br />
+              Start <span style={{ color: GOLD, fontStyle: 'italic' }}>hearing</span> them.
             </h2>
-
-            <p className="text-white/60 max-w-lg mx-auto">
-              A system isn't the opposite of connection. It gives you back the time to be human. To check in on loyal clients, to show up fully in every session, to protect the legacy you've built.
+            <p className="text-gray-400 text-lg mb-8">
+              Set up in under 10 minutes. Your booking page, your dashboard, and Nexty AI working for you from day one.
             </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-              <Link
-                to="/onboarding"
-                className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-8 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                style={{
-                  background: "hsl(var(--foreground))",
-                  color: "hsl(var(--background))",
-                  boxShadow: "0 0 0 1.5px hsl(38 40% 58% / 0.70), 0 6px 20px -2px hsl(38 40% 58% / 0.40)",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow =
-                    "0 0 0 2px hsl(38 40% 58% / 0.90), 0 8px 28px -2px hsl(38 40% 58% / 0.55)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow =
-                    "0 0 0 1.5px hsl(38 40% 58% / 0.70), 0 6px 20px -2px hsl(38 40% 58% / 0.40)";
-                }}
-              >
-                Get clarity in under 10 minutes
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-
-              <Link
-                to="/demo"
-                className="text-sm text-white/50 hover:text-white/80 transition-colors flex items-center gap-2 py-3.5"
-              >
-                <Play className="h-4 w-4" />
-                Watch how it works
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-2">
-              {[
-                "No payment required",
-                "Takes less than 10 minutes",
-                "No technical skills needed",
-                "Works on your phone",
-              ].map(item => (
-                <span key={item} className="text-xs text-white/40 flex items-center gap-1.5">
-                  <span className="w-1 h-1 rounded-full shrink-0" style={{ background: GOLD }} />
-                  {item}
-                </span>
-              ))}
-            </div>
-
+            <Link
+              to="/onboarding"
+              className="inline-block px-10 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105"
+              style={{ backgroundColor: GOLD, color: '#000' }}
+            >
+              Start free. No payment needed
+            </Link>
+            <p className="text-sm text-gray-500 mt-6">30-day trial · No Payment required · Cancel anytime · Built for South Africa</p>
           </div>
         </section>
-
       </main>
-
       <SiteFooter />
+      
+      <style>{`
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-scroll {
+          animation: scroll 30s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
