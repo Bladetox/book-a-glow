@@ -840,7 +840,7 @@ const Index = () => {
                 More personalised than<br /><span style={{ color: C.gold }}>most advisors.</span>
               </h2>
               <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7 }}>
-                Nexty is always learning your business — your peak times, your riskiest clients, your
+                Nexty is always learning your business: your peak times, your riskiest clients, your
                 biggest opportunities. So when she speaks, it's not generic advice. It's yours.
               </p>
             </div>
@@ -876,7 +876,7 @@ const Index = () => {
                   type="critical"
                   speaker="Nexty"
                   label="Critical"
-                  message="Your cancellation rate hit 22% this month. That's R 580 walking out the door every single time. Turn on a 30% deposit — one tap in Settings — and watch it drop."
+                  message="Your cancellation rate hit 22% this month. That's R 580 walking out the door every single time. Turn on a 30% deposit. One tap in Settings and watch it drop."
                   action="Fix it now"
                   delay={0.1}
                 />
@@ -884,7 +884,7 @@ const Index = () => {
                   type="growth"
                   speaker="Nexty"
                   label="Growth"
-                  message="Thursday afternoons are basically empty — 14 open slots just sitting there. At your current basket, filling 6 of them adds R 3,480 to this month. Want me to suggest a promo?"
+                  message="Thursday afternoons are basically empty. Great to take the rest of the day off to recharge or running a promo to increase bookings. Want me to suggest a promo?"
                   action="See the gap"
                   delay={0.25}
                 />
@@ -892,7 +892,7 @@ const Index = () => {
                   type="retention"
                   speaker="Nexty"
                   label="Retention"
-                  message="You're at 38% retention — just 2 points shy of the beauty benchmark. Your top 12 regulars aren't on loyalty yet. Enrol them today and you'll cross 40% within 30 days."
+                  message="You're at 38% retention, just 2 points shy of the beauty benchmark. Your top 12 regulars aren't on loyalty yet. Enrol them today and you'll cross 40% within 30 days."
                   action="Enrol them"
                   delay={0.4}
                 />
@@ -1001,14 +1001,14 @@ const Index = () => {
               If it's costing<br /><span style={{ color: C.gold }}>you money</span>, it should not be hiding.
             </h2>
             <p style={{ fontSize: 16, color: C.muted, maxWidth: 680, margin: "0 auto 48px", lineHeight: 1.7 }}>
-              Stop hunting for problems. NextSlot surfaces the high-impact ones — ranked by rand value —
-              so every alert earns its place on your screen.
+              Stop hunting for problems. NextSlot surfaces the high-impact ones, ranked by rand value. 
+              So every alert earns its place on your screen.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 16, textAlign: "left" }}>
               {[
                 { type: "critical"  as const, badge: "Critical · Cancellations up 22%",   message: "You lost R 3,480 to cancellations this month. Introduce a 30% deposit to protect revenue. One setting change, instant effect.",                              action: "Enable deposits",  delay: 0   },
                 { type: "growth"    as const, badge: "Growth · 14 open slots Thursday",    message: "Thursday afternoons are your emptiest window. At your current basket, filling 6 of those slots would add R 3,480 to this month's total.",                       action: "View heatmap",    delay: 0.1 },
-                { type: "retention" as const, badge: "Retention · 9 clients gone quiet",   message: "9 clients haven't booked in 90+ days. A personalised WhatsApp to each one — sent from NextSlot — recovers 1 in 3. That's R 1,740 in potential revenue.",      action: "Send reminder",   delay: 0.2 },
+                { type: "retention" as const, badge: "Retention · 9 clients gone quiet",   message: "9 clients haven't booked in 90+ days. A personalised WhatsApp to each one, sent from NextSlot, recovers 1 in 3. That's R 1,740 in potential revenue.",      action: "Send reminder",   delay: 0.2 },
                 { type: "ops"       as const, badge: "Operations · Stock below reorder",   message: "3 products are below reorder level. Restocking now prevents last-minute cancellations and lost revenue.",                                                        action: "View stock",      delay: 0.3 },
               ].map((item, i) => (
                 <InsightCard key={i} type={item.type} badge={item.badge} message={item.message} action={item.action} delay={item.delay} />
@@ -1026,7 +1026,7 @@ const Index = () => {
                 One platform.<br /><span style={{ color: C.gold }}>Every tool.</span>
               </h2>
               <p style={{ fontSize: 16, color: C.muted, maxWidth: 520, margin: "0 auto", lineHeight: 1.7 }}>
-                From AI insights to payments, everything your beauty business needs is built in — nothing bolted on.
+                From Intelligent insights to payments, everything your business needs, is built in.
               </p>
             </div>
 
@@ -1096,7 +1096,7 @@ const Index = () => {
                 See where your<br /><span style={{ color: C.gold }}>demand actually lives.</span>
               </h2>
               <p style={{ fontSize: 16, color: C.muted, maxWidth: 520, margin: "0 auto", lineHeight: 1.7 }}>
-                The heatmap shows you which days and times fill fastest — so you can price, promote, and schedule smarter.
+                The heatmap shows you which days and times fill fastest. So you can price, promote, and schedule smarter.
               </p>
             </div>
 
