@@ -154,7 +154,119 @@ const Orb = ({ scale = 1 }: { scale?: number }) => {
   );
 };
 
-/* ─── InsightCard ────────────────────────────────────────────── */
+/* ─── SpeechBubble ───────────────────────────────────────────── */
+const SpeechBubble = ({ type, speaker, label, message, action, delay }: {
+  type: "critical" | "growth" | "retention" | "ops";
+  speaker: string;
+  label: string;
+  message: string;
+  action: string;
+  delay: number;
+}) => {
+  const colors: Record<string, string> = {
+    critical:  C.red,
+    growth:    C.em,
+    retention: C.blue,
+    ops:       C.amber,
+  };
+  const glows: Record<string, string> = {
+    critical:  "rgba(255,87,87,0.18)",
+    growth:    "rgba(52,211,153,0.18)",
+    retention: "rgba(96,165,250,0.18)",
+    ops:       "rgba(245,158,11,0.18)",
+  };
+  const borders: Record<string, string> = {
+    critical:  "rgba(255,87,87,0.22)",
+    growth:    "rgba(52,211,153,0.22)",
+    retention: "rgba(96,165,250,0.22)",
+    ops:       "rgba(245,158,11,0.22)",
+  };
+  const c   = colors[type];
+  const g   = glows[type];
+  const b   = borders[type];
+
+  return (
+    <div
+      className={`speech-bubble speech-bubble--${type}`}
+      style={{
+        position:            "relative",
+        background:          "rgba(16,15,14,0.72)",
+        border:              `1px solid ${b}`,
+        borderRadius:        18,
+        borderBottomLeftRadius: 4,
+        padding:             "18px 20px 16px",
+        backdropFilter:      "blur(24px)",
+        WebkitBackdropFilter:"blur(24px)",
+        boxShadow:           `0 0 0 1px ${b}, 0 8px 32px rgba(0,0,0,0.5), 0 0 40px ${g}`,
+        animation:           `bubbleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay}s both`,
+        fontFamily:          FONT_BODY,
+      }}
+    >
+      {/* Tail */}
+      <div style={{
+        position:    "absolute",
+        bottom:      -10,
+        left:        22,
+        width:       0,
+        height:      0,
+        borderLeft:  "10px solid transparent",
+        borderRight: "0px solid transparent",
+        borderTop:   `10px solid ${b}`,
+        filter:      `drop-shadow(0 2px 4px ${g})`,
+      }} />
+      <div style={{
+        position:    "absolute",
+        bottom:      -8,
+        left:        23,
+        width:       0,
+        height:      0,
+        borderLeft:  "9px solid transparent",
+        borderRight: "0px solid transparent",
+        borderTop:   "9px solid rgba(16,15,14,0.72)",
+      }} />
+
+      {/* Speaker row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: "50%",
+          background: `radial-gradient(circle at 32% 28%, rgba(255,240,180,0.6) 0%, transparent 40%), radial-gradient(circle, #D4A574 0%, #8a5b00 100%)`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 7, fontWeight: 700, color: "rgba(8,8,8,0.8)", letterSpacing: "0.04em",
+          fontFamily: FONT_DISPLAY, flexShrink: 0,
+          boxShadow: `0 0 8px rgba(212,165,116,0.5)`,
+        }}>nx</div>
+        <div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.gold, fontFamily: FONT_DISPLAY }}>{speaker}</span>
+          <span style={{ fontSize: 10, color: C.faint, marginLeft: 6 }}>· just now</span>
+        </div>
+        <div style={{
+          marginLeft: "auto",
+          fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+          color: c, background: `rgba(0,0,0,0.3)`, border: `1px solid ${b}`,
+          padding: "2px 8px", borderRadius: 20,
+        }}>{label}</div>
+      </div>
+
+      {/* Message */}
+      <p style={{
+        fontSize: 13, fontWeight: 300, color: C.text,
+        lineHeight: 1.65, margin: 0, marginBottom: 12,
+        fontStyle: "italic",
+      }}>"{message}"</p>
+
+      {/* Action */}
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 5,
+        fontSize: 11, fontWeight: 600, color: c,
+        cursor: "pointer", letterSpacing: "0.02em",
+      }}>
+        {action} →
+      </div>
+    </div>
+  );
+};
+
+/* ─── InsightCard (used in Proactive Alerts section) ─────────── */
 const InsightCard = ({ type, badge, message, action, delay }: {
   type: "critical" | "growth" | "retention" | "ops";
   badge: string; message: string; action: string; delay: number;
@@ -346,7 +458,7 @@ const Index = () => {
         <span style={{ fontSize: 11, color: C.faint }}>Always learning</span>
       </div>
       <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Nexty AI Insights</h3>
-      <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Proactive Critical, Growth, Retention, and Operations insights, ranked by rand impact. Your Pro-active Intelligent business advisor, always on, never asleep.</p>
+      <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Proactive Critical, Growth, Retention, and Operations insights, ranked by rand impact. Your proactive intelligent business advisor, always on, never asleep.</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {[
           { dot: C.red,  text: "Critical: 3 clients lapsed 14+ days. R1,200 at risk" },
@@ -582,6 +694,7 @@ const Index = () => {
       <style>{`
         @keyframes fadeUp        { from{opacity:0;transform:translateY(14px);}  to{opacity:1;transform:translateY(0);} }
         @keyframes fadeSlideIn   { from{opacity:0;transform:translateX(16px);}  to{opacity:1;transform:translateX(0);} }
+        @keyframes bubbleIn      { from{opacity:0;transform:translateX(-12px) scale(0.96);} to{opacity:1;transform:translateX(0) scale(1);} }
         @keyframes orbAuraPulse  { 0%,100%{opacity:.5;transform:scale(1);}      50%{opacity:1;transform:scale(1.1);} }
         @keyframes orbSpinA      { to{transform:rotate(360deg);}  }
         @keyframes orbSpinB      { to{transform:rotate(-360deg);} }
@@ -724,17 +837,23 @@ const Index = () => {
             <div style={{ textAlign: "center", marginBottom: 56 }}>
               <Eyebrow text="Nexty AI · Business Growth Advisor" />
               <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)", fontWeight: 700, color: C.text, lineHeight: 1.08, marginBottom: 16 }}>
-                A business advisor<br />built into <span style={{ color: C.gold }}>every screen.</span>
+                More personalised than<br /><span style={{ color: C.gold }}>most advisors.</span>
               </h2>
               <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7 }}>
-                Every time you open your dashboard, Nexty scans your bookings, revenue,
-                retention, and capacity. Then tells you exactly what's holding you back and what to do about it.
+                Nexty is always learning your business — your peak times, your riskiest clients, your
+                biggest opportunities. So when she speaks, it's not generic advice. It's yours.
               </p>
             </div>
 
-            <div style={{ display: isMobile ? "flex" : "grid", flexDirection: isMobile ? "column" : undefined, gridTemplateColumns: isMobile ? undefined : "1fr 1fr", gap: isMobile ? 40 : 64, alignItems: "center" }}>
+            <div style={{
+              display: isMobile ? "flex" : "grid",
+              flexDirection: isMobile ? "column" : undefined,
+              gridTemplateColumns: isMobile ? undefined : "340px 1fr",
+              gap: isMobile ? 48 : 72,
+              alignItems: "flex-start",
+            }}>
               {/* Orb stage */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative", height: isMobile ? 260 : 340 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative", height: isMobile ? 260 : 340, flexShrink: 0 }}>
                 <div style={{ position: "absolute", width: isMobile ? 200 : 280, height: isMobile ? 200 : 280, borderRadius: "50%", background: "radial-gradient(circle,rgba(212,165,116,0.12) 0%,transparent 65%)", animation: "orbBgPulse 3.5s ease-in-out infinite" }} />
                 <div style={{ position: "absolute", width: isMobile ? 140 : 200, height: isMobile ? 140 : 200, borderRadius: "50%", border: "1.5px solid transparent", borderTopColor: "rgba(212,165,116,0.9)", borderRightColor: "rgba(212,165,116,0.3)", borderBottomColor: "rgba(212,165,116,0.05)", borderLeftColor: "rgba(212,165,116,0.3)", animation: "nextyOrbit 2.4s linear infinite", filter: "drop-shadow(0 0 6px rgba(212,165,116,0.5))" }} />
                 <div style={{ position: "absolute", width: isMobile ? 110 : 160, height: isMobile ? 110 : 160, borderRadius: "50%", border: "1px solid rgba(212,165,116,0.15)", borderTopColor: "rgba(212,165,116,0.5)", animation: "nextyOrbitR 3.8s linear infinite" }} />
@@ -746,16 +865,45 @@ const Index = () => {
                 ))}
               </div>
 
-              {/* Insight cards */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div style={{ fontSize: 11, color: C.faint, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 600, color: C.gold }}>Nexty AI</span>
-                  <span>Updated just now · 4 insights found</span>
+              {/* Speech bubbles */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ fontSize: 11, color: C.faint, marginBottom: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600, color: C.gold, fontSize: 12 }}>Nexty AI</span>
+                  <span style={{ fontSize: 10 }}>Updated just now · 4 insights</span>
                 </div>
-                <InsightCard type="critical"  badge="Critical · Impact: R 4,800+"        message="Your cancellation rate jumped to 22% this month. At your current basket of R 580, every cancelled booking costs you R 580. Introduce a 30% deposit to protect revenue." action="Go to Settings" delay={0.1} />
-                <InsightCard type="growth"    badge="Growth · Capacity opportunity"       message="You have 14 open slots on Thursday afternoons across this month. At your average basket, filling just 6 would add R 3,480. Consider a Thursday loyalty special." action="View heatmap" delay={0.3} />
-                <InsightCard type="retention" badge="Retention · 38% rate, below target" message="Your retention rate is 38%, just below the 40% beauty benchmark. Enrolling your top 12 unregistered regulars in loyalty would push this above target within 30 days." action="Enrol now" delay={0.5} />
-                <InsightCard type="ops"       badge="Operations · Stock alert"           message="3 products are below reorder level: Hard Wax (2 left), Lash Glue (1 left), Tinting Developer (0 left). Restocking now prevents last-minute cancellations." action="View stock" delay={0.7} />
+
+                <SpeechBubble
+                  type="critical"
+                  speaker="Nexty"
+                  label="Critical"
+                  message="Your cancellation rate hit 22% this month. That's R 580 walking out the door every single time. Turn on a 30% deposit — one tap in Settings — and watch it drop."
+                  action="Fix it now"
+                  delay={0.1}
+                />
+                <SpeechBubble
+                  type="growth"
+                  speaker="Nexty"
+                  label="Growth"
+                  message="Thursday afternoons are basically empty — 14 open slots just sitting there. At your current basket, filling 6 of them adds R 3,480 to this month. Want me to suggest a promo?"
+                  action="See the gap"
+                  delay={0.25}
+                />
+                <SpeechBubble
+                  type="retention"
+                  speaker="Nexty"
+                  label="Retention"
+                  message="You're at 38% retention — just 2 points shy of the beauty benchmark. Your top 12 regulars aren't on loyalty yet. Enrol them today and you'll cross 40% within 30 days."
+                  action="Enrol them"
+                  delay={0.4}
+                />
+                <SpeechBubble
+                  type="ops"
+                  speaker="Nexty"
+                  label="Operations"
+                  message="Three products are below reorder: Hard Wax (2 left), Lash Glue (1 left), Tinting Developer (0 left). Don't let a last-minute stock-out cancel a booking."
+                  action="Restock now"
+                  delay={0.55}
+                />
               </div>
             </div>
           </div>
@@ -925,7 +1073,6 @@ const Index = () => {
                     </div>
                   ))}
                 </div>
-                {/* Dot indicators */}
                 <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 8 }}>
                   {features.map((_, i) => (
                     <div
@@ -955,7 +1102,6 @@ const Index = () => {
 
             <div style={{ background: C.s1, border: `1px solid ${C.border2}`, borderRadius: 20, padding: isMobile ? "20px 16px" : 32, overflowX: "auto" }}>
               <div style={{ minWidth: 320 }}>
-                {/* Time headers */}
                 <div style={{ display: "grid", gridTemplateColumns: "48px repeat(5,1fr)", gap: 6, marginBottom: 8 }}>
                   <div />
                   {["9am","11am","1pm","3pm","5pm"].map((t, i) => (
@@ -985,7 +1131,6 @@ const Index = () => {
                     ))}
                   </div>
                 ))}
-                {/* Legend */}
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 10, color: C.faint }}>Bookings per slot:</span>
                   {[
@@ -1016,7 +1161,6 @@ const Index = () => {
             </div>
 
             <div style={{ background: C.s2, border: `1px solid ${C.border2}`, borderRadius: 20, overflow: "hidden" }}>
-              {/* Header */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", background: C.s3, padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase" }}>Feature</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>Others</span>
