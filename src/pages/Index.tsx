@@ -303,9 +303,9 @@ const Eyebrow = ({ text }: { text: string }) => (
 /* ─── Heatmap colour ─────────────────────────────────────────── */
 const heatColor = (v: number) =>
   v < 4  ? "rgba(255,255,255,0.04)"
-: v < 8  ? "rgba(212,165,116,0.18)"
-: v < 12 ? "rgba(212,165,116,0.42)"
-:          "rgba(212,165,116,0.72)";
+: v < 8  ? "rgba(52,211,153,0.18)"
+: v < 12 ? "rgba(52,211,153,0.42)"
+:          "rgba(52,211,153,0.72)";
 
 /* ═══════════════════════════════════════════════════════════════
    INDEX PAGE
@@ -1140,7 +1140,7 @@ const Index = () => {
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: 10,
-                          color: v >= 8 ? "rgba(212,165,116,0.9)" : C.faint,
+                          color: v >= 8 ? "rgba(52,211,153,0.9)" : C.faint,
                           fontWeight: v >= 12 ? 700 : 400,
                         }}
                       >
@@ -1152,10 +1152,9 @@ const Index = () => {
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 10, color: C.faint }}>Bookings per slot:</span>
                   {[
-                    { color: "rgba(255,255,255,0.04)", label: "0–3" },
-                    { color: "rgba(212,165,116,0.18)", label: "4–7" },
-                    { color: "rgba(212,165,116,0.42)", label: "8–11" },
-                    { color: "rgba(212,165,116,0.72)", label: "12+" },
+                    { color: "rgba(52,211,153,0.18)", label: "4–7" },
+                    { color: "rgba(52,211,153,0.42)", label: "8–11" },
+                    { color: "rgba(52,211,153,0.72)", label: "12+" },
                   ].map((l, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <div style={{ width: 12, height: 12, borderRadius: 3, background: l.color, border: `1px solid ${C.border}` }} />
