@@ -860,4 +860,216 @@ const Index = () => {
               {[
                 { type: "critical"  as const, badge: "Critical · Cancellations up 22%",   message: "You lost R 3,480 to cancellations this month. Introduce a 30% deposit to protect revenue. One setting change, instant effect.",                              action: "Enable deposits",  delay: 0   },
                 { type: "growth"    as const, badge: "Growth · 14 open slots Thursday",    message: "Thursday afternoons are your emptiest window. At your current basket, filling 6 of those slots would add R 3,480 to this month's total.",                       action: "View heatmap",    delay: 0.1 },
-                { type: "retention" as const, badge: "Retention · 9 clients gone quiet",   message: "9 clients haven't booked in 90+ days. A personalised WhatsApp to each one — sent from
+                { type: "retention" as const, badge: "Retention · 9 clients gone quiet",   message: "9 clients haven't booked in 90+ days. A personalised WhatsApp to each one — sent from NextSlot — recovers 1 in 3. That's R 1,740 in potential revenue.",      action: "Send reminder",   delay: 0.2 },
+                { type: "ops"       as const, badge: "Operations · Stock below reorder",   message: "3 products are below reorder level. Restocking now prevents last-minute cancellations and lost revenue.",                                                        action: "View stock",      delay: 0.3 },
+              ].map((item, i) => (
+                <InsightCard key={i} type={item.type} badge={item.badge} message={item.message} action={item.action} delay={item.delay} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═════ FEATURES ═════ */}
+        <section style={{ background: C.s1, padding: isMobile ? "64px 0" : "96px 24px" }}>
+          <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 40, padding: isMobile ? "0 24px" : 0 }}>
+              <Eyebrow text="Everything you need" />
+              <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)", fontWeight: 700, color: C.text, lineHeight: 1.08, marginBottom: 16 }}>
+                One platform.<br /><span style={{ color: C.gold }}>Every tool.</span>
+              </h2>
+              <p style={{ fontSize: 16, color: C.muted, maxWidth: 520, margin: "0 auto", lineHeight: 1.7 }}>
+                From AI insights to payments, everything your beauty business needs is built in — nothing bolted on.
+              </p>
+            </div>
+
+            {/* Tab bar – desktop */}
+            {!isMobile && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32, justifyContent: "center" }}>
+                {features.map((f, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleFeatureClick(i)}
+                    style={{
+                      background: activeFeature === i ? C.gold : "transparent",
+                      color: activeFeature === i ? "#080808" : C.muted,
+                      border: `1px solid ${activeFeature === i ? C.gold : C.border}`,
+                      borderRadius: 100,
+                      padding: "8px 18px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontFamily: FONT_BODY,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Panel – desktop */}
+            {!isMobile && (
+              <div style={{ background: C.s2, border: `1px solid ${C.border2}`, borderRadius: 24, padding: 36, minHeight: 320 }}>
+                {featurePanels[activeFeature]}
+              </div>
+            )}
+
+            {/* Carousel – mobile */}
+            {isMobile && (
+              <>
+                <div ref={carouselRef} className="feat-carousel">
+                  {featurePanels.map((panel, i) => (
+                    <div key={i} className="feat-carousel-card">
+                      {panel}
+                    </div>
+                  ))}
+                </div>
+                {/* Dot indicators */}
+                <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 8 }}>
+                  {features.map((_, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleFeatureClick(i)}
+                      style={{ width: i === activeFeature ? 18 : 6, height: 6, borderRadius: 3, background: i === activeFeature ? C.gold : C.border, transition: "all 0.3s ease", cursor: "pointer" }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* ═════ HEATMAP ═════ */}
+        <section style={{ background: C.bg, padding: isMobile ? "64px 24px" : "96px 24px" }}>
+          <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 48 }}>
+              <Eyebrow text="Booking Heatmap" />
+              <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)", fontWeight: 700, color: C.text, lineHeight: 1.08, marginBottom: 16 }}>
+                See where your<br /><span style={{ color: C.gold }}>demand actually lives.</span>
+              </h2>
+              <p style={{ fontSize: 16, color: C.muted, maxWidth: 520, margin: "0 auto", lineHeight: 1.7 }}>
+                The heatmap shows you which days and times fill fastest — so you can price, promote, and schedule smarter.
+              </p>
+            </div>
+
+            <div style={{ background: C.s1, border: `1px solid ${C.border2}`, borderRadius: 20, padding: isMobile ? "20px 16px" : 32, overflowX: "auto" }}>
+              <div style={{ minWidth: 320 }}>
+                {/* Time headers */}
+                <div style={{ display: "grid", gridTemplateColumns: "48px repeat(5,1fr)", gap: 6, marginBottom: 8 }}>
+                  <div />
+                  {["9am","11am","1pm","3pm","5pm"].map((t, i) => (
+                    <div key={i} style={{ fontSize: 10, color: C.faint, textAlign: "center", letterSpacing: "0.06em" }}>{t}</div>
+                  ))}
+                </div>
+                {heatRows.map((row, ri) => (
+                  <div key={ri} style={{ display: "grid", gridTemplateColumns: "48px repeat(5,1fr)", gap: 6, marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, color: C.muted, display: "flex", alignItems: "center", fontWeight: 600 }}>{row.day}</div>
+                    {row.slots.map((v, ci) => (
+                      <div
+                        key={ci}
+                        style={{
+                          height: isMobile ? 28 : 36,
+                          borderRadius: 6,
+                          background: heatColor(v),
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 10,
+                          color: v >= 8 ? "rgba(212,165,116,0.9)" : C.faint,
+                          fontWeight: v >= 12 ? 700 : 400,
+                        }}
+                      >
+                        {v}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                {/* Legend */}
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 10, color: C.faint }}>Bookings per slot:</span>
+                  {[
+                    { color: "rgba(255,255,255,0.04)", label: "0–3" },
+                    { color: "rgba(212,165,116,0.18)", label: "4–7" },
+                    { color: "rgba(212,165,116,0.42)", label: "8–11" },
+                    { color: "rgba(212,165,116,0.72)", label: "12+" },
+                  ].map((l, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 3, background: l.color, border: `1px solid ${C.border}` }} />
+                      <span style={{ fontSize: 10, color: C.faint }}>{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═════ COMPARISON ═════ */}
+        <section style={{ background: C.s1, padding: isMobile ? "64px 24px" : "96px 24px" }}>
+          <div style={{ maxWidth: 860, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 48 }}>
+              <Eyebrow text="How we compare" />
+              <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)", fontWeight: 700, color: C.text, lineHeight: 1.08, marginBottom: 16 }}>
+                Other tools show data.<br /><span style={{ color: C.gold }}>NextSlot drives action.</span>
+              </h2>
+            </div>
+
+            <div style={{ background: C.s2, border: `1px solid ${C.border2}`, borderRadius: 20, overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", background: C.s3, padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase" }}>Feature</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>Others</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>NextSlot</span>
+              </div>
+              {compRows.map((row, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 100px 100px",
+                    padding: "13px 20px",
+                    borderBottom: i < compRows.length - 1 ? `1px solid ${C.border}` : "none",
+                    background: row.usOnly ? "rgba(212,165,116,0.02)" : "transparent",
+                  }}
+                >
+                  <span style={{ fontSize: 13, color: C.muted }}>{row.feature}</span>
+                  <span style={{ fontSize: 13, color: C.faint, textAlign: "center" }}>{row.them}</span>
+                  <span style={{ fontSize: 13, fontWeight: row.usOnly ? 600 : 400, color: row.usOnly ? C.em : C.muted, textAlign: "center" }}>{row.us}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═════ CTA ═════ */}
+        <section style={{ background: C.bg, padding: isMobile ? "80px 24px" : "120px 24px" }}>
+          <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
+            <Eyebrow text="Get started today" />
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? "clamp(28px,8vw,42px)" : "clamp(32px,4vw,52px)", fontWeight: 700, color: C.text, lineHeight: 1.08, marginBottom: 20 }}>
+              Your dashboard should be<br /><span style={{ color: C.gold, fontStyle: "italic" }}>working for you.</span>
+            </h2>
+            <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.75, marginBottom: 40, maxWidth: 500, margin: "0 auto 40px" }}>
+              Join beauty professionals across South Africa who use NextSlot to grow smarter, book more, and stress less.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
+              <Link
+                to="/onboarding"
+                style={{ background: C.gold, color: "#080808", fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, padding: "16px 36px", borderRadius: 12, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, minHeight: 52, boxShadow: "0 8px 32px rgba(212,165,116,0.3)" }}
+              >
+                Start your free trial
+              </Link>
+            </div>
+            <p style={{ marginTop: 20, fontSize: 12, color: C.faint, letterSpacing: "0.04em" }}>
+              No credit card required · 30-day free trial · Cancel anytime
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+};
+
+export default Index;
