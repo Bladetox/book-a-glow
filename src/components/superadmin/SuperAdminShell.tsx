@@ -78,11 +78,70 @@ const TabLoader = () => (
   </div>
 );
 
+// ─── NavItemButton hoisted outside SuperAdminShell to prevent remount on every render ─
+interface NavItemButtonProps extends NavItem {
+  activeView: ViewId;
+  onSelect: (id: ViewId) => void;
+}
+
+const NavItemButton = ({ id, label, icon: Icon, badge, activeView, onSelect }: NavItemButtonProps) => {
+  const active = activeView === id;
+  return (
+    <button
+      onClick={() => onSelect(id)}
+      style={active ? {
+        background: "rgba(0,200,83,0.08)",
+        borderColor: "rgba(0,200,83,0.22)",
+        boxShadow: "0 0 12px rgba(0,200,83,0.06)",
+      } : {}}
+      className={[
+        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 text-left group relative border",
+        active
+          ? "text-white font-medium"
+          : "text-white/30 hover:text-white/60 hover:bg-white/[0.03] border-transparent",
+      ].join(" ")}
+    >
+      {active && (
+        <span
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full"
+          style={{ background: "#00c853", boxShadow: "0 0 8px #00c85388" }}
+        />
+      )}
+      <span
+        style={active ? { background: "rgba(0,200,83,0.12)", color: "#00c853" } : {}}
+        className={[
+          "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+          active ? "" : "text-white/22 group-hover:text-white/45",
+        ].join(" ")}
+      >
+        <Icon className="w-3.5 h-3.5" />
+      </span>
+      <span className="flex-1 leading-none text-[13px]">{label}</span>
+      {badge && (
+        <span
+          className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide shrink-0 border"
+          style={{ background: "rgba(0,200,83,0.12)", borderColor: "rgba(0,200,83,0.28)", color: "#00c853" }}
+        >
+          {badge}
+        </span>
+      )}
+      {active && !badge && (
+        <ChevronRight className="w-3 h-3 shrink-0" style={{ color: "rgba(0,200,83,0.4)" }} />
+      )}
+    </button>
+  );
+};
+
 export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }) {
   const [activeView,  setActiveView]  = useState<ViewId>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const activeLabel = ALL_NAV.find(n => n.id === activeView)?.label ?? "";
+
+  const handleSelect = (id: ViewId) => {
+    setActiveView(id);
+    setSidebarOpen(false);
+  };
 
   const renderView = () => {
     switch (activeView) {
@@ -104,54 +163,6 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
       case "payment-config":    return <SAPaymentConfig />;
       default:                  return <SAOverview />;
     }
-  };
-
-  const NavItemButton = ({ id, label, icon: Icon, badge }: NavItem) => {
-    const active = activeView === id;
-    return (
-      <button
-        onClick={() => { setActiveView(id); setSidebarOpen(false); }}
-        style={active ? {
-          background: "rgba(0,200,83,0.08)",
-          borderColor: "rgba(0,200,83,0.22)",
-          boxShadow: "0 0 12px rgba(0,200,83,0.06)",
-        } : {}}
-        className={[
-          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 text-left group relative border",
-          active
-            ? "text-white font-medium"
-            : "text-white/30 hover:text-white/60 hover:bg-white/[0.03] border-transparent",
-        ].join(" ")}
-      >
-        {active && (
-          <span
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full"
-            style={{ background: "#00c853", boxShadow: "0 0 8px #00c85388" }}
-          />
-        )}
-        <span
-          style={active ? { background: "rgba(0,200,83,0.12)", color: "#00c853" } : {}}
-          className={[
-            "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-            active ? "" : "text-white/22 group-hover:text-white/45",
-          ].join(" ")}
-        >
-          <Icon className="w-3.5 h-3.5" />
-        </span>
-        <span className="flex-1 leading-none text-[13px]">{label}</span>
-        {badge && (
-          <span
-            className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide shrink-0 border"
-            style={{ background: "rgba(0,200,83,0.12)", borderColor: "rgba(0,200,83,0.28)", color: "#00c853" }}
-          >
-            {badge}
-          </span>
-        )}
-        {active && !badge && (
-          <ChevronRight className="w-3 h-3 shrink-0" style={{ color: "rgba(0,200,83,0.4)" }} />
-        )}
-      </button>
-    );
   };
 
   return (
@@ -216,7 +227,14 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
                 {group.label}
               </p>
               <div className="space-y-0.5">
-                {group.items.map(item => <NavItemButton key={item.id} {...item} />)}
+                {group.items.map(item => (
+                  <NavItemButton
+                    key={item.id}
+                    {...item}
+                    activeView={activeView}
+                    onSelect={handleSelect}
+                  />
+                ))}
               </div>
             </div>
           ))}
