@@ -69,6 +69,7 @@ const FloatCard = ({
   const dragOffset = useRef({ x: 0, y: 0 });
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if (mobile) return;
     isDragging.current = true;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -98,9 +99,9 @@ const FloatCard = ({
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         boxShadow:      "0 16px 40px rgba(0,0,0,0.55)",
-        cursor:         "grab",
+        cursor:         mobile ? "default" : "grab",
         userSelect:     "none",
-        touchAction:    "none",
+        touchAction:    mobile ? "none" : "none",
         zIndex:         card.z,
         fontFamily:     FONT_BODY,
       }}
@@ -217,19 +218,19 @@ const Index = () => {
   const makeCards = useCallback((mobile: boolean, cw: number): FloatCardData[] => {
     if (mobile) {
       return [
-        { id: 0, x: 8,      y: 20,  z: 2, vx:  0.14, vy:  0.10, label: "Revenue today",     value: "R 1,950", sub: "7 bookings · 4 remaining",      color: C.gold,  width: 120 },
-        { id: 1, x: cw-128, y: 14,  z: 2, vx: -0.11, vy:  0.13, label: "Month progress",    value: "82%",     sub: "R 4,160 to beat last month",     color: C.em,    width: 120 },
-        { id: 2, x: 10,     y: 230, z: 2, vx:  0.10, vy: -0.14, label: "Cancellation rate", value: "22%",     sub: "Introduce a 30% deposit",        color: C.red,   width: 118 },
-        { id: 3, x: cw-126, y: 224, z: 2, vx: -0.12, vy: -0.11, label: "Open slots",        value: "14",      sub: "Filling 6 adds R 3,480",         color: C.blue,  width: 118 },
-        { id: 4, x: cw/2-60,y: 320, z: 2, vx:  0.08, vy:  0.12, label: "Retention",         value: "38%",     sub: "Enrol 12 → hit 40%",             color: C.amber, width: 120 },
+        { id: 0, x: 8,        y: 20,  z: 2, vx:  0.14, vy:  0.10, label: "Revenue today",     value: "R 1,950", sub: "7 bookings · 4 remaining",  color: C.gold,  width: 120 },
+        { id: 1, x: cw - 128, y: 14,  z: 2, vx: -0.11, vy:  0.13, label: "Month progress",    value: "82%",     sub: "R 4,160 to beat last month", color: C.em,    width: 120 },
+        { id: 2, x: 10,       y: 230, z: 2, vx:  0.10, vy: -0.14, label: "Cancellation rate", value: "22%",     sub: "Introduce a 30% deposit",   color: C.red,   width: 118 },
+        { id: 3, x: cw - 126, y: 224, z: 2, vx: -0.12, vy: -0.11, label: "Open slots",        value: "14",      sub: "Filling 6 adds R 3,480",    color: C.blue,  width: 118 },
+        { id: 4, x: cw/2 - 60,y: 320, z: 2, vx:  0.08, vy:  0.12, label: "Retention",         value: "38%",     sub: "Enrol 12 → hit 40%",        color: C.amber, width: 120 },
       ];
     }
     return [
-      { id: 0, x: 18,  y: 40,  z: 2, vx:  0.18, vy:  0.12, label: "Revenue today",     value: "R 1,950",  sub: "7 bookings · 4 remaining",       color: C.gold,  width: 168 },
-      { id: 1, x: 260, y: 20,  z: 2, vx: -0.14, vy:  0.16, label: "Month progress",    value: "82%",      sub: "R 4,160 to beat last month",      color: C.em,    width: 154 },
-      { id: 2, x: 48,  y: 250, z: 2, vx:  0.12, vy: -0.18, label: "Cancellation rate", value: "22%",      sub: "Introduce a 30% deposit",         color: C.red,   width: 160 },
-      { id: 3, x: 270, y: 230, z: 2, vx: -0.16, vy: -0.13, label: "Open slots · Thu",  value: "14",       sub: "Filling 6 adds R 3,480",          color: C.blue,  width: 156 },
-      { id: 4, x: 140, y: 370, z: 2, vx:  0.10, vy:  0.15, label: "Retention",         value: "38%",      sub: "Enrol 12 regulars → hit 40%",     color: C.amber, width: 158 },
+      { id: 0, x: 18,  y: 40,  z: 2, vx:  0.18, vy:  0.12, label: "Revenue today",     value: "R 1,950",  sub: "7 bookings · 4 remaining",      color: C.gold,  width: 168 },
+      { id: 1, x: 260, y: 20,  z: 2, vx: -0.14, vy:  0.16, label: "Month progress",    value: "82%",      sub: "R 4,160 to beat last month",     color: C.em,    width: 154 },
+      { id: 2, x: 48,  y: 250, z: 2, vx:  0.12, vy: -0.18, label: "Cancellation rate", value: "22%",      sub: "Introduce a 30% deposit",        color: C.red,   width: 160 },
+      { id: 3, x: 270, y: 230, z: 2, vx: -0.16, vy: -0.13, label: "Open slots · Thu",  value: "14",       sub: "Filling 6 adds R 3,480",         color: C.blue,  width: 156 },
+      { id: 4, x: 140, y: 370, z: 2, vx:  0.10, vy:  0.15, label: "Retention",         value: "38%",      sub: "Enrol 12 regulars → hit 40%",    color: C.amber, width: 158 },
     ];
   }, []);
 
@@ -290,17 +291,39 @@ const Index = () => {
     }
   };
 
-  /* ── Carousel scroll → sync active on mobile ── */
+  /* ── Carousel scroll → tilt effect + sync active ── */
   useEffect(() => {
     if (!isMobile || !carouselRef.current) return;
     const el = carouselRef.current;
-    const onScroll = () => {
+    const updateTilt = () => {
+      const containerRect = el.getBoundingClientRect();
+      const centerX = containerRect.left + containerRect.width / 2;
+      Array.from(el.children).forEach((child, idx) => {
+        const card = child as HTMLElement;
+        const rect = card.getBoundingClientRect();
+        const cardCenterX = rect.left + rect.width / 2;
+        const offset = cardCenterX - centerX;
+        const maxOffset = containerRect.width * 0.4;
+        const ratio = Math.max(-1, Math.min(1, offset / maxOffset));
+        const tilt = ratio * 15;
+        card.style.transform = `rotateY(${tilt}deg)`;
+        card.classList.remove("edge-left", "edge-right", "active-card");
+        if (Math.abs(offset) < rect.width * 0.3) {
+          card.classList.add("active-card");
+          card.style.transform = "rotateY(0deg)";
+        } else if (offset < 0) {
+          card.classList.add("edge-left");
+        } else {
+          card.classList.add("edge-right");
+        }
+      });
       const cardW = el.scrollWidth / features.length;
       const idx = Math.round(el.scrollLeft / cardW);
       setActiveFeature(Math.min(Math.max(idx, 0), features.length - 1));
     };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    el.addEventListener("scroll", updateTilt, { passive: true });
+    updateTilt();
+    return () => el.removeEventListener("scroll", updateTilt);
   }, [isMobile, features.length]);
 
   /* ── Heatmap ── */
@@ -348,8 +371,8 @@ const Index = () => {
       <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Day, week, and month views. Mobile date strip. Payment status visible at a glance. Reschedule in two taps. Call-out bookings tracked separately.</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {[
-          { time: "09:00", name: "Amara Dube",    service: "Brazilian Blowout · 2h",  status: "Paid",    sc: C.em },
-          { time: "11:30", name: "Keitumetse M.", service: "Cut & Colour · 1.5h",     status: "Deposit", sc: C.gold },
+          { time: "09:00", name: "Amara Dube",    service: "Brazilian Blowout · 2h", status: "Paid",    sc: C.em },
+          { time: "11:30", name: "Keitumetse M.", service: "Cut & Colour · 1.5h",    status: "Deposit", sc: C.gold },
           { time: "14:00", name: "Nandi Khumalo", service: "Knotless Braids · 3h",   status: "Pending", sc: C.amber },
         ].map((b, i) => (
           <div key={i} style={{ background: C.bg, borderRadius: 10, padding: "10px 14px", border: `1px solid ${C.border}` }}>
@@ -425,9 +448,9 @@ const Index = () => {
       <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Stock & Inventory</h3>
       <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Track products, reorder levels, and consumption per service. Stock alerts surface directly on your dashboard. Scan to update on the go.</p>
       {[
-        { name: "Keratin Treatment 500ml", stock: "2 units left · Reorder at 3",  status: "Low stock", sc: C.red },
-        { name: "Olaplex No. 3 100ml",     stock: "12 units · Reorder at 4",      status: "In stock",  sc: C.em },
-        { name: "Braid Spray 250ml",        stock: "7 units · Reorder at 3",       status: "In stock",  sc: C.em },
+        { name: "Keratin Treatment 500ml", stock: "2 units left · Reorder at 3", status: "Low stock", sc: C.red },
+        { name: "Olaplex No. 3 100ml",     stock: "12 units · Reorder at 4",     status: "In stock",  sc: C.em },
+        { name: "Braid Spray 250ml",        stock: "7 units · Reorder at 3",      status: "In stock",  sc: C.em },
       ].map((p, i) => (
         <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.bg, borderRadius: 10, padding: "10px 14px", border: `1px solid ${C.border}`, marginBottom: 8 }}>
           <div>
@@ -492,9 +515,9 @@ const Index = () => {
           <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 700, color: C.gold }}>R 3 240</span>
         </div>
         {[
-          { name: "Amara Dube",    amount: "R 850 paid",     color: C.em },
-          { name: "Keitumetse M.", amount: "R 200 deposit",  color: C.gold },
-          { name: "Nandi Khumalo", amount: "R 1 200 pending",color: C.amber },
+          { name: "Amara Dube",    amount: "R 850 paid",      color: C.em },
+          { name: "Keitumetse M.", amount: "R 200 deposit",   color: C.gold },
+          { name: "Nandi Khumalo", amount: "R 1 200 pending", color: C.amber },
         ].map((p, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.muted, padding: "5px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
             <span>{p.name}</span>
@@ -530,17 +553,17 @@ const Index = () => {
 
   /* ── Comparison data ── */
   const compRows = [
-    { feature: "Online booking page",                   them: "✓",         us: "✓",                  usOnly: false },
-    { feature: "Basic dashboard & stats",               them: "✓",         us: "✓",                  usOnly: false },
-    { feature: "Revenue projection this month",         them: "—",         us: "✓",                  usOnly: true  },
-    { feature: "Goal-gradient: R X to beat last month", them: "—",         us: "✓",                  usOnly: true  },
-    { feature: "Proactive AI business insights",        them: "—",         us: "✓ Nexty AI",          usOnly: true  },
-    { feature: "Booking heatmap (demand by day/time)",  them: "—",         us: "✓",                  usOnly: true  },
-    { feature: "Inactive client alerts (90 days)",      them: "—",         us: "✓",                  usOnly: true  },
-    { feature: "Loyalty program with AI enrolment",     them: "Some tools",us: "✓ AI-suggested",     usOnly: true  },
-    { feature: "Lead source / acquisition tracking",    them: "—",         us: "✓",                  usOnly: true  },
-    { feature: "Stock alerts on dashboard",             them: "—",         us: "✓",                  usOnly: true  },
-    { feature: "Built for South African businesses",    them: "Rarely",    us: "✓ Yoco · ZAR · POPIA",usOnly: true },
+    { feature: "Online booking page",                   them: "✓",          us: "✓",                   usOnly: false },
+    { feature: "Basic dashboard & stats",               them: "✓",          us: "✓",                   usOnly: false },
+    { feature: "Revenue projection this month",         them: "—",          us: "✓",                   usOnly: true  },
+    { feature: "Goal-gradient: R X to beat last month", them: "—",          us: "✓",                   usOnly: true  },
+    { feature: "Proactive AI business insights",        them: "—",          us: "✓ Nexty AI",           usOnly: true  },
+    { feature: "Booking heatmap (demand by day/time)",  them: "—",          us: "✓",                   usOnly: true  },
+    { feature: "Inactive client alerts (90 days)",      them: "—",          us: "✓",                   usOnly: true  },
+    { feature: "Loyalty program with AI enrolment",     them: "Some tools", us: "✓ AI-suggested",      usOnly: true  },
+    { feature: "Lead source / acquisition tracking",    them: "—",          us: "✓",                   usOnly: true  },
+    { feature: "Stock alerts on dashboard",             them: "—",          us: "✓",                   usOnly: true  },
+    { feature: "Built for South African businesses",    them: "Rarely",     us: "✓ Yoco · ZAR · POPIA",usOnly: true  },
   ];
 
   /* ── Proof ticker items ── */
@@ -592,8 +615,8 @@ const Index = () => {
           scroll-snap-align: center;
           flex: 0 0 82vw;
           max-width: 320px;
-          background: ${C.s1};
-          border: 1px solid ${C.border2};
+          background: #111110;
+          border: 1px solid rgba(255,255,255,0.10);
           border-radius: 20px;
           padding: 24px;
           transform-origin: center center;
@@ -603,7 +626,7 @@ const Index = () => {
         }
         .feat-carousel-card.edge-left  { transform: rotateY(15deg);  box-shadow: -6px 0 20px rgba(0,0,0,0.4); }
         .feat-carousel-card.edge-right { transform: rotateY(-15deg); box-shadow:  6px 0 20px rgba(0,0,0,0.4); }
-        .feat-carousel-card.active-card { border-color: ${C.goldDim}; box-shadow: 0 0 0 1px ${C.goldDim}, 0 20px 40px rgba(0,0,0,0.5); }
+        .feat-carousel-card.active-card { border-color: #B8915F; box-shadow: 0 0 0 1px #B8915F, 0 20px 40px rgba(0,0,0,0.5); }
       `}</style>
 
       <SiteHeader />
@@ -661,7 +684,9 @@ const Index = () => {
               ref={containerRef}
               style={{
                 position: "relative",
-                width: isMobile ? "100%" : "100%",
+                width: "100%",
+                maxWidth: isMobile ? cardWorldW : "100%",
+                margin: isMobile ? "0 auto" : undefined,
                 height: cardWorldH,
                 perspective: 900,
                 userSelect: "none",
@@ -767,10 +792,10 @@ const Index = () => {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {[
-                  { label: "Bookings",     value: "7",       sub: "today",          color: C.text  },
-                  { label: "Revenue",      value: "R 1,950", sub: "paid in",        color: C.em    },
-                  { label: "Still to come",value: "4",       sub: "remaining",      color: C.text  },
-                  { label: "Next client",  value: "11:30",   sub: "Jess · Full Set",color: C.gold  },
+                  { label: "Bookings",      value: "7",       sub: "today",           color: C.text  },
+                  { label: "Revenue",       value: "R 1,950", sub: "paid in",         color: C.em    },
+                  { label: "Still to come", value: "4",       sub: "remaining",       color: C.text  },
+                  { label: "Next client",   value: "11:30",   sub: "Jess · Full Set", color: C.gold  },
                 ].map((t, i) => (
                   <div key={i} style={{ background: C.s1, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 16px" }}>
                     <div style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: C.faint, marginBottom: 6 }}>{t.label}</div>
@@ -799,10 +824,10 @@ const Index = () => {
             {/* Alert pills */}
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 12, marginBottom: 16 }}>
               {[
-                { label: "High cancellation rate",  sub: "22% this month, action needed",      color: C.red   },
-                { label: "Inactive clients",         sub: "9 clients gone quiet · 90+ days",    color: C.amber },
-                { label: "Overdue loyalty rewards",  sub: "5 clients due for a stamp / reward", color: C.blue  },
-                { label: "Birthdays this week",      sub: "Thandi · Naledi, send a WhatsApp",   color: C.gold  },
+                { label: "High cancellation rate", sub: "22% this month, action needed",       color: C.red   },
+                { label: "Inactive clients",        sub: "9 clients gone quiet · 90+ days",    color: C.amber },
+                { label: "Overdue loyalty rewards", sub: "5 clients due for a stamp / reward",  color: C.blue  },
+                { label: "Birthdays this week",     sub: "Thandi · Naledi, send a WhatsApp",    color: C.gold  },
               ].map((a, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: C.s2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px" }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
@@ -828,4 +853,11 @@ const Index = () => {
               If it's costing<br /><span style={{ color: C.gold }}>you money</span>, it should not be hiding.
             </h2>
             <p style={{ fontSize: 16, color: C.muted, maxWidth: 680, margin: "0 auto 48px", lineHeight: 1.7 }}>
-      
+              Stop hunting for problems. NextSlot surfaces the high-impact ones — ranked by rand value —
+              so every alert earns its place on your screen.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 16, textAlign: "left" }}>
+              {[
+                { type: "critical"  as const, badge: "Critical · Cancellations up 22%",   message: "You lost R 3,480 to cancellations this month. Introduce a 30% deposit to protect revenue. One setting change, instant effect.",                              action: "Enable deposits",  delay: 0   },
+                { type: "growth"    as const, badge: "Growth · 14 open slots Thursday",    message: "Thursday afternoons are your emptiest window. At your current basket, filling 6 of those slots would add R 3,480 to this month's total.",                       action: "View heatmap",    delay: 0.1 },
+                { type: "retention" as const, badge: "Retention · 9 clients gone quiet",   message: "9 clients haven't booked in 90+ days. A personalised WhatsApp to each one — sent from
