@@ -38,8 +38,8 @@
 
     --glass-bg: 0 0% 98%;
     --glass-border: 0 0% 80%;
-    --glass-highlight: 0 0% 70%;
-    --glass-shimmer: 0 0% 85%;
+    --glass-highlight: 0 0% 100%;
+    --glass-shimmer: 0 0% 100%;
 
     --sidebar-background: 0 0% 97%;
     --sidebar-foreground: 0 0% 10%;
@@ -89,8 +89,8 @@
 
     --glass-bg: 0 0% 12%;
     --glass-border: 0 0% 22%;
-    --glass-highlight: 0 0% 40%;
-    --glass-shimmer: 0 0% 50%;
+    --glass-highlight: 0 0% 60%;
+    --glass-shimmer: 0 0% 70%;
 
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 95%;
@@ -209,17 +209,21 @@ html:not(.dark) .tenant-logo-img {
     overflow: hidden;
     background: linear-gradient(
       145deg,
-      hsl(var(--glass-bg) / 0.6),
-      hsl(var(--glass-bg) / 0.25)
+      hsl(var(--glass-bg) / 0.12),
+      hsl(var(--glass-bg) / 0.06)
     );
-    backdrop-filter: blur(50px) saturate(2) brightness(1.05);
-    -webkit-backdrop-filter: blur(50px) saturate(2) brightness(1.05);
-    border: 1px solid hsl(var(--glass-border) / 0.2);
+    backdrop-filter: blur(72px) saturate(2.2) brightness(1.08);
+    -webkit-backdrop-filter: blur(72px) saturate(2.2) brightness(1.08);
+    border: 1px solid transparent;
+    background-clip: padding-box;
     box-shadow:
-      0 8px 40px hsl(0 0% 0% / 0.25),
-      0 1px 0 hsl(var(--glass-highlight) / 0.15) inset,
-      0 -1px 0 hsl(0 0% 0% / 0.1) inset,
-      0 0 0 0.5px hsl(var(--glass-highlight) / 0.08) inset;
+      0 8px 40px hsl(0 0% 0% / 0.18),
+      0 2px 8px hsl(0 0% 0% / 0.08),
+      0 1px 0 hsl(var(--glass-highlight) / 0.55) inset,
+      1px 0 0 hsl(var(--glass-highlight) / 0.25) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.18) inset,
+      -1px 0 0 hsl(0 0% 0% / 0.08) inset,
+      0 0 0 0.5px hsl(var(--glass-highlight) / 0.2);
   }
 
   .glass-card::before {
@@ -228,13 +232,14 @@ html:not(.dark) .tenant-logo-img {
     top: 0;
     left: 0;
     right: 0;
-    height: 1px;
+    height: 1.5px;
     background: linear-gradient(
       90deg,
-      transparent 5%,
-      hsl(var(--glass-shimmer) / 0.4),
-      hsl(var(--glass-shimmer) / 0.15),
-      transparent 95%
+      transparent 2%,
+      hsl(var(--glass-shimmer) / 0.75) 30%,
+      hsl(0 0% 100% / 0.9) 50%,
+      hsl(var(--glass-shimmer) / 0.75) 70%,
+      transparent 98%
     );
     pointer-events: none;
   }
@@ -242,14 +247,15 @@ html:not(.dark) .tenant-logo-img {
   .glass-card::after {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
+    top: -30%;
+    left: -20%;
+    width: 160%;
+    height: 120%;
     background: radial-gradient(
-      ellipse at 30% 20%,
-      hsl(var(--glass-highlight) / 0.06),
-      transparent 50%
+      ellipse at 35% 25%,
+      hsl(0 0% 100% / 0.09),
+      hsl(0 0% 100% / 0.03) 40%,
+      transparent 65%
     );
     pointer-events: none;
   }
@@ -260,17 +266,19 @@ html:not(.dark) .tenant-logo-img {
     overflow: hidden;
     background: linear-gradient(
       145deg,
-      hsl(var(--glass-bg) / 0.55),
-      hsl(var(--glass-bg) / 0.25)
+      hsl(var(--glass-bg) / 0.10),
+      hsl(var(--glass-bg) / 0.04)
     );
-    border: 1px solid hsl(var(--glass-border) / 0.15);
-    backdrop-filter: blur(30px) saturate(1.8) brightness(1.03);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8) brightness(1.03);
+    border: 1px solid hsl(var(--glass-border) / 0.08);
+    backdrop-filter: blur(48px) saturate(2.0) brightness(1.06);
+    -webkit-backdrop-filter: blur(48px) saturate(2.0) brightness(1.06);
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow:
-      0 2px 12px hsl(0 0% 0% / 0.12),
-      0 1px 0 hsl(var(--glass-highlight) / 0.1) inset,
-      0 0 0 0.5px hsl(var(--glass-highlight) / 0.05) inset;
+      0 2px 16px hsl(0 0% 0% / 0.10),
+      0 1px 0 hsl(var(--glass-highlight) / 0.45) inset,
+      1px 0 0 hsl(var(--glass-highlight) / 0.15) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.12) inset,
+      0 0 0 0.5px hsl(var(--glass-highlight) / 0.12);
   }
 
   .glass-card-service::before {
@@ -282,24 +290,28 @@ html:not(.dark) .tenant-logo-img {
     height: 1px;
     background: linear-gradient(
       90deg,
-      transparent 10%,
-      hsl(var(--glass-shimmer) / 0.25),
-      transparent 90%
+      transparent 5%,
+      hsl(var(--glass-shimmer) / 0.55) 40%,
+      hsl(0 0% 100% / 0.70) 50%,
+      hsl(var(--glass-shimmer) / 0.55) 60%,
+      transparent 95%
     );
     pointer-events: none;
   }
 
   .glass-card-service:hover {
-    border-color: hsl(var(--glass-highlight) / 0.25);
+    border-color: hsl(var(--glass-highlight) / 0.18);
     background: linear-gradient(
       145deg,
-      hsl(var(--glass-bg) / 0.7),
-      hsl(var(--glass-bg) / 0.4)
+      hsl(var(--glass-bg) / 0.16),
+      hsl(var(--glass-bg) / 0.08)
     );
     box-shadow:
-      0 4px 20px hsl(0 0% 0% / 0.18),
-      0 1px 0 hsl(var(--glass-highlight) / 0.15) inset,
-      0 0 0 0.5px hsl(var(--glass-highlight) / 0.08) inset;
+      0 6px 28px hsl(0 0% 0% / 0.14),
+      0 1px 0 hsl(var(--glass-highlight) / 0.55) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.14) inset,
+      0 0 0 0.5px hsl(var(--glass-highlight) / 0.18);
+    transform: translateY(-2px);
   }
 
   .glass-card-service.selected {
