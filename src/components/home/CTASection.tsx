@@ -3,6 +3,9 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 
+const CTA_BG     = "radial-gradient(circle at 30% 26%, rgba(255,242,185,0.92) 0%, transparent 36%), radial-gradient(circle at 50% 50%, #D4A574 0%, #B8915F 48%, #7a4200 100%)";
+const CTA_SHADOW = "inset -3px -5px 12px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(255,235,160,0.22), 0 8px 32px rgba(184,145,95,0.7), 0 2px 10px rgba(0,0,0,0.65)";
+
 export const CTASection = () => {
   const width    = useWindowWidth();
   const isMobile = width < BP;
@@ -26,13 +29,14 @@ export const CTASection = () => {
           <Link
             to="/onboarding"
             style={{
-              background: C.gold, color: "#080808",
+              background: CTA_BG,
+              boxShadow: CTA_SHADOW,
+              color: "#080808",
               fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700,
               padding: "16px 36px", borderRadius: 12,
               textDecoration: "none",
               display: "inline-flex", alignItems: "center", gap: 8,
               minHeight: 52,
-              boxShadow: "0 8px 32px rgba(212,165,116,0.3)",
             }}
           >
             Start your free trial

@@ -23,7 +23,7 @@ export const Orb = ({ scale = 1 }: { scale?: number }) => {
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         <div style={{ position: "absolute", width: s(22), height: s(13), background: "radial-gradient(ellipse, rgba(255,255,255,0.52) 0%, transparent 72%)", top: s(13), left: s(15), borderRadius: "50%", transform: "rotate(-22deg)" }} />
-        <span style={{ fontFamily: FONT_DISPLAY, fontSize: s(9), color: "rgba(8,8,8,0.75)", letterSpacing: "0.04em", position: "relative", zIndex: 1 }}>nexty</span>
+        <span style={{ fontFamily: FONT_DISPLAY, fontSize: s(9), color: "#080808", letterSpacing: "0.04em", position: "relative", zIndex: 1 }}>nexty</span>
       </div>
       {[
         { anim: `dotOrbitA 2.8s linear infinite`,       tx: s(93) },
