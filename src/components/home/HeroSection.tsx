@@ -22,7 +22,7 @@ export const HeroSection = () => {
         { id: 1, x: cw - 128,    y: 14,  z: 2, vx: -0.11, vy:  0.13, label: "Month progress",    value: "82%",     sub: "R 4,160 to beat last month", color: C.em,    width: 120 },
         { id: 2, x: 10,          y: 230, z: 2, vx:  0.10, vy: -0.14, label: "Cancellation rate", value: "22%",     sub: "Introduce a 30% deposit",   color: C.red,   width: 118 },
         { id: 3, x: cw - 126,    y: 224, z: 2, vx: -0.12, vy: -0.11, label: "Open slots",        value: "14",      sub: "Filling 6 adds R 3,480",    color: C.blue,  width: 118 },
-        { id: 4, x: cw / 2 - 60, y: 320, z: 2, vx:  0.08, vy:  0.12, label: "Retention",         value: "38%",     sub: "Enrol 12 \u2192 hit 40%",        color: C.amber, width: 120 },
+        { id: 4, x: cw / 2 - 60, y: 320, z: 2, vx:  0.08, vy:  0.12, label: "Retention",         value: "38%",     sub: "Enrol 12 → hit 40%",        color: C.amber, width: 120 },
       ];
     }
     return [
@@ -30,7 +30,7 @@ export const HeroSection = () => {
       { id: 1, x: 260, y: 20,  z: 2, vx: -0.14, vy:  0.16, label: "Month progress",    value: "82%",      sub: "R 4,160 to beat last month",     color: C.em,    width: 154 },
       { id: 2, x: 48,  y: 250, z: 2, vx:  0.12, vy: -0.18, label: "Cancellation rate", value: "22%",      sub: "Introduce a 30% deposit",        color: C.red,   width: 160 },
       { id: 3, x: 270, y: 230, z: 2, vx: -0.16, vy: -0.13, label: "Open slots · Thu",  value: "14",       sub: "Filling 6 adds R 3,480",         color: C.blue,  width: 156 },
-      { id: 4, x: 140, y: 370, z: 2, vx:  0.10, vy:  0.15, label: "Retention",         value: "38%",      sub: "Enrol 12 regulars \u2192 hit 40%",    color: C.amber, width: 158 },
+      { id: 4, x: 140, y: 370, z: 2, vx:  0.10, vy:  0.15, label: "Retention",         value: "38%",      sub: "Enrol 12 regulars → hit 40%",    color: C.amber, width: 158 },
     ];
   }, []);
 
@@ -79,7 +79,7 @@ export const HeroSection = () => {
         background: C.bg,
       }}
     >
-      {/* Hero background image */}
+      {/* Background image */}
       <div style={{
         position:           "absolute",
         inset:              0,
@@ -121,18 +121,19 @@ export const HeroSection = () => {
         gap: isMobile ? 32 : 64,
         alignItems: "center",
         width: "100%", maxWidth: 1120, margin: "0 auto",
-        padding: isMobile ? "100px 24px 48px" : "100px 24px 48px",
+        padding: isMobile ? "100px 24px 48px" : "100px 40px 48px",
       }}>
         {/* Copy */}
         <div>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 8,
             background: "rgba(212,165,116,0.08)",
-            border: `1px solid rgba(212,165,116,0.2)`,
+            border: "1px solid rgba(212,165,116,0.2)",
             borderRadius: 100, padding: "5px 14px",
             fontSize: 11, fontWeight: 600, color: C.gold,
             letterSpacing: "0.08em", textTransform: "uppercase",
             marginBottom: 28, animation: "fadeUp 0.6s ease both",
+            fontFamily: FONT_BODY,
           } as React.CSSProperties}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block", animation: "pulseDot 2s ease-in-out infinite" }} />
             AI-Powered · For Beauty Pros
@@ -156,6 +157,7 @@ export const HeroSection = () => {
             lineHeight: 1.75, marginBottom: 36,
             maxWidth: 460,
             animation: "fadeUp 0.6s 0.2s ease both",
+            fontFamily: FONT_BODY,
           } as React.CSSProperties}>
             Most platforms show you what&apos;s happened. NextSlot tells you what&apos;s happening.
             With proactive insights, real-time revenue intelligence, and alerts that surface
@@ -184,7 +186,7 @@ export const HeroSection = () => {
                 minHeight: 48, display: "inline-flex", alignItems: "center", gap: 6,
               }}
             >
-              See how it works \u2197
+              See how it works ↗
             </a>
           </div>
 
@@ -192,6 +194,7 @@ export const HeroSection = () => {
             marginTop: 22, fontSize: 11, color: C.faint,
             letterSpacing: "0.04em", fontWeight: 500,
             animation: "fadeUp 0.6s 0.4s ease both",
+            fontFamily: FONT_BODY,
           } as React.CSSProperties}>
             No Payment Required · 30-day trial · Set up in under 10 minutes
           </p>

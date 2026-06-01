@@ -39,7 +39,7 @@ export const RevenueSection = () => {
           }}>
             Not a report card.<br /><span style={{ color: C.gold }}>A running coach.</span>
           </h2>
-          <p style={{ fontSize: 16, color: C.muted, maxWidth: 560, margin: "0 auto", lineHeight: 1.7 }}>
+          <p style={{ fontSize: 16, color: C.muted, maxWidth: 560, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
             NextSlot doesn&apos;t just show you revenue, it contextualises every number, projects your month-end,
             and tells you exactly how far you are from beating last month.
           </p>
@@ -64,7 +64,12 @@ export const RevenueSection = () => {
             <div style={{ paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 12, color: C.gold, marginBottom: 6 }}>R 4,160 to beat last month · 82% there</div>
               <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-                <div style={{ height: "100%", background: C.em, borderRadius: 99, width: 0, animation: "fillBar 2s 0.5s ease forwards" }} />
+                <div style={{
+                  height: "100%", background: C.em, borderRadius: 99,
+                  width: 0,
+                  animation: "fillBar 2s 0.5s ease forwards",
+                  "--bar-w": "82%",
+                } as React.CSSProperties} />
               </div>
             </div>
           </div>
@@ -123,10 +128,10 @@ export const RevenueSection = () => {
         {/* Alert pills */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 12, marginBottom: 16 }}>
           {[
-            { label: "High cancellation rate", sub: "22% this month, action needed",       color: C.red   },
-            { label: "Inactive clients",        sub: "9 clients gone quiet · 90+ days",    color: C.amber },
-            { label: "Overdue loyalty rewards", sub: "5 clients due for a stamp / reward",  color: C.blue  },
-            { label: "Birthdays this week",     sub: "Thandi · Naledi, send a WhatsApp",    color: C.gold  },
+            { label: "High cancellation rate", sub: "22% this month, action needed",      color: C.red   },
+            { label: "Inactive clients",        sub: "9 clients gone quiet · 90+ days",   color: C.amber },
+            { label: "Overdue loyalty rewards", sub: "5 clients due for a stamp / reward", color: C.blue  },
+            { label: "Birthdays this week",     sub: "Thandi · Naledi, send a WhatsApp",   color: C.gold  },
           ].map((a, i) => (
             <div key={i} style={{
               display: "flex", alignItems: "center", gap: 10,

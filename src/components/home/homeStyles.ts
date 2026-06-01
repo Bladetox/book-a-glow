@@ -17,6 +17,13 @@ export const HOME_STYLES = `
   @keyframes countUp       { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
   @keyframes shimmer       { 0%{background-position:-200% 0;} 100%{background-position:200% 0;} }
 
+  /* Nexty AI section orb */
+  @keyframes orbBgPulse    { 0%,100%{opacity:.6;transform:scale(1);}     50%{opacity:1;transform:scale(1.1);} }
+  @keyframes nextyOrbit    { to{transform:rotate(360deg);}  }
+  @keyframes nextyOrbitR   { to{transform:rotate(-360deg);} }
+  @keyframes nextyDot1     { from{transform:rotate(0deg)   translateX(84px) rotate(0deg);}   to{transform:rotate(360deg)  translateX(84px) rotate(-360deg);}  }
+  @keyframes nextyDot2     { from{transform:rotate(180deg) translateX(66px) rotate(-180deg);} to{transform:rotate(540deg)  translateX(66px) rotate(-540deg);}  }
+
   .feat-carousel {
     display: flex;
     overflow-x: auto;

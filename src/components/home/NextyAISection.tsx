@@ -17,7 +17,7 @@ export const NextyAISection = () => {
     >
       <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <Eyebrow text="Nexty AI \u00b7 Business Growth Advisor" />
+          <Eyebrow text="Nexty AI · Business Growth Advisor" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)",
@@ -26,7 +26,7 @@ export const NextyAISection = () => {
           }}>
             More personalised than<br /><span style={{ color: C.gold }}>most advisors.</span>
           </h2>
-          <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7 }}>
+          <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
             Nexty is always learning your business: your peak times, your riskiest clients, your
             biggest opportunities. So when she speaks, it&apos;s not generic advice. It&apos;s yours.
           </p>
@@ -46,6 +46,7 @@ export const NextyAISection = () => {
             height: isMobile ? 260 : 340,
             flexShrink: 0,
           }}>
+            {/* Pulse glow */}
             <div style={{
               position: "absolute",
               width: isMobile ? 200 : 280, height: isMobile ? 200 : 280,
@@ -53,6 +54,7 @@ export const NextyAISection = () => {
               background: "radial-gradient(circle,rgba(212,165,116,0.12) 0%,transparent 65%)",
               animation: "orbBgPulse 3.5s ease-in-out infinite",
             }} />
+            {/* Outer spinning ring */}
             <div style={{
               position: "absolute",
               width: isMobile ? 140 : 200, height: isMobile ? 140 : 200,
@@ -65,6 +67,7 @@ export const NextyAISection = () => {
               animation: "nextyOrbit 2.4s linear infinite",
               filter: "drop-shadow(0 0 6px rgba(212,165,116,0.5))",
             }} />
+            {/* Inner counter-spinning ring */}
             <div style={{
               position: "absolute",
               width: isMobile ? 110 : 160, height: isMobile ? 110 : 160,
@@ -73,6 +76,7 @@ export const NextyAISection = () => {
               borderTopColor: "rgba(212,165,116,0.5)",
               animation: "nextyOrbitR 3.8s linear infinite",
             }} />
+            {/* Core orb */}
             <div style={{
               position: "relative",
               width: isMobile ? 70 : 100, height: isMobile ? 70 : 100,
@@ -84,21 +88,17 @@ export const NextyAISection = () => {
             }}>
               <span style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 8 : 11, color: "rgba(8,8,8,0.75)", letterSpacing: "0.04em" }}>nexty</span>
             </div>
-            {[{ anim: "nextyDot1 2.4s linear infinite" }, { anim: "nextyDot2 3.8s linear infinite reverse" }].map((d, i) => (
-              <div key={i} style={{
-                position: "absolute", width: 8, height: 8, borderRadius: "50%",
-                background: C.gold, boxShadow: "0 0 10px rgba(212,165,116,0.8)",
-                animation: d.anim,
-              }} />
-            ))}
+            {/* Orbiting dots */}
+            <div style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: C.gold, boxShadow: "0 0 10px rgba(212,165,116,0.8)", animation: "nextyDot1 2.4s linear infinite" }} />
+            <div style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: C.gold, boxShadow: "0 0 10px rgba(212,165,116,0.8)", animation: "nextyDot2 3.8s linear infinite" }} />
           </div>
 
           {/* Speech bubbles */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{
-              fontSize: 11, color: C.faint, marginBottom: 4,
+              fontSize: 11, color: C.faint,
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              fontFamily: FONT_BODY,
+              fontFamily: FONT_BODY, marginBottom: 4,
             }}>
               <span style={{ fontWeight: 600, color: C.gold, fontSize: 12 }}>Nexty AI</span>
               <span style={{ fontSize: 10 }}>Updated just now · 4 insights</span>
