@@ -761,14 +761,6 @@ const Index = () => {
               zIndex:             0,
               pointerEvents:      "none",
             }} />
-            {/* Dark overlay to preserve text contrast */}
-            <div style={{
-              position:        "absolute",
-              inset:           0,
-              background:      "linear-gradient(135deg, rgba(8,8,8,0.72) 0%, rgba(8,8,8,0.55) 50%, rgba(8,8,8,0.72) 100%)",
-              zIndex:          1,
-              pointerEvents:   "none",
-            }} />
           <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`, backgroundSize: "44px 44px", WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)", maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)" } as React.CSSProperties} />
           <div style={{ position: "absolute", width: 640, height: 640, borderRadius: "50%", background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)", top: "50%", left: "50%", animation: "heroBreathe 7s ease-in-out infinite", pointerEvents: "none" }} />
 
