@@ -23,16 +23,15 @@ interface ReviewStepProps {
 
 type PaymentChoice = "deposit" | "full";
 
-// ── Step labels shown inside the button while processing ──────────────────────
 type SubmitPhase =
   | "idle"
-  | "creating"   // RPC: create_booking_with_consultation
-  | "gateway";   // Edge function: yoco-checkout
+  | "creating"
+  | "gateway";
 
 function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: PaymentChoice): string {
   switch (phase) {
-    case "creating": return "Creating your booking…";
-    case "gateway":  return "Opening payment gateway…";
+    case "creating": return "Creating your booking\u2026";
+    case "gateway":  return "Opening payment gateway\u2026";
     default:
       return choice === "full"
         ? `Confirm & Pay ${cur}${amount}`
@@ -57,6 +56,22 @@ function friendlyBookingError(err: any): string {
   return "Something went wrong while placing your booking. Please try again or contact us directly.";
 }
 
+// ── Redirect helper: builds a hidden-field form and submits it to PayFast ────
+function redirectToPayfast(payfastUrl: string, fields: Record<string, string>) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = payfastUrl;
+  Object.entries(fields).forEach(([key, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = value;
+    form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  form.submit();
+}
+
 const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
@@ -71,15 +86,29 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
   const [showPairWith, setShowPairWith] = useState(false);
 
-  // Track the booking ID created during this session so we never create twice.
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
-  // ── Show the pair-with sheet once on mount ──
+  // ── Cache tenant's PayFast mode so we know which gateway to use ──────────
+  const [payfastMode, setPayfastMode] = useState<"live" | "sandbox" | null>(null);
+  useEffect(() => {
+    if (!tenantId) return;
+    supabase
+      .from("app_settings")
+      .select("value")
+      .eq("tenant_id", tenantId)
+      .eq("key", "payfast_mode")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value === "live" || data?.value === "sandbox") {
+          setPayfastMode(data.value as "live" | "sandbox");
+        }
+      });
+  }, [tenantId]);
+
   useEffect(() => {
     setShowPairWith(true);
   }, []);
 
-  // ── Build deduplicated add-on list across all selected services ──
   const pairWithAddons = useMemo(() => {
     if (!addonsConfig || !allServices.length) return [];
     const selectedSet = new Set(booking.selectedTreatments);
@@ -98,7 +127,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
   const hasPairWith = pairWithAddons.length > 0;
 
-  // ── Helpers to read / mutate add-on quantities in selectedTreatments ──
   const getAddonQty = (id: string) =>
     booking.selectedTreatments.filter((t) => t === id).length;
 
@@ -157,7 +185,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         return;
       }
 
-      // ── If a booking was already created but payment failed, skip re-creating ──
       let bookingId = pendingBookingId;
 
       if (!bookingId) {
@@ -216,7 +243,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         if (result && !result.success) throw new Error(result.message);
 
         bookingId = result?.booking_id ?? null;
-        // Store so retries skip the RPC and go straight to payment
         if (bookingId) setPendingBookingId(bookingId);
       }
 
@@ -224,7 +250,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         const serviceNames = selectedWithQty
-          .map(({ svc, qty }) => (qty > 1 ? `${qty}× ${svc.name}` : svc.name))
+          .map(({ svc, qty }) => (qty > 1 ? `${qty}\u00d7 ${svc.name}` : svc.name))
           .join(", ");
         const totalDuration = selectedWithQty.reduce((s, { svc, qty }) => s + svc.duration * qty, 0);
 
@@ -249,20 +275,51 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           }),
         }).catch((gcalErr) => console.error("GCal create failed:", gcalErr));
 
-        // ── Switch label to "Opening payment gateway…" before the Yoco call ──
         setPhase("gateway");
 
         const origin = window.location.origin;
         const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
-        const cancelUrl = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
-        // ── Raised from 10 s → 30 s to survive Edge Function cold-starts ──
+        // ── PayFast path ────────────────────────────────────────────────────
+        if (payfastMode === "live" || payfastMode === "sandbox") {
+          const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
+          const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
+
+          const checkoutTimeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Payment gateway took too long — please try again.")), 30_000)
+          );
+
+          const { data: checkoutData, error: checkoutErr } = await Promise.race([
+            supabase.functions.invoke("payfast-create-checkout", {
+              body: {
+                booking_id: bookingId,
+                tenant_id: tenantId,
+                success_url: successUrl,
+                cancel_url: cancelUrl,
+                payment_type: paymentChoice,
+                client_name: booking.fullName ?? "",
+                client_email: booking.email ?? "",
+              },
+            }),
+            checkoutTimeout,
+          ]);
+
+          if (checkoutErr) throw checkoutErr;
+          if (checkoutData?.payfast_url && checkoutData?.fields) {
+            await releaseHold();
+            redirectToPayfast(checkoutData.payfast_url, checkoutData.fields);
+            return;
+          } else {
+            throw new Error("PayFast did not return a checkout payload. Please try again.");
+          }
+        }
+
+        // ── Yoco path (existing) ─────────────────────────────────────────────
+        const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
+        const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
+
         const checkoutTimeout = new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Payment gateway took too long — please try again.")),
-            30_000
-          )
+          setTimeout(() => reject(new Error("Payment gateway took too long — please try again.")), 30_000)
         );
 
         const { data: checkoutData, error: checkoutErr } = await Promise.race([
@@ -302,7 +359,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         queryClient.invalidateQueries({ queryKey: ["public-date-slots"] });
         queryClient.invalidateQueries({ queryKey: ["public-month-availability"] });
         onUpdate({ selectedDate: null, selectedTime: null });
-        // Clear the pending booking ID so a new slot triggers a fresh RPC
         setPendingBookingId(null);
         toast.error("That time slot was just taken. Please pick a new time.");
         onGoToStep(1);
@@ -331,8 +387,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           <button type="button" disabled={submitting} onClick={() => onGoToStep(1)}
             className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none">Edit</button>
         </div>
-        <span className="text-sm text-foreground">{booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "—"}</span>
-        <span className="text-sm text-muted-foreground">{booking.selectedTime || "—"}</span>
+        <span className="text-sm text-foreground">{booking.selectedDate ? format(booking.selectedDate, "EEEE, d MMMM yyyy") : "\u2014"}</span>
+        <span className="text-sm text-muted-foreground">{booking.selectedTime || "\u2014"}</span>
       </motion.div>
 
       {/* Contact */}
@@ -343,9 +399,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           <button type="button" disabled={submitting} onClick={() => onGoToStep(2)}
             className="text-xs underline opacity-60 hover:opacity-100 transition-opacity disabled:pointer-events-none">Edit</button>
         </div>
-        <span className="text-sm text-foreground">{booking.fullName || "—"}</span>
+        <span className="text-sm text-foreground">{booking.fullName || "\u2014"}</span>
         <span className="text-sm text-muted-foreground">{booking.phoneCode} {booking.phone}</span>
-        <span className="text-sm text-muted-foreground">{booking.email || "—"}</span>
+        <span className="text-sm text-muted-foreground">{booking.email || "\u2014"}</span>
         {booking.address && (
           <span className="text-sm text-muted-foreground">{booking.address}</span>
         )}
@@ -371,7 +427,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         {selectedWithQty.map(({ svc, qty }) => (
           <div key={svc.id} className="flex items-baseline justify-between py-1.5">
             <span className="text-sm text-foreground">
-              {qty > 1 && <span className="text-xs font-bold text-primary mr-1">{qty}×</span>}
+              {qty > 1 && <span className="text-xs font-bold text-primary mr-1">{qty}\u00d7</span>}
               {svc.name}
             </span>
             <span className="text-sm font-semibold text-foreground ml-4">{cur}{svc.price * qty}</span>
@@ -409,7 +465,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               <CreditCard className="w-4 h-4 mb-1.5 opacity-70" />
               <span className="text-xs font-semibold">Deposit only</span>
               <span className="text-sm font-bold mt-0.5">{cur}{deposit}</span>
-              <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now • {cur}{balance} on the day</span>
+              <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now \u2022 {cur}{balance} on the day</span>
             </button>
           )}
           <button type="button" onClick={() => setPaymentChoice("full")}
@@ -454,11 +510,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         </motion.button>
       </motion.div>
 
-      {/* ── Pair your services with — full-height mobile bottom sheet ── */}
+      {/* Pair your services with — bottom sheet */}
       <AnimatePresence>
         {showPairWith && hasPairWith && (
           <>
-            {/* Backdrop */}
             <motion.div
               key="pair-backdrop"
               className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
@@ -469,7 +524,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               onClick={() => setShowPairWith(false)}
             />
 
-            {/* Sheet */}
             <motion.div
               key="pair-sheet"
               className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
@@ -479,10 +533,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 38 }}
             >
-              {/* Drag handle */}
               <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
 
-              {/* Header */}
               <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
                 <div className="flex-1 min-w-0 pr-3">
                   <div className="flex items-center gap-2 mb-1">
@@ -504,7 +556,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                 </button>
               </div>
 
-              {/* Scrollable add-on list */}
               <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3 scrollbar-hide">
                 {pairWithAddons.map((a) => {
                   const qty = getAddonQty(a.id);
@@ -515,7 +566,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                         qty > 0 ? "border-primary/40 bg-primary/8" : "border-border bg-muted/30"
                       }`}
                     >
-                      {/* Service info */}
                       <div className="flex-1 min-w-0">
                         <span className="block text-sm font-semibold text-foreground leading-snug">
                           {a.name}
@@ -532,12 +582,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                         )}
                       </div>
 
-                      {/* Price */}
                       <span className="shrink-0 text-sm font-bold text-foreground">
                         {cur}{a.price * (qty || 1)}
                       </span>
 
-                      {/* Quantity stepper: shows plain + when qty=0, − count + when qty>0 */}
                       {qty === 0 ? (
                         <motion.button
                           whileTap={{ scale: 0.85 }}
@@ -575,7 +623,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
                 })}
               </div>
 
-              {/* Done button — pinned to bottom, respects iOS safe area */}
               <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
                 <motion.button
                   whileTap={{ scale: 0.97 }}

@@ -327,6 +327,255 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PayfastCard
+// Mirrors YocoCard's structure: masked credentials, Edit/Save, mode badge.
+// Stores payfast_merchant_id, payfast_merchant_key, payfast_passphrase,
+// and payfast_mode ('live' | 'sandbox') in app_settings.
+// ─────────────────────────────────────────────────────────────────────────────
+interface PayfastCardProps {
+  settings: Record<string, string>;
+  onSaved: () => void;
+}
+
+const PayfastCard = ({ settings, onSaved }: PayfastCardProps) => {
+  const payfastMode = (settings.payfast_mode as "live" | "sandbox" | undefined) ?? null;
+  const anyConfigured = !!settings.payfast_merchant_id || !!settings.payfast_merchant_key;
+
+  const [draft, setDraft] = useState({
+    merchant_id: "",
+    merchant_key: "",
+    passphrase: "",
+    mode: payfastMode ?? "sandbox",
+  });
+  const [editing, setEditing] = useState(!anyConfigured);
+  const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  // Sync mode dropdown default when settings load async
+  useEffect(() => {
+    if (payfastMode && draft.mode !== payfastMode) {
+      setDraft((p) => ({ ...p, mode: payfastMode }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payfastMode]);
+
+  const handleChange = (key: string, value: string) =>
+    setDraft((p) => ({ ...p, [key]: value }));
+
+  const handleSave = async () => {
+    if (!draft.merchant_id || draft.merchant_id === MASK) {
+      toast.error("Merchant ID is required.");
+      return;
+    }
+    if (!draft.merchant_key || draft.merchant_key === MASK) {
+      toast.error("Merchant Key is required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Not authenticated — please refresh.");
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/save-payfast-keys`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          merchant_id: draft.merchant_id,
+          merchant_key: draft.merchant_key,
+          passphrase: draft.passphrase,
+          mode: draft.mode,
+        }),
+      });
+      const result = await res.json();
+      if (!result.success) throw new Error(result.error ?? "Save failed");
+      toast.success("PayFast credentials saved.");
+      onSaved();
+      setEditing(false);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save PayFast credentials.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const ModeBadge = ({ size = "md" }: { size?: "sm" | "md" }) => {
+    if (!anyConfigured) return null;
+    const base = size === "sm"
+      ? "flex items-center gap-1 text-[9px] font-bold rounded-full px-2 py-0.5"
+      : "flex items-center gap-1.5 text-[10px] font-bold rounded-full px-2.5 py-1";
+    const iconSize = size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
+    if (payfastMode === "sandbox") {
+      return (
+        <span className={`${base} text-amber-400/90 bg-amber-400/10 border border-amber-400/20`}>
+          <FlaskConical className={iconSize} /> Sandbox Mode
+        </span>
+      );
+    }
+    return (
+      <span className={`${base} text-emerald-400/90 bg-emerald-400/10 border border-emerald-400/20`}>
+        <CheckCircle2 className={iconSize} /> Live Mode
+      </span>
+    );
+  };
+
+  const accentBorder = !anyConfigured
+    ? "border-l-2 border-l-amber-400/30"
+    : payfastMode === "sandbox"
+      ? "border-l-2 border-l-amber-400/50"
+      : "border-l-2 border-l-emerald-400/40";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between p-5 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+            <CreditCard className="w-4 h-4 text-white/40" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white/80">PayFast Payments</h4>
+            <p className="text-[10px] text-white/30 mt-0.5 font-medium">
+              South African card & EFT checkout
+            </p>
+            {!anyConfigured && (
+              <p className="text-[10px] text-amber-400/60 mt-1 font-medium">
+                Add your PayFast credentials to enable online payments
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {anyConfigured && <ModeBadge size="sm" />}
+          {!anyConfigured && <AdminTag label="Not configured" color="default" />}
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className="w-4 h-4 text-white/25" />
+          </motion.div>
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/[0.04]">
+              {anyConfigured && (
+                <div className="flex items-center gap-2 px-5 pt-4">
+                  <ModeBadge />
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 px-5 pt-5">
+                {/* Mode selector */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
+                    Mode
+                  </label>
+                  <select
+                    disabled={!editing}
+                    value={draft.mode}
+                    onChange={(e) => setDraft((p) => ({ ...p, mode: e.target.value as "live" | "sandbox" }))}
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white/80 focus:outline-none focus:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <option value="sandbox">Sandbox (testing)</option>
+                    <option value="live">Live (real payments)</option>
+                  </select>
+                </div>
+
+                <Field
+                  label="Merchant ID"
+                  fieldKey="merchant_id"
+                  placeholder="10000100"
+                  value={editing ? draft.merchant_id : (anyConfigured ? (settings.payfast_merchant_id ?? "") : "")}
+                  masked={anyConfigured && !editing}
+                  editing={editing}
+                  onChange={(_, v) => setDraft((p) => ({ ...p, merchant_id: v }))}
+                  hint="From PayFast dashboard → Settings → Merchant Details"
+                  tooltip="Log in to PayFast, go to Settings then Merchant Details to find your Merchant ID."
+                />
+
+                <Field
+                  label="Merchant Key"
+                  fieldKey="merchant_key"
+                  placeholder="q1cd2rdny4a53"
+                  type="password"
+                  value={editing ? draft.merchant_key : (anyConfigured ? (settings.payfast_merchant_key ?? "") : "")}
+                  masked={anyConfigured && !editing}
+                  editing={editing}
+                  onChange={(_, v) => setDraft((p) => ({ ...p, merchant_key: v }))}
+                  hint="From PayFast dashboard → Settings → Merchant Details"
+                  tooltip="Located next to your Merchant ID. Treat this like a password."
+                />
+
+                <Field
+                  label="Passphrase (optional but recommended)"
+                  fieldKey="passphrase"
+                  placeholder="My secret passphrase"
+                  type="password"
+                  value={editing ? draft.passphrase : (settings.payfast_passphrase ? MASK : "")}
+                  masked={!!settings.payfast_passphrase && !editing}
+                  editing={editing}
+                  onChange={(_, v) => setDraft((p) => ({ ...p, passphrase: v }))}
+                  hint="Set in PayFast dashboard → Settings → Security → Passphrase"
+                  tooltip="A passphrase adds an extra layer to signature verification. Set it in PayFast first, then enter the same value here."
+                />
+
+                <div className="flex items-center justify-end gap-3 pt-1">
+                  {anyConfigured && !editing && (
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
+                    >
+                      <Edit2 className="w-3 h-3" /> Edit
+                    </button>
+                  )}
+                  {(editing || !anyConfigured) && (
+                    <SaveButton
+                      label={saving ? "Saving..." : "Save PayFast Credentials"}
+                      loading={saving}
+                      onClick={handleSave}
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3 mb-5">
+                  <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-white/25 leading-relaxed">
+                    PayFast redirects clients to their hosted checkout. After payment,
+                    they are returned to your booking confirmation page. Your ITN
+                    (webhook) endpoint is auto-configured — no manual setup needed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// YocoCard (unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
 interface YocoCardProps {
   settings: Record<string, string>;
   yocoMode: "live" | "test" | null;
@@ -336,22 +585,13 @@ interface YocoCardProps {
 
 const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const [open, setOpen] = useState(false);
-  // Test Keys collapsed by default — reduces cognitive load (Hick's Law).
-  // Most tenants only ever configure Live Keys; Test is a developer concern.
   const [testOpen, setTestOpen] = useState(false);
 
   const anyConfigured = !!settings.yoco_public_key || !!settings.yoco_secret_key;
   const testConfigured = yocoMode === "test" && anyConfigured;
-
-  // liveHasKeys: true only when the currently saved keys are live keys.
-  // Used to gate masking and the Edit button — decoupled from anyConfigured
-  // so that a tenant in test mode can freely enter live keys without the
-  // live section appearing frozen/empty.
   const liveHasKeys = anyConfigured && (yocoMode === "live" || !yocoMode);
 
   const [liveDraft, setLiveDraft] = useState({ public_key: "", secret_key: "" });
-  // When mode is "test" there are no saved live keys yet — open editing
-  // immediately so the fields are ready to accept input on first open.
   const [liveEditing, setLiveEditing] = useState(yocoMode === "test");
   const [savingLive, setSavingLive] = useState(false);
 
@@ -362,10 +602,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   const [prevHadKeys, setPrevHadKeys] = useState(anyConfigured);
   useEffect(() => {
     const nowHasKeys = !!settings.yoco_public_key || !!settings.yoco_secret_key;
-    // Only collapse editing when keys transition from absent → present AND
-    // the active mode is not "test".  In test mode the live section must
-    // stay open so tenants can enter their live keys without hitting a
-    // frozen / empty form.
     if (!prevHadKeys && nowHasKeys && yocoMode !== "test") {
       setLiveEditing(false);
       setTestEditing(false);
@@ -373,21 +609,11 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
     setPrevHadKeys(nowHasKeys);
   }, [settings, prevHadKeys, yocoMode]);
 
-  // Reset editing state when yocoMode resolves from null (async load).
-  // useState initialises before the async settings load returns, so this
-  // effect fires once when the real mode value arrives and corrects both
-  // editing states accordingly.
   useEffect(() => {
     if (yocoMode === "test") {
-      // In test mode: live keys have never been saved — keep the live
-      // section open/editing so the tenant can enter them immediately.
       setLiveEditing(true);
       setTestEditing(false);
     } else if (yocoMode === "live") {
-      // Only lock the live section when live keys are already saved.
-      // If liveHasKeys is false (e.g. mode is "live" but webhook_id is
-      // missing or keys were never written), keep editing open so the
-      // tenant can enter their keys and trigger webhook registration.
       setLiveEditing(!liveHasKeys);
       setTestEditing(false);
     }
@@ -422,10 +648,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       return;
     }
     const token = await getToken();
-    if (!token) {
-      toast.error("Not authenticated — please refresh.");
-      return;
-    }
+    if (!token) { toast.error("Not authenticated — please refresh."); return; }
     setSavingLive(true);
     try {
       const result = await callSaveYocoKeys("live", liveDraft.public_key, liveDraft.secret_key, token);
@@ -450,10 +673,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       return;
     }
     const token = await getToken();
-    if (!token) {
-      toast.error("Not authenticated — please refresh.");
-      return;
-    }
+    if (!token) { toast.error("Not authenticated — please refresh."); return; }
     setSavingTest(true);
     try {
       const result = await callSaveYocoKeys("test", testDraft.public_key, testDraft.secret_key, token);
@@ -468,8 +688,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
     }
   };
 
-  // Inline mode badge — shown in header so mode is visible without opening
-  // the card (Law of Feedback). Also shown inside the body for context.
   const ModeBadge = ({ size = "md" }: { size?: "sm" | "md" }) => {
     if (!anyConfigured) return null;
     const base = size === "sm"
@@ -490,9 +708,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
     );
   };
 
-  // Border accent colour — payments is the most critical integration;
-  // visual weight distinguishes it from managed/optional cards
-  // (Aesthetic-Usability Effect).
   const accentBorder = !anyConfigured
     ? "border-l-2 border-l-amber-400/30"
     : yocoMode === "test"
@@ -505,7 +720,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
       animate={{ opacity: 1, y: 0 }}
       className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
     >
-      {/* ── Header — always visible ── */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -520,8 +734,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
             <p className="text-[10px] text-white/30 mt-0.5 font-medium">
               Online checkout, deposit &amp; balance collection
             </p>
-            {/* Unconfigured nudge — actionable prompt, not just a status
-                (Jakob's Law: users expect clear next-step affordance). */}
             {!anyConfigured && (
               <p className="text-[10px] text-amber-400/60 mt-1 font-medium">
                 Add your Yoco keys to enable online payments
@@ -530,8 +742,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
-          {/* Mode badge visible in header — no need to open card to check
-              which mode is active (Law of Feedback). */}
           {anyConfigured && <ModeBadge size="sm" />}
           {!anyConfigured && <AdminTag label="Not configured" color="default" />}
           <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -540,7 +750,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
         </div>
       </button>
 
-      {/* ── Expandable body ── */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -552,15 +761,12 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.04]">
-
-              {/* Active mode badge inside body for in-context feedback */}
               {anyConfigured && (
                 <div className="flex items-center gap-2 px-5 pt-4">
                   <ModeBadge />
                 </div>
               )}
 
-              {/* ── Live Keys ── */}
               <div className="flex flex-col gap-3 px-5 pt-5">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-white/20">Live Keys</p>
                 <Field
@@ -586,8 +792,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                   hint="Server-side only — never exposed to the browser"
                   tooltip="In the Yoco app, click Sales then Payment Gateway. Never share this key."
                 />
-                {/* Edit + Save — sized as pill buttons for adequate tap targets
-                    (Fitts's Law: larger, separated targets reduce mis-taps). */}
                 <div className="flex items-center justify-end gap-3 pt-1">
                   {liveHasKeys && !liveEditing && (
                     <button
@@ -609,7 +813,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
 
               <div className="mx-5 my-4 border-t border-white/[0.04]" />
 
-              {/* ── Test Keys — collapsed by default (Hick's Law) ── */}
               <div className="px-5">
                 <button
                   type="button"
@@ -672,7 +875,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                           hint="Server-side only — never exposed to the browser"
                           tooltip="Switch to sandbox mode in the Yoco app to find test keys. Never share this key."
                         />
-                        {/* Edit + Save pill buttons */}
                         <div className="flex items-center justify-end gap-3 pt-1">
                           {testConfigured && !testEditing && (
                             <button
@@ -690,9 +892,6 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
                             />
                           )}
                         </div>
-                        {/* Sandbox info note — placed after the save button so it
-                            reads as a footnote to the action, not a blocker before
-                            the fields (Law of Proximity). */}
                         <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
                           <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                           <p className="text-[11px] text-white/25 leading-relaxed">
@@ -713,6 +912,9 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved }: YocoCardProps) => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AdminIntegrations
+// ─────────────────────────────────────────────────────────────────────────────
 const AdminIntegrations = () => {
   const { tenantId, userId } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
@@ -758,6 +960,11 @@ const AdminIntegrations = () => {
               settings={settings}
               yocoMode={yocoMode}
               userId={userId}
+              onSaved={refetch}
+            />
+
+            <PayfastCard
+              settings={settings}
               onSaved={refetch}
             />
 
