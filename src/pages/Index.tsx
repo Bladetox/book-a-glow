@@ -751,7 +751,7 @@ const Index = () => {
             <div style={{
               position:           "absolute",
               inset:              0,
-              backgroundImage:    "url('https://iili.io/C3Ur129.jpg')",
+              backgroundImage:    "url('https://iili.io/C3gfi2S.jpg')",
               backgroundSize:     "cover",
               backgroundPosition: "center",
               backgroundRepeat:   "no-repeat",
