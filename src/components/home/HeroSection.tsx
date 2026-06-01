@@ -1,23 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { C, FONT_DISPLAY, FONT_BODY, BP } from "./tokens";
-import useWindowWidth from "./useWindowWidth";
-import Orb from "./Orb";
-import FloatCard, { FloatCardData } from "./FloatCard";
+import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
+import { useWindowWidth } from "./useWindowWidth";
+import { Orb } from "./Orb";
+import { FloatCard, FloatCardData } from "./FloatCard";
+import { Eyebrow } from "./Eyebrow";
 
-/* ─── HeroSection ─────────────────────────────────────────── */
-const HeroSection = () => {
+export const HeroSection = () => {
   const width      = useWindowWidth();
   const isMobile   = width < BP;
   const orbScale   = isMobile ? 0.55 : 1;
   const cardWorldW = isMobile ? Math.min(width - 48, 340) : 480;
   const cardWorldH = isMobile ? 380 : 480;
 
-  const containerRef  = useRef<HTMLDivElement>(null);
-  const rafRef        = useRef<number>(0);
-  const prevMobileRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rafRef       = useRef<number>(0);
 
-  /* ── Card factory ── */
   const makeCards = useCallback((mobile: boolean, cw: number): FloatCardData[] => {
     if (mobile) {
       return [
@@ -38,8 +36,8 @@ const HeroSection = () => {
   }, []);
 
   const [cards, setCards] = useState<FloatCardData[]>(() => makeCards(false, 480));
+  const prevMobileRef = useRef(false);
 
-  /* ── Rebuild cards on breakpoint cross ── */
   useEffect(() => {
     const nowMobile = width < BP;
     if (nowMobile !== prevMobileRef.current) {
@@ -48,7 +46,6 @@ const HeroSection = () => {
     }
   }, [width, makeCards]);
 
-  /* ── RAF bounce loop ── */
   const animate = useCallback(() => {
     setCards(prev => prev.map(c => {
       if (!containerRef.current) return c;
@@ -73,174 +70,102 @@ const HeroSection = () => {
   }, []);
 
   return (
-    <section style={{
-      position:   "relative",
-      minHeight:  isMobile ? "auto" : "100vh",
-      display:    "flex",
-      alignItems: "center",
-      overflow:   "hidden",
-      background: C.bg,
-    }}>
-
+    <section
+      style={{
+        position: "relative",
+        minHeight: isMobile ? "auto" : "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: isMobile ? "80px 0 40px" : "0",
+        overflow: "hidden",
+      }}
+    >
       {/* Background glow */}
       <div style={{
-        position:   "absolute",
-        left:       "50%",
-        top:        "50%",
-        transform:  "translate(-50%,-50%)",
-        width:      isMobile ? 400 : 700,
-        height:     isMobile ? 400 : 700,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(212,165,116,0.055) 0%, transparent 65%)",
-        animation:  "heroBreathe 6s ease-in-out infinite",
+        position: "absolute", left: "50%", top: "40%",
+        transform: "translate(-50%,-50%)",
+        width: 700, height: 700, borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(212,165,116,0.07) 0%, transparent 65%)",
+        animation: "heroBreathe 6s ease-in-out infinite",
         pointerEvents: "none",
       }} />
 
       <div style={{
-        maxWidth: 1200,
-        margin:   "0 auto",
-        padding:  isMobile ? "80px 24px 60px" : "120px 48px",
-        display:  "grid",
+        maxWidth: 1200, margin: "0 auto",
+        padding: isMobile ? "0 24px" : "0 40px",
+        width: "100%",
+        display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-        gap:      isMobile ? 48 : 80,
+        gap: isMobile ? 40 : 60,
         alignItems: "center",
-        width:    "100%",
       }}>
-
-        {/* ── Left: copy ── */}
-        <div style={{ animation: "fadeUp 0.7s ease both" }}>
-          {/* Eyebrow */}
-          <div style={{
-            display:       "inline-flex",
-            alignItems:    "center",
-            gap:           8,
-            background:    "rgba(212,165,116,0.08)",
-            border:        "1px solid rgba(212,165,116,0.2)",
-            borderRadius:  100,
-            padding:       "5px 14px",
-            fontSize:      11,
-            fontWeight:    600,
-            color:         C.gold,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            marginBottom:  28,
-          } as React.CSSProperties}>
-            <span style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: C.gold,
-              animation:  "pulseDot 1.8s ease-in-out infinite",
-              display:    "inline-block",
-            }} />
-            Booking + Business Intelligence
-          </div>
-
-          {/* Headline */}
+        {/* Left: copy */}
+        <div style={{ animation: "fadeUp 0.7s ease 0.1s both" }}>
+          <Eyebrow text="South Africa's booking intelligence platform" />
           <h1 style={{
-            fontFamily:  FONT_DISPLAY,
-            fontSize:    isMobile ? 36 : 58,
-            fontWeight:  800,
-            lineHeight:  1.04,
+            fontFamily: FONT_DISPLAY,
+            fontSize: isMobile ? 36 : 56,
+            fontWeight: 800,
+            lineHeight: 1.06,
             letterSpacing: "-0.02em",
-            color:       C.text,
-            marginBottom: 24,
+            color: C.text,
+            marginBottom: 20,
           }}>
-            Your bookings.
-            <br />
-            <span style={{ color: C.gold }}>Your data.</span>
-            <br />
-            <span style={{ color: C.muted, fontWeight: 600, fontSize: isMobile ? 28 : 44 }}>
-              Your edge.
-            </span>
+            Your business,<br />
+            <span style={{ color: C.gold }}>finally intelligent.</span>
           </h1>
-
-          {/* Sub */}
           <p style={{
-            fontSize:    isMobile ? 15 : 17,
-            color:       C.muted,
-            lineHeight:  1.7,
+            fontSize: isMobile ? 15 : 17,
+            color: C.muted,
+            lineHeight: 1.7,
+            maxWidth: 440,
             marginBottom: 36,
-            maxWidth:    460,
-            fontFamily:  FONT_BODY,
           }}>
-            NextSlot is the booking and business intelligence platform built for South African service businesses.
-            Not just a calendar. A system that helps you grow.
+            NextSlot gives South African service businesses a smart booking page, proactive AI insights,
+            and a revenue dashboard built for the real world.
           </p>
-
-          {/* CTAs */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
             <Link
               to="/onboarding"
               style={{
-                display:        "inline-flex",
-                alignItems:     "center",
-                gap:            8,
-                background:     C.gold,
-                color:          "#080808",
-                fontFamily:     FONT_DISPLAY,
-                fontSize:       14,
-                fontWeight:     700,
-                padding:        "14px 28px",
-                borderRadius:   12,
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: C.gold, color: "#080808",
+                fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 700,
+                padding: "14px 28px", borderRadius: 10,
                 textDecoration: "none",
-                letterSpacing:  "0.01em",
-                boxShadow:      `0 4px 24px rgba(212,165,116,0.35)`,
-                transition:     "all 0.2s",
+                boxShadow: "0 8px 32px rgba(212,165,116,0.35)",
+                letterSpacing: "0.01em",
               }}
             >
-              Start free — 30 days
-              <span style={{ fontSize: 16 }}>→</span>
+              Start free trial
             </Link>
             <Link
               to="/demo"
               style={{
-                display:        "inline-flex",
-                alignItems:     "center",
-                gap:            8,
-                background:     "transparent",
-                color:          C.muted,
-                fontFamily:     FONT_BODY,
-                fontSize:       14,
-                fontWeight:     500,
-                padding:        "14px 24px",
-                borderRadius:   12,
+                display: "inline-flex", alignItems: "center", gap: 6,
+                color: C.muted, fontSize: 13, fontWeight: 500,
                 textDecoration: "none",
-                border:         `1px solid ${C.border2}`,
-                transition:     "all 0.2s",
+                border: `1px solid ${C.border2}`,
+                padding: "13px 22px", borderRadius: 10,
               }}
             >
-              Live demo
+              View live demo
             </Link>
           </div>
-
-          {/* Trust row */}
-          <div style={{
-            display:    "flex",
-            flexWrap:   "wrap",
-            gap:        20,
-            marginTop:  32,
-            fontSize:   12,
-            color:      C.faint,
-            fontFamily: FONT_BODY,
-          }}>
-            {["No credit card", "Cancel anytime", "Built for SA"].map((t, i) => (
-              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <span style={{ color: C.em }}>&#10003;</span> {t}
-              </span>
-            ))}
-          </div>
+          <p style={{ fontSize: 11, color: C.faint, marginTop: 14 }}>
+            No credit card required · 30-day free trial · Cancel anytime
+          </p>
         </div>
 
-        {/* ── Right: orb + float cards ── */}
+        {/* Right: orb + floating cards */}
         <div style={{
-          position:   "relative",
-          width:      cardWorldW,
-          height:     cardWorldH,
-          margin:     isMobile ? "0 auto" : undefined,
-          flexShrink: 0,
-          animation:  "fadeUp 0.9s ease 0.2s both",
-        }}
-          ref={containerRef}
-        >
+          position: "relative",
+          width: cardWorldW,
+          height: cardWorldH,
+          margin: isMobile ? "0 auto" : "0",
+          animation: "fadeUp 0.7s ease 0.3s both",
+        }} ref={containerRef}>
           <Orb scale={orbScale} />
           {cards.map(card => (
             <FloatCard
@@ -252,10 +177,7 @@ const HeroSection = () => {
             />
           ))}
         </div>
-
       </div>
     </section>
   );
 };
-
-export default HeroSection;

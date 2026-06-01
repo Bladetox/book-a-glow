@@ -1,85 +1,71 @@
-import { C, FONT_DISPLAY, FONT_BODY, BP } from "./tokens";
-import useWindowWidth from "./useWindowWidth";
-import Eyebrow from "./Eyebrow";
-import InsightCard from "./InsightCard";
+import { C, FONT_DISPLAY, BP } from "./tokens";
+import { useWindowWidth } from "./useWindowWidth";
+import { InsightCard } from "./InsightCard";
+import { Eyebrow } from "./Eyebrow";
 
-/* ─── ProactiveAlertsSection ───────────────────────────────── */
-const ProactiveAlertsSection = () => {
+export const ProactiveAlertsSection = () => {
   const width    = useWindowWidth();
   const isMobile = width < BP;
 
   return (
     <section style={{
-      maxWidth: 1200,
-      margin:   "0 auto",
-      padding:  isMobile ? "72px 24px" : "120px 48px",
+      padding: isMobile ? "64px 24px" : "100px 40px",
+      maxWidth: 1200, margin: "0 auto",
     }}>
-
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: isMobile ? 40 : 64 }}>
+      <div style={{ textAlign: "center", marginBottom: isMobile ? 40 : 60 }}>
         <Eyebrow text="Proactive Alerts" />
         <h2 style={{
-          fontFamily:    FONT_DISPLAY,
-          fontSize:      isMobile ? 28 : 44,
-          fontWeight:    800,
-          color:         C.text,
-          letterSpacing: "-0.02em",
-          lineHeight:    1.1,
-          marginBottom:  16,
+          fontFamily: FONT_DISPLAY,
+          fontSize: isMobile ? 30 : 44,
+          fontWeight: 800,
+          lineHeight: 1.1,
+          color: C.text,
+          marginBottom: 16,
         }}>
-          Four lenses on your business.
-          <br />
-          <span style={{ color: C.gold }}>Ranked by rand impact.</span>
+          Nexty tells you what to fix<br />
+          <span style={{ color: C.gold }}>before it becomes a problem.</span>
         </h2>
-        <p style={{
-          fontSize:   isMobile ? 14 : 16,
-          color:      C.muted,
-          lineHeight: 1.7,
-          maxWidth:   520,
-          margin:     "0 auto",
-          fontFamily: FONT_BODY,
-        }}>
-          Critical. Growth. Retention. Operations. Nexty categorises every insight and surfaces the ones that cost you the most money first.
+        <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 540, margin: "0 auto" }}>
+          Every insight is categorised, prioritised by rand impact, and surfaces only when it's relevant to your business.
+          No noise. Just the right nudge at the right time.
         </p>
       </div>
 
-      {/* Insight cards grid */}
       <div style={{
-        display:             "grid",
+        display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
-        gap:                 16,
+        gap: 12,
+        maxWidth: 800, margin: "0 auto",
       }}>
         <InsightCard
           type="critical"
           badge="Critical"
-          message="3 clients haven't booked in 14+ days. Estimated R 1,200 in at-risk revenue this month."
+          message="3 of your regular clients haven't booked in 14+ days. Estimated R 1,200 revenue at risk this month."
           action="View lapsed clients"
-          delay={0.05}
+          delay={0.1}
         />
         <InsightCard
           type="growth"
           badge="Growth"
-          message="Tuesday 10–12pm converts 2.4× better than your average slot. Adding a premium service tier here could add R 2,800/month."
-          action="Optimise that slot"
-          delay={0.15}
+          message="Your Tuesday 10am–12pm window converts 2.4× better than other slots. Consider adding a premium-priced tier."
+          action="See slot analysis"
+          delay={0.2}
         />
         <InsightCard
           type="retention"
           badge="Retention"
-          message="Clients receiving a 48hr reminder return 3× more often. 6 of tomorrow’s bookings don’t have one scheduled."
+          message="Clients with 48hr reminders enabled return 3× more often. Only 4 of 22 active clients have this on."
           action="Enable reminders"
-          delay={0.25}
+          delay={0.3}
         />
         <InsightCard
           type="ops"
-          badge="Operations"
-          message="Your cancellation rate rose from 14% to 22% this week. A 30% deposit policy on new bookings typically cuts this in half."
-          action="Set deposit policy"
-          delay={0.35}
+          badge="Ops"
+          message="14 open slots this Thursday. Filling 6 of them at your average rate adds R 3,480 this week."
+          action="Fill open slots"
+          delay={0.4}
         />
       </div>
     </section>
   );
 };
-
-export default ProactiveAlertsSection;

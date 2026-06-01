@@ -1,108 +1,98 @@
-import { C, FONT_DISPLAY, FONT_BODY, BP } from "./tokens";
-import useWindowWidth from "./useWindowWidth";
-import Eyebrow from "./Eyebrow";
-import Orb from "./Orb";
-import SpeechBubble from "./SpeechBubble";
+import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
+import { useWindowWidth } from "./useWindowWidth";
+import { Orb } from "./Orb";
+import { SpeechBubble } from "./SpeechBubble";
+import { Eyebrow } from "./Eyebrow";
 
-/* ─── NextyAISection ──────────────────────────────────────── */
-const NextyAISection = () => {
+export const NextyAISection = () => {
   const width    = useWindowWidth();
   const isMobile = width < BP;
 
   return (
     <section style={{
-      padding:    isMobile ? "72px 24px" : "120px 48px",
-      maxWidth:   1200,
-      margin:     "0 auto",
-      overflow:   "hidden",
+      padding: isMobile ? "64px 24px" : "120px 40px",
+      maxWidth: 1200, margin: "0 auto",
     }}>
-
-      {/* ── Header ── */}
-      <div style={{ textAlign: "center", marginBottom: isMobile ? 48 : 72 }}>
-        <Eyebrow text="Nexty AI" />
-        <h2 style={{
-          fontFamily:    FONT_DISPLAY,
-          fontSize:      isMobile ? 28 : 44,
-          fontWeight:    800,
-          color:         C.text,
-          letterSpacing: "-0.02em",
-          lineHeight:    1.1,
-          marginBottom:  16,
-        }}>
-          Your AI business advisor.
-          <br />
-          <span style={{ color: C.gold }}>Always on. Never asleep.</span>
-        </h2>
-        <p style={{
-          fontSize:   isMobile ? 14 : 16,
-          color:      C.muted,
-          lineHeight: 1.7,
-          maxWidth:   540,
-          margin:     "0 auto",
-          fontFamily: FONT_BODY,
-        }}>
-          Nexty watches your data 24/7, then surfaces the insights that matter most — ranked by rand impact.
-        </p>
-      </div>
-
-      {/* ── Two-column layout: Orb left, bubbles right ── */}
       <div style={{
-        display:             "grid",
+        display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-        gap:                 isMobile ? 48 : 80,
-        alignItems:          "center",
+        gap: isMobile ? 48 : 80,
+        alignItems: "center",
       }}>
-
-        {/* Orb column */}
-        <div style={{
-          position:   "relative",
-          height:     isMobile ? 300 : 480,
-          display:    "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <Orb scale={isMobile ? 0.6 : 1} />
+        {/* Left: copy */}
+        <div>
+          <Eyebrow text="Nexty AI" />
+          <h2 style={{
+            fontFamily: FONT_DISPLAY,
+            fontSize: isMobile ? 30 : 44,
+            fontWeight: 800,
+            lineHeight: 1.1,
+            color: C.text,
+            marginBottom: 20,
+          }}>
+            Your proactive<br />
+            <span style={{ color: C.gold }}>business advisor.</span>
+          </h2>
+          <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginBottom: 28 }}>
+            Nexty monitors your bookings, revenue, and client behaviour 24/7.
+            It surfaces Critical, Growth, Retention, and Operations insights,
+            ranked by rand impact, so you always know what to act on next.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              { dot: C.red,   label: "Critical",  text: "3 clients lapsed 14+ days. R 1,200 at risk." },
+              { dot: C.em,    label: "Growth",    text: "Tuesday 10–12pm converts 2.4× better. Add a premium tier." },
+              { dot: C.blue,  label: "Retention", text: "48hr reminder clients return 3× more often." },
+              { dot: C.amber, label: "Ops",       text: "Open slots on Thu could add R 3,480 this week." },
+            ].map((r, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                padding: "12px 14px",
+                background: C.s1, borderRadius: 10,
+                border: `1px solid ${C.border}`,
+                fontFamily: FONT_BODY,
+              }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: r.dot, flexShrink: 0, marginTop: 4 }} />
+                <div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: r.dot, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: 6 }}>{r.label}</span>
+                  <span style={{ fontSize: 13, color: C.muted }}>{r.text}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Speech bubbles column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Right: orb + speech bubbles */}
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ position: "relative", height: isMobile ? 180 : 240, marginBottom: 8 }}>
+            <Orb scale={isMobile ? 0.45 : 0.75} />
+          </div>
           <SpeechBubble
             type="critical"
             speaker="Nexty"
             label="Critical"
-            message="3 clients haven't returned in 14+ days. You're sitting on R 1,200 in at-risk revenue. Want me to draft a re-engagement message?"
-            action="Re-engage clients"
+            message="3 of your regulars haven't booked in 14 days. Based on their average spend, you're looking at R 1,200 at risk this week."
+            action="View clients"
             delay={0.1}
           />
           <SpeechBubble
             type="growth"
             speaker="Nexty"
             label="Growth"
-            message="Tuesday 10–12pm converts 2.4× better than any other slot. Consider adding a premium tier there."
-            action="Review slot pricing"
+            message="Your Tuesday 10am–12pm slots convert 2.4× better than average. Consider adding a premium tier for that window."
+            action="See breakdown"
             delay={0.3}
           />
           <SpeechBubble
             type="retention"
             speaker="Nexty"
             label="Retention"
-            message="Clients who receive a 48hr reminder return 3× more often. You have 6 bookings tomorrow without one."
+            message="Clients who receive a 48hr reminder return 3× more often. Only 4 of your 22 active clients have reminders enabled."
             action="Enable reminders"
             delay={0.5}
           />
-          <SpeechBubble
-            type="ops"
-            speaker="Nexty"
-            label="Ops"
-            message="Your cancellation rate is 22% this week, up from 14% last week. A 30% deposit policy could reduce this significantly."
-            action="Set deposit policy"
-            delay={0.7}
-          />
         </div>
-
       </div>
     </section>
   );
 };
-
-export default NextyAISection;
