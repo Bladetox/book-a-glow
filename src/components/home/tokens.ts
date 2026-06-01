@@ -1,4 +1,4 @@
-/* ─── Design tokens ──────────────────────────────────────────── */
+/* ─── Design tokens shared across all home sections ─────────── */
 export const C = {
   bg:      "#080808",
   s1:      "#111110",

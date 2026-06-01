@@ -1,32 +1,30 @@
 import { useRef } from "react";
-import { C, FONT_DISPLAY, FONT_BODY } from "./tokens";
+import { C, FONT_BODY, FONT_DISPLAY } from "./tokens";
 
-/* ─── Types ───────────────────────────────────────────────── */
 export interface FloatCardData {
-  id:    number;
-  x:     number;
-  y:     number;
-  z:     number;
-  vx:    number;
-  vy:    number;
+  id: number;
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
   label: string;
   value: string;
-  sub:   string;
+  sub: string;
   color: string;
   width: number;
 }
 
-/* ─── FloatCard ───────────────────────────────────────────── */
-const FloatCard = ({
+export const FloatCard = ({
   card,
   containerRef,
   onDragUpdate,
   mobile,
 }: {
-  card:          FloatCardData;
-  containerRef:  React.RefObject<HTMLDivElement>;
-  onDragUpdate:  (id: number, x: number, y: number) => void;
-  mobile:        boolean;
+  card: FloatCardData;
+  containerRef: React.RefObject<HTMLDivElement>;
+  onDragUpdate: (id: number, x: number, y: number) => void;
+  mobile: boolean;
 }) => {
   const isDragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -42,11 +40,7 @@ const FloatCard = ({
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current || !containerRef.current) return;
     const cr = containerRef.current.getBoundingClientRect();
-    onDragUpdate(
-      card.id,
-      e.clientX - cr.left - dragOffset.current.x,
-      e.clientY - cr.top  - dragOffset.current.y,
-    );
+    onDragUpdate(card.id, e.clientX - cr.left - dragOffset.current.x, e.clientY - cr.top - dragOffset.current.y);
   };
 
   const onPointerUp = () => { isDragging.current = false; };
@@ -75,29 +69,13 @@ const FloatCard = ({
         fontFamily:           FONT_BODY,
       }}
     >
-      <div style={{
-        fontSize:      mobile ? 7 : 8,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase",
-        color:         C.faint,
-        marginBottom:  2,
-      }}>
+      <div style={{ fontSize: mobile ? 7 : 8, letterSpacing: "0.14em", textTransform: "uppercase", color: C.faint, marginBottom: 2 }}>
         {card.label}
       </div>
-      <div style={{
-        fontSize:   mobile ? 14 : 17,
-        fontWeight: 700,
-        color:      card.color,
-        fontFamily: FONT_DISPLAY,
-        lineHeight: 1.1,
-      }}>
+      <div style={{ fontSize: mobile ? 14 : 17, fontWeight: 700, color: card.color, fontFamily: FONT_DISPLAY, lineHeight: 1.1 }}>
         {card.value}
       </div>
-      <div style={{ fontSize: mobile ? 8 : 9, color: C.muted, marginTop: 2 }}>
-        {card.sub}
-      </div>
+      <div style={{ fontSize: mobile ? 8 : 9, color: C.muted, marginTop: 2 }}>{card.sub}</div>
     </div>
   );
 };
-
-export default FloatCard;
