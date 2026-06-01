@@ -4,6 +4,7 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Orb } from "./Orb";
 import { FloatCard, FloatCardData } from "./FloatCard";
+import { Eyebrow } from "./Eyebrow";
 
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
