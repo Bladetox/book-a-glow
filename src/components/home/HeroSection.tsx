@@ -4,7 +4,6 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Orb } from "./Orb";
 import { FloatCard, FloatCardData } from "./FloatCard";
-import { Eyebrow } from "./Eyebrow";
 
 export const HeroSection = () => {
   const width      = useWindowWidth();
@@ -19,11 +18,11 @@ export const HeroSection = () => {
   const makeCards = useCallback((mobile: boolean, cw: number): FloatCardData[] => {
     if (mobile) {
       return [
-        { id: 0, x: 8,          y: 20,  z: 2, vx:  0.14, vy:  0.10, label: "Revenue today",     value: "R 1,950", sub: "7 bookings · 4 remaining",  color: C.gold,  width: 120 },
-        { id: 1, x: cw - 128,   y: 14,  z: 2, vx: -0.11, vy:  0.13, label: "Month progress",    value: "82%",     sub: "R 4,160 to beat last month", color: C.em,    width: 120 },
-        { id: 2, x: 10,         y: 230, z: 2, vx:  0.10, vy: -0.14, label: "Cancellation rate", value: "22%",     sub: "Introduce a 30% deposit",   color: C.red,   width: 118 },
-        { id: 3, x: cw - 126,   y: 224, z: 2, vx: -0.12, vy: -0.11, label: "Open slots",        value: "14",      sub: "Filling 6 adds R 3,480",    color: C.blue,  width: 118 },
-        { id: 4, x: cw / 2 - 60,y: 320, z: 2, vx:  0.08, vy:  0.12, label: "Retention",         value: "38%",     sub: "Enrol 12 → hit 40%",        color: C.amber, width: 120 },
+        { id: 0, x: 8,           y: 20,  z: 2, vx:  0.14, vy:  0.10, label: "Revenue today",     value: "R 1,950", sub: "7 bookings · 4 remaining",  color: C.gold,  width: 120 },
+        { id: 1, x: cw - 128,    y: 14,  z: 2, vx: -0.11, vy:  0.13, label: "Month progress",    value: "82%",     sub: "R 4,160 to beat last month", color: C.em,    width: 120 },
+        { id: 2, x: 10,          y: 230, z: 2, vx:  0.10, vy: -0.14, label: "Cancellation rate", value: "22%",     sub: "Introduce a 30% deposit",   color: C.red,   width: 118 },
+        { id: 3, x: cw - 126,    y: 224, z: 2, vx: -0.12, vy: -0.11, label: "Open slots",        value: "14",      sub: "Filling 6 adds R 3,480",    color: C.blue,  width: 118 },
+        { id: 4, x: cw / 2 - 60, y: 320, z: 2, vx:  0.08, vy:  0.12, label: "Retention",         value: "38%",     sub: "Enrol 12 \u2192 hit 40%",        color: C.amber, width: 120 },
       ];
     }
     return [
@@ -31,7 +30,7 @@ export const HeroSection = () => {
       { id: 1, x: 260, y: 20,  z: 2, vx: -0.14, vy:  0.16, label: "Month progress",    value: "82%",      sub: "R 4,160 to beat last month",     color: C.em,    width: 154 },
       { id: 2, x: 48,  y: 250, z: 2, vx:  0.12, vy: -0.18, label: "Cancellation rate", value: "22%",      sub: "Introduce a 30% deposit",        color: C.red,   width: 160 },
       { id: 3, x: 270, y: 230, z: 2, vx: -0.16, vy: -0.13, label: "Open slots · Thu",  value: "14",       sub: "Filling 6 adds R 3,480",         color: C.blue,  width: 156 },
-      { id: 4, x: 140, y: 370, z: 2, vx:  0.10, vy:  0.15, label: "Retention",         value: "38%",      sub: "Enrol 12 regulars → hit 40%",    color: C.amber, width: 158 },
+      { id: 4, x: 140, y: 370, z: 2, vx:  0.10, vy:  0.15, label: "Retention",         value: "38%",      sub: "Enrol 12 regulars \u2192 hit 40%",    color: C.amber, width: 158 },
     ];
   }, []);
 
@@ -73,99 +72,145 @@ export const HeroSection = () => {
     <section
       style={{
         position: "relative",
-        minHeight: isMobile ? "auto" : "100vh",
+        minHeight: "100vh",
         display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        padding: isMobile ? "80px 0 40px" : "0",
+        alignItems: "center",
         overflow: "hidden",
+        background: C.bg,
       }}
     >
-      {/* Background glow */}
+      {/* Hero background image */}
       <div style={{
-        position: "absolute", left: "50%", top: "40%",
+        position:           "absolute",
+        inset:              0,
+        backgroundImage:    "url('https://iili.io/C3gfi2S.jpg')",
+        backgroundSize:     "cover",
+        backgroundPosition: "center",
+        backgroundRepeat:   "no-repeat",
+        opacity:            0.22,
+        filter:             "blur(1px) saturate(0.5)",
+        transform:          "scale(1.04)",
+        zIndex:             0,
+        pointerEvents:      "none",
+      }} />
+
+      {/* Grid overlay */}
+      <div style={{
+        position: "absolute", inset: 0,
+        backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
+        backgroundSize: "44px 44px",
+        WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+        maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+      } as React.CSSProperties} />
+
+      {/* Ambient glow */}
+      <div style={{
+        position: "absolute", width: 640, height: 640, borderRadius: "50%",
+        background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
+        top: "50%", left: "50%",
         transform: "translate(-50%,-50%)",
-        width: 700, height: 700, borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(212,165,116,0.07) 0%, transparent 65%)",
-        animation: "heroBreathe 6s ease-in-out infinite",
+        animation: "heroBreathe 7s ease-in-out infinite",
         pointerEvents: "none",
       }} />
 
       <div style={{
-        maxWidth: 1200, margin: "0 auto",
-        padding: isMobile ? "0 24px" : "0 40px",
-        width: "100%",
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-        gap: isMobile ? 40 : 60,
+        position: "relative", zIndex: 2,
+        display: isMobile ? "flex" : "grid",
+        flexDirection: isMobile ? "column" : undefined,
+        gridTemplateColumns: isMobile ? undefined : "1fr 1fr",
+        gap: isMobile ? 32 : 64,
         alignItems: "center",
+        width: "100%", maxWidth: 1120, margin: "0 auto",
+        padding: isMobile ? "100px 24px 48px" : "100px 24px 48px",
       }}>
-        {/* Left: copy */}
-        <div style={{ animation: "fadeUp 0.7s ease 0.1s both" }}>
-          <Eyebrow text="South Africa's booking intelligence platform" />
+        {/* Copy */}
+        <div>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: "rgba(212,165,116,0.08)",
+            border: `1px solid rgba(212,165,116,0.2)`,
+            borderRadius: 100, padding: "5px 14px",
+            fontSize: 11, fontWeight: 600, color: C.gold,
+            letterSpacing: "0.08em", textTransform: "uppercase",
+            marginBottom: 28, animation: "fadeUp 0.6s ease both",
+          } as React.CSSProperties}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block", animation: "pulseDot 2s ease-in-out infinite" }} />
+            AI-Powered · For Beauty Pros
+          </div>
+
           <h1 style={{
             fontFamily: FONT_DISPLAY,
-            fontSize: isMobile ? 36 : 56,
-            fontWeight: 800,
-            lineHeight: 1.06,
-            letterSpacing: "-0.02em",
-            color: C.text,
-            marginBottom: 20,
-          }}>
-            Your business,<br />
-            <span style={{ color: C.gold }}>finally intelligent.</span>
+            fontSize: isMobile ? "clamp(32px,8vw,46px)" : "clamp(36px,4.2vw,58px)",
+            fontWeight: 700, color: C.text,
+            marginBottom: 22,
+            animation: "fadeUp 0.6s 0.1s ease both",
+            lineHeight: 1.08,
+          } as React.CSSProperties}>
+            Your dashboard<br />
+            should be <span style={{ color: C.gold, fontStyle: "italic" }}>speaking.</span>
           </h1>
+
           <p style={{
-            fontSize: isMobile ? 15 : 17,
-            color: C.muted,
-            lineHeight: 1.7,
-            maxWidth: 440,
-            marginBottom: 36,
-          }}>
-            NextSlot gives South African service businesses a smart booking page, proactive AI insights,
-            and a revenue dashboard built for the real world.
+            fontSize: isMobile ? 14 : "clamp(14px,1.3vw,16px)",
+            fontWeight: 300, color: C.muted,
+            lineHeight: 1.75, marginBottom: 36,
+            maxWidth: 460,
+            animation: "fadeUp 0.6s 0.2s ease both",
+          } as React.CSSProperties}>
+            Most platforms show you what&apos;s happened. NextSlot tells you what&apos;s happening.
+            With proactive insights, real-time revenue intelligence, and alerts that surface
+            opportunities before they&apos;re missed, you&apos;ll always know where to focus next.
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", animation: "fadeUp 0.6s 0.3s ease both" } as React.CSSProperties}>
             <Link
               to="/onboarding"
               style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
                 background: C.gold, color: "#080808",
-                fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 700,
-                padding: "14px 28px", borderRadius: 10,
+                fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700,
+                padding: "14px 30px", borderRadius: 10,
                 textDecoration: "none",
-                boxShadow: "0 8px 32px rgba(212,165,116,0.35)",
-                letterSpacing: "0.01em",
+                display: "inline-flex", alignItems: "center", gap: 8,
+                minHeight: 48,
               }}
             >
-              Start free trial
+              Start for free
             </Link>
-            <Link
-              to="/demo"
+            <a
+              href="#nexty-section"
               style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                color: C.muted, fontSize: 13, fontWeight: 500,
-                textDecoration: "none",
-                border: `1px solid ${C.border2}`,
-                padding: "13px 22px", borderRadius: 10,
+                fontFamily: FONT_BODY, fontSize: 14, fontWeight: 500, color: C.muted,
+                textDecoration: "none", padding: "14px 4px",
+                minHeight: 48, display: "inline-flex", alignItems: "center", gap: 6,
               }}
             >
-              View live demo
-            </Link>
+              See how it works \u2197
+            </a>
           </div>
-          <p style={{ fontSize: 11, color: C.faint, marginTop: 14 }}>
-            No credit card required · 30-day free trial · Cancel anytime
+
+          <p style={{
+            marginTop: 22, fontSize: 11, color: C.faint,
+            letterSpacing: "0.04em", fontWeight: 500,
+            animation: "fadeUp 0.6s 0.4s ease both",
+          } as React.CSSProperties}>
+            No Payment Required · 30-day trial · Set up in under 10 minutes
           </p>
         </div>
 
-        {/* Right: orb + floating cards */}
-        <div style={{
-          position: "relative",
-          width: cardWorldW,
-          height: cardWorldH,
-          margin: isMobile ? "0 auto" : "0",
-          animation: "fadeUp 0.7s ease 0.3s both",
-        }} ref={containerRef}>
+        {/* Card world */}
+        <div
+          ref={containerRef}
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: isMobile ? cardWorldW : "100%",
+            margin: isMobile ? "0 auto" : undefined,
+            height: cardWorldH,
+            perspective: 900,
+            userSelect: "none",
+            flexShrink: 0,
+          }}
+        >
           <Orb scale={orbScale} />
           {cards.map(card => (
             <FloatCard

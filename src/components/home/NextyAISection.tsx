@@ -1,6 +1,5 @@
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
-import { Orb } from "./Orb";
 import { SpeechBubble } from "./SpeechBubble";
 import { Eyebrow } from "./Eyebrow";
 
@@ -9,88 +8,134 @@ export const NextyAISection = () => {
   const isMobile = width < BP;
 
   return (
-    <section style={{
-      padding: isMobile ? "64px 24px" : "120px 40px",
-      maxWidth: 1200, margin: "0 auto",
-    }}>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-        gap: isMobile ? 48 : 80,
-        alignItems: "center",
-      }}>
-        {/* Left: copy */}
-        <div>
-          <Eyebrow text="Nexty AI" />
+    <section
+      id="nexty-section"
+      style={{
+        background: `linear-gradient(180deg,${C.bg} 0%,${C.s1} 50%,${C.bg} 100%)`,
+        padding: isMobile ? "64px 24px" : "96px 24px",
+      }}
+    >
+      <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 56 }}>
+          <Eyebrow text="Nexty AI \u00b7 Business Growth Advisor" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
-            fontSize: isMobile ? 30 : 44,
-            fontWeight: 800,
-            lineHeight: 1.1,
-            color: C.text,
-            marginBottom: 20,
+            fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)",
+            fontWeight: 700, color: C.text,
+            lineHeight: 1.08, marginBottom: 16,
           }}>
-            Your proactive<br />
-            <span style={{ color: C.gold }}>business advisor.</span>
+            More personalised than<br /><span style={{ color: C.gold }}>most advisors.</span>
           </h2>
-          <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginBottom: 28 }}>
-            Nexty monitors your bookings, revenue, and client behaviour 24/7.
-            It surfaces Critical, Growth, Retention, and Operations insights,
-            ranked by rand impact, so you always know what to act on next.
+          <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7 }}>
+            Nexty is always learning your business: your peak times, your riskiest clients, your
+            biggest opportunities. So when she speaks, it&apos;s not generic advice. It&apos;s yours.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { dot: C.red,   label: "Critical",  text: "3 clients lapsed 14+ days. R 1,200 at risk." },
-              { dot: C.em,    label: "Growth",    text: "Tuesday 10–12pm converts 2.4× better. Add a premium tier." },
-              { dot: C.blue,  label: "Retention", text: "48hr reminder clients return 3× more often." },
-              { dot: C.amber, label: "Ops",       text: "Open slots on Thu could add R 3,480 this week." },
-            ].map((r, i) => (
-              <div key={i} style={{
-                display: "flex", alignItems: "flex-start", gap: 10,
-                padding: "12px 14px",
-                background: C.s1, borderRadius: 10,
-                border: `1px solid ${C.border}`,
-                fontFamily: FONT_BODY,
-              }}>
-                <div style={{ width: 7, height: 7, borderRadius: "50%", background: r.dot, flexShrink: 0, marginTop: 4 }} />
-                <div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: r.dot, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: 6 }}>{r.label}</span>
-                  <span style={{ fontSize: 13, color: C.muted }}>{r.text}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* Right: orb + speech bubbles */}
-        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ position: "relative", height: isMobile ? 180 : 240, marginBottom: 8 }}>
-            <Orb scale={isMobile ? 0.45 : 0.75} />
+        <div style={{
+          display: isMobile ? "flex" : "grid",
+          flexDirection: isMobile ? "column" : undefined,
+          gridTemplateColumns: isMobile ? undefined : "340px 1fr",
+          gap: isMobile ? 48 : 72,
+          alignItems: "flex-start",
+        }}>
+          {/* Orb stage */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            position: "relative",
+            height: isMobile ? 260 : 340,
+            flexShrink: 0,
+          }}>
+            <div style={{
+              position: "absolute",
+              width: isMobile ? 200 : 280, height: isMobile ? 200 : 280,
+              borderRadius: "50%",
+              background: "radial-gradient(circle,rgba(212,165,116,0.12) 0%,transparent 65%)",
+              animation: "orbBgPulse 3.5s ease-in-out infinite",
+            }} />
+            <div style={{
+              position: "absolute",
+              width: isMobile ? 140 : 200, height: isMobile ? 140 : 200,
+              borderRadius: "50%",
+              border: "1.5px solid transparent",
+              borderTopColor: "rgba(212,165,116,0.9)",
+              borderRightColor: "rgba(212,165,116,0.3)",
+              borderBottomColor: "rgba(212,165,116,0.05)",
+              borderLeftColor: "rgba(212,165,116,0.3)",
+              animation: "nextyOrbit 2.4s linear infinite",
+              filter: "drop-shadow(0 0 6px rgba(212,165,116,0.5))",
+            }} />
+            <div style={{
+              position: "absolute",
+              width: isMobile ? 110 : 160, height: isMobile ? 110 : 160,
+              borderRadius: "50%",
+              border: "1px solid rgba(212,165,116,0.15)",
+              borderTopColor: "rgba(212,165,116,0.5)",
+              animation: "nextyOrbitR 3.8s linear infinite",
+            }} />
+            <div style={{
+              position: "relative",
+              width: isMobile ? 70 : 100, height: isMobile ? 70 : 100,
+              borderRadius: "50%",
+              background: "radial-gradient(circle at 32% 28%,rgba(255,240,180,0.85) 0%,transparent 40%),radial-gradient(circle at 50% 50%,#D4A574 0%,#B8915F 45%,#8a5b00 100%)",
+              boxShadow: "inset -3px -4px 10px rgba(0,0,0,0.5),0 8px 32px rgba(184,145,95,0.55)",
+              animation: "orbBreathe 4s ease-in-out infinite",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <span style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 8 : 11, color: "rgba(8,8,8,0.75)", letterSpacing: "0.04em" }}>nexty</span>
+            </div>
+            {[{ anim: "nextyDot1 2.4s linear infinite" }, { anim: "nextyDot2 3.8s linear infinite reverse" }].map((d, i) => (
+              <div key={i} style={{
+                position: "absolute", width: 8, height: 8, borderRadius: "50%",
+                background: C.gold, boxShadow: "0 0 10px rgba(212,165,116,0.8)",
+                animation: d.anim,
+              }} />
+            ))}
           </div>
-          <SpeechBubble
-            type="critical"
-            speaker="Nexty"
-            label="Critical"
-            message="3 of your regulars haven't booked in 14 days. Based on their average spend, you're looking at R 1,200 at risk this week."
-            action="View clients"
-            delay={0.1}
-          />
-          <SpeechBubble
-            type="growth"
-            speaker="Nexty"
-            label="Growth"
-            message="Your Tuesday 10am–12pm slots convert 2.4× better than average. Consider adding a premium tier for that window."
-            action="See breakdown"
-            delay={0.3}
-          />
-          <SpeechBubble
-            type="retention"
-            speaker="Nexty"
-            label="Retention"
-            message="Clients who receive a 48hr reminder return 3× more often. Only 4 of your 22 active clients have reminders enabled."
-            action="Enable reminders"
-            delay={0.5}
-          />
+
+          {/* Speech bubbles */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{
+              fontSize: 11, color: C.faint, marginBottom: 4,
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              fontFamily: FONT_BODY,
+            }}>
+              <span style={{ fontWeight: 600, color: C.gold, fontSize: 12 }}>Nexty AI</span>
+              <span style={{ fontSize: 10 }}>Updated just now · 4 insights</span>
+            </div>
+            <SpeechBubble
+              type="critical"
+              speaker="Nexty"
+              label="Critical"
+              message="Your cancellation rate hit 22% this month. That's R 580 walking out the door every single time. Turn on a 30% deposit. One tap in Settings and watch it drop."
+              action="Fix it now"
+              delay={0.1}
+            />
+            <SpeechBubble
+              type="growth"
+              speaker="Nexty"
+              label="Growth"
+              message="Thursday afternoons are basically empty. Great to take the rest of the day off to recharge or running a promo to increase bookings. Want me to suggest a promo?"
+              action="See the gap"
+              delay={0.25}
+            />
+            <SpeechBubble
+              type="retention"
+              speaker="Nexty"
+              label="Retention"
+              message="You're at 38% retention, just 2 points shy of the beauty benchmark. Your top 12 regulars aren't on loyalty yet. Enrol them today and you'll cross 40% within 30 days."
+              action="Enrol them"
+              delay={0.4}
+            />
+            <SpeechBubble
+              type="ops"
+              speaker="Nexty"
+              label="Operations"
+              message="Three products are below reorder: Hard Wax (2 left), Lash Glue (1 left), Tinting Developer (0 left). Don't let a last-minute stock-out cancel a booking."
+              action="Restock now"
+              delay={0.55}
+            />
+          </div>
         </div>
       </div>
     </section>
