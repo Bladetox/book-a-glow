@@ -16,7 +16,7 @@ export const NextyAISection = () => {
       }}
     >
       <div style={{ maxWidth: 1120, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 56 }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 56 }}>
           <Eyebrow text="Nexty · Business Growth Advisor" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
@@ -35,20 +35,23 @@ export const NextyAISection = () => {
           display: isMobile ? "flex" : "grid",
           flexDirection: isMobile ? "column" : undefined,
           gridTemplateColumns: isMobile ? undefined : "340px 1fr",
-          gap: isMobile ? 48 : 72,
+          gap: isMobile ? 28 : 72,
           alignItems: "flex-start",
         }}>
           {/* Orb stage */}
           <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             position: "relative",
-            height: isMobile ? 260 : 340,
+            width: "100%",
+            height: isMobile ? 180 : 340,
             flexShrink: 0,
           }}>
             {/* Pulse glow */}
             <div style={{
               position: "absolute",
-              width: isMobile ? 200 : 280, height: isMobile ? 200 : 280,
+              width: isMobile ? 160 : 280, height: isMobile ? 160 : 280,
               borderRadius: "50%",
               background: "radial-gradient(circle,rgba(212,165,116,0.12) 0%,transparent 65%)",
               animation: "orbBgPulse 3.5s ease-in-out infinite",
@@ -56,7 +59,7 @@ export const NextyAISection = () => {
             {/* Outer spinning ring */}
             <div style={{
               position: "absolute",
-              width: isMobile ? 140 : 200, height: isMobile ? 140 : 200,
+              width: isMobile ? 120 : 200, height: isMobile ? 120 : 200,
               borderRadius: "50%",
               border: "1.5px solid transparent",
               borderTopColor: "rgba(212,165,116,0.9)",
@@ -69,7 +72,7 @@ export const NextyAISection = () => {
             {/* Inner counter-spinning ring */}
             <div style={{
               position: "absolute",
-              width: isMobile ? 110 : 160, height: isMobile ? 110 : 160,
+              width: isMobile ? 90 : 160, height: isMobile ? 90 : 160,
               borderRadius: "50%",
               border: "1px solid rgba(212,165,116,0.15)",
               borderTopColor: "rgba(212,165,116,0.5)",
@@ -78,14 +81,14 @@ export const NextyAISection = () => {
             {/* Core orb */}
             <div style={{
               position: "relative",
-              width: isMobile ? 70 : 100, height: isMobile ? 70 : 100,
+              width: isMobile ? 60 : 100, height: isMobile ? 60 : 100,
               borderRadius: "50%",
               background: "radial-gradient(circle at 32% 28%,rgba(255,240,180,0.85) 0%,transparent 40%),radial-gradient(circle at 50% 50%,#D4A574 0%,#B8915F 45%,#8a5b00 100%)",
               boxShadow: "inset -3px -4px 10px rgba(0,0,0,0.5),0 8px 32px rgba(184,145,95,0.55)",
               animation: "orbBreathe 4s ease-in-out infinite",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <span style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 8 : 11, color: "rgba(8,8,8,0.75)", letterSpacing: "0.04em" }}>nexty</span>
+              <span style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 7 : 11, color: "rgba(8,8,8,0.75)", letterSpacing: "0.04em" }}>nexty</span>
             </div>
             {/* Orbiting dots */}
             <div style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: C.gold, boxShadow: "0 0 10px rgba(212,165,116,0.8)", animation: "nextyDot1 2.4s linear infinite" }} />
