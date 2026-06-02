@@ -1,0 +1,359 @@
+import { useRef } from "react";
+import { Link } from "react-router-dom";
+import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
+import { useWindowWidth } from "./useWindowWidth";
+import { Eyebrow } from "./Eyebrow";
+
+/*
+  Laws of UX applied
+  ─────────────────────────────────────────────────────────────
+  Serial Position Effect   : Chaos first, Result last — the outcome
+                             is the most memorable item.
+  Von Restorff Effect      : The Result card is gold-bordered and
+                             visually distinct — it will be remembered.
+  Aesthetic-Usability      : Clean card surfaces, consistent radius,
+                             generous whitespace reduce perceived effort.
+  Miller's Law             : Three steps only (Chaos / Shift / Result)
+                             — well within the 7±2 chunk limit.
+  Goal-Gradient Effect     : Step numbers + visible progression cue
+                             the reader toward the outcome.
+  Zeigarnik Effect         : Steps 01 and 02 are intentionally
+                             unresolved — tension draws the eye to 03.
+  Jakobs Law               : Timeline cards follow a familiar
+                             before/after narrative pattern.
+  Proximity                : Related copy, stat, and bullet tightly
+                             grouped; inter-card gap is wider.
+*/
+
+const IMAGE_URL = "https://iili.io/CFVVaHu.jpg";
+
+const STEPS = [
+  {
+    step: "01",
+    tag: "The chaos",
+    headline: "Running a business on WhatsApp.",
+    body: "Bookings came through messages at all hours. Every confirmation, deposit request, and reminder sent manually, one client at a time. Mornings started with an inbox to untangle before a single client was served.",
+    stat: null,
+    isFinal: false,
+  },
+  {
+    step: "02",
+    tag: "The shift",
+    headline: "One link changed everything.",
+    body: "A professional booking page with a real payment gateway. Clients book, choose a time, and pay a deposit without a single message. The link went into the TikTok bio, Instagram bio, and WhatsApp status. Bookings started arriving on their own.",
+    stat: null,
+    isFinal: false,
+  },
+  {
+    step: "03",
+    tag: "The result",
+    headline: "A business that runs itself.",
+    body: "No more chasing payments. No more proof-of-payment screenshots. The dashboard shows exactly what is happening in real time and surfaces what to do next — before the owner even thinks to check.",
+    stat: "This is why NextSlot exists.",
+    isFinal: true,
+  },
+] as const;
+
+export const CaseStudySection = () => {
+  const width    = useWindowWidth();
+  const isMobile = width < BP;
+  const sectionRef = useRef<HTMLElement>(null);
+
+  return (
+    <section
+      ref={sectionRef}
+      style={{
+        position: "relative",
+        background: C.bg,
+        borderTop: `1px solid ${C.border}`,
+        borderBottom: `1px solid ${C.border}`,
+        padding: isMobile ? "72px 0 80px" : "100px 40px 108px",
+        overflow: "hidden",
+      }}
+    >
+      {/* Faint background image — Aesthetic-Usability: texture without distraction */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `url('${IMAGE_URL}')`,
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.07,
+          filter: "blur(2px) saturate(0.4)",
+          transform: "scale(1.04)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      {/* Gold ambient glow — visual warmth */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          width: 560,
+          height: 560,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(212,165,116,0.06) 0%, transparent 70%)",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1120,
+          margin: "0 auto",
+          padding: isMobile ? "0 24px" : "0",
+        }}
+      >
+        {/* Section header */}
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: isMobile ? 40 : 64,
+          }}
+        >
+          <Eyebrow text="Where NextSlot came from" />
+          <h2
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontSize: isMobile ? 30 : 44,
+              fontWeight: 800,
+              lineHeight: 1.08,
+              color: C.text,
+              marginBottom: 16,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            It all started with{" "}
+            <span style={{ color: C.gold }}>PhenomeBeauty.</span>
+          </h2>
+          <p
+            style={{
+              fontSize: isMobile ? 14 : 16,
+              color: C.muted,
+              lineHeight: 1.75,
+              maxWidth: 520,
+              margin: "0 auto",
+              fontFamily: FONT_BODY,
+            }}
+          >
+            A mobile beauty studio owner doing everything alone. This is her journey
+            and the reason every feature in NextSlot exists.
+          </p>
+        </div>
+
+        {/* Pull quote — Von Restorff: isolated, memorable */}
+        <div
+          style={{
+            maxWidth: 600,
+            margin: isMobile ? "0 auto 40px" : "0 auto 56px",
+            background: "rgba(212,165,116,0.06)",
+            border: `1.5px solid rgba(212,165,116,0.30)`,
+            borderRadius: 16,
+            padding: isMobile ? "20px 24px" : "26px 36px",
+            boxShadow: "0 4px 32px rgba(212,165,116,0.08)",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontSize: isMobile ? 17 : 20,
+              fontWeight: 700,
+              color: C.text,
+              lineHeight: 1.55,
+              marginBottom: 12,
+            }}
+          >
+            &ldquo;For the first time, the business felt like it was running itself.&rdquo;
+          </p>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: C.gold,
+              fontFamily: FONT_BODY,
+              letterSpacing: "0.04em",
+            }}
+          >
+            PhenomeBeauty &mdash; NextSlot customer
+          </span>
+        </div>
+
+        {/* Three-step timeline */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+            gap: isMobile ? 16 : 24,
+            maxWidth: 960,
+            margin: "0 auto",
+          }}
+        >
+          {STEPS.map((s) => (
+            <div
+              key={s.step}
+              style={{
+                position: "relative",
+                background: s.isFinal ? "rgba(212,165,116,0.07)" : C.s2,
+                border: s.isFinal
+                  ? `1.5px solid rgba(212,165,116,0.55)`
+                  : `1px solid ${C.border}`,
+                borderRadius: 18,
+                padding: isMobile ? "24px 22px" : "28px 26px",
+                boxShadow: s.isFinal
+                  ? "0 4px 32px rgba(212,165,116,0.12)"
+                  : "none",
+                overflow: "hidden",
+              }}
+            >
+              {/* Ghost step number — Goal-Gradient */}
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  right: 14,
+                  bottom: 10,
+                  fontSize: 72,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  color: s.isFinal
+                    ? "rgba(212,165,116,0.10)"
+                    : "rgba(232,232,230,0.04)",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  fontFamily: FONT_DISPLAY,
+                }}
+              >
+                {s.step}
+              </span>
+
+              {/* Tag + step badge */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 16,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: s.isFinal ? C.gold : C.faint,
+                    fontFamily: FONT_BODY,
+                  }}
+                >
+                  {s.tag}
+                </span>
+                <span
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    background: s.isFinal ? C.gold : C.s3,
+                    color: s.isFinal ? "#080808" : C.muted,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    fontFamily: FONT_BODY,
+                    flexShrink: 0,
+                  }}
+                >
+                  {parseInt(s.step)}
+                </span>
+              </div>
+
+              {/* Headline */}
+              <h3
+                style={{
+                  fontFamily: FONT_DISPLAY,
+                  fontSize: isMobile ? 17 : 19,
+                  fontWeight: 700,
+                  color: C.text,
+                  lineHeight: 1.25,
+                  marginBottom: 12,
+                }}
+              >
+                {s.headline}
+              </h3>
+
+              {/* Body */}
+              <p
+                style={{
+                  fontSize: 13,
+                  color: s.isFinal ? C.muted : "rgba(232,232,230,0.38)",
+                  lineHeight: 1.7,
+                  fontFamily: FONT_BODY,
+                  marginBottom: s.stat ? 16 : 0,
+                }}
+              >
+                {s.body}
+              </p>
+
+              {/* Stat callout on final card — Von Restorff */}
+              {s.stat && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: C.gold,
+                    letterSpacing: "0.06em",
+                    fontFamily: FONT_BODY,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {s.stat}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Read full story link — Fitts' Law: generous tap target */}
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: isMobile ? 36 : 48,
+          }}
+        >
+          <Link
+            to="/case-study"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontFamily: FONT_BODY,
+              fontSize: 13,
+              fontWeight: 600,
+              color: C.gold,
+              textDecoration: "none",
+              border: `1px solid rgba(212,165,116,0.28)`,
+              borderRadius: 10,
+              padding: "12px 22px",
+              background: "rgba(212,165,116,0.05)",
+              transition: "border-color 0.15s, background 0.15s",
+              minHeight: 44,
+            }}
+          >
+            Read the full story &#8599;
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+};

@@ -8,7 +8,7 @@ import { RevenueSection } from "@/components/home/RevenueSection";
 import { ProactiveAlertsSection } from "@/components/home/ProactiveAlertsSection";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
 import { HeatmapSection } from "@/components/home/HeatmapSection";
-import { ComparisonSection } from "@/components/home/ComparisonSection";
+import { CaseStudySection } from "@/components/home/CaseStudySection";
 import { CTASection } from "@/components/home/CTASection";
 import { C, FONT_BODY } from "@/components/home/tokens";
 
@@ -31,7 +31,7 @@ const Index = () => (
       <ProactiveAlertsSection />
       <FeaturesSection />
       <HeatmapSection />
-      <ComparisonSection />
+      <CaseStudySection />
       <CTASection />
     </main>
     <SiteFooter />
