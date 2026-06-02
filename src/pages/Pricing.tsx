@@ -17,7 +17,8 @@ const tiers = [
     name: "Starter",
     price: "R299",
     period: "/ month",
-    description: "Stop managing bookings. Start taking them.",
+    description: "While others charge you for the basics.",
+    subline: "Your Starter plan includes:",
     groups: [
       {
         label: "Core",
@@ -45,6 +46,7 @@ const tiers = [
     price: "R499",
     period: "/ month",
     description: "Your dashboard should be telling you what to do next.",
+    subline: null,
     groups: [
       {
         label: "Everything in Starter, plus",
@@ -72,6 +74,7 @@ const tiers = [
     price: "R899",
     period: "/ month",
     description: "Built for teams. Runs like a system.",
+    subline: null,
     groups: [
       {
         label: "Everything in Professional, plus",
@@ -204,8 +207,6 @@ const CellValue = ({ value }: { value: boolean | string }) => {
     ? <Check style={{ height: 16, width: 16, color: C.gold, margin: "0 auto", display: "block" }} />
     : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
 };
-
-const starterTier = tiers[0];
 
 const Pricing = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -434,75 +435,6 @@ const Pricing = () => {
             </div>
           </div>
 
-          {/* ── Starter callout ──────────────────────────────────────── */}
-          <div style={{
-            marginTop: 40,
-            background: `rgba(212,165,116,0.04)`,
-            border: `1px solid rgba(212,165,116,0.16)`,
-            borderRadius: 20, padding: "32px 36px",
-          }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, marginBottom: 4, fontFamily: FONT_BODY } as React.CSSProperties}>
-              Starter — R299 / month
-            </p>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 4 }}>
-              While others charge you for the basics.
-            </h2>
-            <p style={{ fontSize: 13, color: C.muted, marginBottom: 24, fontFamily: FONT_BODY }}>
-              Your Starter plan includes everything you need to run a real booking business:
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }} className="starter-callout-grid">
-              {starterTier.groups.map((group) => (
-                <div key={group.label}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.faint, marginBottom: 10, fontFamily: FONT_BODY } as React.CSSProperties}>
-                    {group.label}
-                  </p>
-                  <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-                    {group.features.map((f) => (
-                      <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
-                        <Check style={{ height: 14, width: 14, marginTop: 2, color: C.gold, flexShrink: 0 }} />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 28 }}>
-              {pricingMode === "manage" ? (
-                <button
-                  type="button"
-                  disabled={currentPlan === "starter" || !!submittingPlan}
-                  onClick={() => handlePlanChange("starter")}
-                  style={{
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                    padding: "12px 24px", borderRadius: 10, cursor: "pointer",
-                    border: `1px solid ${C.border2}`, color: C.muted, background: "transparent",
-                    opacity: (currentPlan === "starter" || !!submittingPlan) ? 0.5 : 1,
-                  }}
-                >
-                  {currentPlan === "starter" ? "Current Plan" : submittingPlan === "starter" ? "Saving..." : "Select Starter"}
-                  {currentPlan !== "starter" && <ArrowRight style={{ marginLeft: 6, height: 13, width: 13 }} />}
-                </button>
-              ) : (
-                <Link
-                  to="/onboarding"
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                    padding: "12px 24px", borderRadius: 10,
-                    border: `1px solid ${C.border2}`, color: C.muted,
-                    textDecoration: "none",
-                  }}
-                >
-                  Start Free Trial
-                  <ArrowRight style={{ height: 13, width: 13 }} />
-                </Link>
-              )}
-              <p style={{ marginTop: 8, fontSize: 11, color: C.faint, fontFamily: FONT_BODY }}>Free for 30 days. No card required.</p>
-            </div>
-          </div>
-
           {/* ── 3-step flow ──────────────────────────────────────────── */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
             className="pricing-steps-row">
@@ -581,7 +513,10 @@ const Pricing = () => {
                       <span style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 700, color: tier.featured ? C.gold : C.text }}>{tier.price}</span>
                       <span style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>{tier.period}</span>
                     </div>
-                    <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.5 }}>{tier.description}</p>
+                    <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.5, marginBottom: tier.subline ? 6 : 0 }}>{tier.description}</p>
+                    {tier.subline && (
+                      <p style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, marginBottom: 0 }}>{tier.subline}</p>
+                    )}
                   </div>
 
                   <div style={{ padding: "20px 28px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
