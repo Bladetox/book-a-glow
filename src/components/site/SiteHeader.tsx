@@ -3,11 +3,8 @@ import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const navLinks = [
-  { to: "/product",  label: "Product" },
-  { to: "/pricing",  label: "Pricing" },
-  { to: "/about",    label: "About" },
-  { to: "/blog",     label: "Blog" },
-  { to: "/demo",     label: "Live Demo", accent: true },
+  { to: "/pricing", label: "Pricing" },
+  { to: "/about",   label: "About" },
 ];
 
 const SiteHeader = () => {
@@ -36,13 +33,13 @@ const SiteHeader = () => {
               className="h-9 w-9 object-contain rounded-lg shrink-0 transition-transform duration-200 group-hover:scale-105"
             />
             <span className="text-base font-bold tracking-tight leading-none">
-              Next<span style={{ color: "hsl(var(--accent))" }}>Slot</span>
+              <span style={{ color: "hsl(var(--foreground))" }}>Next</span><span style={{ color: "hsl(var(--accent))" }}>Slot</span>
             </span>
           </Link>
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ to, label, accent }) => {
+            {navLinks.map(({ to, label }) => {
               const active = isActive(to);
               return (
                 <Link
@@ -52,8 +49,6 @@ const SiteHeader = () => {
                   style={{
                     color: active
                       ? "hsl(var(--foreground))"
-                      : accent
-                      ? "hsl(var(--accent))"
                       : "hsl(var(--muted-foreground))",
                     background: active ? "hsl(var(--accent) / 0.08)" : "transparent",
                   }}
@@ -64,15 +59,12 @@ const SiteHeader = () => {
                   }}
                   onMouseLeave={(e) => {
                     if (!active) {
-                      (e.currentTarget as HTMLElement).style.color = accent
-                        ? "hsl(var(--accent))"
-                        : "hsl(var(--muted-foreground))";
+                      (e.currentTarget as HTMLElement).style.color = "hsl(var(--muted-foreground))";
                       (e.currentTarget as HTMLElement).style.background = "transparent";
                     }
                   }}
                 >
                   {label}
-                  {/* Active pip */}
                   {active && (
                     <span
                       className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
@@ -102,7 +94,6 @@ const SiteHeader = () => {
               Login
             </Link>
 
-            {/* CTA -- Von Restorff isolated, glow shadow, scale on hover */}
             <Link
               to="/onboarding"
               className="inline-flex items-center justify-center text-sm font-semibold px-5 py-2.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
@@ -144,7 +135,7 @@ const SiteHeader = () => {
             style={{ borderTop: "1px solid hsl(var(--accent) / 0.12)" }}
           >
             <nav className="flex flex-col gap-1 mb-4">
-              {navLinks.map(({ to, label, accent }) => {
+              {navLinks.map(({ to, label }) => {
                 const active = isActive(to);
                 return (
                   <Link
@@ -154,8 +145,6 @@ const SiteHeader = () => {
                     style={{
                       color: active
                         ? "hsl(var(--foreground))"
-                        : accent
-                        ? "hsl(var(--accent))"
                         : "hsl(var(--muted-foreground))",
                       background: active ? "hsl(var(--accent) / 0.08)" : "transparent",
                     }}
