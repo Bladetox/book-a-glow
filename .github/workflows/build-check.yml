@@ -1,0 +1,49 @@
+name: Build Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build + Safari legacy guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Verify Safari legacy bundle exists
+        run: |
+          LEGACY=$(find dist/assets -name '*-legacy-*.js' | head -1)
+          if [ -z "$LEGACY" ]; then
+            echo "ERROR: No legacy bundle found in dist/assets."
+            echo "@vitejs/plugin-legacy may have been removed or misconfigured."
+            echo "This will cause a white screen on Safari iOS."
+            exit 1
+          fi
+          echo "Legacy bundle found: $LEGACY"
+
+      - name: Check bundle sizes
+        run: |
+          echo "=== dist/assets bundle sizes ==="
+          du -sh dist/assets/*.js 2>/dev/null | sort -h | tail -20
+          TOTAL=$(du -sh dist | cut -f1)
+          echo "Total dist size: $TOTAL"
