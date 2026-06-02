@@ -280,12 +280,32 @@ export const FeaturesSection = () => {
 
   return (
     <section style={{
+      position: "relative",
       background: C.s1,
       borderTop: `1px solid ${C.border}`,
       borderBottom: `1px solid ${C.border}`,
       padding: isMobile ? "64px 0" : "100px 40px",
+      overflow: "hidden",
     }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      {/* Background image */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: "url('https://iili.io/CF6Dsa4.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.35,
+          filter: "blur(0.5px) saturate(0.7)",
+          transform: "scale(1.04)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 52, padding: isMobile ? "0 24px" : 0 }}>
           <Eyebrow text="Nine tools. One login." />
           <h2 style={{
