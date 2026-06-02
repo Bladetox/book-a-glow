@@ -575,7 +575,7 @@ const About = () => {
         />
 
         {/* ── CASE STUDY ───────────────────────────────────────── */}
-        <section className="relative w-full min-h-[360px] flex items-end overflow-hidden">
+        <section id="case-study" className="relative w-full min-h-[360px] flex items-end overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
               src={FEATURES_IMAGE}
