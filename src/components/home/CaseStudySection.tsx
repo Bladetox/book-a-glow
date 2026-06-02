@@ -71,7 +71,7 @@ export const CaseStudySection = () => {
         overflow: "hidden",
       }}
     >
-      {/* Background image — opacity raised so the photo is visible */}
+      {/* Background image */}
       <div
         aria-hidden="true"
         style={{
@@ -81,15 +81,15 @@ export const CaseStudySection = () => {
           backgroundSize: "cover",
           backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
-          opacity: 0.18,
-          filter: "blur(1px) saturate(0.55)",
+          opacity: 0.35,
+          filter: "blur(0.5px) saturate(0.7)",
           transform: "scale(1.04)",
           pointerEvents: "none",
           zIndex: 0,
         }}
       />
 
-      {/* Gold ambient glow — visual warmth */}
+      {/* Gold ambient glow */}
       <div
         aria-hidden="true"
         style={{
@@ -152,7 +152,7 @@ export const CaseStudySection = () => {
           </p>
         </div>
 
-        {/* Pull quote — Von Restorff: isolated, memorable */}
+        {/* Pull quote */}
         <div
           style={{
             maxWidth: 600,
@@ -216,7 +216,6 @@ export const CaseStudySection = () => {
                 overflow: "hidden",
               }}
             >
-              {/* Ghost step number — Goal-Gradient */}
               <span
                 aria-hidden="true"
                 style={{
@@ -237,7 +236,6 @@ export const CaseStudySection = () => {
                 {s.step}
               </span>
 
-              {/* Tag + step badge */}
               <div
                 style={{
                   display: "flex",
@@ -278,7 +276,6 @@ export const CaseStudySection = () => {
                 </span>
               </div>
 
-              {/* Headline */}
               <h3
                 style={{
                   fontFamily: FONT_DISPLAY,
@@ -292,7 +289,6 @@ export const CaseStudySection = () => {
                 {s.headline}
               </h3>
 
-              {/* Body */}
               <p
                 style={{
                   fontSize: 13,
@@ -305,7 +301,6 @@ export const CaseStudySection = () => {
                 {s.body}
               </p>
 
-              {/* Stat callout on final card — Von Restorff */}
               {s.stat && (
                 <p
                   style={{
@@ -324,7 +319,6 @@ export const CaseStudySection = () => {
           ))}
         </div>
 
-        {/* Read full story link — Fitts' Law: generous tap target */}
         <div
           style={{
             textAlign: "center",
