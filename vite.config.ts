@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import legacy from "@vitejs/plugin-legacy";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
@@ -14,6 +15,10 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    legacy({
+      targets: ["ios >= 13", "safari >= 13"],
+      additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
+    }),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
@@ -25,8 +30,6 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
-            // All Supabase traffic must bypass the cache entirely.
-            // Caching cross-origin responses causes cross-origin-copy-response.
             urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\//,
             handler: "NetworkOnly",
           },
