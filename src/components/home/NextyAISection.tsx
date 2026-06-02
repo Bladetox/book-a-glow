@@ -17,18 +17,17 @@ export const NextyAISection = () => {
     >
       <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <Eyebrow text="Nexty AI · Business Growth Advisor" />
+          <Eyebrow text="Nexty · Business Growth Advisor" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)",
             fontWeight: 700, color: C.text,
             lineHeight: 1.08, marginBottom: 16,
           }}>
-            Knows your business<br /><span style={{ color: C.gold }}>better than a spreadsheet ever will.</span>
+            Your dashboard already knows<br /><span style={{ color: C.gold }}>what your numbers mean.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
-            Nexty tracks your peak times, your riskiest clients, your biggest gaps.
-            When she speaks, it is not generic advice. It is yours.
+            Every booking, gap, and trend is tracked in real time. The dashboard surfaces what matters. Nexty goes further — she watches for the moments that cost you money and puts them in front of you before you think to look.
           </p>
         </div>
 
@@ -100,7 +99,7 @@ export const NextyAISection = () => {
               display: "flex", justifyContent: "space-between", alignItems: "center",
               fontFamily: FONT_BODY, marginBottom: 4,
             }}>
-              <span style={{ fontWeight: 600, color: C.gold, fontSize: 12 }}>Nexty AI</span>
+              <span style={{ fontWeight: 600, color: C.gold, fontSize: 12 }}>Nexty</span>
               <span style={{ fontSize: 10 }}>Updated just now · 4 insights</span>
             </div>
             <SpeechBubble
