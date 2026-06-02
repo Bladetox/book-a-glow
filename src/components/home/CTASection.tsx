@@ -13,7 +13,7 @@ export const CTASection = () => {
   return (
     <section style={{ background: C.bg, padding: isMobile ? "80px 24px" : "120px 24px" }}>
       <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
-        <Eyebrow text="Get started today" />
+        <Eyebrow text="30-day free trial" />
         <h2 style={{
           fontFamily: FONT_DISPLAY,
           fontSize: isMobile ? "clamp(28px,8vw,42px)" : "clamp(32px,4vw,52px)",
@@ -23,7 +23,7 @@ export const CTASection = () => {
           Your dashboard should be<br /><span style={{ color: C.gold, fontStyle: "italic" }}>working for you.</span>
         </h2>
         <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.75, marginBottom: 40, maxWidth: 500, margin: "0 auto 40px", fontFamily: FONT_BODY }}>
-          Join beauty professionals across South Africa who use NextSlot to grow smarter, book more, and stress less.
+          Set up your booking page in under 10 minutes. Let Nexty watch the business while you focus on the work.
         </p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
           <Link
@@ -39,7 +39,7 @@ export const CTASection = () => {
               minHeight: 52,
             }}
           >
-            Start your free trial
+            Start for free
           </Link>
         </div>
         <p style={{ marginTop: 20, fontSize: 12, color: C.faint, letterSpacing: "0.04em", fontFamily: FONT_BODY }}>

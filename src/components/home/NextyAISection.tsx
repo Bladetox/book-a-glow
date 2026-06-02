@@ -24,11 +24,11 @@ export const NextyAISection = () => {
             fontWeight: 700, color: C.text,
             lineHeight: 1.08, marginBottom: 16,
           }}>
-            More personalised than<br /><span style={{ color: C.gold }}>most advisors.</span>
+            Knows your business<br /><span style={{ color: C.gold }}>better than a spreadsheet ever will.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
-            Nexty is always learning your business: your peak times, your riskiest clients, your
-            biggest opportunities. So when she speaks, it&apos;s not generic advice. It&apos;s yours.
+            Nexty tracks your peak times, your riskiest clients, your biggest gaps.
+            When she speaks, it is not generic advice. It is yours.
           </p>
         </div>
 

@@ -40,8 +40,8 @@ export const RevenueSection = () => {
             Not a report card.<br /><span style={{ color: C.gold }}>A running coach.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 560, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
-            NextSlot doesn&apos;t just show you revenue, it contextualises every number, projects your month-end,
-            and tells you exactly how far you are from beating last month.
+            NextSlot does not just show you the number. It tells you where the month is heading,
+            exactly how far you are from beating last month, and which gaps to fill today.
           </p>
         </div>
 
@@ -103,17 +103,17 @@ export const RevenueSection = () => {
           {[
             {
               title: "Live revenue projection",
-              body:  "Based on your daily pace, NextSlot projects your month-end revenue in real time, so you know whether to push harder or coast to a record month.",
+              body:  "Based on your daily pace, NextSlot projects your month-end figure in real time. You know whether to push harder or coast to a record month before the month ends.",
               quote: "\u201cOn track for R 39,200 this month\u201d",
             },
             {
               title: "Goal-gradient progress bar",
-              body:  "The dashboard shows you exactly how far you are from beating last month, down to the rand. That R 4,160 gap is the most motivating number on your screen.",
+              body:  "The dashboard shows exactly how far you are from beating last month, down to the rand. That R 4,160 gap is the most motivating number on your screen.",
               quote: "\u201cR 4,160 to beat last month · 82% there\u201d",
             },
             {
               title: "Urgency signals at a glance",
-              body:  "Still no revenue by noon? All appointments complete before 5pm? NextSlot highlights the outlier in amber, the number that needs your attention right now.",
+              body:  "Still no revenue by noon? All appointments done before 5pm? NextSlot highlights the outlier in amber. The number that needs your attention right now.",
               quote: "\u201cStill to come: 4 remaining\u201d",
             },
           ].map((card, i) => (

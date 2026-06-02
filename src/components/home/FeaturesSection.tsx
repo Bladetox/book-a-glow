@@ -17,7 +17,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>Always learning</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Nexty AI Insights</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Proactive Critical, Growth, Retention, and Operations insights, ranked by rand impact. Your proactive intelligent business advisor, always on, never asleep.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Critical, Growth, Retention, and Operations insights ranked by rand impact. Nexty watches your business while you work. She surfaces the problem before you feel it.</p>
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {[
         { dot: C.red,  text: "Critical: 3 clients lapsed 14+ days. R1,200 at risk" },
@@ -39,7 +39,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>Live booking</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Smart Calendar</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Day, week, and month views. Mobile date strip. Payment status visible at a glance. Reschedule in two taps. Call-out bookings tracked separately.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Day, week, and month views. Payment status visible at a glance. Reschedule in two taps. Your whole day, on one screen, no inbox required.</p>
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {[
         { time: "09:00", name: "Amara Dube",    service: "Brazilian Blowout · 2h", status: "Paid",    sc: C.em },
@@ -65,7 +65,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>Full history</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Client Management</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Full client history, consultation forms, special occasions, blocked clients, and birthday alerts. Your clients, finally organised in one place.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Full visit history, consultation forms, special occasions, blocked clients, birthday alerts. Every client detail in one place. No more digging through WhatsApp to remember what they had last time.</p>
     <div style={{ background: C.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.goldDim, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, color: "#080808" }}>A</div>
@@ -93,7 +93,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>AI-suggested</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Loyalty Program</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>AI-suggested enrollment candidates. Configurable criteria. Bulk actions. Nexty tells you who's overdue and who to enrol next, before you even ask.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Nexty tells you who to enrol before you even ask. Configurable criteria, bulk actions, overdue alerts. Stop guessing who your best clients are. The data already knows.</p>
     <div style={{ fontSize: 12, color: C.faint, marginBottom: 10 }}>Nexty recommends enrolling</div>
     {[
       { initial: "K", name: "Keitumetse M.", sub: "8 visits · R 3 200 spent" },
@@ -117,7 +117,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>Real-time alerts</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Stock &amp; Inventory</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Track products, reorder levels, and consumption per service. Stock alerts surface directly on your dashboard. Scan to update on the go.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Track products, reorder levels, and consumption per service. Alerts live on your dashboard. A stock-out cancelling a booking is the most avoidable way to lose money.</p>
     {[
       { name: "Keratin Treatment 500ml", stock: "2 units left · Reorder at 3", status: "Low stock", sc: C.red },
       { name: "Olaplex No. 3 100ml",     stock: "12 units · Reorder at 4",     status: "In stock",  sc: C.em },
@@ -140,7 +140,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>POPIA compliant</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Consultation Forms</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Custom intake forms per service, client health screening, consent records. All permanently attached to the client profile, accessible from any device.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Custom intake forms per service, health screening, consent records, all attached to the client profile. If something goes wrong, the record is there. If nothing goes wrong, you look like a professional either way.</p>
     <div style={{ background: C.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 10 }}>Chemical Relaxer · Health Screen</div>
       {[
@@ -163,7 +163,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>Online bookings</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Availability Control</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Weekly recurring schedule plus daily overrides. Block days for holidays, events, or personal time. 30-minute slots from 06:00–23:00 with instant online booking.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Weekly recurring schedule, daily overrides, block days for holidays or personal time. You decide when you work. Clients book inside those windows. Nothing outside them.</p>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 10 }}>
       {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d, i) => (
         <div key={i} style={{ textAlign: "center", padding: "8px 4px", borderRadius: 8, background: i === 6 ? "rgba(255,87,87,0.08)" : C.s2, border: `1px solid ${i === 6 ? "rgba(255,87,87,0.2)" : C.border}`, fontSize: 11, fontWeight: 600, color: i === 6 ? C.red : C.muted }}>{d}</div>
@@ -179,7 +179,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>Payment gateway</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Payments + Deposits</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Accept Yoco payments, partial deposits, and track outstanding balances, all per booking, all live in the dashboard. No chasing, no spreadsheets.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Yoco payments, partial deposits, outstanding balances, all per booking, all live. No proof of payment. No banking details in the chat. No chasing.</p>
     <div style={{ background: C.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <span style={{ fontSize: 11, color: C.faint }}>Today's payments</span>
@@ -205,7 +205,7 @@ const PANELS: React.ReactNode[] = [
       <span style={{ fontSize: 11, color: C.faint }}>Your layout</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Customisable Dashboard</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Show or hide any section. Revenue graph, heatmap, stock alerts, client insights. Your dashboard, your way, saved per device.</p>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Show or hide any section. Revenue graph, heatmap, stock alerts, client insights. One dashboard, built around how you actually run your day, saved per device.</p>
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {[
         { label: "Revenue graph",  on: true },
@@ -287,7 +287,7 @@ export const FeaturesSection = () => {
     }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 52, padding: isMobile ? "0 24px" : 0 }}>
-          <Eyebrow text="Everything you need" />
+          <Eyebrow text="Nine tools. One login." />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? 30 : 44,
@@ -298,12 +298,11 @@ export const FeaturesSection = () => {
             <span style={{ color: C.gold }}>Every tool your business needs.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
-            From bookings to AI insights, payments to inventory. Built for South African service businesses.
+            Bookings, AI insights, payments, inventory. Built for South African service businesses. No integrations, no patchwork, no spreadsheets running alongside it.
           </p>
         </div>
 
         {isMobile ? (
-          /* Mobile: horizontal scroll carousel */
           <div
             ref={carouselRef}
             className="feat-carousel"
@@ -328,7 +327,6 @@ export const FeaturesSection = () => {
             ))}
           </div>
         ) : (
-          /* Desktop: tab nav + panel */
           <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 24 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {FEATURES.map((f, i) => (

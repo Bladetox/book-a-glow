@@ -164,8 +164,8 @@ export const HeroSection = () => {
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
             Most platforms show you what&apos;s happened. NextSlot tells you what&apos;s happening.
-            With proactive insights, real-time revenue intelligence, and alerts that surface
-            opportunities before they&apos;re missed, you&apos;ll always know where to focus next.
+            Real-time revenue, alerts ranked by rand value, and insights that tell you where
+            to focus before money walks out the door.
           </p>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", animation: "fadeUp 0.6s 0.3s ease both" } as React.CSSProperties}>

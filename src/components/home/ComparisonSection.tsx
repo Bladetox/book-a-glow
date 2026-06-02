@@ -41,14 +41,12 @@ export const ComparisonSection = () => {
             <span style={{ color: C.gold }}>Not just another booking tool.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 460, margin: "0 auto" }}>
-            Most booking tools stop at the calendar. NextSlot goes further with AI insights,
-            revenue intelligence, and tools built specifically for the South African market.
+            Most booking tools stop at the calendar. NextSlot goes further.
+            AI insights, revenue intelligence, and the only platform in this category built specifically for South Africa.
           </p>
         </div>
 
-        {/* Table */}
         <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border2}`, fontFamily: FONT_BODY }}>
-          {/* Header */}
           <div style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr 64px 80px" : "1fr 120px 160px",
@@ -60,7 +58,6 @@ export const ComparisonSection = () => {
             <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, textAlign: "center" }}>Others</div>
             <div style={{ fontSize: 11, color: C.gold,  fontWeight: 700, textAlign: "center" }}>NextSlot</div>
           </div>
-          {/* Rows */}
           {ROWS.map((row, i) => (
             <div
               key={i}

@@ -48,15 +48,16 @@ export const HeatmapSection = () => {
             <span style={{ color: C.gold }}>is actually in demand.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginBottom: 24 }}>
-            The booking heatmap shows which days and times generate the most demand.
-            Use it to price strategically, adjust availability, and stop leaving revenue in empty slots.
+            The heatmap shows which days and times fill fastest.
+            Price the busy slots higher. Fill the quiet ones with a targeted offer.
+            Stop leaving revenue in empty slots you did not even know were empty.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, fontFamily: FONT_BODY }}>
             {[
               { color: "rgba(52,211,153,0.72)", label: "Peak demand",   desc: "Your highest converting windows" },
               { color: "rgba(52,211,153,0.42)", label: "High activity", desc: "Strong booking frequency" },
               { color: "rgba(52,211,153,0.18)", label: "Moderate",      desc: "Room to grow with the right offer" },
-              { color: "rgba(255,255,255,0.04)",label: "Low demand",    desc: "Consider blocking or repricing" },
+              { color: "rgba(255,255,255,0.04)",label: "Low demand",    desc: "Block it or reprice it" },
             ].map((l, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ width: 16, height: 16, borderRadius: 4, background: l.color, flexShrink: 0 }} />

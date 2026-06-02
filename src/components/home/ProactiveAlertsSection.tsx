@@ -20,35 +20,34 @@ export const ProactiveAlertsSection = () => {
           If it&apos;s costing<br /><span style={{ color: C.gold }}>you money</span>, it should not be hiding.
         </h2>
         <p style={{ fontSize: 16, color: C.muted, maxWidth: 680, margin: "0 auto 48px", lineHeight: 1.7 }}>
-          Stop hunting for problems. NextSlot surfaces the high-impact ones, ranked by rand value.
-          So every alert earns its place on your screen.
+          Stop hunting for problems. NextSlot finds the high-cost ones and puts them in front of you, ranked by rand value, before they compound.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 16, textAlign: "left" }}>
           <InsightCard
             type="critical"
-            badge="Critical \u00b7 Cancellations up 22%"
+            badge="Critical · Cancellations up 22%"
             message="You lost R 3,480 to cancellations this month. Introduce a 30% deposit to protect revenue. One setting change, instant effect."
             action="Enable deposits"
             delay={0}
           />
           <InsightCard
             type="growth"
-            badge="Growth \u00b7 14 open slots Thursday"
-            message="Thursday afternoons are your emptiest window. At your current basket, filling 6 of those slots would add R 3,480 to this month's total."
+            badge="Growth · 14 open slots Thursday"
+            message="Thursday afternoons are your emptiest window. At your current basket, filling 6 of those slots adds R 3,480 to this month's total."
             action="View heatmap"
             delay={0.1}
           />
           <InsightCard
             type="retention"
-            badge="Retention \u00b7 9 clients gone quiet"
-            message="9 clients haven't booked in 90+ days. A personalised WhatsApp to each one, sent from NextSlot, recovers 1 in 3. That's R 1,740 in potential revenue."
+            badge="Retention · 9 clients gone quiet"
+            message="9 clients have not booked in 90+ days. A personalised WhatsApp from NextSlot recovers 1 in 3. That is R 1,740 sitting there waiting."
             action="Send reminder"
             delay={0.2}
           />
           <InsightCard
             type="ops"
-            badge="Operations \u00b7 Stock below reorder"
-            message="3 products are below reorder level. Restocking now prevents last-minute cancellations and lost revenue."
+            badge="Operations · Stock below reorder"
+            message="3 products are below reorder level. Restock now. A stock-out cancelling a booking is the most avoidable way to lose money."
             action="View stock"
             delay={0.3}
           />
