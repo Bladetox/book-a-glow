@@ -71,7 +71,7 @@ export const CaseStudySection = () => {
         overflow: "hidden",
       }}
     >
-      {/* Faint background image — Aesthetic-Usability: texture without distraction */}
+      {/* Background image — opacity raised so the photo is visible */}
       <div
         aria-hidden="true"
         style={{
@@ -81,8 +81,8 @@ export const CaseStudySection = () => {
           backgroundSize: "cover",
           backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
-          opacity: 0.07,
-          filter: "blur(2px) saturate(0.4)",
+          opacity: 0.18,
+          filter: "blur(1px) saturate(0.55)",
           transform: "scale(1.04)",
           pointerEvents: "none",
           zIndex: 0,
@@ -336,7 +336,6 @@ export const CaseStudySection = () => {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
               fontFamily: FONT_BODY,
               fontSize: 13,
               fontWeight: 600,
@@ -350,7 +349,7 @@ export const CaseStudySection = () => {
               minHeight: 44,
             }}
           >
-            Read the full story &#8599;
+            Read the full story
           </Link>
         </div>
       </div>
