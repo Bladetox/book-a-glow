@@ -4,14 +4,20 @@ import SiteFooter from "@/components/site/SiteFooter";
 import { Link } from "react-router-dom";
 import { Check, Minus, ArrowRight, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
+import { HOME_STYLES } from "@/components/home/homeStyles";
 
-// ── Tier definitions (notIncluded removed — Hick's Law: show only what's included) ──
+/* ─── CTA button style (matches home page gold gradient) ──────── */
+const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
+const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
+
+/* ─── Tier definitions ─────────────────────────────────────────── */
 const tiers = [
   {
     name: "Starter",
     price: "R299",
     period: "/ month",
-    description: "For solo operators ready to ditch the WhatsApp chaos.",
+    description: "Stop managing bookings. Start taking them.",
     groups: [
       {
         label: "Core",
@@ -38,7 +44,7 @@ const tiers = [
     name: "Professional",
     price: "R499",
     period: "/ month",
-    description: "For growing businesses that want to know what's actually working.",
+    description: "Your dashboard should be telling you what to do next.",
     groups: [
       {
         label: "Everything in Starter, plus",
@@ -65,7 +71,7 @@ const tiers = [
     name: "Studio",
     price: "R899",
     period: "/ month",
-    description: "For teams, multi-operator setups and studios running at full capacity.",
+    description: "Built for teams. Runs like a system.",
     groups: [
       {
         label: "Everything in Professional, plus",
@@ -120,7 +126,6 @@ const comparisonRows: FeatureRow[] = [
   { label: "Priority support", starter: false, professional: false, studio: true },
 ];
 
-// ── Serial Position Effect: objection-killers first and last ──
 const faqs = [
   {
     q: "Do I need a card to start?",
@@ -128,7 +133,7 @@ const faqs = [
   },
   {
     q: "What happens during the 30-day free trial?",
-    a: "You get full access to the plan you choose. During this time, NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised insights waiting for you.",
+    a: "You get full access to the plan you choose. NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised insights waiting for you.",
   },
   {
     q: "How long does setup take?",
@@ -136,7 +141,7 @@ const faqs = [
   },
   {
     q: "Which payment gateway does NextSlot use?",
-    a: "NextSlot integrates with Yoco, trusted by over 200 000 South African businesses. Clients pay by card at the time of booking. Deposits are collected automatically, no EFT proof-of-payment chasing required.",
+    a: "NextSlot integrates with Yoco, trusted by over 200 000 South African businesses. Clients pay by card at the time of booking. Deposits are collected automatically. No EFT proof-of-payment chasing required.",
   },
   {
     q: "What happens if a client does not pay the deposit?",
@@ -144,15 +149,15 @@ const faqs = [
   },
   {
     q: "What is client source tracking?",
-    a: "When a client books, they tell you how they found you: TikTok, Instagram, Google, WhatsApp, or referral. Your dashboard shows which channels are actually converting so you know exactly where to focus your time and money.",
+    a: "When a client books, they tell you how they found you: TikTok, Instagram, Google, WhatsApp, or referral. Your dashboard shows which channels are actually converting so you know where to put your energy.",
   },
   {
     q: "What is the AI add-on suggestion feature?",
-    a: "During the booking flow, NextSlot can suggest relevant add-on services based on what the client is booking. It is a passive upsell that increases your average booking value without any extra effort from you.",
+    a: "During the booking flow, NextSlot suggests relevant add-on services based on what the client is booking. A passive upsell that increases your average booking value without any extra effort from you.",
   },
   {
     q: "Can I block a client?",
-    a: "Yes. On the Professional and Studio plans you can block a client with a reason attached. Blocked clients cannot make a new booking. You stay in control of who walks through your door.",
+    a: "Yes. On Professional and Studio you can block a client with a reason attached. Blocked clients cannot make a new booking. You stay in control of who walks through your door.",
   },
   {
     q: "Is there a contract or lock-in?",
@@ -194,13 +199,12 @@ const planRank: Record<TenantPlan, number> = {
 };
 
 const CellValue = ({ value }: { value: boolean | string }) => {
-  if (typeof value === "string") return <span className="text-xs text-foreground/80">{value}</span>;
+  if (typeof value === "string") return <span style={{ fontSize: 12, color: C.muted }}>{value}</span>;
   return value
-    ? <Check className="h-4 w-4 text-accent mx-auto" />
-    : <Minus className="h-4 w-4 text-foreground/20 mx-auto" />;
+    ? <Check style={{ height: 16, width: 16, color: C.gold, margin: "0 auto", display: "block" }} />
+    : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
 };
 
-// ── Starter tier shorthand for the inline callout ──
 const starterTier = tiers[0];
 
 const Pricing = () => {
@@ -215,39 +219,23 @@ const Pricing = () => {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadTenantContext = async () => {
       try {
         const { data: authData, error: authError } = await supabase.auth.getUser();
-
         if (authError || !authData?.user) {
-          if (isMounted) {
-            setPricingMode("signup");
-            setLoadingTenantContext(false);
-          }
+          if (isMounted) { setPricingMode("signup"); setLoadingTenantContext(false); }
           return;
         }
-
         const userId = authData.user.id;
-
         const { data: tenant, error: tenantError } = await supabase
-          .from("tenants")
-          .select("id, plan")
-          .eq("id", userId)
-          .maybeSingle();
-
+          .from("tenants").select("id, plan").eq("id", userId).maybeSingle();
         if (tenantError || !tenant) {
-          if (isMounted) {
-            setPricingMode("signup");
-            setLoadingTenantContext(false);
-          }
+          if (isMounted) { setPricingMode("signup"); setLoadingTenantContext(false); }
           return;
         }
-
         const normalizedPlan = String(tenant.plan ?? "").trim().toLowerCase();
         const safePlan: TenantPlan =
           normalizedPlan === "professional" || normalizedPlan === "studio" ? normalizedPlan : "starter";
-
         if (isMounted) {
           setTenantId(tenant.id);
           setCurrentPlan(safePlan);
@@ -256,49 +244,31 @@ const Pricing = () => {
         }
       } catch (error) {
         console.error("Failed to load pricing context:", error);
-        if (isMounted) {
-          setPricingMode("signup");
-          setLoadingTenantContext(false);
-        }
+        if (isMounted) { setPricingMode("signup"); setLoadingTenantContext(false); }
       }
     };
-
     loadTenantContext();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const manageTierMeta = useMemo(() => {
     if (!currentPlan) return null;
-    return {
-      label: planLabelMap[currentPlan],
-      rank: planRank[currentPlan],
-    };
+    return { label: planLabelMap[currentPlan], rank: planRank[currentPlan] };
   }, [currentPlan]);
 
   const handlePlanChange = async (selectedPlan: TenantPlan) => {
     if (!tenantId || pricingMode !== "manage" || currentPlan === selectedPlan) return;
-
     setManageNotice(null);
     setSubmittingPlan(selectedPlan);
-
     try {
       const currentRank = currentPlan ? planRank[currentPlan] : 0;
       const selectedRank = planRank[selectedPlan];
       const nextStatus = selectedRank > currentRank ? "pending_payment" : "pending_downgrade";
-
       const { error } = await supabase
         .from("tenants")
-        .update({
-          plan: selectedPlan,
-          subscription_status: nextStatus,
-        })
+        .update({ plan: selectedPlan, subscription_status: nextStatus })
         .eq("id", tenantId);
-
       if (error) throw error;
-
       setCurrentPlan(selectedPlan);
       setManageNotice(
         nextStatus === "pending_payment"
@@ -314,199 +284,182 @@ const Pricing = () => {
   };
 
   return (
-    <div className="min-h-screen nextslot-theme bg-background">
+    <div style={{ background: C.bg, color: C.text, fontFamily: FONT_BODY, minHeight: "100vh", overflowX: "hidden", WebkitFontSmoothing: "antialiased" } as React.CSSProperties}>
+      <style>{HOME_STYLES}</style>
       <SiteHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
-        {/* ── Hero ── */}
-        <section className="py-16 md:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        {/* ── HERO ─────────────────────────────────────────────────── */}
+        <section style={{ padding: "80px 0 60px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
+            className="pricing-hero-grid">
+
+            {/* Left: copy */}
             <div>
-              <div
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
-                style={{
-                  background: "hsl(var(--accent)/0.12)",
-                  border: "1px solid hsl(var(--accent)/0.30)",
-                  color: "hsl(var(--foreground))",
-                }}
-              >
-                <Zap className="h-3.5 w-3.5" style={{ color: "hsl(var(--accent))" }} />
-                30 days completely free
+              {/* Eyebrow pill */}
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: `rgba(212,165,116,0.08)`,
+                border: `1px solid rgba(212,165,116,0.2)`,
+                borderRadius: 100, padding: "5px 14px",
+                fontSize: 11, fontWeight: 600, color: C.gold,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                marginBottom: 28, fontFamily: FONT_BODY,
+              } as React.CSSProperties}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block" }} />
+                30-day free trial. No card needed.
               </div>
-              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.08] mb-5">
-                Try it free.
-                <br />
-                <span style={{ color: "hsl(var(--accent))" }}>See if it earns its keep.</span>
+
+              <h1 style={{
+                fontFamily: FONT_DISPLAY,
+                fontSize: "clamp(36px,4.2vw,58px)",
+                fontWeight: 700, color: C.text,
+                marginBottom: 20, lineHeight: 1.08,
+              }}>
+                Pricing that earns<br />
+                <span style={{ color: C.gold, fontStyle: "italic" }}>its keep.</span>
               </h1>
-              <p
-                className="text-base leading-relaxed max-w-md mb-8"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                Run your bookings for 30 days. Let NextSlot learn your business.
-                Then decide which plan fits. No card. No pressure. Starter from R299 per month.
+
+              <p style={{
+                fontSize: "clamp(15px,1.4vw,18px)", fontWeight: 500,
+                color: C.text, lineHeight: 1.5, marginBottom: 10,
+                maxWidth: 460, fontFamily: FONT_BODY,
+              }}>
+                Run your bookings for 30 days. Let NextSlot learn your business. Then decide which plan fits.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <p style={{
+                fontSize: "clamp(13px,1.15vw,15px)", fontWeight: 300,
+                color: C.muted, lineHeight: 1.7, marginBottom: 36,
+                maxWidth: 420, fontFamily: FONT_BODY,
+              }}>
+                No pressure. No card. Starter from R299 per month.
+              </p>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 {pricingMode === "manage" ? (
-                  <div
-                    className="inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px]"
-                    style={{
-                      background: "hsl(var(--accent)/0.08)",
-                      color: "hsl(var(--foreground))",
-                      border: "1px solid hsl(var(--accent)/0.25)",
-                    }}
-                  >
-                    You are currently on the {manageTierMeta?.label ?? "Starter"} plan
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
+                    padding: "14px 28px", borderRadius: 10,
+                    background: `rgba(212,165,116,0.10)`,
+                    border: `1px solid rgba(212,165,116,0.25)`,
+                    color: C.text,
+                  }}>
+                    You are on the {manageTierMeta?.label ?? "Starter"} plan
                   </div>
                 ) : (
                   <Link
                     to="/onboarding"
-                    className="group inline-flex items-center justify-center text-sm font-semibold px-7 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
                     style={{
-                      background: "hsl(var(--foreground))",
-                      color: "hsl(var(--background))",
-                      boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.boxShadow =
-                        "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.40)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.boxShadow =
-                        "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.30)";
+                      background: CTA_BG, boxShadow: CTA_SHADOW,
+                      color: "#080808", fontFamily: FONT_BODY,
+                      fontSize: 14, fontWeight: 700,
+                      padding: "14px 30px", borderRadius: 10,
+                      textDecoration: "none",
+                      display: "inline-flex", alignItems: "center", gap: 8,
+                      minHeight: 48,
                     }}
                   >
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                    Start for free
+                    <ArrowRight style={{ height: 16, width: 16 }} />
                   </Link>
                 )}
                 <a
                   href="#plans"
-                  className="inline-flex items-center justify-center text-sm font-medium px-7 py-3.5 rounded-[10px] transition-all duration-200 hover:scale-[1.01]"
                   style={{
-                    border: "1px solid hsl(var(--border))",
-                    color: "hsl(var(--muted-foreground))",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
-                    (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
-                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--muted-foreground))";
-                    (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
+                    fontFamily: FONT_BODY, fontSize: 14, fontWeight: 500, color: C.muted,
+                    textDecoration: "none", padding: "14px 4px",
+                    minHeight: 48, display: "inline-flex", alignItems: "center",
                   }}
                 >
                   See plans
                 </a>
               </div>
-              <p
-                className="text-xs mt-3"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                No credit card required. Cancel anytime. POPIA compliant.
+
+              <p style={{ marginTop: 18, fontSize: 11, color: C.faint, letterSpacing: "0.04em", fontWeight: 500, fontFamily: FONT_BODY }}>
+                No Payment Required · 30-day trial · Set up in under 20 minutes
               </p>
+
               {pricingMode === "manage" && manageNotice && (
-                <p className="text-sm mt-3" style={{ color: "hsl(var(--accent))" }}>
-                  {manageNotice}
-                </p>
+                <p style={{ marginTop: 12, fontSize: 13, color: C.gold, fontFamily: FONT_BODY }}>{manageNotice}</p>
               )}
               {loadingTenantContext && (
-                <p className="text-xs mt-3" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  Checking your account...
-                </p>
+                <p style={{ marginTop: 10, fontSize: 11, color: C.muted, fontFamily: FONT_BODY }}>Checking your account...</p>
               )}
             </div>
 
-            {/* Hero card — Aesthetic-Usability: Check icons replace empty dot markers */}
-            <div
-              className="rounded-2xl p-8 relative overflow-hidden"
-              style={{
-                background: "var(--gradient-card)",
-                border: "1px solid hsl(var(--accent)/0.28)",
-                boxShadow: "var(--shadow-elevated)",
-              }}
-            >
-              <div
-                className="pointer-events-none absolute -top-10 -right-10 w-52 h-52 rounded-full"
-                style={{
-                  background: "radial-gradient(circle, hsl(var(--accent)/0.10) 0%, transparent 70%)",
-                }}
-              />
-              <p
-                className="text-xs font-semibold uppercase tracking-widest mb-5"
-                style={{ color: "hsl(var(--accent))" }}
-              >
+            {/* Right: what the trial builds card */}
+            <div style={{
+              background: C.s1,
+              border: `1px solid ${C.border2}`,
+              borderRadius: 20,
+              padding: "36px 36px 32px",
+              position: "relative",
+              overflow: "hidden",
+            }}>
+              {/* Ambient glow */}
+              <div style={{
+                position: "absolute", top: -40, right: -40,
+                width: 200, height: 200, borderRadius: "50%",
+                background: `radial-gradient(circle, rgba(212,165,116,0.08) 0%, transparent 70%)`,
+                pointerEvents: "none",
+              }} />
+              <p style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
+                textTransform: "uppercase", color: C.gold,
+                marginBottom: 20, fontFamily: FONT_BODY,
+              } as React.CSSProperties}>
                 What your 30 days builds
               </p>
-              <ul className="space-y-4">
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 16 }}>
                 {trialBuilds.map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    {/* Aesthetic-Usability fix: filled check icon, not empty circle */}
-                    <span
-                      className="mt-0.5 h-4 w-4 rounded-full shrink-0 flex items-center justify-center"
-                      style={{
-                        background: "hsl(var(--accent)/0.15)",
-                        border: "1.5px solid hsl(var(--accent)/0.55)",
-                      }}
-                    >
-                      <Check className="h-2.5 w-2.5" style={{ color: "hsl(var(--accent))" }} />
+                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <span style={{
+                      marginTop: 2, height: 16, width: 16, borderRadius: "50%",
+                      flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: `rgba(212,165,116,0.12)`,
+                      border: `1.5px solid rgba(212,165,116,0.40)`,
+                    }}>
+                      <Check style={{ height: 9, width: 9, color: C.gold }} />
                     </span>
-                    <span
-                      className="text-sm leading-relaxed"
-                      style={{ color: "hsl(var(--foreground)/0.85)" }}
-                    >
-                      {item}
-                    </span>
+                    <span style={{ fontSize: 14, color: C.text, lineHeight: 1.55, fontFamily: FONT_BODY }}>{item}</span>
                   </li>
                 ))}
               </ul>
-              <div
-                className="mt-7 pt-5"
-                style={{ borderTop: "1px solid hsl(var(--accent)/0.18)" }}
-              >
-                <p
-                  className="text-xs"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
+              <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
+                <p style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.6 }}>
                   These insights unlock once your trial data is in. Start free to see yours.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* ── Zeigarnik/Proximity: Starter callout immediately below CTA —
-               closes the "what do I get?" loop before the user scrolls.
-               Jakob's Law: Starter still appears in the grid below for side-by-side comparison. ── */}
-          <div
-            className="mt-10 rounded-2xl p-8 border"
-            style={{
-              background: "hsl(var(--accent)/0.04)",
-              borderColor: "hsl(var(--accent)/0.18)",
-            }}
-          >
-            <p
-              className="text-xs font-semibold uppercase tracking-widest mb-1"
-              style={{ color: "hsl(var(--accent))" }}
-            >
+          {/* ── Starter callout ──────────────────────────────────────── */}
+          <div style={{
+            marginTop: 40,
+            background: `rgba(212,165,116,0.04)`,
+            border: `1px solid rgba(212,165,116,0.16)`,
+            borderRadius: 20, padding: "32px 36px",
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, marginBottom: 4, fontFamily: FONT_BODY } as React.CSSProperties}>
               Starter — R299 / month
             </p>
-            <h2 className="text-xl font-semibold tracking-tight mb-1">
-              While others charge you for the basics…
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+              While others charge you for the basics.
             </h2>
-            <p className="text-sm mb-6" style={{ color: "hsl(var(--muted-foreground))" }}>
-              Your Starter plan includes:
+            <p style={{ fontSize: 13, color: C.muted, marginBottom: 24, fontFamily: FONT_BODY }}>
+              Your Starter plan includes everything you need to run a real booking business:
             </p>
-            <div className="grid sm:grid-cols-2 gap-6">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }} className="starter-callout-grid">
               {starterTier.groups.map((group) => (
                 <div key={group.label}>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.faint, marginBottom: 10, fontFamily: FONT_BODY } as React.CSSProperties}>
                     {group.label}
                   </p>
-                  <ul className="space-y-2.5">
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
                     {group.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2.5 text-sm">
-                        <Check className="h-4 w-4 mt-0.5 text-accent flex-shrink-0" />
+                      <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
+                        <Check style={{ height: 14, width: 14, marginTop: 2, color: C.gold, flexShrink: 0 }} />
                         {f}
                       </li>
                     ))}
@@ -514,309 +467,267 @@ const Pricing = () => {
                 </div>
               ))}
             </div>
-            <div className="mt-7">
+            <div style={{ marginTop: 28 }}>
               {pricingMode === "manage" ? (
                 <button
                   type="button"
                   disabled={currentPlan === "starter" || !!submittingPlan}
                   onClick={() => handlePlanChange("starter")}
-                  className="inline-flex items-center justify-center text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
-                    border: "1px solid hsl(var(--border))",
-                    color: "hsl(var(--foreground)/0.75)",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                    padding: "12px 24px", borderRadius: 10, cursor: "pointer",
+                    border: `1px solid ${C.border2}`, color: C.muted, background: "transparent",
+                    opacity: (currentPlan === "starter" || !!submittingPlan) ? 0.5 : 1,
                   }}
                 >
                   {currentPlan === "starter" ? "Current Plan" : submittingPlan === "starter" ? "Saving..." : "Select Starter"}
-                  {currentPlan !== "starter" && <ArrowRight className="ml-2 h-3.5 w-3.5" />}
+                  {currentPlan !== "starter" && <ArrowRight style={{ marginLeft: 6, height: 13, width: 13 }} />}
                 </button>
               ) : (
                 <Link
                   to="/onboarding"
-                  className="group inline-flex items-center justify-center text-sm font-semibold px-6 py-3 rounded-[10px] transition-all duration-200 hover:scale-[1.01] active:scale-[0.98]"
                   style={{
-                    border: "1px solid hsl(var(--border))",
-                    color: "hsl(var(--foreground)/0.75)",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
-                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
-                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
-                    (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                    padding: "12px 24px", borderRadius: 10,
+                    border: `1px solid ${C.border2}`, color: C.muted,
+                    textDecoration: "none",
                   }}
                 >
                   Start Free Trial
-                  <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  <ArrowRight style={{ height: 13, width: 13 }} />
                 </Link>
               )}
-              <p className="text-[11px] text-muted-foreground mt-2">Free for 30 days. No card required.</p>
+              <p style={{ marginTop: 8, fontSize: 11, color: C.faint, fontFamily: FONT_BODY }}>Free for 30 days. No card required.</p>
             </div>
           </div>
 
-          {/* Goal-Gradient: directional arrows between steps. Occam's Razor: hidden on mobile */}
-          <div className="hidden md:flex items-center justify-center gap-0 max-w-3xl mx-auto mt-14">
+          {/* ── 3-step flow ──────────────────────────────────────────── */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
+            className="pricing-steps-row">
             {[
               { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
               { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
               { num: "03", label: "Get your strategy", sub: "Personalised insights ready when your trial ends." },
             ].map((step, idx) => (
-              <div key={step.num} className="flex items-center flex-1">
-                <div className="flex flex-col items-center gap-2 p-5 rounded-2xl border border-border/60 bg-secondary/20 flex-1">
-                  <span className="text-xs font-bold text-accent tracking-widest">{step.num}</span>
-                  <p className="text-sm font-semibold">{step.label}</p>
-                  <p className="text-xs text-muted-foreground leading-snug text-center">{step.sub}</p>
+              <div key={step.num} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+                <div style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                  padding: "20px 16px", borderRadius: 16,
+                  border: `1px solid ${C.border}`, background: C.s1, flex: 1,
+                  textAlign: "center",
+                }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: C.gold, letterSpacing: "0.1em", fontFamily: FONT_BODY }}>{step.num}</span>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: FONT_DISPLAY, margin: 0 }}>{step.label}</p>
+                  <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.4, fontFamily: FONT_BODY, margin: 0 }}>{step.sub}</p>
                 </div>
                 {idx < 2 && (
-                  <ArrowRight className="h-4 w-4 text-accent/40 shrink-0 mx-2" />
+                  <ArrowRight style={{ height: 14, width: 14, color: `rgba(212,165,116,0.35)`, flexShrink: 0, margin: "0 6px" }} />
                 )}
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── Plans — Von Restorff: Professional visually lifted ── */}
-        <section id="plans" className="pb-0">
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {tiers.map((tier) => (
-              <div
-                key={tier.name}
-                className={`rounded-xl flex flex-col transition-all duration-300 ${
-                  tier.featured
-                    ? "relative z-10 shadow-[0_8px_40px_-8px_hsl(var(--accent)/0.35)]"
-                    : "border border-border gradient-surface shadow-soft"
-                }`}
-                style={tier.featured ? {
-                  background: "linear-gradient(145deg, hsl(var(--accent)/0.08) 0%, var(--gradient-card) 60%)",
-                  border: "2px solid hsl(var(--accent)/0.50)",
-                  boxShadow: "0 8px 40px -8px hsl(var(--accent)/0.35), 0 0 0 1px hsl(var(--accent)/0.15)",
-                } : {}}
-              >
-                <div className={`px-8 pt-8 pb-6 ${tier.featured ? "border-b border-accent/15" : "border-b border-border/50"}`}>
-                  {tier.featured && (
-                    /* Von Restorff: larger, higher-contrast "Most Popular" badge */
-                    <span
-                      className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-3"
-                      style={{
-                        background: "hsl(var(--accent)/0.15)",
-                        color: "hsl(var(--accent))",
-                        border: "1px solid hsl(var(--accent)/0.35)",
-                      }}
-                    >
-                      <Zap className="h-3 w-3" />
-                      Most Popular
-                    </span>
-                  )}
-                  <h3 className="text-lg font-semibold mb-1">{tier.name}</h3>
-                  <div className="mb-2">
-                    <span className="text-3xl font-semibold">{tier.price}</span>
-                    <span className="text-sm text-muted-foreground">{tier.period}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{tier.description}</p>
-                </div>
+        {/* ── PLANS ────────────────────────────────────────────────── */}
+        <section id="plans" style={{ paddingBottom: 0 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, maxWidth: 960, margin: "0 auto" }}
+            className="pricing-plans-grid">
+            {tiers.map((tier) => {
+              const tierPlan = planKeyMap[tier.name];
+              const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
+              const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
+              const isDowngrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] < planRank[currentPlan];
+              const isBusy = submittingPlan === tierPlan;
+              const ctaLabel = pricingMode === "manage"
+                ? isCurrent ? "Current Plan" : isUpgrade ? "Upgrade" : isDowngrade ? "Downgrade" : "Select Plan"
+                : tier.cta;
 
-                {/* Miller's Law: features chunked under labelled micro-groups */}
-                <div className="px-8 py-6 flex-1 space-y-5">
-                  {tier.groups.map((group) => (
-                    <div key={group.label}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
-                        {group.label}
-                      </p>
-                      <ul className="space-y-2.5">
-                        {group.features.map((f) => (
-                          <li key={f} className="flex items-start gap-2.5 text-sm">
-                            <Check className="h-4 w-4 mt-0.5 text-accent flex-shrink-0" />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
+              return (
+                <div
+                  key={tier.name}
+                  style={tier.featured ? {
+                    background: `linear-gradient(145deg, rgba(212,165,116,0.06) 0%, ${C.s1} 60%)`,
+                    border: `2px solid rgba(212,165,116,0.45)`,
+                    borderRadius: 16,
+                    boxShadow: `0 8px 40px -8px rgba(212,165,116,0.30), 0 0 0 1px rgba(212,165,116,0.10)`,
+                    display: "flex", flexDirection: "column",
+                    position: "relative", zIndex: 1,
+                  } : {
+                    background: C.s1,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 16,
+                    display: "flex", flexDirection: "column",
+                  }}
+                >
+                  <div style={{ padding: "28px 28px 20px", borderBottom: `1px solid ${tier.featured ? "rgba(212,165,116,0.12)" : C.border}` }}>
+                    {tier.featured && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
+                        textTransform: "uppercase",
+                        padding: "4px 12px", borderRadius: 100, marginBottom: 12,
+                        background: `rgba(212,165,116,0.12)`,
+                        border: `1px solid rgba(212,165,116,0.30)`,
+                        color: C.gold, fontFamily: FONT_BODY,
+                      } as React.CSSProperties}>
+                        <Zap style={{ height: 10, width: 10 }} />
+                        Most Popular
+                      </span>
+                    )}
+                    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 6 }}>{tier.name}</h3>
+                    <div style={{ marginBottom: 8 }}>
+                      <span style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 700, color: tier.featured ? C.gold : C.text }}>{tier.price}</span>
+                      <span style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>{tier.period}</span>
                     </div>
-                  ))}
-                </div>
+                    <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.5 }}>{tier.description}</p>
+                  </div>
 
-                <div className="px-8 pb-8">
-                  {(() => {
-                    const tierPlan = planKeyMap[tier.name];
-                    const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
-                    const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
-                    const isDowngrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] < planRank[currentPlan];
-                    const isBusy = submittingPlan === tierPlan;
+                  <div style={{ padding: "20px 28px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+                    {tier.groups.map((group) => (
+                      <div key={group.label}>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.faint, marginBottom: 10, fontFamily: FONT_BODY } as React.CSSProperties}>
+                          {group.label}
+                        </p>
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                          {group.features.map((f) => (
+                            <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
+                              <Check style={{ height: 14, width: 14, marginTop: 2, color: C.gold, flexShrink: 0 }} />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
 
-                    const ctaLabel = pricingMode === "manage"
-                      ? isCurrent
-                        ? "Current Plan"
-                        : isUpgrade
-                        ? "Upgrade"
-                        : isDowngrade
-                        ? "Downgrade"
-                        : "Select Plan"
-                      : tier.cta;
-
-                    if (pricingMode === "manage") {
-                      return (
-                        <>
-                          <button
-                            type="button"
-                            disabled={isCurrent || !!submittingPlan}
-                            onClick={() => handlePlanChange(tierPlan)}
-                            className={`group w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] ${
-                              isCurrent ? "cursor-not-allowed opacity-60" : tier.featured ? "hover:scale-[1.02]" : "hover:scale-[1.01]"
-                            }`}
-                            style={
-                              isCurrent
-                                ? {
-                                    background: "hsl(var(--accent)/0.10)",
-                                    color: "hsl(var(--foreground))",
-                                    border: "1px solid hsl(var(--accent)/0.25)",
-                                  }
-                                : tier.featured
-                                ? {
-                                    background: "hsl(var(--foreground))",
-                                    color: "hsl(var(--background))",
-                                    boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)",
-                                  }
-                                : {
-                                    border: "1px solid hsl(var(--border))",
-                                    color: "hsl(var(--foreground)/0.75)",
-                                  }
-                            }
-                            onMouseEnter={(e) => {
-                              if (isCurrent || isBusy) return;
-                              if (tier.featured) {
-                                (e.currentTarget as HTMLElement).style.boxShadow =
-                                  "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.38)";
-                              } else {
-                                (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
-                                (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
-                                (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (isCurrent || isBusy) return;
-                              if (tier.featured) {
-                                (e.currentTarget as HTMLElement).style.boxShadow =
-                                  "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)";
-                              } else {
-                                (e.currentTarget as HTMLElement).style.background = "transparent";
-                                (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
-                                (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
-                              }
-                            }}
-                          >
-                            {isBusy ? "Saving..." : ctaLabel}
-                            {!isCurrent && <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />}
-                          </button>
-                          <p className="text-center text-[11px] text-muted-foreground mt-2">
-                            {isCurrent
-                              ? "This is your current subscription."
-                              : isUpgrade
-                              ? "Upgrade request will be recorded for billing."
-                              : isDowngrade
-                              ? "Downgrade applies at the start of your next billing cycle."
-                              : "Select the plan you want to move to."}
-                          </p>
-                        </>
-                      );
-                    }
-
-                    return (
+                  <div style={{ padding: "0 28px 28px" }}>
+                    {pricingMode === "manage" ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={isCurrent || !!submittingPlan}
+                          onClick={() => handlePlanChange(tierPlan)}
+                          style={isCurrent ? {
+                            width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                            padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
+                            background: `rgba(212,165,116,0.08)`, color: C.text,
+                            border: `1px solid rgba(212,165,116,0.20)`, opacity: 0.6,
+                          } : tier.featured ? {
+                            width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                            fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
+                            padding: "13px 20px", borderRadius: 10, cursor: "pointer",
+                            background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808", border: "none",
+                          } : {
+                            width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                            fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                            padding: "12px 20px", borderRadius: 10, cursor: "pointer",
+                            background: "transparent", color: C.muted, border: `1px solid ${C.border2}`,
+                          }}
+                        >
+                          {isBusy ? "Saving..." : ctaLabel}
+                          {!isCurrent && <ArrowRight style={{ height: 13, width: 13 }} />}
+                        </button>
+                        <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
+                          {isCurrent ? "This is your current subscription." : isUpgrade ? "Upgrade request recorded for billing." : isDowngrade ? "Downgrade applies next billing cycle." : "Select the plan you want to move to."}
+                        </p>
+                      </>
+                    ) : (
                       <>
                         <Link
                           to="/onboarding"
-                          className={`group w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98] ${
-                            tier.featured ? "hover:scale-[1.02]" : "hover:scale-[1.01]"
-                          }`}
                           style={tier.featured ? {
-                            background: "hsl(var(--foreground))",
-                            color: "hsl(var(--background))",
-                            boxShadow: "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)",
+                            width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                            fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
+                            padding: "13px 20px", borderRadius: 10,
+                            background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808",
+                            textDecoration: "none",
                           } : {
-                            border: "1px solid hsl(var(--border))",
-                            color: "hsl(var(--foreground)/0.75)",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (tier.featured) {
-                              (e.currentTarget as HTMLElement).style.boxShadow =
-                                "0 0 0 1px hsl(var(--accent)/0.55), 0 6px 20px -2px hsl(var(--accent)/0.38)";
-                            } else {
-                              (e.currentTarget as HTMLElement).style.background = "hsl(var(--accent)/0.06)";
-                              (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--accent)/0.35)";
-                              (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground))";
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (tier.featured) {
-                              (e.currentTarget as HTMLElement).style.boxShadow =
-                                "0 0 0 1px hsl(var(--accent)/0.35), 0 4px 14px -2px hsl(var(--accent)/0.28)";
-                            } else {
-                              (e.currentTarget as HTMLElement).style.background = "transparent";
-                              (e.currentTarget as HTMLElement).style.borderColor = "hsl(var(--border))";
-                              (e.currentTarget as HTMLElement).style.color = "hsl(var(--foreground)/0.75)";
-                            }
+                            width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                            fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                            padding: "12px 20px", borderRadius: 10,
+                            background: "transparent", color: C.muted,
+                            border: `1px solid ${C.border2}`, textDecoration: "none",
                           }}
                         >
                           {tier.cta}
-                          <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          <ArrowRight style={{ height: 13, width: 13 }} />
                         </Link>
-                        <p className="text-center text-[11px] text-muted-foreground mt-2">Free for 30 days. No card required.</p>
+                        <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>Free for 30 days. No card required.</p>
                       </>
-                    );
-                  })()}
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="max-w-4xl mx-auto mt-6 border border-border rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-4 gradient-surface shadow-soft">
+          {/* Enterprise row */}
+          <div style={{
+            maxWidth: 960, margin: "20px auto 0",
+            background: C.s1, border: `1px solid ${C.border}`,
+            borderRadius: 16, padding: "28px 32px",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap",
+          }}>
             <div>
-              <h3 className="text-lg font-semibold mb-1">Enterprise</h3>
-              <p className="text-sm text-muted-foreground">For multi-location businesses, franchise brands, and white-label infrastructure. Custom pricing, dedicated support, and a setup built around your operation.</p>
+              <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>Enterprise</h3>
+              <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, maxWidth: 480, lineHeight: 1.6 }}>
+                Multi-location businesses, franchise brands, and white-label infrastructure. Custom pricing, dedicated support, and a setup built around your operation.
+              </p>
             </div>
             <Link
               to="/contact"
-              className="inline-flex items-center justify-center border border-border text-sm font-medium px-5 py-2.5 rounded-[10px] hover:bg-secondary hover:shadow-soft transition-all whitespace-nowrap"
+              style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                padding: "12px 24px", borderRadius: 10, whiteSpace: "nowrap",
+                border: `1px solid ${C.border2}`, color: C.muted, textDecoration: "none",
+              }}
             >
               Contact Sales
             </Link>
           </div>
         </section>
 
-        {/* ── Comparison — Proximity: flush to plans, no gap ── */}
-        <section className="pb-16 md:pb-20 max-w-4xl mx-auto mt-4">
-          <div className="flex justify-center">
+        {/* ── COMPARISON ───────────────────────────────────────────── */}
+        <section style={{ maxWidth: 960, margin: "16px auto 0", paddingBottom: 60 }}>
+          <div style={{ display: "flex", justifyContent: "center" }}>
             <button
               type="button"
               onClick={() => setShowComparison(!showComparison)}
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                fontSize: 13, fontWeight: 500, color: C.muted,
+                background: "none", border: "none", cursor: "pointer",
+                padding: "8px 0", fontFamily: FONT_BODY,
+              }}
             >
               {showComparison ? "Hide" : "See"} full plan comparison
-              {showComparison ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {showComparison
+                ? <ChevronUp style={{ height: 14, width: 14 }} />
+                : <ChevronDown style={{ height: 14, width: 14 }} />}
             </button>
           </div>
           {showComparison && (
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-border shadow-soft">
-              <table className="w-full text-sm">
+            <div style={{ marginTop: 16, overflowX: "auto", borderRadius: 16, border: `1px solid ${C.border}` }}>
+              <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
                 <thead>
-                  {/* Proximity: sticky tier names mirror the card order above */}
-                  <tr className="border-b border-border bg-secondary/40">
-                    <th className="text-left py-4 px-5 font-semibold text-sm w-1/2">Feature</th>
-                    <th className="text-center py-4 px-3 font-semibold text-sm">Starter</th>
-                    <th className="text-center py-4 px-3 font-semibold text-sm text-accent">Professional</th>
-                    <th className="text-center py-4 px-3 font-semibold text-sm">Studio</th>
+                  <tr style={{ borderBottom: `1px solid ${C.border}`, background: C.s2 }}>
+                    <th style={{ textAlign: "left", padding: "14px 20px", fontWeight: 600, fontSize: 13, color: C.text, fontFamily: FONT_BODY, width: "50%" }}>Feature</th>
+                    <th style={{ textAlign: "center", padding: "14px 12px", fontWeight: 600, fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>Starter</th>
+                    <th style={{ textAlign: "center", padding: "14px 12px", fontWeight: 600, fontSize: 13, color: C.gold, fontFamily: FONT_BODY }}>Professional</th>
+                    <th style={{ textAlign: "center", padding: "14px 12px", fontWeight: 600, fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>Studio</th>
                   </tr>
                 </thead>
                 <tbody>
                   {comparisonRows.map((row, i) => (
-                    <tr
-                      key={row.label}
-                      className={`border-b border-border/50 ${i % 2 === 0 ? "bg-background" : "bg-secondary/20"}`}
-                    >
-                      <td className="py-3 px-5 text-foreground/80">{row.label}</td>
-                      <td className="py-3 px-3 text-center"><CellValue value={row.starter} /></td>
-                      <td className="py-3 px-3 text-center bg-accent/5"><CellValue value={row.professional} /></td>
-                      <td className="py-3 px-3 text-center"><CellValue value={row.studio} /></td>
+                    <tr key={row.label} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.bg : C.s1 }}>
+                      <td style={{ padding: "12px 20px", color: C.muted, fontFamily: FONT_BODY }}>{row.label}</td>
+                      <td style={{ padding: "12px", textAlign: "center" }}><CellValue value={row.starter} /></td>
+                      <td style={{ padding: "12px", textAlign: "center", background: "rgba(212,165,116,0.03)" }}><CellValue value={row.professional} /></td>
+                      <td style={{ padding: "12px", textAlign: "center" }}><CellValue value={row.studio} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -825,19 +736,23 @@ const Pricing = () => {
           )}
         </section>
 
-        <section className="pb-20 md:pb-24 max-w-4xl mx-auto">
-          <div className="rounded-2xl border border-accent/25 bg-accent/5 px-8 py-10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-3">What your 30-day trial actually builds</p>
-            <h2 className="text-2xl font-semibold tracking-tight mb-3">
+        {/* ── TRIAL VALUE BLOCK ─────────────────────────────────────── */}
+        <section style={{ maxWidth: 960, margin: "0 auto", paddingBottom: 80 }}>
+          <div style={{
+            background: C.s1,
+            border: `1px solid rgba(212,165,116,0.22)`,
+            borderRadius: 20, padding: "40px 40px",
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, marginBottom: 10, fontFamily: FONT_BODY } as React.CSSProperties}>
+              What your 30-day trial actually builds
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
               Your data. Your strategy.
             </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business:
-              when demand peaks, where clients find you, which services drive the most revenue per hour, and
-              which time slots go to waste. By the time your trial ends, your dashboard is already working
-              as your business advisor.
+            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
+              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business. When demand peaks, where clients find you, which services drive the most revenue per hour, and which time slots go to waste. By the time your trial ends, your dashboard is already working as your business advisor.
             </p>
-            <ul className="space-y-3">
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
               {[
                 "Know which channel (TikTok, Instagram, Google) is actually sending you clients",
                 "See which services generate the most revenue per hour worked",
@@ -845,8 +760,8 @@ const Pricing = () => {
                 "Spot clients who have gone quiet and need a re-engagement nudge",
                 "Get growth strategies built from your actual data, not generic advice",
               ].map((point) => (
-                <li key={point} className="flex items-start gap-3 text-sm">
-                  <Check className="h-4 w-4 mt-0.5 text-accent shrink-0" />
+                <li key={point} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
+                  <Check style={{ height: 15, width: 15, marginTop: 2, color: C.gold, flexShrink: 0 }} />
                   {point}
                 </li>
               ))}
@@ -854,25 +769,33 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* ── FAQ — Serial Position: objection-killers at positions 1 and 10 ── */}
-        <section className="pb-20 md:pb-28 max-w-2xl mx-auto">
-          <h2 className="text-2xl font-semibold tracking-tight text-center mb-2">Common questions</h2>
-          <p className="text-center text-sm text-muted-foreground mb-10">Straight answers. No sales speak.</p>
-          <div className="space-y-3">
+        {/* ── FAQ ───────────────────────────────────────────────────── */}
+        <section style={{ maxWidth: 680, margin: "0 auto", paddingBottom: 100 }}>
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
+            Straight answers.
+          </h2>
+          <p style={{ fontSize: 14, color: C.muted, textAlign: "center", marginBottom: 40, fontFamily: FONT_BODY }}>
+            No sales speak.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {faqs.map((faq, i) => (
-              <div key={i} className="border border-border rounded-xl overflow-hidden">
+              <div key={i} style={{ border: `1px solid ${openFaq === i ? "rgba(212,165,116,0.25)" : C.border}`, borderRadius: 14, overflow: "hidden" }}>
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-secondary/40 transition-colors"
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                    padding: "16px 20px", textAlign: "left", background: openFaq === i ? C.s1 : "transparent",
+                    border: "none", cursor: "pointer", fontFamily: FONT_BODY,
+                  }}
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
                 >
-                  <span className="text-sm font-medium">{faq.q}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{faq.q}</span>
                   {openFaq === i
-                    ? <ChevronUp className="h-4 w-4 text-accent shrink-0" />
-                    : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    ? <ChevronUp style={{ height: 14, width: 14, color: C.gold, flexShrink: 0 }} />
+                    : <ChevronDown style={{ height: 14, width: 14, color: C.muted, flexShrink: 0 }} />}
                 </button>
                 {openFaq === i && (
-                  <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border/50 pt-3 bg-secondary/20">
+                  <div style={{ padding: "0 20px 16px", fontSize: 14, color: C.muted, lineHeight: 1.7, borderTop: `1px solid ${C.border}`, paddingTop: 14, background: C.s1, fontFamily: FONT_BODY }}>
                     {faq.a}
                   </div>
                 )}
@@ -882,35 +805,68 @@ const Pricing = () => {
         </section>
       </main>
 
-      {/* ── Peak-End Rule: high-impact close — the last thing felt before leaving ── */}
-      <section className="bg-primary text-primary-foreground py-16 md:py-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent">30 days free. No card needed.</p>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Start free. Let your data do the talking.
+      {/* ── BOTTOM CTA (matches home CTASection) ─────────────────── */}
+      <section style={{ background: C.bg, padding: "100px 24px" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: "rgba(212,165,116,0.08)", border: "1px solid rgba(212,165,116,0.2)",
+            borderRadius: 100, padding: "5px 14px",
+            fontSize: 11, fontWeight: 600, color: C.gold,
+            letterSpacing: "0.08em", textTransform: "uppercase",
+            marginBottom: 24, fontFamily: FONT_BODY,
+          } as React.CSSProperties}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block" }} />
+            30-day free trial
+          </div>
+          <h2 style={{
+            fontFamily: FONT_DISPLAY,
+            fontSize: "clamp(28px,4vw,48px)",
+            fontWeight: 700, color: C.text,
+            lineHeight: 1.08, marginBottom: 20,
+          }}>
+            Your dashboard should be<br /><span style={{ color: C.gold, fontStyle: "italic" }}>working for you.</span>
           </h2>
-          <p className="text-primary-foreground/70 text-base max-w-md mx-auto">
-            Sign up in minutes. Your first 30 days are completely free.
-            NextSlot maps your business patterns and delivers personalised growth insights built on your real numbers.
+          <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.75, marginBottom: 40, maxWidth: 500, margin: "0 auto 40px", fontFamily: FONT_BODY }}>
+            Set up your booking page in under 20 minutes. Let NextSlot watch the business while you focus on the work.
           </p>
-          {pricingMode === "manage" ? (
-            <a
-              href="#plans"
-              className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
-            >
-              Manage Your Plan
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </a>
-          ) : (
-            <Link
-              to="/onboarding"
-              className="group inline-flex items-center justify-center bg-primary-foreground text-primary text-sm font-semibold px-8 py-4 rounded-[10px] ring-1 ring-accent hover:scale-[1.02] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.35)]"
-            >
-              Start Your Free Trial
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          )}
-          <p className="text-xs text-primary-foreground/40 pt-1">No payment required. Try free for 30 days. Cancel anytime.</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
+            {pricingMode === "manage" ? (
+              <a
+                href="#plans"
+                style={{
+                  background: CTA_BG, boxShadow: CTA_SHADOW,
+                  color: "#080808", fontFamily: FONT_BODY,
+                  fontSize: 15, fontWeight: 700,
+                  padding: "16px 36px", borderRadius: 12,
+                  textDecoration: "none",
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  minHeight: 52,
+                }}
+              >
+                Manage Your Plan
+                <ArrowRight style={{ height: 16, width: 16 }} />
+              </a>
+            ) : (
+              <Link
+                to="/onboarding"
+                style={{
+                  background: CTA_BG, boxShadow: CTA_SHADOW,
+                  color: "#080808", fontFamily: FONT_BODY,
+                  fontSize: 15, fontWeight: 700,
+                  padding: "16px 36px", borderRadius: 12,
+                  textDecoration: "none",
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  minHeight: 52,
+                }}
+              >
+                Start for free
+              </Link>
+            )}
+          </div>
+          <p style={{ marginTop: 20, fontSize: 12, color: C.faint, letterSpacing: "0.04em", fontFamily: FONT_BODY }}>
+            No credit card required · 30-day free trial · Cancel anytime
+          </p>
         </div>
       </section>
 
