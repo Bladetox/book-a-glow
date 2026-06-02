@@ -326,7 +326,7 @@ export const CaseStudySection = () => {
           }}
         >
           <Link
-            to="/case-study"
+            to="/about#case-study"
             style={{
               display: "inline-flex",
               alignItems: "center",
