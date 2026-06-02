@@ -4,35 +4,19 @@ import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 
 const FEATURES = [
-  { name: "Nexty AI" }, { name: "Smart Calendar" }, { name: "Client Management" },
-  { name: "Loyalty Program" }, { name: "Stock & Inventory" }, { name: "Consultations" },
-  { name: "Availability" }, { name: "Payments" }, { name: "Dashboard" },
+  { name: "Smart Calendar" },
+  { name: "Payments" },
+  { name: "Client Management" },
+  { name: "Dashboard" },
+  { name: "Nexty" },
+  { name: "Availability" },
+  { name: "Loyalty Program" },
+  { name: "Stock & Inventory" },
+  { name: "Consultations" },
 ];
 
 const PANELS: React.ReactNode[] = [
-  /* 0 – Nexty AI */
-  <div>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>AI-POWERED</span>
-      <span style={{ fontSize: 11, color: C.faint }}>Always learning</span>
-    </div>
-    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Nexty AI Insights</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Critical, Growth, Retention, and Operations insights ranked by rand impact. Nexty watches your business while you work. She surfaces the problem before you feel it.</p>
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {[
-        { dot: C.red,  text: "Critical: 3 clients lapsed 14+ days. R1,200 at risk" },
-        { dot: C.em,   text: "Growth: Tuesday 10–12pm converts 2.4× better. Add premium tier" },
-        { dot: C.blue, text: "Retention: 48hr reminder clients return 3× more often" },
-      ].map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
-          <div style={{ width: 7, height: 7, borderRadius: "50%", background: r.dot, flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: C.muted }}>{r.text}</span>
-        </div>
-      ))}
-    </div>
-  </div>,
-
-  /* 1 – Smart Calendar */
+  /* 0 – Smart Calendar */
   <div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>FULL FEATURE</span>
@@ -53,6 +37,32 @@ const PANELS: React.ReactNode[] = [
             <span style={{ fontSize: 12, color: C.muted }}>{b.service}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: b.sc }}>{b.status}</span>
           </div>
+        </div>
+      ))}
+    </div>
+  </div>,
+
+  /* 1 – Payments */
+  <div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>SA PAYMENTS</span>
+      <span style={{ fontSize: 11, color: C.faint }}>Payment gateway</span>
+    </div>
+    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Payments + Deposits</h3>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Yoco payments, partial deposits, outstanding balances, all per booking, all live. No proof of payment. No banking details in the chat. No chasing.</p>
+    <div style={{ background: C.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ fontSize: 11, color: C.faint }}>Today's payments</span>
+        <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 700, color: C.gold }}>R 3 240</span>
+      </div>
+      {[
+        { name: "Amara Dube",    amount: "R 850 paid",      color: C.em },
+        { name: "Keitumetse M.", amount: "R 200 deposit",   color: C.gold },
+        { name: "Nandi Khumalo", amount: "R 1 200 pending", color: C.amber },
+      ].map((p, i) => (
+        <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.muted, padding: "5px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
+          <span>{p.name}</span>
+          <span style={{ color: p.color, fontWeight: 600 }}>{p.amount}</span>
         </div>
       ))}
     </div>
@@ -86,11 +96,72 @@ const PANELS: React.ReactNode[] = [
     </div>
   </div>,
 
-  /* 3 – Loyalty */
+  /* 3 – Dashboard */
+  <div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>FULL FEATURE</span>
+      <span style={{ fontSize: 11, color: C.faint }}>Your layout</span>
+    </div>
+    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Customisable Dashboard</h3>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Show or hide any section. Revenue graph, heatmap, stock alerts, client insights. One dashboard, built around how you actually run your day, saved per device.</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {[
+        { label: "Revenue graph",  on: true },
+        { label: "Heatmap",        on: true },
+        { label: "Nexty insights", on: true },
+        { label: "Stock alerts",   on: false },
+      ].map((t, i) => (
+        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.bg, borderRadius: 10, padding: "10px 14px", border: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: 13, color: C.muted }}>{t.label}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: t.on ? C.em : C.faint }}>{t.on ? "On" : "Off"}</span>
+        </div>
+      ))}
+    </div>
+  </div>,
+
+  /* 4 – Nexty */
+  <div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>NEXTY</span>
+      <span style={{ fontSize: 11, color: C.faint }}>Always watching</span>
+    </div>
+    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Nexty Insights</h3>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Critical, Growth, Retention, and Operations insights ranked by rand impact. Nexty watches your business while you work. She surfaces the problem before you feel it.</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {[
+        { dot: C.red,  text: "Critical: 3 clients lapsed 14+ days. R1,200 at risk" },
+        { dot: C.em,   text: "Growth: Tuesday 10–12pm converts 2.4× better. Add premium tier" },
+        { dot: C.blue, text: "Retention: 48hr reminder clients return 3× more often" },
+      ].map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: r.dot, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: C.muted }}>{r.text}</span>
+        </div>
+      ))}
+    </div>
+  </div>,
+
+  /* 5 – Availability */
+  <div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>FULL FEATURE</span>
+      <span style={{ fontSize: 11, color: C.faint }}>Online bookings</span>
+    </div>
+    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Availability Control</h3>
+    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Weekly recurring schedule, daily overrides, block days for holidays or personal time. You decide when you work. Clients book inside those windows. Nothing outside them.</p>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 10 }}>
+      {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d, i) => (
+        <div key={i} style={{ textAlign: "center", padding: "8px 4px", borderRadius: 8, background: i === 6 ? "rgba(255,87,87,0.08)" : C.s2, border: `1px solid ${i === 6 ? "rgba(255,87,87,0.2)" : C.border}`, fontSize: 11, fontWeight: 600, color: i === 6 ? C.red : C.muted }}>{d}</div>
+      ))}
+    </div>
+    <div style={{ fontSize: 11, color: C.faint }}>Sunday blocked · 34 open slots this week</div>
+  </div>,
+
+  /* 6 – Loyalty */
   <div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>NEXTY-POWERED</span>
-      <span style={{ fontSize: 11, color: C.faint }}>AI-suggested</span>
+      <span style={{ fontSize: 11, color: C.faint }}>Nexty-suggested</span>
     </div>
     <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Loyalty Program</h3>
     <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Nexty tells you who to enrol before you even ask. Configurable criteria, bulk actions, overdue alerts. Stop guessing who your best clients are. The data already knows.</p>
@@ -110,7 +181,7 @@ const PANELS: React.ReactNode[] = [
     ))}
   </div>,
 
-  /* 4 – Stock */
+  /* 7 – Stock */
   <div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>FULL FEATURE</span>
@@ -133,7 +204,7 @@ const PANELS: React.ReactNode[] = [
     ))}
   </div>,
 
-  /* 5 – Consultations */
+  /* 8 – Consultations */
   <div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>FULL FEATURE</span>
@@ -151,71 +222,6 @@ const PANELS: React.ReactNode[] = [
         <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.muted, padding: "5px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
           <span>{row.q}</span>
           <span style={{ color: C.text, fontWeight: 500 }}>{row.a}</span>
-        </div>
-      ))}
-    </div>
-  </div>,
-
-  /* 6 – Availability */
-  <div>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>FULL FEATURE</span>
-      <span style={{ fontSize: 11, color: C.faint }}>Online bookings</span>
-    </div>
-    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Availability Control</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Weekly recurring schedule, daily overrides, block days for holidays or personal time. You decide when you work. Clients book inside those windows. Nothing outside them.</p>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 10 }}>
-      {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d, i) => (
-        <div key={i} style={{ textAlign: "center", padding: "8px 4px", borderRadius: 8, background: i === 6 ? "rgba(255,87,87,0.08)" : C.s2, border: `1px solid ${i === 6 ? "rgba(255,87,87,0.2)" : C.border}`, fontSize: 11, fontWeight: 600, color: i === 6 ? C.red : C.muted }}>{d}</div>
-      ))}
-    </div>
-    <div style={{ fontSize: 11, color: C.faint }}>Sunday blocked · 34 open slots this week</div>
-  </div>,
-
-  /* 7 – Payments */
-  <div>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>SA PAYMENTS</span>
-      <span style={{ fontSize: 11, color: C.faint }}>Payment gateway</span>
-    </div>
-    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Payments + Deposits</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Yoco payments, partial deposits, outstanding balances, all per booking, all live. No proof of payment. No banking details in the chat. No chasing.</p>
-    <div style={{ background: C.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <span style={{ fontSize: 11, color: C.faint }}>Today's payments</span>
-        <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 700, color: C.gold }}>R 3 240</span>
-      </div>
-      {[
-        { name: "Amara Dube",    amount: "R 850 paid",      color: C.em },
-        { name: "Keitumetse M.", amount: "R 200 deposit",   color: C.gold },
-        { name: "Nandi Khumalo", amount: "R 1 200 pending", color: C.amber },
-      ].map((p, i) => (
-        <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.muted, padding: "5px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
-          <span>{p.name}</span>
-          <span style={{ color: p.color, fontWeight: 600 }}>{p.amount}</span>
-        </div>
-      ))}
-    </div>
-  </div>,
-
-  /* 8 – Dashboard */
-  <div>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>FULL FEATURE</span>
-      <span style={{ fontSize: 11, color: C.faint }}>Your layout</span>
-    </div>
-    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 10 }}>Customisable Dashboard</h3>
-    <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>Show or hide any section. Revenue graph, heatmap, stock alerts, client insights. One dashboard, built around how you actually run your day, saved per device.</p>
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {[
-        { label: "Revenue graph",  on: true },
-        { label: "Heatmap",        on: true },
-        { label: "Nexty insights", on: true },
-        { label: "Stock alerts",   on: false },
-      ].map((t, i) => (
-        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.bg, borderRadius: 10, padding: "10px 14px", border: `1px solid ${C.border}` }}>
-          <span style={{ fontSize: 13, color: C.muted }}>{t.label}</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: t.on ? C.em : C.faint }}>{t.on ? "On" : "Off"}</span>
         </div>
       ))}
     </div>
@@ -318,7 +324,7 @@ export const FeaturesSection = () => {
             <span style={{ color: C.gold }}>Every tool your business needs.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
-            Bookings, AI insights, payments, inventory. Built for South African service businesses. No integrations, no patchwork, no spreadsheets running alongside it.
+            Bookings, intelligent insights, payments, inventory. Built for South African service businesses. No integrations, no patchwork, no spreadsheets running alongside it.
           </p>
         </div>
 
