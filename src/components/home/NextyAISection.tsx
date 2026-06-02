@@ -27,7 +27,7 @@ export const NextyAISection = () => {
             Your dashboard already knows<br /><span style={{ color: C.gold }}>what your numbers mean.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
-            Every booking, gap, and trend is tracked in real time. The dashboard surfaces what matters. Nexty goes further — she watches for the moments that cost you money and puts them in front of you before you think to look.
+            Every booking, gap, and trend is tracked in real time. The dashboard surfaces what matters. Nexty goes further, she watches for the moments that cost you money and puts them in front of you before you think to look.
           </p>
         </div>
 
