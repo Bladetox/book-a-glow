@@ -10,25 +10,22 @@ import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
 import { PwaUpdater } from "@/components/PwaUpdater";
 
-const Index         = lazy(() => import("./pages/Index"));
-const About         = lazy(() => import("./pages/About"));
-const Book          = lazy(() => import("./pages/Book"));
-const Product       = lazy(() => import("./pages/Product"));
-const Pricing       = lazy(() => import("./pages/Pricing"));
-const Blog          = lazy(() => import("./pages/Blog"));
-const Login         = lazy(() => import("./pages/Login"));
-const Onboarding    = lazy(() => import("./pages/Onboarding"));
-const Signup        = lazy(() => import("./pages/Signup"));
-const Privacy       = lazy(() => import("./pages/Privacy"));
-const SiteTerms     = lazy(() => import("./pages/SiteTerms"));
-const Admin         = lazy(() => import("./pages/Admin"));
-const SuperAdmin    = lazy(() => import("./pages/SuperAdmin"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const NotFound      = lazy(() => import("./pages/NotFound"));
+const Index          = lazy(() => import("./pages/Index"));
+const About          = lazy(() => import("./pages/About"));
+const Book           = lazy(() => import("./pages/Book"));
+const Pricing        = lazy(() => import("./pages/Pricing"));
+const Login          = lazy(() => import("./pages/Login"));
+const Onboarding     = lazy(() => import("./pages/Onboarding"));
+const Signup         = lazy(() => import("./pages/Signup"));
+const Privacy        = lazy(() => import("./pages/Privacy"));
+const SiteTerms      = lazy(() => import("./pages/SiteTerms"));
+const Admin          = lazy(() => import("./pages/Admin"));
+const SuperAdmin     = lazy(() => import("./pages/SuperAdmin"));
+const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
+const NotFound       = lazy(() => import("./pages/NotFound"));
 const TenantNotFound = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
-const Demo          = lazy(() => import("./pages/Demo"));
-const CaseStudy     = lazy(() => import("./pages/CaseStudy"));
+const Demo           = lazy(() => import("./pages/Demo"));
 
 const queryClient = new QueryClient();
 
@@ -62,9 +59,7 @@ const MarketingRoutes = () => (
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/about" element={<About />} />
-        <Route path="/product" element={<Product />} />
         <Route path="/pricing" element={<Pricing />} />
-        <Route path="/blog" element={<Blog />} />
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/signup" element={<Signup />} />
@@ -77,7 +72,10 @@ const MarketingRoutes = () => (
         <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
         <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
         <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
-        <Route path="/case-study/phenomebeauty" element={<CaseStudy />} />
+        {/* Legacy redirects */}
+        <Route path="/product" element={<Navigate to="/" replace />} />
+        <Route path="/blog" element={<Navigate to="/about" replace />} />
+        <Route path="/case-study/phenomebeauty" element={<Navigate to="/about" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
@@ -106,9 +104,9 @@ const TenantRoutes = () => {
 };
 
 const App = () => {
-  const tenantSlug = getTenantSlug();
+  const tenantSlug  = getTenantSlug();
   const customDomain = isCustomDomainHost();
-  const isSubdomain = !!tenantSlug || !!customDomain;
+  const isSubdomain  = !!tenantSlug || !!customDomain;
 
   return (
     <QueryClientProvider client={queryClient}>
