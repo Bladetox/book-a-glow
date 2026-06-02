@@ -705,7 +705,7 @@ const Pricing = () => {
         </section>
 
         {/* ── FAQ ───────────────────────────────────────────────────── */}
-        <section style={{ maxWidth: 680, margin: "0 auto", paddingBottom: 100 }}>
+        <section id="faq" style={{ maxWidth: 680, margin: "0 auto", paddingBottom: 100 }}>
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
             Straight answers.
           </h2>

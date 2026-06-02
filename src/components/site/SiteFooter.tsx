@@ -27,7 +27,7 @@ const SiteFooter = () => (
           <Link to="/pricing" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
           <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
           <Link to="/terms"   className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
-          <Link to="/faq"     className="text-xs text-muted-foreground hover:text-foreground transition-colors">FAQ</Link>
+          <a href="/pricing#faq" className="text-xs text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
         </nav>
 
         <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} NextSlot. All rights reserved.</p>
