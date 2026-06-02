@@ -140,7 +140,7 @@ export const HeroSection = () => {
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block", animation: "pulseDot 2s ease-in-out infinite" }} />
-            AI-Powered · For Beauty Pros
+            Intelligent · Built for Service Businesses
           </div>
 
           <h1 style={{
@@ -200,10 +200,10 @@ export const HeroSection = () => {
               style={{
                 fontFamily: FONT_BODY, fontSize: 14, fontWeight: 500, color: C.muted,
                 textDecoration: "none", padding: "14px 4px",
-                minHeight: 48, display: "inline-flex", alignItems: "center", gap: 6,
+                minHeight: 48, display: "inline-flex", alignItems: "center",
               }}
             >
-              See how it works ↗
+              See how it works
             </a>
           </div>
 
