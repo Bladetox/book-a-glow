@@ -46,4 +46,23 @@ export const HOME_STYLES = `
 
   .proof-track { animation: proofScroll 28s linear infinite; }
   .proof-track:hover { animation-play-state: paused; }
+
+  /* ── Pricing page responsive grids ─────────────────────────── */
+  @media (max-width: 767px) {
+    .pricing-hero-grid {
+      grid-template-columns: 1fr !important;
+      gap: 32px !important;
+    }
+    .pricing-plans-grid {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+    .starter-callout-grid {
+      grid-template-columns: 1fr !important;
+      gap: 20px !important;
+    }
+    .pricing-steps-row {
+      display: none !important;
+    }
+  }
 `;
