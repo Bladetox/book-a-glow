@@ -44,20 +44,18 @@ export const HeatmapSection = () => {
             fontWeight: 800, lineHeight: 1.1,
             color: C.text, marginBottom: 20,
           }}>
-            See when your business<br />
-            <span style={{ color: C.gold }}>is actually in demand.</span>
+            You already know Saturday is busy.<br />
+            <span style={{ color: C.gold }}>Now you know why Friday is not.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginBottom: 24 }}>
-            The heatmap shows which days and times fill fastest.
-            Price the busy slots higher. Fill the quiet ones with a targeted offer.
-            Stop leaving revenue in empty slots you did not even know were empty.
+            Some weeks feel full. Others feel thin and you cannot explain it. The heatmap makes the pattern visible. When you can see it, you can do something about it.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, fontFamily: FONT_BODY }}>
             {[
-              { color: "rgba(52,211,153,0.72)", label: "Peak demand",   desc: "Your highest converting windows" },
-              { color: "rgba(52,211,153,0.42)", label: "High activity", desc: "Strong booking frequency" },
-              { color: "rgba(52,211,153,0.18)", label: "Moderate",      desc: "Room to grow with the right offer" },
-              { color: "rgba(255,255,255,0.04)",label: "Low demand",    desc: "Block it or reprice it" },
+              { color: "rgba(52,211,153,0.72)",  label: "Peak demand",   desc: "Clients want in. Charge accordingly" },
+              { color: "rgba(52,211,153,0.42)",  label: "High activity", desc: "Solid ground. Keep it" },
+              { color: "rgba(52,211,153,0.18)",  label: "Moderate",      desc: "One well-timed offer fills this" },
+              { color: "rgba(255,255,255,0.04)", label: "Low demand",    desc: "Now you know. Now you can act" },
             ].map((l, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ width: 16, height: 16, borderRadius: 4, background: l.color, flexShrink: 0 }} />
