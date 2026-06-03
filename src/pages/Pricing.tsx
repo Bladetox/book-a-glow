@@ -11,6 +11,46 @@ import { HOME_STYLES } from "@/components/home/homeStyles";
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
+/* ─── Shared background image layer (matches HeroSection exactly) */
+const BgImage = ({ url }: { url: string }) => (
+  <>
+    {/* Photo layer */}
+    <div style={{
+      position:           "absolute",
+      inset:              0,
+      backgroundImage:    `url('${url}')`,
+      backgroundSize:     "cover",
+      backgroundPosition: "center",
+      backgroundRepeat:   "no-repeat",
+      opacity:            0.42,
+      filter:             "blur(0.5px) saturate(0.75)",
+      transform:          "scale(1.04)",
+      zIndex:             0,
+      pointerEvents:      "none",
+    }} />
+    {/* Gold grid overlay */}
+    <div style={{
+      position: "absolute", inset: 0,
+      backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
+      backgroundSize: "44px 44px",
+      WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+      maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+      zIndex: 1,
+      pointerEvents: "none",
+    } as React.CSSProperties} />
+    {/* Ambient glow orb */}
+    <div style={{
+      position: "absolute", width: 640, height: 640, borderRadius: "50%",
+      background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
+      top: "50%", left: "50%",
+      transform: "translate(-50%,-50%)",
+      animation: "heroBreathe 7s ease-in-out infinite",
+      zIndex: 1,
+      pointerEvents: "none",
+    }} />
+  </>
+);
+
 /* ─── Tier definitions ─────────────────────────────────────────── */
 const tiers = [
   {
@@ -291,36 +331,14 @@ const Pricing = () => {
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
-        <section style={{ padding: "80px 0 60px", position: "relative" }}>
-          {/* Hero background image */}
-          <div style={{
-            position: "absolute", inset: 0,
-            overflow: "hidden", borderRadius: 24, zIndex: 0,
-            pointerEvents: "none",
-          }}>
-            <img
-              src="https://iili.io/CFs98E7.jpg"
-              alt=""
-              aria-hidden="true"
-              style={{
-                position: "absolute", inset: 0,
-                width: "100%", height: "100%",
-                objectFit: "cover", objectPosition: "center",
-                opacity: 0.13,
-              }}
-            />
-            <div style={{
-              position: "absolute", inset: 0,
-              background: `linear-gradient(135deg, ${C.bg} 0%, rgba(8,8,8,0.72) 50%, ${C.bg} 100%)`,
-            }} />
-          </div>
+        <section style={{ padding: "80px 0 60px", position: "relative", overflow: "hidden" }}>
+          <BgImage url="https://iili.io/CFs98E7.jpg" />
 
-          <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
+          <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
             className="pricing-hero-grid">
 
             {/* Left: copy */}
             <div>
-              {/* Eyebrow pill */}
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 background: `rgba(212,165,116,0.08)`,
@@ -421,7 +439,6 @@ const Pricing = () => {
               position: "relative",
               overflow: "hidden",
             }}>
-              {/* Ambient glow */}
               <div style={{
                 position: "absolute", top: -40, right: -40,
                 width: 200, height: 200, borderRadius: "50%",
@@ -459,7 +476,7 @@ const Pricing = () => {
           </div>
 
           {/* ── 3-step flow ──────────────────────────────────────────── */}
-          <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
+          <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
             className="pricing-steps-row">
             {[
               { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
@@ -728,31 +745,10 @@ const Pricing = () => {
         </section>
 
         {/* ── FAQ ───────────────────────────────────────────────────── */}
-        <section id="faq" style={{ position: "relative", margin: "0 -24px", padding: "80px 24px 100px" }}>
-          {/* FAQ background image */}
-          <div style={{
-            position: "absolute", inset: 0,
-            overflow: "hidden", zIndex: 0,
-            pointerEvents: "none",
-          }}>
-            <img
-              src="https://iili.io/CFsJkg9.jpg"
-              alt=""
-              aria-hidden="true"
-              style={{
-                position: "absolute", inset: 0,
-                width: "100%", height: "100%",
-                objectFit: "cover", objectPosition: "center",
-                opacity: 0.10,
-              }}
-            />
-            <div style={{
-              position: "absolute", inset: 0,
-              background: `linear-gradient(180deg, ${C.bg} 0%, rgba(8,8,8,0.60) 40%, rgba(8,8,8,0.60) 60%, ${C.bg} 100%)`,
-            }} />
-          </div>
+        <section id="faq" style={{ position: "relative", margin: "0 -24px", padding: "80px 24px 100px", overflow: "hidden" }}>
+          <BgImage url="https://iili.io/CFsJkg9.jpg" />
 
-          <div style={{ position: "relative", zIndex: 1, maxWidth: 680, margin: "0 auto" }}>
+          <div style={{ position: "relative", zIndex: 2, maxWidth: 680, margin: "0 auto" }}>
             <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
               Straight answers.
             </h2>
