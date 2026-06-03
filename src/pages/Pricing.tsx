@@ -291,8 +291,31 @@ const Pricing = () => {
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
-        <section style={{ padding: "80px 0 60px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
+        <section style={{ padding: "80px 0 60px", position: "relative" }}>
+          {/* Hero background image */}
+          <div style={{
+            position: "absolute", inset: 0,
+            overflow: "hidden", borderRadius: 24, zIndex: 0,
+            pointerEvents: "none",
+          }}>
+            <img
+              src="https://iili.io/CFs98E7.jpg"
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute", inset: 0,
+                width: "100%", height: "100%",
+                objectFit: "cover", objectPosition: "center",
+                opacity: 0.13,
+              }}
+            />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: `linear-gradient(135deg, ${C.bg} 0%, rgba(8,8,8,0.72) 50%, ${C.bg} 100%)`,
+            }} />
+          </div>
+
+          <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
             className="pricing-hero-grid">
 
             {/* Left: copy */}
@@ -436,7 +459,7 @@ const Pricing = () => {
           </div>
 
           {/* ── 3-step flow ──────────────────────────────────────────── */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
+          <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
             className="pricing-steps-row">
             {[
               { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
@@ -705,37 +728,62 @@ const Pricing = () => {
         </section>
 
         {/* ── FAQ ───────────────────────────────────────────────────── */}
-        <section id="faq" style={{ maxWidth: 680, margin: "0 auto", paddingBottom: 100 }}>
-          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
-            Straight answers.
-          </h2>
-          <p style={{ fontSize: 14, color: C.muted, textAlign: "center", marginBottom: 40, fontFamily: FONT_BODY }}>
-            No sales speak.
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {faqs.map((faq, i) => (
-              <div key={i} style={{ border: `1px solid ${openFaq === i ? "rgba(212,165,116,0.25)" : C.border}`, borderRadius: 14, overflow: "hidden" }}>
-                <button
-                  type="button"
-                  style={{
-                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
-                    padding: "16px 20px", textAlign: "left", background: openFaq === i ? C.s1 : "transparent",
-                    border: "none", cursor: "pointer", fontFamily: FONT_BODY,
-                  }}
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                >
-                  <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{faq.q}</span>
-                  {openFaq === i
-                    ? <ChevronUp style={{ height: 14, width: 14, color: C.gold, flexShrink: 0 }} />
-                    : <ChevronDown style={{ height: 14, width: 14, color: C.muted, flexShrink: 0 }} />}
-                </button>
-                {openFaq === i && (
-                  <div style={{ padding: "0 20px 16px", fontSize: 14, color: C.muted, lineHeight: 1.7, borderTop: `1px solid ${C.border}`, paddingTop: 14, background: C.s1, fontFamily: FONT_BODY }}>
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
+        <section id="faq" style={{ position: "relative", margin: "0 -24px", padding: "80px 24px 100px" }}>
+          {/* FAQ background image */}
+          <div style={{
+            position: "absolute", inset: 0,
+            overflow: "hidden", zIndex: 0,
+            pointerEvents: "none",
+          }}>
+            <img
+              src="https://iili.io/CFsJkg9.jpg"
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute", inset: 0,
+                width: "100%", height: "100%",
+                objectFit: "cover", objectPosition: "center",
+                opacity: 0.10,
+              }}
+            />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: `linear-gradient(180deg, ${C.bg} 0%, rgba(8,8,8,0.60) 40%, rgba(8,8,8,0.60) 60%, ${C.bg} 100%)`,
+            }} />
+          </div>
+
+          <div style={{ position: "relative", zIndex: 1, maxWidth: 680, margin: "0 auto" }}>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
+              Straight answers.
+            </h2>
+            <p style={{ fontSize: 14, color: C.muted, textAlign: "center", marginBottom: 40, fontFamily: FONT_BODY }}>
+              No sales speak.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {faqs.map((faq, i) => (
+                <div key={i} style={{ border: `1px solid ${openFaq === i ? "rgba(212,165,116,0.25)" : C.border}`, borderRadius: 14, overflow: "hidden" }}>
+                  <button
+                    type="button"
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                      padding: "16px 20px", textAlign: "left", background: openFaq === i ? C.s1 : "transparent",
+                      border: "none", cursor: "pointer", fontFamily: FONT_BODY,
+                    }}
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{faq.q}</span>
+                    {openFaq === i
+                      ? <ChevronUp style={{ height: 14, width: 14, color: C.gold, flexShrink: 0 }} />
+                      : <ChevronDown style={{ height: 14, width: 14, color: C.muted, flexShrink: 0 }} />}
+                  </button>
+                  {openFaq === i && (
+                    <div style={{ padding: "0 20px 16px", fontSize: 14, color: C.muted, lineHeight: 1.7, borderTop: `1px solid ${C.border}`, paddingTop: 14, background: C.s1, fontFamily: FONT_BODY }}>
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </main>
