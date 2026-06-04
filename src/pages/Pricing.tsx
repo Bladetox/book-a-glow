@@ -325,7 +325,7 @@ const Pricing = () => {
   };
 
   return (
-    <div style={{ background: C.bg, color: C.text, fontFamily: FONT_BODY, minHeight: "100vh", overflowX: "hidden", WebkitFontSmoothing: "antialiased" } as React.CSSProperties}>
+    <div className="nextslot-theme dark-brand" style={{ overflowX: "hidden" }}>  
       <style>{HOME_STYLES}</style>
       <SiteHeader />
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
