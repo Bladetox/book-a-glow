@@ -601,6 +601,44 @@ html:not(.dark) .tenant-logo-img {
   pointer-events: none;
 }
 
+/* ─── Dark brand variant: used by Pricing page ───────────────── */
+.nextslot-theme.dark-brand {
+  --background: 0 0% 3%;
+  --foreground: 0 0% 91%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 91%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 91%;
+  --primary: 38 45% 65%;
+  --primary-foreground: 0 0% 5%;
+  --secondary: 0 0% 7%;
+  --secondary-foreground: 0 0% 91%;
+  --muted: 0 0% 7%;
+  --muted-foreground: 0 0% 52%;
+  --accent: 38 45% 65%;
+  --accent-foreground: 0 0% 5%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 100% / 0.06;
+  --input: 0 0% 100% / 0.08;
+  --ring: 38 45% 65%;
+
+  --gradient-hero:    linear-gradient(180deg, #080808 0%, #111110 100%);
+  --gradient-section: linear-gradient(180deg, #111110 0%, #080808 100%);
+  --gradient-card:    linear-gradient(135deg, #111110 0%, #181816 100%);
+  --gradient-dark-section: linear-gradient(180deg, #080808 0%, #111110 100%);
+  --gradient-glow:    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212,165,116,0.10), transparent);
+  --gradient-surface: linear-gradient(180deg, #111110 0%, #080808 100%);
+  --shadow-soft:      0 1px 3px rgba(0,0,0,0.30), 0 4px 12px rgba(0,0,0,0.20);
+  --shadow-elevated:  0 4px 16px rgba(0,0,0,0.45), 0 12px 40px rgba(0,0,0,0.30);
+  --shadow-glow:      0 0 40px rgba(212,165,116,0.15);
+
+  color-scheme: dark;
+  background: #080808;
+  color: #e8e8e6;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+  
 /* ═══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE OVERRIDES
 ═══════════════════════════════════════════════════════════════ */
