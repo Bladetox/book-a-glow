@@ -4,12 +4,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Clock, Check } from "lucide-react";
 import { useState } from "react";
 
-/* ─── constants ─────────────────────────────────────────────── */
+/* ─── constants ─────────────────────────────────────── */
 const GOLD    = "hsl(38 40% 58%)";
 const FEATURES_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
 
-/* ─── blog data ─────────────────────────────────────────────── */
+/* ─── blog data ─────────────────────────────────────── */
 type Category = "All" | "Business" | "Operations" | "Finance";
 type Article = {
   title: string;
@@ -57,7 +57,7 @@ const articles: Article[] = [
   {
     title: "How to Price Your Services Without Underselling or Losing Clients",
     excerpt:
-      "Pricing is one of the most avoided conversations in small business. Most owners either charge too little out of fear or copy competitors without understanding their own costs. This is a practical method for getting it right.",
+      "Pricing is most avoided conversations in small business. Most owners either charge too little out of fear or copy competitors without understanding their own costs. This is a practical method for getting it right.",
     category: "Finance",
     readTime: "6 min",
     date: "2025",
@@ -76,7 +76,7 @@ const articles: Article[] = [
   },
 ];
 
-/* ─── how-it-works steps ─────────────────────────────────────── */
+/* ─── how-it-works steps ─────────────────────────────── */
 const steps = [
   {
     number: "01",
@@ -95,7 +95,7 @@ const steps = [
   },
 ];
 
-/* ─── timeline ───────────────────────────────────────────────── */
+/* ─── timeline ───────────────────────────────────────── */
 const timeline = [
   {
     version: "The problem",
@@ -114,7 +114,7 @@ const timeline = [
   },
 ];
 
-/* ─── feature cards ──────────────────────────────────────────── */
+/* ─── feature cards ──────────────────────────────────── */
 const features = [
   {
     label: "Booking page",
@@ -148,7 +148,7 @@ const features = [
   },
 ];
 
-/* ─── component ──────────────────────────────────────────────── */
+/* ─── component ──────────────────────────────────────── */
 const About = () => {
   const [activeCategory, setActiveCategory] = useState<Category>("All");
 
@@ -364,12 +364,17 @@ const About = () => {
                   <div className="rounded-2xl bg-white/8 border border-white/10 p-5">
                     <p className="text-xs text-white/50 uppercase tracking-wider mb-3">Services offered</p>
                     <div className="flex flex-wrap gap-2">
-                      {["TikTok Strategy", "Content Audit", "1:1 Coaching", "Brand Review", "Profile Optimisation"].map((s) => (
+                      {["TikTok Strategy", "Content Audit", "1:1 Coaching", "Brand Review", "Profile Optimisation"].map((tag) => (
                         <span
-                          key={s}
-                          className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-white/70 border border-white/10"
+                          key={tag}
+                          className="px-3 py-1 rounded-full text-[11px] font-medium"
+                          style={{
+                            background: "rgba(255,255,255,0.08)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "rgba(255,255,255,0.65)",
+                          }}
                         >
-                          {s}
+                          {tag}
                         </span>
                       ))}
                     </div>
