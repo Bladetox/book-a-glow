@@ -81,7 +81,7 @@ const Demo = () => {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
           <div className="text-center space-y-4 mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/20 text-xs font-medium border border-foreground/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D4A574] animate-pulse" />
               Interactive Demo - 100% Mock Data
             </div>
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
