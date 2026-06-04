@@ -156,14 +156,19 @@ Deno.serve(async (req) => {
     const clientEmail = (booking as any).client_email || (booking as any).guest_email || (booking.client as any)?.email    || null;
     const clientPhone = escapeHtml((booking as any).client_phone || (booking as any).guest_phone || (booking.client as any)?.phone    || "");
 
-    const tenantName  = escapeHtml(tenant?.name ?? "PhenomeBeauty");
-    const tenantEmail = (tenant?.email && tenant.email.trim() !== "")
-      ? tenant.email.trim()
-      : (settings["notification_email"] && settings["notification_email"].trim() !== "")
-        ? settings["notification_email"].trim()
-        : (settings["email"] && settings["email"].trim() !== "")
-          ? settings["email"].trim()
-          : "phenomebeautys@gmail.com";
+    const tenantName  = escapeHtml(tenant?.name ?? "Beauty Studio");
+
+    // Resolve tenant notification email — no hardcoded fallback.
+    // If no email is configured the owner notification is silently skipped.
+    const tenantEmail: string | null =
+      (tenant?.email && tenant.email.trim() !== "")
+        ? tenant.email.trim()
+        : (settings["notification_email"] && settings["notification_email"].trim() !== "")
+          ? settings["notification_email"].trim()
+          : (settings["email"] && settings["email"].trim() !== "")
+            ? settings["email"].trim()
+            : null;
+
     const logoUrl = (tenant as any)?.logo_url ?? null;
 
     const formattedDate = formatDate(booking.booking_date);
@@ -250,12 +255,12 @@ Deno.serve(async (req) => {
           location,
           description:    `Appointment confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nDeposit paid: ${depositAmount}\nBalance due on day: ${balanceDue}`,
           organiserName:  tenantName,
-          organiserEmail: tenantEmail,
+          organiserEmail: tenantEmail ?? "bookings@nextslot.co.za",
         }) : null;
 
         const clientPayload: Record<string, unknown> = {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
+          reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
           subject:  `Booking Confirmed – ${formattedDate} at ${formattedTime}`,
           html:     clientHtml,
@@ -270,18 +275,20 @@ Deno.serve(async (req) => {
         console.log("Client confirmation email:", clientRes.status, JSON.stringify(await clientRes.json()));
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Owner notification — only if tenant has a configured email
+      if (tenantEmail) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
 
-      const gcalStart    = booking.booking_date.replace(/-/g, "") + "T" + booking.start_time.replace(/:/g, "").slice(0, 6);
-      const gcalEnd      = booking.end_time
-        ? booking.booking_date.replace(/-/g, "") + "T" + (booking.end_time as string).replace(/:/g, "").slice(0, 6)
-        : gcalStart;
-      const gcalTitle    = encodeURIComponent(`${serviceNames} — ${clientName}`);
-      const gcalDetails  = encodeURIComponent(`Client: ${clientName} | Phone: ${clientPhone} | Deposit: ${depositAmount} | Balance: ${balanceDue}`);
-      const gcalLocation = encodeURIComponent(location);
-      const gcalLink     = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalStart}/${gcalEnd}&details=${gcalDetails}&location=${gcalLocation}`;
+        const gcalStart    = booking.booking_date.replace(/-/g, "") + "T" + booking.start_time.replace(/:/g, "").slice(0, 6);
+        const gcalEnd      = booking.end_time
+          ? booking.booking_date.replace(/-/g, "") + "T" + (booking.end_time as string).replace(/:/g, "").slice(0, 6)
+          : gcalStart;
+        const gcalTitle    = encodeURIComponent(`${serviceNames} — ${clientName}`);
+        const gcalDetails  = encodeURIComponent(`Client: ${clientName} | Phone: ${clientPhone} | Deposit: ${depositAmount} | Balance: ${balanceDue}`);
+        const gcalLocation = encodeURIComponent(location);
+        const gcalLink     = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalStart}/${gcalEnd}&details=${gcalDetails}&location=${gcalLocation}`;
 
-      const ownerHtml = `<!DOCTYPE html>
+        const ownerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -321,18 +328,21 @@ Deno.serve(async (req) => {
 </table>
 </body></html>`;
 
-      const ownerRes = await fetch(RESEND_API_URL, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
-          to:       [tenantEmail],
-          subject:  `🎉 New booking — ${clientName} on ${formattedDate}`,
-          html:     ownerHtml,
-        }),
-      });
-      console.log("Owner notification email:", ownerRes.status, JSON.stringify(await ownerRes.json()));
+        const ownerRes = await fetch(RESEND_API_URL, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from:     `${tenantName} <bookings@nextslot.co.za>`,
+            reply_to: tenantEmail,
+            to:       [tenantEmail],
+            subject:  `🎉 New booking — ${clientName} on ${formattedDate}`,
+            html:     ownerHtml,
+          }),
+        });
+        console.log("Owner notification email:", ownerRes.status, JSON.stringify(await ownerRes.json()));
+      } else {
+        console.warn("No tenant email configured — owner notification skipped for booking:", booking_id);
+      }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -400,12 +410,12 @@ Deno.serve(async (req) => {
           location,
           description:    `Appointment confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nFull payment received: ${totalAmount}`,
           organiserName:  tenantName,
-          organiserEmail: tenantEmail,
+          organiserEmail: tenantEmail ?? "bookings@nextslot.co.za",
         }) : null;
 
         const clientPayload: Record<string, unknown> = {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
+          reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
           subject:  `Booking Confirmed & Fully Paid – ${formattedDate} at ${formattedTime}`,
           html:     clientHtml,
@@ -420,18 +430,20 @@ Deno.serve(async (req) => {
         console.log("Client full-payment email:", clientRes.status, JSON.stringify(await clientRes.json()));
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Owner notification — only if tenant has a configured email
+      if (tenantEmail) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
 
-      const gcalStart    = booking.booking_date.replace(/-/g, "") + "T" + booking.start_time.replace(/:/g, "").slice(0, 6);
-      const gcalEnd      = booking.end_time
-        ? booking.booking_date.replace(/-/g, "") + "T" + (booking.end_time as string).replace(/:/g, "").slice(0, 6)
-        : gcalStart;
-      const gcalTitle    = encodeURIComponent(`${serviceNames} — ${clientName}`);
-      const gcalDetails  = encodeURIComponent(`Client: ${clientName} | Phone: ${clientPhone} | Full payment: ${totalAmount}`);
-      const gcalLocation = encodeURIComponent(location);
-      const gcalLink     = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalStart}/${gcalEnd}&details=${gcalDetails}&location=${gcalLocation}`;
+        const gcalStart    = booking.booking_date.replace(/-/g, "") + "T" + booking.start_time.replace(/:/g, "").slice(0, 6);
+        const gcalEnd      = booking.end_time
+          ? booking.booking_date.replace(/-/g, "") + "T" + (booking.end_time as string).replace(/:/g, "").slice(0, 6)
+          : gcalStart;
+        const gcalTitle    = encodeURIComponent(`${serviceNames} — ${clientName}`);
+        const gcalDetails  = encodeURIComponent(`Client: ${clientName} | Phone: ${clientPhone} | Full payment: ${totalAmount}`);
+        const gcalLocation = encodeURIComponent(location);
+        const gcalLink     = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalStart}/${gcalEnd}&details=${gcalDetails}&location=${gcalLocation}`;
 
-      const ownerHtml = `<!DOCTYPE html>
+        const ownerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -471,18 +483,21 @@ Deno.serve(async (req) => {
 </table>
 </body></html>`;
 
-      const ownerRes = await fetch(RESEND_API_URL, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
-          to:       [tenantEmail],
-          subject:  `💳 Full payment received — ${clientName} on ${formattedDate}`,
-          html:     ownerHtml,
-        }),
-      });
-      console.log("Owner full-payment email:", ownerRes.status, JSON.stringify(await ownerRes.json()));
+        const ownerRes = await fetch(RESEND_API_URL, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from:     `${tenantName} <bookings@nextslot.co.za>`,
+            reply_to: tenantEmail,
+            to:       [tenantEmail],
+            subject:  `💳 Full payment received — ${clientName} on ${formattedDate}`,
+            html:     ownerHtml,
+          }),
+        });
+        console.log("Owner full-payment email:", ownerRes.status, JSON.stringify(await ownerRes.json()));
+      } else {
+        console.warn("No tenant email configured — owner notification skipped for booking:", booking_id);
+      }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -500,22 +515,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Tenant-conditional copy
-      const isPhenomeBeauty = booking.tenant_id === "phenomebeauty";
-
-      const balanceBodyLine1 = isPhenomeBeauty
-        ? `Thank you so much for your session today — you were absolutely glowing! 💛`
-        : `Thank you for your appointment on <strong style="color:#000;">${formattedDate}</strong>.`;
-
+      const balanceBodyLine1 = `Thank you for your appointment on <strong style="color:#000;">${formattedDate}</strong>.`;
       const balanceBodyLine2 = `Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> is ready to settle securely online.`;
-
-      const reviewCopy = isPhenomeBeauty
-        ? `help other women find their glow too. 🌸`
-        : `help others discover ${tenantName}.`;
-
-      const emailSubject = isPhenomeBeauty
-        ? `Your balance is ready to settle — Phenome Beauty`
-        : `Your balance payment — ${balanceDue} due`;
+      const reviewCopy = `help others discover ${tenantName}.`;
+      const emailSubject = `Your balance payment — ${balanceDue} due`;
 
       const balanceHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -565,7 +568,7 @@ Deno.serve(async (req) => {
         headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
+          reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
           subject:  emailSubject,
           html:     balanceHtml,
@@ -575,13 +578,12 @@ Deno.serve(async (req) => {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // BALANCE PAID — triggered by yoco-webhook after successful balance payment
+    // BALANCE PAID — triggered by yoco-webhook after client pays balance
     // ══════════════════════════════════════════════════════════════════════
     if (email_type === "balance_paid") {
-      if (!clientEmail) {
-        console.warn("No client email for balance_paid notification — skipping");
-      } else {
-        const balancePaidHtml = `<!DOCTYPE html>
+
+      if (clientEmail) {
+        const clientHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -590,7 +592,7 @@ Deno.serve(async (req) => {
     @media (prefers-color-scheme:dark){
       .eb{background-color:#000!important}.ec{background-color:#111!important;border-color:#333!important}
       .eh{background-color:#111!important;border-bottom:1px solid #333!important}.es{background-color:#1a1a1a!important}
-      .tm{color:#fff!important}.tl{color:#999!important}.tv{color:#fff!important}.tf{color:#666!important}
+      .tm{color:#fff!important}.tl{color:#999!important}.tv{color:#fff!important}.tf{color:#666!important}.dv{border-bottom-color:#333!important}
     }
   </style>
 </head>
@@ -600,15 +602,21 @@ Deno.serve(async (req) => {
   <tr><td class="eh" style="padding:28px 32px;text-align:center;background:#fff;border-bottom:1px solid #e0e0e0;">
     ${logoHtml}
     <p class="tm" style="margin:0;font-size:20px;font-weight:700;color:#000;">${tenantName}</p>
-    <p class="tl" style="margin:6px 0 0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#777;">Payment Received</p>
+    <p class="tl" style="margin:6px 0 0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#777;">Balance Received — All Paid</p>
   </td></tr>
-  <tr><td style="padding:28px 32px 16px;">
-    <p class="tm" style="margin:0 0 12px;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>,</p>
-    <p class="tl" style="margin:0 0 8px;font-size:14px;color:#555;line-height:1.6;">Your balance payment for <strong style="color:#000;">${serviceNames}</strong> on <strong style="color:#000;">${formattedDate}</strong> has been received. ✅</p>
-    <p class="tl" style="margin:0;font-size:14px;color:#555;line-height:1.6;">Your booking is now fully settled. Thank you for choosing ${tenantName}.</p>
+  <tr><td style="padding:24px 32px 8px;">
+    <p class="tm" style="margin:0;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>, your balance payment has been received. You're all settled! ✅</p>
   </td></tr>
-  ${reviewLink ? `<tr><td style="padding:0 32px 24px;">
-    <p class="tl" style="margin:0;font-size:13px;color:#666;">We'd love to hear about your experience — <a href="${reviewLink}" target="_blank" style="color:#000;font-weight:600;">share your review</a> and help other women find their glow too. 🌸</p>
+  <tr><td style="padding:16px 32px 24px;">
+    <table class="es" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;border-radius:8px;padding:4px 16px;">
+      <tr><td class="tl dv" style="padding:10px 0;font-size:13px;color:#666;width:42%;border-bottom:1px solid #e0e0e0;">Service</td><td class="tv dv" style="padding:10px 0;font-size:13px;font-weight:600;color:#000;border-bottom:1px solid #e0e0e0;">${serviceNames}</td></tr>
+      <tr><td class="tl dv" style="padding:10px 0;font-size:13px;color:#666;border-bottom:1px solid #e0e0e0;">Date</td><td class="tv dv" style="padding:10px 0;font-size:13px;font-weight:600;color:#000;border-bottom:1px solid #e0e0e0;">${formattedDate}</td></tr>
+      <tr><td class="tl dv" style="padding:10px 0;font-size:13px;color:#666;border-bottom:1px solid #e0e0e0;">Total Paid</td><td class="tv dv" style="padding:10px 0;font-size:13px;font-weight:700;color:#000;border-bottom:1px solid #e0e0e0;">${totalAmount} ✓</td></tr>
+      <tr><td class="tl" style="padding:10px 0;font-size:13px;color:#666;">Balance Outstanding</td><td class="tv" style="padding:10px 0;font-size:13px;font-weight:600;color:#000;">R0.00</td></tr>
+    </table>
+  </td></tr>
+  ${reviewLink ? `<tr><td style="padding:0 32px 20px;">
+    <p class="tl" style="margin:0;font-size:13px;color:#666;">We'd love to hear about your experience — <a href="${reviewLink}" target="_blank" style="color:#000;font-weight:600;">leave us a review</a>.</p>
   </td></tr>` : ""}
   <tr><td class="es" style="padding:14px 32px;text-align:center;background:#f0f0f0;">
     <p class="tf" style="margin:0;font-size:11px;color:#999;">&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot</p>
@@ -617,23 +625,76 @@ Deno.serve(async (req) => {
 </td></tr></table>
 </body></html>`;
 
-        const bpRes = await fetch(RESEND_API_URL, {
+        const clientRes = await fetch(RESEND_API_URL, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from:     `${tenantName} <bookings@nextslot.co.za>`,
+            reply_to: tenantEmail ?? undefined,
+            to:       [clientEmail],
+            subject:  `Balance received — you're all paid up! ✅`,
+            html:     clientHtml,
+          }),
+        });
+        console.log("Client balance-paid email:", clientRes.status, JSON.stringify(await clientRes.json()));
+      }
+
+      // Owner notification — only if tenant has a configured email
+      if (tenantEmail) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        const ownerHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    @media (prefers-color-scheme:dark){
+      .ob{background-color:#000!important}.ow{background-color:#111!important;border-color:#333!important}
+      .ot{color:#fff!important}.ol{color:#aaa!important}.od{border-bottom-color:#333!important}
+    }
+  </style>
+</head>
+<body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
+  <tr><td style="padding:24px 28px 8px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Balance settled 💰✅</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">${clientName} has paid their balance. Booking fully settled.</p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${row("Client",       clientName)}
+      ${row("Phone",        clientPhone || "—")}
+      ${row("Service",      serviceNames)}
+      ${row("Date",         formattedDate)}
+      ${row("Time",         formattedTime)}
+      ${row("Balance paid", balanceDue, true)}
+      ${row("Total paid",   totalAmount)}
+    </table>
+  </td></tr>
+  <tr><td style="padding:0 28px 20px;">
+    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  </td></tr>
+</table>
+</body></html>`;
+
+        const ownerRes = await fetch(RESEND_API_URL, {
           method: "POST",
           headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             from:     `${tenantName} <bookings@nextslot.co.za>`,
             reply_to: tenantEmail,
-            to:       [clientEmail],
-            subject:  `Payment received — ${serviceNames} on ${formattedDate}`,
-            html:     balancePaidHtml,
+            to:       [tenantEmail],
+            subject:  `💰 Balance received — ${clientName} on ${formattedDate}`,
+            html:     ownerHtml,
           }),
         });
-        console.log("Balance paid email:", bpRes.status, JSON.stringify(await bpRes.json()));
+        console.log("Owner balance-paid email:", ownerRes.status, JSON.stringify(await ownerRes.json()));
+      } else {
+        console.warn("No tenant email configured — owner balance-paid notification skipped for booking:", booking_id);
       }
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (err) {
