@@ -5,7 +5,6 @@ import { ArrowRight, ArrowUpRight, Clock, Check } from "lucide-react";
 import { useState } from "react";
 
 /* ─── constants ─────────────────────────────────────────────── */
-const TK_RED  = "#fe2c55";
 const GOLD    = "hsl(38 40% 58%)";
 const FEATURES_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
@@ -476,31 +475,31 @@ const About = () => {
               className="group block relative overflow-hidden rounded-2xl transition-all duration-300 no-underline"
               style={{
                 background: "var(--gradient-card)",
-                border: `1px solid ${TK_RED}44`,
-                boxShadow: `0 0 0 1px ${TK_RED}18, var(--shadow-soft)`,
+                border: `1px solid ${GOLD}44`,
+                boxShadow: `0 0 0 1px ${GOLD}18, var(--shadow-soft)`,
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = `${TK_RED}88`;
-                el.style.boxShadow = `0 0 28px 0 ${TK_RED}22, var(--shadow-elevated)`;
+                el.style.borderColor = `${GOLD}88`;
+                el.style.boxShadow = `0 0 28px 0 ${GOLD}22, var(--shadow-elevated)`;
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = `${TK_RED}44`;
-                el.style.boxShadow = `0 0 0 1px ${TK_RED}18, var(--shadow-soft)`;
+                el.style.borderColor = `${GOLD}44`;
+                el.style.boxShadow = `0 0 0 1px ${GOLD}18, var(--shadow-soft)`;
               }}
             >
               <div
                 className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full"
                 style={{
-                  background: `radial-gradient(circle, ${TK_RED}18 0%, transparent 70%)`,
+                  background: `radial-gradient(circle, ${GOLD}18 0%, transparent 70%)`,
                 }}
               />
               <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-7 md:p-8">
                 <div className="space-y-2">
                   <p
                     className="text-[11px] font-semibold uppercase tracking-widest"
-                    style={{ color: TK_RED }}
+                    style={{ color: GOLD }}
                   >
                     Personal brand / TikTok
                   </p>
@@ -525,13 +524,13 @@ const About = () => {
                   <span
                     className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 group-hover:gap-3"
                     style={{
-                      background: `${TK_RED}18`,
-                      border: `1px solid ${TK_RED}55`,
+                      background: `${GOLD}18`,
+                      border: `1px solid ${GOLD}55`,
                       color: "hsl(var(--foreground))",
                     }}
                   >
                     Watch on TikTok
-                    <ArrowUpRight className="h-4 w-4" style={{ color: TK_RED }} />
+                    <ArrowUpRight className="h-4 w-4" style={{ color: GOLD }} />
                   </span>
                 </div>
               </div>
