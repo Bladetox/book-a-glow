@@ -155,7 +155,7 @@ export const HeroSection = () => {
             should be <span style={{ color: C.gold, fontStyle: "italic" }}>speaking.</span>
           </h1>
 
-          {/* Line 1: the contrast */}
+          {/* Line 1: remove blame, surface the possibility */}
           <p style={{
             fontSize: isMobile ? 15 : "clamp(15px,1.4vw,18px)",
             fontWeight: 500, color: C.text,
@@ -164,10 +164,10 @@ export const HeroSection = () => {
             animation: "fadeUp 0.6s 0.2s ease both",
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
-            Other platforms show you the numbers. NextSlot tells you what to do with them.
+            You already have everything you need to grow. You just cannot see it yet.
           </p>
 
-          {/* Line 2: the proof */}
+          {/* Line 2: the mechanism, in plain language */}
           <p style={{
             fontSize: isMobile ? 13 : "clamp(13px,1.15vw,15px)",
             fontWeight: 300, color: C.muted,
@@ -176,7 +176,7 @@ export const HeroSection = () => {
             animation: "fadeUp 0.6s 0.25s ease both",
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
-            Gaps flagged before they cost you. One tap from action.
+            NextSlot reads your bookings, your revenue, and your patterns, then tells you exactly where to focus.
           </p>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", animation: "fadeUp 0.6s 0.3s ease both" } as React.CSSProperties}>
