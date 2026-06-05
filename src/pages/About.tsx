@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Clock, Check } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
@@ -239,6 +239,17 @@ const CoverImage = ({
 /* ─── page ──────────────────────────────────────────────────────── */
 const About = () => {
   const [activeCategory, setActiveCategory] = useState<Category>("All");
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.replace("#", "");
+    const el = document.getElementById(id);
+    if (!el) return;
+    const offset = 80;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: "smooth" });
+  }, [hash]);
 
   const featured = articles.find((a) => a.featured);
   const isFiltered = activeCategory !== "All";
