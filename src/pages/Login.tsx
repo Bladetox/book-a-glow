@@ -3,14 +3,11 @@ import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
+import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
+import { HOME_STYLES } from "@/components/home/homeStyles";
 
 type ViewMode = "login" | "forgot";
 
-/**
- * Builds the correct admin URL for a tenant after login.
- * - On production domains (nextslot.co.za / nextslot.app) → hard redirect to subdomain
- * - On localhost / dev → stay on same origin with ?tenant= param so Admin component loads
- */
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
   const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost");
@@ -23,6 +20,29 @@ function buildAdminUrl(tenantId: string): string {
   const rootDomain = parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px 16px",
+  borderRadius: 10,
+  border: `1px solid ${C.border2}`,
+  background: C.s1,
+  color: C.text,
+  fontSize: 14,
+  fontFamily: FONT_BODY,
+  outline: "none",
+  boxSizing: "border-box" as const,
+  transition: "border-color 0.2s",
+};
+
+const labelStyle = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 500,
+  color: C.muted,
+  marginBottom: 6,
+  fontFamily: FONT_BODY,
+};
 
 const Login = () => {
   const [view, setView] = useState<ViewMode>("login");
@@ -63,8 +83,6 @@ const Login = () => {
         return;
       }
 
-      // Prefer 'owner' first — prevents a super-admin with 'admin' rows on other
-      // tenants from being routed to the wrong dashboard.
       const adminRole =
         roles.find((r) => r.role === "owner") ??
         roles.find((r) => r.role === "admin");
@@ -109,80 +127,181 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen nextslot-theme bg-background">
+    <div
+      className="nextslot-theme dark-brand min-h-screen"
+      style={{ background: C.bg, color: C.text, fontFamily: FONT_BODY }}
+    >
+      <style>{HOME_STYLES}</style>
       <SiteHeader />
-      <main className="max-w-sm mx-auto px-4 py-24">
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">
-          {view === "login" ? "Welcome back" : "Reset your password"}
-        </h1>
-        <p className="text-sm text-muted-foreground mb-8">
-          {view === "login"
-            ? "Sign in to your NextSlot dashboard."
-            : "Enter your email and we'll send you a reset link."}
-        </p>
+      <main
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "calc(100vh - 65px)",
+          padding: "48px 24px",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: 400 }}>
 
-        <form className="space-y-4" onSubmit={view === "login" ? handleLogin : handleForgotPassword}>
-          <div>
-            <label htmlFor="login-email" className="block text-sm font-medium mb-1.5">Email</label>
-            <input
-              id="login-email"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(""); }}
-              placeholder="you@example.com"
-              className="w-full px-4 py-2.5 rounded-[10px] border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              required
-            />
-          </div>
-
-          {view === "login" && (
-            <div>
-              <label htmlFor="login-password" className="block text-sm font-medium mb-1.5">Password</label>
-              <input
-                id="login-password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 rounded-[10px] border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                required
-              />
-            </div>
-          )}
-
-          {error && <p className="text-sm text-destructive text-center">{error}</p>}
-          {success && <p className="text-sm text-primary text-center">{success}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+          {/* Card */}
+          <div
+            style={{
+              background: C.s1,
+              border: `1px solid ${C.border2}`,
+              borderRadius: 20,
+              padding: "40px 36px",
+              boxShadow: "0 8px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
+            }}
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {view === "login" ? "Sign In" : "Send Reset Link"}
-          </button>
-        </form>
+            {/* Logo */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+              <img
+                src="/web-app-manifest-192x192.png"
+                alt="NextSlot"
+                width={36}
+                height={36}
+                style={{ borderRadius: 8, objectFit: "contain" }}
+              />
+              <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 700, color: C.text }}>
+                Next<span style={{ color: C.gold }}>Slot</span>
+              </span>
+            </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setView(view === "login" ? "forgot" : "login");
-            setError("");
-            setSuccess("");
-          }}
-          className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors mt-4"
-        >
-          {view === "login" ? "Forgot password?" : "Back to sign in"}
-        </button>
+            <h1
+              style={{
+                fontFamily: FONT_DISPLAY,
+                fontSize: 22,
+                fontWeight: 700,
+                color: C.text,
+                marginBottom: 6,
+              }}
+            >
+              {view === "login" ? "Welcome back" : "Reset your password"}
+            </h1>
+            <p style={{ fontSize: 14, color: C.muted, fontFamily: FONT_BODY, marginBottom: 28 }}>
+              {view === "login"
+                ? "Sign in to your NextSlot dashboard."
+                : "Enter your email and we'll send you a reset link."}
+            </p>
 
-        {view === "login" && (
-          <p className="text-sm text-muted-foreground text-center mt-6">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-foreground font-medium hover:underline">Create one</Link>
-          </p>
-        )}
+            <form
+              style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              onSubmit={view === "login" ? handleLogin : handleForgotPassword}
+            >
+              <div>
+                <label htmlFor="login-email" style={labelStyle}>Email</label>
+                <input
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                  placeholder="you@example.com"
+                  style={inputStyle}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = C.border2)}
+                  required
+                />
+              </div>
+
+              {view === "login" && (
+                <div>
+                  <label htmlFor="login-password" style={labelStyle}>Password</label>
+                  <input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                    placeholder="Enter your password"
+                    style={inputStyle}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = C.border2)}
+                    required
+                  />
+                </div>
+              )}
+
+              {error && (
+                <p style={{ fontSize: 13, color: "#ff5757", textAlign: "center", fontFamily: FONT_BODY }}>
+                  {error}
+                </p>
+              )}
+              {success && (
+                <p style={{ fontSize: 13, color: C.gold, textAlign: "center", fontFamily: FONT_BODY }}>
+                  {success}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "13px 20px",
+                  borderRadius: 10,
+                  background: C.text,
+                  color: C.bg,
+                  fontFamily: FONT_BODY,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.6 : 1,
+                  transition: "opacity 0.2s",
+                  marginTop: 4,
+                }}
+              >
+                {loading && <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} />}
+                {view === "login" ? "Sign In" : "Send Reset Link"}
+              </button>
+            </form>
+
+            <button
+              type="button"
+              onClick={() => {
+                setView(view === "login" ? "forgot" : "login");
+                setError("");
+                setSuccess("");
+              }}
+              style={{
+                width: "100%",
+                marginTop: 12,
+                padding: "10px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 13,
+                color: C.muted,
+                fontFamily: FONT_BODY,
+                transition: "color 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = C.muted)}
+            >
+              {view === "login" ? "Forgot password?" : "Back to sign in"}
+            </button>
+
+            {view === "login" && (
+              <p style={{ fontSize: 13, color: C.muted, textAlign: "center", marginTop: 16, fontFamily: FONT_BODY }}>
+                Don't have an account?{" "}
+                <Link
+                  to="/onboarding"
+                  style={{ color: C.text, fontWeight: 600, textDecoration: "none" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = C.gold)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = C.text)}
+                >
+                  Get started free
+                </Link>
+              </p>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

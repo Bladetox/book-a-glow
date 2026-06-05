@@ -1,15 +1,19 @@
-import SiteHeader from "@/components/site/SiteHeader";
-import SiteFooter from "@/components/site/SiteFooter";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Clock, Check } from "lucide-react";
-import { useState } from "react";
+import SiteHeader from "@/components/site/SiteHeader";
+import SiteFooter from "@/components/site/SiteFooter";
+import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
+import { HOME_STYLES } from "@/components/home/homeStyles";
 
-/* ─── constants ─────────────────────────────────────── */
-const GOLD    = "hsl(38 40% 58%)";
+/* ─── constants ─────────────────────────────────────────────────── */
 const FEATURES_IMAGE =
   "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=80";
 
-/* ─── blog data ─────────────────────────────────────── */
+const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
+const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
+
+/* ─── blog data (matches Blog.tsx exactly) ──────────────────────── */
 type Category = "All" | "Business" | "Operations" | "Finance";
 type Article = {
   title: string;
@@ -52,572 +56,527 @@ const articles: Article[] = [
     readTime: "5 min",
     date: "2025",
     url: "https://medium.com/@arshadsegal/why-your-ssme-needs-a-delivery-strategy-not-a-delivery-hope-0acf3cfb99ea",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*Tg_mBQFBKQ0A8opnBFcZdQ@2x.jpeg",
+    image: "https://miro.medium.com/v2/resize:fit:1400/1*WnlZmve6pYPhgYXQ39OiWA.png",
   },
   {
-    title: "How to Price Your Services Without Underselling or Losing Clients",
+    title: "Why South African SMEs Need to Act Now on Digital Payments (2025 to 2026)",
     excerpt:
-      "Pricing is most avoided conversations in small business. Most owners either charge too little out of fear or copy competitors without understanding their own costs. This is a practical method for getting it right.",
+      "The window to get ahead of digital payments in South Africa is narrowing. Customers expect it, competitors are adopting it, and the cost of staying cash-only is compounding. Here is what the data says and what to do about it.",
     category: "Finance",
-    readTime: "6 min",
+    readTime: "5 min",
     date: "2025",
-    url: "https://medium.com/@arshadsegal/how-to-price-your-services-without-underselling-or-losing-clients-3ef83cec7a94",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*wJf3EJmtG0L9qT_RFrklTw@2x.jpeg",
-  },
-  {
-    title: "The No-Show Problem: Why Deposits Are Not Just About the Money",
-    excerpt:
-      "No-shows cost service businesses more than just revenue. They disrupt your schedule, demoralise your team, and make planning impossible. A deposit policy is not about being difficult. It is about being taken seriously.",
-    category: "Operations",
-    readTime: "4 min",
-    date: "2025",
-    url: "https://medium.com/@arshadsegal/the-no-show-problem-why-deposits-are-not-just-about-the-money-6ba965fda4ef",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*RYlCvqUTMqWGM77ynEoI4w@2x.jpeg",
+    url: "https://medium.com/@arshadsegal/why-south-african-smes-need-to-act-now-on-digital-payments-2025-2026-0a68b755ec79",
+    image: "https://miro.medium.com/v2/resize:fit:1400/1*Zn7_--DsP_XvtRjHTPLqnA@2x.jpeg",
   },
 ];
 
-/* ─── how-it-works steps ─────────────────────────────── */
-const steps = [
-  {
-    number: "01",
-    title: "You set up your page",
-    desc: "Add your services, set your hours, and choose your deposit rules. Takes about ten minutes.",
-  },
-  {
-    number: "02",
-    title: "Clients book themselves",
-    desc: "Share your booking link anywhere. Clients pick a time, pay the deposit, and get a confirmation.",
-  },
-  {
-    number: "03",
-    title: "You show up and work",
-    desc: "Your schedule is managed. No calls, no back-and-forth. Just confirmed bookings waiting for you.",
-  },
-];
+const categories: Category[] = ["All", "Business", "Operations", "Finance"];
 
-/* ─── timeline ───────────────────────────────────────── */
+/* ─── case study timeline ───────────────────────────────────────── */
 const timeline = [
   {
-    version: "The problem",
-    date: "Early 2024",
-    desc: "A barber in Cape Town was losing hours every week to WhatsApp scheduling. Missed messages. Double bookings. No-shows with no deposit. The tools available were either too complex or built for large salons.",
+    step: "01",
+    label: "Where it started",
+    version: "The reality",
+    isFinal: false,
+    points: [
+      "Bookings came through WhatsApp at all hours, from multiple conversations, with no clear system.",
+      "Every confirmation, deposit request, and reminder had to be sent manually, one client at a time.",
+      "Messages piled up overnight. Mornings started with an inbox to untangle before any work could begin.",
+      "Records had to be created manually, shifting focus away from how the business was actually doing.",
+    ],
   },
   {
+    step: "02",
+    label: "Trying to fix it",
+    version: "The workaround",
+    isFinal: false,
+    points: [
+      "A Google Form was added to collect booking info. A spreadsheet to track it. A calendar to manage time.",
+      "It was better than nothing, but it still required constant manual work to keep it all in sync.",
+      "Payments still meant sending banking details, waiting for proof of payment, then manually confirming.",
+      "The tools were patched together. Nothing spoke to each other. It was a job on top of the actual job.",
+    ],
+  },
+  {
+    step: "03",
+    label: "The moment everything changed",
     version: "The shift",
-    date: "Mid 2024",
-    desc: "We started building something different. A booking system designed specifically for independent service providers. Simple to set up, serious enough to protect your time and income.",
+    isFinal: false,
+    points: [
+      "A professional booking system with a real payment gateway. Clients book, choose a time, and pay a deposit without a single message.",
+      "Proof of payment gone. A booking is only confirmed once payment clears. Automatically.",
+      "The link went into the TikTok bio, Instagram bio, and WhatsApp status. Bookings started arriving on their own.",
+      "For the first time, the business felt like it was running itself.",
+    ],
   },
   {
-    version: "NextSlot",
-    date: "2025",
-    desc: "NextSlot launched with a focus on South African service businesses. Barbers, nail technicians, photographers, tattoo artists. People who are skilled at what they do and should not have to be skilled at managing bookings too.",
+    step: "04",
+    label: "What the numbers revealed",
+    version: "The insight",
+    isFinal: false,
+    points: [
+      "Most new clients were coming from TikTok, not Instagram or WhatsApp as assumed. Marketing changed immediately.",
+      "Some services made far more per hour than others. Pricing and promotion followed the data.",
+      "Certain time slots always filled first. Real demand patterns became visible for the first time.",
+      "Clients who had not rebooked in a month surfaced automatically. Follow-up became obvious, not guesswork.",
+    ],
+  },
+  {
+    step: "05",
+    label: "Where it is now",
+    version: "The result",
+    isFinal: true,
+    points: [
+      "PhenomeBeauty did not just get a booking tool. They got a system that runs the business and advises the owner every day.",
+      "No more chasing payments. No more proof of payments. No more spreadsheets going stale.",
+      "The dashboard shows exactly what is happening in real time and surfaces what to do next.",
+      "This is why NextSlot exists. Every lesson from building it for a real business is built into the product.",
+      "If you run a service business in South Africa, this was built for you.",
+    ],
   },
 ];
 
-/* ─── feature cards ──────────────────────────────────── */
-const features = [
-  {
-    label: "Booking page",
-    desc: "A clean, mobile-first page your clients can use without an app or account.",
-    color: "hsl(var(--foreground))",
-  },
-  {
-    label: "Deposit collection",
-    desc: "Require payment upfront so no-shows cost the client, not you.",
-    color: GOLD,
-  },
-  {
-    label: "Smart scheduling",
-    desc: "Set your hours, block dates, and let the system handle availability.",
-    color: "hsl(var(--foreground))",
-  },
-  {
-    label: "Dashboard insights",
-    desc: "See revenue, retention, and open slots at a glance. Know your numbers.",
-    color: GOLD,
-  },
-  {
-    label: "Automated reminders",
-    desc: "Clients get notified before their appointment. Fewer forgotten bookings.",
-    color: "hsl(var(--foreground))",
-  },
-  {
-    label: "Built for South Africa",
-    desc: "Rand pricing, local payment rails, and support that understands your context.",
-    color: GOLD,
-  },
-];
+/* ─── sub-components ────────────────────────────────────────────── */
+const categoryOpacity: Record<Exclude<Category, "All">, string> = {
+  Business:   "0.80",
+  Operations: "0.55",
+  Finance:    "0.35",
+};
 
-/* ─── component ──────────────────────────────────────── */
-const About = () => {
-  const [activeCategory, setActiveCategory] = useState<Category>("All");
+const CategoryChip = ({ category, small = false }: { category: Exclude<Category, "All">; small?: boolean }) => (
+  <span
+    style={{
+      display: "inline-flex", alignItems: "center",
+      borderRadius: 100,
+      fontWeight: 600,
+      border: `1px solid rgba(212,165,116,0.30)`,
+      background: `rgba(212,165,116,${categoryOpacity[category]})`,
+      color: C.text,
+      padding: small ? "2px 8px" : "2px 10px",
+      fontSize: small ? 10 : 11,
+      fontFamily: FONT_BODY,
+    }}
+  >
+    {category}
+  </span>
+);
 
-  const categories: Category[] = ["All", "Business", "Operations", "Finance"];
+const FallbackBand = ({ tall = false }: { tall?: boolean }) => (
+  <div
+    style={{
+      width: "100%", flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      height: tall ? 176 : 128,
+      background: `linear-gradient(135deg, rgba(212,165,116,0.18) 0%, ${C.s2} 100%)`,
+      borderBottom: `1px solid rgba(212,165,116,0.12)`,
+    }}
+  >
+    <span style={{ fontSize: 30, fontWeight: 600, color: "rgba(212,165,116,0.25)", fontFamily: FONT_DISPLAY }}>NS</span>
+  </div>
+);
 
-  const filtered =
-    activeCategory === "All"
-      ? articles
-      : articles.filter((a) => a.category === activeCategory);
-
-  const featured = articles.find((a) => a.featured);
-  const rest = filtered.filter((a) => !a.featured || activeCategory !== "All");
-
+const CoverImage = ({ src, alt, tall = false }: { src?: string; alt: string; tall?: boolean }) => {
+  if (!src) return <FallbackBand tall={tall} />;
   return (
-    <div className="min-h-screen nextslot-theme bg-background">
-      <SiteHeader />
-      <main>
-
-        {/* ── HERO ── */}
-        <section className="relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-            <div className="max-w-3xl">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-4">
-                About NextSlot
-              </p>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-6">
-                Built for people who work with their hands
-              </h1>
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                NextSlot is a booking and business management platform for independent service providers in South Africa.
-                We handle the scheduling so you can focus on the work.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ── FEATURES IMAGE + GRID ── */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="relative rounded-3xl overflow-hidden aspect-[4/3] group">
-              <img
-                src={FEATURES_IMAGE}
-                alt="A professional at work in their studio"
-                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {features.map((f) => (
-                <div
-                  key={f.label}
-                  className="rounded-2xl border border-border bg-secondary/40 p-5 space-y-2"
-                >
-                  <p className="text-sm font-semibold" style={{ color: f.color }}>
-                    {f.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── HOW IT WORKS ── */}
-        <section className="border-t border-border bg-secondary/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="mb-12">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-3">
-                How it works
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Set up once. Run on autopilot.
-              </h2>
-            </div>
-            <div className="grid md:grid-cols-3 gap-8">
-              {steps.map((s) => (
-                <div key={s.number} className="space-y-4">
-                  <span
-                    className="text-5xl font-bold tabular-nums"
-                    style={{ color: GOLD, opacity: 0.6 }}
-                  >
-                    {s.number}
-                  </span>
-                  <h3 className="text-xl font-semibold">{s.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── STORY / TIMELINE ── */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-3">
-                Our story
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">
-                Where NextSlot came from
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Every feature in NextSlot exists because a real service provider needed it.
-                We did not build this from a boardroom. We built it from conversations with
-                barbers, nail technicians, photographers, and tattoo artists who were drowning
-                in admin.
-              </p>
-            </div>
-            <div className="space-y-8">
-              {timeline.map((t, i) => (
-                <div key={t.version} className="flex gap-6">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className="w-3 h-3 rounded-full mt-1.5 shrink-0"
-                      style={{ backgroundColor: GOLD }}
-                    />
-                    {i < timeline.length - 1 && (
-                      <div className="w-px flex-1 mt-2 bg-border" />
-                    )}
-                  </div>
-                  <div className="pb-8 last:pb-0">
-                    <p className="text-xs text-muted-foreground mb-1">{t.date}</p>
-                    <p className="font-semibold mb-2">{t.version}</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{t.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── CASE STUDY ── */}
-        <section id="case-study" className="border-t border-border bg-secondary/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="mb-10">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-3">
-                In practice
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Real businesses. Real results.
-              </h2>
-            </div>
-
-            {/* Just Start TikTok brand card */}
-            <div
-              className="relative rounded-3xl overflow-hidden p-8 md:p-12"
-              style={{
-                background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
-              }}
-            >
-              <div className="relative z-10 grid md:grid-cols-2 gap-10 items-center">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-xs font-medium text-white/80 mb-6">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4A574]" />
-                    Cape Town, South Africa
-                  </div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 leading-tight">
-                    Just Start TikTok
-                  </h3>
-                  <p className="text-white/70 leading-relaxed mb-6">
-                    A Cape Town-based content creation and social media coaching brand that
-                    helps entrepreneurs build their presence on TikTok. They use NextSlot
-                    to manage one-on-one coaching sessions, content audits, and strategy calls.
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 mb-8">
-                    {[
-                      { label: "No-show rate", value: "Near zero", sub: "since adding deposits" },
-                      { label: "Booking time", value: "2 min", sub: "average client booking" },
-                      { label: "Admin saved", value: "5+ hrs", sub: "per week" },
-                      { label: "Setup time", value: "10 min", sub: "to go live" },
-                    ].map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="rounded-2xl bg-white/8 border border-white/10 p-4"
-                      >
-                        <p className="text-xl font-bold text-white">{stat.value}</p>
-                        <p className="text-xs text-white/50 mt-0.5">{stat.sub}</p>
-                        <p className="text-xs text-white/40 mt-1">{stat.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <a
-                    href="https://www.tiktok.com/@juststarttiktok"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white transition-colors"
-                  >
-                    Follow on TikTok
-                    <ArrowUpRight className="w-4 h-4" />
-                  </a>
-                </div>
-                <div className="space-y-4">
-                  <div className="rounded-2xl bg-white/8 border border-white/10 p-6">
-                    <p className="text-white/80 text-sm leading-relaxed italic mb-4">
-                      "Before NextSlot, I was spending hours every week just managing DMs and trying to
-                      coordinate bookings. Now clients book themselves, pay their deposit, and I get a
-                      notification. It changed how I run my business."
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                        style={{ background: "linear-gradient(135deg, #D4A574, #B8915F)" }}
-                      >
-                        JS
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">Just Start TikTok</p>
-                        <p className="text-xs text-white/50">Content Coach, Cape Town</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-white/8 border border-white/10 p-5">
-                    <p className="text-xs text-white/50 uppercase tracking-wider mb-3">Services offered</p>
-                    <div className="flex flex-wrap gap-2">
-                      {["TikTok Strategy", "Content Audit", "1:1 Coaching", "Brand Review", "Profile Optimisation"].map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-3 py-1 rounded-full text-[11px] font-medium"
-                          style={{
-                            background: "rgba(255,255,255,0.08)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "rgba(255,255,255,0.65)",
-                          }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── BLOG ── */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-3">
-                Resources
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                For independent business owners
-              </h2>
-            </div>
-            {/* Category filter */}
-            <div className="flex gap-2 flex-wrap">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    activeCategory === cat
-                      ? "bg-foreground text-background"
-                      : "bg-secondary text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Featured article */}
-          {activeCategory === "All" && featured && (
-            <a
-              href={featured.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block rounded-3xl overflow-hidden border border-border bg-secondary/40 hover:border-foreground/20 transition-colors mb-6"
-            >
-              <div className="grid md:grid-cols-2">
-                {featured.image && (
-                  <div className="aspect-video md:aspect-auto overflow-hidden">
-                    <img
-                      src={featured.image}
-                      alt={featured.title}
-                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-                <div className="p-8 md:p-10 flex flex-col justify-center">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-foreground/10 text-foreground">
-                      {featured.category}
-                    </span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {featured.readTime} read
-                    </span>
-                  </div>
-                  <h3 className="text-xl md:text-2xl font-bold mb-3 group-hover:text-muted-foreground transition-colors leading-snug">
-                    {featured.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                    {featured.excerpt}
-                  </p>
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                    Read on Medium
-                    <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </span>
-                </div>
-              </div>
-            </a>
-          )}
-
-          {/* Article grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {rest.map((article) => (
-              <a
-                key={article.title}
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col rounded-2xl overflow-hidden border border-border bg-secondary/40 hover:border-foreground/20 transition-colors"
-              >
-                {article.image && (
-                  <div className="aspect-video overflow-hidden">
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-                <div className="p-5 flex flex-col flex-1">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-foreground/8 text-foreground/70">
-                      {article.category}
-                    </span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {article.readTime}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-semibold leading-snug mb-2 group-hover:text-muted-foreground transition-colors flex-1">
-                    {article.title}
-                  </h3>
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground mt-3">
-                    Read
-                    <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </span>
-                </div>
-              </a>
-            ))}
-          </div>
-
-          {filtered.length === 0 && (
-            <p className="text-center text-muted-foreground py-12">
-              No articles in this category yet.
-            </p>
-          )}
-        </section>
-
-        {/* ── AUTHOR ── */}
-        <section className="border-t border-border bg-secondary/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="flex flex-col sm:flex-row items-start gap-6 max-w-2xl">
-              <div
-                className="w-14 h-14 rounded-full shrink-0 flex items-center justify-center text-lg font-bold text-white"
-                style={{ background: `linear-gradient(135deg, ${GOLD}, hsl(38 50% 40%))` }}
-              >
-                AS
-              </div>
-              <div>
-                <p className="font-semibold mb-1">Arshad Segal</p>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Founder of NextSlot. Writes about operations, finance, and growth for independent service businesses in South Africa.
-                </p>
-                <a
-                  href="https://medium.com/@arshadsegal"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium hover:text-muted-foreground transition-colors"
-                >
-                  Read on Medium
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── CTA ── */}
-        <section
-          className="relative overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%)",
-          }}
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center relative z-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Stop managing bookings manually
-            </h2>
-            <p className="text-white/60 mb-8 max-w-md mx-auto">
-              Get your booking page live today. No monthly fees while you are getting started.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to="/onboarding"
-                className="group inline-flex items-center justify-center bg-white text-black text-sm font-semibold px-7 py-3.5 rounded-[10px] hover:bg-white/90 transition-colors"
-              >
-                Create your booking page
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-              <Link
-                to="/pricing"
-                className="text-sm text-white/60 hover:text-white transition-colors"
-              >
-                View pricing
-              </Link>
-            </div>
-          </div>
-
-          {/* Subtle grid overlay */}
-          <div
-            className="absolute inset-0 opacity-[0.03]"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-              backgroundSize: "60px 60px",
-            }}
-          />
-        </section>
-
-        {/* ── VALUES ── */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="mb-12">
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-3">
-              What we believe
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              How we think about this work
-            </h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Simplicity is a feature",
-                desc: "Most booking software is built for large teams and takes days to configure. NextSlot is built for one person who has a business to run.",
-              },
-              {
-                title: "Your time has value",
-                desc: "Every hour spent on admin is an hour not spent on the work you are actually good at. We exist to give that time back.",
-              },
-              {
-                title: "Local context matters",
-                desc: "South African businesses operate differently. Load shedding, local payment methods, and the way clients communicate here shaped every decision we made.",
-              },
-            ].map((v) => (
-              <div key={v.title} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 shrink-0" style={{ color: GOLD }} />
-                  <h3 className="font-semibold">{v.title}</h3>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed pl-6">{v.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-      </main>
-      <SiteFooter />
+    <div
+      style={{
+        width: "100%", flexShrink: 0, overflow: "hidden",
+        height: tall ? 176 : 128,
+        borderBottom: `1px solid rgba(212,165,116,0.12)`,
+      }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s" }}
+        onError={(e) => { (e.currentTarget.parentElement as HTMLElement).innerHTML = ""; }}
+      />
     </div>
   );
 };
 
-export default About;
+/* ─── page ──────────────────────────────────────────────────────── */
+const About = () => {
+  const [activeCategory, setActiveCategory] = useState<Category>("All");
+
+  const featured   = articles.find((a) => a.featured);
+  const isFiltered = activeCategory !== "All";
+  const showFeatured = !isFiltered || featured?.category === activeCategory;
+  const grid = articles
+    .filter((a) => !a.featured)
+    .filter((a) => !isFiltered || a.category === activeCategory);
+
+  return (
+    <div
+      className="nextslot-theme dark-brand"
+      style={{ background: C.bg, color: C.text, fontFamily: FONT_BODY, minHeight: "100vh" }}
+    >
+      <style>{HOME_STYLES}</style>
+      <SiteHeader />
+      <main>
+
+        {/* ── HERO ─────────────────────────────────────────────────── */}
+        <section style={{ position: "relative", overflow: "hidden", background: C.s1 }}>
+          <div
+            style={{
+              pointerEvents: "none", position: "absolute", inset: 0,
+              background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,165,116,0.07) 0%, transparent 70%)",
+            }}
+          />
+          <div
+            style={{
+              pointerEvents: "none",
+              position: "absolute", left: "50%", top: 0, bottom: 0, width: 1,
+              background: `linear-gradient(180deg, transparent, rgba(212,165,116,0.18), transparent)`,
+            }}
+          />
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "80px 24px 72px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }} className="about-hero-grid">
+
+              {/* LEFT */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+                  <img
+                    src="/web-app-manifest-192x192.png"
+                    alt="NextSlot"
+                    width={44}
+                    height={44}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ borderRadius: 12, objectFit: "contain", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
+                  />
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, fontFamily: FONT_BODY }}>
+                    About NextSlot
+                  </p>
+                </div>
+                <h1
+                  style={{
+                    fontFamily: FONT_DISPLAY,
+                    fontSize: "clamp(32px, 3.8vw, 52px)",
+                    fontWeight: 700, color: C.text,
+                    lineHeight: 1.08, marginBottom: 20,
+                  }}
+                >
+                  Built from real problems.<br />
+                  <span style={{ color: C.gold, fontStyle: "italic" }}>Not a boardroom.</span>
+                </h1>
+                <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.7, maxWidth: 440, marginBottom: 32, fontFamily: FONT_BODY }}>
+                  NextSlot is a booking and business intelligence platform built for South African
+                  service businesses. Designed with the reality of this market in mind, not a generic
+                  global template.
+                </p>
+                <Link
+                  to="/onboarding"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    background: CTA_BG, boxShadow: CTA_SHADOW,
+                    color: "#080808", fontFamily: FONT_BODY,
+                    fontSize: 14, fontWeight: 700,
+                    padding: "13px 28px", borderRadius: 10,
+                    textDecoration: "none",
+                  }}
+                >
+                  Create Your Booking Page
+                  <ArrowRight style={{ height: 16, width: 16 }} />
+                </Link>
+              </div>
+
+              {/* RIGHT: signature quote card */}
+              <div
+                style={{
+                  borderRadius: 20, padding: "40px",
+                  position: "relative", overflow: "hidden",
+                  background: C.s2,
+                  border: `1px solid rgba(212,165,116,0.30)`,
+                  boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
+                }}
+              >
+                <div
+                  style={{
+                    pointerEvents: "none",
+                    position: "absolute", top: -40, right: -40,
+                    width: 200, height: 200, borderRadius: "50%",
+                    background: "radial-gradient(circle, rgba(212,165,116,0.12) 0%, transparent 70%)",
+                  }}
+                />
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, marginBottom: 24, fontFamily: FONT_BODY }}>
+                  The Founder's Belief
+                </p>
+                <blockquote style={{ position: "relative" }}>
+                  <p style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: C.text, lineHeight: 1.3, marginBottom: 12 }}>
+                    "Sometimes the biggest barrier to progress is waiting too long to start."
+                  </p>
+                  <footer style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>
+                    Arshad Segal, Founder of NextSlot
+                  </footer>
+                </blockquote>
+                <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid rgba(212,165,116,0.20)` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    {[
+                      { label: "Booking types", value: "Any service" },
+                      { label: "Built for",     value: "South Africa" },
+                      { label: "Setup time",    value: "20 min" },
+                      { label: "Trial",         value: "30 days free" },
+                    ].map((item) => (
+                      <div key={item.label}>
+                        <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: C.muted, marginBottom: 2, fontFamily: FONT_BODY }}>{item.label}</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: FONT_BODY }}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, rgba(212,165,116,0.4), transparent)` }} />
+
+        {/* ── ORIGIN ───────────────────────────────────────────────── */}
+        <section style={{ maxWidth: 760, margin: "0 auto", padding: "64px 24px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              In South Africa, service businesses operate in one of the most competitive and
+              price-sensitive environments in the world. Barbers, beauty studios, nail technicians,
+              tattoo artists, massage therapists and independent creatives work long hours, build loyal
+              communities, and carry the pressure of keeping their businesses running day after day.
+              Yet the tools available to them often feel disconnected from how their businesses
+              actually work.
+            </p>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              NextSlot was created to change that.
+            </p>
+          </div>
+        </section>
+
+        {/* ── THE IDEA ─────────────────────────────────────────────── */}
+        <section style={{ background: C.s1, padding: "64px 24px" }}>
+          <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, fontFamily: FONT_BODY }}>
+              The Idea Behind NextSlot
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px,2.4vw,30px)", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+              Technology that feels like part of your business.
+            </h2>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              NextSlot is a platform designed to help service-based businesses manage bookings,
+              understand their data, and make smarter decisions. But the goal goes beyond software.
+            </p>
+            <blockquote
+              style={{
+                borderLeft: `2px solid ${C.gold}`,
+                paddingLeft: 20,
+                display: "flex", flexDirection: "column", gap: 4,
+              }}
+            >
+              <p style={{ fontSize: 15, fontWeight: 600, color: C.text, fontFamily: FONT_BODY }}>The vision is simple.</p>
+              <p style={{ fontSize: 15, color: C.muted, fontStyle: "italic", fontFamily: FONT_BODY }}>
+                Technology should feel like part of your business, not something imposed on it.
+              </p>
+            </blockquote>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              Instead of complicated dashboards, generic automation, and advice that ignores
+              real-world conditions, NextSlot focuses on context. It looks at what is actually
+              happening inside your business and turns that information into practical insights you
+              can use.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {["Not guru advice.", "Not guesswork.", "Real insights based on your business' real data."].map((line) => (
+                <p key={line} style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: FONT_BODY }}>{line}</p>
+              ))}
+            </div>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              In a market like South Africa, where raising prices, losing clients, or making the
+              wrong decision can have real consequences, businesses need tools that are street smart
+              as well as professional. NextSlot was designed with that reality in mind.
+            </p>
+          </div>
+        </section>
+
+        {/* ── BUILT FOR CREATIVES ──────────────────────────────────── */}
+        <section style={{ maxWidth: 760, margin: "0 auto", padding: "64px 24px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, fontFamily: FONT_BODY }}>
+              A Platform Built for Creatives
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px,2.4vw,30px)", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+              Relationships matter. Community matters. Reputation matters.
+            </h2>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              Creative service businesses are deeply human. NextSlot respects that.
+            </p>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              The platform is designed to feel familiar and supportive rather than cold or overly
+              technical. It fits naturally into the way creative professionals already run their
+              businesses, helping them stay organised, understand their growth, and serve their clients
+              better.
+            </p>
+            <blockquote style={{ borderLeft: `2px solid ${C.gold}`, paddingLeft: 20 }}>
+              <p style={{ fontSize: 15, color: C.muted, fontStyle: "italic", fontFamily: FONT_BODY }}>
+                It is technology that works quietly in the background while the real craft stays front
+                and center.
+              </p>
+            </blockquote>
+          </div>
+        </section>
+
+        {/* ── FOUNDER ─────────────────────────────────────────────── */}
+        <section style={{ background: C.s1, padding: "64px 24px" }}>
+          <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, fontFamily: FONT_BODY }}>
+              The Founder
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px,2.4vw,30px)", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+              Arshad Segal
+            </h2>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              NextSlot was founded by Arshad Segal, an entrepreneur and builder driven by a simple
+              belief.
+            </p>
+            <blockquote style={{ borderLeft: `2px solid ${C.gold}`, paddingLeft: 20 }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: C.text, fontStyle: "italic", fontFamily: FONT_BODY }}>
+                Sometimes the biggest barrier to progress is waiting too long to start.
+              </p>
+            </blockquote>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              Arshad has always been drawn to ideas that combine creativity, technology, and human
+              behaviour. His work often sits at the intersection of entrepreneurship, storytelling,
+              and systems thinking. He believes that when people are given the right tools and a
+              clear path forward, they can build extraordinary things from ordinary beginnings.
+            </p>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              This philosophy is reflected in his broader creative work and personal brand, centred
+              on one belief he returns to constantly:
+            </p>
+
+            {/* Just Start / chasing_dweams card */}
+            <a
+              href="https://www.tiktok.com/@chasing_dweams?_r=1&_t=ZS-94gSp7To9iS"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "block",
+                borderRadius: 16,
+                overflow: "hidden",
+                textDecoration: "none",
+                background: C.s2,
+                border: `1px solid rgba(212,165,116,0.27)`,
+                boxShadow: `0 0 0 1px rgba(212,165,116,0.10)`,
+                transition: "border-color 0.2s, box-shadow 0.2s",
+                position: "relative",
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.borderColor = "rgba(212,165,116,0.55)";
+                el.style.boxShadow = `0 0 28px 0 rgba(212,165,116,0.22), 0 8px 32px rgba(0,0,0,0.4)`;
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.borderColor = "rgba(212,165,116,0.27)";
+                el.style.boxShadow = `0 0 0 1px rgba(212,165,116,0.10)`;
+              }}
+            >
+              <div
+                style={{
+                  pointerEvents: "none",
+                  position: "absolute", top: -32, right: -32,
+                  width: 160, height: 160, borderRadius: "50%",
+                  background: `radial-gradient(circle, rgba(212,165,116,0.18) 0%, transparent 70%)`,
+                }}
+              />
+              <div
+                style={{
+                  position: "relative",
+                  display: "flex", flexDirection: "column", gap: 16,
+                  padding: "28px 32px",
+                }}
+                className="founder-card-inner"
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, fontFamily: FONT_BODY }}>
+                      Personal brand / TikTok
+                    </p>
+                    <p style={{ fontFamily: FONT_DISPLAY, fontSize: 36, fontWeight: 700, color: C.text, lineHeight: 1 }}>
+                      Just Start.
+                    </p>
+                    <p style={{ fontSize: 14, color: C.muted, maxWidth: 280, lineHeight: 1.6, fontFamily: FONT_BODY }}>
+                      Creativity, entrepreneurship, and the courage to begin. Follow the journey on TikTok.
+                    </p>
+                    <p style={{ fontSize: 12, fontWeight: 500, color: C.muted, fontFamily: FONT_BODY }}>@chasing_dweams</p>
+                  </div>
+                  <span
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 8,
+                      fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                      padding: "10px 20px", borderRadius: 10, flexShrink: 0,
+                      background: `rgba(212,165,116,0.12)`,
+                      border: `1px solid rgba(212,165,116,0.35)`,
+                      color: C.text,
+                    }}
+                  >
+                    Watch on TikTok
+                    <ArrowUpRight style={{ height: 14, width: 14, color: C.gold }} />
+                  </span>
+                </div>
+              </div>
+            </a>
+
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              NextSlot is a practical extension of that mindset, a tool created to help everyday
+              business owners take the next step, make better decisions, and grow with confidence.
+            </p>
+          </div>
+        </section>
+
+        {/* ── MISSION ─────────────────────────────────────────────── */}
+        <section style={{ maxWidth: 760, margin: "0 auto", padding: "64px 24px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, fontFamily: FONT_BODY }}>
+              Our Mission
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px,2.4vw,30px)", fontWeight: 700, color: C.text, lineHeight: 1.3 }}>
+              To give service businesses tools that feel like they were built by someone who actually
+              understands their world.
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {["Not overly complex.", "Not disconnected from reality.", "Just useful, thoughtful technology that helps businesses move forward."].map((line) => (
+                <p key={line} style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: FONT_BODY }}>{line}</p>
+              ))}
+            </div>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
+              Because behind every booking, every client, and every small studio is a person working
+              hard to build something meaningful. NextSlot exists to support that journey.
+            </p>
+          </div>
+        </section>
+
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, rgba(212,165,116,0.4), transparent)` }} />
+
+        {/* ── CASE STUDY ───────────────────────────────────────────── */}
+        <section id="case-study" style={{ position: "relative", width: "100%", minHeight: 360, display: "flex", alignItems: "flex-end", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+            <img
+              src={FEATURES_IMAGE}
+              alt="PhenomeBeauty"
+              fetchPriority="low"
+              decoding="async"
+              loading="lazy"
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+            />
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                background: `linear-gradient(to bottom, ${C.bg}4D 0%, ${C.bg}EC 80%, ${C.bg} 100%)`,
+              }}
+            />
+          </div>
+          <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 760, margin: "0 auto", padding: "128px 24px 56px" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, marginBottom: 12, fontFamily: FONT_BODY }}>
+              Where NextSlot came from
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(26px,3vw,40px)", fontWeight: 700, color: C.text, lineHeight: 1.1
