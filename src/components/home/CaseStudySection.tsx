@@ -140,7 +140,7 @@ export const CaseStudySection = () => {
             }}
           >
             NextSlot showed her exactly which services, time slots, and clients were driving
-            growth. Everything else fell away. Within 3 months, her bookings doubled.
+            growth. The noise fell away and the path was clear. Within 3 months, her bookings doubled.
           </p>
         </div>
 
