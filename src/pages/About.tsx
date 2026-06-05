@@ -370,8 +370,9 @@ const About = () => {
                 </Link>
               </div>
 
-              {/* RIGHT: signature quote card */}
+              {/* RIGHT: founder's belief card */}
               <div
+                className="about-belief-card"
                 style={{
                   borderRadius: 20,
                   padding: "40px",
@@ -410,6 +411,7 @@ const About = () => {
                 </p>
                 <blockquote style={{ position: "relative" }}>
                   <p
+                    className="belief-quote"
                     style={{
                       fontFamily: FONT_DISPLAY,
                       fontSize: 22,
@@ -433,6 +435,7 @@ const About = () => {
                   }}
                 >
                   <div
+                    className="belief-stats-grid"
                     style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
                   >
                     {[

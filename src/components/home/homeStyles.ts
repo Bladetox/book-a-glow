@@ -65,4 +65,23 @@ export const HOME_STYLES = `
       display: none !important;
     }
   }
+
+  /* ── About page responsive ──────────────────────────────────── */
+  @media (max-width: 767px) {
+    .about-hero-grid {
+      grid-template-columns: 1fr !important;
+      gap: 32px !important;
+    }
+    .about-belief-card {
+      padding: 24px !important;
+      border-radius: 16px !important;
+    }
+    .about-belief-card .belief-quote {
+      font-size: 18px !important;
+    }
+    .about-belief-card .belief-stats-grid {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 12px !important;
+    }
+  }
 `;
