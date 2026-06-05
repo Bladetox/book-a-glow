@@ -813,7 +813,7 @@ const Pricing = () => {
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {faqs.map((faq, i) => (
-              <div key={i} style={{ border: `1px solid ${openFaq === i ? "rgba(212,165,116,0.25)" : C.border}`, borderRadius: 14, overflow: "hidden" }}>
+              <div key={i} style={{ border: `1px solid ${openFaq === i ? "rgba(212,165,116,0.25)" : C.border}`, borderRadius: 16, overflow: "hidden" }}>
                 <button
                   type="button"
                   style={{
@@ -872,7 +872,7 @@ const Pricing = () => {
                   background: CTA_BG, boxShadow: CTA_SHADOW,
                   color: "#080808", fontFamily: FONT_BODY,
                   fontSize: 15, fontWeight: 700,
-                  padding: "16px 36px", borderRadius: 12,
+                  padding: "16px 36px", borderRadius: 10,
                   textDecoration: "none",
                   display: "inline-flex", alignItems: "center", gap: 8,
                   minHeight: 52,
@@ -888,7 +888,7 @@ const Pricing = () => {
                   background: CTA_BG, boxShadow: CTA_SHADOW,
                   color: "#080808", fontFamily: FONT_BODY,
                   fontSize: 15, fontWeight: 700,
-                  padding: "16px 36px", borderRadius: 12,
+                  padding: "16px 36px", borderRadius: 10,
                   textDecoration: "none",
                   display: "inline-flex", alignItems: "center", gap: 8,
                   minHeight: 52,
