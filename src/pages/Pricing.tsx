@@ -7,51 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 
-/* ─── CTA button style (matches home page gold gradient) ──────── */
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
-/* ─── Shared background image layer (matches HeroSection exactly) */
-const BgImage = ({ url }: { url: string }) => (
-  <>
-    {/* Photo layer */}
-    <div style={{
-      position:           "absolute",
-      inset:              0,
-      backgroundImage:    `url('${url}')`,
-      backgroundSize:     "cover",
-      backgroundPosition: "center",
-      backgroundRepeat:   "no-repeat",
-      opacity:            0.42,
-      filter:             "blur(0.5px) saturate(0.75)",
-      transform:          "scale(1.04)",
-      zIndex:             0,
-      pointerEvents:      "none",
-    }} />
-    {/* Gold grid overlay */}
-    <div style={{
-      position: "absolute", inset: 0,
-      backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
-      backgroundSize: "44px 44px",
-      WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-      maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-      zIndex: 1,
-      pointerEvents: "none",
-    } as React.CSSProperties} />
-    {/* Ambient glow orb */}
-    <div style={{
-      position: "absolute", width: 640, height: 640, borderRadius: "50%",
-      background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
-      top: "50%", left: "50%",
-      transform: "translate(-50%,-50%)",
-      animation: "heroBreathe 7s ease-in-out infinite",
-      zIndex: 1,
-      pointerEvents: "none",
-    }} />
-  </>
-);
-
-/* ─── Tier definitions ─────────────────────────────────────────── */
 const tiers = [
   {
     name: "Starter",
@@ -325,18 +283,65 @@ const Pricing = () => {
   };
 
   return (
-    <div className="nextslot-theme dark-brand" style={{ overflowX: "hidden" }}>  
+    <div className="nextslot-theme dark-brand" style={{ overflowX: "hidden" }}>
       <style>{HOME_STYLES}</style>
       <SiteHeader />
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
-        {/* ── HERO ─────────────────────────────────────────────────── */}
-        <section style={{ padding: "80px 0 60px", position: "relative", overflow: "hidden" }}>
-          <BgImage url="https://iili.io/CFs98E7.jpg" />
+      {/* ── HERO ─ full-width, background layers match HeroSection exactly ──── */}
+      <section
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          background: C.bg,
+          padding: "80px 24px 60px",
+        }}
+      >
+        {/* Background image layer */}
+        <div style={{
+          position:           "absolute",
+          inset:              0,
+          backgroundImage:    "url('https://iili.io/CFs98E7.jpg')",
+          backgroundSize:     "cover",
+          backgroundPosition: "center",
+          backgroundRepeat:   "no-repeat",
+          opacity:            0.42,
+          filter:             "blur(0.5px) saturate(0.75)",
+          transform:          "scale(1.04)",
+          zIndex:             0,
+          pointerEvents:      "none",
+        }} />
+        {/* Grid overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
+          backgroundSize: "44px 44px",
+          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+          zIndex: 1,
+          pointerEvents: "none",
+        } as React.CSSProperties} />
+        {/* Ambient glow orb */}
+        <div style={{
+          position: "absolute", width: 640, height: 640, borderRadius: "50%",
+          background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
+          top: "50%", left: "50%",
+          transform: "translate(-50%,-50%)",
+          animation: "heroBreathe 7s ease-in-out infinite",
+          zIndex: 1,
+          pointerEvents: "none",
+        }} />
 
-          <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
-            className="pricing-hero-grid">
-
+        {/* Content */}
+        <div
+          style={{
+            position: "relative", zIndex: 2,
+            maxWidth: 1200, margin: "0 auto",
+          }}
+        >
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
+            className="pricing-hero-grid"
+          >
             {/* Left: copy */}
             <div>
               <div style={{
@@ -475,9 +480,11 @@ const Pricing = () => {
             </div>
           </div>
 
-          {/* ── 3-step flow ──────────────────────────────────────────── */}
-          <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
-            className="pricing-steps-row">
+          {/* 3-step flow */}
+          <div
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
+            className="pricing-steps-row"
+          >
             {[
               { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
               { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
@@ -500,12 +507,17 @@ const Pricing = () => {
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ── PLANS ────────────────────────────────────────────────── */}
-        <section id="plans" style={{ paddingBottom: 0 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, maxWidth: 960, margin: "0 auto" }}
-            className="pricing-plans-grid">
+      {/* ── PLANS, COMPARISON, TRIAL VALUE ─ inside constrained container ──── */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
+
+        <section id="plans" style={{ paddingBottom: 0, paddingTop: 60 }}>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, maxWidth: 960, margin: "0 auto" }}
+            className="pricing-plans-grid"
+          >
             {tiers.map((tier) => {
               const tierPlan = planKeyMap[tier.name];
               const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
@@ -666,7 +678,7 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* ── COMPARISON ───────────────────────────────────────────── */}
+        {/* Comparison */}
         <section style={{ maxWidth: 960, margin: "16px auto 0", paddingBottom: 60 }}>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <button
@@ -711,7 +723,7 @@ const Pricing = () => {
           )}
         </section>
 
-        {/* ── TRIAL VALUE BLOCK ─────────────────────────────────────── */}
+        {/* Trial value block */}
         <section style={{ maxWidth: 960, margin: "0 auto", paddingBottom: 80 }}>
           <div style={{
             background: C.s1,
@@ -744,47 +756,90 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* ── FAQ ───────────────────────────────────────────────────── */}
-        <section id="faq" style={{ position: "relative", margin: "0 -24px", padding: "80px 24px 100px", overflow: "hidden" }}>
-          <BgImage url="https://iili.io/CFsJkg9.jpg" />
+      </div>
 
-          <div style={{ position: "relative", zIndex: 2, maxWidth: 680, margin: "0 auto" }}>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
-              Straight answers.
-            </h2>
-            <p style={{ fontSize: 14, color: C.muted, textAlign: "center", marginBottom: 40, fontFamily: FONT_BODY }}>
-              No sales speak.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {faqs.map((faq, i) => (
-                <div key={i} style={{ border: `1px solid ${openFaq === i ? "rgba(212,165,116,0.25)" : C.border}`, borderRadius: 14, overflow: "hidden" }}>
-                  <button
-                    type="button"
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
-                      padding: "16px 20px", textAlign: "left", background: openFaq === i ? C.s1 : "transparent",
-                      border: "none", cursor: "pointer", fontFamily: FONT_BODY,
-                    }}
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  >
-                    <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{faq.q}</span>
-                    {openFaq === i
-                      ? <ChevronUp style={{ height: 14, width: 14, color: C.gold, flexShrink: 0 }} />
-                      : <ChevronDown style={{ height: 14, width: 14, color: C.muted, flexShrink: 0 }} />}
-                  </button>
-                  {openFaq === i && (
-                    <div style={{ padding: "0 20px 16px", fontSize: 14, color: C.muted, lineHeight: 1.7, borderTop: `1px solid ${C.border}`, paddingTop: 14, background: C.s1, fontFamily: FONT_BODY }}>
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+      {/* ── FAQ ─ full-width, background layers match HeroSection exactly ───── */}
+      <section
+        id="faq"
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          background: C.bg,
+          padding: "80px 24px 100px",
+        }}
+      >
+        {/* Background image layer */}
+        <div style={{
+          position:           "absolute",
+          inset:              0,
+          backgroundImage:    "url('https://iili.io/CFsJkg9.jpg')",
+          backgroundSize:     "cover",
+          backgroundPosition: "center",
+          backgroundRepeat:   "no-repeat",
+          opacity:            0.42,
+          filter:             "blur(0.5px) saturate(0.75)",
+          transform:          "scale(1.04)",
+          zIndex:             0,
+          pointerEvents:      "none",
+        }} />
+        {/* Grid overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
+          backgroundSize: "44px 44px",
+          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+          zIndex: 1,
+          pointerEvents: "none",
+        } as React.CSSProperties} />
+        {/* Ambient glow orb */}
+        <div style={{
+          position: "absolute", width: 640, height: 640, borderRadius: "50%",
+          background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
+          top: "50%", left: "50%",
+          transform: "translate(-50%,-50%)",
+          animation: "heroBreathe 7s ease-in-out infinite",
+          zIndex: 1,
+          pointerEvents: "none",
+        }} />
+
+        {/* Content */}
+        <div style={{ position: "relative", zIndex: 2, maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
+            Straight answers.
+          </h2>
+          <p style={{ fontSize: 14, color: C.muted, textAlign: "center", marginBottom: 40, fontFamily: FONT_BODY }}>
+            No sales speak.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {faqs.map((faq, i) => (
+              <div key={i} style={{ border: `1px solid ${openFaq === i ? "rgba(212,165,116,0.25)" : C.border}`, borderRadius: 14, overflow: "hidden" }}>
+                <button
+                  type="button"
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                    padding: "16px 20px", textAlign: "left", background: openFaq === i ? C.s1 : "transparent",
+                    border: "none", cursor: "pointer", fontFamily: FONT_BODY,
+                  }}
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{faq.q}</span>
+                  {openFaq === i
+                    ? <ChevronUp style={{ height: 14, width: 14, color: C.gold, flexShrink: 0 }} />
+                    : <ChevronDown style={{ height: 14, width: 14, color: C.muted, flexShrink: 0 }} />}
+                </button>
+                {openFaq === i && (
+                  <div style={{ padding: "0 20px 16px", fontSize: 14, color: C.muted, lineHeight: 1.7, borderTop: `1px solid ${C.border}`, paddingTop: 14, background: C.s1, fontFamily: FONT_BODY }}>
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
 
-      {/* ── BOTTOM CTA (matches home CTASection) ─────────────────── */}
+      {/* ── BOTTOM CTA ───────────────────────────────────────────────── */}
       <section style={{ background: C.bg, padding: "100px 24px" }}>
         <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
           <div style={{
