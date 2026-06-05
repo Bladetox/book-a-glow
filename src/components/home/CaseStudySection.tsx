@@ -7,18 +7,18 @@ import { Eyebrow } from "./Eyebrow";
 /*
   Laws of UX applied
   ─────────────────────────────────────────────────────────────
-  Serial Position Effect   : Chaos first, Result last — the outcome
+  Serial Position Effect   : Before first, Result last — the outcome
                              is the most memorable item.
   Von Restorff Effect      : The Result card is gold-bordered and
                              visually distinct — it will be remembered.
   Aesthetic-Usability      : Clean card surfaces, consistent radius,
                              generous whitespace reduce perceived effort.
-  Miller's Law             : Three steps only (Chaos / Shift / Result)
-                             — well within the 7±2 chunk limit.
+  Miller's Law             : Two steps only (Before / Shift)
+                             — well within the 7+2 chunk limit.
   Goal-Gradient Effect     : Step numbers + visible progression cue
                              the reader toward the outcome.
-  Zeigarnik Effect         : Steps 01 and 02 are intentionally
-                             unresolved — tension draws the eye to 03.
+  Zeigarnik Effect         : Step 01 is intentionally unresolved —
+                             tension draws the eye to 02.
   Jakobs Law               : Timeline cards follow a familiar
                              before/after narrative pattern.
   Proximity                : Related copy, stat, and bullet tightly
@@ -30,26 +30,18 @@ const IMAGE_URL = "https://iili.io/CFVVaHu.jpg";
 const STEPS = [
   {
     step: "01",
-    tag: "The chaos",
-    headline: "Running a business on WhatsApp.",
-    body: "Bookings came through messages at all hours. Every confirmation, deposit request, and reminder sent manually, one client at a time. Mornings started with an inbox to untangle before a single client was served.",
+    tag: "The before",
+    headline: "Working hard at everything.",
+    body: "Busy every day, but no clear picture of what was actually moving the business forward. Every service, every channel, every time slot felt equally important. None of them were.",
     stat: null,
     isFinal: false,
   },
   {
     step: "02",
     tag: "The shift",
-    headline: "One link changed everything.",
-    body: "A professional booking page with a real payment gateway. Clients book, choose a time, and pay a deposit without a single message. The link went into the TikTok bio, Instagram bio, and WhatsApp status. Bookings started arriving on their own.",
-    stat: null,
-    isFinal: false,
-  },
-  {
-    step: "03",
-    tag: "The result",
-    headline: "A business that runs itself.",
-    body: "No more chasing payments. No more proof-of-payment screenshots. The dashboard shows exactly what is happening in real time and surfaces what to do next — before the owner even thinks to check.",
-    stat: "This is why NextSlot exists.",
+    headline: "Clarity is a competitive advantage.",
+    body: "The data was already there. NextSlot just made it readable. She stopped spreading herself thin, because now she knew where her attention was needed.",
+    stat: "2x bookings. 3 months.",
     isFinal: true,
   },
 ] as const;
@@ -122,7 +114,7 @@ export const CaseStudySection = () => {
             marginBottom: isMobile ? 40 : 64,
           }}
         >
-          <Eyebrow text="Where NextSlot came from" />
+          <Eyebrow text="Real result. Phenomena Beauty." />
           <h2
             style={{
               fontFamily: FONT_DISPLAY,
@@ -134,8 +126,8 @@ export const CaseStudySection = () => {
               letterSpacing: "-0.02em",
             }}
           >
-            It all started with{" "}
-            <span style={{ color: C.gold }}>PhenomeBeauty.</span>
+            She was not doing less.{" "}
+            <span style={{ color: C.gold }}>She just did not know where to focus.</span>
           </h2>
           <p
             style={{
@@ -147,55 +139,18 @@ export const CaseStudySection = () => {
               fontFamily: FONT_BODY,
             }}
           >
-            A mobile beauty studio owner doing everything alone. This is her journey
-            and the reason every feature in NextSlot exists.
+            NextSlot showed her exactly which services, time slots, and clients were driving
+            growth. Everything else fell away. Within 3 months, her bookings doubled.
           </p>
         </div>
 
-        {/* Pull quote */}
-        <div
-          style={{
-            maxWidth: 600,
-            margin: isMobile ? "0 auto 40px" : "0 auto 56px",
-            background: "rgba(212,165,116,0.06)",
-            border: `1.5px solid rgba(212,165,116,0.30)`,
-            borderRadius: 16,
-            padding: isMobile ? "20px 24px" : "26px 36px",
-            boxShadow: "0 4px 32px rgba(212,165,116,0.08)",
-          }}
-        >
-          <p
-            style={{
-              fontFamily: FONT_DISPLAY,
-              fontSize: isMobile ? 17 : 20,
-              fontWeight: 700,
-              color: C.text,
-              lineHeight: 1.55,
-              marginBottom: 12,
-            }}
-          >
-            &ldquo;For the first time, the business felt like it was running itself.&rdquo;
-          </p>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: C.gold,
-              fontFamily: FONT_BODY,
-              letterSpacing: "0.04em",
-            }}
-          >
-            PhenomeBeauty &mdash; NextSlot customer
-          </span>
-        </div>
-
-        {/* Three-step timeline */}
+        {/* Two-step timeline */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
             gap: isMobile ? 16 : 24,
-            maxWidth: 960,
+            maxWidth: 760,
             margin: "0 auto",
           }}
         >
