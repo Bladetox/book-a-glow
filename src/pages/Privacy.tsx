@@ -5,9 +5,9 @@ import { HOME_STYLES } from "@/components/home/homeStyles";
 
 const bodyText: React.CSSProperties = {
   fontSize: 14,
-  color: "rgba(232,232,230,0.52)",
+  color: C.muted,
   lineHeight: 1.8,
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: FONT_BODY,
 };
 
 const Privacy = () => (
@@ -142,9 +142,9 @@ const Privacy = () => (
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section>
     <h2 style={{
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: FONT_DISPLAY,
       fontSize: 18, fontWeight: 700,
-      color: "#e8e8e6",
+      color: C.text,
       marginBottom: 12,
     }}>
       {title}
@@ -159,9 +159,9 @@ const BulletList = ({ items }: { items: string[] }) => (
       <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <span style={{
           marginTop: 6, width: 5, height: 5, borderRadius: "50%",
-          background: "#D4A574", flexShrink: 0, display: "inline-block",
+          background: C.gold, flexShrink: 0, display: "inline-block",
         }} />
-        <span style={{ fontSize: 14, color: "rgba(232,232,230,0.52)", lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
+        <span style={{ fontSize: 14, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
           {item}
         </span>
       </li>
