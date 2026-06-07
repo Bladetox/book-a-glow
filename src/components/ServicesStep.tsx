@@ -1,6 +1,6 @@
 import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Plus, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -15,6 +15,12 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
   const { data: categories = [], isLoading: loadingCats } = usePublicCategories();
   const config = usePublicBusinessConfig();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeCategory === null && categories.length > 0) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
 
   const servicesHeading: string =
     (config as Record<string, string>)["services_step_heading"] ?? "Select a service";
