@@ -163,7 +163,7 @@ export function usePublicCategories() {
           if (ai !== -1 && bi !== -1) return ai - bi;
           if (ai !== -1) return -1;
           if (bi !== -1) return 1;
-          return a.localeCompare(b);
+          return a.localeCompare(b, "en", { sensitivity: "base" });
         });
       } else {
         // Default: waxing sub-cats first (Intimate → Body → Face),
@@ -175,7 +175,7 @@ export function usePublicCategories() {
           if (ai !== -1 && bi !== -1) return ai - bi;
           if (ai !== -1) return -1;
           if (bi !== -1) return 1;
-          return a.localeCompare(b);
+          return a.localeCompare(b, "en", { sensitivity: "base" });
         });
       }
 
