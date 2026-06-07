@@ -94,7 +94,6 @@ export function usePublicCategories() {
         if (settingsRes.data?.value) {
           const parsed = JSON.parse(settingsRes.data.value);
           if (Array.isArray(parsed)) {
-            // Normalize saved order entries the same way
             savedOrder = (parsed as string[]).map((c) =>
               c.trim().toLowerCase()
             );
@@ -103,6 +102,12 @@ export function usePublicCategories() {
       } catch {
         // malformed JSON — fall back to alphabetical
       }
+
+      console.log("[cat] tenantId:", tenantId);
+      console.log("[cat] settingsRes.data:", settingsRes.data);
+      console.log("[cat] settingsRes.error:", settingsRes.error);
+      console.log("[cat] savedOrder:", savedOrder);
+      console.log("[cat] unique (pre-sort):", [...unique]);
 
       if (savedOrder.length > 0) {
         unique.sort((a, b) => {
@@ -118,6 +123,8 @@ export function usePublicCategories() {
           a.localeCompare(b, "en", { sensitivity: "base" })
         );
       }
+
+      console.log("[cat] unique (post-sort):", [...unique]);
 
       return unique.map((c): ServiceCategory => ({
         id: c,
