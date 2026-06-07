@@ -84,9 +84,10 @@ export function usePublicServices() {
         .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((s): PublicService => {
-        const rawCat = s.category ?? "";
+        // Normalize before comparison — guards against DB casing/whitespace variance
+        const rawCat = (s.category ?? "").trim().toLowerCase();
         const category =
-          rawCat.toLowerCase() === "waxing"
+          rawCat === "waxing"
             ? resolveWaxingSubCategory(s.name)
             : rawCat;
         return {
@@ -121,7 +122,8 @@ export function usePublicCategories() {
           .eq("tenant_id", tenantId)
           .eq("is_active", true)
           .eq("is_addon", false)
-          .order("category"),
+          .order("category")
+          .order("name", { ascending: true }), // deterministic tiebreaker within same category
         supabase
           .from("app_settings")
           .select("value")
@@ -143,10 +145,12 @@ export function usePublicCategories() {
         // ignore malformed JSON — just use default sort
       }
 
-      // Expand raw "waxing" category into sub-categories
+      // Normalize + expand raw "waxing" category into sub-categories.
+      // trim().toLowerCase() ensures "Skin Care" and "skin care" collapse
+      // into the same Set entry, preventing phantom duplicate tabs.
       const expanded = (servicesRes.data ?? []).map((s) => {
-        const raw = s.category ?? "";
-        return raw.toLowerCase() === "waxing"
+        const raw = (s.category ?? "").trim().toLowerCase();
+        return raw === "waxing"
           ? resolveWaxingSubCategory(s.name)
           : raw;
       });
@@ -163,6 +167,7 @@ export function usePublicCategories() {
           if (ai !== -1 && bi !== -1) return ai - bi;
           if (ai !== -1) return -1;
           if (bi !== -1) return 1;
+          // Locale-pinned, sensitivity-controlled — identical result on all browsers
           return a.localeCompare(b, "en", { sensitivity: "base" });
         });
       } else {
@@ -175,6 +180,7 @@ export function usePublicCategories() {
           if (ai !== -1 && bi !== -1) return ai - bi;
           if (ai !== -1) return -1;
           if (bi !== -1) return 1;
+          // Locale-pinned, sensitivity-controlled — identical result on all browsers
           return a.localeCompare(b, "en", { sensitivity: "base" });
         });
       }
