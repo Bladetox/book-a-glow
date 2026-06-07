@@ -103,12 +103,6 @@ export function usePublicCategories() {
         // malformed JSON — fall back to alphabetical
       }
 
-      console.log("[cat] tenantId:", tenantId);
-      console.log("[cat] settingsRes.data:", settingsRes.data);
-      console.log("[cat] settingsRes.error:", settingsRes.error);
-      console.log("[cat] savedOrder:", savedOrder);
-      console.log("[cat] unique (pre-sort):", [...unique]);
-
       if (savedOrder.length > 0) {
         unique.sort((a, b) => {
           const ai = savedOrder.indexOf(a);
@@ -123,8 +117,6 @@ export function usePublicCategories() {
           a.localeCompare(b, "en", { sensitivity: "base" })
         );
       }
-
-      console.log("[cat] unique (post-sort):", [...unique]);
 
       return unique.map((c): ServiceCategory => ({
         id: c,
