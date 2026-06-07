@@ -18,53 +18,10 @@ export interface ServiceCategory {
   label: string;
 }
 
-// ─── Explicit waxing sub-category map ───────────────────────────────────────
-// Keys are lowercase service names (trimmed). Fallback = "waxing-body".
-const WAXING_INTIMATE: string[] = [
-  "hollywood",
-  "brazilia",
-  "brazilian",
-  "areola",
-  "garden path",
-  "underarm waxing",
-  "underarm",
-  "bikini",
-  "g-string",
-  "intimate",
-];
-
-const WAXING_FACE: string[] = [
-  "full face including eyebrow",
-  "full face excluding eyebrow",
-  "upper lip, eyebrow & chin",
-  "upper lip",
-  "eyebrow",
-  "chin",
-  "full face",
-  "facial",
-  "face wax",
-  "brow",
-  "lip wax",
-  "sideburn",
-];
-
-function resolveWaxingSubCategory(name: string): string {
-  const lower = name.toLowerCase().trim();
-  if (WAXING_INTIMATE.some((k) => lower === k || lower.includes(k))) return "waxing-intimate";
-  if (WAXING_FACE.some((k) => lower === k || lower.includes(k)))    return "waxing-face";
-  return "waxing-body";
-}
-
-// ─── Display labels ──────────────────────────────────────────────────────────
-const CATEGORY_LABELS: Record<string, string> = {
-  "waxing-intimate": "Waxing — Intimate",
-  "waxing-body":     "Waxing — Body",
-  "waxing-face":     "Waxing — Face",
-};
-
 function categoryLabel(id: string): string {
-  if (CATEGORY_LABELS[id]) return CATEGORY_LABELS[id];
-  return id.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  return id
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 // ─── usePublicServices ───────────────────────────────────────────────────────
@@ -83,24 +40,16 @@ export function usePublicServices() {
         .order("display_order", { ascending: true, nullsFirst: false })
         .order("name", { ascending: true });
       if (error) throw error;
-      return (data ?? []).map((s): PublicService => {
-        // Normalize before comparison — guards against DB casing/whitespace variance
-        const rawCat = (s.category ?? "").trim().toLowerCase();
-        const category =
-          rawCat === "waxing"
-            ? resolveWaxingSubCategory(s.name)
-            : rawCat;
-        return {
-          id: s.id,
-          name: s.name,
-          description: s.description,
-          price: s.price,
-          duration: s.duration_minutes,
-          category,
-          isCallOutAvailable: s.is_call_out_available ?? false,
-          isAddon: s.is_addon ?? false,
-        };
-      });
+      return (data ?? []).map((s): PublicService => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        price: s.price,
+        duration: s.duration_minutes,
+        category: (s.category ?? "").trim().toLowerCase(),
+        isCallOutAvailable: s.is_call_out_available ?? false,
+        isAddon: s.is_addon ?? false,
+      }));
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -114,16 +63,15 @@ export function usePublicCategories() {
     queryKey: ["public-categories", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      // Fetch services for category derivation AND the persisted category order
       const [servicesRes, settingsRes] = await Promise.all([
         supabase
           .from("services")
-          .select("category, name, is_addon")
+          .select("category")
           .eq("tenant_id", tenantId)
           .eq("is_active", true)
           .eq("is_addon", false)
           .order("category")
-          .order("name", { ascending: true }), // deterministic tiebreaker within same category
+          .order("name" as never, { ascending: true }),
         supabase
           .from("app_settings")
           .select("value")
@@ -134,55 +82,41 @@ export function usePublicCategories() {
 
       if (servicesRes.error) throw servicesRes.error;
 
-      // Parse saved category order (falls back to empty — no crash if missing)
+      // Normalize and deduplicate — category is the single source of truth
+      const normalized = (servicesRes.data ?? []).map((s) =>
+        (s.category ?? "").trim().toLowerCase()
+      );
+      const unique = [...new Set(normalized)].filter(Boolean);
+
+      // Parse saved order from admin UI
       let savedOrder: string[] = [];
       try {
         if (settingsRes.data?.value) {
           const parsed = JSON.parse(settingsRes.data.value);
-          if (Array.isArray(parsed)) savedOrder = parsed as string[];
+          if (Array.isArray(parsed)) {
+            // Normalize saved order entries the same way
+            savedOrder = (parsed as string[]).map((c) =>
+              c.trim().toLowerCase()
+            );
+          }
         }
       } catch {
-        // ignore malformed JSON — just use default sort
+        // malformed JSON — fall back to alphabetical
       }
 
-      // Normalize + expand raw "waxing" category into sub-categories.
-      // trim().toLowerCase() ensures "Skin Care" and "skin care" collapse
-      // into the same Set entry, preventing phantom duplicate tabs.
-      const expanded = (servicesRes.data ?? []).map((s) => {
-        const raw = (s.category ?? "").trim().toLowerCase();
-        return raw === "waxing"
-          ? resolveWaxingSubCategory(s.name)
-          : raw;
-      });
-
-      // Exclude internal categories that should never appear as tabs
-      const unique = [...new Set(expanded)].filter((c) => c !== "add-on");
-
       if (savedOrder.length > 0) {
-        // Use the tenant's custom order; anything not in the saved list falls
-        // back to alphabetical at the end.
         unique.sort((a, b) => {
           const ai = savedOrder.indexOf(a);
           const bi = savedOrder.indexOf(b);
           if (ai !== -1 && bi !== -1) return ai - bi;
           if (ai !== -1) return -1;
           if (bi !== -1) return 1;
-          // Locale-pinned, sensitivity-controlled — identical result on all browsers
           return a.localeCompare(b, "en", { sensitivity: "base" });
         });
       } else {
-        // Default: waxing sub-cats first (Intimate → Body → Face),
-        // then everything else alphabetically.
-        const waxingOrder = ["waxing-intimate", "waxing-body", "waxing-face"];
-        unique.sort((a, b) => {
-          const ai = waxingOrder.indexOf(a);
-          const bi = waxingOrder.indexOf(b);
-          if (ai !== -1 && bi !== -1) return ai - bi;
-          if (ai !== -1) return -1;
-          if (bi !== -1) return 1;
-          // Locale-pinned, sensitivity-controlled — identical result on all browsers
-          return a.localeCompare(b, "en", { sensitivity: "base" });
-        });
+        unique.sort((a, b) =>
+          a.localeCompare(b, "en", { sensitivity: "base" })
+        );
       }
 
       return unique.map((c): ServiceCategory => ({
