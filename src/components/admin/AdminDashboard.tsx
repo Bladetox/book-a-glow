@@ -16,6 +16,7 @@ import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useNextyInsights } from "@/hooks/useNextyInsights";
 import BusinessHealthSection, { MetricExpandOverlay, type ExpandedCard } from "@/components/admin/BusinessHealthSection";
 import DashboardStockAlerts from "@/components/admin/DashboardStockAlerts";
+import AdminPayshapQueue from "@/components/admin/AdminPayshapQueue";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 
@@ -402,7 +403,7 @@ const AppointmentsList = ({
               <td className="py-2.5">
                 <StatusBadge status={a.status} />
               </td>
-              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "—"}</td>
+              <td className="py-2.5 text-right text-white/60">{a.balance > 0 ? `R ${a.balance}` : "\u2014"}</td>
             </tr>
           ))}
         </tbody>
@@ -522,7 +523,7 @@ function daysInMonth(year: number, month: number): number {
 
 /** Parses nextAppt safely regardless of whether it contains " - " */
 function parseNextAppt(raw: string | null): { value: string; sub: string | null } {
-  if (!raw) return { value: "—", sub: "no more today" };
+  if (!raw) return { value: "\u2014", sub: "no more today" };
   const idx = raw.indexOf(" - ");
   if (idx === -1) return { value: raw, sub: null };
   return { value: raw.slice(0, idx), sub: raw.slice(idx + 3) };
@@ -626,7 +627,7 @@ const AdminDashboard = ({
   const retentionDisp  = `${retentionRate}%`;
   const retentionColor = retentionRate >= 40 ? "text-emerald-400" : "text-white/90";
 
-  const topChannel       = leadSourceBreakdown[0]?.channel ?? "—";
+  const topChannel       = leadSourceBreakdown[0]?.channel ?? "\u2014";
   const totalWithSource  = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
   const topChannelPct    =
     totalWithSource > 0 && leadSourceBreakdown[0]
@@ -732,7 +733,7 @@ const AdminDashboard = ({
 
                 {/* Zeigarnik Effect: temporal frame */}
                 <p className="text-[10px] text-white/25 tabular-nums">
-                  Day {dayOfMonth} of {totalDays} · {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
+                  Day {dayOfMonth} of {totalDays} &middot; {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
                 </p>
 
                 {/* Peak-End Rule: projection */}
@@ -770,7 +771,7 @@ const AdminDashboard = ({
                 </div>
                 <p className="text-[10px] text-white/25 tabular-nums">
                   {beatLastMonth
-                    ? "Last month beaten ✓"
+                    ? "Last month beaten \u2713"
                     : rToGo !== null
                       ? `R ${rToGo.toLocaleString()} to beat last month`
                       : `${progressPct}% of last month`}
@@ -1034,6 +1035,9 @@ const AdminDashboard = ({
       {visibility.stockAlerts && (
         <DashboardStockAlerts stockAlerts={stockAlerts} onNavigate={onNavigate} />
       )}
+
+      {/* PayShap verification queue — gated by flags.payshap_payments */}
+      {flags.payshap_payments && <AdminPayshapQueue />}
     </div>
   );
 };
