@@ -208,7 +208,7 @@ export const HeroSection = () => {
           </div>
 
           <p style={{
-            marginTop: 22, fontSize: 11, color: C.faint,
+            marginTop: 22, fontSize: 11, color: "rgba(232,232,230,0.42)",
             letterSpacing: "0.04em", fontWeight: 500,
             animation: "fadeUp 0.6s 0.4s ease both",
             fontFamily: FONT_BODY,
