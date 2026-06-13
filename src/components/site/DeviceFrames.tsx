@@ -35,10 +35,10 @@ export const LaptopFrame = ({ children, interactive = true }: DeviceFrameProps) 
 
 export const MobileFrame = ({ children, interactive = true }: DeviceFrameProps) => (
   <div
-    className="relative mx-auto w-full overflow-hidden rounded-[22%/8%] bg-[#1a1a1a]"
+    className="relative mx-auto w-full overflow-hidden rounded-[22%/8%] bg-black"
   >
     {/* Outer housing border */}
-    <div className="rounded-[22%/8%] border-[2px] border-[#3a3a3a] bg-[#1a1a1a] p-[3px]">
+    <div className="rounded-[22%/8%] overflow-hidden border-[2px] border-[#3a3a3a] bg-black p-[3px]">
       {/* Side buttons */}
       <div className="absolute left-[-2.5px] top-[20%] w-[2.5px] h-[8%] rounded-l-sm bg-[#3a3a3a]" />
       <div className="absolute left-[-2.5px] top-[30%] w-[2.5px] h-[12%] rounded-l-sm bg-[#3a3a3a]" />
@@ -53,7 +53,7 @@ export const MobileFrame = ({ children, interactive = true }: DeviceFrameProps) 
         {/* Notch pill */}
         <div className="absolute top-[1.2%] left-1/2 -translate-x-1/2 z-10 w-[28%] h-[3%] rounded-full bg-black" />
 
-        {/* Content area - no scaling, components are already mobile-sized */}
+        {/* Content area */}
         <div
           className={`absolute inset-0 flex flex-col overflow-hidden bg-[hsl(0,0%,4%)] ${!interactive ? "pointer-events-none select-none" : ""}`}
         >

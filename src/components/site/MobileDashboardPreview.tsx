@@ -50,7 +50,7 @@ const MobileDashboardPreview = () => {
   };
 
   return (
-    <div className="relative overflow-hidden w-full bg-[hsl(0,0%,4%)] text-white flex flex-col" style={{ minHeight: "100%" }}>
+    <div className="relative overflow-hidden w-full bg-[hsl(0,0%,4%)] text-white flex flex-col" style={{ height: "100%" }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06] bg-[hsl(0,0%,5%)] shrink-0 z-10">
         <button
