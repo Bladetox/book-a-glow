@@ -106,7 +106,7 @@ const DashboardCustomisationCallout = () => (
   </div>
 );
 
-/* Reliable mobile detection via JS — avoids CSS injection order issues */
+/* Reliable mobile detection via JS */
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < breakpoint : false
@@ -162,8 +162,8 @@ const Demo = () => {
               fontSize: 14, color: C.muted, fontFamily: FONT_BODY,
               maxWidth: 480, margin: "0 auto", lineHeight: 1.7,
             }}>
-              This is a fully interactive demo using fictional data for a mock barbershop called{" "}
-              <span style={{ fontWeight: 600, color: C.text }}>Blade &amp; Co.</span> No account required.
+              This is a fully interactive demo using fictional data for a mock bridal makeup studio called{" "}
+              <span style={{ fontWeight: 600, color: C.text }}>Brush &amp; Veil.</span> No account required.
             </p>
           </div>
 
