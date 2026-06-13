@@ -15,14 +15,14 @@ const AdminPayshapQueue = () => {
 
   const handleConfirm = (bookingId: string) => {
     setActiveId(bookingId);
-    confirmMutation.mutate(bookingId, {
+    confirmMutation.mutate({ bookingId }, {
       onSettled: () => setActiveId(null),
     });
   };
 
   const handleReject = (bookingId: string) => {
     setActiveId(bookingId);
-    rejectMutation.mutate(bookingId, {
+    rejectMutation.mutate({ bookingId }, {
       onSettled: () => setActiveId(null),
     });
   };
@@ -84,7 +84,6 @@ const AdminPayshapQueue = () => {
                   transition={{ duration: 0.2 }}
                   className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3.5 flex flex-col gap-3"
                 >
-                  {/* Client and service row */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                       <p className="text-sm font-semibold text-white/85 truncate">
@@ -112,7 +111,6 @@ const AdminPayshapQueue = () => {
                     </div>
                   </div>
 
-                  {/* Proof image link */}
                   {booking.payshapProofUrl && (
                     <a
                       href={booking.payshapProofUrl}
@@ -125,7 +123,6 @@ const AdminPayshapQueue = () => {
                     </a>
                   )}
 
-                  {/* Action buttons */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleConfirm(booking.id)}

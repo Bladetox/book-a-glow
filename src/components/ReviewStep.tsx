@@ -8,9 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo } from "react";
-import { Sparkles, X, Loader2, CreditCard, CheckCircle2, Plus, Minus } from "lucide-react";
+import { Sparkles, X, Loader2, CreditCard, CheckCircle2, Plus, Minus, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
+import PayshapClaimSheet from "@/components/PayshapClaimSheet";
 import { toast } from "sonner";
 import type { PublicService } from "@/hooks/usePublicServices";
 
@@ -21,7 +22,7 @@ interface ReviewStepProps {
   releaseHold: () => Promise<void>;
 }
 
-type PaymentChoice = "deposit" | "full";
+type PaymentChoice = "deposit" | "full" | "payshap";
 
 type SubmitPhase =
   | "idle"
@@ -33,6 +34,7 @@ function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: Pay
     case "creating": return "Creating your booking\u2026";
     case "gateway":  return "Opening payment gateway\u2026";
     default:
+      if (choice === "payshap") return "Continue to PayShap";
       return choice === "full"
         ? `Confirm & Pay ${cur}${amount}`
         : `Confirm & Pay Deposit ${cur}${amount}`;
@@ -86,21 +88,32 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
   const [showPairWith, setShowPairWith] = useState(false);
 
+  // PayShap sheet state
+  const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
+  const [payshapBookingId, setPayshapBookingId] = useState<string | null>(null);
+  const [payshapPending, setPayshapPending] = useState(false);
+
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
   // ── Cache tenant's PayFast mode so we know which gateway to use ──────────
   const [payfastMode, setPayfastMode] = useState<"live" | "sandbox" | null>(null);
+  const [payshapEnabled, setPayshapEnabled] = useState(false);
+
   useEffect(() => {
     if (!tenantId) return;
     supabase
       .from("app_settings")
-      .select("value")
+      .select("key, value")
       .eq("tenant_id", tenantId)
-      .eq("key", "payfast_mode")
-      .maybeSingle()
+      .in("key", ["payfast_mode", "payshap_enabled"])
       .then(({ data }) => {
-        if (data?.value === "live" || data?.value === "sandbox") {
-          setPayfastMode(data.value as "live" | "sandbox");
+        for (const row of data ?? []) {
+          if (row.key === "payfast_mode" && (row.value === "live" || row.value === "sandbox")) {
+            setPayfastMode(row.value as "live" | "sandbox");
+          }
+          if (row.key === "payshap_enabled" && row.value === "true") {
+            setPayshapEnabled(true);
+          }
         }
       });
   }, [tenantId]);
@@ -163,193 +176,213 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const balance = total - deposit;
 
   const cur = config.currency;
-  const amountDueNow = paymentChoice === "full" ? total : deposit;
-  const balanceAfterPay = paymentChoice === "full" ? 0 : balance;
+  const amountDueNow =
+    paymentChoice === "full" ? total
+    : paymentChoice === "payshap" ? total
+    : deposit;
+  const balanceAfterPay = paymentChoice === "full" || paymentChoice === "payshap" ? 0 : balance;
+
+  // ── Create the booking row (shared between gateway paths) ────────────────
+  const ensureBookingCreated = async (): Promise<string> => {
+    if (pendingBookingId) return pendingBookingId;
+
+    if (!booking.selectedTreatments.length) {
+      toast.error("No services selected. Please go back and choose a service.");
+      onGoToStep(0);
+      throw new Error("no services");
+    }
+
+    const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
+    const startTime   = booking.selectedTime ? `${booking.selectedTime}:00` : "";
+    if (!bookingDate || !startTime) {
+      toast.error("Missing date or time. Please go back and select a slot.");
+      onGoToStep(1);
+      throw new Error("missing datetime");
+    }
+
+    const { data: tenantRow } = await supabase
+      .from("tenants")
+      .select("owner_id")
+      .eq("id", tenantId)
+      .single();
+
+    const staffId = tenantRow?.owner_id;
+    if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
+
+    const getAnswerDetail = (id: number) => {
+      const answer = booking.safetyAnswers[id];
+      if (answer === true) {
+        const detail = booking.safetyAnswerDetails[id];
+        return detail ? `Yes: ${detail}` : "Yes (Flagged)";
+      }
+      if (answer === false) return "No";
+      return booking.isExistingClient ? "On File" : "None reported";
+    };
+
+    const guestPhone = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
+
+    const { data, error } = await supabase.rpc("create_booking_with_consultation", {
+      p_client_id: null,
+      p_staff_id: staffId,
+      p_booking_date: bookingDate,
+      p_start_time: startTime,
+      p_service_ids: booking.selectedTreatments,
+      p_is_callout: isCallOut,
+      p_callout_address: isCallOut ? booking.address : null,
+      p_callout_distance_km: isCallOut ? estimatedDistanceKm : 0,
+      p_client_notes: booking.additionalNotes || booking.existingClientNotes || null,
+      p_client_type: booking.isExistingClient ? "existing" : "new",
+      p_lead_source: booking.referralSource || null,
+      p_skin_conditions: getAnswerDetail(1),
+      p_medications: getAnswerDetail(2),
+      p_allergies: getAnswerDetail(3),
+      p_health_conditions: getAnswerDetail(5),
+      p_pregnancy: getAnswerDetail(4),
+      p_additional_notes: booking.additionalNotes || null,
+      p_environmental_exposure: getAnswerDetail(6),
+      p_physical_factors: getAnswerDetail(7),
+      p_hair_length_ok: booking.safetyAnswers[8] === false ? "No" : "Yes",
+      p_guest_name: booking.fullName || null,
+      p_guest_email: booking.email || null,
+      p_guest_phone: guestPhone,
+      p_total_amount: total,
+      p_deposit_amount: amountDueNow,
+    });
+
+    if (error) throw error;
+    const result = (data as any)?.[0];
+    if (result && !result.success) throw new Error(result.message);
+
+    const newId: string = result?.booking_id ?? null;
+    if (!newId) throw new Error("No booking ID returned.");
+    setPendingBookingId(newId);
+
+    // Fire GCal event creation (non-blocking)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const serviceNames = selectedWithQty
+      .map(({ svc, qty }) => (qty > 1 ? `${qty}\u00d7 ${svc.name}` : svc.name))
+      .join(", ");
+    const totalDuration = selectedWithQty.reduce((s, { svc, qty }) => s + svc.duration * qty, 0);
+    const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
+    void fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${supabaseKey}`,
+        apikey: supabaseKey,
+      },
+      body: JSON.stringify({
+        tenant_id: tenantId,
+        gcal_event_id: null,
+        booking_id: newId,
+        new_date: bookingDateStr,
+        new_start_time: booking.selectedTime ?? "",
+        duration_minutes: totalDuration || 60,
+        client_name: booking.fullName || "Guest",
+        service_name: serviceNames,
+        client_phone: booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null,
+        location: booking.address || null,
+      }),
+    }).catch((gcalErr) => console.error("GCal create failed:", gcalErr));
+
+    return newId;
+  };
 
   const handleConfirm = async () => {
     if (submitting) return;
     setPhase("creating");
 
     try {
-      if (!booking.selectedTreatments.length) {
-        toast.error("No services selected. Please go back and choose a service.");
-        onGoToStep(0);
+      const bookingId = await ensureBookingCreated();
+
+      // ── PayShap path ────────────────────────────────────────────────────
+      if (paymentChoice === "payshap") {
+        await releaseHold();
+        setPayshapBookingId(bookingId);
+        setPayshapSheetOpen(true);
+        setPhase("idle");
         return;
       }
 
-      const bookingDate = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-      const startTime = booking.selectedTime ? `${booking.selectedTime}:00` : "";
-      if (!bookingDate || !startTime) {
-        toast.error("Missing date or time. Please go back and select a slot.");
-        onGoToStep(1);
-        return;
-      }
+      setPhase("gateway");
 
-      let bookingId = pendingBookingId;
+      const origin = window.location.origin;
+      const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
 
-      if (!bookingId) {
-        const clientId = null;
-        const { data: tenantRow } = await supabase
-          .from("tenants")
-          .select("owner_id")
-          .eq("id", tenantId)
-          .single();
-
-        const staffId = tenantRow?.owner_id;
-        if (!staffId) throw new Error("Could not resolve staff. Please refresh and try again.");
-
-        const getAnswerDetail = (id: number) => {
-          const answer = booking.safetyAnswers[id];
-          if (answer === true) {
-            const detail = booking.safetyAnswerDetails[id];
-            return detail ? `Yes: ${detail}` : "Yes (Flagged)";
-          }
-          if (answer === false) return "No";
-          return booking.isExistingClient ? "On File" : "None reported";
-        };
-
-        const guestPhone = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
-
-        const { data, error } = await supabase.rpc("create_booking_with_consultation", {
-          p_client_id: clientId,
-          p_staff_id: staffId,
-          p_booking_date: bookingDate,
-          p_start_time: startTime,
-          p_service_ids: booking.selectedTreatments,
-          p_is_callout: isCallOut,
-          p_callout_address: isCallOut ? booking.address : null,
-          p_callout_distance_km: isCallOut ? estimatedDistanceKm : 0,
-          p_client_notes: booking.additionalNotes || booking.existingClientNotes || null,
-          p_client_type: booking.isExistingClient ? "existing" : "new",
-          p_lead_source: booking.referralSource || null,
-          p_skin_conditions: getAnswerDetail(1),
-          p_medications: getAnswerDetail(2),
-          p_allergies: getAnswerDetail(3),
-          p_health_conditions: getAnswerDetail(5),
-          p_pregnancy: getAnswerDetail(4),
-          p_additional_notes: booking.additionalNotes || null,
-          p_environmental_exposure: getAnswerDetail(6),
-          p_physical_factors: getAnswerDetail(7),
-          p_hair_length_ok: booking.safetyAnswers[8] === false ? "No" : "Yes",
-          p_guest_name: booking.fullName || null,
-          p_guest_email: booking.email || null,
-          p_guest_phone: guestPhone,
-          p_total_amount: total,
-          p_deposit_amount: amountDueNow,
-        });
-
-        if (error) throw error;
-        const result = (data as any)?.[0];
-        if (result && !result.success) throw new Error(result.message);
-
-        bookingId = result?.booking_id ?? null;
-        if (bookingId) setPendingBookingId(bookingId);
-      }
-
-      if (bookingId) {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        const serviceNames = selectedWithQty
-          .map(({ svc, qty }) => (qty > 1 ? `${qty}\u00d7 ${svc.name}` : svc.name))
-          .join(", ");
-        const totalDuration = selectedWithQty.reduce((s, { svc, qty }) => s + svc.duration * qty, 0);
-
-        void fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-            apikey: supabaseKey,
-          },
-          body: JSON.stringify({
-            tenant_id: tenantId,
-            gcal_event_id: null,
-            booking_id: bookingId,
-            new_date: bookingDate,
-            new_start_time: booking.selectedTime ?? "",
-            duration_minutes: totalDuration || 60,
-            client_name: booking.fullName || "Guest",
-            service_name: serviceNames,
-            client_phone: booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null,
-            location: booking.address || null,
-          }),
-        }).catch((gcalErr) => console.error("GCal create failed:", gcalErr));
-
-        setPhase("gateway");
-
-        const origin = window.location.origin;
-        const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
-
-        // ── PayFast path ────────────────────────────────────────────────────
-        if (payfastMode === "live" || payfastMode === "sandbox") {
-          const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
-          const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
-
-          const checkoutTimeout = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Payment gateway took too long — please try again.")), 30_000)
-          );
-
-          const { data: checkoutData, error: checkoutErr } = await Promise.race([
-            supabase.functions.invoke("payfast-create-checkout", {
-              body: {
-                booking_id: bookingId,
-                tenant_id: tenantId,
-                success_url: successUrl,
-                cancel_url: cancelUrl,
-                payment_type: paymentChoice,
-                client_name: booking.fullName ?? "",
-                client_email: booking.email ?? "",
-              },
-            }),
-            checkoutTimeout,
-          ]);
-
-          if (checkoutErr) throw checkoutErr;
-          if (checkoutData?.payfast_url && checkoutData?.fields) {
-            await releaseHold();
-            redirectToPayfast(checkoutData.payfast_url, checkoutData.fields);
-            return;
-          } else {
-            throw new Error("PayFast did not return a checkout payload. Please try again.");
-          }
-        }
-
-        // ── Yoco path (existing) ─────────────────────────────────────────────
+      // ── PayFast path ────────────────────────────────────────────────────
+      if (payfastMode === "live" || payfastMode === "sandbox") {
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
         const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
         const checkoutTimeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Payment gateway took too long — please try again.")), 30_000)
+          setTimeout(() => reject(new Error("Payment gateway took too long \u2014 please try again.")), 30_000)
         );
 
         const { data: checkoutData, error: checkoutErr } = await Promise.race([
-          supabase.functions.invoke("yoco-checkout", {
+          supabase.functions.invoke("payfast-create-checkout", {
             body: {
               booking_id: bookingId,
-              tenant_slug: tenantId,
+              tenant_id: tenantId,
               success_url: successUrl,
               cancel_url: cancelUrl,
               payment_type: paymentChoice,
+              client_name: booking.fullName ?? "",
+              client_email: booking.email ?? "",
             },
           }),
           checkoutTimeout,
         ]);
 
         if (checkoutErr) throw checkoutErr;
-        if (checkoutData?.redirect_url || checkoutData?.redirectUrl || checkoutData?.url) {
+        if (checkoutData?.payfast_url && checkoutData?.fields) {
           await releaseHold();
-          window.location.href =
-            checkoutData.redirect_url ?? checkoutData.redirectUrl ?? checkoutData.url;
+          redirectToPayfast(checkoutData.payfast_url, checkoutData.fields);
           return;
         } else {
-          throw new Error("Payment gateway did not return a redirect URL. Please try again.");
+          throw new Error("PayFast did not return a checkout payload. Please try again.");
         }
+      }
+
+      // ── Yoco path ────────────────────────────────────────────────────────
+      const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
+      const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
+
+      const checkoutTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Payment gateway took too long \u2014 please try again.")), 30_000)
+      );
+
+      const { data: checkoutData, error: checkoutErr } = await Promise.race([
+        supabase.functions.invoke("yoco-checkout", {
+          body: {
+            booking_id: bookingId,
+            tenant_slug: tenantId,
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            payment_type: paymentChoice,
+          },
+        }),
+        checkoutTimeout,
+      ]);
+
+      if (checkoutErr) throw checkoutErr;
+      if (checkoutData?.redirect_url || checkoutData?.redirectUrl || checkoutData?.url) {
+        await releaseHold();
+        window.location.href =
+          checkoutData.redirect_url ?? checkoutData.redirectUrl ?? checkoutData.url;
+        return;
+      } else {
+        throw new Error("Payment gateway did not return a redirect URL. Please try again.");
       }
 
       setConfirmed(true);
       toast.success("Booking created successfully!");
     } catch (err: any) {
       console.error("Booking error:", err);
+      if (err.message === "no services" || err.message === "missing datetime") {
+        setPhase("idle");
+        return;
+      }
       const msg: string = err.message || "";
       const slotTaken =
         /time.*already booked|slot.*taken|no longer available|is not available/i.test(msg) &&
@@ -371,6 +404,28 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   };
 
   if (confirmed) return <BookingConfirmation booking={booking} />;
+
+  if (payshapPending) {
+    return (
+      <div className="flex flex-col items-center gap-5 py-8 text-center">
+        <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06]">
+          <Smartphone className="w-10 h-10 text-amber-400" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-base font-bold text-foreground">Payment submitted</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            We have received your proof of payment. We will verify it and send you a booking confirmation shortly.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] w-full text-left">
+          <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+          <p className="text-[11px] text-amber-400/90 leading-snug">
+            Your booking is not yet confirmed. You will receive an email once verified.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -470,7 +525,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           )}
           <button type="button" onClick={() => setPaymentChoice("full")}
             className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
-              depositPercent >= 100 ? "col-span-2" : ""
+              depositPercent >= 100 && !payshapEnabled ? "col-span-2" : ""
             } ${
               paymentChoice === "full"
                 ? "border-primary bg-primary/10 text-foreground"
@@ -482,6 +537,24 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
             <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
             <span className="text-[10px] opacity-60 mt-0.5">Nothing due on the day</span>
           </button>
+
+          {payshapEnabled && (
+            <button
+              type="button"
+              onClick={() => setPaymentChoice("payshap")}
+              className={`relative col-span-2 flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                paymentChoice === "payshap"
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
+              }`}
+            >
+              {paymentChoice === "payshap" && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
+              <Smartphone className="w-4 h-4 mb-1.5 opacity-70" />
+              <span className="text-xs font-semibold">Pay via PayShap</span>
+              <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
+              <span className="text-[10px] opacity-60 mt-0.5">Instant EFT \u2022 Pending owner verification</span>
+            </button>
+          )}
         </div>
 
         <div className="flex justify-between items-baseline py-1 text-sm">
@@ -505,12 +578,28 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
         <motion.button whileTap={{ scale: 0.96 }} onClick={handleConfirm} disabled={submitting}
           className="btn-next flex items-center justify-center gap-2 disabled:opacity-50 w-full">
-          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          {phaseLabel(phase, cur, paymentChoice === "full" ? total : deposit, paymentChoice)}
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : paymentChoice === "payshap" ? <Smartphone className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+          {phaseLabel(phase, cur, paymentChoice === "full" || paymentChoice === "payshap" ? total : deposit, paymentChoice)}
         </motion.button>
       </motion.div>
 
-      {/* Pair your services with — bottom sheet */}
+      {/* PayShap claim bottom sheet */}
+      {payshapBookingId && (
+        <PayshapClaimSheet
+          isOpen={payshapSheetOpen}
+          onClose={() => setPayshapSheetOpen(false)}
+          bookingId={payshapBookingId}
+          tenantId={tenantId}
+          amountDue={amountDueNow}
+          currency={cur}
+          onClaimed={() => {
+            setPayshapSheetOpen(false);
+            setPayshapPending(true);
+          }}
+        />
+      )}
+
+      {/* Pair your services with \u2014 bottom sheet */}
       <AnimatePresence>
         {showPairWith && hasPairWith && (
           <>
