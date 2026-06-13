@@ -18,7 +18,7 @@ export interface BookingRow {
   total: number;
   deposit: number;
   balance: number;
-  status: "pending" | "pending_payment" | "confirmed" | "in_progress" | "completed" | "complete" | "cancelled" | "no_show";
+  status: "pending" | "pending_payment" | "payment_claimed" | "confirmed" | "in_progress" | "completed" | "complete" | "cancelled" | "no_show";
   depositPaid: boolean;
   fullPaymentReceived: boolean;
   finalPaymentPaid: boolean;
@@ -45,9 +45,13 @@ export interface BookingRow {
   completedAt: string | null;
   cancelledAt: string | null;
   tenantId: string;
+  // PayShap fields
+  payshapReference: string | null;
+  payshapProofUrl: string | null;
+  payshapClaimedAt: string | null;
 }
 
-function mapBooking(b: any): BookingRow {
+export function mapBooking(b: any): BookingRow {
   const items = [...(b.items ?? [])].sort(
     (a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0)
   );
@@ -80,8 +84,8 @@ function mapBooking(b: any): BookingRow {
     "";
 
   // Address resolution — canonical order:
-  // 1. call_out_address — set when is_call_out = true (call-out bookings via booking form)
-  // 2. client?.address  — registered client's profile address (client_id is set)
+  // 1. call_out_address — set when is_call_out = true
+  // 2. client?.address  — registered client profile address
   // 3. guest_address    — address added by admin for non-callout guest bookings
   const address =
     b.call_out_address ||
@@ -89,9 +93,7 @@ function mapBooking(b: any): BookingRow {
     b.guest_address    ||
     "";
 
-  // balance_due is a real persisted column (default 0); use it directly.
   const balance = Number(b.balance_due ?? 0);
-
   const ref = `PB-${(b.id as string).slice(0, 8).toUpperCase()}`;
 
   return {
@@ -137,6 +139,9 @@ function mapBooking(b: any): BookingRow {
     completedAt:           b.completed_at           ?? null,
     cancelledAt:           b.cancelled_at           ?? null,
     tenantId:              b.tenant_id              ?? "",
+    payshapReference:      b.payshap_reference      ?? null,
+    payshapProofUrl:       b.payshap_proof_url      ?? null,
+    payshapClaimedAt:      b.payshap_claimed_at     ?? null,
   };
 }
 
@@ -191,6 +196,9 @@ export function useSupabaseBookings() {
           confirmed_at,
           completed_at,
           cancelled_at,
+          payshap_reference,
+          payshap_proof_url,
+          payshap_claimed_at,
           client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
           items:booking_items(service_name, price, duration_minutes, sort_order)
         `)

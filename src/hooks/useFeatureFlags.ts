@@ -13,37 +13,38 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const FLAG_KEYS = [
-  // ── Core booking
+  // Core booking
   "slot_hold",
   "call_out",
   "multi_staff",
   "suggested_addons",
   "consultations",
   "special_occasions",
-  // ── Notifications & comms
+  // Notifications & comms
   "email_confirmations",
   "whatsapp_reminders",
   "whatsapp_balance",
   "broadcast_email",
-  // ── Payments
+  // Payments
   "yoco_payments",
   "deposit_payments",
-  // ── Calendar
+  "payshap_payments",
+  // Calendar
   "google_calendar_sync",
   "add_to_calendar",
-  // ── Reviews & reputation
+  // Reviews & reputation
   "review_generation",
   "gmb_integration",
-  // ── Client management
+  // Client management
   "blocked_clients",
   "client_alerts",
   "loyalty_module",
-  // ── Inventory
+  // Inventory
   "stock_module",
   "stock_barcode_scan",
-  // ── AI & insights
+  // AI & insights
   "ai_insights",
-  // ── Integrations & platform
+  // Integrations & platform
   "integrations_tab",
   "custom_domain",
   "pwa_prompt",
@@ -54,11 +55,12 @@ export type FeatureFlags = Record<FlagKey, boolean>;
 
 /**
  * Features kept ON when a tenant is in arrears.
- * Bookings tab + both payment methods so they can still operate & collect money.
+ * Bookings tab + payment methods so they can still operate and collect money.
  */
 const ARREARS_ALLOWED: ReadonlySet<FlagKey> = new Set<FlagKey>([
   "yoco_payments",
   "deposit_payments",
+  "payshap_payments",
 ]);
 
 const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
@@ -81,20 +83,16 @@ export function getAccountState(
 ): AccountState {
   if (isLifetimeFree) return "active";
 
-  // Explicitly paid/active.
   if (status === "active") return "active";
 
-  // null or "trial": check expiry.
   if (!status || status === "trial") {
-    if (!trialEndsAt) return "trial"; // no end date → still in trial
+    if (!trialEndsAt) return "trial";
     const expired = Date.now() > new Date(trialEndsAt).getTime() + GRACE_PERIOD_MS;
     return expired ? "arrears" : "trial";
   }
 
-  // Explicit admin-set hard lockout.
   if (status === "cancelled" || status === "disabled") return "blocked";
 
-  // pending_payment, trial_expired, or any unknown → arrears (degraded access).
   return "arrears";
 }
 
@@ -137,14 +135,12 @@ export function useFeatureFlags(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Lifetime free — skip DB entirely.
     if (isLifetimeFree === true) {
       setFlags(ALL_TRUE);
       setLoading(false);
       return;
     }
 
-    // Arrears / blocked: fixed degraded flag set, no DB query.
     if (accountState === "arrears" || accountState === "blocked") {
       setFlags(ARREARS_FLAGS);
       setLoading(false);
@@ -159,7 +155,6 @@ export function useFeatureFlags(
     let cancelled = false;
 
     (async () => {
-      // 1. Global defaults.
       const { data: globalRows } = await supabase
         .from("app_settings")
         .select("key, value")
@@ -168,7 +163,6 @@ export function useFeatureFlags(
 
       const globalFlags = parseRows(globalRows ?? []);
 
-      // 2. Tenant overrides.
       const { data: tenantRows } = await supabase
         .from("app_settings")
         .select("key, value")
@@ -177,8 +171,6 @@ export function useFeatureFlags(
 
       if (cancelled) return;
 
-      // Trial (including legacy tenants with null status): all missing flags
-      // default true. Explicit DB rows win over this default.
       const trialDefaults: Partial<FeatureFlags> =
         accountState === "trial" ? { ...ALL_TRUE } : {};
 
