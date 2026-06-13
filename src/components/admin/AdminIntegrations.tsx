@@ -445,7 +445,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        className="w-full flex items-center justify-between p5 text-left"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
@@ -529,7 +529,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
                       masked={anyConfigured && !editing}
                       editing={editing}
                       onChange={(_, v) => setDraft((p) => ({ ...p, merchant_id: v }))}
-                      hint="From PayFast dashboard → Settings → Merchant Details"
+                      hint="From PayFast dashboard > Settings > Merchant Details"
                       tooltip="Log in to PayFast, go to Settings then Merchant Details to find your Merchant ID."
                     />
 
@@ -542,7 +542,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
                       masked={anyConfigured && !editing}
                       editing={editing}
                       onChange={(_, v) => setDraft((p) => ({ ...p, merchant_key: v }))}
-                      hint="From PayFast dashboard → Settings → Merchant Details"
+                      hint="From PayFast dashboard > Settings > Merchant Details"
                       tooltip="Located next to your Merchant ID. Treat this like a password."
                     />
 
@@ -555,7 +555,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
                       masked={!!settings.payfast_passphrase && !editing}
                       editing={editing}
                       onChange={(_, v) => setDraft((p) => ({ ...p, passphrase: v }))}
-                      hint="Set in PayFast dashboard → Settings → Security → Passphrase"
+                      hint="Set in PayFast dashboard > Settings > Security > Passphrase"
                       tooltip="A passphrase adds an extra layer to signature verification. Set it in PayFast first, then enter the same value here."
                     />
 
@@ -971,6 +971,9 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
 // Reads tenants.phone as the PayShap proxy number shown to clients.
 // Saves payshap_enabled to app_settings.
 // PayShap is mutually exclusive with Yoco and PayFast.
+//
+// FIX: uses local optimistic `enabled` state so the UI flips immediately on
+// click without waiting for the async refetch to resolve.
 // ─────────────────────────────────────────────────────────────────────────────
 interface PayshapCardProps {
   settings: Record<string, string>;
@@ -979,11 +982,22 @@ interface PayshapCardProps {
 }
 
 const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
-  const enabled = settings.payshap_enabled === "true";
+  // Seed local state from settings on mount; after that the local state owns
+  // the displayed value so refetch lag cannot snap it back.
+  const [enabled, setEnabled] = useState(settings.payshap_enabled === "true");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tenantPhone, setTenantPhone] = useState<string | null>(null);
   const [loadingPhone, setLoadingPhone] = useState(false);
+
+  // Keep local state in sync when the parent re-fetches fresh settings
+  // (e.g. on first load or after a page refresh) but only when we are not
+  // in the middle of saving to avoid a race condition.
+  useEffect(() => {
+    if (!saving) {
+      setEnabled(settings.payshap_enabled === "true");
+    }
+  }, [settings.payshap_enabled, saving]);
 
   useEffect(() => {
     if (!open || tenantPhone !== null) return;
@@ -1000,19 +1014,27 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
   }, [open, tenantId, tenantPhone]);
 
   const handleToggle = async () => {
+    const newValue = !enabled;
+    // Flip UI immediately before the network round-trip
+    setEnabled(newValue);
     setSaving(true);
-    const newValue = enabled ? "false" : "true";
     try {
       const { error } = await supabase
         .from("app_settings")
         .upsert(
-          { tenant_id: tenantId, key: "payshap_enabled", value: newValue },
+          { tenant_id: tenantId, key: "payshap_enabled", value: String(newValue) },
           { onConflict: "tenant_id,key" }
         );
       if (error) throw error;
-      toast.success(newValue === "true" ? "PayShap enabled. Yoco and PayFast are now disabled for your booking page." : "PayShap disabled.");
+      toast.success(
+        newValue
+          ? "PayShap enabled. Yoco and PayFast are now disabled for your booking page."
+          : "PayShap disabled."
+      );
       onSaved();
     } catch (err: any) {
+      // Roll back on failure
+      setEnabled(!newValue);
       toast.error(err.message ?? "Failed to update PayShap setting.");
     } finally {
       setSaving(false);
