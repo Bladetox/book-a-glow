@@ -87,7 +87,7 @@ export const HeroSection = () => {
       <div style={{
         position:           "absolute",
         inset:              0,
-        backgroundImage:    "url('https://iili.io/C3gfi2S.jpg')",
+        backgroundImage:    "url('https://iili.io/CCLle5l.webp')",
         backgroundSize:     "cover",
         backgroundPosition: "center",
         backgroundRepeat:   "no-repeat",
