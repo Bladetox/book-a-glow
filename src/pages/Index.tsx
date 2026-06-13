@@ -13,29 +13,31 @@ import { CTASection } from "@/components/home/CTASection";
 import { C, FONT_BODY } from "@/components/home/tokens";
 
 const Index = () => (
-  <div style={{
-    background: C.bg,
-    color: C.text,
-    fontFamily: FONT_BODY,
-    minHeight: "100vh",
-    overflowX: "hidden",
-    WebkitFontSmoothing: "antialiased",
-  } as React.CSSProperties}>
-    <style>{HOME_STYLES}</style>
+  <>
     <SiteHeader />
-    <main>
-      <HeroSection />
-      <ProofTicker />
-      <CaseStudySection />
-      <NextyAISection />
-      <RevenueSection />
-      <ProactiveAlertsSection />
-      <FeaturesSection />
-      <HeatmapSection />
-      <CTASection />
-    </main>
-    <SiteFooter />
-  </div>
+    <div style={{
+      background: C.bg,
+      color: C.text,
+      fontFamily: FONT_BODY,
+      minHeight: "100vh",
+      overflowX: "hidden",
+      WebkitFontSmoothing: "antialiased",
+    } as React.CSSProperties}>
+      <style>{HOME_STYLES}</style>
+      <main>
+        <HeroSection />
+        <ProofTicker />
+        <CaseStudySection />
+        <NextyAISection />
+        <RevenueSection />
+        <ProactiveAlertsSection />
+        <FeaturesSection />
+        <HeatmapSection />
+        <CTASection />
+      </main>
+      <SiteFooter />
+    </div>
+  </>
 );
 
 export default Index;
