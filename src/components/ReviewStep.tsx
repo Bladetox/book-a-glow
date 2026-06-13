@@ -34,8 +34,8 @@ function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: Pay
     case "creating": return "Creating your booking\u2026";
     case "gateway":  return "Opening payment gateway\u2026";
     default:
-      if (choice === "payshap_deposit") return `Continue to PayShap \u2022 ${cur}${amount}`;
-      if (choice === "payshap_full")    return `Continue to PayShap \u2022 ${cur}${amount}`;
+      if (choice === "payshap_deposit") return `Continue to PayShap ${cur}${amount}`;
+      if (choice === "payshap_full")    return `Continue to PayShap ${cur}${amount}`;
       return choice === "full"
         ? `Confirm & Pay ${cur}${amount}`
         : `Confirm & Pay Deposit ${cur}${amount}`;
@@ -59,7 +59,6 @@ function friendlyBookingError(err: any): string {
   return "Something went wrong while placing your booking. Please try again or contact us directly.";
 }
 
-// ── Redirect helper: builds a hidden-field form and submits it to PayFast ────
 function redirectToPayfast(payfastUrl: string, fields: Record<string, string>) {
   const form = document.createElement("form");
   form.method = "POST";
@@ -89,14 +88,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
   const [showPairWith, setShowPairWith] = useState(false);
 
-  // PayShap sheet state
   const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
   const [payshapBookingId, setPayshapBookingId] = useState<string | null>(null);
   const [payshapPending, setPayshapPending] = useState(false);
 
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
-  // ── Cache tenant's PayFast mode so we know which gateway to use ──────────
   const [payfastMode, setPayfastMode] = useState<"live" | "sandbox" | null>(null);
   const [payshapEnabled, setPayshapEnabled] = useState(false);
 
@@ -119,7 +116,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       });
   }, [tenantId]);
 
-  // When payshap is enabled, default to payshap_deposit (or payshap_full if deposit is 100%)
   useEffect(() => {
     if (payshapEnabled) {
       setPaymentChoice(
@@ -196,7 +192,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const balanceAfterPay =
     paymentChoice === "full" || paymentChoice === "payshap_full" ? 0 : balance;
 
-  // ── Create the booking row (shared between gateway paths) ────────────────
   const ensureBookingCreated = async (): Promise<string> => {
     if (pendingBookingId) return pendingBookingId;
 
@@ -271,7 +266,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
     if (!newId) throw new Error("No booking ID returned.");
     setPendingBookingId(newId);
 
-    // Fire GCal event creation (non-blocking)
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     const serviceNames = selectedWithQty
@@ -310,7 +304,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
     try {
       const bookingId = await ensureBookingCreated();
 
-      // ── PayShap path ─────────────────────────────────────────────────────
       if (isPayshap) {
         await releaseHold();
         setPayshapBookingId(bookingId);
@@ -324,7 +317,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       const origin = window.location.origin;
       const bookingDateStr = booking.selectedDate ? format(booking.selectedDate, "yyyy-MM-dd") : "";
 
-      // ── PayFast path ──────────────────────────────────────────────────────
       if (payfastMode === "live" || payfastMode === "sandbox") {
         const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
         const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
@@ -358,7 +350,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         }
       }
 
-      // ── Yoco path ─────────────────────────────────────────────────────────
       const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
       const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
@@ -428,7 +419,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         <div className="flex flex-col gap-1">
           <p className="text-base font-bold text-foreground">Payment submitted</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            We have received your proof of payment. We will verify it and send you a booking confirmation shortly.
+            We have received your reference. We will verify it and send you a booking confirmation shortly.
           </p>
         </div>
         <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] w-full text-left">
@@ -448,7 +439,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         <p className="text-[10px] text-muted-foreground mt-0.5">Your booking is not confirmed until payment is completed.</p>
       </div>
 
-      {/* Schedule */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <div className="flex items-center justify-between mb-1">
@@ -460,7 +450,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         <span className="text-sm text-muted-foreground">{booking.selectedTime || "\u2014"}</span>
       </motion.div>
 
-      {/* Contact */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-1">
         <div className="flex items-center justify-between mb-1">
@@ -476,7 +465,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         )}
       </motion.div>
 
-      {/* Services summary */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="glass-card-service rounded-2xl p-4 flex flex-col gap-0">
         <div className="flex items-center justify-between mb-1">
@@ -523,7 +511,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2">How would you like to pay?</p>
 
         <div className="grid grid-cols-2 gap-2 mb-3">
-          {/* Standard card gateway tiles (Yoco / PayFast) */}
           {!payshapEnabled && depositPercent < 100 && (
             <button type="button" onClick={() => setPaymentChoice("deposit")}
               className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
@@ -535,7 +522,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               <CreditCard className="w-4 h-4 mb-1.5 opacity-70" />
               <span className="text-xs font-semibold">Deposit only</span>
               <span className="text-sm font-bold mt-0.5">{cur}{deposit}</span>
-              <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now \u2022 {cur}{balance} on the day</span>
+              <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now &bull; {cur}{balance} on the day</span>
             </button>
           )}
 
@@ -556,7 +543,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
             </button>
           )}
 
-          {/* PayShap tiles: deposit + full, both via instant EFT */}
           {payshapEnabled && depositPercent < 100 && (
             <button
               type="button"
@@ -571,29 +557,29 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               <Smartphone className="w-4 h-4 mb-1.5 opacity-70" />
               <span className="text-xs font-semibold">PayShap deposit</span>
               <span className="text-sm font-bold mt-0.5">{cur}{deposit}</span>
-              <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now \u2022 {cur}{balance} on the day</span>
+              <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now &bull; {cur}{balance} on the day</span>
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => setPaymentChoice("payshap_full")}
-            className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
-              payshapEnabled && depositPercent >= 100 ? "col-span-2" : ""
-            } ${
-              paymentChoice === "payshap_full"
-                ? "border-primary bg-primary/10 text-foreground"
-                : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
-            } ${
-              !payshapEnabled ? "hidden" : ""
-            }`}
-          >
-            {paymentChoice === "payshap_full" && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
-            <Smartphone className="w-4 h-4 mb-1.5 opacity-70" />
-            <span className="text-xs font-semibold">PayShap in full</span>
-            <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
-            <span className="text-[10px] opacity-60 mt-0.5">Nothing due on the day</span>
-          </button>
+          {payshapEnabled && (
+            <button
+              type="button"
+              onClick={() => setPaymentChoice("payshap_full")}
+              className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                depositPercent >= 100 ? "col-span-2" : ""
+              } ${
+                paymentChoice === "payshap_full"
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
+              }`}
+            >
+              {paymentChoice === "payshap_full" && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
+              <Smartphone className="w-4 h-4 mb-1.5 opacity-70" />
+              <span className="text-xs font-semibold">PayShap in full</span>
+              <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
+              <span className="text-[10px] opacity-60 mt-0.5">Nothing due on the day</span>
+            </button>
+          )}
         </div>
 
         <div className="flex justify-between items-baseline py-1 text-sm">
@@ -626,7 +612,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         </motion.button>
       </motion.div>
 
-      {/* PayShap claim bottom sheet */}
       {payshapBookingId && (
         <PayshapClaimSheet
           isOpen={payshapSheetOpen}
@@ -642,7 +627,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         />
       )}
 
-      {/* Pair your services with — bottom sheet */}
       <AnimatePresence>
         {showPairWith && hasPairWith && (
           <>
@@ -769,7 +753,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         )}
       </AnimatePresence>
 
-      {/* Terms modal */}
       <AnimatePresence>
         {showTerms && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}

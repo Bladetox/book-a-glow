@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload, Loader2, CheckCircle2, AlertTriangle, Smartphone } from "lucide-react";
+import { X, Loader2, CheckCircle2, AlertTriangle, Smartphone, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -11,61 +11,30 @@ interface PayshapClaimSheetProps {
   tenantId: string;
   amountDue: number;
   currency: string;
-  /** Called after the claim is successfully submitted so the parent can show a pending state. */
   onClaimed: () => void;
 }
 
-type Phase = "idle" | "uploading" | "submitting" | "done";
+type Phase = "idle" | "submitting" | "done";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Uploads a file to the payshap-proofs Supabase Storage bucket. */
-async function uploadProof(
-  file: File,
-  bookingId: string,
-  tenantId: string,
-): Promise<string> {
-  const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${tenantId}/${bookingId}-${Date.now()}.${ext}`;
-
-  const { error } = await supabase.storage
-    .from("payshap-proofs")
-    .upload(path, file, { upsert: true, contentType: file.type });
-
-  if (error) throw new Error(`Upload failed: ${error.message}`);
-
-  const { data } = supabase.storage
-    .from("payshap-proofs")
-    .getPublicUrl(path);
-
-  return data.publicUrl;
-}
-
-/** Writes the claim metadata to the bookings row and flips status to payment_claimed. */
 async function submitClaim({
   bookingId,
   tenantId,
   reference,
-  proofUrl,
 }: {
   bookingId: string;
   tenantId: string;
   reference: string;
-  proofUrl: string;
 }) {
   const { error: updateError } = await supabase
     .from("bookings")
     .update({
-      payshap_reference: reference.trim() || null,
-      payshap_proof_url: proofUrl,
+      payshap_reference: reference.trim(),
       payshap_claimed_at: new Date().toISOString(),
     })
     .eq("id", bookingId)
     .eq("tenant_id", tenantId);
 
-  if (updateError) throw new Error(`Could not save claim: ${updateError.message}`);
+  if (updateError) throw new Error(`Could not save reference: ${updateError.message}`);
 
   const { data: rpcData, error: rpcError } = await supabase.rpc(
     "update_booking_status",
@@ -78,10 +47,6 @@ async function submitClaim({
     throw new Error(result.message ?? "Status update failed");
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 const PayshapClaimSheet = ({
   isOpen,
   onClose,
@@ -92,32 +57,42 @@ const PayshapClaimSheet = ({
   onClaimed,
 }: PayshapClaimSheetProps) => {
   const [reference, setReference] = useState("");
-  const [proofFile, setProofFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [payshapPhone, setPayshapPhone] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File is too large. Please upload an image under 10 MB.");
-      return;
+  useEffect(() => {
+    if (!tenantId) return;
+    supabase
+      .from("app_settings")
+      .select("value")
+      .eq("tenant_id", tenantId)
+      .eq("key", "payshap_phone")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) setPayshapPhone(data.value);
+      });
+  }, [tenantId]);
+
+  const handleCopyPhone = async () => {
+    if (!payshapPhone) return;
+    try {
+      await navigator.clipboard.writeText(payshapPhone);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy to clipboard.");
     }
-    setProofFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleSubmit = async () => {
-    if (!proofFile) {
-      toast.error("Please attach your proof of payment screenshot.");
+    if (!reference.trim()) {
+      toast.error("Please enter your PayShap reference before continuing.");
       return;
     }
     try {
-      setPhase("uploading");
-      const proofUrl = await uploadProof(proofFile, bookingId, tenantId);
       setPhase("submitting");
-      await submitClaim({ bookingId, tenantId, reference, proofUrl });
+      await submitClaim({ bookingId, tenantId, reference });
       setPhase("done");
       onClaimed();
     } catch (err: any) {
@@ -127,21 +102,19 @@ const PayshapClaimSheet = ({
   };
 
   const handleClose = () => {
-    if (phase === "uploading" || phase === "submitting") return;
+    if (phase === "submitting") return;
     setReference("");
-    setProofFile(null);
-    setPreviewUrl(null);
     setPhase("idle");
     onClose();
   };
 
-  const isBusy = phase === "uploading" || phase === "submitting";
+  const isBusy = phase === "submitting";
+  const canSubmit = reference.trim().length > 0 && !isBusy;
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="payshap-backdrop"
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
@@ -152,7 +125,6 @@ const PayshapClaimSheet = ({
             onClick={handleClose}
           />
 
-          {/* Sheet */}
           <motion.div
             key="payshap-sheet"
             className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
@@ -162,10 +134,8 @@ const PayshapClaimSheet = ({
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 38 }}
           >
-            {/* Drag handle */}
             <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
 
-            {/* Header */}
             <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
               <div className="flex-1 min-w-0 pr-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -175,7 +145,7 @@ const PayshapClaimSheet = ({
                   </h2>
                 </div>
                 <p className="text-xs text-muted-foreground leading-snug">
-                  Send {currency}{amountDue.toLocaleString()} via PayShap, then upload your screenshot below.
+                  Send {currency}{amountDue.toLocaleString()} via PayShap, then enter your reference below.
                 </p>
               </div>
               <button
@@ -188,10 +158,7 @@ const PayshapClaimSheet = ({
               </button>
             </div>
 
-            {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-5 scrollbar-hide">
-
-              {/* Done state */}
               {phase === "done" ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -206,9 +173,9 @@ const PayshapClaimSheet = ({
                     <CheckCircle2 className="w-14 h-14 text-primary" />
                   </motion.div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-base font-bold text-foreground">Payment submitted!</p>
+                    <p className="text-base font-bold text-foreground">Reference submitted!</p>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      Your proof has been sent to us. We will verify your payment and confirm your booking shortly.
+                      We will verify your payment and confirm your booking shortly.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] w-full">
@@ -220,26 +187,44 @@ const PayshapClaimSheet = ({
                 </motion.div>
               ) : (
                 <>
-                  {/* Step 1: PayShap instructions */}
+                  {/* Step 1: Send payment */}
                   <div className="flex flex-col gap-3">
                     <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground">
                       Step 1 — Send payment
                     </p>
-                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col gap-2.5">
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col gap-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Amount</span>
                         <span className="font-bold text-foreground">{currency}{amountDue.toLocaleString()}</span>
                       </div>
+
+                      {payshapPhone && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">PayShap number</span>
+                            <span className="text-sm font-bold text-foreground">{payshapPhone}</span>
+                          </div>
+                          <button
+                            onClick={handleCopyPhone}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 bg-muted/30 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors"
+                          >
+                            {copied
+                              ? <><Check className="w-3 h-3 text-primary" /> Copied!</>
+                              : <><Copy className="w-3 h-3" /> Copy</>}
+                          </button>
+                        </div>
+                      )}
+
                       <p className="text-xs text-muted-foreground/70 leading-relaxed">
-                        Open your banking app, navigate to PayShap, and send the exact amount above. Use the reference field to add your name so we can match it.
+                        Open your banking app, navigate to PayShap, and send the exact amount above. Use your name as the payment reference so we can match it.
                       </p>
                     </div>
                   </div>
 
-                  {/* Step 2: Reference */}
+                  {/* Step 2: Enter reference */}
                   <div className="flex flex-col gap-2">
                     <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground">
-                      Step 2 — Your PayShap reference (optional)
+                      Step 2 — Enter your PayShap reference
                     </p>
                     <input
                       type="text"
@@ -249,58 +234,14 @@ const PayshapClaimSheet = ({
                       disabled={isBusy}
                       className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition disabled:opacity-50"
                     />
-                  </div>
-
-                  {/* Step 3: Upload proof */}
-                  <div className="flex flex-col gap-2">
-                    <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground">
-                      Step 3 — Upload screenshot
+                    <p className="text-[10px] text-muted-foreground/60 leading-snug">
+                      This is required so we can match your payment to your booking.
                     </p>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={handleFileChange}
-                      disabled={isBusy}
-                    />
-
-                    {previewUrl ? (
-                      <div className="relative rounded-xl overflow-hidden border border-border/50">
-                        <img
-                          src={previewUrl}
-                          alt="Proof of payment preview"
-                          className="w-full object-contain max-h-52"
-                        />
-                        <button
-                          onClick={() => { setProofFile(null); setPreviewUrl(null); }}
-                          disabled={isBusy}
-                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
-                          aria-label="Remove image"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isBusy}
-                        className="flex flex-col items-center gap-3 w-full rounded-xl border-2 border-dashed border-border/40 bg-muted/10 py-8 px-4 hover:border-primary/40 hover:bg-primary/[0.03] transition-all disabled:opacity-50"
-                      >
-                        <Upload className="w-6 h-6 text-muted-foreground/60" />
-                        <div className="flex flex-col gap-0.5 text-center">
-                          <p className="text-sm font-medium text-foreground">Tap to upload screenshot</p>
-                          <p className="text-xs text-muted-foreground/60">JPG, PNG or HEIC up to 10 MB</p>
-                        </div>
-                      </button>
-                    )}
                   </div>
                 </>
               )}
             </div>
 
-            {/* Footer CTA */}
             <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
               {phase === "done" ? (
                 <motion.button
@@ -314,16 +255,16 @@ const PayshapClaimSheet = ({
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleSubmit}
-                  disabled={isBusy || !proofFile}
+                  disabled={!canSubmit}
                   className="btn-next w-full flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isBusy ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      {phase === "uploading" ? "Uploading…" : "Submitting…"}
+                      Submitting...
                     </>
                   ) : (
-                    <>Submit proof of payment</>
+                    <>Submit reference</>
                   )}
                 </motion.button>
               )}
