@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
@@ -16,7 +16,6 @@ import { HOME_STYLES } from "@/components/home/homeStyles";
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
-/* ─── Dashboard customisation teaching points ─── */
 const customisationTips = [
   {
     icon: SlidersHorizontal,
@@ -35,10 +34,8 @@ const customisationTips = [
   },
 ];
 
-/* ─── Dashboard customisation callout component ─── */
 const DashboardCustomisationCallout = () => (
   <div style={{ maxWidth: 768, margin: "0 auto 32px" }}>
-    {/* Banner */}
     <div style={{
       borderRadius: 16,
       border: `1px solid rgba(212,165,116,0.30)`,
@@ -71,7 +68,6 @@ const DashboardCustomisationCallout = () => (
       </p>
     </div>
 
-    {/* Three tip cards */}
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="demo-tips-grid">
       {customisationTips.map((tip) => {
         const Icon = tip.icon;
@@ -110,8 +106,24 @@ const DashboardCustomisationCallout = () => (
   </div>
 );
 
+/* Reliable mobile detection via JS — avoids CSS injection order issues */
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const Demo = () => {
   const [tab, setTab] = useState<"dashboard" | "booking">("dashboard");
+  const isMobile = useIsMobile();
 
   return (
     <div className="nextslot-theme dark-brand" style={{ minHeight: "100vh", background: C.bg, overflowX: "hidden" }}>
@@ -122,7 +134,6 @@ const Demo = () => {
         {/* Hero */}
         <section style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 24px 64px" }}>
 
-          {/* Eyebrow + heading + subtext */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8,
@@ -156,7 +167,6 @@ const Demo = () => {
             </p>
           </div>
 
-          {/* Demo notice banner */}
           <div style={{
             display: "flex", alignItems: "flex-start", gap: 12,
             background: `rgba(212,165,116,0.05)`,
@@ -215,8 +225,6 @@ const Demo = () => {
           {/* DASHBOARD TAB */}
           {tab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-
-              {/* Customisation education — shown before the preview */}
               <DashboardCustomisationCallout />
 
               <p style={{ textAlign: "center", fontSize: 12, color: C.faint, fontFamily: FONT_BODY, margin: 0 }}>
@@ -224,34 +232,37 @@ const Demo = () => {
               </p>
 
               {/* Desktop: laptop + mobile side by side */}
-              <div className="demo-devices-desktop" style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
-                <div style={{ flex: 1, maxWidth: 860 }}>
-                  <LaptopFrame interactive={true}>
-                    <DashboardPreview />
-                  </LaptopFrame>
+              {!isMobile && (
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
+                  <div style={{ flex: 1, maxWidth: 860 }}>
+                    <LaptopFrame interactive={true}>
+                      <DashboardPreview />
+                    </LaptopFrame>
+                  </div>
+                  <div style={{ width: 160, flexShrink: 0, marginBottom: -4 }}>
+                    <MobileFrame interactive={true}>
+                      <MobileDashboardPreview />
+                    </MobileFrame>
+                  </div>
                 </div>
-                <div style={{ width: 160, flexShrink: 0, marginBottom: -4 }}>
-                  <MobileFrame interactive={true}>
-                    <MobileDashboardPreview />
-                  </MobileFrame>
-                </div>
-              </div>
+              )}
 
-              {/* Mobile: single phone preview */}
-              <div className="demo-devices-mobile" style={{ display: "none", flexDirection: "column", gap: 16 }}>
-                <p style={{ fontSize: 12, textAlign: "center", color: C.muted, fontFamily: FONT_BODY, fontWeight: 500, margin: 0 }}>
-                  Mobile Dashboard
-                </p>
-                <div style={{ maxWidth: 300, margin: "0 auto" }}>
-                  <MobileFrame interactive={true}>
-                    <MobileDashboardPreview />
-                  </MobileFrame>
+              {/* Mobile: single phone preview in MobileFrame */}
+              {isMobile && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <p style={{ fontSize: 12, textAlign: "center", color: C.muted, fontFamily: FONT_BODY, fontWeight: 500, margin: 0 }}>
+                    Mobile Dashboard
+                  </p>
+                  <div style={{ maxWidth: 300, margin: "0 auto", width: "100%" }}>
+                    <MobileFrame interactive={true}>
+                      <MobileDashboardPreview />
+                    </MobileFrame>
+                  </div>
+                  <p style={{ textAlign: "center", fontSize: 12, color: C.faint, fontFamily: FONT_BODY, margin: 0 }}>
+                    Toggle cards on or off from the customise button in the dashboard header.
+                  </p>
                 </div>
-                <p style={{ textAlign: "center", fontSize: 12, color: C.faint, fontFamily: FONT_BODY, margin: 0 }}>
-                  Toggle cards on or off from the customise button in the dashboard header.
-                </p>
-              </div>
-
+              )}
             </div>
           )}
 
@@ -261,26 +272,28 @@ const Demo = () => {
               <p style={{ textAlign: "center", fontSize: 12, color: C.faint, fontFamily: FONT_BODY, margin: 0 }}>
                 Walk through the full booking flow your clients will experience
               </p>
+
               {/* Desktop: phone frame centered */}
-              <div className="demo-devices-desktop" style={{ display: "flex", justifyContent: "center" }}>
-                <div style={{ width: 320 }}>
-                  <MobileFrame interactive={true}>
-                    <BookingAppPreview />
-                  </MobileFrame>
+              {!isMobile && (
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <div style={{ width: 320 }}>
+                    <MobileFrame interactive={true}>
+                      <BookingAppPreview />
+                    </MobileFrame>
+                  </div>
                 </div>
-              </div>
-              {/* Mobile: raw card */}
-              <div
-                className="demo-devices-mobile"
-                style={{
-                  display: "none",
-                  borderRadius: 24, border: `1px solid ${C.border}`,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                  overflow: "hidden", background: C.s1,
-                }}
-              >
-                <BookingAppPreview />
-              </div>
+              )}
+
+              {/* Mobile: phone frame centered, full width bounded */}
+              {isMobile && (
+                <div style={{ display: "flex", justifyContent: "center", padding: "0 16px" }}>
+                  <div style={{ width: "100%", maxWidth: 320 }}>
+                    <MobileFrame interactive={true}>
+                      <BookingAppPreview />
+                    </MobileFrame>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

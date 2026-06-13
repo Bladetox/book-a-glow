@@ -196,10 +196,6 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
 
 /* ─────────────────────────────────────────────────────────────
    DEMO CALENDAR HELPERS
-   We fake availability so the calendar feels real:
-   - All days from tomorrow onwards in the current & next month
-     that fall Mon–Sat are "available".
-   - Time slots are a fixed list (mirrors the real app grid).
 ───────────────────────────────────────────────────────────── */
 const TIME_SLOTS = [
   "08:30","09:00","09:30","10:00","10:30","11:00",
@@ -210,8 +206,8 @@ function isDemoAvailable(day: Date): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (isBefore(day, today) && !isToday(day)) return false;
-  const dow = getDay(day); // 0=Sun, 6=Sat
-  return dow >= 1 && dow <= 6; // Mon–Sat
+  const dow = getDay(day);
+  return dow >= 1 && dow <= 6;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -247,36 +243,29 @@ const STEP_LABELS  = ["Services", "Schedule", "Details", "Review"];
    MAIN COMPONENT
 ───────────────────────────────────────────────────────────── */
 const BookingAppPreview = () => {
-  // ── theme
   const [themeIdx, setThemeIdx]     = useState(0);
   const theme   = businessThemes[themeIdx];
   const cssVars = toStyleVars(theme);
   const tenant  = TENANT_BY_ID[theme.id] ?? TENANT_BY_ID["standard"];
   const TIcon   = tenant.Icon;
 
-  // ── navigation
   const [screen, setScreen] = useState<Screen>("splash");
-  const stepIdx = STEP_SCREENS.indexOf(screen); // -1 when not in booking flow
+  const stepIdx = STEP_SCREENS.indexOf(screen);
 
-  // ── splash
   const [referral, setReferral] = useState("");
 
-  // ── services
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
 
-  // ── schedule
   const [currentMonth, setCurrentMonth]   = useState(new Date());
   const [selectedDate, setSelectedDate]   = useState<Date | null>(null);
   const [selectedTime, setSelectedTime]   = useState<string | null>(null);
 
-  // ── details
   const [isExisting, setIsExisting]       = useState<boolean | null>(null);
   const [form, setForm]                   = useState({ name: "", phone: "", email: "", address: "" });
 
   const today = useMemo(() => { const t = new Date(); t.setHours(0,0,0,0); return t; }, []);
 
-  // ── derived
   const activeCat = activeCategory ?? (tenant.categories[0]?.id ?? null);
   const visibleServices = activeCat
     ? tenant.services.filter(s => s.category === activeCat)
@@ -288,7 +277,6 @@ const BookingAppPreview = () => {
   const depositAmt    = Math.ceil(totalPrice * 0.3);
   const balanceAmt    = totalPrice - depositAmt;
 
-  // calendar
   const isCurrentMonth =
     currentMonth.getFullYear() === today.getFullYear() &&
     currentMonth.getMonth()    === today.getMonth();
@@ -297,7 +285,6 @@ const BookingAppPreview = () => {
   const days           = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startDayOfWeek = getDay(monthStart);
 
-  // canProceed per step
   const canProceed = (() => {
     if (screen === "services")  return selectedTreatments.length > 0;
     if (screen === "schedule")  return !!selectedDate && !!selectedTime;
@@ -339,7 +326,6 @@ const BookingAppPreview = () => {
      SPLASH SCREEN
   ═══════════════════════════════════════════════════════════ */
   if (screen === "splash") {
-    // Fake stable orbs for the demo
     const orbs = [
       { id: 0, x: 10,  y: 8,  size: 320, color: "rgba(220,235,255,0.13)" },
       { id: 1, x: 80,  y: 70, size: 260, color: "rgba(200,220,255,0.09)" },
@@ -350,7 +336,6 @@ const BookingAppPreview = () => {
         className="relative flex flex-col items-center w-full overflow-y-auto"
         style={{ background: "#080808", minHeight: "100%" }}
       >
-        {/* Ambient orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {orbs.map(o => (
             <div
@@ -367,9 +352,7 @@ const BookingAppPreview = () => {
           ))}
         </div>
 
-        {/* Content */}
         <div className="relative flex flex-col items-center w-full px-6 pt-14 pb-10">
-          {/* Logo box */}
           <div
             className="w-[72px] h-[72px] rounded-[22px] flex items-center justify-center mb-8"
             style={{
@@ -381,7 +364,6 @@ const BookingAppPreview = () => {
             <TIcon className="w-8 h-8" style={{ color: "rgba(220,238,255,0.85)" }} />
           </div>
 
-          {/* Welcome label */}
           <p
             className="text-[9px] font-bold tracking-[0.5em] uppercase mb-2"
             style={{ color: "rgba(210,228,255,0.38)" }}
@@ -389,7 +371,6 @@ const BookingAppPreview = () => {
             {tenant.splashWelcome}
           </p>
 
-          {/* Business name */}
           <h1
             className="font-bold text-white text-center tracking-tight mb-5"
             style={{ fontSize: "clamp(1.7rem,7vw,2.2rem)", lineHeight: 1.1 }}
@@ -397,7 +378,6 @@ const BookingAppPreview = () => {
             {tenant.name}
           </h1>
 
-          {/* Taglines */}
           <p className="text-[10px] font-semibold tracking-[0.35em] uppercase mb-1"
             style={{ color: "rgba(215,232,255,0.42)" }}>
             {tenant.splashTagline1}
@@ -407,13 +387,11 @@ const BookingAppPreview = () => {
             {tenant.splashTagline2}
           </p>
 
-          {/* Divider */}
           <div className="mt-7 mb-7" style={{
             width: 40, height: 1,
             background: "linear-gradient(90deg,transparent,rgba(210,228,255,0.35),transparent)"
           }} />
 
-          {/* Where did you hear about us */}
           <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-center mb-1"
             style={{ color: "rgba(210,228,255,0.3)" }}>
             Where did you hear about us?
@@ -441,7 +419,6 @@ const BookingAppPreview = () => {
             ))}
           </div>
 
-          {/* CTA */}
           <button
             onClick={() => setScreen("theme")}
             className="mt-8 w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase relative overflow-hidden cursor-pointer transition-all duration-300"
@@ -456,7 +433,6 @@ const BookingAppPreview = () => {
             {tenant.splashCta}
           </button>
 
-          {/* Powered by */}
           <p className="mt-6 text-[8px] tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.14)" }}>
             Powered by{" "}
             <span style={{ color: "rgba(210,228,255,0.35)" }}>nextslot.co.za</span>
@@ -517,7 +493,6 @@ const BookingAppPreview = () => {
   if (screen === "theme") {
     return (
       <div className="flex flex-col" style={{ ...cssVars, ...S.bg, minHeight: "100%" }}>
-        {/* Header */}
         <div className="px-6 pt-8 pb-5 text-center">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3" style={S.primary}>
             <TIcon className="w-6 h-6" style={S.primaryFg} strokeWidth={2} />
@@ -526,7 +501,6 @@ const BookingAppPreview = () => {
           <p className="text-xs mt-1" style={S.muted}>Personalise how your booking page looks</p>
         </div>
 
-        {/* Theme list */}
         <div className="flex-1 px-5 space-y-2.5 overflow-y-auto [&::-webkit-scrollbar]:hidden">
           {businessThemes.map((bt, i) => {
             const btVars  = toStyleVars(bt);
@@ -569,7 +543,6 @@ const BookingAppPreview = () => {
           })}
         </div>
 
-        {/* CTA */}
         <div className="px-5 pb-8 pt-4">
           <button
             onClick={() => setScreen("services")}
@@ -586,16 +559,18 @@ const BookingAppPreview = () => {
 
   /* ════════════════════════════════════════════════════════════
      BOOKING FLOW (services / schedule / details / review)
+     NOTE: minHeight uses "100%" not "100vh" so it fills its
+     container correctly whether inside MobileFrame (scaled)
+     or a raw card on mobile — avoids the black overflow strip.
   ═══════════════════════════════════════════════════════════ */
   return (
-    <div className="flex flex-col" style={{ ...cssVars, ...S.bg, minHeight: "100vh" }}>
+    <div className="flex flex-col" style={{ ...cssVars, ...S.bg, minHeight: "100%" }}>
 
-      {/* ── APP HEADER ── */}
+      {/* APP HEADER */}
       <div
         className="px-5 pt-7 pb-4"
         style={{ borderBottom: "1px solid hsl(var(--border))" }}
       >
-        {/* Brand row */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={S.primary}>
@@ -615,21 +590,19 @@ const BookingAppPreview = () => {
           </button>
         </div>
 
-        {/* ── STEP INDICATOR (matches real StepIndicator.tsx geometry) ── */}
+        {/* STEP INDICATOR */}
         <div className="flex items-center justify-between w-full">
           {STEP_LABELS.map((label, i) => {
             const status = i < stepIdx ? "completed" : i === stepIdx ? "active" : "upcoming";
             return (
               <div key={label} className="flex flex-col items-center gap-1 flex-1">
                 <div className="w-full flex items-center">
-                  {/* Left line */}
                   <div
                     className="h-0.5 flex-1 transition-colors duration-300"
                     style={{
                       background: i === 0 ? "transparent" : i <= stepIdx ? "hsl(var(--primary))" : "hsl(var(--border))"
                     }}
                   />
-                  {/* Dot */}
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
                     style={
@@ -642,7 +615,6 @@ const BookingAppPreview = () => {
                   >
                     {status === "completed" ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : i + 1}
                   </div>
-                  {/* Right line */}
                   <div
                     className="h-0.5 flex-1 transition-colors duration-300"
                     style={{
@@ -662,10 +634,10 @@ const BookingAppPreview = () => {
         </div>
       </div>
 
-      {/* ── SCROLLABLE BODY ── */}
+      {/* SCROLLABLE BODY */}
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden px-5 py-5">
 
-        {/* ── SERVICES STEP ── */}
+        {/* SERVICES STEP */}
         {screen === "services" && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -679,7 +651,6 @@ const BookingAppPreview = () => {
               )}
             </div>
 
-            {/* Category pills */}
             <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden -mx-1 px-1">
               {tenant.categories.map(cat => {
                 const isAct = activeCat === cat.id;
@@ -699,7 +670,6 @@ const BookingAppPreview = () => {
               })}
             </div>
 
-            {/* Service cards */}
             <div className="flex flex-col gap-2">
               {visibleServices.map(t => {
                 const isSel = selectedTreatments.includes(t.id);
@@ -713,7 +683,6 @@ const BookingAppPreview = () => {
                       border: isSel ? "1.5px solid hsl(var(--primary))" : "1.5px solid hsl(var(--border))",
                     }}
                   >
-                    {/* Check circle */}
                     <div
                       className="shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200"
                       style={isSel
@@ -723,14 +692,12 @@ const BookingAppPreview = () => {
                     >
                       {isSel && <Check className="w-2.5 h-2.5" style={S.primaryFg} strokeWidth={3} />}
                     </div>
-                    {/* Name + duration */}
                     <div className="flex-1 min-w-0">
                       <span className="block text-sm font-semibold" style={S.fg}>{t.name}</span>
                       {t.duration > 0 && (
                         <span className="text-[10px]" style={S.muted}>{t.duration} min</span>
                       )}
                     </div>
-                    {/* Price */}
                     <span className="shrink-0 text-sm font-bold" style={S.fg}>R{t.price}</span>
                   </button>
                 );
@@ -739,14 +706,13 @@ const BookingAppPreview = () => {
           </div>
         )}
 
-        {/* ── SCHEDULE STEP ── */}
+        {/* SCHEDULE STEP */}
         {screen === "schedule" && (
           <div className="flex flex-col gap-5">
             <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>
               Choose date &amp; time
             </h3>
 
-            {/* Month calendar */}
             <div className="rounded-2xl p-4" style={S.card}>
               <div className="flex items-center justify-between mb-4">
                 <button
@@ -772,14 +738,12 @@ const BookingAppPreview = () => {
                 </button>
               </div>
 
-              {/* Day-of-week headers */}
               <div className="grid grid-cols-7 gap-1 text-center mb-2">
                 {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
                   <span key={d} className="text-[10px] font-semibold uppercase" style={S.muted}>{d}</span>
                 ))}
               </div>
 
-              {/* Day cells */}
               <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: startDayOfWeek }).map((_, i) => (
                   <div key={`e-${i}`} />
@@ -810,7 +774,6 @@ const BookingAppPreview = () => {
               </div>
             </div>
 
-            {/* Time slots */}
             {selectedDate && (
               <div>
                 <h4 className="text-xs font-semibold tracking-[0.15em] uppercase mb-3" style={S.muted}>
@@ -836,14 +799,13 @@ const BookingAppPreview = () => {
           </div>
         )}
 
-        {/* ── DETAILS STEP ── */}
+        {/* DETAILS STEP */}
         {screen === "details" && (
           <div className="flex flex-col gap-5">
             <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>
               Your details
             </h3>
 
-            {/* Existing / new client */}
             <div>
               <p className="text-sm mb-3" style={S.fg}>Have you booked with us before?</p>
               <div className="flex gap-3">
@@ -867,7 +829,6 @@ const BookingAppPreview = () => {
               </div>
             </div>
 
-            {/* Safety check note for new clients */}
             {isExisting === false && (
               <div className="rounded-2xl p-4" style={S.card}>
                 <h4 className="text-sm font-semibold flex items-center gap-2 mb-1" style={S.fg}>
@@ -879,7 +840,6 @@ const BookingAppPreview = () => {
               </div>
             )}
 
-            {/* Form fields */}
             <div className="flex flex-col gap-3">
               {([
                 { icon: User,   key: "name",    placeholder: "Full Name *",        type: "text" },
@@ -909,14 +869,13 @@ const BookingAppPreview = () => {
           </div>
         )}
 
-        {/* ── REVIEW STEP ── */}
+        {/* REVIEW STEP */}
         {screen === "review" && (
           <div className="flex flex-col gap-4">
             <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>
               Review booking
             </h3>
 
-            {/* Schedule card */}
             <div className="rounded-2xl p-4 flex flex-col gap-1" style={S.card}>
               <h4 className="text-xs font-semibold tracking-wider uppercase mb-1" style={S.muted}>Schedule</h4>
               <span className="text-sm" style={S.fg}>
@@ -925,7 +884,6 @@ const BookingAppPreview = () => {
               <span className="text-sm" style={S.muted}>{selectedTime || "—"}</span>
             </div>
 
-            {/* Contact card */}
             <div className="rounded-2xl p-4 flex flex-col gap-1" style={S.card}>
               <h4 className="text-xs font-semibold tracking-wider uppercase mb-1" style={S.muted}>Contact</h4>
               <span className="text-sm" style={S.fg}>{form.name || "—"}</span>
@@ -934,7 +892,6 @@ const BookingAppPreview = () => {
               {form.address && <span className="text-sm" style={S.muted}>{form.address}</span>}
             </div>
 
-            {/* Summary card */}
             <div className="rounded-2xl p-4 flex flex-col gap-0" style={S.card}>
               {selectedServiceObjects.map(t => (
                 <div key={t.id} className="flex items-baseline justify-between py-1.5">
@@ -978,13 +935,12 @@ const BookingAppPreview = () => {
         )}
       </div>
 
-      {/* ── STICKY BOTTOM BAR (matches real StickyBottomBar.tsx) ── */}
+      {/* STICKY BOTTOM BAR */}
       {screen !== "review" && (
         <div
           className="px-5 pt-3 pb-6"
           style={{ borderTop: "1px solid hsl(var(--border))" }}
         >
-          {/* Summary pill — only on services step when items selected */}
           {screen === "services" && selectedTreatments.length > 0 && (
             <div
               className="rounded-2xl px-4 py-3 mb-3 flex items-center justify-between"
@@ -1001,7 +957,6 @@ const BookingAppPreview = () => {
             </div>
           )}
 
-          {/* Nav buttons */}
           <div className="flex gap-3">
             {stepIdx > 0 && (
               <button
@@ -1024,7 +979,6 @@ const BookingAppPreview = () => {
         </div>
       )}
 
-      {/* On review step, nav is handled inside the card (no external bar) */}
       {screen === "review" && (
         <div className="px-5 pt-3 pb-6">
           <button
