@@ -47,6 +47,20 @@ export const HOME_STYLES = `
   .proof-track { animation: proofScroll 28s linear infinite; }
   .proof-track:hover { animation-play-state: paused; }
 
+  /* ── Demo page device switcher ──────────────────────────────── */
+  .demo-devices-desktop { display: flex; }
+  .demo-devices-mobile  { display: none; }
+
+  @media (max-width: 767px) {
+    .demo-devices-desktop { display: none !important; }
+    .demo-devices-mobile  { display: flex !important; }
+
+    .demo-tips-grid {
+      grid-template-columns: 1fr !important;
+      gap: 10px !important;
+    }
+  }
+
   /* ── Pricing page responsive grids ─────────────────────────── */
   @media (max-width: 767px) {
     .pricing-hero-grid {
