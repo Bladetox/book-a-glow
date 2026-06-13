@@ -52,6 +52,13 @@ const ALLOWED_APP_SETTING_KEYS = [
   "yoco_secret_key",
   "yoco_webhook_secret",
   "yoco_webhook_id",
+  // PayFast Payments
+  "payfast_merchant_id",
+  "payfast_merchant_key",
+  "payfast_passphrase",
+  "payfast_mode",
+  // PayShap
+  "payshap_enabled",
   // Suggested add-ons (booking flow upsell)
   "suggested_addons",
   // Category display order
