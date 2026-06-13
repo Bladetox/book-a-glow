@@ -95,7 +95,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
-  // ── Cache tenant's PayFast mode so we know which gateway to use ──────────
+  // ── Cache tenant's PayFast mode so we know which gateway to use ───────────
   const [payfastMode, setPayfastMode] = useState<"live" | "sandbox" | null>(null);
   const [payshapEnabled, setPayshapEnabled] = useState(false);
 
@@ -117,6 +117,13 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         }
       });
   }, [tenantId]);
+
+  // When payshap is enabled, force the payment choice to payshap
+  useEffect(() => {
+    if (payshapEnabled) {
+      setPaymentChoice("payshap");
+    }
+  }, [payshapEnabled]);
 
   useEffect(() => {
     setShowPairWith(true);
@@ -296,7 +303,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
     try {
       const bookingId = await ensureBookingCreated();
 
-      // ── PayShap path ────────────────────────────────────────────────────
+      // ── PayShap path ─────────────────────────────────────────────────────
       if (paymentChoice === "payshap") {
         await releaseHold();
         setPayshapBookingId(bookingId);
@@ -344,7 +351,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         }
       }
 
-      // ── Yoco path ────────────────────────────────────────────────────────
+      // ── Yoco path ──────────────────────────────────────────────────────
       const successUrl = `${origin}/payment?tenant=${tenantId}&payment=success&booking_id=${bookingId}&date=${encodeURIComponent(bookingDateStr)}&time=${encodeURIComponent(booking.selectedTime ?? "")}&deposit=${amountDueNow}&payment_type=${paymentChoice}`;
       const cancelUrl  = `${origin}/payment?tenant=${tenantId}&payment=cancelled&booking_id=${bookingId}`;
 
@@ -509,7 +516,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2">How would you like to pay?</p>
 
         <div className="grid grid-cols-2 gap-2 mb-3">
-          {depositPercent < 100 && (
+          {/* Deposit and Pay in full tiles: hidden when PayShap is the only method */}
+          {!payshapEnabled && depositPercent < 100 && (
             <button type="button" onClick={() => setPaymentChoice("deposit")}
               className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
                 paymentChoice === "deposit"
@@ -523,20 +531,23 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
               <span className="text-[10px] opacity-60 mt-0.5">{depositPercent}% now \u2022 {cur}{balance} on the day</span>
             </button>
           )}
-          <button type="button" onClick={() => setPaymentChoice("full")}
-            className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
-              depositPercent >= 100 && !payshapEnabled ? "col-span-2" : ""
-            } ${
-              paymentChoice === "full"
-                ? "border-primary bg-primary/10 text-foreground"
-                : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
-            }`}>
-            {paymentChoice === "full" && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
-            <Sparkles className="w-4 h-4 mb-1.5 opacity-70" />
-            <span className="text-xs font-semibold">Pay in full</span>
-            <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
-            <span className="text-[10px] opacity-60 mt-0.5">Nothing due on the day</span>
-          </button>
+
+          {!payshapEnabled && (
+            <button type="button" onClick={() => setPaymentChoice("full")}
+              className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                depositPercent >= 100 ? "col-span-2" : ""
+              } ${
+                paymentChoice === "full"
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border/40 bg-muted/20 text-muted-foreground hover:border-border/70"
+              }`}>
+              {paymentChoice === "full" && <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-primary" />}
+              <Sparkles className="w-4 h-4 mb-1.5 opacity-70" />
+              <span className="text-xs font-semibold">Pay in full</span>
+              <span className="text-sm font-bold mt-0.5">{cur}{total}</span>
+              <span className="text-[10px] opacity-60 mt-0.5">Nothing due on the day</span>
+            </button>
+          )}
 
           {payshapEnabled && (
             <button
@@ -599,7 +610,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
         />
       )}
 
-      {/* Pair your services with \u2014 bottom sheet */}
+      {/* Pair your services with — bottom sheet */}
       <AnimatePresence>
         {showPairWith && hasPairWith && (
           <>
