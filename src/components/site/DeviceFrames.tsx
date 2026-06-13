@@ -26,17 +26,30 @@ export const LaptopFrame = ({ children, interactive = true }: DeviceFrameProps) 
 );
 
 export const MobileFrame = ({ children, interactive = true }: DeviceFrameProps) => (
-  <div className="relative mx-auto w-full">
+  <div className="relative mx-auto w-full bg-[#1a1a1a] rounded-[22%/8%]">
     <div className="rounded-[22%/8%] border-[2px] border-[#3a3a3a] bg-[#1a1a1a] p-[3px]">
       <div className="absolute left-[-2.5px] top-[20%] w-[2.5px] h-[8%] rounded-l-sm bg-[#3a3a3a]" />
       <div className="absolute left-[-2.5px] top-[30%] w-[2.5px] h-[12%] rounded-l-sm bg-[#3a3a3a]" />
       <div className="absolute left-[-2.5px] top-[44%] w-[2.5px] h-[12%] rounded-l-sm bg-[#3a3a3a]" />
       <div className="absolute right-[-2.5px] top-[28%] w-[2.5px] h-[14%] rounded-r-sm bg-[#3a3a3a]" />
-      <div className={`relative rounded-[20%/7%] overflow-hidden bg-black ${!interactive ? "pointer-events-none select-none" : ""}`} style={{ aspectRatio: "9 / 19.5" }}>
-        <div className="absolute top-[1.2%] left-1/2 -translate-x-1/2 z-10 w-[28%] h-[3%] rounded-full bg-black border border-[#1a1a1a]" />
-        <div className="absolute inset-0 origin-top-left" style={{ width: "200%", height: "200%", transform: "scale(0.5)" }}>
-          <div className="w-full h-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-[hsl(0,0%,4%)]">{children}</div>
+      <div
+        className={`relative rounded-[20%/7%] overflow-hidden bg-black ${!interactive ? "pointer-events-none select-none" : ""}`}
+        style={{ aspectRatio: "9 / 19.5" }}
+      >
+        {/* Notch pill */}
+        <div className="absolute top-[1.2%] left-1/2 -translate-x-1/2 z-10 w-[28%] h-[3%] rounded-full bg-black border border-[#0d0d0d]" />
+        {/* 2x scale container: explicit height so children using h-full resolve correctly */}
+        <div
+          className="absolute inset-0 origin-top-left"
+          style={{ width: "200%", height: "200%", transform: "scale(0.5)" }}
+        >
+          <div
+            className={`w-full h-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-[hsl(0,0%,4%)] ${!interactive ? "pointer-events-none select-none" : ""}`}
+          >
+            {children}
+          </div>
         </div>
+        {/* Home indicator */}
         <div className="absolute bottom-[1.5%] left-1/2 -translate-x-1/2 w-[32%] h-[0.6%] rounded-full bg-white/20 z-10" />
       </div>
     </div>

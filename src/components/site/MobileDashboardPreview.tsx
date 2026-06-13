@@ -50,7 +50,7 @@ const MobileDashboardPreview = () => {
   };
 
   return (
-    <div className="relative overflow-hidden w-full h-full bg-[hsl(0,0%,4%)] text-white flex flex-col">
+    <div className="relative overflow-hidden w-full bg-[hsl(0,0%,4%)] text-white flex flex-col" style={{ minHeight: "100%" }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06] bg-[hsl(0,0%,5%)] shrink-0 z-10">
         <button
@@ -68,7 +68,7 @@ const MobileDashboardPreview = () => {
         <MockAvatar size={20} />
       </div>
 
-      {/* Menu overlay — scoped to component via relative parent */}
+      {/* Menu overlay */}
       {menuOpen && (
         <div className="absolute inset-0 z-20 bg-[hsl(0,0%,5%)] flex flex-col animate-fade-in">
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06] shrink-0">
@@ -105,11 +105,12 @@ const MobileDashboardPreview = () => {
         </div>
       )}
 
-      {/* Content — flex-1 so it fills remaining height, overflow-hidden prevents it
-          from ever pushing the container taller than the MobileFrame allows.
-          The inner animate-fade-in wrapper is keyed per view for the crossfade. */}
+      {/* Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-fade-in" key={activeItem}>
+        <div
+          className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-fade-in"
+          key={activeItem}
+        >
           {renderContent()}
         </div>
       </div>
