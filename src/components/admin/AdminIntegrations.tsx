@@ -445,7 +445,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p5 text-left"
+        className="w-full flex items-center justify-between p-5 text-left"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
@@ -967,13 +967,8 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PayshapCard
-// Lets a tenant enable PayShap as their sole payment method.
-// Reads tenants.phone as the PayShap proxy number shown to clients.
-// Saves payshap_enabled to app_settings.
-// PayShap is mutually exclusive with Yoco and PayFast.
-//
-// FIX: uses local optimistic `enabled` state so the UI flips immediately on
-// click without waiting for the async refetch to resolve.
+// Writes payshap_enabled, feature_flag_payshap_payments, and payshap_phone
+// atomically so the edge function and booking page always stay in sync.
 // ─────────────────────────────────────────────────────────────────────────────
 interface PayshapCardProps {
   settings: Record<string, string>;
@@ -982,17 +977,12 @@ interface PayshapCardProps {
 }
 
 const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
-  // Seed local state from settings on mount; after that the local state owns
-  // the displayed value so refetch lag cannot snap it back.
   const [enabled, setEnabled] = useState(settings.payshap_enabled === "true");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tenantPhone, setTenantPhone] = useState<string | null>(null);
   const [loadingPhone, setLoadingPhone] = useState(false);
 
-  // Keep local state in sync when the parent re-fetches fresh settings
-  // (e.g. on first load or after a page refresh) but only when we are not
-  // in the middle of saving to avoid a race condition.
   useEffect(() => {
     if (!saving) {
       setEnabled(settings.payshap_enabled === "true");
@@ -1015,17 +1005,30 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
 
   const handleToggle = async () => {
     const newValue = !enabled;
-    // Flip UI immediately before the network round-trip
     setEnabled(newValue);
     setSaving(true);
     try {
+      // Resolve current tenant phone so payshap_phone stays fresh
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("phone")
+        .eq("id", tenantId)
+        .single();
+      const phone = tenantRow?.phone ?? "";
+
+      // Write all three keys atomically
+      const rows = [
+        { tenant_id: tenantId, key: "payshap_enabled", value: String(newValue) },
+        { tenant_id: tenantId, key: "feature_flag_payshap_payments", value: String(newValue) },
+        ...(newValue && phone ? [{ tenant_id: tenantId, key: "payshap_phone", value: phone }] : []),
+      ];
+
       const { error } = await supabase
         .from("app_settings")
-        .upsert(
-          { tenant_id: tenantId, key: "payshap_enabled", value: String(newValue) },
-          { onConflict: "tenant_id,key" }
-        );
+        .upsert(rows, { onConflict: "tenant_id,key" });
+
       if (error) throw error;
+
       toast.success(
         newValue
           ? "PayShap enabled. Yoco and PayFast are now disabled for your booking page."
@@ -1033,7 +1036,6 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
       );
       onSaved();
     } catch (err: any) {
-      // Roll back on failure
       setEnabled(!newValue);
       toast.error(err.message ?? "Failed to update PayShap setting.");
     } finally {
@@ -1096,7 +1098,6 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
             <div className="border-t border-white/[0.04]">
               <div className="flex flex-col gap-4 px-5 pt-5">
 
-                {/* PayShap proxy number read from tenants.phone */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
                     Your PayShap Number
@@ -1119,15 +1120,13 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
                   </p>
                 </div>
 
-                {/* How it works */}
                 <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-white/25 leading-relaxed">
-                    When PayShap is enabled, clients will see your phone number on the booking payment step and are instructed to pay via their banking app. They upload a proof of payment which you review and confirm manually in the PayShap queue. Yoco and PayFast are hidden from clients while this is active.
+                    When PayShap is enabled, clients will see your phone number on the booking payment step and are instructed to pay via their banking app. They submit a payment reference which you review and confirm manually in the PayShap queue. Yoco and PayFast are hidden from clients while this is active.
                   </p>
                 </div>
 
-                {/* Mutual exclusivity warning when enabling */}
                 {!enabled && (
                   <div className="flex items-start gap-2.5 rounded-xl bg-amber-400/[0.04] border border-amber-400/[0.12] px-3.5 py-3">
                     <AlertCircle className="w-3.5 h-3.5 text-amber-400/50 mt-0.5 shrink-0" />
