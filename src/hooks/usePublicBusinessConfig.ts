@@ -4,11 +4,11 @@ import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 export const defaultReferralOptions = [
   "Returning Client",
+  "TikTok"
   "Website",
-  "TikTok",
+  "Google",
   "Instagram",
   "Facebook",
-  "Google",
   "Referral",
 ];
 
