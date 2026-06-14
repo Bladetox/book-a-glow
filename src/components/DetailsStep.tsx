@@ -191,9 +191,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const [addressLoading, setAddressLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockChecking, setBlockChecking] = useState(false);
-  // FIX 2a: overflow state for new client collapse wrapper
   const [newClientCollapsed, setNewClientCollapsed] = useState(true);
-  // FIX 2b: overflow state for address field collapse wrapper
   const [addressCollapsed, setAddressCollapsed] = useState(true);
   const blockCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -201,14 +199,12 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const selectingRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  // FIX 1: ref to the scroll container passed down from Book.tsx — use window scroll as fallback
   const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   const [consultationQuestions, setConsultationQuestions] = useState<ConsultationQuestionDefinition[]>([]);
   const [consultationLoading, setConsultationLoading] = useState(true);
 
   useEffect(() => {
-    // FIX 1: find the nearest overflow-y-auto ancestor on mount so scrollIntoView targets it
     const el = document.querySelector("[data-booking-scroll]") as HTMLElement | null;
     scrollContainerRef.current = el;
   }, []);
@@ -268,7 +264,9 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     };
 
     loadQuestions();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [tenantId]);
 
   const handleConsultationAnswer = useCallback(
@@ -296,7 +294,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     const t = setTimeout(() => {
       requestAnimationFrame(() => {
         nameInputRef.current?.focus({ preventScroll: true });
-        // FIX 3: scroll the focused input into view inside the locked scroll container
         setTimeout(() => {
           nameInputRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
         }, 400);
@@ -305,27 +302,35 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     return () => clearTimeout(t);
   }, []);
 
+  // FIX 3: track the conditional section node in a ref and scroll via useEffect
+  // instead of returning cleanup from a ref callback (unsupported in React 18).
+  const conditionalSectionNode = useRef<HTMLDivElement | null>(null);
   const prevClientType = useRef<boolean | null>(booking.isExistingClient);
-  const conditionalSectionRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!node) return;
-      if (booking.isExistingClient === prevClientType.current) return;
-      prevClientType.current = booking.isExistingClient;
-      const t = setTimeout(() => {
-        // FIX 1: scroll within the booking scroll container, not the window
-        const container = scrollContainerRef.current;
-        if (container) {
-          const nodeTop = node.getBoundingClientRect().top;
-          const containerTop = container.getBoundingClientRect().top;
-          container.scrollBy({ top: nodeTop - containerTop - 24, behavior: "smooth" });
-        } else {
-          node.scrollIntoView({ block: "nearest", behavior: "smooth" });
-        }
-      }, 360);
-      return () => clearTimeout(t);
-    },
-    [booking.isExistingClient]
-  );
+
+  const conditionalSectionRef = useCallback((node: HTMLDivElement | null) => {
+    conditionalSectionNode.current = node;
+  }, []);
+
+  useEffect(() => {
+    if (booking.isExistingClient === prevClientType.current) return;
+    prevClientType.current = booking.isExistingClient;
+
+    const node = conditionalSectionNode.current;
+    if (!node) return;
+
+    const t = setTimeout(() => {
+      const container = scrollContainerRef.current;
+      if (container) {
+        const nodeTop = node.getBoundingClientRect().top;
+        const containerTop = container.getBoundingClientRect().top;
+        container.scrollBy({ top: nodeTop - containerTop - 24, behavior: "smooth" });
+      } else {
+        node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }, 360);
+
+    return () => clearTimeout(t);
+  }, [booking.isExistingClient]);
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -357,6 +362,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     return data;
   };
 
+  // FIX 2: added onBlockedChange to the dependency array
   useEffect(() => {
     const email = booking.email.trim();
     const phone = booking.phone.trim().replace(/\s/g, "");
@@ -389,8 +395,10 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
       }
     }, 800);
 
-    return () => { if (blockCheckRef.current) clearTimeout(blockCheckRef.current); };
-  }, [booking.email, booking.phone, booking.fullName, tenantId]);
+    return () => {
+      if (blockCheckRef.current) clearTimeout(blockCheckRef.current);
+    };
+  }, [booking.email, booking.phone, booking.fullName, tenantId, onBlockedChange, isBlocked]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -428,7 +436,9 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
       }
     }, 350);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [booking.address, booking.addressVerified]);
 
   const handleSelectSuggestion = async (description: string) => {
@@ -445,7 +455,9 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     try {
       const data = await callPlacesFunction({ input: description, origin });
       if (data?.distanceKm != null) onUpdate({ distanceKm: data.distanceKm });
-    } catch { /* fallback to defaultDistanceKm in ReviewStep */ }
+    } catch {
+      /* fallback to defaultDistanceKm in ReviewStep */
+    }
   };
 
   const handleClearAddress = () => {
@@ -464,10 +476,13 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
       <AnimatePresence>
         {isBlocked && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
             className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3.5 text-sm text-destructive"
           >
-            Sorry, this date is fully booked. Please try another date.
+            {/* FIX 1: corrected message — this fires when the guest is blocked, not when a date is full */}
+            We&apos;re unable to complete this booking. Please contact us directly for assistance.
           </motion.div>
         )}
       </AnimatePresence>
@@ -529,13 +544,16 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
       {/* New client: dynamic consultation form */}
       <AnimatePresence>
         {booking.isExistingClient === false && (
-          // FIX 2a: flip to overflow-visible once open animation completes
+          // FIX 4: consistent indentation on all motion.div props
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-            onAnimationComplete={(def) => setNewClientCollapsed(def === "exit")}
+            onAnimationStart={() => setNewClientCollapsed(true)}
+            onAnimationComplete={(def) => {
+              if (def === "animate") setNewClientCollapsed(false);
+            }}
             className={newClientCollapsed ? "overflow-hidden" : "overflow-visible"}
           >
             <div
@@ -614,12 +632,14 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                             className={`${inputClass} min-h-[50px] text-xs py-2`}
                             placeholder="Please provide details..."
                             value={booking.safetyAnswerDetails[q.id] || ""}
-                            onChange={(e) => onUpdate({
-                              safetyAnswerDetails: {
-                                ...booking.safetyAnswerDetails,
-                                [q.id]: e.target.value
-                              }
-                            })}
+                            onChange={(e) =>
+                              onUpdate({
+                                safetyAnswerDetails: {
+                                  ...booking.safetyAnswerDetails,
+                                  [q.id]: e.target.value,
+                                },
+                              })
+                            }
                           />
                         </motion.div>
                       )}
@@ -718,7 +738,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
             }}
             onBlur={() => markTouched("email")}
           />
-          {/* FIX 5: added z-10 so spinner always renders above border glow */}
           {blockChecking && (
             <div className="absolute right-3.5 top-3.5 z-10 w-3.5 h-3.5 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
           )}
@@ -726,109 +745,114 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
 
         {/* Address */}
         <AnimatePresence initial={false}>
-  {mobileServiceEnabled && (
-    <motion.div
-      key="address-field"
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ duration: 0.25, ease: "easeInOut" }}
-      onAnimationComplete={(def) => setAddressCollapsed(def === "exit")}
-      className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
-    >
-      <div>
-        {/* Input + suggestions share a relative container so suggestions can anchor to bottom-full */}
-        <div className="relative">
-          <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-          {addressLoading && !booking.addressVerified && (
-            <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
-          )}
-          {booking.address.length > 0 && !addressLoading && (
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                handleClearAddress();
+          {mobileServiceEnabled && (
+            <motion.div
+              key="address-field"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              onAnimationStart={() => setAddressCollapsed(true)}
+              onAnimationComplete={(def) => {
+                if (def === "animate") setAddressCollapsed(false);
               }}
-              className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors z-10"
-              aria-label="Clear address"
+              className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
             >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <input
-            id="booking-address"
-            name="address"
-            className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
-            placeholder="Home Address *"
-            value={booking.address}
-            inputMode="search"
-            onChange={(e) => {
-              onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
-              if (e.target.value.trim().length >= 2) {
-                setTouched((prev) => ({ ...prev, address: true }));
-              }
-              if (e.target.value.length < 3) setShowSuggestions(false);
-            }}
-            onBlur={() => {
-              markTouched("address");
-              if (selectingRef.current) return;
-              setTimeout(() => {
-                if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
-                  setShowSuggestions(false);
-                }
-              }, 300);
-            }}
-            onFocus={() => {
-              if (addressSuggestions.length > 0 && !booking.addressVerified) {
-                setShowSuggestions(true);
-              }
-            }}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-
-          {/* Suggestions — anchored ABOVE the input so keyboard never obscures them */}
-          <AnimatePresence>
-            {showSuggestions && addressSuggestions.length > 0 && (
-              <motion.div
-                ref={suggestionsRef}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 6 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-                className="absolute left-0 right-0 bottom-full mb-1.5 z-50"
-              >
-                <div className="rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl max-h-[220px] overflow-y-auto">
-                  {addressSuggestions.map((s, idx) => (
-                    <button
-                      key={s.place_id}
-                      type="button"
-                      onMouseDown={() => { selectingRef.current = true; }}
-                      onTouchStart={() => { selectingRef.current = true; }}
-                      onClick={() => handleSelectSuggestion(s.description)}
-                      className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
-                        ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
-                    >
-                      <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                      <span>{s.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-                {!showSuggestions && (
-                  <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
-                    {booking.addressVerified
-                      ? "\u2713 Address confirmed \u2014 used to calculate your call-out fee"
-                      : "Used to calculate your call-out fee"}
-                  </p>
+              {/* Input + suggestions share a relative container so suggestions can anchor to bottom-full */}
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
+                {addressLoading && !booking.addressVerified && (
+                  <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
                 )}
+                {booking.address.length > 0 && !addressLoading && (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      handleClearAddress();
+                    }}
+                    className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors z-10"
+                    aria-label="Clear address"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <input
+                  id="booking-address"
+                  name="address"
+                  className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
+                  placeholder="Home Address *"
+                  value={booking.address}
+                  inputMode="search"
+                  onChange={(e) => {
+                    onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
+                    if (e.target.value.trim().length >= 2) {
+                      setTouched((prev) => ({ ...prev, address: true }));
+                    }
+                    if (e.target.value.length < 3) setShowSuggestions(false);
+                  }}
+                  onBlur={() => {
+                    markTouched("address");
+                    if (selectingRef.current) return;
+                    setTimeout(() => {
+                      if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
+                        setShowSuggestions(false);
+                      }
+                    }, 300);
+                  }}
+                  onFocus={() => {
+                    if (addressSuggestions.length > 0 && !booking.addressVerified) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+
+                {/* Suggestions anchored ABOVE the input so keyboard never obscures them */}
+                <AnimatePresence>
+                  {showSuggestions && addressSuggestions.length > 0 && (
+                    <motion.div
+                      ref={suggestionsRef}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                      className="absolute left-0 right-0 bottom-full mb-1.5 z-50"
+                    >
+                      <div className="rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl max-h-[220px] overflow-y-auto">
+                        {addressSuggestions.map((s, idx) => (
+                          <button
+                            key={s.place_id}
+                            type="button"
+                            onMouseDown={() => {
+                              selectingRef.current = true;
+                            }}
+                            onTouchStart={() => {
+                              selectingRef.current = true;
+                            }}
+                            onClick={() => handleSelectSuggestion(s.description)}
+                            className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
+                              ${idx < addressSuggestions.length - 1 ? "border-b border-border/20" : ""}`}
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                            <span>{s.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
+
+              {!showSuggestions && (
+                <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
+                  {booking.addressVerified
+                    ? "\u2713 Address confirmed \u2014 used to calculate your call-out fee"
+                    : "Used to calculate your call-out fee"}
+                </p>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
