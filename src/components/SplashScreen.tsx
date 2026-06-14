@@ -308,8 +308,8 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           <motion.div
             className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
             style={{
-              marginLeft: "-1rem",
-              marginRight: "-1rem",
+              marginLeft: "-2rem",
+              marginRight: "-2rem",
               paddingLeft: "1rem",
               paddingRight: "1rem",
             }}
