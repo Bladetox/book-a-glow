@@ -111,6 +111,7 @@ function emailWrapper(logoHtml: string, tenantName: string, subtitle: string, bo
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${EMAIL_STYLES}</style>
 </head>
 <body class="eb" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
@@ -173,6 +174,7 @@ Deno.serve(async (req) => {
         id, booking_date, start_time, end_time,
         total_amount, deposit_amount, balance_due,
         is_call_out, call_out_address, call_out_fee, service_ids,
+        guest_address,
         tenant_id,
         client_name, client_email, client_phone,
         guest_name,  guest_email,  guest_phone,
@@ -252,9 +254,42 @@ Deno.serve(async (req) => {
     const totalAmount   = `R${rawTotal.toFixed(2)}`;
     const depositAmount = `R${rawDeposit.toFixed(2)}`;
     const balanceDue    = `R${rawBalance.toFixed(2)}`;
-    const location      = booking.is_call_out
-      ? `Call-out to ${escapeHtml(booking.call_out_address ?? "")}`
-      : escapeHtml(tenant?.address || settings["salon_address"] || "Our Studio");
+    const isFullPayment = rawDeposit >= rawTotal;
+
+    // -------------------------------------------------------------------
+    // ADDRESS LOGIC
+    // Call-out:    tenant travels to client  → client sees their own address
+    //              (call_out_address, fallback guest_address)
+    // Fixed salon: client travels to tenant  → client sees salon address
+    //              (tenants.address) with a Google Maps link
+    // -------------------------------------------------------------------
+    const isCallOut         = !!(booking as any).is_call_out;
+    const rawCallOutAddress = escapeHtml((booking as any).call_out_address || (booking as any).guest_address || "");
+    const rawSalonAddress   = tenantAddress || escapeHtml(settings["salon_address"] || "");
+
+    // Used in ICS / gcal for both tenant and client (always the physical location)
+    const calendarLocation = isCallOut
+      ? (rawCallOutAddress || "Call-out")
+      : (rawSalonAddress || tenantName);
+
+    // What the TENANT sees in their email — always their own studio address
+    const tenantLocationDisplay = tenantAddress || escapeHtml(settings["salon_address"] || "");
+
+    // What the CLIENT sees in their email and WhatsApp
+    // Call-out: "We're coming to you at <client address>"
+    // Fixed:    "<salon address>" with a Google Maps link
+    const clientLocationLabel = isCallOut ? "We're coming to you" : "Location";
+    const clientLocationValue = isCallOut ? rawCallOutAddress : rawSalonAddress;
+    const clientMapsLink      = (!isCallOut && rawSalonAddress)
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawSalonAddress)}`
+      : null;
+
+    // WhatsApp confirmation message — address shown to client
+    // Call-out: show the client's own address so they know we have the right place
+    // Fixed:    show the studio address so the client knows where to go
+    const waAddressPart = isCallOut
+      ? (rawCallOutAddress ? ` — we're coming to you at ${rawCallOutAddress}` : "")
+      : (rawSalonAddress   ? ` at ${rawSalonAddress}` : "");
 
     const gcalBookingLink = buildGcalLink({
       title:     `${serviceNames} at ${tenantName}`,
@@ -262,7 +297,7 @@ Deno.serve(async (req) => {
       startTime: booking.start_time,
       endTime:   (booking.end_time as string | null),
       details:   `Booking with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}`,
-      location,
+      location:  calendarLocation,
     });
 
     // Base URL for the confirm-booking edge function
@@ -328,11 +363,11 @@ Deno.serve(async (req) => {
           startTime: booking.start_time,
           endTime:   (booking.end_time as string | null),
           details:   `Client: ${clientName} | Phone: ${clientPhone} | Ref: ${payshapRef}`,
-          location,
+          location:  calendarLocation,
         });
 
         const waMessage = encodeURIComponent(
-          `Hi ${clientName.split(" ")[0]}, your booking at ${tenantName}${tenantAddress ? " (" + tenantAddress + ")" : ""} for ${serviceNames} on ${formattedDate} at ${formattedTime} has been confirmed! We look forward to seeing you.\n\nConfirm booking: ${confirmBookingUrl}`
+          `Hi ${clientName.split(" ")[0]}, your booking at ${tenantName}${waAddressPart} for ${serviceNames} on ${formattedDate} at ${formattedTime} has been confirmed! We look forward to seeing you.\n\nConfirm booking: ${confirmBookingUrl}`
         );
         const rawPhone = clientPhone.replace(/[^0-9]/g, "");
         const waNumber = rawPhone.startsWith("0") ? "27" + rawPhone.slice(1) : rawPhone;
@@ -349,7 +384,7 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">New Payshap Payment &#128178;</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">New Payshap Payment 💳</p>
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has submitted a payment reference. Review and confirm below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",      clientName)}
@@ -357,9 +392,9 @@ Deno.serve(async (req) => {
       ${row("Service",     serviceNames)}
       ${row("Date",        formattedDate)}
       ${row("Time",        formattedTime)}
-      ${row("Location",    tenantAddress || location)}
+      ${row("Location",    tenantLocationDisplay || "—")}
       ${row("Reference",   payshapRef || "—")}
-      ${row("Payment",     depositAmount === totalAmount ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
+      ${row("Payment",     isFullPayment ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
     </table>
   </td></tr>
   <tr><td style="padding:16px 28px 22px;">
@@ -386,7 +421,7 @@ Deno.serve(async (req) => {
           from:     `NextSlot <bookings@nextslot.co.za>`,
           reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
-          subject:  `&#128178; Payshap Payment from ${clientName} — ${formattedDate}`,
+          subject:  `💳 Payshap Payment from ${clientName} — ${formattedDate}`,
           html:     ownerHtml,
         });
       }
@@ -401,21 +436,30 @@ Deno.serve(async (req) => {
     // ======================================================================
     if (email_type === "booking_confirmed") {
 
-      const mapsLink = tenantAddress
-        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenantAddress)}`
-        : null;
-
       if (clientEmail) {
         const icsContent = addToCalendar ? buildICS({
           title:          `${serviceNames} at ${tenantName}`,
           startDate:      booking.booking_date,
           startTime:      booking.start_time,
           endTime:        (booking.end_time as string | null) ?? booking.start_time,
-          location,
-          description:    `Booking confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nDeposit: ${depositAmount}\nBalance due on day: ${balanceDue}`,
+          location:       calendarLocation,
+          description:    isFullPayment
+            ? `Booking confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nFull payment: ${totalAmount}`
+            : `Booking confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nDeposit: ${depositAmount}\nBalance due on day: ${balanceDue}`,
           organiserName:  tenantName,
           organiserEmail: tenantEmail ?? "bookings@nextslot.co.za",
         }) : null;
+
+        const locationDetailRow = clientMapsLink
+          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
+          : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
+
+        const paymentRows = isFullPayment
+          ? detailTable(detailRow("Full Payment Paid", `${totalAmount} &#10003;`, true))
+          : detailTable(
+              detailRow("Deposit Paid", `${depositAmount} &#10003;`) +
+              detailRow("Balance Due on Day", balanceDue, true)
+            );
 
         const clientBody = `
           <tr><td style="padding:28px 36px 10px;">
@@ -428,18 +472,12 @@ Deno.serve(async (req) => {
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
               (payshapRef ? detailRow("Your Reference", payshapRef) : "") +
-              (mapsLink
-                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
-                : detailRow("Location", location, true)
-              )
+              locationDetailRow
             )}
           </td></tr>
           <tr><td style="padding:0 36px 22px;">
             <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Payment</p>
-            ${detailTable(
-              detailRow("Deposit Paid", `${depositAmount} &#10003;`) +
-              detailRow("Balance Due on Day", balanceDue, true)
-            )}
+            ${paymentRows}
           </td></tr>
           <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
@@ -470,7 +508,7 @@ Deno.serve(async (req) => {
           startTime: booking.start_time,
           endTime:   (booking.end_time as string | null),
           details:   `Client: ${clientName} | Phone: ${clientPhone} | Deposit: ${depositAmount} | Balance: ${balanceDue}`,
-          location,
+          location:  calendarLocation,
         });
 
         const ownerHtml = `<!DOCTYPE html>
@@ -484,17 +522,17 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Booking confirmed &#127881;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">Deposit confirmed — add to your calendar below.</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Booking confirmed 🎉</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${isFullPayment ? "Full payment" : "Deposit"} confirmed — add to your calendar below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",           clientName)}
       ${row("Phone",            clientPhone || "—")}
       ${row("Service",          serviceNames)}
       ${row("Date",             formattedDate)}
       ${row("Time",             formattedTime)}
-      ${row("Location",         tenantAddress || location)}
-      ${row("Deposit received", depositAmount, true)}
-      ${row("Balance due",      balanceDue)}
+      ${row("Location",         tenantLocationDisplay || "—")}
+      ${row(isFullPayment ? "Full payment received" : "Deposit received", isFullPayment ? totalAmount : depositAmount, true)}
+      ${!isFullPayment ? row("Balance due", balanceDue) : ""}
     </table>
   </td></tr>
   <tr><td style="padding:16px 28px 22px;">
@@ -510,7 +548,7 @@ Deno.serve(async (req) => {
           from:     `NextSlot <bookings@nextslot.co.za>`,
           reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
-          subject:  `&#127881; Booking confirmed — ${clientName} on ${formattedDate}`,
+          subject:  `🎉 Booking confirmed — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
@@ -521,21 +559,21 @@ Deno.serve(async (req) => {
     // ======================================================================
     if (email_type === "full_payment_confirmed") {
 
-      const mapsLink = tenantAddress
-        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenantAddress)}`
-        : null;
-
       if (clientEmail) {
         const icsContent = addToCalendar ? buildICS({
           title:          `${serviceNames} at ${tenantName}`,
           startDate:      booking.booking_date,
           startTime:      booking.start_time,
           endTime:        (booking.end_time as string | null) ?? booking.start_time,
-          location,
+          location:       calendarLocation,
           description:    `Appointment confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nFull payment received: ${totalAmount}`,
           organiserName:  tenantName,
           organiserEmail: tenantEmail ?? "bookings@nextslot.co.za",
         }) : null;
+
+        const locationDetailRow = clientMapsLink
+          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
+          : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
 
         const clientBody = `
           <tr><td style="padding:28px 36px 10px;">
@@ -547,10 +585,7 @@ Deno.serve(async (req) => {
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
-              (mapsLink
-                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
-                : detailRow("Location", location, true)
-              )
+              locationDetailRow
             )}
           </td></tr>
           <tr><td style="padding:0 36px 22px;">
@@ -571,7 +606,7 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Booking Confirmed — Fully Paid &#10003;`,
+          subject:  `Booking Confirmed — Fully Paid ✓`,
           html:     emailWrapper(logoHtml, tenantName, "Booking Confirmed & Fully Paid", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
           ...(icsContent ? { attachments: [{ filename: "appointment.ics", content: btoa(icsContent), content_type: "text/calendar; method=REQUEST" }] } : {}),
         };
@@ -588,7 +623,7 @@ Deno.serve(async (req) => {
           startTime: booking.start_time,
           endTime:   (booking.end_time as string | null),
           details:   `Client: ${clientName} | Phone: ${clientPhone} | Full payment: ${totalAmount}`,
-          location,
+          location:  calendarLocation,
         });
 
         const ownerHtml = `<!DOCTYPE html>
@@ -602,7 +637,7 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Full payment confirmed &#127881;</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Full payment confirmed 🎉</p>
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">Full payment received — add to your calendar below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",        clientName)}
@@ -610,7 +645,7 @@ Deno.serve(async (req) => {
       ${row("Service",       serviceNames)}
       ${row("Date",          formattedDate)}
       ${row("Time",          formattedTime)}
-      ${row("Location",      tenantAddress || location)}
+      ${row("Location",      tenantLocationDisplay || "—")}
       ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
@@ -627,7 +662,7 @@ Deno.serve(async (req) => {
           from:     `NextSlot <bookings@nextslot.co.za>`,
           reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
-          subject:  `&#127881; Full payment confirmed — ${clientName} on ${formattedDate}`,
+          subject:  `🎉 Full payment confirmed — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
@@ -638,11 +673,11 @@ Deno.serve(async (req) => {
     // ======================================================================
     if (email_type === "balance_paid") {
 
-      const mapsLink = tenantAddress
-        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenantAddress)}`
-        : null;
-
       if (clientEmail) {
+        const locationDetailRow = clientMapsLink
+          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
+          : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
+
         const clientBody = `
           <tr><td style="padding:28px 36px 10px;">
             <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your balance has been received! &#10003;</p>
@@ -653,10 +688,7 @@ Deno.serve(async (req) => {
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
-              (mapsLink
-                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
-                : detailRow("Location", location, true)
-              )
+              locationDetailRow
             )}
           </td></tr>
           <tr><td style="padding:0 36px 22px;">
@@ -674,7 +706,7 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Balance received — all paid up &#10003;`,
+          subject:  `Balance received — all paid up ✓`,
           html:     emailWrapper(logoHtml, tenantName, "Balance Received", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
         });
       }
@@ -694,7 +726,7 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Balance received &#127881;</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Balance received 🎉</p>
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has paid their outstanding balance.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",         clientName)}
@@ -702,7 +734,7 @@ Deno.serve(async (req) => {
       ${row("Service",        serviceNames)}
       ${row("Date",           formattedDate)}
       ${row("Time",           formattedTime)}
-      ${row("Location",       tenantAddress || location)}
+      ${row("Location",       tenantLocationDisplay || "—")}
       ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
@@ -716,7 +748,7 @@ Deno.serve(async (req) => {
           from:     `NextSlot <bookings@nextslot.co.za>`,
           reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
-          subject:  `&#127881; Balance received — ${clientName} on ${formattedDate}`,
+          subject:  `🎉 Balance received — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
