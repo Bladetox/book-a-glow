@@ -16,6 +16,7 @@ import { useTenantHead } from "@/hooks/useTenantHead";
 import { useBrandFont } from "@/hooks/useBrandFont";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useCallback, useEffect } from "react";
+
 const stepVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 80 : -80,
@@ -58,10 +59,6 @@ const PrefetchAvailability = ({
   return null;
 };
 
-const resetScroll = () => {
-  window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-};
-
 const Index = () => {
   const {
     step,
@@ -79,7 +76,7 @@ const Index = () => {
   const slotHold = useSlotHold();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
-  
+
   // Single source of truth: clear call-out state when tenant is in salon mode
   useEffect(() => {
     if (config.loading) return;
@@ -88,7 +85,7 @@ const Index = () => {
     }
   }, [config.mobileServiceEnabled, config.loading]);
 
-  // ── Brand font (sister-studios only; null for all other tenants) ──────────
+  // Brand font (sister-studios only; null for all other tenants)
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
 
   useTenantHead({ name: config.name, logoUrl: config.logoUrl, loading: config.loading });
@@ -120,14 +117,12 @@ const Index = () => {
 
   const handleNext = useCallback(() => {
     if (!canProceed()) return;
-    resetScroll();
     setDirection(1);
     nextStep();
   }, [canProceed, nextStep]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
-    resetScroll();
     setDirection(-1);
     prevStep();
   }, [step, prevStep]);
@@ -138,7 +133,7 @@ const Index = () => {
 
   if (tenantLoading || !tenantId) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-background to-muted">
+      <div className="h-dvh flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -159,7 +154,7 @@ const Index = () => {
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
   const durationForSlots = Math.max(totalDuration, 30);
 
-  // ── Cart line items for StickyBottomBar ─────────────────────────────────
+  // Cart line items for StickyBottomBar
   const cartItems = uniqueSelectedIds.flatMap((id) => {
     const svc = treatments.find((t) => t.id === id);
     if (!svc) return [];
@@ -167,7 +162,7 @@ const Index = () => {
     return [{ service: svc, qty }];
   });
 
-  // ── Brand name style: font + gold colour applied ONLY when set ──────────
+  // Brand name style: font + colour applied ONLY when set
   const brandNameStyle: React.CSSProperties = {
     ...(brandFontFamily  ? { fontFamily: brandFontFamily }               : {}),
     ...(config.brandNameColor ? { color: config.brandNameColor }         : {}),
@@ -178,26 +173,24 @@ const Index = () => {
 
   return (
     <>
-      <div className="min-h-dvh flex flex-col items-center px-4 pt-8 pb-32">
+      {/*
+        ── BOOKING APP SHELL ───────────────────────────────────────────────────
+        h-dvh + overflow-hidden locks the viewport so only the inner body
+        region scrolls. This eliminates page-level scroll, fixes the iOS
+        keyboard jump, and makes every step feel like a native app screen.
+      */}
+      <div className="h-dvh flex flex-col overflow-hidden bg-background">
+
         {!showSplash && ownerId && (
           <PrefetchAvailability durationMinutes={durationForSlots} staffId={ownerId} />
         )}
 
-        <div className="w-full max-w-md">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-            className="text-center mb-6 relative"
-          >
-            <div className="absolute right-0 top-0">
-              <ThemeToggle />
-            </div>
-
-            {/* Logo block — full-bleed when a logo is present */}
-            <motion.div
-              whileTap={{ scale: 0.95 }}
-              className="w-16 h-16 rounded-2xl glass-card mx-auto mb-3 overflow-hidden flex items-center justify-center"
+        {/* ── COMPACT STICKY HEADER ──────────────────────────────────────── */}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top,0px),12px)] pb-3 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Logo / abbreviation */}
+            <div
+              className="w-9 h-9 rounded-xl glass-card flex-shrink-0 overflow-hidden flex items-center justify-center"
               style={config.logoUrl ? { padding: 0 } : {}}
             >
               {config.logoUrl ? (
@@ -207,42 +200,47 @@ const Index = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="font-display text-xl font-bold text-foreground">
+                <span
+                  className="font-display text-sm font-bold text-foreground"
+                  style={Object.keys(brandNameStyle).length > 0 ? brandNameStyle : {}}
+                >
                   {abbreviation}
                 </span>
               )}
-            </motion.div>
+            </div>
 
-            <p className="text-[10px] font-semibold tracking-[0.3em] uppercase text-muted-foreground">
-              {config.tagline}
-            </p>
+            {/* Business name + tagline */}
+            <div className="min-w-0">
+              <p
+                className="text-sm font-bold leading-tight truncate"
+                style={Object.keys(brandNameStyle).length > 0 ? brandNameStyle : {}}
+              >
+                {businessName}
+              </p>
+              {config.tagline && (
+                <p className="text-[10px] text-muted-foreground font-medium tracking-wide truncate leading-tight mt-0.5">
+                  {config.tagline}
+                </p>
+              )}
+            </div>
+          </div>
 
-            {/* Business name — brand font + gold when configured */}
-            <h1
-              className="font-display text-2xl font-bold mt-1"
-              style={Object.keys(brandNameStyle).length > 0 ? brandNameStyle : { color: undefined }}
-            >
-              {businessName}
-            </h1>
+          <ThemeToggle />
+        </div>
 
-            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground mt-0.5">
-              {config.subtitle}
-            </p>
-          </motion.div>
+        {/* ── STEP INDICATOR ─────────────────────────────────────────────── */}
+        <div className="flex-shrink-0 px-2 py-3 bg-background/60 backdrop-blur-xl border-b border-border/20">
+          <StepIndicator currentStep={step} />
+        </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mb-6"
-          >
-            <StepIndicator currentStep={step} />
-          </motion.div>
-
-          <div
-            className="glass-card rounded-3xl p-5 mb-4"
-            style={{ overflow: "clip" }}
-          >
+        {/* ── SCROLLABLE STEP BODY ───────────────────────────────────────── */}
+        {/*
+          flex-1 + overflow-y-auto means ONLY this region scrolls.
+          The header, step indicator, and bottom bar are all fixed chrome.
+          AnimatePresence and stepVariants are completely unchanged.
+        */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="w-full max-w-md mx-auto px-4 pt-4 pb-4">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}
@@ -251,9 +249,6 @@ const Index = () => {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                onAnimationComplete={(definition) => {
-                  if (definition === "center") resetScroll();
-                }}
               >
                 {step === 0 && (
                   <ServicesStep
@@ -281,7 +276,6 @@ const Index = () => {
                     booking={booking}
                     onUpdate={updateBooking}
                     onGoToStep={(s) => {
-                      resetScroll();
                       setDirection(-1);
                       setStep(s);
                     }}
@@ -290,9 +284,30 @@ const Index = () => {
                 )}
               </motion.div>
             </AnimatePresence>
+
+            <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] text-center mt-6 pb-2">
+              {"Powered by "}
+              <a
+                href="https://nextslot.co.za"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-muted-foreground transition-colors underline underline-offset-2"
+              >
+                {"nextslot.co.za"}
+              </a>
+            </p>
           </div>
         </div>
 
+        {/* ── BOTTOM BAR — flex sibling, not fixed ──────────────────────── */}
+        {/*
+          StickyBottomBar is now a flex sibling of the scrollable body.
+          It sits at the bottom of the h-dvh column naturally.
+          The useViewportFix translateY on iOS still works exactly as before
+          because the bar still reads --keyboard-height from :root.
+          On Android, interactive-widget=resizes-content shrinks the flex
+          column automatically — the bar moves up with the layout.
+        */}
         {step < 3 && (
           <StickyBottomBar
             step={step}
@@ -306,20 +321,9 @@ const Index = () => {
             onRemoveOne={removeTreatment}
           />
         )}
-
-        <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] mt-4 pb-4">
-          {"Powered by "}
-          <a
-            href="https://nextslot.co.za"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-muted-foreground transition-colors underline underline-offset-2"
-          >
-            {"nextslot.co.za"}
-          </a>
-        </p>
       </div>
 
+      {/* ── SPLASH SCREEN — fixed inset-0 z-[100], unaffected by shell ── */}
       <AnimatePresence>
         {showSplash && (
           <motion.div
