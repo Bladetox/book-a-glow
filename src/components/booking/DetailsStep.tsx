@@ -192,7 +192,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockChecking, setBlockChecking] = useState(false);
   const [newClientCollapsed, setNewClientCollapsed] = useState(true);
-  const [addressCollapsed, setAddressCollapsed] = useState(true);
   const blockCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
@@ -747,17 +746,9 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeInOut" }}
-              onAnimationStart={() => setAddressCollapsed(true)}
-              onAnimationComplete={(def) => {
-                if (def === "animate") setAddressCollapsed(false);
-              }}
-              className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
+              className="overflow-visible"
             >
-              {/*
-                The relative container is intentionally NOT overflow-hidden so that
-                the suggestions dropdown (top-full, z-50) can escape it and render
-                over the elements below without being clipped.
-              */}
+              {/* Input + suggestions share a relative container so suggestions can anchor to top-full */}
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
                 {addressLoading && !booking.addressVerified && (
@@ -809,8 +800,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                   spellCheck={false}
                 />
 
-                {/* Suggestions — anchored BELOW the input (top-full) so they are never
-                    clipped by the overflow-hidden ancestors that animate height. */}
+                {/* Suggestions — anchored BELOW the input (top-full) */}
                 <AnimatePresence>
                   {showSuggestions && addressSuggestions.length > 0 && (
                     <motion.div
