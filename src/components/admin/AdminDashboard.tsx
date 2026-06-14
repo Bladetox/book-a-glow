@@ -678,6 +678,9 @@ const AdminDashboard = ({
         </motion.section>
       )}
 
+      {/* PayShap verification queue — gated by flags.payshap_payments */}
+      {flags.payshap_payments && <AdminPayshapQueue />}
+
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-4">
@@ -988,9 +991,6 @@ const AdminDashboard = ({
       {visibility.stockAlerts && (
         <DashboardStockAlerts stockAlerts={stockAlerts} onNavigate={onNavigate} />
       )}
-
-      {/* PayShap verification queue — gated by flags.payshap_payments */}
-      {flags.payshap_payments && <AdminPayshapQueue />}
     </div>
   );
 };
