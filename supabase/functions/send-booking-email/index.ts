@@ -694,6 +694,55 @@ Deno.serve(async (req) => {
     }
 
     // ======================================================================
+    // BALANCE REQUEST
+    // Triggered when the tenant manually requests final payment via email.
+    // Sends the client an email with their outstanding balance and payment link.
+    // ======================================================================
+    if (email_type === "balance_request") {
+      if (!payment_url) {
+        return new Response(JSON.stringify({ error: "payment_url is required for balance_request" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const balanceAmount = (booking as any).balance_due != null
+        ? `R${Math.round(parseFloat((booking as any).balance_due) * 100) / 100 > 0 ? (Math.round(parseFloat((booking as any).balance_due) * 100) / 100).toFixed(2) : rawBalance.toFixed(2)}`
+        : balanceDue;
+
+      if (clientEmail) {
+        const clientBody = `
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
+            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">Your outstanding balance of <strong>${balanceAmount}</strong> for your upcoming appointment is now ready to settle online.</p>
+          </td></tr>
+          <tr><td style="padding:18px 36px 26px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Appointment Details</p>
+            ${detailTable(
+              detailRow("Service", serviceNames) +
+              detailRow("Date", formattedDate) +
+              detailRow("Time", formattedTime) +
+              detailRow("Balance Due", balanceAmount, true)
+            )}
+          </td></tr>
+          <tr><td style="padding:0 36px 28px;text-align:center;">
+            <a href="${payment_url}" target="_blank" style="display:inline-block;padding:14px 32px;border-radius:10px;background:#000;color:#fff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:.04em;">Pay Balance Now</a>
+          </td></tr>
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+          </td></tr>
+        `;
+
+        await send({
+          from:     `${tenantName} <bookings@nextslot.co.za>`,
+          reply_to: tenantEmail ?? undefined,
+          to:       [clientEmail],
+          subject:  `Balance Due — ${balanceAmount} for your appointment on ${formattedDate}`,
+          html:     emailWrapper(logoHtml, tenantName, "Balance Due", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
+        });
+      }
+    }
+
+    // ======================================================================
     // BALANCE PAID
     // ======================================================================
     if (email_type === "balance_paid") {
