@@ -239,7 +239,7 @@ const Index = () => {
           The header, step indicator, and bottom bar are all fixed chrome.
           AnimatePresence and stepVariants are completely unchanged.
         */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div data-booking-scroll className="flex-1 overflow-y-auto scrollbar-hide">
           <div className="w-full max-w-md mx-auto px-4 pt-4 pb-4">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
