@@ -14,7 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
 interface DetailsStepProps {
   booking: BookingState;
   onUpdate: (updates: Partial<BookingState>) => void;
-  /** Called with true when the guest is blocked — parent should prevent advancing */
   onBlockedChange?: (blocked: boolean) => void;
 }
 
@@ -38,8 +37,6 @@ interface PlaceSuggestion {
   place_id: string;
   description: string;
 }
-
-// ── Dynamic consultation question renderer ────────────────────────────────────
 
 interface ConsultationQRendererProps {
   q: ConsultationQuestionDefinition;
@@ -75,7 +72,6 @@ const ConsultationQRenderer = ({
         {q.required && <span className="text-destructive ml-0.5">*</span>}
       </p>
 
-      {/* yes_no */}
       {q.type === "yes_no" && (
         <>
           <div className="flex gap-2">
@@ -115,7 +111,6 @@ const ConsultationQRenderer = ({
         </>
       )}
 
-      {/* text */}
       {q.type === "text" && (
         <input
           type="text"
@@ -126,7 +121,6 @@ const ConsultationQRenderer = ({
         />
       )}
 
-      {/* textarea */}
       {q.type === "textarea" && (
         <textarea
           className={`${inputClass} min-h-[60px] text-sm`}
@@ -136,7 +130,6 @@ const ConsultationQRenderer = ({
         />
       )}
 
-      {/* radio */}
       {q.type === "radio" && q.options && (
         <div className="flex flex-wrap gap-2">
           {q.options.map((opt) => (
@@ -156,7 +149,6 @@ const ConsultationQRenderer = ({
         </div>
       )}
 
-      {/* checkbox */}
       {q.type === "checkbox" && q.options && (
         <div className="flex flex-wrap gap-2">
           {q.options.map((opt) => {
@@ -199,16 +191,27 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const [addressLoading, setAddressLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockChecking, setBlockChecking] = useState(false);
+  // FIX 2a: overflow state for new client collapse wrapper
+  const [newClientCollapsed, setNewClientCollapsed] = useState(true);
+  // FIX 2b: overflow state for address field collapse wrapper
+  const [addressCollapsed, setAddressCollapsed] = useState(true);
   const blockCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
   const selectingRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  // FIX 1: ref to the scroll container passed down from Book.tsx — use window scroll as fallback
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
 
-  // ── Dynamic consultation questions (Stage 5) ─────────────────────────────
   const [consultationQuestions, setConsultationQuestions] = useState<ConsultationQuestionDefinition[]>([]);
   const [consultationLoading, setConsultationLoading] = useState(true);
+
+  useEffect(() => {
+    // FIX 1: find the nearest overflow-y-auto ancestor on mount so scrollIntoView targets it
+    const el = document.querySelector("[data-booking-scroll]") as HTMLElement | null;
+    scrollContainerRef.current = el;
+  }, []);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -217,7 +220,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     const loadQuestions = async () => {
       setConsultationLoading(true);
       try {
-        // 1. Try custom questions from DB — using real live schema columns
         const { data: customRows } = await supabase
           .from("consultation_questions")
           .select("id, question, detail, is_active, sort_order")
@@ -230,7 +232,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         if (customRows && customRows.length > 0) {
           setConsultationQuestions(
             customRows.map((r, i) => ({
-              // derive a stable key from sort_order + slugified question
               key: `q_${r.sort_order ?? i}_${r.question
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "_")
@@ -244,7 +245,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
           return;
         }
 
-        // 2. Fallback: fetch tenant business_type → use defaultConsultationQuestions
         const { data: tenantRow } = await supabase
           .from("tenants")
           .select("business_type")
@@ -261,7 +261,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
 
         setConsultationQuestions(fallback);
       } catch {
-        // Silent — render nothing rather than crash
         if (!cancelled) setConsultationQuestions([]);
       } finally {
         if (!cancelled) setConsultationLoading(false);
@@ -286,9 +285,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     [booking.consultationAnswerDetails, onUpdate]
   );
 
-  // Whether this tenant has mobile/call-out service enabled
   const mobileServiceEnabled = config.mobileServiceEnabled;
-
   const existingClientLabel = config.clientLabelExisting;
   const newClientLabel = config.clientLabelNew;
   const existingClientNotesPlaceholder: string =
@@ -299,6 +296,10 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     const t = setTimeout(() => {
       requestAnimationFrame(() => {
         nameInputRef.current?.focus({ preventScroll: true });
+        // FIX 3: scroll the focused input into view inside the locked scroll container
+        setTimeout(() => {
+          nameInputRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+        }, 400);
       });
     }, 350);
     return () => clearTimeout(t);
@@ -311,7 +312,15 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
       if (booking.isExistingClient === prevClientType.current) return;
       prevClientType.current = booking.isExistingClient;
       const t = setTimeout(() => {
-        node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        // FIX 1: scroll within the booking scroll container, not the window
+        const container = scrollContainerRef.current;
+        if (container) {
+          const nodeTop = node.getBoundingClientRect().top;
+          const containerTop = container.getBoundingClientRect().top;
+          container.scrollBy({ top: nodeTop - containerTop - 24, behavior: "smooth" });
+        } else {
+          node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
       }, 360);
       return () => clearTimeout(t);
     },
@@ -517,15 +526,17 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
         )}
       </AnimatePresence>
 
-      {/* ── New client: dynamic consultation form (Stage 5) ── */}
+      {/* New client: dynamic consultation form */}
       <AnimatePresence>
         {booking.isExistingClient === false && (
+          // FIX 2a: flip to overflow-visible once open animation completes
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
+            onAnimationComplete={(def) => setNewClientCollapsed(def === "exit")}
+            className={newClientCollapsed ? "overflow-hidden" : "overflow-visible"}
           >
             <div
               ref={conditionalSectionRef}
@@ -541,7 +552,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                 </p>
               </div>
 
-              {/* Dynamic questions — custom or business-type fallback */}
               {consultationLoading ? (
                 <p className="text-xs text-muted-foreground animate-pulse">Loading questions\u2026</p>
               ) : consultationQuestions.length > 0 ? (
@@ -558,8 +568,6 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                   />
                 ))
               ) : (
-                // Ultimate fallback: render the legacy hardcoded safety questions
-                // so the form is never empty (e.g. if both DB and business_type are missing)
                 safetyQuestions.map((q, i) => (
                   <motion.div
                     key={q.id}
@@ -710,21 +718,24 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
             }}
             onBlur={() => markTouched("email")}
           />
+          {/* FIX 5: added z-10 so spinner always renders above border glow */}
           {blockChecking && (
-            <div className="absolute right-3.5 top-3.5 w-3.5 h-3.5 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
+            <div className="absolute right-3.5 top-3.5 z-10 w-3.5 h-3.5 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
           )}
         </div>
 
-        {/* Address — only shown when call-outs are enabled for this tenant */}
+        {/* Address */}
         <AnimatePresence initial={false}>
           {mobileServiceEnabled && (
+            // FIX 2b: flip to overflow-visible once open animation completes
             <motion.div
               key="address-field"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeInOut" }}
-              className="overflow-hidden"
+              onAnimationComplete={(def) => setAddressCollapsed(def === "exit")}
+              className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
             >
               <div>
                 <div className="relative">
