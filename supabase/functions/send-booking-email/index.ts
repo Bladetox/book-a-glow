@@ -31,8 +31,8 @@ function formatTime(timeStr: string): string {
 
 function row(label: string, value: string, bold = false): string {
   return `<tr>
-    <td style="padding:10px 0;font-size:14px;border-bottom:1px solid #cccccc;color:#555555;width:40%;font-family:-apple-system,sans-serif;">${label}</td>
-    <td style="padding:10px 0;font-size:14px;border-bottom:1px solid #cccccc;color:#000000;font-weight:${bold ? "700" : "600"};font-family:-apple-system,sans-serif;">${value}</td>
+    <td style="padding:11px 0;font-size:14px;line-height:1.5;border-bottom:1px solid #e8e8e8;color:#999999;width:40%;font-family:-apple-system,sans-serif;">${label}</td>
+    <td style="padding:11px 0;font-size:14px;line-height:1.5;border-bottom:1px solid #e8e8e8;color:#111111;font-weight:${bold ? "700" : "600"};font-family:-apple-system,sans-serif;">${value}</td>
   </tr>`;
 }
 
@@ -92,16 +92,16 @@ function buildGcalLink(params: {
 
 const EMAIL_STYLES = `
   @media (prefers-color-scheme:dark){
-    .eb{background-color:#000!important}.ec{background-color:#111!important;border-color:#333!important}
-    .eh{background-color:#111!important;border-bottom:1px solid #333!important}.es{background-color:#1a1a1a!important}
-    .tm{color:#fff!important}.tl{color:#999!important}.tv{color:#fff!important}.tf{color:#666!important}.dv{border-bottom-color:#333!important}
+    .eb{background-color:#0d0d0d!important}.ec{background-color:#161616!important;border-color:#2a2a2a!important}
+    .eh{background-color:#161616!important;border-bottom:1px solid #2a2a2a!important}.es{background-color:#1e1e1e!important}
+    .tm{color:#f0f0f0!important}.tl{color:#999!important}.tv{color:#f0f0f0!important}.tf{color:#666!important}.dv{border-bottom-color:#2a2a2a!important}
   }
 `;
 
 const OWNER_STYLES = `
   @media (prefers-color-scheme:dark){
-    .ob{background-color:#000!important}.ow{background-color:#111!important;border-color:#333!important}
-    .ot{color:#fff!important}.ol{color:#aaa!important}.ov{color:#fff!important}.od{border-bottom-color:#333!important}
+    .ob{background-color:#0d0d0d!important}.ow{background-color:#161616!important;border-color:#2a2a2a!important}
+    .ot{color:#f0f0f0!important}.ol{color:#aaa!important}.ov{color:#f0f0f0!important}.od{border-bottom-color:#2a2a2a!important}
   }
 `;
 
@@ -113,17 +113,17 @@ function emailWrapper(logoHtml: string, tenantName: string, subtitle: string, bo
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>${EMAIL_STYLES}</style>
 </head>
-<body class="eb" style="margin:0;padding:20px;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<body class="eb" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-<table class="ec" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:12px;border:1px solid #e0e0e0;overflow:hidden;">
-  <tr><td class="eh" style="padding:28px 32px;text-align:center;background:#fff;border-bottom:1px solid #e0e0e0;">
+<table class="ec" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:12px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
+  <tr><td class="eh" style="padding:28px 36px;text-align:center;background:#fff;border-bottom:1px solid #e0e0e0;">
     ${logoHtml}
     <p class="tm" style="margin:0;font-size:20px;font-weight:700;color:#000;">${tenantName}</p>
     <p class="tl" style="margin:6px 0 0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#777;">${subtitle}</p>
   </td></tr>
   ${body}
-  <tr><td class="es" style="padding:14px 32px;text-align:center;background:#f0f0f0;">
-    <p class="tf" style="margin:0;font-size:11px;color:#999;">${footer}</p>
+  <tr><td class="es" style="padding:12px 36px 18px;text-align:center;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p class="tf" style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">${footer}</p>
   </td></tr>
 </table>
 </td></tr></table>
@@ -131,19 +131,19 @@ function emailWrapper(logoHtml: string, tenantName: string, subtitle: string, bo
 }
 
 function detailTable(rows: string): string {
-  return `<table class="es" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;border-radius:8px;padding:4px 16px;">${rows}</table>`;
+  return `<table class="es" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:4px 16px;">${rows}</table>`;
 }
 
 function detailRow(label: string, value: string, last = false): string {
-  const border = last ? "" : "border-bottom:1px solid #e0e0e0;";
+  const border = last ? "" : "border-bottom:1px solid #e8e8e8;";
   return `<tr>
-    <td class="tl dv" style="padding:10px 0;font-size:13px;color:#666;width:42%;${border}">${label}</td>
-    <td class="tv dv" style="padding:10px 0;font-size:13px;font-weight:600;color:#000;${border}">${value}</td>
+    <td class="tl dv" style="padding:11px 0;font-size:13px;line-height:1.5;color:#999999;width:42%;${border}">${label}</td>
+    <td class="tv dv" style="padding:11px 0;font-size:13px;line-height:1.5;font-weight:600;color:#111111;${border}">${value}</td>
   </tr>`;
 }
 
 function calendarButton(href: string, label = "Add to Calendar"): string {
-  return `<a href="${href}" target="_blank" style="display:inline-block;padding:12px 22px;border-radius:8px;background:#000;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">&#128197;&nbsp; ${label}</a>`;
+  return `<a href="${href}" target="_blank" style="display:inline-block;padding:14px 26px;border-radius:10px;background:#000;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">&#128197;&nbsp; ${label}</a>`;
 }
 
 Deno.serve(async (req) => {
@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
 
     const logoUrl  = (tenant as any)?.logo_url ?? null;
     const logoHtml = logoUrl
-      ? `<img src="${logoUrl}" alt="${tenantName}" style="width:52px;height:52px;object-fit:contain;border-radius:8px;margin:0 auto 10px;display:block;" />`
+      ? `<img src="${logoUrl}" alt="${tenantName}" style="width:56px;height:56px;object-fit:contain;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.10);margin:0 auto 12px;display:block;" />`
       : "";
 
     const formattedDate = formatDate(booking.booking_date);
@@ -286,12 +286,12 @@ Deno.serve(async (req) => {
       // 1. CLIENT email
       if (clientEmail) {
         const clientBody = `
-          <tr><td style="padding:24px 32px 8px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>,</p>
-            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.6;">Your payment reference has been received. Your booking details are below and your studio will confirm your appointment shortly.</p>
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
+            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">Your payment reference has been received. Your booking details are below and your studio will confirm your appointment shortly.</p>
           </td></tr>
-          <tr><td style="padding:16px 32px 24px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;">Booking Details</p>
+          <tr><td style="padding:18px 36px 26px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
             ${detailTable(
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
@@ -299,10 +299,10 @@ Deno.serve(async (req) => {
               detailRow("Your Reference", payshapRef || "(none submitted)", true)
             )}
           </td></tr>
-          <tr><td style="padding:0 32px 24px;">
-            <div style="background:#f7f7f7;border-radius:8px;padding:14px 18px;border-left:3px solid #000;">
-              <p class="tm" style="margin:0;font-size:13px;font-weight:600;color:#000;">What happens next?</p>
-              <p class="tl" style="margin:6px 0 0;font-size:13px;color:#555;line-height:1.6;">Keep an eye on your email and WhatsApp. Once your studio has verified your payment you will receive a confirmation there.</p>
+          <tr><td style="padding:0 36px 26px;">
+            <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:14px 18px;border-left:3px solid #000;">
+              <p class="tm" style="margin:0;font-size:13px;font-weight:600;color:#000;line-height:1.5;">What happens next?</p>
+              <p class="tl" style="margin:6px 0 0;font-size:13px;color:#555;line-height:1.7;">Keep an eye on your email and WhatsApp. Once your studio has verified your payment you will receive a confirmation there.</p>
             </div>
           </td></tr>
         `;
@@ -343,11 +343,11 @@ Deno.serve(async (req) => {
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
-<body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
-<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
-  <tr><td style="padding:24px 28px 8px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">New Payshap Payment &#128178;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">${clientName} has submitted a payment reference. Review and confirm below.</p>
+<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
+  <tr><td style="padding:28px 28px 10px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">New Payshap Payment &#128178;</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has submitted a payment reference. Review and confirm below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",      clientName)}
       ${row("Phone",       clientPhone || "—")}
@@ -358,22 +358,22 @@ Deno.serve(async (req) => {
       ${row("Payment",     depositAmount === totalAmount ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
     </table>
   </td></tr>
-  <tr><td style="padding:16px 28px 20px;">
+  <tr><td style="padding:16px 28px 22px;">
     <table cellpadding="0" cellspacing="0"><tr>
       <td style="padding-right:10px;">
         ${calendarButton(gcalOwnerLink)}
       </td>
       <td>
         <a href="${waLink}" target="_blank"
-          style="display:inline-block;padding:12px 22px;border-radius:8px;background:#25D366;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">
+          style="display:inline-block;padding:14px 26px;border-radius:10px;background:#25D366;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">
           &#9989;&nbsp; Confirm via WhatsApp
         </a>
       </td>
     </tr></table>
-    <p class="ol" style="margin:10px 0 0;font-size:11px;color:#aaa;">The WhatsApp button opens a pre-filled message to send the client their confirmation. You can also confirm the booking directly in your admin panel.</p>
+    <p class="ol" style="margin:10px 0 0;font-size:11px;color:#aaa;line-height:1.5;">The WhatsApp button opens a pre-filled message to send the client their confirmation. You can also confirm the booking directly in your admin panel.</p>
   </td></tr>
-  <tr><td style="padding:0 28px 16px;">
-    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
   </td></tr>
 </table>
 </body></html>`;
@@ -414,34 +414,34 @@ Deno.serve(async (req) => {
         }) : null;
 
         const clientBody = `
-          <tr><td style="padding:24px 32px 8px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>, your booking is confirmed! &#10003;</p>
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your booking is confirmed! &#10003;</p>
           </td></tr>
-          <tr><td style="padding:16px 32px 24px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;">Booking Details</p>
+          <tr><td style="padding:18px 36px 26px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
             ${detailTable(
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
               (payshapRef ? detailRow("Your Reference", payshapRef) : "") +
               (mapsLink
-                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#000;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
+                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
                 : detailRow("Location", location, true)
               )
             )}
           </td></tr>
-          <tr><td style="padding:0 32px 20px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;">Payment</p>
+          <tr><td style="padding:0 36px 22px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Payment</p>
             ${detailTable(
               detailRow("Deposit Paid", `${depositAmount} &#10003;`) +
               detailRow("Balance Due on Day", balanceDue, true)
             )}
           </td></tr>
-          <tr><td style="padding:0 32px 24px;">
+          <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
           </td></tr>
-          <tr><td style="padding:0 32px 24px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;">Questions? <a href="tel:${tenantPhone}" style="color:#000;font-weight:600;">${tenantPhone}</a></p>
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
 
@@ -477,11 +477,11 @@ Deno.serve(async (req) => {
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
-<body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
-<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
-  <tr><td style="padding:24px 28px 8px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Booking confirmed &#127881;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">Deposit confirmed — add to your calendar below.</p>
+<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
+  <tr><td style="padding:28px 28px 10px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Booking confirmed &#127881;</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">Deposit confirmed — add to your calendar below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",           clientName)}
       ${row("Phone",            clientPhone || "—")}
@@ -492,11 +492,11 @@ Deno.serve(async (req) => {
       ${row("Balance due",      balanceDue)}
     </table>
   </td></tr>
-  <tr><td style="padding:16px 28px 20px;">
+  <tr><td style="padding:16px 28px 22px;">
     ${calendarButton(gcalOwnerLink)}
   </td></tr>
-  <tr><td style="padding:0 28px 16px;">
-    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
   </td></tr>
 </table>
 </body></html>`;
@@ -533,32 +533,32 @@ Deno.serve(async (req) => {
         }) : null;
 
         const clientBody = `
-          <tr><td style="padding:24px 32px 8px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>, your booking is confirmed and fully paid! &#10003;</p>
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your booking is confirmed and fully paid! &#10003;</p>
           </td></tr>
-          <tr><td style="padding:16px 32px 24px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;">Booking Details</p>
+          <tr><td style="padding:18px 36px 26px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
             ${detailTable(
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
               (mapsLink
-                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#000;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
+                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
                 : detailRow("Location", location, true)
               )
             )}
           </td></tr>
-          <tr><td style="padding:0 32px 20px;">
+          <tr><td style="padding:0 36px 22px;">
             ${detailTable(
               detailRow("Total Paid", `${totalAmount} &#10003;`, true)
             )}
-            <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;">Nothing more is due. See you on ${formattedDate}!</p>
+            <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">Nothing more is due. See you on ${formattedDate}!</p>
           </td></tr>
-          <tr><td style="padding:0 32px 24px;">
+          <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
           </td></tr>
-          <tr><td style="padding:0 32px 24px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;">Questions? <a href="tel:${tenantPhone}" style="color:#000;font-weight:600;">${tenantPhone}</a></p>
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
 
@@ -594,11 +594,11 @@ Deno.serve(async (req) => {
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
-<body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
-<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
-  <tr><td style="padding:24px 28px 8px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Full payment confirmed &#127881;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">Full payment received — add to your calendar below.</p>
+<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
+  <tr><td style="padding:28px 28px 10px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Full payment confirmed &#127881;</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">Full payment received — add to your calendar below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",        clientName)}
       ${row("Phone",         clientPhone || "—")}
@@ -608,11 +608,11 @@ Deno.serve(async (req) => {
       ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
-  <tr><td style="padding:16px 28px 20px;">
+  <tr><td style="padding:16px 28px 22px;">
     ${calendarButton(gcalOwnerLink)}
   </td></tr>
-  <tr><td style="padding:0 28px 16px;">
-    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
   </td></tr>
 </table>
 </body></html>`;
@@ -638,29 +638,29 @@ Deno.serve(async (req) => {
 
       if (clientEmail) {
         const clientBody = `
-          <tr><td style="padding:24px 32px 8px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>, your balance has been received! &#10003;</p>
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your balance has been received! &#10003;</p>
           </td></tr>
-          <tr><td style="padding:16px 32px 24px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;">Booking Details</p>
+          <tr><td style="padding:18px 36px 26px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
             ${detailTable(
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
               (mapsLink
-                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#000;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
+                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
                 : detailRow("Location", location, true)
               )
             )}
           </td></tr>
-          <tr><td style="padding:0 32px 20px;">
+          <tr><td style="padding:0 36px 22px;">
             ${detailTable(
               detailRow("Total Paid", `${totalAmount} &#10003;`, true)
             )}
-            <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;">You are all paid up. See you on ${formattedDate}!</p>
+            <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">You are all paid up. See you on ${formattedDate}!</p>
           </td></tr>
-          <tr><td style="padding:0 32px 24px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;">Questions? <a href="tel:${tenantPhone}" style="color:#000;font-weight:600;">${tenantPhone}</a></p>
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
 
@@ -685,11 +685,11 @@ Deno.serve(async (req) => {
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
-<body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
-<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
-  <tr><td style="padding:24px 28px 8px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Balance received &#127881;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">${clientName} has paid their outstanding balance.</p>
+<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
+  <tr><td style="padding:28px 28px 10px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Balance received &#127881;</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has paid their outstanding balance.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",         clientName)}
       ${row("Phone",          clientPhone || "—")}
@@ -699,8 +699,8 @@ Deno.serve(async (req) => {
       ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
-  <tr><td style="padding:0 28px 16px;">
-    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
   </td></tr>
 </table>
 </body></html>`;
