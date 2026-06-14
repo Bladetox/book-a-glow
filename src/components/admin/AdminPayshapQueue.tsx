@@ -130,7 +130,7 @@ const AdminPayshapQueue = () => {
       <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
         <div className="flex items-center gap-2 text-white/20 text-xs py-3">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          Loading PayShap queue…
+          Loading Payshap queue…
         </div>
       </motion.section>
     );
@@ -140,8 +140,8 @@ const AdminPayshapQueue = () => {
     return (
       <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">PayShap Payments</p>
-          <p className="text-xs text-white/20">No pending PayShap payments to review.</p>
+          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Payshap Payments</p>
+          <p className="text-xs text-white/20">No pending Payshap payments to review.</p>
         </div>
       </motion.section>
     );
@@ -185,7 +185,7 @@ const AdminPayshapQueue = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 leading-none">
-                PayShap Payments
+                Payshap Payments
               </p>
               <p className="text-[10px] text-amber-400/70 mt-0.5">
                 {queue.length} awaiting verification
