@@ -226,9 +226,9 @@ Deno.serve(async (req) => {
     const clientPhone = escapeHtml((booking as any).client_phone || (booking as any).guest_phone || (booking.client as any)?.phone    || "");
     const payshapRef  = escapeHtml((booking as any).payshap_reference ?? "");
 
-    const tenantName  = escapeHtml(tenant?.name ?? "Beauty Studio");
+    const tenantName    = escapeHtml(tenant?.name ?? "Beauty Studio");
     const tenantAddress = escapeHtml(tenant?.address ?? "");
-    const tenantPhone = escapeHtml(tenant?.phone ?? "");
+    const tenantPhone   = escapeHtml(tenant?.phone ?? "");
 
     const tenantEmail: string | null =
       (tenant?.email && tenant.email.trim() !== "")
@@ -264,6 +264,9 @@ Deno.serve(async (req) => {
       details:   `Booking with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}`,
       location,
     });
+
+    // Base URL for the confirm-booking edge function
+    const confirmBookingUrl = `${supabaseUrl}/functions/v1/confirm-booking?booking_id=${booking_id}`;
 
     const send = async (payload: Record<string, unknown>) => {
       const res = await fetch(RESEND_API_URL, {
@@ -329,7 +332,7 @@ Deno.serve(async (req) => {
         });
 
         const waMessage = encodeURIComponent(
-          `Hi ${clientName.split(" ")[0]}, your booking at ${tenantName} for ${serviceNames} on ${formattedDate} at ${formattedTime} has been confirmed! We look forward to seeing you.`
+          `Hi ${clientName.split(" ")[0]}, your booking at ${tenantName}${tenantAddress ? " (" + tenantAddress + ")" : ""} for ${serviceNames} on ${formattedDate} at ${formattedTime} has been confirmed! We look forward to seeing you.\n\nConfirm booking: ${confirmBookingUrl}`
         );
         const rawPhone = clientPhone.replace(/[^0-9]/g, "");
         const waNumber = rawPhone.startsWith("0") ? "27" + rawPhone.slice(1) : rawPhone;
@@ -354,6 +357,7 @@ Deno.serve(async (req) => {
       ${row("Service",     serviceNames)}
       ${row("Date",        formattedDate)}
       ${row("Time",        formattedTime)}
+      ${row("Location",    tenantAddress || location)}
       ${row("Reference",   payshapRef || "—")}
       ${row("Payment",     depositAmount === totalAmount ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
     </table>
@@ -370,7 +374,7 @@ Deno.serve(async (req) => {
         </a>
       </td>
     </tr></table>
-    <p class="ol" style="margin:10px 0 0;font-size:11px;color:#aaa;line-height:1.5;">The WhatsApp button opens a pre-filled message to send the client their confirmation. You can also confirm the booking directly in your admin panel.</p>
+    <p class="ol" style="margin:10px 0 0;font-size:11px;color:#aaa;line-height:1.5;">Clicking the WhatsApp button opens a pre-filled message to the client and confirms their booking. You can also confirm directly in your admin panel.</p>
   </td></tr>
   <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
     <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
@@ -379,8 +383,8 @@ Deno.serve(async (req) => {
 </body></html>`;
 
         await send({
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
+          from:     `NextSlot <bookings@nextslot.co.za>`,
+          reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
           subject:  `&#128178; Payshap Payment from ${clientName} — ${formattedDate}`,
           html:     ownerHtml,
@@ -488,6 +492,7 @@ Deno.serve(async (req) => {
       ${row("Service",          serviceNames)}
       ${row("Date",             formattedDate)}
       ${row("Time",             formattedTime)}
+      ${row("Location",         tenantAddress || location)}
       ${row("Deposit received", depositAmount, true)}
       ${row("Balance due",      balanceDue)}
     </table>
@@ -502,8 +507,8 @@ Deno.serve(async (req) => {
 </body></html>`;
 
         await send({
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
+          from:     `NextSlot <bookings@nextslot.co.za>`,
+          reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
           subject:  `&#127881; Booking confirmed — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
@@ -605,6 +610,7 @@ Deno.serve(async (req) => {
       ${row("Service",       serviceNames)}
       ${row("Date",          formattedDate)}
       ${row("Time",          formattedTime)}
+      ${row("Location",      tenantAddress || location)}
       ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
@@ -618,8 +624,8 @@ Deno.serve(async (req) => {
 </body></html>`;
 
         await send({
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
+          from:     `NextSlot <bookings@nextslot.co.za>`,
+          reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
           subject:  `&#127881; Full payment confirmed — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
@@ -696,6 +702,7 @@ Deno.serve(async (req) => {
       ${row("Service",        serviceNames)}
       ${row("Date",           formattedDate)}
       ${row("Time",           formattedTime)}
+      ${row("Location",       tenantAddress || location)}
       ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
@@ -706,8 +713,8 @@ Deno.serve(async (req) => {
 </body></html>`;
 
         await send({
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail,
+          from:     `NextSlot <bookings@nextslot.co.za>`,
+          reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
           subject:  `&#127881; Balance received — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
