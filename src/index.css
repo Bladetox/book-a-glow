@@ -123,13 +123,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
-    scroll-padding-bottom: 110px;
   }
 
   body {
     @apply bg-background text-foreground font-body;
-    min-height: 100vh;
-    min-height: 100dvh;
     user-select: none;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
