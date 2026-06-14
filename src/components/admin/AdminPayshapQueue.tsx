@@ -137,14 +137,7 @@ const AdminPayshapQueue = () => {
   }
 
   if (queue.length === 0) {
-    return (
-      <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
-          <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Payshap Payments</p>
-          <p className="text-xs text-white/20">No pending Payshap payments to review.</p>
-        </div>
-      </motion.section>
-    );
+    return null;
   }
 
   return (
