@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
     const balanceDue    = `R${rawBalance.toFixed(2)}`;
     const location      = booking.is_call_out
       ? `Call-out to ${escapeHtml(booking.call_out_address ?? "")}`
-      : escapeHtml(tenant?.address || "Our Studio");
+      : escapeHtml(tenant?.address || settings["salon_address"] || "Our Studio");
 
     const gcalBookingLink = buildGcalLink({
       title:     `${serviceNames} at ${tenantName}`,
