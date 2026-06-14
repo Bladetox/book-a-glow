@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
     //   1. Client: receipt of reference + reminder to watch email/WhatsApp
     //   2. Tenant: all booking details + WhatsApp confirm button + Add to Calendar
     // ======================================================================
-    if (email_type === "payshap_pending") {
+    if (email_type === "payshap_proof_submitted") {
 
       // 1. CLIENT email
       if (clientEmail) {
