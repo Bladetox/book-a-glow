@@ -26,6 +26,7 @@ const NotFound       = lazy(() => import("./pages/NotFound"));
 const TenantNotFound = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const Demo           = lazy(() => import("./pages/Demo"));
+const PayshapProof   = lazy(() => import("./pages/PayshapProof"));
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ const MarketingRoutes = () => (
         <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
         <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
         <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
+        <Route path="/pay/:bookingId" element={<PayshapProof />} />
         {/* Legacy redirects */}
         <Route path="/product" element={<Navigate to="/" replace />} />
         <Route path="/blog" element={<Navigate to="/about" replace />} />
@@ -97,6 +99,7 @@ const TenantRoutes = () => {
         <Route path="/payment" element={<PaymentSuccess />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/pay/:bookingId" element={<PayshapProof />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
