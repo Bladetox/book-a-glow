@@ -129,9 +129,11 @@ export type PayshapBookingRow = BookingRow & {
 
 /**
  * Confirm a PayShap booking.
- * 1. Marks the booking confirmed via RPC.
- * 2. Updates the payment row to completed.
- * 3. Fires the booking-confirmed email via send-booking-email edge function.
+ * 1. Reads the booking to determine whether this is a deposit-only or full payment.
+ * 2. Marks the booking confirmed via RPC.
+ * 3. Sets deposit_paid and/or full_payment_received flags correctly on the booking row.
+ * 4. Updates the payment row to completed (idempotent: only when status = pending).
+ * 5. Fires the booking-confirmed email via send-booking-email edge function.
  */
 export function useConfirmPayshapBooking() {
   const qc = useQueryClient();
@@ -139,6 +141,28 @@ export function useConfirmPayshapBooking() {
 
   return useMutation({
     mutationFn: async ({ bookingId }: { bookingId: string }) => {
+      // Step 1: Read the booking to determine payment amounts before confirming.
+      const { data: bookingData, error: bookingReadError } = await supabase
+        .from("bookings")
+        .select("total_amount, deposit_amount, balance_due, deposit_paid, full_payment_received")
+        .eq("id", bookingId)
+        .eq("tenant_id", tenantId)
+        .single();
+      if (bookingReadError) throw bookingReadError;
+
+      const totalAmount   = Number(bookingData?.total_amount   ?? 0);
+      const depositAmount = Number(bookingData?.deposit_amount ?? 0);
+      const balanceDue    = Number(bookingData?.balance_due    ?? 0);
+
+      // Determine which financial flags to set.
+      // If no deposit is configured (depositAmount === 0) OR balanceDue === 0
+      // after deposit, the client paid in full via Payshap.
+      const isFullPayment = depositAmount === 0 || balanceDue === 0 || totalAmount === depositAmount;
+      const bookingFlags = isFullPayment
+        ? { deposit_paid: true, full_payment_received: true, balance_due: 0 }
+        : { deposit_paid: true };
+
+      // Step 2: Mark booking confirmed via RPC.
       const { data: rpcData, error: rpcError } = await supabase.rpc(
         "update_booking_status",
         { p_booking_id: bookingId, p_new_status: "confirmed" },
@@ -148,13 +172,24 @@ export function useConfirmPayshapBooking() {
       if (rpcResult && !rpcResult.success)
         throw new Error(rpcResult.message ?? "Status update failed");
 
+      // Step 3: Set the correct financial flags on the booking row.
+      const { error: flagError } = await supabase
+        .from("bookings")
+        .update(bookingFlags)
+        .eq("id", bookingId)
+        .eq("tenant_id", tenantId);
+      if (flagError) throw flagError;
+
+      // Step 4: Mark the payment row completed — only if still pending to ensure idempotency.
       const { error: paymentError } = await supabase
         .from("payments")
         .update({ status: "completed" })
         .eq("booking_id", bookingId)
-        .eq("payment_method", "payshap");
+        .eq("payment_method", "payshap")
+        .eq("status", "pending");
       if (paymentError) throw paymentError;
 
+      // Step 5: Fire booking-confirmed email.
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -195,6 +230,8 @@ export function useConfirmPayshapBooking() {
  * Reject a PayShap proof submission.
  * 1. Resets booking status back to pending_payment.
  * 2. Clears the three payshap columns so the client can resubmit.
+ * 3. Voids the orphaned payments row (sets status = voided) rather than
+ *    leaving it as pending, which would cause a duplicate on resubmission.
  */
 export function useRejectPayshapBooking() {
   const qc = useQueryClient();
@@ -206,6 +243,7 @@ export function useRejectPayshapBooking() {
     }: {
       bookingId: string;
     }) => {
+      // Step 1: Reset booking status via RPC.
       const { data: rpcData, error: rpcError } = await supabase.rpc(
         "update_booking_status",
         { p_booking_id: bookingId, p_new_status: "pending_payment" },
@@ -215,6 +253,7 @@ export function useRejectPayshapBooking() {
       if (rpcResult && !rpcResult.success)
         throw new Error(rpcResult.message ?? "Status reset failed");
 
+      // Step 2: Clear Payshap proof columns on the booking row.
       const { error: clearError } = await supabase
         .from("bookings")
         .update({
@@ -225,6 +264,16 @@ export function useRejectPayshapBooking() {
         .eq("id", bookingId)
         .eq("tenant_id", tenantId);
       if (clearError) throw clearError;
+
+      // Step 3: Void the orphaned payments row so a future resubmission
+      // does not create a duplicate pending row for the same booking.
+      const { error: voidError } = await supabase
+        .from("payments")
+        .update({ status: "voided" })
+        .eq("booking_id", bookingId)
+        .eq("payment_method", "payshap")
+        .eq("status", "pending");
+      if (voidError) throw voidError;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: PAYSHAP_QUERY_KEY(tenantId) });
