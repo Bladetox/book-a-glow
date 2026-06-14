@@ -308,10 +308,10 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           <motion.div
             className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
             style={{
-              marginLeft: "-1.5rem",
-              marginRight: "-1.5rem",
-              paddingLeft: "1.5rem",
-              paddingRight: "1.5rem",
+              marginLeft: "-1rem",
+              marginRight: "-1rem",
+              paddingLeft: "1rem",
+              paddingRight: "1rem",
             }}
             animate={attempted && !isSelected ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
