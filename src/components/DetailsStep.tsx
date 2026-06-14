@@ -6,6 +6,7 @@ import {
 } from "@/data/defaultConsultationQuestions";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, X } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
@@ -36,6 +37,12 @@ const validators = {
 interface PlaceSuggestion {
   place_id: string;
   description: string;
+}
+
+interface SuggestionRect {
+  top: number;
+  left: number;
+  width: number;
 }
 
 interface ConsultationQRendererProps {
@@ -193,11 +200,14 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const [blockChecking, setBlockChecking] = useState(false);
   const [newClientCollapsed, setNewClientCollapsed] = useState(true);
   const [addressCollapsed, setAddressCollapsed] = useState(true);
+  // Stores the fixed-position rect for the portal-rendered suggestions dropdown
+  const [suggestionRect, setSuggestionRect] = useState<SuggestionRect | null>(null);
   const blockCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const justSelectedRef = useRef(false);
   const selectingRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
 
@@ -208,6 +218,31 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     const el = document.querySelector("[data-booking-scroll]") as HTMLElement | null;
     scrollContainerRef.current = el;
   }, []);
+
+  // Recalculate the dropdown position whenever suggestions become visible or
+  // the window resizes / scrolls so the portal stays anchored to the input.
+  const updateSuggestionRect = useCallback(() => {
+    const input = addressInputRef.current;
+    if (!input) return;
+    const rect = input.getBoundingClientRect();
+    setSuggestionRect({
+      top: rect.top + window.scrollY,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+    updateSuggestionRect();
+
+    window.addEventListener("resize", updateSuggestionRect);
+    window.addEventListener("scroll", updateSuggestionRect, true);
+    return () => {
+      window.removeEventListener("resize", updateSuggestionRect);
+      window.removeEventListener("scroll", updateSuggestionRect, true);
+    };
+  }, [showSuggestions, updateSuggestionRect]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -466,6 +501,54 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     setShowSuggestions(false);
     setTouched((prev) => ({ ...prev, address: false }));
   };
+
+  // Portal-rendered suggestions dropdown anchored via fixed position so no
+  // parent overflow:hidden or stacking context can clip it.
+  const suggestionsPortal =
+    showSuggestions && addressSuggestions.length > 0 && suggestionRect
+      ? createPortal(
+          <AnimatePresence>
+            <motion.div
+              ref={suggestionsRef}
+              key="address-suggestions"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+              style={{
+                position: "fixed",
+                top: suggestionRect.top - 4,
+                left: suggestionRect.left,
+                width: suggestionRect.width,
+                transform: "translateY(-100%)",
+                zIndex: 9999,
+              }}
+            >
+              <div className="rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl max-h-[220px] overflow-y-auto">
+                {addressSuggestions.map((s, idx) => (
+                  <button
+                    key={s.place_id}
+                    type="button"
+                    onMouseDown={() => {
+                      selectingRef.current = true;
+                    }}
+                    onTouchStart={() => {
+                      selectingRef.current = true;
+                    }}
+                    onClick={() => handleSelectSuggestion(s.description)}
+                    className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
+                      ${idx < addressSuggestions.length - 1 ? "border-b border-border/20" : ""}`}
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                    <span>{s.description}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          document.body
+        )
+      : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -758,7 +841,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
               }}
               className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
             >
-              {/* Input + suggestions share a relative container so suggestions can anchor to bottom-full */}
+              {/* Input wrapper — no overflow:hidden here so nothing clips the portal */}
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
                 {addressLoading && !booking.addressVerified && (
@@ -778,6 +861,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                   </button>
                 )}
                 <input
+                  ref={addressInputRef}
                   id="booking-address"
                   name="address"
                   className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
@@ -803,6 +887,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                   onFocus={() => {
                     if (addressSuggestions.length > 0 && !booking.addressVerified) {
                       setShowSuggestions(true);
+                      updateSuggestionRect();
                     }
                   }}
                   autoComplete="off"
@@ -810,40 +895,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
                   spellCheck={false}
                 />
 
-                {/* Suggestions anchored ABOVE the input so keyboard never obscures them */}
-                <AnimatePresence>
-                  {showSuggestions && addressSuggestions.length > 0 && (
-                    <motion.div
-                      ref={suggestionsRef}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-                      className="absolute left-0 right-0 bottom-full mb-1.5 z-50"
-                    >
-                      <div className="rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl max-h-[220px] overflow-y-auto">
-                        {addressSuggestions.map((s, idx) => (
-                          <button
-                            key={s.place_id}
-                            type="button"
-                            onMouseDown={() => {
-                              selectingRef.current = true;
-                            }}
-                            onTouchStart={() => {
-                              selectingRef.current = true;
-                            }}
-                            onClick={() => handleSelectSuggestion(s.description)}
-                            className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
-                              ${idx < addressSuggestions.length - 1 ? "border-b border-border/20" : ""}`}
-                          >
-                            <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                            <span>{s.description}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* Suggestions are rendered into document.body via a portal (see suggestionsPortal below) */}
               </div>
 
               {!showSuggestions && (
@@ -857,6 +909,9 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Portal-rendered suggestions dropdown — lives in document.body, immune to parent overflow clipping */}
+      {suggestionsPortal}
     </div>
   );
 };
