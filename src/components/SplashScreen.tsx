@@ -166,7 +166,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         ))}
       </div>
 
-      {/* Scroll content */}
+      {/* Scroll content — px-6 lives here, chips break out with negative margin */}
       <motion.div
         className="relative flex flex-col items-center w-full min-h-screen px-6"
         style={{
@@ -177,7 +177,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
       >
-        {/* Logo block — full-bleed when logo exists, abbreviation fallback otherwise */}
+        {/* Logo block */}
         <motion.div
           initial={{ scale: 0.82, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -213,7 +213,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
                 {config.abbreviation}
               </span>
             )}
-            {/* Shimmer edge highlight — only shown for abbreviation fallback */}
             {!config.logoUrl && (
               <span
                 className="absolute top-0 left-3 right-3 h-px"
@@ -234,7 +233,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           {config.splashWelcomeLabel}
         </motion.p>
 
-        {/* Business name — brand font + gold colour ONLY for tenants that set it */}
+        {/* Business name */}
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -276,7 +275,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           style={{ width: 48, height: 1, background: dividerColor }}
         />
 
-        {/* Where did you hear about us */}
+        {/* Referral section */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -297,52 +296,53 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             {attempted && !isSelected ? "Please select an option to continue" : "Scroll to see all options"}
           </p>
 
-          {/* Shake wrapper — only animates, never clips */}
+          {/*
+            Chip scroll row.
+            - mx-[-1.5rem] cancels the parent px-6 (1.5rem) on both sides so the
+              row is flush with the viewport edges.
+            - px-6 re-applies the same padding as first/last-chip inset so chips
+              align with the rest of the content when the row is not scrolled.
+            - The shake animation is on this same div; it never affects overflow
+              because no ancestor has overflow:hidden on the horizontal axis.
+          */}
           <motion.div
+            className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+            style={{
+              marginLeft: "-1.5rem",
+              marginRight: "-1.5rem",
+              paddingLeft: "1.5rem",
+              paddingRight: "1.5rem",
+            }}
             animate={attempted && !isSelected ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
-            {/* Full-bleed scroll container — owns overflow-x-auto, never transformed */}
-            <div
-              className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-              style={{
-                position: "relative",
-                left: "50%",
-                width: "100dvw",
-                marginLeft: "-50dvw",
-                paddingLeft: "1.5rem",
-                paddingRight: "1.5rem",
-                boxSizing: "border-box",
-              }}
-            >
-              {referralOptions.map(opt => (
-                <motion.button
-                  key={opt}
-                  whileTap={{ scale: 0.91 }}
-                  onClick={() => {
-                    onReferralChange(referralSource === opt ? "" : opt);
-                    if (attempted) setAttempted(false);
-                  }}
-                  className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
-                  style={{
-                    border: referralSource === opt
-                      ? `1px solid ${chipBorderSel}`
-                      : attempted && !isSelected
-                        ? `1px solid ${errorColor.replace("0.85", "0.25")}`
-                        : `1px solid ${chipBorderDef}`,
-                    background: referralSource === opt ? chipSelected : "transparent",
-                    color: referralSource === opt
-                      ? chipTextSel
-                      : attempted && !isSelected
-                        ? errorColorDim
-                        : chipTextDef,
-                    backdropFilter: referralSource === opt ? "blur(8px)" : undefined,
-                  }}
-                >
-                  {opt}
-                </motion.button>
-              ))}
-            </div>
+            {referralOptions.map(opt => (
+              <motion.button
+                key={opt}
+                whileTap={{ scale: 0.91 }}
+                onClick={() => {
+                  onReferralChange(referralSource === opt ? "" : opt);
+                  if (attempted) setAttempted(false);
+                }}
+                className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
+                style={{
+                  border: referralSource === opt
+                    ? `1px solid ${chipBorderSel}`
+                    : attempted && !isSelected
+                      ? `1px solid ${errorColor.replace("0.85", "0.25")}`
+                      : `1px solid ${chipBorderDef}`,
+                  background: referralSource === opt ? chipSelected : "transparent",
+                  color: referralSource === opt
+                    ? chipTextSel
+                    : attempted && !isSelected
+                      ? errorColorDim
+                      : chipTextDef,
+                  backdropFilter: referralSource === opt ? "blur(8px)" : undefined,
+                }}
+              >
+                {opt}
+              </motion.button>
+            ))}
           </motion.div>
         </motion.div>
 
