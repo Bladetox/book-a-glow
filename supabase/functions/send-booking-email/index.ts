@@ -340,12 +340,13 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
 <body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
   <tr><td style="padding:24px 28px 8px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">New PayShap payment claim &#128178;</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">New Payshap Payment &#128178;</p>
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">${clientName} has submitted a payment reference. Review and confirm below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",      clientName)}
@@ -381,7 +382,7 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail,
           to:       [tenantEmail],
-          subject:  `&#128178; PayShap claim from ${clientName} — ${formattedDate}`,
+          subject:  `&#128178; Payshap Payment from ${clientName} — ${formattedDate}`,
           html:     ownerHtml,
         });
       }
@@ -473,6 +474,7 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
 <body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
@@ -564,15 +566,17 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Booking Confirmed & Fully Paid — ${formattedDate} at ${formattedTime}`,
-          html:     emailWrapper(logoHtml, tenantName, "Booking Confirmed — Fully Paid", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
+          subject:  `Booking Confirmed — Fully Paid &#10003;`,
+          html:     emailWrapper(logoHtml, tenantName, "Booking Confirmed & Fully Paid", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
           ...(icsContent ? { attachments: [{ filename: "appointment.ics", content: btoa(icsContent), content_type: "text/calendar; method=REQUEST" }] } : {}),
         };
         await send(clientPayload);
       }
 
+      // Tenant notification
       if (tenantEmail) {
         await new Promise((r) => setTimeout(r, 300));
+
         const gcalOwnerLink = buildGcalLink({
           title:     `${serviceNames} — ${clientName}`,
           startDate: booking.booking_date,
@@ -581,77 +585,46 @@ Deno.serve(async (req) => {
           details:   `Client: ${clientName} | Phone: ${clientPhone} | Full payment: ${totalAmount}`,
           location,
         });
+
         const ownerHtml = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${OWNER_STYLES}</style></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
+  <style>${OWNER_STYLES}</style>
+</head>
 <body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
   <tr><td style="padding:24px 28px 8px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">New booking — fully paid &#128179;&#10003;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">Full payment confirmed. No balance outstanding.</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Full payment confirmed &#127881;</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">Full payment received — add to your calendar below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
-      ${row("Client",       clientName)}
-      ${row("Phone",        clientPhone || "—")}
-      ${row("Service",      serviceNames)}
-      ${row("Date",         formattedDate)}
-      ${row("Time",         formattedTime)}
-      ${row("Full payment", totalAmount, true)}
-      ${row("Balance due",  "R0.00 — Fully Paid")}
+      ${row("Client",        clientName)}
+      ${row("Phone",         clientPhone || "—")}
+      ${row("Service",       serviceNames)}
+      ${row("Date",          formattedDate)}
+      ${row("Time",          formattedTime)}
+      ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
-  <tr><td style="padding:16px 28px 20px;">${calendarButton(gcalOwnerLink)}</td></tr>
-  <tr><td style="padding:0 28px 16px;"><p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p></td></tr>
+  <tr><td style="padding:16px 28px 20px;">
+    ${calendarButton(gcalOwnerLink)}
+  </td></tr>
+  <tr><td style="padding:0 28px 16px;">
+    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  </td></tr>
 </table>
 </body></html>`;
+
         await send({
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail,
           to:       [tenantEmail],
-          subject:  `&#128179; Full payment received — ${clientName} on ${formattedDate}`,
+          subject:  `&#127881; Full payment confirmed — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
-    }
-
-    // ======================================================================
-    // BALANCE REQUEST
-    // ======================================================================
-    if (email_type === "balance_request") {
-      if (!payment_url) {
-        return new Response(JSON.stringify({ error: "payment_url required for balance_request" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (!clientEmail) {
-        return new Response(JSON.stringify({ error: "No client email for this booking" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const balanceBody = `
-        <tr><td style="padding:28px 32px 16px;">
-          <p class="tm" style="margin:0 0 12px;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>,</p>
-          <p class="tl" style="margin:0 0 8px;font-size:14px;color:#555;line-height:1.6;">Thank you for your appointment on <strong style="color:#000;">${formattedDate}</strong>.</p>
-          <p class="tl" style="margin:0;font-size:14px;color:#555;line-height:1.6;">Your remaining balance of <strong style="color:#000;">${balanceDue}</strong> for <strong style="color:#000;">${serviceNames}</strong> is ready to settle securely online.</p>
-        </td></tr>
-        <tr><td style="padding:8px 32px 28px;text-align:center;">
-          <a href="${payment_url}" target="_blank"
-            style="display:inline-block;padding:14px 32px;border-radius:10px;background:#000;color:#fff;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.04em;">
-            Pay ${balanceDue} Securely
-          </a>
-          <p class="tl" style="margin:12px 0 0;font-size:11px;color:#aaa;">Powered by Yoco &middot; Safe &amp; encrypted</p>
-        </td></tr>
-        ${reviewLink ? `<tr><td style="padding:0 32px 20px;">
-          <p class="tl" style="margin:0;font-size:13px;color:#666;">Once you are done, we would love to hear about your experience — <a href="${reviewLink}" target="_blank" style="color:#000;font-weight:600;">share your review</a> and help others discover ${tenantName}.</p>
-        </td></tr>` : ""}
-      `;
-      await send({
-        from:     `${tenantName} <bookings@nextslot.co.za>`,
-        reply_to: tenantEmail ?? undefined,
-        to:       [clientEmail],
-        subject:  `Your balance payment — ${balanceDue} due`,
-        html:     emailWrapper(logoHtml, tenantName, "Balance Payment Request", balanceBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
-      });
     }
 
     // ======================================================================
@@ -659,60 +632,84 @@ Deno.serve(async (req) => {
     // ======================================================================
     if (email_type === "balance_paid") {
 
+      const mapsLink = tenantAddress
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenantAddress)}`
+        : null;
+
       if (clientEmail) {
         const clientBody = `
           <tr><td style="padding:24px 32px 8px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>, your balance has been received. You are all settled! &#10003;</p>
+            <p class="tm" style="margin:0;font-size:15px;color:#000;">Hi <strong>${clientName}</strong>, your balance has been received! &#10003;</p>
           </td></tr>
           <tr><td style="padding:16px 32px 24px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;">Booking Details</p>
             ${detailTable(
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
-              detailRow("Total Paid", `${totalAmount} &#10003;`) +
-              detailRow("Balance Outstanding", "R0.00", true)
+              detailRow("Time", formattedTime) +
+              (mapsLink
+                ? detailRow("Location", `<a href="${mapsLink}" target="_blank" style="color:#000;font-weight:600;text-decoration:underline;">${tenantAddress}</a>`, true)
+                : detailRow("Location", location, true)
+              )
             )}
           </td></tr>
-          ${reviewLink ? `<tr><td style="padding:0 32px 20px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;">We would love to hear about your experience — <a href="${reviewLink}" target="_blank" style="color:#000;font-weight:600;">leave us a review</a>.</p>
-          </td></tr>` : ""}
+          <tr><td style="padding:0 32px 20px;">
+            ${detailTable(
+              detailRow("Total Paid", `${totalAmount} &#10003;`, true)
+            )}
+            <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;">You are all paid up. See you on ${formattedDate}!</p>
+          </td></tr>
+          <tr><td style="padding:0 32px 24px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;">Questions? <a href="tel:${tenantPhone}" style="color:#000;font-weight:600;">${tenantPhone}</a></p>
+          </td></tr>
         `;
+
         await send({
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Balance received — you are all paid up! &#10003;`,
-          html:     emailWrapper(logoHtml, tenantName, "Balance Received — All Paid", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
+          subject:  `Balance received — all paid up &#10003;`,
+          html:     emailWrapper(logoHtml, tenantName, "Balance Received", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
         });
       }
 
+      // Tenant notification
       if (tenantEmail) {
         await new Promise((r) => setTimeout(r, 300));
+
         const ownerHtml = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${OWNER_STYLES}</style></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
+  <style>${OWNER_STYLES}</style>
+</head>
 <body class="ob" style="margin:0;padding:24px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
   <tr><td style="padding:24px 28px 8px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Balance settled &#128176;&#10003;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">${clientName} has paid their balance. Booking fully settled.</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Balance received &#127881;</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">${clientName} has paid their outstanding balance.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
-      ${row("Client",       clientName)}
-      ${row("Phone",        clientPhone || "—")}
-      ${row("Service",      serviceNames)}
-      ${row("Date",         formattedDate)}
-      ${row("Time",         formattedTime)}
-      ${row("Balance paid", balanceDue, true)}
-      ${row("Total paid",   totalAmount)}
+      ${row("Client",         clientName)}
+      ${row("Phone",          clientPhone || "—")}
+      ${row("Service",        serviceNames)}
+      ${row("Date",           formattedDate)}
+      ${row("Time",           formattedTime)}
+      ${row("Total received", totalAmount, true)}
     </table>
   </td></tr>
-  <tr><td style="padding:0 28px 16px;"><p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p></td></tr>
+  <tr><td style="padding:0 28px 16px;">
+    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  </td></tr>
 </table>
 </body></html>`;
+
         await send({
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail,
           to:       [tenantEmail],
-          subject:  `&#128176; Balance received — ${clientName} on ${formattedDate}`,
+          subject:  `&#127881; Balance received — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
