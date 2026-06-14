@@ -296,47 +296,53 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           >
             {attempted && !isSelected ? "Please select an option to continue" : "Scroll to see all options"}
           </p>
+
+          {/* Shake wrapper — only animates, never clips */}
           <motion.div
-            className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-            style={{
-              position: "relative",
-              left: "50%",
-              width: "100dvw",
-              marginLeft: "-50dvw",
-              paddingLeft: "1.5rem",
-              paddingRight: "1.5rem",
-              boxSizing: "border-box",
-            }}
             animate={attempted && !isSelected ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
-            {referralOptions.map(opt => (
-              <motion.button
-                key={opt}
-                whileTap={{ scale: 0.91 }}
-                onClick={() => {
-                  onReferralChange(referralSource === opt ? "" : opt);
-                  if (attempted) setAttempted(false);
-                }}
-                className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
-                style={{
-                  border: referralSource === opt
-                    ? `1px solid ${chipBorderSel}`
-                    : attempted && !isSelected
-                      ? `1px solid ${errorColor.replace("0.85", "0.25")}`
-                      : `1px solid ${chipBorderDef}`,
-                  background: referralSource === opt ? chipSelected : "transparent",
-                  color: referralSource === opt
-                    ? chipTextSel
-                    : attempted && !isSelected
-                      ? errorColorDim
-                      : chipTextDef,
-                  backdropFilter: referralSource === opt ? "blur(8px)" : undefined,
-                }}
-              >
-                {opt}
-              </motion.button>
-            ))}
+            {/* Full-bleed scroll container — owns overflow-x-auto, never transformed */}
+            <div
+              className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+              style={{
+                position: "relative",
+                left: "50%",
+                width: "100dvw",
+                marginLeft: "-50dvw",
+                paddingLeft: "1.5rem",
+                paddingRight: "1.5rem",
+                boxSizing: "border-box",
+              }}
+            >
+              {referralOptions.map(opt => (
+                <motion.button
+                  key={opt}
+                  whileTap={{ scale: 0.91 }}
+                  onClick={() => {
+                    onReferralChange(referralSource === opt ? "" : opt);
+                    if (attempted) setAttempted(false);
+                  }}
+                  className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
+                  style={{
+                    border: referralSource === opt
+                      ? `1px solid ${chipBorderSel}`
+                      : attempted && !isSelected
+                        ? `1px solid ${errorColor.replace("0.85", "0.25")}`
+                        : `1px solid ${chipBorderDef}`,
+                    background: referralSource === opt ? chipSelected : "transparent",
+                    color: referralSource === opt
+                      ? chipTextSel
+                      : attempted && !isSelected
+                        ? errorColorDim
+                        : chipTextDef,
+                    backdropFilter: referralSource === opt ? "blur(8px)" : undefined,
+                  }}
+                >
+                  {opt}
+                </motion.button>
+              ))}
+            </div>
           </motion.div>
         </motion.div>
 
