@@ -313,26 +313,42 @@ Deno.serve(async (req) => {
     // PAYSHAP PENDING
     // Triggered immediately when the client submits their payment reference.
     // Sends:
-    //   1. Client: receipt of reference + reminder to watch email/WhatsApp
+    //   1. Client: receipt of reference + payment type (full/deposit) + amounts
     //   2. Tenant: all booking details + WhatsApp confirm button + Add to Calendar
     // ======================================================================
     if (email_type === "payshap_proof_submitted") {
 
       // 1. CLIENT email
       if (clientEmail) {
-        const clientBody = `
-          <tr><td style="padding:28px 36px 10px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
-            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">Your payment reference has been received. Your booking details are below and your studio will confirm your appointment shortly.</p>
-          </td></tr>
-          <tr><td style="padding:18px 36px 26px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
-            ${detailTable(
+        const payshapClientPaymentRows = isFullPayment
+          ? detailTable(
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
+              detailRow("Full Payment", `${totalAmount} &#10003;`) +
               detailRow("Your Reference", payshapRef || "(none submitted)", true)
-            )}
+            )
+          : detailTable(
+              detailRow("Service", serviceNames) +
+              detailRow("Date", formattedDate) +
+              detailRow("Time", formattedTime) +
+              detailRow("Deposit Paid", `${depositAmount} &#10003;`) +
+              detailRow("Balance Due on Day", balanceDue) +
+              detailRow("Your Reference", payshapRef || "(none submitted)", true)
+            );
+
+        const payshapClientIntro = isFullPayment
+          ? `Your full payment of <strong>${totalAmount}</strong> has been received. Your studio will confirm your appointment shortly.`
+          : `Your deposit of <strong>${depositAmount}</strong> has been received. The remaining balance of <strong>${balanceDue}</strong> will be due on the day. Your studio will confirm your appointment shortly.`;
+
+        const clientBody = `
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
+            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">${payshapClientIntro}</p>
+          </td></tr>
+          <tr><td style="padding:18px 36px 26px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
+            ${payshapClientPaymentRows}
           </td></tr>
           <tr><td style="padding:0 36px 26px;">
             <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:14px 18px;border-left:3px solid #000;">
@@ -345,8 +361,10 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Payment reference received — awaiting confirmation`,
-          html:     emailWrapper(logoHtml, tenantName, "Payment Reference Received", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
+          subject:  isFullPayment
+            ? `Full payment received — awaiting confirmation`
+            : `Deposit received — awaiting confirmation`,
+          html:     emailWrapper(logoHtml, tenantName, isFullPayment ? "Full Payment Received" : "Deposit Received", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
         });
       }
 
@@ -370,6 +388,13 @@ Deno.serve(async (req) => {
         const waNumber = rawPhone.startsWith("0") ? "27" + rawPhone.slice(1) : rawPhone;
         const waLink   = `https://wa.me/${waNumber}?text=${waMessage}`;
 
+        const ownerPaymentHeading = isFullPayment
+          ? "New Payshap Full Payment 💳"
+          : "New Payshap Deposit 💳";
+        const ownerPaymentSubline = isFullPayment
+          ? `${clientName} has submitted a full payment reference. Review and confirm below.`
+          : `${clientName} has submitted a deposit reference. Review and confirm below.`;
+
         const ownerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -381,8 +406,8 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">New Payshap Payment 💳</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has submitted a payment reference. Review and confirm below.</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">${ownerPaymentHeading}</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${ownerPaymentSubline}</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",      clientName)}
       ${row("Phone",       clientPhone || "—")}
@@ -392,6 +417,7 @@ Deno.serve(async (req) => {
       ${row("Location",    tenantLocationDisplay || "—")}
       ${row("Reference",   payshapRef || "—")}
       ${row("Payment",     isFullPayment ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
+      ${!isFullPayment ? row("Balance Due on Day", balanceDue) : ""}
     </table>
   </td></tr>
   <tr><td style="padding:16px 28px 22px;">
@@ -418,7 +444,9 @@ Deno.serve(async (req) => {
           from:     `NextSlot <bookings@nextslot.co.za>`,
           reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
-          subject:  `💳 Payshap Payment from ${clientName} — ${formattedDate}`,
+          subject:  isFullPayment
+            ? `💳 Payshap Full Payment from ${clientName} — ${formattedDate}`
+            : `💳 Payshap Deposit from ${clientName} — ${formattedDate}`,
           html:     ownerHtml,
         });
       }
