@@ -284,12 +284,12 @@ Deno.serve(async (req) => {
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawSalonAddress)}`
       : null;
 
-    // WhatsApp confirmation message — address shown to client
-    // Call-out: show the client's own address so they know we have the right place
-    // Fixed:    show the studio address so the client knows where to go
-    const waAddressPart = isCallOut
-      ? (rawCallOutAddress ? ` — we're coming to you at ${rawCallOutAddress}` : "")
-      : (rawSalonAddress   ? ` at ${rawSalonAddress}` : "");
+    // WhatsApp location part for the confirmation message
+    // Call-out: tenant comes to client — show client's address
+    // Fixed:    client comes to salon — show salon name + address
+    const waLocation = isCallOut
+      ? (rawCallOutAddress || tenantName)
+      : (rawSalonAddress ? `${tenantName}, ${rawSalonAddress}` : tenantName);
 
     const gcalBookingLink = buildGcalLink({
       title:     `${serviceNames} at ${tenantName}`,
@@ -299,9 +299,6 @@ Deno.serve(async (req) => {
       details:   `Booking with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}`,
       location:  calendarLocation,
     });
-
-    // Base URL for the confirm-booking edge function
-    const confirmBookingUrl = `${supabaseUrl}/functions/v1/confirm-booking?booking_id=${booking_id}`;
 
     const send = async (payload: Record<string, unknown>) => {
       const res = await fetch(RESEND_API_URL, {
@@ -367,7 +364,7 @@ Deno.serve(async (req) => {
         });
 
         const waMessage = encodeURIComponent(
-          `Hi ${clientName.split(" ")[0]}, your booking at ${tenantName}${waAddressPart} for ${serviceNames} on ${formattedDate} at ${formattedTime} has been confirmed! We look forward to seeing you.\n\nConfirm booking: ${confirmBookingUrl}`
+          `Hi ${clientName.split(" ")[0]},\nYour booking for ${serviceNames} with ${tenantName} on ${formattedDate} has been confirmed.\nPlease add it to your calendar. We look forward to welcoming you at ${waLocation}.\nSee you soon!`
         );
         const rawPhone = clientPhone.replace(/[^0-9]/g, "");
         const waNumber = rawPhone.startsWith("0") ? "27" + rawPhone.slice(1) : rawPhone;
