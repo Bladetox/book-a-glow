@@ -452,64 +452,23 @@ const StatusBadge = ({ status }: { status: Appointment["status"] }) => (
 );
 
 // ---------------------------------------------------------------------------
-// Nexty AI — compact proactive insight cards shown at the top of the Dashboard.
+// Nexty AI — priority icon and accent maps.
 // ---------------------------------------------------------------------------
 const priorityIcon: Record<string, React.ElementType> = {
-  critical: AlertTriangle,
-  high:     TrendingUp,
-  medium:   UserCheck,
-  low:      Clock,
+  critical:  AlertTriangle,
+  high:      TrendingUp,
+  medium:    UserCheck,
+  low:       Clock,
+  important: AlertTriangle,
+  info:      Info,
 };
 const priorityAccent: Record<string, { icon: string; bg: string; border: string }> = {
-  critical: { icon: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/20" },
-  high:     { icon: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-  medium:   { icon: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20" },
-  low:      { icon: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
-};
-
-const NextyInsightCards = ({ onNavigate }: { onNavigate?: (view: string) => void }) => {
-  const { data: insights, isLoading } = useNextyInsights();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-white/20 text-xs py-3">
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        Analysing your business data…
-      </div>
-    );
-  }
-
-  if (!insights || insights.length === 0) {
-    return <p className="text-xs text-white/20 py-2">No insights yet. Check back once more bookings come in.</p>;
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {insights.slice(0, 3).map((insight) => {
-        const Icon   = priorityIcon[insight.priority]  ?? TrendingUp;
-        const accent = priorityAccent[insight.priority] ?? priorityAccent.low;
-        return (
-          <div key={insight.id} className={`flex items-start gap-3 p-3.5 rounded-xl border bg-white/[0.02] ${accent.border}`}>
-            <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${accent.bg}`}>
-              <Icon className={`w-3.5 h-3.5 ${accent.icon}`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${accent.icon}`}>{insight.title}</p>
-              <p className="text-xs text-white/55 leading-relaxed">{insight.message}</p>
-              {insight.actionLabel && (
-                <button
-                  onClick={() => onNavigate?.(insight.actionView || "Recommendations")}
-                  className="mt-1.5 flex items-center gap-1.5 text-[10px] text-white/35 hover:text-white/65 transition-colors font-medium"
-                >
-                  {insight.actionLabel} <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+  critical:  { icon: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/20" },
+  high:      { icon: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+  medium:    { icon: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20" },
+  low:       { icon: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
+  important: { icon: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
+  info:      { icon: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20" },
 };
 
 // ---------------------------------------------------------------------------
@@ -986,12 +945,6 @@ const AdminDashboard = ({
               />
             )}
           </div>
-        </motion.section>
-      )}
-
-      {visibility.leadSource && (
-        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
-          <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
         </motion.section>
       )}
 
