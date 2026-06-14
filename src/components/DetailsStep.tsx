@@ -726,99 +726,100 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
 
         {/* Address */}
         <AnimatePresence initial={false}>
-          {mobileServiceEnabled && (
-            // FIX 2b: flip to overflow-visible once open animation completes
-            <motion.div
-              key="address-field"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              onAnimationComplete={(def) => setAddressCollapsed(def === "exit")}
-              className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
+  {mobileServiceEnabled && (
+    <motion.div
+      key="address-field"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeInOut" }}
+      onAnimationComplete={(def) => setAddressCollapsed(def === "exit")}
+      className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
+    >
+      <div>
+        {/* Input + suggestions share a relative container so suggestions can anchor to bottom-full */}
+        <div className="relative">
+          <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
+          {addressLoading && !booking.addressVerified && (
+            <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
+          )}
+          {booking.address.length > 0 && !addressLoading && (
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                handleClearAddress();
+              }}
+              className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors z-10"
+              aria-label="Clear address"
             >
-              <div>
-                <div className="relative">
-                  <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-                  {addressLoading && !booking.addressVerified && (
-                    <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
-                  )}
-                  {booking.address.length > 0 && !addressLoading && (
-                    <button
-                      type="button"
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        handleClearAddress();
-                      }}
-                      className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors z-10"
-                      aria-label="Clear address"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <input
-                    id="booking-address"
-                    name="address"
-                    className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
-                    placeholder="Home Address *"
-                    value={booking.address}
-                    inputMode="search"
-                    onChange={(e) => {
-                      onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
-                      if (e.target.value.trim().length >= 2) {
-                        setTouched((prev) => ({ ...prev, address: true }));
-                      }
-                      if (e.target.value.length < 3) setShowSuggestions(false);
-                    }}
-                    onBlur={() => {
-                      markTouched("address");
-                      if (selectingRef.current) return;
-                      setTimeout(() => {
-                        if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
-                          setShowSuggestions(false);
-                        }
-                      }, 300);
-                    }}
-                    onFocus={() => {
-                      if (addressSuggestions.length > 0 && !booking.addressVerified) {
-                        setShowSuggestions(true);
-                      }
-                    }}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                  />
-                </div>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <input
+            id="booking-address"
+            name="address"
+            className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
+            placeholder="Home Address *"
+            value={booking.address}
+            inputMode="search"
+            onChange={(e) => {
+              onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
+              if (e.target.value.trim().length >= 2) {
+                setTouched((prev) => ({ ...prev, address: true }));
+              }
+              if (e.target.value.length < 3) setShowSuggestions(false);
+            }}
+            onBlur={() => {
+              markTouched("address");
+              if (selectingRef.current) return;
+              setTimeout(() => {
+                if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
+                  setShowSuggestions(false);
+                }
+              }, 300);
+            }}
+            onFocus={() => {
+              if (addressSuggestions.length > 0 && !booking.addressVerified) {
+                setShowSuggestions(true);
+              }
+            }}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
 
-                <AnimatePresence>
-                  {showSuggestions && addressSuggestions.length > 0 && (
-                    <motion.div
-                      ref={suggestionsRef}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-                      className="overflow-hidden"
+          {/* Suggestions — anchored ABOVE the input so keyboard never obscures them */}
+          <AnimatePresence>
+            {showSuggestions && addressSuggestions.length > 0 && (
+              <motion.div
+                ref={suggestionsRef}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute left-0 right-0 bottom-full mb-1.5 z-50"
+              >
+                <div className="rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl max-h-[220px] overflow-y-auto">
+                  {addressSuggestions.map((s, idx) => (
+                    <button
+                      key={s.place_id}
+                      type="button"
+                      onMouseDown={() => { selectingRef.current = true; }}
+                      onTouchStart={() => { selectingRef.current = true; }}
+                      onClick={() => handleSelectSuggestion(s.description)}
+                      className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
+                        ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
                     >
-                      <div className="mt-1 rounded-2xl overflow-hidden border border-border/40 bg-background/80 backdrop-blur-sm shadow-sm">
-                        {addressSuggestions.map((s, idx) => (
-                          <button
-                            key={s.place_id}
-                            type="button"
-                            onMouseDown={() => { selectingRef.current = true; }}
-                            onTouchStart={() => { selectingRef.current = true; }}
-                            onClick={() => handleSelectSuggestion(s.description)}
-                            className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
-                              ${ idx < addressSuggestions.length - 1 ? "border-b border-border/20" : "" }`}
-                          >
-                            <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                            <span>{s.description}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      <span>{s.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
                 {!showSuggestions && (
                   <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
