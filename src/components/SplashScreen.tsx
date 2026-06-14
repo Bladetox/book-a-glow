@@ -297,13 +297,18 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             {attempted && !isSelected ? "Please select an option to continue" : "Scroll to see all options"}
           </p>
           <motion.div
-          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-          style={{
-            width: "100vw",
-            marginLeft: "calc(-1 * (50vw - 50%))",
-            paddingLeft: "1.5rem",
-            paddingRight: "1.5rem",
-          }}
+            className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+            style={{
+              position: "relative",
+              left: "50%",
+              width: "100dvw",
+              marginLeft: "-50dvw",
+              paddingLeft: "1.5rem",
+              paddingRight: "1.5rem",
+              boxSizing: "border-box",
+            }}
+            animate={attempted && !isSelected ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
           >
             {referralOptions.map(opt => (
               <motion.button
