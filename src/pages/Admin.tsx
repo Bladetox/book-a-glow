@@ -155,7 +155,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-dvh bg-[#0a0a0a] text-white flex flex-col lg:flex-row overflow-hidden">
       <AdminSidebar
         views={allowedViews as unknown as string[]}
         activeView={activeView}
