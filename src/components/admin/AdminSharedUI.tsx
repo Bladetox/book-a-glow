@@ -222,6 +222,7 @@ export const AdminTag = ({
   color = "default",
 }: {
   label?: string;
+  children?: React.ReactNode;
   color?: "default" | "red" | "amber" | "emerald" | "blue" | "sky";
 }) => {
   const colors = {
@@ -234,7 +235,7 @@ export const AdminTag = ({
   };
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded-md border font-medium ${colors[color]}`}>
-      {label}
+      {children ?? label}
     </span>
   );
 };
