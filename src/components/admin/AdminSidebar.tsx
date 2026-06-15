@@ -239,7 +239,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
       <motion.aside
         animate={{ x: xPos }}
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
-        className="fixed lg:relative z-50 lg:z-auto flex flex-col w-64 h-full bg-[#0d0d0d] border-r border-white/[0.06] overflow-y-auto shrink-0"
+        className="fixed lg:relative z-50 lg:z-auto flex flex-col w-64 h-dvh bg-[#0d0d0d] border-r border-white/[0.06] overflow-y-auto shrink-0"
       >
         {/* Brand header */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/[0.05]">
