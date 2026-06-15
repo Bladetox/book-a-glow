@@ -545,7 +545,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   const dueToday = bookings
     .filter(b => {
-      const isToday = format(new Date(b.startTime), "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+      const isToday = b.date === todayStr;
       return isToday && !b.fullPaymentReceived && (b.balance ?? 0) > 0;
     })
     .reduce((sum, b) => sum + (b.balance ?? 0), 0);
