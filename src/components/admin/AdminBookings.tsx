@@ -1011,8 +1011,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                         <p className="text-xs text-white/40 mt-0.5 truncate">{b.service} · {b.date} · {b.time}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {(b.balance ?? 0) > 0 && !b.fullPaymentReceived && (
-                          <PaymentTag>R{(b.balance ?? 0).toFixed(0)} due</PaymentTag>
+                        {(b.balance ?? 0) > 0 && (
+                          <PaymentTag
+                            fullPaymentReceived={b.fullPaymentReceived ?? false}
+                            balance={b.balance ?? 0}
+                            depositPaid={b.depositPaid ?? false}
+                          />
                         )}
                         {isExpanded
                           ? <ChevronUp className="w-3.5 h-3.5 text-white/25" />
