@@ -57,7 +57,12 @@ export default function PayshapProof() {
       .then(({ data, error }) => {
         if (error || !data) { setStage("not-found"); return; }
 
-        if (data.status === "payshap_proof_submitted" || data.status === "confirmed") {
+        // Guard: already submitted via either status value
+        if (
+          data.status === "payment_claimed" ||
+          data.status === "payshap_proof_submitted" ||
+          data.status === "confirmed"
+        ) {
           setStage("already-submitted");
           return;
         }
@@ -98,22 +103,22 @@ export default function PayshapProof() {
     setSubmitting(true);
 
     try {
-      // write reference to booking
-      const updatePayload: Record<string, unknown> = {
-        payshap_reference: reference.trim(),
-        status: "payshap_proof_submitted",
-      };
-
+      // Write reference and advance status so the booking appears in the
+      // AdminPayshapQueue which filters on status = payment_claimed.
       const { error: updateErr } = await supabase
         .from("bookings")
-        .update(updatePayload)
+        .update({
+          payshap_reference: reference.trim(),
+          status: "payment_claimed",
+          payshap_claimed_at: new Date().toISOString(),
+        })
         .eq("id", booking.id);
 
       if (updateErr) throw updateErr;
 
-      // trigger notification email to tenant
+      // Trigger notification email to tenant + acknowledgement to client.
       await supabase.functions.invoke("send-booking-email", {
-        body: { bookingId: booking.id, type: "payshap_proof_submitted" },
+        body: { booking_id: booking.id, email_type: "payshap_proof_submitted" },
       });
 
       setStage("submitted");
