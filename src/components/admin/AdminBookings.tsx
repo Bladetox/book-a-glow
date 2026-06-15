@@ -972,7 +972,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon={<CalendarCheck className="w-5 h-5" />}
+            icon={CalendarCheck}
             title="No bookings found"
             description={searchQuery ? "Try adjusting your search." : "Bookings will appear here once clients start scheduling."}
           />
