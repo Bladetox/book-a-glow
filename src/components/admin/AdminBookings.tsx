@@ -17,7 +17,7 @@ import {
   Check, X, Trash2, ChevronDown, ChevronUp,
   CalendarCheck, CircleDollarSign, MessageSquare, CalendarClock, Loader2,
   Search, AlertTriangle, Edit3, Sparkles, MoreHorizontal,
-  Tag, XCircle
+  Tag
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useQueryClient } from "@tanstack/react-query";
@@ -534,6 +534,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     Cancelled: bookings.filter(b => b.status === "cancelled" || b.status === "no_show").length,
   };
 
+  // ── Restored: overview stats (revenue / outstanding / due today) ───────────
+  const totalRevenue = bookings.reduce((sum, b) => sum + (b.total ?? 0), 0);
+  const totalOutstanding = bookings.reduce((sum, b) => sum + (b.balance ?? 0), 0);
+  const dueToday = bookings
+    .filter(b => b.date === todayStr && (b.balance ?? 0) > 0)
+    .reduce((sum, b) => sum + (b.balance ?? 0), 0);
+
   const handleStatusChange = async (bookingId: string, status: string) => {
     try {
       await updateStatus.mutateAsync({ bookingId, status });
@@ -810,6 +817,15 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     b.status !== "complete" &&
     !b.fullPaymentReceived;
 
+  // ── Restored: page-level loading guard (before modals render) ──────────────
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <>
       {/* ── Modals ────────────────────────────────────────────────────────── */}
@@ -830,7 +846,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         title="Delete booking?"
         description={`This will permanently remove ${confirmDelete?.client}'s booking and cannot be undone.`}
         confirmLabel="Delete"
-        confirmClass="bg-red-500/20 text-red-400 hover:bg-red-500/30"
+        confirmClass="bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
         onConfirm={() => { if (confirmDelete) { handleDelete(confirmDelete.id); setConfirmDelete(null); } }}
         onCancel={() => setConfirmDelete(null)}
       />
@@ -840,7 +856,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         title="Cancel booking?"
         description={`This will cancel ${confirmCancel?.client}'s booking. The client will not be automatically notified.`}
         confirmLabel="Cancel Booking"
-        confirmClass="bg-red-500/20 text-red-400 hover:bg-red-500/30"
+        confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
         onConfirm={() => { if (confirmCancel) { handleStatusChange(confirmCancel.id, "cancelled"); setConfirmCancel(null); } }}
         onCancel={() => setConfirmCancel(null)}
       />
@@ -850,7 +866,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         title="Confirm booking?"
         description={`This will confirm ${confirmConfirm?.client}'s booking and send them a confirmation email.`}
         confirmLabel="Confirm"
-        confirmClass="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+        confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
         onConfirm={() => { if (confirmConfirm) { handleStatusChange(confirmConfirm.id, "confirmed"); setConfirmConfirm(null); } }}
         onCancel={() => setConfirmConfirm(null)}
       />
@@ -860,7 +876,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         title="Mark as fully paid?"
         description={`This will clear ${confirmMarkPaid?.client}'s outstanding balance and mark the booking as fully paid.`}
         confirmLabel="Mark Paid"
-        confirmClass="bg-sky-500/20 text-sky-400 hover:bg-sky-500/30"
+        confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
         onConfirm={() => { if (confirmMarkPaid) { handleMarkFullyPaid(confirmMarkPaid); setConfirmMarkPaid(null); } }}
         onCancel={() => setConfirmMarkPaid(null)}
       />
@@ -870,7 +886,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         title="Mark as serviced?"
         description={`This will mark ${confirmMarkServiced?.client}'s booking as completed / serviced.`}
         confirmLabel="Mark Serviced"
-        confirmClass="bg-sky-500/20 text-sky-400 hover:bg-sky-500/30"
+        confirmClass="bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/30"
         onConfirm={() => { if (confirmMarkServiced) { handleMarkServiced(confirmMarkServiced); setConfirmMarkServiced(null); } }}
         onCancel={() => setConfirmMarkServiced(null)}
       />
@@ -882,7 +898,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           isPayShapTenant ? "PayShap payment link" : "Yoco payment link"
         } for the outstanding balance of R${(confirmRequestBalance?.balance ?? 0).toFixed(2)}.`}
         confirmLabel="Send Request"
-        confirmClass="bg-sky-500/20 text-sky-400 hover:bg-sky-500/30"
+        confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
         onConfirm={() => { if (confirmRequestBalance) { handleRequestBalance(confirmRequestBalance); setConfirmRequestBalance(null); } }}
         onCancel={() => setConfirmRequestBalance(null)}
       />
@@ -916,21 +932,79 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       />
 
       {/* ── Page ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 min-h-0">
+      <div className="flex flex-col gap-8 pb-12">
         <AdminPageHeader
           title="Bookings"
-          subtitle={`${bookings.length} total booking${bookings.length !== 1 ? "s" : ""}`}
+          subtitle="View bookings, update guest details, manage payments, reschedule appointments, and handle client actions."
         />
+
+        {/* ── Overview ─────────────────────────────────────────────────────── */}
+        <SectionLabel label="Overview" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Today */}
+          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+              <CalendarCheck className="w-4 h-4 text-white/35" />
+            </div>
+            <div>
+              <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Today</p>
+              <p className="text-sm font-semibold text-white/90">{counts.Today}</p>
+            </div>
+          </div>
+
+          {/* Pending */}
+          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+              <Clock className="w-4 h-4 text-amber-400/60" />
+            </div>
+            <div>
+              <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Pending</p>
+              <p className="text-sm font-semibold text-amber-400">{counts.Pending}</p>
+            </div>
+          </div>
+
+          {/* Revenue + Outstanding + Due Today (spans 2 cols) */}
+          <div className="col-span-2 rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+              <CircleDollarSign className="w-4 h-4 text-white/35" />
+            </div>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div>
+                <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Total Revenue</p>
+                <p className="text-sm font-semibold text-white/90">R {totalRevenue.toLocaleString()}</p>
+              </div>
+              <div className="h-7 w-px bg-white/[0.07]" />
+              <div>
+                <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Outstanding</p>
+                <p className="text-sm font-semibold text-red-400">R {totalOutstanding.toLocaleString()}</p>
+              </div>
+              {dueToday > 0 && (
+                <>
+                  <div className="h-7 w-px bg-white/[0.07]" />
+                  <div>
+                    <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Due Today</p>
+                    <p className="text-sm font-semibold text-amber-400">R {dueToday.toLocaleString()}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Bookings List ────────────────────────────────────────────────── */}
+        <SectionLabel label="Bookings List" />
 
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
           <input
+            id="bookings-search"
+            name="bookings-search"
             type="text"
             placeholder="Search by name, service, or ref…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 focus:bg-white/[0.06] transition-colors"
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] transition-colors"
           />
           {searchQuery && (
             <button
@@ -938,27 +1012,27 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
               aria-label="Clear search"
             >
-              <XCircle className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
         {/* Filters */}
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {filters.map(f => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+              className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap border transition-colors ${
                 activeFilter === f
-                  ? "bg-white/[0.10] text-white/90 border border-white/[0.15]"
-                  : "text-white/40 hover:text-white/60 hover:bg-white/[0.04]"
+                  ? "bg-white/[0.12] text-white border-white/[0.15]"
+                  : "text-white/35 border-white/[0.06] hover:text-white/60"
               }`}
             >
-              {f}
-              {counts[f] > 0 && (
-                <span className={`ml-1.5 text-[10px] ${
-                  activeFilter === f ? "text-white/50" : "text-white/25"
+              {f === "Completed" ? "Serviced" : f}
+              {f !== "All" && f !== "Today" && counts[f] > 0 && (
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                  activeFilter === f ? "bg-white/[0.15] text-white/70" : "bg-white/[0.06] text-white/25"
                 }`}>{counts[f]}</span>
               )}
             </button>
@@ -966,11 +1040,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         </div>
 
         {/* Booking list */}
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
-          </div>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
             icon={CalendarCheck}
             title="No bookings found"
@@ -978,8 +1048,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           />
         ) : (
           <div className="flex flex-col gap-2">
-            <AnimatePresence initial={false}>
-              {filtered.map(b => {
+            {(() => {
+              const todayBookings = filtered.filter(b => b.date === todayStr);
+              const upcomingBookings = filtered.filter(b => b.date > todayStr);
+              const pastBookings = filtered.filter(b => b.date < todayStr);
+
+              const renderCard = (b: BookingRow) => {
                 const isExpanded = expandedId === b.id;
                 const isEditing = editingInlineId === b.id;
                 const blockInfo = blockStatusMap[b.id];
@@ -988,9 +1062,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                   <motion.div
                     key={b.id}
                     layout
-                    initial={{ opacity: 0, y: 6 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
+                    exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
                     className={`rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden ${
                       statusBorderAccent[b.status]
@@ -1273,8 +1347,31 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                     </AnimatePresence>
                   </motion.div>
                 );
-              })}
-            </AnimatePresence>
+              };
+
+              return (
+                <>
+                  {todayBookings.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[10px] tracking-[0.12em] uppercase text-white/25 px-1">Today</p>
+                      <AnimatePresence initial={false}>{todayBookings.map(renderCard)}</AnimatePresence>
+                    </div>
+                  )}
+                  {upcomingBookings.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[10px] tracking-[0.12em] uppercase text-white/25 px-1">Upcoming</p>
+                      <AnimatePresence initial={false}>{upcomingBookings.map(renderCard)}</AnimatePresence>
+                    </div>
+                  )}
+                  {pastBookings.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[10px] tracking-[0.12em] uppercase text-white/25 px-1">Past</p>
+                      <AnimatePresence initial={false}>{pastBookings.map(renderCard)}</AnimatePresence>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
