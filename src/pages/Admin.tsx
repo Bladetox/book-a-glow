@@ -99,6 +99,42 @@ interface AdminShellProps {
   subscription: TenantSubscription | null;
 }
 
+// ── Tenant avatar shown in the mobile header ──────────────────────────────────
+const TenantAvatar = ({ tenant }: { tenant: Tenant | null }) => {
+  const [imgError, setImgError] = useState(false);
+
+  if (!tenant) return null;
+
+  const name   = tenant.name ?? "";
+  const words  = name.trim().split(/\s+/).filter(Boolean);
+  const initials =
+    words.length >= 2
+      ? (words[0][0] + words[1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase() || "NS";
+
+  const showImg = !!tenant.logo_url && !imgError;
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="w-6 h-6 rounded-lg bg-white/[0.07] border border-white/[0.1] flex items-center justify-center overflow-hidden shrink-0">
+        {showImg ? (
+          <img
+            src={tenant.logo_url!}
+            alt={name}
+            width={24}
+            height={24}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <span className="text-[8px] font-bold text-white/50 leading-none">{initials}</span>
+        )}
+      </div>
+      <span className="text-[11px] font-medium text-white/70 truncate max-w-[120px]">{name}</span>
+    </div>
+  );
+};
+
 const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   const isLifetimeFree = tenant?.is_lifetime_free === true;
 
@@ -169,26 +205,38 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
         {isArrears && <ArrearsBanner />}
 
         <header className="h-16 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
-          <div className="flex items-center gap-3">
+          {/* Left: hamburger (mobile only) + view title */}
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 text-white/40 hover:text-white transition-colors"
+              className="lg:hidden p-2 -ml-2 text-white/40 hover:text-white transition-colors shrink-0"
+              aria-label="Open navigation"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-sm font-semibold tracking-tight text-white/90">{activeView}</h1>
+            <h1 className="text-sm font-semibold tracking-tight text-white/90 truncate">{activeView}</h1>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Right: tenant brand (mobile only) + bell + divider + tenant name (desktop only) */}
+          <div className="flex items-center gap-3">
+            {/* Tenant logo + name — visible on mobile only, hidden on lg+ (sidebar already shows it) */}
+            <div className="lg:hidden">
+              <TenantAvatar tenant={tenant} />
+            </div>
+
             <NotificationBell />
+
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
+
+            {/* Tenant name text block — desktop only */}
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-[11px] font-medium text-white/80">{tenant?.name}</span>
+              <span className="text-[11px] font-medium text-white/80 truncate max-w-[160px]">{tenant?.name}</span>
               <span className="text-[9px] text-white/30 uppercase tracking-wider">Admin</span>
             </div>
           </div>
         </header>
 
-        {/* Content region — pb-24 padding hack removed; AdminMobileNav is now a flex sibling */}
+        {/* Content region */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth relative z-10 scrollbar-hide">
           <AdminErrorBoundary>
             <Suspense
