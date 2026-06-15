@@ -132,3 +132,4 @@ export function useTenant(): TenantContextValue {
   if (!ctx) throw new Error("useTenant must be used inside TenantProvider (admin layout)");
   return ctx;
 }
+
