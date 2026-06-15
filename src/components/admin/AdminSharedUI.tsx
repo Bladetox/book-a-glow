@@ -218,9 +218,10 @@ export const SavedBadge = ({ visible }: { visible: boolean }) =>
 // ── AdminTag ──────────────────────────────────────────────────────────────────
 export const AdminTag = ({
   label,
+  children,
   color = "default",
 }: {
-  label: string;
+  label?: string;
   color?: "default" | "red" | "amber" | "emerald" | "blue" | "sky";
 }) => {
   const colors = {
