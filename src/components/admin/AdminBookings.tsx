@@ -33,6 +33,7 @@ type FilterType = typeof filters[number];
 const statusDisplayLabel: Record<BookingRow["status"], string> = {
   pending:         "pending",
   pending_payment: "awaiting payment",
+  payment_claimed: "payment claimed",
   confirmed:       "confirmed",
   in_progress:     "in progress",
   completed:       "serviced",
@@ -44,6 +45,7 @@ const statusDisplayLabel: Record<BookingRow["status"], string> = {
 const statusBorderAccent: Record<BookingRow["status"], string> = {
   pending:         "border-l-2 border-l-amber-500/50",
   pending_payment: "border-l-2 border-l-orange-500/40",
+  payment_claimed: "border-l-2 border-l-orange-400/40",
   confirmed:       "border-l-2 border-l-emerald-500/30",
   in_progress:     "border-l-2 border-l-sky-400/40",
   completed:       "border-l-2 border-l-sky-500/20",
@@ -55,7 +57,7 @@ const statusBorderAccent: Record<BookingRow["status"], string> = {
 const statusTagColor = (
   status: BookingRow["status"]
 ): "amber" | "emerald" | "sky" | "red" | "default" => {
-  if (status === "pending" || status === "pending_payment") return "amber";
+  if (status === "pending" || status === "pending_payment" || status === "payment_claimed") return "amber";
   if (status === "confirmed")                               return "emerald";
   if (status === "completed" || status === "complete" || status === "in_progress") return "sky";
   if (status === "cancelled" || status === "no_show")       return "red";
@@ -1103,19 +1105,19 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </div>
                                 )}
 
-                                {/* Payment summary */}
-                                {(b.price != null || b.depositAmount != null || b.balance != null) && (
+                                {/* Payment summary — uses b.total and b.deposit (correct BookingRow fields) */}
+                                {((b.total ?? 0) > 0 || (b.deposit ?? 0) > 0 || (b.balance ?? 0) > 0) && (
                                   <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-wrap gap-x-4 gap-y-1">
-                                    {b.price != null && (
+                                    {(b.total ?? 0) > 0 && (
                                       <div className="flex flex-col">
                                         <span className="text-[10px] text-white/25">Total</span>
-                                        <span className="text-xs text-white/65 font-medium">R{b.price.toFixed(2)}</span>
+                                        <span className="text-xs text-white/65 font-medium">R{(b.total ?? 0).toFixed(2)}</span>
                                       </div>
                                     )}
-                                    {b.depositAmount != null && (
+                                    {(b.deposit ?? 0) > 0 && (
                                       <div className="flex flex-col">
                                         <span className="text-[10px] text-white/25">Deposit</span>
-                                        <span className="text-xs text-white/65 font-medium">R{b.depositAmount.toFixed(2)}</span>
+                                        <span className="text-xs text-white/65 font-medium">R{(b.deposit ?? 0).toFixed(2)}</span>
                                       </div>
                                     )}
                                     {(b.balance ?? 0) > 0 && (
