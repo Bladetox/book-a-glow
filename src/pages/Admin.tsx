@@ -204,7 +204,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
         {/* Arrears banner — shown below the top header, above content */}
         {isArrears && <ArrearsBanner />}
 
-        <header className="h-16 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
+        <header className="h-16 border-b border-black bg-black flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
           {/* Left: hamburger (mobile only) + view title */}
           <div className="flex items-center gap-3 min-w-0">
             <button
