@@ -267,6 +267,16 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       const bookingId = await ensureBookingCreated();
 
       if (isPayshap) {
+        // Fire payshap_instructions email immediately after booking is created.
+        // This sends the tenant's PayShap number, amount due, and the
+        // /payshap-confirm/:bookingId link to the client.
+        // Non-fatal: a failed email must not block the booking flow.
+        supabase.functions.invoke("send-booking-email", {
+          body: { booking_id: bookingId, email_type: "payshap_instructions" },
+        }).catch((emailErr) => {
+          console.warn("payshap_instructions email failed (non-fatal):", emailErr);
+        });
+
         await releaseHold();
         setPayshapBookingId(bookingId);
         setPayshapSheetOpen(true);
