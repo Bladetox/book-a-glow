@@ -188,7 +188,8 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-24 lg:pb-8 scroll-smooth relative z-10 scrollbar-hide">
+        {/* Content region — pb-24 padding hack removed; AdminMobileNav is now a flex sibling */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth relative z-10 scrollbar-hide">
           <AdminErrorBoundary>
             <Suspense
               fallback={
@@ -216,6 +217,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
           </AdminErrorBoundary>
         </div>
 
+        {/* AdminMobileNav is a flex sibling — pinned to bottom by the flex column, no position:fixed needed */}
         <AdminMobileNav
           activeView={activeView}
           onSelect={(v) => setActiveView(v as ViewName)}

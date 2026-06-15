@@ -1,4 +1,4 @@
-// C7 — Mobile bottom navigation bar for admin (pinned, shown on < lg screens)
+// C7 — Mobile bottom navigation bar for admin (flex sibling inside <main>, shown on < lg screens)
 import { motion } from "framer-motion";
 import {
   DashboardIcon,
@@ -57,10 +57,11 @@ interface AdminMobileNavProps {
 }
 
 const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileNavProps) => (
+  // Positioned as a flex sibling inside <main> — the flex column pushes it to the bottom
+  // naturally. No position:fixed needed. Safe-area inset preserved for iOS home indicator.
   // FIX: removed backdrop-blur-md — causes blank screen on low-end mobile browsers
-  // FIX: use min-h instead of h to prevent collapse on older Safari
   <nav
-    className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-white/[0.07] bg-[#0a0a0a]"
+    className="lg:hidden flex-shrink-0 border-t border-white/[0.07] bg-[#0a0a0a]"
     style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
   >
     <div className="flex items-center justify-around" style={{ height: "56px" }}>
