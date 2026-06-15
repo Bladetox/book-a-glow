@@ -26,12 +26,43 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        navigateFallbackDenylist: [/^\/~oauth/],
+        // Only allow the app shell to be used as a navigation fallback.
+        // Supabase auth redirects and API calls must never hit the fallback.
+        navigateFallbackDenylist: [/^\/~oauth/, /\.supabase\.co/],
+        // Precache only static assets bundled with the app.
+        // Explicitly exclude anything that could resolve to a cross-origin URL.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globIgnores: ["**/supabase/**", "**/*.map"],
+        // Hard cap so large cross-origin opaque responses never enter the cache.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: /https:\/\/[a-z0-9]+\.supabase\.co\//,
+            // All Supabase traffic (REST, Auth, Storage, Realtime) — never cache.
+            urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co"),
             handler: "NetworkOnly",
+          },
+          {
+            // Google Fonts stylesheets — stale-while-revalidate, same-origin only.
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "google-fonts-stylesheets",
+            },
+          },
+          {
+            // Google Fonts files — cache-first, long-lived.
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts-webfonts",
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
           },
         ],
       },
