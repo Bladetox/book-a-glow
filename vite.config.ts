@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // Only allow the app shell to be used as a navigation fallback.
         // Supabase auth redirects and API calls must never hit the fallback.
         navigateFallbackDenylist: [/^\/~oauth/, /\.supabase\.co/],
