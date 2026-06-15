@@ -156,6 +156,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const resendKey   = Deno.env.get("RESEND_API_KEY")!;
+    const appBaseUrl  = Deno.env.get("APP_BASE_URL") ?? "https://nextslot.co.za";
     const supabase    = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json();
@@ -267,30 +268,20 @@ Deno.serve(async (req) => {
     const rawCallOutAddress = escapeHtml((booking as any).call_out_address || (booking as any).guest_address || "");
     const rawSalonAddress   = tenantAddress || escapeHtml(settings["salon_address"] || "");
 
-    // Used in ICS / gcal for both tenant and client (always the physical location)
     const calendarLocation = isCallOut
       ? (rawCallOutAddress || "Call-out")
       : (rawSalonAddress || tenantName);
 
-    // What the TENANT sees in their email — for fixed salon bookings this is
-    // their own studio address; for call-out bookings this is the client's address
-    // because the tenant needs to travel to the client.
     const tenantLocationDisplay = isCallOut
       ? rawCallOutAddress
       : (tenantAddress || escapeHtml(settings["salon_address"] || ""));
 
-    // What the CLIENT sees in their email and WhatsApp
-    // Call-out: "We're coming to you at <client address>"
-    // Fixed:    "<salon address>" with a Google Maps link
     const clientLocationLabel = isCallOut ? "We're coming to you" : "Location";
     const clientLocationValue = isCallOut ? rawCallOutAddress : rawSalonAddress;
     const clientMapsLink      = (!isCallOut && rawSalonAddress)
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawSalonAddress)}`
       : null;
 
-    // WhatsApp location part for the confirmation message
-    // Call-out: tenant comes to client — show client's address
-    // Fixed:    client comes to salon — show salon name + address
     const waLocation = isCallOut
       ? (rawCallOutAddress || tenantName)
       : (rawSalonAddress ? `${tenantName}, ${rawSalonAddress}` : tenantName);
@@ -312,6 +303,136 @@ Deno.serve(async (req) => {
       });
       console.log(`Email sent [${payload.subject}]:`, res.status, JSON.stringify(await res.json()));
     };
+
+    // ======================================================================
+    // PAYSHAP INSTRUCTIONS
+    // Triggered immediately when the booking is created for a PayShap tenant.
+    // Sends:
+    //   1. Client: tenant's PayShap phone number (copyable), amount due,
+    //              step-by-step payment instructions, and a link to
+    //              /payshap-confirm/:bookingId to submit their reference.
+    //   2. Tenant: brief holding notification that a booking is pending payment.
+    // ======================================================================
+    if (email_type === "payshap_instructions") {
+      const confirmUrl  = `${appBaseUrl}/payshap-confirm/${booking_id}`;
+      const amountLabel = isFullPayment ? "Full Payment" : "Deposit";
+      const amountValue = isFullPayment ? totalAmount : depositAmount;
+
+      // 1. CLIENT email
+      if (clientEmail) {
+        const clientBody = `
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
+            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">
+              Your booking slot has been provisionally held. To confirm it, please complete your PayShap payment using the details below.
+            </p>
+          </td></tr>
+
+          <tr><td style="padding:18px 36px 10px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
+            ${detailTable(
+              detailRow("Service", serviceNames) +
+              detailRow("Date", formattedDate) +
+              detailRow("Time", formattedTime) +
+              detailRow(amountLabel + " Due", amountValue, !isFullPayment ? false : true) +
+              (!isFullPayment ? detailRow("Balance on the Day", balanceDue, true) : "")
+            )}
+          </td></tr>
+
+          <tr><td style="padding:14px 36px 10px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">How to Pay via PayShap</p>
+            <div style="background:#f7f7f7;border-radius:10px;border:1px solid #e0e0e0;padding:20px 22px;">
+
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 1 &mdash; Copy this number</p>
+              <div style="background:#fff;border-radius:8px;border:2px solid #000;padding:14px 18px;margin:0 0 18px;text-align:center;">
+                <p class="tm" style="margin:0;font-size:26px;font-weight:700;letter-spacing:.06em;color:#000;font-family:monospace,monospace;">${tenantPhone}</p>
+                <p class="tl" style="margin:4px 0 0;font-size:11px;color:#888;">PayShap number for ${tenantName}</p>
+              </div>
+
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 2 &mdash; Open your banking app</p>
+              <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">Go to the PayShap or Instant EFT section and send <strong>${amountValue}</strong> to the number above.</p>
+
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 3 &mdash; Use your name as reference</p>
+              <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">When prompted for a payment reference, enter your <strong>full name</strong> so we can match the payment.</p>
+
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 4 &mdash; Submit your reference</p>
+              <p class="tl" style="margin:0 0 14px;font-size:13px;color:#555;line-height:1.6;">Once you have made the payment, click the button below to confirm it. Your booking will be verified and confirmed by ${tenantName}.</p>
+
+            </div>
+          </td></tr>
+
+          <tr><td style="padding:20px 36px 28px;text-align:center;">
+            <a href="${confirmUrl}" target="_blank"
+              style="display:inline-block;padding:16px 36px;border-radius:10px;background:#000;color:#fff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:.04em;">
+              I have paid &mdash; Submit Reference
+            </a>
+            <p class="tl" style="margin:12px 0 0;font-size:11px;color:#999;">
+              This link is unique to your booking. Do not share it.
+            </p>
+          </td></tr>
+
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+          </td></tr>
+        `;
+
+        await send({
+          from:     `${tenantName} <bookings@nextslot.co.za>`,
+          reply_to: tenantEmail ?? undefined,
+          to:       [clientEmail],
+          subject:  `Complete your booking — PayShap payment instructions`,
+          html:     emailWrapper(
+            logoHtml,
+            tenantName,
+            "PayShap Payment Instructions",
+            clientBody,
+            `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`
+          ),
+        });
+      }
+
+      // 2. TENANT holding notification
+      if (tenantEmail) {
+        await new Promise((r) => setTimeout(r, 300));
+
+        const ownerHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
+  <style>${OWNER_STYLES}</style>
+</head>
+<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
+  <tr><td style="padding:28px 28px 10px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">New booking pending payment &#128242;</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has started a booking. PayShap payment instructions have been sent to them. You will be notified once they submit their payment reference.</p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${row("Client",   clientName)}
+      ${row("Phone",    clientPhone || "—")}
+      ${row("Service",  serviceNames)}
+      ${row("Date",     formattedDate)}
+      ${row("Time",     formattedTime)}
+      ${row("Location", tenantLocationDisplay || "—")}
+      ${row(amountLabel + " Due", amountValue, true)}
+    </table>
+  </td></tr>
+  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  </td></tr>
+</table>
+</body></html>`;
+
+        await send({
+          from:     `NextSlot <bookings@nextslot.co.za>`,
+          reply_to: "bookings@nextslot.co.za",
+          to:       [tenantEmail],
+          subject:  `&#128242; Pending PayShap booking — ${clientName} on ${formattedDate}`,
+          html:     ownerHtml,
+        });
+      }
+    }
 
     // ======================================================================
     // PAYSHAP PENDING
