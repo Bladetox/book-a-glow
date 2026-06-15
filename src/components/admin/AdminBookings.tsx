@@ -785,10 +785,15 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     }
   };
 
+  // ── Restored: completed_at timestamp write that was dropped by the PayShap commit ──
   const handleMarkServiced = async (b: BookingRow) => {
     if (markingServicedId === b.id) return;
     setMarkingServicedId(b.id);
     try {
+      await updateFields.mutateAsync({
+        bookingId: b.id,
+        updates: { completed_at: new Date().toISOString() },
+      });
       await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
       toast.success(`${b.client}'s booking marked as serviced`);
     } catch (e: any) {
@@ -882,27 +887,33 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onCancel={() => setConfirmRequestBalance(null)}
       />
 
-      {addServiceBooking && (
-        <AddServiceModal
-          booking={addServiceBooking}
-          onClose={() => setAddServiceBooking(null)}
-        />
-      )}
+      {/* ── Restored: correct AddServiceModal props (bookingId/clientName/onAdded) ── */}
+      <AddServiceModal
+        bookingId={addServiceBooking?.id ?? null}
+        clientName={addServiceBooking?.client ?? ""}
+        onClose={() => setAddServiceBooking(null)}
+        onAdded={() => queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] })}
+      />
 
-      {blockModalBooking && (
-        <BlockClientModal
-          booking={blockModalBooking}
-          currentBlockId={blockStatusMap[blockModalBooking.id]?.blockId ?? null}
-          isBlocked={blockStatusMap[blockModalBooking.id]?.isBlocked ?? false}
-          onClose={() => setBlockModalBooking(null)}
-          onToggled={(newIsBlocked, newBlockId) => {
+      {/* ── Restored: correct BlockClientModal props ── */}
+      <BlockClientModal
+        open={!!blockModalBooking}
+        clientName={blockModalBooking?.client ?? ""}
+        clientEmail={blockModalBooking?.email ?? ""}
+        clientPhone={blockModalBooking?.phone ?? ""}
+        clientAddress={blockModalBooking?.address ?? ""}
+        existingBlockId={blockModalBooking ? (blockStatusMap[blockModalBooking.id]?.blockId ?? null) : null}
+        onClose={() => setBlockModalBooking(null)}
+        onSuccess={(nowBlocked) => {
+          if (blockModalBooking) {
             setBlockStatusMap(prev => ({
               ...prev,
-              [blockModalBooking.id]: { blockId: newBlockId, isBlocked: newIsBlocked },
+              [blockModalBooking.id]: { blockId: nowBlocked ? "pending-refresh" : null, isBlocked: nowBlocked },
             }));
-          }}
-        />
-      )}
+          }
+          setBlockModalBooking(null);
+        }}
+      />
 
       {/* ── Page ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 min-h-0">
@@ -1105,7 +1116,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </div>
                                 )}
 
-                                {/* Payment summary — uses b.total and b.deposit (correct BookingRow fields) */}
+                                {/* Payment summary */}
                                 {((b.total ?? 0) > 0 || (b.deposit ?? 0) > 0 || (b.balance ?? 0) > 0) && (
                                   <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 flex flex-wrap gap-x-4 gap-y-1">
                                     {(b.total ?? 0) > 0 && (
