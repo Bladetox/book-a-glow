@@ -518,6 +518,21 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     try {
       await updateStatus.mutateAsync({ bookingId, status });
       toast.success(`Status updated to ${status}`);
+
+      // When the tenant confirms a booking from the admin panel, send the
+      // client their confirmation email (with booking details + balance info).
+      if (status === "confirmed") {
+        const booking = bookings.find(b => b.id === bookingId);
+        supabase.functions.invoke("send-booking-email", {
+          body: {
+            booking_id: bookingId,
+            tenant_id:  booking?.tenantId ?? tenantId,
+            email_type: "booking_confirmed",
+          },
+        }).then(({ error }) => {
+          if (error) console.warn("send-booking-email warning (admin confirm):", error.message);
+        });
+      }
     } catch (e: any) {
       toast.error(e.message || "Failed to update status");
     }
