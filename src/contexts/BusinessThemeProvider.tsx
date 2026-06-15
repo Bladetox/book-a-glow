@@ -40,6 +40,22 @@ const BusinessThemeContext = createContext<BusinessThemeContextValue>({
 export const useBusinessTheme = () => useContext(BusinessThemeContext);
 
 /**
+ * Returns true when the current pathname is an admin route.
+ * On admin routes the provider acts as a passthrough — no CSS vars,
+ * no fonts, no dark/light classes are written to document.documentElement.
+ * The admin shell owns its own visual tokens entirely.
+ */
+const ADMIN_PATH_PREFIXES = ["/admin", "/superadmin"];
+
+function isAdminPath(): boolean {
+  if (typeof window === "undefined") return false;
+  const p = window.location.pathname;
+  return ADMIN_PATH_PREFIXES.some(
+    (prefix) => p === prefix || p.startsWith(prefix + "/")
+  );
+}
+
+/**
  * BusinessThemeProvider
  *
  * Resolution order:
@@ -55,12 +71,18 @@ export const useBusinessTheme = () => useContext(BusinessThemeContext);
  * - phenomebeauty + sister-studios → Abril Fatface (display) + Montserrat (body)
  * - zo-beauty-bar                  → Cormorant Garamond (display) + Montserrat (body)
  * - all other tenants + marketing  → Inter (display + body)
+ *
+ * NOTE: On /admin and /superadmin routes this provider is a passthrough.
+ * No CSS vars, fonts, or dark/light classes are applied to :root so the
+ * admin shell's own Tailwind tokens remain fully in control.
  */
 export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const resolution = resolveTenantSync();
   const tenantSlug = resolution.slug;
+  const adminPath = isAdminPath();
 
-  const [loading, setLoading] = useState(!!tenantSlug);
+  // On admin routes skip loading entirely — provider is passthrough
+  const [loading, setLoading] = useState(!adminPath && !!tenantSlug);
   const [baseThemeId, setBaseThemeId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -82,7 +104,9 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   // Fetch theme_id from Supabase for the resolved tenant
+  // Skipped entirely on admin routes
   useEffect(() => {
+    if (adminPath) return;
     if (!tenantSlug) {
       setLoading(false);
       return;
@@ -104,7 +128,7 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       })
       .finally(() => setLoading(false));
-  }, [tenantSlug]);
+  }, [tenantSlug, adminPath]);
 
   const baseTheme = useMemo(
     () => findTheme(baseThemeId) ?? getDefaultTheme(),
@@ -120,7 +144,9 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   const cssVars = useMemo(() => getThemeCssVars(theme), [theme]);
 
   // Apply CSS colour variables + dark/light class to document root
+  // Skipped entirely on admin routes — admin shell owns :root tokens
   useEffect(() => {
+    if (adminPath) return;
     const root = document.documentElement;
     Object.entries(cssVars).forEach(([key, value]) => {
       root.style.setProperty(key, value);
@@ -135,10 +161,12 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       root.classList.add("light");
       root.classList.remove("dark");
     }
-  }, [cssVars, theme]);
+  }, [cssVars, theme, adminPath]);
 
   // Apply tenant-specific fonts via CSS variables
+  // Skipped entirely on admin routes
   useEffect(() => {
+    if (adminPath) return;
     const root = document.documentElement;
 
     // Default: Inter for all tenants and marketing site
@@ -157,12 +185,13 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
     root.style.setProperty("--font-display", fontDisplay);
     root.style.setProperty("--font-body", fontBody);
-  }, [tenantSlug]);
+  }, [tenantSlug, adminPath]);
 
-  // Persist base theme id
+  // Persist base theme id — skipped on admin routes
   useEffect(() => {
+    if (adminPath) return;
     localStorage.setItem("ns_business_theme", baseThemeId);
-  }, [baseThemeId]);
+  }, [baseThemeId, adminPath]);
 
   const setThemeById = useCallback((id: string) => {
     if (findTheme(id)) {
