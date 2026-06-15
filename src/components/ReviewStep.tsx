@@ -2,4 +2,15 @@ import { BookingState, safetyQuestions } from "@/data/bookingData";
 import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
-import { usePublicTenant } from "@/co
+import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import { useSuggestedAddons } from "@/hooks/useSuggestedAddons";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { Sparkles, X, Loader2, CreditCard, CheckCircle2, Plus, Minus, Smartphone } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import BookingConfirmation from "@/components/BookingConfirmation";
+import PayshapProvisionalModal from "@/components/PayshapClaimSheet";
+import { toast } from "sonner";
+import type { PublicService } from "@/hooks/usePublicServices";
