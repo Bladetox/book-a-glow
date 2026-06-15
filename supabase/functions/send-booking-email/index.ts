@@ -272,8 +272,12 @@ Deno.serve(async (req) => {
       ? (rawCallOutAddress || "Call-out")
       : (rawSalonAddress || tenantName);
 
-    // What the TENANT sees in their email — always their own studio address
-    const tenantLocationDisplay = tenantAddress || escapeHtml(settings["salon_address"] || "");
+    // What the TENANT sees in their email — for fixed salon bookings this is
+    // their own studio address; for call-out bookings this is the client's address
+    // because the tenant needs to travel to the client.
+    const tenantLocationDisplay = isCallOut
+      ? rawCallOutAddress
+      : (tenantAddress || escapeHtml(settings["salon_address"] || ""));
 
     // What the CLIENT sees in their email and WhatsApp
     // Call-out: "We're coming to you at <client address>"
