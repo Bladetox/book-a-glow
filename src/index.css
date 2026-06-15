@@ -134,6 +134,7 @@
   html.dark body   { background: hsl(var(--background)); }
   html:not(.dark) body { background: hsl(var(--background)); }
 
+  @supports (padding-top: env(safe-area-inset-top))
   body {
     padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
