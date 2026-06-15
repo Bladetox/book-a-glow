@@ -28,6 +28,10 @@ export interface Tenant {
    * and trial_ends_at, NOT this column. Do not use plan for feature gating.
    */
   plan?: string | null;
+  /** When true, balance payment requests use PayShap instead of Yoco. */
+  paynow_enabled?: boolean | null;
+  /** The PayShap proxy number / ID registered to this tenant (e.g. 0821234567). */
+  paynow_number?: string | null;
 }
 
 export interface TenantSubscription {
@@ -79,7 +83,8 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
       .from("tenants")
       .select(
         "id, name, owner_id, email, phone, address, logo_url, is_active, custom_domain, " +
-        "theme_id, currency, is_lifetime_free, subscription_status, trial_ends_at, plan"
+        "theme_id, currency, is_lifetime_free, subscription_status, trial_ends_at, plan, " +
+        "paynow_enabled, paynow_number"
       )
       .eq("owner_id", ownerId)
       .maybeSingle()
