@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -56,6 +56,9 @@ interface TenantRenderProps {
 
 const TenantContext = createContext<TenantContextValue | null>(null);
 
+// Stable fallback so useTenant() never throws during the loading phase.
+const LOADING_CTX: TenantContextValue = { tenantId: "", userId: "", tenant: null };
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 interface TenantProviderProps {
@@ -68,6 +71,8 @@ interface TenantProviderProps {
  * render-prop with { tenant, subscription, loading }.
  *
  * Also provides TenantContext so any child component can call useTenant().
+ * The Provider is always mounted (even while loading) so useTenant() never
+ * throws React error #130 before the fetch resolves.
  */
 export function TenantProvider({ ownerId, children }: TenantProviderProps) {
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -94,6 +99,14 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
       });
   }, [ownerId]);
 
+  const ctxValue = useMemo<TenantContextValue>(
+    () =>
+      tenant
+        ? { tenantId: tenant.id, userId: ownerId, tenant }
+        : LOADING_CTX,
+    [tenant, ownerId]
+  );
+
   const renderProps: TenantRenderProps = {
     tenant,
     subscription: tenant
@@ -105,12 +118,8 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
     loading,
   };
 
-  if (!tenant) {
-    return <>{children(renderProps)}</>;
-  }
-
   return (
-    <TenantContext.Provider value={{ tenantId: tenant.id, userId: ownerId, tenant }}>
+    <TenantContext.Provider value={ctxValue}>
       {children(renderProps)}
     </TenantContext.Provider>
   );
