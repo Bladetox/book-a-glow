@@ -340,7 +340,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
             <div className="flex items-center justify-between px-4 py-2.5">
               <div>
                 <p className="text-sm font-medium text-foreground">Call-out fee</p>
-                <p className="text-[11px] text-muted-foreground">{estimatedDistanceKm} km × 2 × {cur}{config.ratePerKm}/km</p>
+                <p className="text-[11px] text-muted-foreground">{estimatedDistanceKm} km x 2 x {cur}{config.ratePerKm}/km</p>
               </div>
               <p className="text-sm font-semibold text-foreground">{cur}{callOutFee.toLocaleString()}</p>
             </div>
