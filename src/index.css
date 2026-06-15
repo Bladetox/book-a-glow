@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --background: black;
+    --background: 0 0% 97%;
     --foreground: 0 0% 10%;
 
     --card: 0 0% 99%;
@@ -105,6 +105,7 @@
 
 @layer base {
   * {
+    @apply border-border;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
   }
@@ -122,10 +123,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
+    scroll-padding-bottom: 110px;
   }
 
   body {
     @apply bg-background text-foreground font-body;
+    min-height: 100vh;
+    min-height: 100dvh;
     user-select: none;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
@@ -133,12 +137,10 @@
   html.dark body   { background: hsl(var(--background)); }
   html:not(.dark) body { background: hsl(var(--background)); }
 
-  @supports (padding-top: env(safe-area-inset-top)) {
-    body {
-      padding-top: env(safe-area-inset-top, 0px);
-      padding-left: env(safe-area-inset-left, 0px);
-      padding-right: env(safe-area-inset-right, 0px);
-    }
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   input,
@@ -522,6 +524,11 @@ html:not(.dark) .tenant-logo-img {
 
   /* ===== STICKY BOTTOM BAR ===== */
   .sticky-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
     padding-bottom: env(safe-area-inset-bottom);
     background: hsl(var(--background));
     border-top: 1px solid hsl(var(--border) / 0.5);
