@@ -221,7 +221,7 @@ const Onboarding = () => {
 
   return (
     <div
-      className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground"
+      className="nextslot-theme dark-brand min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground"
       style={themeStyle}
     >
       <input

@@ -18,9 +18,9 @@ const SiteHeader = () => {
     <header
       className="sticky top-0 z-50 backdrop-blur-lg"
       style={{
-        background: "hsl(var(--background) / 0.92)",
+        background: "rgba(0, 0, 0, 0.92)",
         borderBottom: "1px solid hsl(var(--accent) / 0.12)",
-        boxShadow: "0 1px 0 0 hsl(var(--accent) / 0.06), 0 4px 16px -4px hsl(var(--background) / 0.8)",
+        boxShadow: "0 1px 0 0 hsl(var(--accent) / 0.06), 0 4px 16px -4px rgba(0, 0, 0, 0.8)",
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -133,7 +133,10 @@ const SiteHeader = () => {
         {isMenuOpen && (
           <div
             className="md:hidden py-4 animate-fade-in"
-            style={{ borderTop: "1px solid hsl(var(--accent) / 0.12)" }}
+            style={{
+              borderTop: "1px solid hsl(var(--accent) / 0.12)",
+              background: "#000000",
+            }}
           >
             <nav className="flex flex-col gap-1 mb-4">
               {navLinks.map(({ to, label }) => {
