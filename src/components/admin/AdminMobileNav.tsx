@@ -61,7 +61,7 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
   // naturally. No position:fixed needed. Safe-area inset preserved for iOS home indicator.
   // FIX: removed backdrop-blur-md — causes blank screen on low-end mobile browsers
   <nav
-    className="lg:hidden flex-shrink-0 border-t border-white/[0.07] bg-[#0a0a0a]"
+    className="lg:hidden flex-shrink-0 border-t border-white/[0.07] bg-black"
     style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
   >
     <div className="flex items-center justify-around" style={{ height: "56px" }}>
