@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Abril+Fatface&family=Montserrat:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -53,9 +53,9 @@
     --keyboard-height: 0px;
     --visual-viewport-height: 100dvh;
 
-    /* Default font stack — Inter for all tenants unless overridden */
-    --font-display: Inter, system-ui, sans-serif;
-    --font-body:    Inter, system-ui, sans-serif;
+    /* Default font stack — Geist for all tenants unless overridden */
+    --font-display: 'Geist', system-ui, sans-serif;
+    --font-body:    'Geist', system-ui, sans-serif;
   }
 
   .dark {

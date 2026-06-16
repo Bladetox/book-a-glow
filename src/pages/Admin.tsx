@@ -43,7 +43,7 @@ class AdminErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-black  flex items-center justify-center p-6">
+        <div className="min-h-screen bg-black flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
             <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-4" />
             <h2 className="text-white font-semibold mb-2">Something went wrong</h2>
@@ -127,10 +127,10 @@ const TenantAvatar = ({ tenant }: { tenant: Tenant | null }) => {
             onError={() => setImgError(true)}
           />
         ) : (
-          <span className="text-[8px] font-bold text-white/50 leading-none">{initials}</span>
+          <span className="text-[10px] font-bold text-white/50 leading-none">{initials}</span>
         )}
       </div>
-      <span className="text-[11px] font-medium text-white/70 truncate max-w-[120px]">{name}</span>
+      <span className="text-xs font-medium text-white/70 truncate max-w-[120px]">{name}</span>
     </div>
   );
 };
@@ -184,14 +184,14 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
   if (flagsLoading) {
     return (
-      <div className="min-h-screen bg-black  flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="h-dvh bg-black  text-white flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-dvh bg-black text-white flex flex-col lg:flex-row overflow-hidden">
       <AdminSidebar
         views={allowedViews as unknown as string[]}
         activeView={activeView}
@@ -230,8 +230,8 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
             {/* Tenant name text block — desktop only */}
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-[11px] font-medium text-white/80 truncate max-w-[160px]">{tenant?.name}</span>
-              <span className="text-[9px] text-white/30 uppercase tracking-wider">Admin</span>
+              <span className="text-xs font-medium text-white/80 truncate max-w-[160px]">{tenant?.name}</span>
+              <span className="text-[10px] text-white/30 uppercase tracking-wider">Admin</span>
             </div>
           </div>
         </header>
@@ -294,7 +294,7 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black  flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
       </div>
     );
@@ -309,7 +309,7 @@ const Admin = () => {
       {({ tenant, subscription, loading: tenantLoading }) => {
         if (tenantLoading) {
           return (
-            <div className="min-h-screen bg-black  flex items-center justify-center">
+            <div className="min-h-screen bg-black flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
             </div>
           );
