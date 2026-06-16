@@ -13,7 +13,7 @@ const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba
 const tiers = [
   {
     name: "Starter",
-    price: "R299",
+    price: "R99",
     period: "/ month",
     description: "While others charge you for the basics.",
     subline: "Your Starter plan includes:",
@@ -42,7 +42,7 @@ const tiers = [
   },
   {
     name: "Flow",
-    price: "R499",
+    price: "R399",
     period: "/ month",
     description: "Card payments, deposits, and client control.",
     subline: null,
@@ -983,7 +983,7 @@ const Pricing = () => {
             Your dashboard should be<br /><span style={{ color: C.gold, fontStyle: "italic" }}>working for you.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.75, marginBottom: 40, maxWidth: 500, margin: "0 auto 40px", fontFamily: FONT_BODY }}>
-            Set up your booking page in under 20 minutes. Let NextSlot watch the business while you focus on the work.
+            Set up your booking page in under 10 minutes. Let NextSlot watch the business while you focus on the work.
           </p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
             {pricingMode === "manage" ? (
@@ -1020,7 +1020,7 @@ const Pricing = () => {
             )}
           </div>
           <p style={{ marginTop: 20, fontSize: 12, color: C.faint, letterSpacing: "0.04em", fontFamily: FONT_BODY }}>
-            No credit card required · 30-day free trial · Cancel anytime
+            No payment required · 30-day free trial · Cancel anytime
           </p>
         </div>
       </section>
