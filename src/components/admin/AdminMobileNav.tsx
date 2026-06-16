@@ -62,7 +62,7 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
   // FIX: removed backdrop-blur-md — causes blank screen on low-end mobile browsers
   <nav
     className="lg:hidden flex-shrink-0 border-t border-white/[0.07] bg-black"
-    style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    style={{ paddingBottom: "env(safe-area-inset-bottom, 2px)" }}
   >
     <div className="flex items-center justify-around" style={{ height: "56px" }}>
       {NAV_GROUPS.map(({ label, icon: Icon, targetView, views }) => {
