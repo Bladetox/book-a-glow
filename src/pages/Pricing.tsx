@@ -482,7 +482,7 @@ const Pricing = () => {
                 color: C.muted, lineHeight: 1.7, marginBottom: 36,
                 maxWidth: 420, fontFamily: FONT_BODY,
               }}>
-                No pressure. No card. Starter from R299 per month.
+                No pressure. No payment. Starter from R99 per month.
               </p>
 
               <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -527,7 +527,7 @@ const Pricing = () => {
               </div>
 
               <p style={{ marginTop: 18, fontSize: 11, color: C.faint, letterSpacing: "0.04em", fontWeight: 500, fontFamily: FONT_BODY }}>
-                No Payment Required · 30-day trial · Set up in under 20 minutes
+                No Payment Required · 30-day trial · Set up in under 10 minutes
               </p>
 
               {pricingMode === "manage" && manageNotice && (
