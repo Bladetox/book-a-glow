@@ -17,6 +17,8 @@ const tiers = [
     period: "/ month",
     description: "While others charge you for the basics.",
     subline: "Your Starter plan includes:",
+    trialDays: 7,
+    comingSoon: false,
     groups: [
       {
         label: "Core",
@@ -44,13 +46,15 @@ const tiers = [
     name: "Flow",
     price: "R399",
     period: "/ month",
-    description: "Card payments, deposits, and client control.",
+    description: "Payment options, deposits, and client control.",
     subline: null,
+    trialDays: 30,
+    comingSoon: false,
     groups: [
       {
         label: "Everything in Starter, plus",
         features: [
-          "Yoco and Payfast card payments",
+          "Yoco and Payfast payments",
           "Deposit collection with balance tracking",
           "Custom Terms and Conditions at checkout",
           "Client blocking with reason attached",
@@ -67,6 +71,8 @@ const tiers = [
     period: "/ month",
     description: "Your dashboard should be telling you what to do next.",
     subline: null,
+    trialDays: 30,
+    comingSoon: false,
     groups: [
       {
         label: "Everything in Flow, plus",
@@ -87,10 +93,12 @@ const tiers = [
   },
   {
     name: "Studio",
-    price: "R899",
+    price: "R1299",
     period: "/ month",
     description: "Built for teams. Runs like a system.",
-    subline: null,
+    subline: "1 location · 3 staff included · R89 per additional staff member",
+    trialDays: 30,
+    comingSoon: true,
     groups: [
       {
         label: "Everything in Professional, plus",
@@ -102,7 +110,7 @@ const tiers = [
         ],
       },
     ],
-    cta: "Start Free Trial",
+    cta: "Coming Soon",
     featured: false,
   },
 ];
@@ -143,7 +151,7 @@ const comparisonSections: FeatureSection[] = [
     rows: [
       { label: "PayShap instant EFT",                                starter: true,  flow: false, professional: false, studio: false },
       { label: "PayShap real-time verification queue",               starter: true,  flow: false, professional: false, studio: false },
-      { label: "Yoco card payments",                                 starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Yoco payments",                                      starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Payfast payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Deposit vs. balance tracking per booking",          starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Payment records (per-booking history)",             starter: true,  flow: true,  professional: true,  studio: true  },
@@ -231,20 +239,20 @@ const comparisonSections: FeatureSection[] = [
 
 const faqs = [
   {
-    q: "Do I need a card to start?",
-    a: "No. Sign up is completely free. No payment required to start your 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
+    q: "Do I need to make a payment to start?",
+    a: "No. Sign up is completely free. No payment required to start your trial. Starter businesses get 7 days to explore the platform. Flow, Professional, and Studio plans include a full 30-day trial. You only choose a plan once you have seen what NextSlot can do for your business.",
   },
   {
-    q: "What happens during the 30-day free trial?",
-    a: "You get full access to the plan you choose. NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised insights waiting for you.",
+    q: "How long is the free trial?",
+    a: "Starter includes a 7-day free trial. Flow, Professional, and Studio each include a 30-day free trial. During that time NextSlot learns how your business operates: which services book fastest, where your clients come from, and when your peak demand is. By the time your trial ends, your dashboard already has personalised insights waiting for you.",
   },
   {
     q: "How long does setup take?",
     a: "Most businesses are live within 20 minutes. Add your services, set your availability, connect your payment method, and share your booking link. That is it. No developer needed.",
   },
   {
-    q: "Which payment gateways does NextSlot support?",
-    a: "Starter plan businesses collect payments via PayShap instant EFT with a built-in proof-of-payment verification queue. Flow, Professional, and Studio plans unlock Yoco and Payfast card payments so clients pay by card at the time of booking. Deposits are collected automatically.",
+    q: "Which payment options does NextSlot support?",
+    a: "Starter plan businesses collect payments via PayShap instant EFT with a built-in proof-of-payment verification queue. Flow, Professional, and Studio plans unlock Yoco and Payfast so clients pay at the time of booking. Deposits are collected automatically.",
   },
   {
     q: "What happens if a client does not pay the deposit?",
@@ -309,6 +317,140 @@ const CellValue = ({ value }: { value: boolean | string }) => {
   return value
     ? <Check style={{ height: 16, width: 16, color: C.gold, margin: "0 auto", display: "block" }} />
     : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
+};
+
+const StarterHeroCard = ({
+  tier,
+  pricingMode,
+  currentPlan,
+  submittingPlan,
+  handlePlanChange,
+}: {
+  tier: typeof tiers[0];
+  pricingMode: PricingMode;
+  currentPlan: TenantPlan | null;
+  submittingPlan: TenantPlan | null;
+  handlePlanChange: (plan: TenantPlan) => void;
+}) => {
+  const tierPlan = planKeyMap[tier.name];
+  const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
+  const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
+  const isDowngrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] < planRank[currentPlan];
+  const isBusy = submittingPlan === tierPlan;
+  const ctaLabel = pricingMode === "manage"
+    ? isCurrent ? "Current Plan" : isUpgrade ? "Upgrade" : isDowngrade ? "Downgrade" : "Select Plan"
+    : tier.cta;
+
+  return (
+    <div style={{
+      background: C.s1,
+      border: `1px solid ${C.border2}`,
+      borderRadius: 20,
+      padding: "36px 36px 32px",
+      position: "relative",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      <div style={{
+        position: "absolute", top: -40, right: -40,
+        width: 200, height: 200, borderRadius: "50%",
+        background: `radial-gradient(circle, rgba(212,165,116,0.08) 0%, transparent 70%)`,
+        pointerEvents: "none",
+      }} />
+
+      {/* Header */}
+      <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
+          textTransform: "uppercase" as const,
+          padding: "4px 12px", borderRadius: 100, marginBottom: 12,
+          background: `rgba(212,165,116,0.08)`,
+          border: `1px solid rgba(212,165,116,0.20)`,
+          color: C.gold, fontFamily: FONT_BODY,
+        }}>
+          7-day free trial
+        </div>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 6 }}>{tier.name}</h3>
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 700, color: C.text }}>{tier.price}</span>
+          <span style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>{tier.period}</span>
+        </div>
+        <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.5, marginBottom: tier.subline ? 6 : 0 }}>{tier.description}</p>
+        {tier.subline && (
+          <p style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, marginBottom: 0 }}>{tier.subline}</p>
+        )}
+      </div>
+
+      {/* Features */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
+        {tier.groups.map((group) => (
+          <div key={group.label}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.faint, marginBottom: 10, fontFamily: FONT_BODY }}>
+              {group.label}
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+              {group.features.map((f) => (
+                <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
+                  <Check style={{ height: 14, width: 14, marginTop: 2, color: C.gold, flexShrink: 0 }} />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      {pricingMode === "manage" ? (
+        <>
+          <button
+            type="button"
+            disabled={isCurrent || !!submittingPlan}
+            onClick={() => handlePlanChange(tierPlan)}
+            style={isCurrent ? {
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+              padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
+              background: `rgba(212,165,116,0.08)`, color: C.text,
+              border: `1px solid rgba(212,165,116,0.20)`, opacity: 0.6,
+            } : {
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+              padding: "12px 20px", borderRadius: 10, cursor: "pointer",
+              background: "transparent", color: C.muted, border: `1px solid ${C.border2}`,
+            }}
+          >
+            {isBusy ? "Saving..." : ctaLabel}
+            {!isCurrent && <ArrowRight style={{ height: 13, width: 13 }} />}
+          </button>
+          <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
+            {isCurrent ? "This is your current subscription." : isUpgrade ? "Upgrade request recorded for billing." : isDowngrade ? "Downgrade applies next billing cycle." : "Select the plan you want to move to."}
+          </p>
+        </>
+      ) : (
+        <>
+          <Link
+            to="/onboarding"
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+              padding: "12px 20px", borderRadius: 10,
+              background: "transparent", color: C.muted,
+              border: `1px solid ${C.border2}`, textDecoration: "none",
+            }}
+          >
+            {tier.cta}
+            <ArrowRight style={{ height: 13, width: 13 }} />
+          </Link>
+          <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
+            Free for 7 days. No payment required.
+          </p>
+        </>
+      )}
+    </div>
+  );
 };
 
 const Pricing = () => {
@@ -390,6 +532,8 @@ const Pricing = () => {
     }
   };
 
+  const starterTier = tiers.find((t) => t.name === "Starter")!;
+
   return (
     <div className="nextslot-theme dark-brand" style={{ overflowX: "hidden" }}>
       <style>{HOME_STYLES}</style>
@@ -446,6 +590,7 @@ const Pricing = () => {
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
             className="pricing-hero-grid"
           >
+            {/* LEFT: headline + CTAs */}
             <div>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
@@ -457,7 +602,7 @@ const Pricing = () => {
                 marginBottom: 28, fontFamily: FONT_BODY,
               } as React.CSSProperties}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block" }} />
-                30-day free trial. No card needed.
+                30-day free trial on Flow and above.
               </div>
 
               <h1 style={{
@@ -475,7 +620,7 @@ const Pricing = () => {
                 color: C.text, lineHeight: 1.5, marginBottom: 10,
                 maxWidth: 460, fontFamily: FONT_BODY,
               }}>
-                Run your bookings for 30 days. Let NextSlot learn your business. Then decide which plan fits.
+                Run your bookings, let NextSlot learn your business, then decide which plan fits.
               </p>
               <p style={{
                 fontSize: "clamp(13px,1.15vw,15px)", fontWeight: 300,
@@ -527,7 +672,7 @@ const Pricing = () => {
               </div>
 
               <p style={{ marginTop: 18, fontSize: 11, color: C.faint, letterSpacing: "0.04em", fontWeight: 500, fontFamily: FONT_BODY }}>
-                No Payment Required · 30-day trial · Set up in under 10 minutes
+                No Payment Required · Starter trial 7 days · Flow and above 30 days
               </p>
 
               {pricingMode === "manage" && manageNotice && (
@@ -538,48 +683,14 @@ const Pricing = () => {
               )}
             </div>
 
-            <div style={{
-              background: C.s1,
-              border: `1px solid ${C.border2}`,
-              borderRadius: 20,
-              padding: "36px 36px 32px",
-              position: "relative",
-              overflow: "hidden",
-            }}>
-              <div style={{
-                position: "absolute", top: -40, right: -40,
-                width: 200, height: 200, borderRadius: "50%",
-                background: `radial-gradient(circle, rgba(212,165,116,0.08) 0%, transparent 70%)`,
-                pointerEvents: "none",
-              }} />
-              <p style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
-                textTransform: "uppercase", color: C.gold,
-                marginBottom: 20, fontFamily: FONT_BODY,
-              } as React.CSSProperties}>
-                What your 30 days builds
-              </p>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 16 }}>
-                {trialBuilds.map((item) => (
-                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    <span style={{
-                      marginTop: 2, height: 16, width: 16, borderRadius: "50%",
-                      flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                      background: `rgba(212,165,116,0.12)`,
-                      border: `1.5px solid rgba(212,165,116,0.40)`,
-                    }}>
-                      <Check style={{ height: 9, width: 9, color: C.gold }} />
-                    </span>
-                    <span style={{ fontSize: 14, color: C.text, lineHeight: 1.55, fontFamily: FONT_BODY }}>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
-                <p style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.6 }}>
-                  These insights unlock once your trial data is in. Start free to see yours.
-                </p>
-              </div>
-            </div>
+            {/* RIGHT: Starter plan card */}
+            <StarterHeroCard
+              tier={starterTier}
+              pricingMode={pricingMode}
+              currentPlan={currentPlan}
+              submittingPlan={submittingPlan}
+              handlePlanChange={handlePlanChange}
+            />
           </div>
 
           {/* 3-step flow */}
@@ -588,7 +699,7 @@ const Pricing = () => {
             className="pricing-steps-row"
           >
             {[
-              { num: "01", label: "Sign up free", sub: "No card. Live in minutes." },
+              { num: "01", label: "Sign up free", sub: "No payment. Live in minutes." },
               { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
               { num: "03", label: "Get your strategy", sub: "Personalised insights ready when your trial ends." },
             ].map((step, idx) => (
@@ -612,7 +723,42 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* PLANS, COMPARISON, TRIAL VALUE */}
+      {/* WHAT YOUR 30 DAYS BUILDS */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
+        <section style={{ paddingTop: 60, paddingBottom: 0 }}>
+          <div style={{
+            maxWidth: 1100, margin: "0 auto",
+            background: C.s1,
+            border: `1px solid rgba(212,165,116,0.22)`,
+            borderRadius: 20, padding: "40px 40px",
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
+              What your 30 days builds
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
+              Your data. Your strategy.
+            </h2>
+            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
+              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business. When demand peaks, where clients find you, which services drive the most revenue per hour, and which time slots go to waste. By the time your trial ends, your dashboard is already working as your business advisor.
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+              {trialBuilds.map((point) => (
+                <li key={point} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
+                  <Check style={{ height: 15, width: 15, marginTop: 2, color: C.gold, flexShrink: 0 }} />
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
+              <p style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.6 }}>
+                These insights unlock once your trial data is in. Start free to see yours.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* PLANS, COMPARISON */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
         <section id="plans" style={{ paddingBottom: 0, paddingTop: 60 }}>
@@ -633,7 +779,14 @@ const Pricing = () => {
               return (
                 <div
                   key={tier.name}
-                  style={tier.featured ? {
+                  style={tier.comingSoon ? {
+                    background: C.s1,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 16,
+                    display: "flex", flexDirection: "column",
+                    opacity: 0.6,
+                    position: "relative",
+                  } : tier.featured ? {
                     background: `linear-gradient(145deg, rgba(212,165,116,0.06) 0%, ${C.s1} 60%)`,
                     border: `2px solid rgba(212,165,116,0.45)`,
                     borderRadius: 16,
@@ -648,16 +801,29 @@ const Pricing = () => {
                   }}
                 >
                   <div style={{ padding: "28px 28px 20px", borderBottom: `1px solid ${tier.featured ? "rgba(212,165,116,0.12)" : C.border}` }}>
-                    {tier.featured && (
+                    {tier.comingSoon && (
                       <span style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
                         fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
-                        textTransform: "uppercase",
+                        textTransform: "uppercase" as const,
+                        padding: "4px 12px", borderRadius: 100, marginBottom: 12,
+                        background: `rgba(212,165,116,0.08)`,
+                        border: `1px solid rgba(212,165,116,0.20)`,
+                        color: C.muted, fontFamily: FONT_BODY,
+                      }}>
+                        Coming Soon
+                      </span>
+                    )}
+                    {tier.featured && !tier.comingSoon && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
+                        textTransform: "uppercase" as const,
                         padding: "4px 12px", borderRadius: 100, marginBottom: 12,
                         background: `rgba(212,165,116,0.12)`,
                         border: `1px solid rgba(212,165,116,0.30)`,
                         color: C.gold, fontFamily: FONT_BODY,
-                      } as React.CSSProperties}>
+                      }}>
                         <Zap style={{ height: 10, width: 10 }} />
                         Most Popular
                       </span>
@@ -676,7 +842,7 @@ const Pricing = () => {
                   <div style={{ padding: "20px 28px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
                     {tier.groups.map((group) => (
                       <div key={group.label}>
-                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.faint, marginBottom: 10, fontFamily: FONT_BODY } as React.CSSProperties}>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.faint, marginBottom: 10, fontFamily: FONT_BODY }}>
                           {group.label}
                         </p>
                         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -692,7 +858,26 @@ const Pricing = () => {
                   </div>
 
                   <div style={{ padding: "0 28px 28px" }}>
-                    {pricingMode === "manage" ? (
+                    {tier.comingSoon ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled
+                          style={{
+                            width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                            padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
+                            background: `rgba(212,165,116,0.06)`, color: C.faint,
+                            border: `1px solid ${C.border}`, opacity: 0.7,
+                          }}
+                        >
+                          Coming Soon
+                        </button>
+                        <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
+                          We will let you know when Studio launches.
+                        </p>
+                      </>
+                    ) : pricingMode === "manage" ? (
                       <>
                         <button
                           type="button"
@@ -744,7 +929,9 @@ const Pricing = () => {
                           {tier.cta}
                           <ArrowRight style={{ height: 13, width: 13 }} />
                         </Link>
-                        <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>Free for 30 days. No card required.</p>
+                        <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
+                          {tier.name === "Starter" ? "Free for 7 days. No payment required." : "Free for 30 days. No payment required."}
+                        </p>
                       </>
                     )}
                   </div>
@@ -848,39 +1035,6 @@ const Pricing = () => {
           )}
         </section>
 
-        {/* Trial value block */}
-        <section style={{ maxWidth: 1100, margin: "0 auto", paddingBottom: 80 }}>
-          <div style={{
-            background: C.s1,
-            border: `1px solid rgba(212,165,116,0.22)`,
-            borderRadius: 20, padding: "40px 40px",
-          }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: C.gold, marginBottom: 10, fontFamily: FONT_BODY } as React.CSSProperties}>
-              What your 30-day trial actually builds
-            </p>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
-              Your data. Your strategy.
-            </h2>
-            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
-              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business. When demand peaks, where clients find you, which services drive the most revenue per hour, and which time slots go to waste. By the time your trial ends, your dashboard is already working as your business advisor.
-            </p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                "Know which channel (TikTok, Instagram, Google) is actually sending you clients",
-                "See which services generate the most revenue per hour worked",
-                "Identify your fastest-filling slots and the dead zones costing you money",
-                "Spot clients who have gone quiet and need a re-engagement nudge",
-                "Get growth strategies built from your actual data, not generic advice",
-              ].map((point) => (
-                <li key={point} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
-                  <Check style={{ height: 15, width: 15, marginTop: 2, color: C.gold, flexShrink: 0 }} />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
       </div>
 
       {/* FAQ */}
@@ -972,7 +1126,7 @@ const Pricing = () => {
             marginBottom: 24, fontFamily: FONT_BODY,
           } as React.CSSProperties}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block" }} />
-            30-day free trial
+            Free trial. No payment required.
           </div>
           <h2 style={{
             fontFamily: FONT_DISPLAY,
@@ -1020,7 +1174,7 @@ const Pricing = () => {
             )}
           </div>
           <p style={{ marginTop: 20, fontSize: 12, color: C.faint, letterSpacing: "0.04em", fontFamily: FONT_BODY }}>
-            No payment required · 30-day free trial · Cancel anytime
+            No payment required · Starter 7-day trial · Flow and above 30 days · Cancel anytime
           </p>
         </div>
       </section>
