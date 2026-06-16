@@ -23,19 +23,19 @@ const tiers = [
       {
         label: "Core",
         features: [
-          "Ditch the pen and diary - automated bookings",
+          "Ditch the pen and diary - Automated bookings",
           "No manual chasing EFT - PayShap clears instantly in your bank account",
-          "No back-and-forth WhatsApp chats - confirm the booking with one click",
-          "Email notifications and WhatsApp templates - one click away",
-          "Availability calendar with smart slot control",
-          "Slot hold so serious clients lock in their time",
+          "No back-and-forth WhatsApp chats - Confirm the booking with one click",
+          "Email notifications and WhatsApp templates - One click away",
+          "Essential dashboard - Less noise, just the basics you need",
         ],
       },
       {
         label: "Clients",
         features: [
-          "Client profiles and full booking history",
-          "Basic analytics dashboard",
+          "4 Step, easy booking",
+          "Pay, add your booked date to your calendar, and go on with your day",
+          "No app download or sign-in required"
         ],
       },
     ],
@@ -132,13 +132,13 @@ const comparisonSections: FeatureSection[] = [
   {
     section: "Booking & Scheduling",
     rows: [
-      { label: "Client-facing booking page",                          starter: true,  flow: true,  professional: true,  studio: true  },
-      { label: "Guest booking (no account required)",                 starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Client-facing booking page",                         starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Guest booking (no account required)",                starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Multi-service booking in one session",               starter: true,  flow: true,  professional: true,  studio: true  },
-      { label: "Real-time slot availability",                         starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Real-time slot availability",                        starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Slot hold (time-limited reservation)",               starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Configurable notice and advance booking windows",    starter: true,  flow: true,  professional: true,  studio: true  },
-      { label: "Deposit system (% configurable)",                    starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Deposit system (% configurable)",                    starter: true, flow: true,  professional: true,  studio: true  },
       { label: "Fixed salon mode (clients come to you)",             starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Mobile / call-out mode (travel fee calculation)",    starter: false, flow: false, professional: true,  studio: true  },
       { label: "Admin-created bookings",                             starter: true,  flow: true,  professional: true,  studio: true  },
@@ -153,8 +153,8 @@ const comparisonSections: FeatureSection[] = [
       { label: "PayShap real-time verification queue",               starter: true,  flow: false, professional: false, studio: false },
       { label: "Yoco payments",                                      starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Payfast payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
-      { label: "Deposit vs. balance tracking per booking",          starter: false, flow: true,  professional: true,  studio: true  },
-      { label: "Payment records (per-booking history)",             starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Deposit vs. balance tracking per booking",           starter: true, flow: true,  professional: true,  studio: true  },
+      { label: "Payment records (per-booking history)",              starter: true,  flow: true,  professional: true,  studio: true  },
     ],
   },
   {
@@ -163,15 +163,15 @@ const comparisonSections: FeatureSection[] = [
       { label: "Booking confirmed email (client)",                   starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Booking cancelled email (client)",                   starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "PayShap payment link email (client)",                starter: true,  flow: false, professional: false, studio: false },
-      { label: "Balance due reminder email (client)",               starter: false, flow: true,  professional: true,  studio: true  },
-      { label: "Consultation form link email (client)",             starter: false, flow: false, professional: true,  studio: true  },
-      { label: "Customisable email content",                        starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Balance due reminder email (client)",                starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Consultation form link email (client)",              starter: false, flow: false, professional: false,  studio: true  },
+      { label: "Customisable email content",                         starter: false, flow: false, professional: false,  studio: true  },
     ],
   },
   {
     section: "Client Management",
     rows: [
-      { label: "Client list with search and filter",                 starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Client list with search and filter",                starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Booking history per client",                        starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Client blocking (by phone + reason)",               starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Client alerts (flagged notes per client)",          starter: false, flow: false, professional: true,  studio: true  },
@@ -180,10 +180,10 @@ const comparisonSections: FeatureSection[] = [
   {
     section: "Loyalty & Re-engagement",
     rows: [
-      { label: "Loyalty tracker (wax cadence and status)",          starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Loyalty tracker (service cadence and status)",      starter: false, flow: false, professional: true,  studio: true  },
       { label: "WhatsApp message templates per loyalty status",     starter: false, flow: false, professional: true,  studio: true  },
       { label: "Loyalty CSV export",                                starter: false, flow: false, professional: true,  studio: true  },
-      { label: "Nexty loyalty AI insights",                         starter: false, flow: false, professional: false, studio: true  },
+      { label: "Nexty loyalty insights",                            starter: false, flow: false, professional: true, studio: true  },
     ],
   },
   {
@@ -203,8 +203,8 @@ const comparisonSections: FeatureSection[] = [
   {
     section: "Stock & Inventory",
     rows: [
-      { label: "Stock management (products, qty, threshold)",       starter: false, flow: false, professional: false, studio: true  },
-      { label: "Low-stock alerts on dashboard",                     starter: false, flow: false, professional: false, studio: true  },
+      { label: "Stock management (products, qty, threshold)",       starter: false, flow: false, professional: true, studio: true  },
+      { label: "Low-stock alerts on dashboard",                     starter: false, flow: false, professional: true, studio: true  },
       { label: "Stock scan modal (barcode / manual)",               starter: false, flow: false, professional: false, studio: true  },
     ],
   },
@@ -212,10 +212,10 @@ const comparisonSections: FeatureSection[] = [
     section: "Analytics & Insights",
     rows: [
       { label: "Dashboard KPIs (bookings, revenue, pending)",       starter: true,  flow: true,  professional: true,  studio: true  },
-      { label: "Revenue trend chart",                               starter: false, flow: true,  professional: true,  studio: true  },
-      { label: "Business health metrics (rebooking rate, etc.)",    starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Revenue trend chart",                               starter: true, flow: true,  professional: true,  studio: true  },
+      { label: "Business health metrics (rebooking rate, etc.)",    starter: true, flow: true,  professional: true,  studio: true  },
       { label: "Actionable recommendations panel",                  starter: false, flow: false, professional: true,  studio: true  },
-      { label: "Nexty AI insights (prioritised, rand impact)",      starter: false, flow: false, professional: false, studio: true  },
+      { label: "Nexty insights (prioritised, rand impact)",         starter: false, flow: false, professional: false, studio: true  },
     ],
   },
   {
@@ -224,13 +224,13 @@ const comparisonSections: FeatureSection[] = [
       { label: "Logo upload",                                       starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Theme selection (predefined visual themes)",        starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Splash screen copy customisation",                  starter: true,  flow: true,  professional: true,  studio: true  },
-      { label: "Custom domain (CNAME)",                             starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Custom domain",                                     starter: false, flow: false, professional: true,  studio: true  },
     ],
   },
   {
     section: "Policies & Availability",
     rows: [
-      { label: "Custom T&Cs (client must accept at checkout)",      starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Custom T&Cs (client must accept at checkout)",      starter: false, flow: false,  professional: true,  studio: true  },
       { label: "Operating hours per day of week",                   starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Blocked dates (public holidays, leave)",            starter: true,  flow: true,  professional: true,  studio: true  },
     ],
@@ -248,7 +248,7 @@ const faqs = [
   },
   {
     q: "How long does setup take?",
-    a: "Most businesses are live within 20 minutes. Add your services, set your availability, connect your payment method, and share your booking link. That is it. No developer needed.",
+    a: "Most businesses are live within 10 minutes. Add your services, set your availability, connect your payment method, and share your booking link. That is it.",
   },
   {
     q: "Which payment options does NextSlot support?",
@@ -263,8 +263,8 @@ const faqs = [
     a: "On Professional and Studio, NextSlot tracks each client's visit cadence and assigns them a status: New, Regular, or VIP. You get WhatsApp message templates tailored to each status so re-engaging quiet clients takes seconds, not a spreadsheet.",
   },
   {
-    q: "What is the AI add-on suggestion feature?",
-    a: "During the booking flow, NextSlot suggests relevant add-on services based on what the client is booking. A passive upsell that increases your average booking value without any extra effort from you.",
+    q: "What is the Nexty add-on suggestion feature?",
+    a: "During the booking flow, Nexty suggests relevant add-on services based on what the client is booking. A passive upsell that increases your average booking value without any extra effort from you.",
   },
   {
     q: "Can I block a client?",
