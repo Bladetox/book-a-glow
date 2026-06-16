@@ -27,6 +27,7 @@ export default function PayshapProof() {
   const [stage, setStage] = useState<Stage>("loading");
   const [booking, setBooking] = useState<BookingInfo | null>(null);
   const [reference, setReference] = useState("");
+  const [amountPaid, setAmountPaid] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // ── load booking ──────────────────────────────────────────────────────────
@@ -93,26 +94,30 @@ export default function PayshapProof() {
   }, [bookingId]);
 
   // ── submit ────────────────────────────────────────────────────────────────
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!booking) return;
-    if (!reference.trim()) {
-      alert("Please enter your PayShap reference number.");
-      return;
-    }
-    setSubmitting(true);
-
-    try {
-      // Write reference and advance status so the booking appears in the
-      // AdminPayshapQueue which filters on status = payment_claimed.
-      const { error: updateErr } = await supabase
-        .from("bookings")
-        .update({
-          payshap_reference: reference.trim(),
-          status: "payment_claimed",
-          payshap_claimed_at: new Date().toISOString(),
-        })
-        .eq("id", booking.id);
+    async function handleSubmit(e: React.FormEvent) {
+      e.preventDefault();
+      if (!booking) return;
+      if (!reference.trim()) {
+        alert("Please enter your PayShap reference number.");
+        return;
+      }
+      const parsedAmount = parseFloat(amountPaid);
+      if (!amountPaid || isNaN(parsedAmount) || parsedAmount <= 0) {
+        alert("Please enter the amount you paid.");
+        return;
+      }
+      setSubmitting(true);
+    
+      try {
+        const { error: updateErr } = await supabase
+          .from("bookings")
+          .update({
+            payshap_reference: reference.trim(),
+            payshap_amount_claimed: parsedAmount,
+            status: "payment_claimed",
+            payshap_claimed_at: new Date().toISOString(),
+          })
+          .eq("id", booking.id);
 
       if (updateErr) throw updateErr;
 
@@ -290,19 +295,77 @@ export default function PayshapProof() {
             </p>
           </div>
 
+                    {/* amount paid input */}
+          <div style={{ marginBottom: 24 }}>
+            <label
+              htmlFor="amountPaid"
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "#555",
+                marginBottom: 6,
+              }}
+            >
+              Amount Paid (R)
+            </label>
+            <div style={{ position: "relative" }}>
+              <span
+                style={{
+                  position: "absolute",
+                  left: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: 15,
+                  color: "#888",
+                  pointerEvents: "none",
+                }}
+              >
+                R
+              </span>
+              <input
+                id="amountPaid"
+                type="number"
+                min="1"
+                step="0.01"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+                placeholder="0.00"
+                required
+                style={{
+                  width: "100%",
+                  padding: "10px 12px 10px 26px",
+                  borderRadius: 10,
+                  border: "1.5px solid #ddd",
+                  fontSize: 15,
+                  outline: "none",
+                  boxSizing: "border-box",
+                  transition: "border-color 0.15s",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#01696f")}
+                onBlur={(e) => (e.target.style.borderColor = "#ddd")}
+              />
+            </div>
+            <p style={{ fontSize: 12, color: "#888", marginTop: 5 }}>
+              Enter the exact amount you sent via PayShap.
+            </p>
+          </div>
+          
           <button
             type="submit"
-            disabled={submitting || !reference.trim()}
+            disabled={submitting || !reference.trim() || !amountPaid || parseFloat(amountPaid) <= 0}
             style={{
               width: "100%",
               padding: "13px",
               borderRadius: 12,
-              background: submitting || !reference.trim() ? "#aaa" : "#01696f",
+              background: submitting || !reference.trim() || !amountPaid || parseFloat(amountPaid) <= 0 ? "#aaa" : "#01696f",
               color: "#fff",
               fontWeight: 700,
               fontSize: 15,
               border: "none",
-              cursor: submitting || !reference.trim() ? "not-allowed" : "pointer",
+              cursor: submitting || !reference.trim() || !amountPaid || parseFloat(amountPaid) <= 0 ? "not-allowed" : "pointer",
               transition: "background 0.15s",
             }}
           >
