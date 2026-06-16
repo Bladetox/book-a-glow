@@ -7,13 +7,16 @@ import { useSuggestedAddons } from "@/hooks/useSuggestedAddons";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useState, useEffect, useMemo } from "react";
-import { Sparkles, X, Loader2, CreditCard, CheckCircle2, Plus, Minus, Smartphone } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Sparkles, X, Loader2, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
 import PayshapProvisionalModal from "@/components/PayshapClaimSheet";
 import { toast } from "sonner";
 import type { PublicService } from "@/hooks/usePublicServices";
+import YocoImg from "@/assets/Yoco.svg";
+import PayfastImg from "@/assets/Payfast.webp";
+import PayshapImg from "@/assets/payshap.png";
 
 interface ReviewStepProps {
   booking: BookingState;
@@ -31,14 +34,15 @@ type SubmitPhase =
 
 function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: PaymentChoice): string {
   switch (phase) {
-    case "creating": return "Creating your booking\u2026";
-    case "gateway":  return "Opening payment gateway\u2026";
+    case "creating":
+    case "gateway":
+      return "Processing\u2026";
     default:
-      if (choice === "payshap_deposit") return `Continue to PayShap ${cur}${amount}`;
-      if (choice === "payshap_full")    return `Continue to PayShap ${cur}${amount}`;
+      if (choice === "payshap_deposit") return `Continue to PayShap ${cur}${amount.toLocaleString()}`;
+      if (choice === "payshap_full")    return `Continue to PayShap ${cur}${amount.toLocaleString()}`;
       return choice === "full"
-        ? `Confirm & Pay ${cur}${amount}`
-        : `Confirm & Pay Deposit ${cur}${amount}`;
+        ? `Confirm & Pay ${cur}${amount.toLocaleString()}`
+        : `Confirm & Pay Deposit ${cur}${amount.toLocaleString()}`;
   }
 }
 
@@ -74,14 +78,32 @@ function redirectToPayfast(payfastUrl: string, fields: Record<string, string>) {
   form.submit();
 }
 
+// Logo component — theme-adaptive via dark:invert
+function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?: string }) {
+  const isPayshap = choice === "payshap_deposit" || choice === "payshap_full";
+  const isPayfast = !isPayshap;
+
+  if (isPayshap) {
+    return (
+      <img
+        src={PayshapImg}
+        alt="PayShap"
+        className={`object-contain dark:invert ${className ?? ""}`}
+      />
+    );
+  }
+
+  // Yoco for non-payfast, Payfast when payfastMode is active — resolved in parent
+  return null;
+}
+
 const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
   const { data: addonsConfig } = useSuggestedAddons();
-  const queryClient = useQueryClient();
-  const [confirmed, setConfirmed] = useState(false);
+  const redirectingRef = useRef(false);
   const [showTerms, setShowTerms] = useState(false);
   const [phase, setPhase] = useState<SubmitPhase>("idle");
   const submitting = phase !== "idle";
@@ -90,38 +112,35 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
 
   const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
   const [payshapBookingId, setPayshapBookingId] = useState<string | null>(null);
-
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
-
   const [payfastMode, setPayfastMode] = useState<"live" | "sandbox" | null>(null);
   const [payshapEnabled, setPayshapEnabled] = useState(false);
 
   useEffect(() => {
-  if (!tenantId) return;
-  supabase
-    .from("app_settings")
-    .select("key, value")
-    .eq("tenant_id", tenantId)
-    .in("key", ["payfast_mode", "payshap_enabled"])
-    .then(({ data }) => {
-      let isPayshapOn = false;
-      for (const row of data ?? []) {
-        if (row.key === "payfast_mode" && (row.value === "live" || row.value === "sandbox")) {
-          setPayfastMode(row.value as "live" | "sandbox");
+    if (!tenantId) return;
+    supabase
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", tenantId)
+      .in("key", ["payfast_mode", "payshap_enabled"])
+      .then(({ data }) => {
+        let isPayshapOn = false;
+        for (const row of data ?? []) {
+          if (row.key === "payfast_mode" && (row.value === "live" || row.value === "sandbox")) {
+            setPayfastMode(row.value as "live" | "sandbox");
+          }
+          if (row.key === "payshap_enabled" && row.value === "true") {
+            isPayshapOn = true;
+            setPayshapEnabled(true);
+          }
         }
-        if (row.key === "payshap_enabled" && row.value === "true") {
-          isPayshapOn = true;
-          setPayshapEnabled(true);
+        if (isPayshapOn) {
+          setPaymentChoice(
+            config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
+          );
         }
-      }
-      // Set default choice only once on load, respecting deposit config
-      if (isPayshapOn) {
-        setPaymentChoice(
-          config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
-        );
-      }
-    });
-    }, [tenantId]);
+      });
+  }, [tenantId]);
 
   useEffect(() => {
     setShowPairWith(true);
@@ -185,11 +204,16 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const isPayshap = paymentChoice === "payshap_deposit" || paymentChoice === "payshap_full";
 
   const amountDueNow =
-    paymentChoice === "full" || paymentChoice === "payshap_full" ? total
-    : deposit;
+    paymentChoice === "full" || paymentChoice === "payshap_full" ? total : deposit;
 
-  const balanceAfterPay =
-    paymentChoice === "full" || paymentChoice === "payshap_full" ? 0 : balance;
+  // Resolve which logo src to show
+  const gatewayLogoSrc = isPayshap
+    ? PayshapImg
+    : payfastMode
+    ? PayfastImg
+    : YocoImg;
+
+  const gatewayLogoAlt = isPayshap ? "PayShap" : payfastMode ? "PayFast" : "Yoco";
 
   const ensureBookingCreated = async (): Promise<string> => {
     if (pendingBookingId) return pendingBookingId;
@@ -250,19 +274,21 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       p_environmental_exposure: null,
       p_physical_factors: null,
       p_hair_length_ok: null,
-      p_guest_name: booking.isExistingClient ? null : [booking.firstName, booking.lastName].filter(Boolean).join(" ") || null,
+      p_guest_name: booking.isExistingClient
+        ? null
+        : [booking.firstName, booking.lastName].filter(Boolean).join(" ") || null,
       p_guest_email: booking.isExistingClient ? null : booking.email,
       p_guest_phone: booking.isExistingClient ? null : guestPhone,
       p_total_amount: total,
       p_deposit_amount: deposit,
     });
 
-if (error) throw error;
-const bookingId: string = data?.[0]?.booking_id;
-if (!bookingId) throw new Error("Booking creation returned no ID.");
+    if (error) throw error;
+    const bookingId: string = data?.[0]?.booking_id;
+    if (!bookingId) throw new Error("Booking creation returned no ID.");
     setPendingBookingId(bookingId);
     return bookingId;
-    };
+  };
 
   const handleConfirm = async () => {
     if (submitting) return;
@@ -272,10 +298,6 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
       const bookingId = await ensureBookingCreated();
 
       if (isPayshap) {
-        // Fire payshap_instructions email immediately after booking is created.
-        // This sends the tenant's PayShap number, amount due, and the
-        // /payshap-confirm/:bookingId link to the client.
-        // Non-fatal: a failed email must not block the booking flow.
         supabase.functions.invoke("send-booking-email", {
           body: { booking_id: bookingId, email_type: "payshap_instructions" },
         }).catch((emailErr) => {
@@ -293,18 +315,19 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
 
       if (payfastMode) {
         const { data: pfData, error: pfErr } = await supabase.functions.invoke("payfast-initiate", {
-          body: { booking_id: bookingId, payment_type: paymentChoice }
+          body: { booking_id: bookingId, payment_type: paymentChoice },
         });
         if (pfErr || !pfData?.redirectUrl) throw new Error(pfErr?.message ?? "Payment gateway error.");
         const { redirectUrl, fields } = pfData;
+        redirectingRef.current = true;
         redirectToPayfast(redirectUrl, fields);
         return;
       }
 
       const { data: initData, error: initErr } = await supabase.functions.invoke("yoco-checkout", {
-         body: {
-        booking_id: bookingId,
-        payment_type: paymentChoice === "full" ? "full" : "deposit",
+        body: {
+          booking_id: bookingId,
+          payment_type: paymentChoice === "full" ? "full" : "deposit",
         },
       });
       if (initErr || !initData?.redirectUrl) throw new Error(initErr?.message ?? "Payment gateway error.");
@@ -322,16 +345,10 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
       } else {
         toast.error(friendlyBookingError(err));
       }
-      } finally {
-        // Don't reset if we navigated away via PayFast form submit
-        if (document.body.contains(document.querySelector("form[action*='payfast']")) === false) {
-          setPhase("idle");
-        }
-      }
-      };
-
-  if (confirmed) return <BookingConfirmation booking={booking} />;
-
+    } finally {
+      if (!redirectingRef.current) setPhase("idle");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -359,10 +376,7 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
           ))}
           {isCallOut && (
             <div className="flex items-center justify-between px-4 py-2.5">
-              <div>
-                <p className="text-sm font-medium text-foreground">Call-out fee</p>
-                <p className="text-[11px] text-muted-foreground">{estimatedDistanceKm} km x 2 x {cur}{config.ratePerKm}/km</p>
-              </div>
+              <p className="text-sm font-medium text-foreground">Call-out fee</p>
               <p className="text-sm font-semibold text-foreground">{cur}{callOutFee.toLocaleString()}</p>
             </div>
           )}
@@ -373,7 +387,7 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
         </div>
       </div>
 
-      {/* Date/time/location */}
+      {/* Appointment */}
       <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border/30">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Appointment</p>
@@ -400,7 +414,7 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
         </div>
       </div>
 
-      {/* Payment summary - shown only for non-payshap */}
+      {/* Payment summary - Yoco / PayFast */}
       {!isPayshap && (
         <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
@@ -425,15 +439,24 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
                 <p className="text-sm font-semibold text-primary">{cur}{total.toLocaleString()}</p>
               </div>
             )}
+            {/* Trust row */}
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <p className="text-sm text-muted-foreground">Pay with</p>
+              <img
+                src={payfastMode ? PayfastImg : YocoImg}
+                alt={payfastMode ? "PayFast" : "Yoco"}
+                className="h-5 w-auto object-contain dark:invert"
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {/* PayShap payment summary */}
+      {/* Payment summary - PayShap */}
       {isPayshap && (
         <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment via PayShap</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
           </div>
           <div className="divide-y divide-border/20">
             {paymentChoice === "payshap_deposit" && (
@@ -450,15 +473,24 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
             )}
             {paymentChoice === "payshap_full" && (
               <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-sm text-muted-foreground">Full payment</p>
+                <p className="text-sm text-muted-foreground">Paying in full</p>
                 <p className="text-sm font-semibold text-primary">{cur}{total.toLocaleString()}</p>
               </div>
             )}
+            {/* Trust row */}
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <p className="text-sm text-muted-foreground">Pay with</p>
+              <img
+                src={PayshapImg}
+                alt="PayShap"
+                className="h-5 w-auto object-contain dark:invert"
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {/* Payment method toggle - shown only for non-payshap */}
+      {/* Payment method toggle - Yoco / PayFast */}
       {!isPayshap && depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
@@ -484,7 +516,7 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
         </div>
       )}
 
-      {/* Payment method toggle - PayShap tenants */}
+      {/* Payment method toggle - PayShap */}
       {isPayshap && config.depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
@@ -508,7 +540,7 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
             Pay in full
           </button>
         </div>
-        )}
+      )}
 
       {/* Terms */}
       {termsSections.length > 0 && (
@@ -525,23 +557,32 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
         onClick={handleConfirm}
         disabled={submitting}
         whileTap={submitting ? {} : { scale: 0.97 }}
-        className="btn-next w-full flex items-center justify-center gap-2"
+        className="btn-next w-full flex items-center justify-center gap-2.5"
       >
         {submitting ? (
-          <><Loader2 className="w-4 h-4 animate-spin" />{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</>
+          <>
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
+          </>
         ) : (
-          <>{isPayshap ? <Smartphone className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
-          {phaseLabel(phase, cur, amountDueNow, paymentChoice)}</>
+          <>
+            <img
+              src={gatewayLogoSrc}
+              alt={gatewayLogoAlt}
+              className="h-4 w-auto object-contain brightness-0 invert shrink-0"
+            />
+            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
+          </>
         )}
       </motion.button>
 
       {/* PayShap provisional modal */}
       <PayshapProvisionalModal
         isOpen={payshapSheetOpen}
-        bookingId={payshapBookingId}
         onClose={() => setPayshapSheetOpen(false)}
       />
 
+      {/* Pair it with sheet */}
       <AnimatePresence>
         {showPairWith && hasPairWith && (
           <>
@@ -554,7 +595,6 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
               transition={{ duration: 0.2 }}
               onClick={() => setShowPairWith(false)}
             />
-
             <motion.div
               key="pair-sheet"
               className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
@@ -565,7 +605,6 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
               transition={{ type: "spring", stiffness: 380, damping: 38 }}
             >
               <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
-
               <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
                 <div className="flex-1 min-w-0 pr-3">
                   <div className="flex items-center gap-2 mb-1">
@@ -586,7 +625,6 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
               <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3 scrollbar-hide">
                 {pairWithAddons.map((svc) => {
                   const qty = getAddonQty(svc.id);
@@ -630,12 +668,14 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
                   );
                 })}
               </div>
-
               <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setShowPairWith(false)}
-                  className="btn-next w-full">Close</motion.button>
+                  className="btn-next w-full"
+                >
+                  Close
+                </motion.button>
               </div>
             </motion.div>
           </>
