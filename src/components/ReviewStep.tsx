@@ -302,10 +302,13 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
       }
 
       const { data: initData, error: initErr } = await supabase.functions.invoke("yoco-checkout", {
-        body: { bookingId, paymentChoice },
+         body: {
+        booking_id: bookingId,
+        payment_type: paymentChoice === "full" ? "full" : "deposit",
+        },
       });
-      if (initErr || !initData?.checkoutUrl) throw new Error(initErr?.message ?? "Payment gateway error.");
-      window.location.href = initData.checkoutUrl;
+      if (initErr || !initData?.redirectUrl) throw new Error(initErr?.message ?? "Payment gateway error.");
+      window.location.href = initData.redirectUrl;
 
     } catch (err: any) {
       if (err?.message === "no services" || err?.message === "missing datetime") return;
