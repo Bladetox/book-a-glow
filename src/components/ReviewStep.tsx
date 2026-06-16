@@ -274,11 +274,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       p_environmental_exposure: null,
       p_physical_factors: null,
       p_hair_length_ok: null,
-      p_guest_name: booking.isExistingClient
-        ? null
-        : [booking.firstName, booking.lastName].filter(Boolean).join(" ") || null,
-      p_guest_email: booking.isExistingClient ? null : booking.email,
-      p_guest_phone: booking.isExistingClient ? null : guestPhone,
+      p_guest_name: [booking.firstName, booking.lastName].filter(Boolean).join(" ") || null,
+      p_guest_email: booking.email || null,
+      p_guest_phone: guestPhone,
       p_total_amount: total,
       p_deposit_amount: deposit,
     });
