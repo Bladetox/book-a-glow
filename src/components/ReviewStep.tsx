@@ -97,31 +97,31 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const [payshapEnabled, setPayshapEnabled] = useState(false);
 
   useEffect(() => {
-    if (!tenantId) return;
-    supabase
-      .from("app_settings")
-      .select("key, value")
-      .eq("tenant_id", tenantId)
-      .in("key", ["payfast_mode", "payshap_enabled"])
-      .then(({ data }) => {
-        for (const row of data ?? []) {
-          if (row.key === "payfast_mode" && (row.value === "live" || row.value === "sandbox")) {
-            setPayfastMode(row.value as "live" | "sandbox");
-          }
-          if (row.key === "payshap_enabled" && row.value === "true") {
-            setPayshapEnabled(true);
-          }
+  if (!tenantId) return;
+  supabase
+    .from("app_settings")
+    .select("key, value")
+    .eq("tenant_id", tenantId)
+    .in("key", ["payfast_mode", "payshap_enabled"])
+    .then(({ data }) => {
+      let isPayshapOn = false;
+      for (const row of data ?? []) {
+        if (row.key === "payfast_mode" && (row.value === "live" || row.value === "sandbox")) {
+          setPayfastMode(row.value as "live" | "sandbox");
         }
-      });
-  }, [tenantId]);
-
-  useEffect(() => {
-    if (payshapEnabled) {
-      setPaymentChoice(
-        config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
-      );
-    }
-  }, [payshapEnabled, config.depositPercent]);
+        if (row.key === "payshap_enabled" && row.value === "true") {
+          isPayshapOn = true;
+          setPayshapEnabled(true);
+        }
+      }
+      // Set default choice only once on load, respecting deposit config
+      if (isPayshapOn) {
+        setPaymentChoice(
+          config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
+        );
+      }
+    });
+    }, [tenantId]);
 
   useEffect(() => {
     setShowPairWith(true);
@@ -472,6 +472,32 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           </button>
         </div>
       )}
+
+      {/* Payment method toggle - PayShap tenants */}
+      {isPayshap && config.depositPercent < 100 && (
+        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
+          <button
+            onClick={() => setPaymentChoice("payshap_deposit")}
+            className={`flex-1 py-2.5 font-medium transition-colors ${
+              paymentChoice === "payshap_deposit"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+            }`}
+          >
+            Pay deposit
+          </button>
+          <button
+            onClick={() => setPaymentChoice("payshap_full")}
+            className={`flex-1 py-2.5 font-medium transition-colors ${
+              paymentChoice === "payshap_full"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+            }`}
+          >
+            Pay in full
+          </button>
+        </div>
+        )}
 
       {/* Terms */}
       {termsSections.length > 0 && (
