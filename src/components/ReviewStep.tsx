@@ -245,19 +245,24 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       p_medications: getAnswerDetail(2),
       p_allergies: getAnswerDetail(3),
       p_health_conditions: getAnswerDetail(5),
+      p_pregnancy: getAnswerDetail(4),
+      p_additional_notes: booking.additionalNotes || null,
+      p_environmental_exposure: null,
+      p_physical_factors: null,
+      p_hair_length_ok: null,
       p_guest_name: booking.isExistingClient ? null : `${booking.firstName} ${booking.lastName}`.trim(),
       p_guest_email: booking.isExistingClient ? null : booking.email,
       p_guest_phone: booking.isExistingClient ? null : guestPhone,
-      p_payment_choice: paymentChoice,
+      p_total_amount: total,
       p_deposit_amount: deposit,
-      p_full_amount: total,
     });
 
-    if (error) throw error;
-    const bookingId: string = data;
+if (error) throw error;
+const bookingId: string = data?.[0]?.booking_id;
+if (!bookingId) throw new Error("Booking creation returned no ID.");
     setPendingBookingId(bookingId);
     return bookingId;
-  };
+    };
 
   const handleConfirm = async () => {
     if (submitting) return;
