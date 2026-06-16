@@ -43,7 +43,7 @@ class AdminErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#0a0a0a]  flex items-center justify-center p-6">
+        <div className="min-h-screen bg-black  flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
             <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-4" />
             <h2 className="text-white font-semibold mb-2">Something went wrong</h2>
@@ -184,14 +184,14 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
   if (flagsLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]  flex items-center justify-center">
+      <div className="min-h-screen bg-black  flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="h-dvh bg-[#0a0a0a]  text-white flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-dvh bg-black  text-white flex flex-col lg:flex-row overflow-hidden">
       <AdminSidebar
         views={allowedViews as unknown as string[]}
         activeView={activeView}
@@ -294,7 +294,7 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]  flex items-center justify-center">
+      <div className="min-h-screen bg-black  flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
       </div>
     );
@@ -309,7 +309,7 @@ const Admin = () => {
       {({ tenant, subscription, loading: tenantLoading }) => {
         if (tenantLoading) {
           return (
-            <div className="min-h-screen bg-[#0a0a0a]  flex items-center justify-center">
+            <div className="min-h-screen bg-black  flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
             </div>
           );
