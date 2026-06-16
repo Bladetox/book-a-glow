@@ -383,7 +383,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
           <div className="flex items-center justify-between px-4 py-2.5">
             <p className="text-sm text-muted-foreground">Location</p>
             <p className="text-sm font-medium text-foreground">
-              {isCallOut ? (booking.address || "Your address") : "Salon"}
+              {isCallOut ? (booking.address || "Your address") : (config.salonAddress || "Salon")}
             </p>
           </div>
         </div>
