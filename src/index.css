@@ -59,7 +59,7 @@
   }
 
   .dark {
-    --background: 0 0% 5%;
+    --background: 0 0% 0%;
     --foreground: 0 0% 95%;
 
     --card: 0 0% 10%;
@@ -69,7 +69,7 @@
     --popover-foreground: 0 0% 95%;
 
     --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 5%;
+    --primary-foreground: 0 0% 0%;
 
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 85%;
@@ -92,10 +92,10 @@
     --glass-highlight: 0 0% 60%;
     --glass-shimmer: 0 0% 70%;
 
-    --sidebar-background: 0 0% 5%;
+    --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 85%;
     --sidebar-border: 0 0% 18%;
@@ -605,38 +605,38 @@ html:not(.dark) .tenant-logo-img {
 
 /* ─── Dark brand variant: used by Pricing page ───────────────── */
 .nextslot-theme.dark-brand {
-  --background: 0 0% 3%;
+  --background: 0 0% 0%;
   --foreground: 0 0% 91%;
   --card: 0 0% 7%;
   --card-foreground: 0 0% 91%;
   --popover: 0 0% 7%;
   --popover-foreground: 0 0% 91%;
   --primary: 38 45% 65%;
-  --primary-foreground: 0 0% 5%;
+  --primary-foreground: 0 0% 0%;
   --secondary: 0 0% 7%;
   --secondary-foreground: 0 0% 91%;
   --muted: 0 0% 7%;
   --muted-foreground: 0 0% 52%;
   --accent: 38 45% 65%;
-  --accent-foreground: 0 0% 5%;
+  --accent-foreground: 0 0% 0%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   --border: 0 0% 100% / 0.06;
   --input: 0 0% 100% / 0.08;
   --ring: 38 45% 65%;
 
-  --gradient-hero:    linear-gradient(180deg, #080808 0%, #111110 100%);
-  --gradient-section: linear-gradient(180deg, #111110 0%, #080808 100%);
+  --gradient-hero:    linear-gradient(180deg, #000000 0%, #111110 100%);
+  --gradient-section: linear-gradient(180deg, #111110 0%, #000000 100%);
   --gradient-card:    linear-gradient(135deg, #111110 0%, #181816 100%);
-  --gradient-dark-section: linear-gradient(180deg, #080808 0%, #111110 100%);
+  --gradient-dark-section: linear-gradient(180deg, #000000 0%, #111110 100%);
   --gradient-glow:    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212,165,116,0.10), transparent);
-  --gradient-surface: linear-gradient(180deg, #111110 0%, #080808 100%);
+  --gradient-surface: linear-gradient(180deg, #111110 0%, #000000 100%);
   --shadow-soft:      0 1px 3px rgba(0,0,0,0.30), 0 4px 12px rgba(0,0,0,0.20);
   --shadow-elevated:  0 4px 16px rgba(0,0,0,0.45), 0 12px 40px rgba(0,0,0,0.30);
   --shadow-glow:      0 0 40px rgba(212,165,116,0.15);
 
   color-scheme: dark;
-  background: #080808;
+  background: #000000;
   color: #e8e8e6;
   font-family: 'Inter', system-ui, sans-serif;
 }

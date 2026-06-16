@@ -1,6 +1,6 @@
 /* ─── Design tokens shared across all home sections ─────────── */
 export const C = {
-  bg:      "#080808",
+  bg:      "#000000",
   s1:      "#111110",
   s2:      "#181816",
   s3:      "#1e1d1b",
