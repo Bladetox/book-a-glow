@@ -24,7 +24,8 @@ const tiers = [
           "Online booking page, live in minutes",
           "Service and pricing management",
           "Availability calendar with smart slot control",
-          "Deposit and balance collection via Yoco",
+          "Slot hold so serious clients lock in their time",
+          "PayShap instant EFT with payment verification",
         ],
       },
       {
@@ -32,7 +33,28 @@ const tiers = [
         features: [
           "Client profiles and full booking history",
           "Email confirmations and reminders",
-          "WhatsApp reminder messages",
+          "Basic analytics dashboard",
+        ],
+      },
+    ],
+    cta: "Start Free Trial",
+    featured: false,
+  },
+  {
+    name: "Flow",
+    price: "R499",
+    period: "/ month",
+    description: "Card payments, deposits, and client control.",
+    subline: null,
+    groups: [
+      {
+        label: "Everything in Starter, plus",
+        features: [
+          "Yoco and Payfast card payments",
+          "Deposit collection with balance tracking",
+          "Custom Terms and Conditions at checkout",
+          "Client blocking with reason attached",
+          "Revenue trends and business health metrics",
         ],
       },
     ],
@@ -41,26 +63,22 @@ const tiers = [
   },
   {
     name: "Professional",
-    price: "R499",
+    price: "R699",
     period: "/ month",
     description: "Your dashboard should be telling you what to do next.",
     subline: null,
     groups: [
       {
-        label: "Everything in Starter, plus",
+        label: "Everything in Flow, plus",
         features: [
-          "Full business dashboard and analytics",
-          "Client source tracking (TikTok, Instagram, Google)",
-          "Google review request system",
-        ],
-      },
-      {
-        label: "Growth",
-        features: [
+          "Call-out mode with travel fee calculation",
           "Loyalty tiers: New, Regular and VIP clients",
-          "Cancellation and retention alerts",
+          "WhatsApp message templates per loyalty status",
+          "Special occasions tracker (birthdays, etc.)",
+          "Custom consultation form builder",
           "AI-powered add-on suggestions during booking",
-          "Client alerts and blocked client management",
+          "Custom domain (CNAME)",
+          "Actionable recommendations panel",
         ],
       },
     ],
@@ -77,17 +95,10 @@ const tiers = [
       {
         label: "Everything in Professional, plus",
         features: [
-          "Multiple staff profiles and individual scheduling",
           "Stock and inventory management with low-stock alerts",
           "Barcode and manual stock scanning",
-        ],
-      },
-      {
-        label: "Advanced",
-        features: [
-          "Advanced analytics and booking heatmap",
-          "Google Calendar sync",
-          "Priority support",
+          "Nexty AI insights for loyalty and business growth",
+          "Advanced analytics suite",
         ],
       },
     ],
@@ -99,32 +110,123 @@ const tiers = [
 type FeatureRow = {
   label: string;
   starter: boolean | string;
+  flow: boolean | string;
   professional: boolean | string;
   studio: boolean | string;
 };
 
-const comparisonRows: FeatureRow[] = [
-  { label: "Online booking page", starter: true, professional: true, studio: true },
-  { label: "Service and pricing management", starter: true, professional: true, studio: true },
-  { label: "Availability calendar", starter: true, professional: true, studio: true },
-  { label: "Deposit and payment collection (Yoco)", starter: true, professional: true, studio: true },
-  { label: "Client profiles and booking history", starter: true, professional: true, studio: true },
-  { label: "Email confirmations and reminders", starter: true, professional: true, studio: true },
-  { label: "WhatsApp reminder messages", starter: true, professional: true, studio: true },
-  { label: "Business dashboard and analytics", starter: false, professional: true, studio: true },
-  { label: "Revenue trends and graphs", starter: false, professional: true, studio: true },
-  { label: "Client source tracking (TikTok, Instagram, Google)", starter: false, professional: true, studio: true },
-  { label: "Loyalty tiers (New / Regular / VIP)", starter: false, professional: true, studio: true },
-  { label: "Google review request system", starter: false, professional: true, studio: true },
-  { label: "Cancellation and retention alerts", starter: false, professional: true, studio: true },
-  { label: "AI-powered add-on suggestions", starter: false, professional: true, studio: true },
-  { label: "Client alerts and blocked client management", starter: false, professional: true, studio: true },
-  { label: "Multiple staff profiles", starter: false, professional: false, studio: true },
-  { label: "Stock and inventory management", starter: false, professional: false, studio: true },
-  { label: "Barcode and manual stock scanning", starter: false, professional: false, studio: true },
-  { label: "Google Calendar sync", starter: false, professional: false, studio: true },
-  { label: "Advanced analytics and booking heatmap", starter: false, professional: false, studio: true },
-  { label: "Priority support", starter: false, professional: false, studio: true },
+type FeatureSection = {
+  section: string;
+  rows: FeatureRow[];
+};
+
+const comparisonSections: FeatureSection[] = [
+  {
+    section: "Booking & Scheduling",
+    rows: [
+      { label: "Client-facing booking page",                          starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Guest booking (no account required)",                 starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Multi-service booking in one session",               starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Real-time slot availability",                         starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Slot hold (time-limited reservation)",               starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Configurable notice and advance booking windows",    starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Deposit system (% configurable)",                    starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Fixed salon mode (clients come to you)",             starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Mobile / call-out mode (travel fee calculation)",    starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Admin-created bookings",                             starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Blocked time slots",                                 starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Suggested add-ons at checkout",                      starter: false, flow: false, professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "Payments",
+    rows: [
+      { label: "PayShap instant EFT",                                starter: true,  flow: false, professional: false, studio: false },
+      { label: "PayShap real-time verification queue",               starter: true,  flow: false, professional: false, studio: false },
+      { label: "Yoco card payments",                                 starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Payfast payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Deposit vs. balance tracking per booking",          starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Payment records (per-booking history)",             starter: true,  flow: true,  professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "Emails",
+    rows: [
+      { label: "Booking confirmed email (client)",                   starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Booking cancelled email (client)",                   starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "PayShap payment link email (client)",                starter: true,  flow: false, professional: false, studio: false },
+      { label: "Balance due reminder email (client)",               starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Consultation form link email (client)",             starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Customisable email content",                        starter: false, flow: false, professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "Client Management",
+    rows: [
+      { label: "Client list with search and filter",                 starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Booking history per client",                        starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Client blocking (by phone + reason)",               starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Client alerts (flagged notes per client)",          starter: false, flow: false, professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "Loyalty & Re-engagement",
+    rows: [
+      { label: "Loyalty tracker (wax cadence and status)",          starter: false, flow: false, professional: true,  studio: true  },
+      { label: "WhatsApp message templates per loyalty status",     starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Loyalty CSV export",                                starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Nexty loyalty AI insights",                         starter: false, flow: false, professional: false, studio: true  },
+    ],
+  },
+  {
+    section: "Special Occasions",
+    rows: [
+      { label: "Admin records client occasions (birthdays, etc.)",  starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Upcoming occasion reminders in admin panel",        starter: false, flow: false, professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "Consultation Forms",
+    rows: [
+      { label: "Custom consultation form builder",                  starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Consultation responses viewer and flagging",        starter: false, flow: false, professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "Stock & Inventory",
+    rows: [
+      { label: "Stock management (products, qty, threshold)",       starter: false, flow: false, professional: false, studio: true  },
+      { label: "Low-stock alerts on dashboard",                     starter: false, flow: false, professional: false, studio: true  },
+      { label: "Stock scan modal (barcode / manual)",               starter: false, flow: false, professional: false, studio: true  },
+    ],
+  },
+  {
+    section: "Analytics & Insights",
+    rows: [
+      { label: "Dashboard KPIs (bookings, revenue, pending)",       starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Revenue trend chart",                               starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Business health metrics (rebooking rate, etc.)",    starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Actionable recommendations panel",                  starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Nexty AI insights (prioritised, rand impact)",      starter: false, flow: false, professional: false, studio: true  },
+    ],
+  },
+  {
+    section: "Branding & Domain",
+    rows: [
+      { label: "Logo upload",                                       starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Theme selection (predefined visual themes)",        starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Splash screen copy customisation",                  starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Custom domain (CNAME)",                             starter: false, flow: false, professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "Policies & Availability",
+    rows: [
+      { label: "Custom T&Cs (client must accept at checkout)",      starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Operating hours per day of week",                   starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Blocked dates (public holidays, leave)",            starter: true,  flow: true,  professional: true,  studio: true  },
+    ],
+  },
 ];
 
 const faqs = [
@@ -138,19 +240,19 @@ const faqs = [
   },
   {
     q: "How long does setup take?",
-    a: "Most businesses are live within 20 minutes. Add your services, set your availability, connect Yoco, and share your booking link. That is it. No developer needed.",
+    a: "Most businesses are live within 20 minutes. Add your services, set your availability, connect your payment method, and share your booking link. That is it. No developer needed.",
   },
   {
-    q: "Which payment gateway does NextSlot use?",
-    a: "NextSlot integrates with Yoco, trusted by over 200 000 South African businesses. Clients pay by card at the time of booking. Deposits are collected automatically. No EFT proof-of-payment chasing required.",
+    q: "Which payment gateways does NextSlot support?",
+    a: "Starter plan businesses collect payments via PayShap instant EFT with a built-in proof-of-payment verification queue. Flow, Professional, and Studio plans unlock Yoco and Payfast card payments so clients pay by card at the time of booking. Deposits are collected automatically.",
   },
   {
     q: "What happens if a client does not pay the deposit?",
     a: "The booking is not confirmed until the deposit is paid. No manual follow-up, no guessing if they are serious. Your calendar only fills with clients who have committed.",
   },
   {
-    q: "What is client source tracking?",
-    a: "When a client books, they tell you how they found you: TikTok, Instagram, Google, WhatsApp, or referral. Your dashboard shows which channels are actually converting so you know where to put your energy.",
+    q: "What is the loyalty module?",
+    a: "On Professional and Studio, NextSlot tracks each client's visit cadence and assigns them a status: New, Regular, or VIP. You get WhatsApp message templates tailored to each status so re-engaging quiet clients takes seconds, not a spreadsheet.",
   },
   {
     q: "What is the AI add-on suggestion feature?",
@@ -158,7 +260,7 @@ const faqs = [
   },
   {
     q: "Can I block a client?",
-    a: "Yes. On Professional and Studio you can block a client with a reason attached. Blocked clients cannot make a new booking. You stay in control of who walks through your door.",
+    a: "Yes. On Flow and above you can block a client with a reason attached. Blocked clients cannot make a new booking. You stay in control of who walks through your door.",
   },
   {
     q: "Is there a contract or lock-in?",
@@ -178,25 +280,28 @@ const trialBuilds = [
   "Get a growth strategy built from your real data, not generic advice",
 ];
 
-type TenantPlan = "starter" | "professional" | "studio";
+type TenantPlan = "starter" | "flow" | "professional" | "studio";
 type PricingMode = "signup" | "manage";
 
 const planKeyMap: Record<string, TenantPlan> = {
   Starter: "starter",
+  Flow: "flow",
   Professional: "professional",
   Studio: "studio",
 };
 
 const planLabelMap: Record<TenantPlan, string> = {
   starter: "Starter",
+  flow: "Flow",
   professional: "Professional",
   studio: "Studio",
 };
 
 const planRank: Record<TenantPlan, number> = {
   starter: 1,
-  professional: 2,
-  studio: 3,
+  flow: 2,
+  professional: 3,
+  studio: 4,
 };
 
 const CellValue = ({ value }: { value: boolean | string }) => {
@@ -234,7 +339,10 @@ const Pricing = () => {
         }
         const normalizedPlan = String(tenant.plan ?? "").trim().toLowerCase();
         const safePlan: TenantPlan =
-          normalizedPlan === "professional" || normalizedPlan === "studio" ? normalizedPlan : "starter";
+          normalizedPlan === "flow" ? "flow"
+          : normalizedPlan === "professional" ? "professional"
+          : normalizedPlan === "studio" ? "studio"
+          : "starter";
         if (isMounted) {
           setTenantId(tenant.id);
           setCurrentPlan(safePlan);
@@ -287,7 +395,7 @@ const Pricing = () => {
       <style>{HOME_STYLES}</style>
       <SiteHeader />
 
-      {/* ── HERO ─ full-width, background layers match HeroSection exactly ──── */}
+      {/* HERO */}
       <section
         style={{
           position: "relative",
@@ -296,7 +404,6 @@ const Pricing = () => {
           padding: "80px 24px 60px",
         }}
       >
-        {/* Background image layer */}
         <div style={{
           position:           "absolute",
           inset:              0,
@@ -310,7 +417,6 @@ const Pricing = () => {
           zIndex:             0,
           pointerEvents:      "none",
         }} />
-        {/* Grid overlay */}
         <div style={{
           position: "absolute", inset: 0,
           backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
@@ -320,7 +426,6 @@ const Pricing = () => {
           zIndex: 1,
           pointerEvents: "none",
         } as React.CSSProperties} />
-        {/* Ambient glow orb */}
         <div style={{
           position: "absolute", width: 640, height: 640, borderRadius: "50%",
           background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
@@ -331,7 +436,6 @@ const Pricing = () => {
           pointerEvents: "none",
         }} />
 
-        {/* Content */}
         <div
           style={{
             position: "relative", zIndex: 2,
@@ -342,7 +446,6 @@ const Pricing = () => {
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
             className="pricing-hero-grid"
           >
-            {/* Left: copy */}
             <div>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
@@ -435,7 +538,6 @@ const Pricing = () => {
               )}
             </div>
 
-            {/* Right: what the trial builds card */}
             <div style={{
               background: C.s1,
               border: `1px solid ${C.border2}`,
@@ -510,12 +612,12 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* ── PLANS, COMPARISON, TRIAL VALUE ─ inside constrained container ──── */}
+      {/* PLANS, COMPARISON, TRIAL VALUE */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
         <section id="plans" style={{ paddingBottom: 0, paddingTop: 60 }}>
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, maxWidth: 960, margin: "0 auto" }}
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 20, maxWidth: 1100, margin: "0 auto" }}
             className="pricing-plans-grid"
           >
             {tiers.map((tier) => {
@@ -653,7 +755,7 @@ const Pricing = () => {
 
           {/* Enterprise row */}
           <div style={{
-            maxWidth: 960, margin: "20px auto 0",
+            maxWidth: 1100, margin: "20px auto 0",
             background: C.s1, border: `1px solid ${C.border}`,
             borderRadius: 16, padding: "28px 32px",
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap",
@@ -678,8 +780,8 @@ const Pricing = () => {
           </div>
         </section>
 
-        {/* Comparison */}
-        <section style={{ maxWidth: 960, margin: "16px auto 0", paddingBottom: 60 }}>
+        {/* Full plan comparison */}
+        <section style={{ maxWidth: 1100, margin: "16px auto 0", paddingBottom: 60 }}>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <button
               type="button"
@@ -702,20 +804,43 @@ const Pricing = () => {
               <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${C.border}`, background: C.s2 }}>
-                    <th style={{ textAlign: "left", padding: "14px 20px", fontWeight: 600, fontSize: 13, color: C.text, fontFamily: FONT_BODY, width: "50%" }}>Feature</th>
+                    <th style={{ textAlign: "left", padding: "14px 20px", fontWeight: 600, fontSize: 13, color: C.text, fontFamily: FONT_BODY, width: "44%" }}>Feature</th>
                     <th style={{ textAlign: "center", padding: "14px 12px", fontWeight: 600, fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>Starter</th>
+                    <th style={{ textAlign: "center", padding: "14px 12px", fontWeight: 600, fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>Flow</th>
                     <th style={{ textAlign: "center", padding: "14px 12px", fontWeight: 600, fontSize: 13, color: C.gold, fontFamily: FONT_BODY }}>Professional</th>
                     <th style={{ textAlign: "center", padding: "14px 12px", fontWeight: 600, fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>Studio</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {comparisonRows.map((row, i) => (
-                    <tr key={row.label} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.bg : C.s1 }}>
-                      <td style={{ padding: "12px 20px", color: C.muted, fontFamily: FONT_BODY }}>{row.label}</td>
-                      <td style={{ padding: "12px", textAlign: "center" }}><CellValue value={row.starter} /></td>
-                      <td style={{ padding: "12px", textAlign: "center", background: "rgba(212,165,116,0.03)" }}><CellValue value={row.professional} /></td>
-                      <td style={{ padding: "12px", textAlign: "center" }}><CellValue value={row.studio} /></td>
-                    </tr>
+                  {comparisonSections.map((section) => (
+                    <>
+                      <tr key={`section-${section.section}`} style={{ background: C.s2 }}>
+                        <td
+                          colSpan={5}
+                          style={{
+                            padding: "10px 20px",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: "0.09em",
+                            textTransform: "uppercase",
+                            color: C.gold,
+                            fontFamily: FONT_BODY,
+                            borderBottom: `1px solid ${C.border}`,
+                          }}
+                        >
+                          {section.section}
+                        </td>
+                      </tr>
+                      {section.rows.map((row, i) => (
+                        <tr key={row.label} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.bg : C.s1 }}>
+                          <td style={{ padding: "12px 20px", color: C.muted, fontFamily: FONT_BODY }}>{row.label}</td>
+                          <td style={{ padding: "12px", textAlign: "center" }}><CellValue value={row.starter} /></td>
+                          <td style={{ padding: "12px", textAlign: "center" }}><CellValue value={row.flow} /></td>
+                          <td style={{ padding: "12px", textAlign: "center", background: "rgba(212,165,116,0.03)" }}><CellValue value={row.professional} /></td>
+                          <td style={{ padding: "12px", textAlign: "center" }}><CellValue value={row.studio} /></td>
+                        </tr>
+                      ))}
+                    </>
                   ))}
                 </tbody>
               </table>
@@ -724,7 +849,7 @@ const Pricing = () => {
         </section>
 
         {/* Trial value block */}
-        <section style={{ maxWidth: 960, margin: "0 auto", paddingBottom: 80 }}>
+        <section style={{ maxWidth: 1100, margin: "0 auto", paddingBottom: 80 }}>
           <div style={{
             background: C.s1,
             border: `1px solid rgba(212,165,116,0.22)`,
@@ -758,7 +883,7 @@ const Pricing = () => {
 
       </div>
 
-      {/* ── FAQ ─ full-width, background layers match HeroSection exactly ───── */}
+      {/* FAQ */}
       <section
         id="faq"
         style={{
@@ -768,7 +893,6 @@ const Pricing = () => {
           padding: "80px 24px 100px",
         }}
       >
-        {/* Background image layer */}
         <div style={{
           position:           "absolute",
           inset:              0,
@@ -782,7 +906,6 @@ const Pricing = () => {
           zIndex:             0,
           pointerEvents:      "none",
         }} />
-        {/* Grid overlay */}
         <div style={{
           position: "absolute", inset: 0,
           backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
@@ -792,7 +915,6 @@ const Pricing = () => {
           zIndex: 1,
           pointerEvents: "none",
         } as React.CSSProperties} />
-        {/* Ambient glow orb */}
         <div style={{
           position: "absolute", width: 640, height: 640, borderRadius: "50%",
           background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
@@ -803,7 +925,6 @@ const Pricing = () => {
           pointerEvents: "none",
         }} />
 
-        {/* Content */}
         <div style={{ position: "relative", zIndex: 2, maxWidth: 680, margin: "0 auto" }}>
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text, textAlign: "center", marginBottom: 8 }}>
             Straight answers.
@@ -839,7 +960,7 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* ── BOTTOM CTA ───────────────────────────────────────────────── */}
+      {/* BOTTOM CTA */}
       <section style={{ background: C.bg, padding: "100px 24px" }}>
         <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
           <div style={{
