@@ -263,7 +263,7 @@ const ClientMiniCard = ({
   <motion.div
     layoutId={id}
     onClick={() => onExpand({ id, label, value, valueColor, title, explain, benchmark })}
-    className="rounded-xl border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
+    className="rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none"
     whileTap={{ scale: 0.97 }}
     transition={{ type: "spring", stiffness: 340, damping: 30 }}
     role="button"
@@ -278,7 +278,7 @@ const ClientMiniCard = ({
 );
 
 const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
-  <div className="mt-3 mb-1 rounded-lg border border-white/[0.06] bg-white/[0.04] p-3 flex flex-col gap-2">
+  <div className="mt-3 mb-1 rounded-lg border border-white/[0.10] bg-white/[0.04] p-3 flex flex-col gap-2">
     {lines.map((l) => (
       <div key={l.term} className="flex gap-2">
         <span className="text-[10px] font-semibold text-emerald-400/80 shrink-0 w-28 leading-snug">{l.term}</span>
@@ -414,7 +414,7 @@ const AppointmentsList = ({
       {appointments.map((a) => (
         <div
           key={a.id}
-          className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
+          className="rounded-lg border border-white/[0.10] bg-white/[0.02] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
           onClick={() => onSelect?.(a.client)}
         >
           <div className="flex flex-col items-center shrink-0 w-12">
@@ -530,7 +530,7 @@ const AdminDashboard = ({
     return (
       <div className="flex flex-col gap-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 animate-pulse">
+          <div key={i} className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5 animate-pulse">
             <div className="h-3 w-24 rounded bg-white/[0.06] mb-3" />
             <div className="h-8 w-32 rounded bg-white/[0.06]" />
           </div>
@@ -636,7 +636,7 @@ const AdminDashboard = ({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+            <div className="rounded-xl border border-white/[0.10] bg-white/[0.02] p-4">
               <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mb-3">Show / Hide Sections</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {ALL_SECTIONS.map((key) => (
@@ -664,7 +664,7 @@ const AdminDashboard = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <button
             onClick={() => onNavigate?.("Recommendations")}
-            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3.5 hover:bg-white/[0.05] hover:border-white/[0.12] transition-all group"
+            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5 hover:bg-white/[0.05] hover:border-white/[0.12] transition-all group"
           >
             <div className="flex items-center gap-3 min-w-0">
               <MiniNextyOrb />
@@ -683,7 +683,7 @@ const AdminDashboard = ({
 
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-4">
+          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5 flex flex-col gap-4">
 
             {/* ── Month revenue header ── */}
             <div className="flex items-start justify-between gap-3">
@@ -788,7 +788,7 @@ const AdminDashboard = ({
                   className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border transition-colors ${
                     item.urgent
                       ? "border-amber-500/30 bg-amber-500/[0.04]"
-                      : "border-white/[0.05] bg-white/[0.03]"
+                      : "border-white/[0.05] bg-white/[0.02]"
                   }`}
                 >
                   <span className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</span>
@@ -876,7 +876,7 @@ const AdminDashboard = ({
               <>
                 <button
                   onClick={() => { setAlertModalType("overdue_loyalty"); setAlertModalOpen(true); }}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.10] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-1.5 rounded-lg bg-amber-500/10">
@@ -891,7 +891,7 @@ const AdminDashboard = ({
                 </button>
                 <button
                   onClick={() => { setAlertModalType("inactive_90_days"); setAlertModalOpen(true); }}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.10] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-1.5 rounded-lg bg-blue-500/10">
@@ -918,7 +918,7 @@ const AdminDashboard = ({
 
       {visibility.heatmap && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.14 }}>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
+          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Booking Heatmap</p>
               <button
@@ -937,7 +937,7 @@ const AdminDashboard = ({
 
       {visibility.todayAppointments && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.16 }}>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
+          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5">
             <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-4">Today's Appointments</p>
             {(data.todayAppointments ?? []).length === 0 ? (
               <p className="text-xs text-white/20">No appointments today.</p>
@@ -965,7 +965,7 @@ const AdminDashboard = ({
               benchmark: METRIC_COPY.leadSource.benchmark,
               extraLines: leadSourceExtraLines,
             })}
-            className="rounded-xl border border-white/[0.06] bg-white/[0.03] cursor-pointer select-none"
+            className="rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none"
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             role="button"
