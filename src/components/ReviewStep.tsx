@@ -250,7 +250,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       p_environmental_exposure: null,
       p_physical_factors: null,
       p_hair_length_ok: null,
-      p_guest_name: booking.isExistingClient ? null : `${booking.firstName} ${booking.lastName}`.trim(),
+      p_guest_name: booking.isExistingClient ? null : [booking.firstName, booking.lastName].filter(Boolean).join(" ") || null,
       p_guest_email: booking.isExistingClient ? null : booking.email,
       p_guest_phone: booking.isExistingClient ? null : guestPhone,
       p_total_amount: total,
@@ -293,7 +293,7 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
 
       if (payfastMode) {
         const { data: pfData, error: pfErr } = await supabase.functions.invoke("payfast-initiate", {
-          body: { bookingId, paymentChoice },
+          body: { booking_id: bookingId, payment_type: paymentChoice }
         });
         if (pfErr || !pfData?.redirectUrl) throw new Error(pfErr?.message ?? "Payment gateway error.");
         const { redirectUrl, fields } = pfData;
@@ -322,10 +322,13 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
       } else {
         toast.error(friendlyBookingError(err));
       }
-    } finally {
-      setPhase("idle");
-    }
-  };
+      } finally {
+        // Don't reset if we navigated away via PayFast form submit
+        if (document.body.contains(document.querySelector("form[action*='payfast']")) === false) {
+          setPhase("idle");
+        }
+      }
+      };
 
   if (confirmed) return <BookingConfirmation booking={booking} />;
 
@@ -388,9 +391,9 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
               <p className="text-sm font-medium text-foreground">{booking.selectedTime}</p>
             </div>
           )}
-          <div className="flex items-center justify-between px-4 py-2.5">
-            <p className="text-sm text-muted-foreground">Location</p>
-            <p className="text-sm font-medium text-foreground">
+          <div className="flex items-start justify-between px-4 py-2.5">
+            <p className="text-sm text-muted-foreground shrink-0 pt-0.5">Location</p>
+            <p className="text-sm font-medium text-foreground text-right ml-3">
               {isCallOut ? (booking.address || "Your address") : (config.salonAddress || "Salon")}
             </p>
           </div>
@@ -535,6 +538,7 @@ if (!bookingId) throw new Error("Booking creation returned no ID.");
       {/* PayShap provisional modal */}
       <PayshapProvisionalModal
         isOpen={payshapSheetOpen}
+        bookingId={payshapBookingId}
         onClose={() => setPayshapSheetOpen(false)}
       />
 
