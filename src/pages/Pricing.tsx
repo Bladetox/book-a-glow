@@ -15,26 +15,26 @@ const tiers = [
     name: "Starter",
     price: "R99",
     period: "/ month",
-    description: "While others charge you for the basics.",
-    subline: "Your Starter plan includes:",
+    description: "While others charge you extra for the basics, your Starter plan automates the admin that drains your day.",
+    subline: "Your Starter plan automates:",
     trialDays: 7,
     comingSoon: false,
     groups: [
       {
         label: "Core",
         features: [
-          "Online booking page, live in minutes",
-          "Service and pricing management",
+          "Ditch the pen and diary - automated bookings",
+          "No manual chasing EFT - PayShap clears instantly in your bank account",
+          "No back-and-forth WhatsApp chats - confirm the booking with one click",
+          "Email notifications and WhatsApp templates - one click away",
           "Availability calendar with smart slot control",
           "Slot hold so serious clients lock in their time",
-          "PayShap instant EFT with payment verification",
         ],
       },
       {
         label: "Clients",
         features: [
           "Client profiles and full booking history",
-          "Email confirmations and reminders",
           "Basic analytics dashboard",
         ],
       },
@@ -402,6 +402,11 @@ const StarterHeroCard = ({
         ))}
       </div>
 
+      {/* Footer tagline */}
+      <p style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.6, marginBottom: 16, fontStyle: "italic" }}>
+        Start right, take your business seriously and focus on your craft, not admin.
+      </p>
+
       {/* CTA */}
       {pricingMode === "manage" ? (
         <>
@@ -533,6 +538,7 @@ const Pricing = () => {
   };
 
   const starterTier = tiers.find((t) => t.name === "Starter")!;
+  const nonStarterTiers = tiers.filter((t) => t.name !== "Starter");
 
   return (
     <div className="nextslot-theme dark-brand" style={{ overflowX: "hidden" }}>
@@ -763,10 +769,10 @@ const Pricing = () => {
 
         <section id="plans" style={{ paddingBottom: 0, paddingTop: 60 }}>
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 20, maxWidth: 1100, margin: "0 auto" }}
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, maxWidth: 1100, margin: "0 auto" }}
             className="pricing-plans-grid"
           >
-            {tiers.map((tier) => {
+            {nonStarterTiers.map((tier) => {
               const tierPlan = planKeyMap[tier.name];
               const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
               const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
@@ -930,7 +936,7 @@ const Pricing = () => {
                           <ArrowRight style={{ height: 13, width: 13 }} />
                         </Link>
                         <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
-                          {tier.name === "Starter" ? "Free for 7 days. No payment required." : "Free for 30 days. No payment required."}
+                          Free for 30 days. No payment required.
                         </p>
                       </>
                     )}
