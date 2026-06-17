@@ -47,7 +47,7 @@ export const AdminCard = ({
             <Icon className="w-4 h-4 text-white/40" />
           </div>
         )}
-        <h4 className="text-sm font-bold text-white/80 flex-1">{title}</h4>
+        <h4 className="text-base font-bold text-white/80 flex-1">{title}</h4>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
         {collapsible && (
           <ChevronDown
@@ -312,7 +312,7 @@ export const AdminPageHeader = ({
 }) => (
   <div className="flex items-start justify-between gap-3 min-w-0">
     <div className="min-w-0 overflow-hidden">
-      <h3 className="text-lg font-bold text-white/90 truncate">{title}</h3>
+      <h3 className="text-base font-bold text-white/90 truncate">{title}</h3>
       {subtitle && (
         <p className="text-xs text-white/30 font-medium mt-0.5 truncate">{subtitle}</p>
       )}
@@ -392,7 +392,7 @@ export const HintTooltip = ({ text }: { text: string }) => {
               borderTop: "6px solid rgba(255,255,255,0.12)",
             }}
           />
-          <p className="text-[11px] text-white/65 leading-relaxed">{text}</p>
+          <p className="text-xs text-white/65 leading-relaxed">{text}</p>
         </motion.div>
       )}
     </AnimatePresence>
