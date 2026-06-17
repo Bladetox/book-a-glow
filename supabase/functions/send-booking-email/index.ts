@@ -314,7 +314,7 @@ Deno.serve(async (req) => {
     //   2. Tenant: brief holding notification that a booking is pending payment.
     // ======================================================================
     if (email_type === "payshap_instructions") {
-      const confirmUrl  = `${appBaseUrl}/payshap-confirm/${booking_id}`;
+      const confirmUrl  = `${appBaseUrl}/pay/${booking_id}`;
       const amountLabel = isFullPayment ? "Full Payment" : "Deposit";
       const amountValue = isFullPayment ? totalAmount : depositAmount;
 
@@ -390,49 +390,6 @@ Deno.serve(async (req) => {
           ),
         });
       }
-
-      // 2. TENANT holding notification
-      if (tenantEmail) {
-        await new Promise((r) => setTimeout(r, 300));
-
-        const ownerHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
-  <style>${OWNER_STYLES}</style>
-</head>
-<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
-<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
-  <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">New booking pending payment &#128242;</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has started a booking. PayShap payment instructions have been sent to them. You will be notified once they submit their payment reference.</p>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      ${row("Client",   clientName)}
-      ${row("Phone",    clientPhone || "—")}
-      ${row("Service",  serviceNames)}
-      ${row("Date",     formattedDate)}
-      ${row("Time",     formattedTime)}
-      ${row("Location", tenantLocationDisplay || "—")}
-      ${row(amountLabel + " Due", amountValue, true)}
-    </table>
-  </td></tr>
-  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
-    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
-  </td></tr>
-</table>
-</body></html>`;
-
-        await send({
-          from:     `NextSlot <bookings@nextslot.co.za>`,
-          reply_to: "bookings@nextslot.co.za",
-          to:       [tenantEmail],
-          subject:  `&#128242; Pending PayShap booking — ${clientName} on ${formattedDate}`,
-          html:     ownerHtml,
-        });
-      }
-    }
 
     // ======================================================================
     // PAYSHAP PENDING
