@@ -198,7 +198,7 @@ const TrialExpiredPaywall = ({ onSignOut }: Props) => {
             Your free trial has ended
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-white/90 tracking-tight mb-3">
+          <h1 className="text-2xl font-bold text-white/90 tracking-tight mb-3">
             Choose a plan to continue
           </h1>
           <p className="text-sm text-white/40 max-w-md mx-auto leading-relaxed">
@@ -244,7 +244,7 @@ const TrialExpiredPaywall = ({ onSignOut }: Props) => {
               >
                 <h3 className="text-base font-bold text-white/85 mb-1">{tier.name}</h3>
                 <div className="flex items-baseline gap-1 mb-1.5">
-                  <span className="text-3xl font-bold text-white/90">{tier.price}</span>
+                  <span className="text-2xl font-bold text-white/90">{tier.price}</span>
                   <span className="text-xs text-white/35">{tier.period}</span>
                 </div>
                 <p className="text-xs text-white/40 leading-snug">{tier.description}</p>
@@ -311,10 +311,9 @@ const TrialExpiredPaywall = ({ onSignOut }: Props) => {
             >
               support@nextslot.co.za
             </a>
-          </p>
-          <button
+          </p><button
             onClick={onSignOut}
-            className="text-[11px] text-white/20 hover:text-white/40 transition-colors pt-1"
+            className="text-xs text-white/20 hover:text-white/40 transition-colors pt-1"
           >
             Sign out
           </button>
