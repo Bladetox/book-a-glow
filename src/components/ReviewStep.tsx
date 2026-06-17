@@ -108,7 +108,16 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
   const [showTerms, setShowTerms] = useState(false);
   const [phase, setPhase] = useState<SubmitPhase>("idle");
   const submitting = phase !== "idle";
-  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>(() =>config.payshapEnabled? config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit": "deposit");
+const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
+
+useEffect(() => {
+  if (config.payshapEnabled) {
+    setPaymentChoice(
+      config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
+    );
+  }
+}, [config.payshapEnabled, config.depositPercent]);  
+    
   const [showPairWith, setShowPairWith] = useState(false);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
   const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
