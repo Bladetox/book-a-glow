@@ -271,7 +271,7 @@ const ClientMiniCard = ({
   >
     <div className="flex flex-col items-center justify-center gap-1 py-4 px-2">
       <Icon className={`w-4 h-4 ${iconColor ?? "text-white/30"}`} />
-      <p className={`text-lg font-bold ${valueColor ?? "text-white/90"}`}>{value}</p>
+      <p className={`text-2xl font-bold ${valueColor ?? "text-white/90"}`}>{value}</p>
       <p className="text-[10px] text-white/30">{label}</p>
     </div>
   </motion.div>
@@ -282,7 +282,7 @@ const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
     {lines.map((l) => (
       <div key={l.term} className="flex gap-2">
         <span className="text-[10px] font-semibold text-emerald-400/80 shrink-0 w-28 leading-snug">{l.term}</span>
-        <span className="text-[11px] text-white/55 leading-snug">{l.def}</span>
+        <span className="text-xs text-white/55 leading-snug">{l.def}</span>
       </div>
     ))}
   </div>
@@ -428,7 +428,7 @@ const AppointmentsList = ({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white/85 truncate">{a.client}</p>
-            <p className="text-[11px] text-white/40 truncate">{a.service}</p>
+            <p className="text-xs text-white/40 truncate">{a.service}</p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             <StatusBadge status={a.status} />
@@ -674,7 +674,7 @@ const AdminDashboard = ({
             <div className="flex items-center gap-3 min-w-0">
               <MiniNextyOrb />
               <div className="flex flex-col items-start gap-0.5 min-w-0">
-                <p className="text-[11px] font-semibold text-white/80 leading-none">Nexty has insights for you</p>
+                <p className="text-xs font-semibold text-white/80 leading-none">Nexty has insights for you</p>
                 <p className="text-[10px] text-white/30 leading-none">Open Nexty to see your business analysis</p>
               </div>
             </div>
@@ -694,7 +694,7 @@ const AdminDashboard = ({
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-1 flex-1 min-w-0">
                 <p className="text-[10px] tracking-[0.16em] uppercase text-white/25">Revenue This Month</p>
-                <p className="text-3xl sm:text-4xl font-bold text-white/95 leading-none tabular-nums">
+                <p className="text-2xl font-bold text-white/95 leading-none tabular-nums">
                   R {monthRevenue.toLocaleString()}
                 </p>
 
@@ -982,7 +982,7 @@ const AdminDashboard = ({
               </div>
               <div className="flex flex-col gap-0.5 flex-1 min-w-0 justify-center">
                 <span className="text-[10px] tracking-[0.1em] uppercase text-white/30 truncate">Top Acquisition Channel</span>
-                <span className="text-base sm:text-lg font-bold truncate text-white/90">{topChannel}</span>
+                <span className="text-base font-bold truncate text-white/90">{topChannel}</span>
                 {leadSourceSub && <span className="text-[10px] text-white/25 truncate">{leadSourceSub}</span>}
               </div>
               <div className="shrink-0 mt-1 ml-1">
