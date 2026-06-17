@@ -256,7 +256,7 @@ useEffect(() => {
       p_environmental_exposure: null,
       p_physical_factors: null,
       p_hair_length_ok: null,
-      p_guest_name: [booking.firstName, booking.lastName].filter(Boolean).join(" ") || null,
+      p_guest_name: booking.fullName.trim() || null,
       p_guest_email: booking.email || null,
       p_guest_phone: guestPhone,
       p_total_amount: total,
