@@ -14,15 +14,15 @@ import { C, FONT_BODY } from "@/components/home/tokens";
 
 const Index = () => (
   <div
-    className="nextslot-theme dark-brand"
+    className="nextslot-theme dark-brand scrollbar-hide"
     style={{
+      position: "absolute",
+      inset: 0,
+      overflowY: "scroll",
+      overflowX: "hidden",
       background: C.bg,
       color: C.text,
       fontFamily: FONT_BODY,
-      height: "100%",
-      overflowY: "auto",
-      overflowX: "hidden",
-      WebkitOverflowScrolling: "touch",
       WebkitFontSmoothing: "antialiased",
     } as React.CSSProperties}
   >
