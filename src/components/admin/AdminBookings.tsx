@@ -1,3 +1,4 @@
+import { useAppSettings } from "@/hooks/useSupabaseSettings";
 import AddServiceModal from "@/components/admin/AddServiceModal";
 import BlockClientModal from "@/components/admin/BlockClientModal";
 import {
@@ -361,6 +362,8 @@ interface AdminBookingsProps {
 const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const { data: bookings = [], isLoading } = useSupabaseBookings();
   const { tenantId } = useTenant();
+  const { data: appSettings = {} } = useAppSettings();
+  const isPayshap = appSettings["payshap_enabled"] === "true";
   const queryClient = useQueryClient();
   const updateStatus = useUpdateBookingStatus();
   const reschedule = useRescheduleBooking();
