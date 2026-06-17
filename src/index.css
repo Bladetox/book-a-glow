@@ -131,6 +131,7 @@
 
   body {
     /* bg-background preserved so tenant theme switcher works correctly */
+    background: #000; 
     @apply bg-background text-foreground font-body;
     height: 100%;
     overflow: hidden;
