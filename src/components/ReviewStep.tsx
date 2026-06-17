@@ -5,7 +5,6 @@ import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { useSuggestedAddons } from "@/hooks/useSuggestedAddons";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Sparkles, X, Loader2, Plus, Minus } from "lucide-react";
@@ -97,50 +96,24 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
   return null;
 }
 
-const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepProps) => {
+  const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
+  const payfastMode = config.payfastMode; 
+  const payshapEnabled = config.payshapEnabled;
   const { tenantId } = usePublicTenant();
   const { data: addonsConfig } = useSuggestedAddons();
   const redirectingRef = useRef(false);
   const [showTerms, setShowTerms] = useState(false);
   const [phase, setPhase] = useState<SubmitPhase>("idle");
   const submitting = phase !== "idle";
-  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>(() =>config.payshapEnabled? config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit": "deposit");
   const [showPairWith, setShowPairWith] = useState(false);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
   const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
   const [payshapBookingId, setPayshapBookingId] = useState<string | null>(null);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
-  const [payfastMode, setPayfastMode] = useState<"live" | "sandbox" | null>(null);
-  const [payshapEnabled, setPayshapEnabled] = useState(false);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    supabase
-      .from("app_settings")
-      .select("key, value")
-      .eq("tenant_id", tenantId)
-      .in("key", ["payfast_mode", "payshap_enabled"])
-      .then(({ data }) => {
-        let isPayshapOn = false;
-        for (const row of data ?? []) {
-          if (row.key === "payfast_mode" && (row.value === "live" || row.value === "sandbox")) {
-            setPayfastMode(row.value as "live" | "sandbox");
-          }
-          if (row.key === "payshap_enabled" && row.value === "true") {
-            isPayshapOn = true;
-            setPayshapEnabled(true);
-          }
-        }
-        if (isPayshapOn) {
-          setPaymentChoice(
-            config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
-          );
-        }
-      });
-  }, [tenantId]);
 
   useEffect(() => {
     setShowPairWith(true);
