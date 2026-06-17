@@ -58,17 +58,22 @@ export default function PayshapProof() {
       .then(({ data, error }) => {
         if (error || !data) { setStage("not-found"); return; }
 
-        // Guard: already submitted via either status value
-        if (
-          data.status === "payment_claimed" ||
-          data.status === "payshap_proof_submitted" ||
-          data.status === "confirmed"
-        ) {
-          setStage("already-submitted");
-          return;
-        }
-
-        const serviceNames = (data.booking_services ?? []).flatMap((bs: any) =>
+      // Guard: already submitted — only block if proof was actually submitted.
+      // "confirmed" is intentionally excluded because a confirmed booking can
+      // still have a balance payment pending (intent=balance flow).
+      const searchParams = new URLSearchParams(window.location.search);
+      const intent = searchParams.get("intent");
+      const isBalanceIntent = intent === "balance";
+      
+      if (
+        data.status === "payment_claimed" ||
+        data.status === "payshap_proof_submitted" ||
+        (!isBalanceIntent && data.status === "confirmed")
+      ) {
+        setStage("already-submitted");
+        return;
+      }
+        const serviceNames = (data.booking_items ?? []).flatMap((bs: any) =>
           bs.services?.name ? [bs.services.name] : []
         );
 
@@ -184,7 +189,7 @@ export default function PayshapProof() {
       <div style={containerStyle}>
         <div style={cardStyle}>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Already received</h1>
-          <p style={{ color: "#888", fontSize: 14 }}>We have already received your payment reference. We will be in touch to confirm your booking.</p>
+          <p style={{ color: "#888", fontSize: 14 }}>We have already received your payment reference and will verify it shortly.</p>
         </div>
       </div>
     );
