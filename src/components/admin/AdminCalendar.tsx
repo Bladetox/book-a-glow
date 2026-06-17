@@ -650,15 +650,18 @@ const TimeGrid = ({
               isToday(d) ? "text-white/90" : "text-white/30"
             }`}
           >
-            <p className="text-[10px] uppercase tracking-widest">
-              {d.toLocaleDateString("en-ZA", { weekday: "short" })}
-            <p className={`text-base font-semibold leading-none mt-0.5 ${
+          <p className="text-[10px] uppercase tracking-widest">
+            {d.toLocaleDateString("en-ZA", { weekday: "short" })}
+          </p>
+          <p
+            className={`text-base font-semibold leading-none mt-0.5 ${
               isToday(d)
                 ? "w-8 h-8 bg-white/10 rounded-full flex items-center justify-center mx-auto text-white"
                 : ""
-            }`}>
-              {d.getDate()}
-            </p>
+            }`}
+          >
+            {d.getDate()}
+          </p>
           </div>
         ))}
       </div>
