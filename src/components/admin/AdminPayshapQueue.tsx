@@ -196,14 +196,14 @@ const AdminPayshapQueue = () => {
                   : null;
 
                 const claimedAmount = resolveClaimedAmount({
-                  totalAmount:   booking.totalAmount,
-                  depositAmount: booking.depositAmount,
-                  balanceDue:    booking.balanceDue,
+                  totalAmount:   booking.total,
+                  depositAmount: booking.deposit,
+                  balanceDue:    booking.balance,
                   depositPaid:   booking.depositPaid,
                 });
                 const amountLabel = resolveAmountLabel({
-                  totalAmount:   booking.totalAmount,
-                  depositAmount: booking.depositAmount,
+                  totalAmount:   booking.total,
+                  depositAmount: booking.deposit,
                   depositPaid:   booking.depositPaid,
                 });
 
@@ -220,10 +220,10 @@ const AdminPayshapQueue = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white/85 truncate">
-                          {booking.clientName || "Client"}
+                          {booking.client || "Client"}
                         </p>
                         <p className="text-[11px] text-white/40 truncate">
-                          {booking.serviceNames?.join(", ") || "Booking"}
+                          {booking.service || "Booking"}
                         </p>
                         {claimedAt && (
                           <div className="flex items-center gap-1 mt-0.5">
@@ -283,7 +283,7 @@ const AdminPayshapQueue = () => {
                         Confirm
                       </button>
                       <button
-                        onClick={() => requestReject(booking.id, booking.clientName || "Client")}
+                        onClick={() => requestReject(booking.id, booking.client || "Client")}
                         disabled={isBusy}
                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
