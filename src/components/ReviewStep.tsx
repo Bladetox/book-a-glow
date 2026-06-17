@@ -277,7 +277,7 @@ useEffect(() => {
     try {
       const bookingId = await ensureBookingCreated();
 
-      if (isPayshap) {
+      if (config.payshapEnabled) {
         supabase.functions.invoke("send-booking-email", {
           body: { booking_id: bookingId, email_type: "payshap_instructions" },
         }).catch((emailErr) => {
@@ -293,7 +293,7 @@ useEffect(() => {
 
       setPhase("gateway");
 
-      if (payfastMode) {
+      if (config.payfastMode) {
         const { data: pfData, error: pfErr } = await supabase.functions.invoke("payfast-initiate", {
           body: { booking_id: bookingId, payment_type: paymentChoice },
         });
