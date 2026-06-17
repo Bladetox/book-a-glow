@@ -19,8 +19,10 @@ const Index = () => (
       background: C.bg,
       color: C.text,
       fontFamily: FONT_BODY,
-      minHeight: "100vh",
+      height: "100%",
+      overflowY: "auto",
       overflowX: "hidden",
+      WebkitOverflowScrolling: "touch",
       WebkitFontSmoothing: "antialiased",
     } as React.CSSProperties}
   >
