@@ -329,7 +329,11 @@ const DetailDrawer = ({
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 420, damping: 38 }}
-        className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-transparent flex flex-col pointer-events-none"
+        className="fixed right-0 z-50 w-full max-w-sm bg-transparent flex flex-col pointer-events-none"
+        style={{
+          top: "64px",
+          bottom: "calc(56px + env(safe-area-inset-bottom, 0px))",
+        }}
         role="dialog"
         aria-modal="true"
         aria-label="Booking details"
@@ -337,8 +341,9 @@ const DetailDrawer = ({
         <motion.div
           layoutId={`booking-${booking.id}`}
           transition={DRAWER_SPRING}
-          className="m-3 md:m-4 mt-6 md:mt-10 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col max-h-[calc(100%-100px)] pointer-events-auto overflow-hidden"
+          className="m-3 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col flex-1 min-h-0 pointer-events-auto overflow-hidden"
         >
+          
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
             <div className="min-w-0">
