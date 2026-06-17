@@ -288,20 +288,21 @@ const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   </div>
 );
 
-const heatmapSlots = ["08-10", "10-12", "12-14", "14-16", "16-18"];
-
 const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
   const maxIntensity = Math.max(...data.flatMap((r) => r.slots.map((s) => s.intensity)), 1);
 
+  // Derive slot labels dynamically from hook data -- no hardcoded slots
+  const slotLabels = data[0]?.slots.map((s) => s.slot) ?? [];
+
   return (
     <>
-      {/* ── Desktop: days = rows, slots = columns ── */}
+      {/* Desktop: days = rows, slots = columns */}
       <div className="hidden sm:block overflow-x-auto -mx-1">
         <table className="w-full">
           <thead>
             <tr>
               <th className="text-[10px] text-white/20 text-left pr-2 pb-2" />
-              {heatmapSlots.map((s) => (
+              {slotLabels.map((s) => (
                 <th key={s} className="text-[10px] text-white/20 text-center pb-2 px-1">
                   {s}
                 </th>
@@ -335,21 +336,25 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
         </table>
       </div>
 
-      {/* ── Mobile: slots = rows, days = columns ── */}
-      <div className="sm:hidden">
-        <div className="grid gap-0.5" style={{ gridTemplateColumns: `auto repeat(${data.length}, 1fr)` }}>
+      {/* Mobile: slots = rows, days = columns */}
+      <div className="sm:hidden overflow-x-auto -mx-1">
+        <div
+          className="grid gap-0.5"
+          style={{ gridTemplateColumns: `auto repeat(${data.length}, minmax(0, 1fr))` }}
+        >
           {/* Header row: empty corner + day labels */}
           <div />
           {data.map((row) => (
-            <div key={row.day} className="text-center text-[9px] font-semibold text-white/30 pb-1">
+            <div key={row.day} className="text-center text-[9px] font-semibold text-white/30 pb-1 truncate">
               {row.day}
             </div>
           ))}
-          {/* One row per time slot */}
-          {heatmapSlots.map((slot) => (
+
+          {/* One row per time slot -- derived from hook data */}
+          {slotLabels.map((slot) => (
             <>
               <div key={`label-${slot}`} className="flex items-center justify-end pr-1.5">
-                <span className="text-[9px] text-white/25 leading-none">{slot}</span>
+                <span className="text-[9px] text-white/25 leading-none whitespace-nowrap">{slot}</span>
               </div>
               {data.map((row) => {
                 const cell = row.slots.find((s) => s.slot === slot);
@@ -358,7 +363,7 @@ const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
                 return (
                   <div
                     key={`${row.day}-${slot}`}
-                    className="h-10 rounded-md"
+                    className="h-8 rounded-md min-w-0"
                     style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.85, 0.06)})` }}
                   />
                 );
