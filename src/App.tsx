@@ -74,6 +74,7 @@ const MarketingRoutes = () => (
         <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
         <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
         <Route path="/pay/:bookingId" element={<PayshapProof />} />
+        <Route path="/payshap-submitted" element={<PublicTenantProvider><PayshapSubmitted /></PublicTenantProvider>} />
         {/* Legacy redirects */}
         <Route path="/product" element={<Navigate to="/" replace />} />
         <Route path="/blog" element={<Navigate to="/about" replace />} />
@@ -100,6 +101,7 @@ const TenantRoutes = () => {
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/pay/:bookingId" element={<PayshapProof />} />
+        <Route path="/payshap-submitted" element={<PayshapSubmitted />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
