@@ -354,7 +354,7 @@ const DetailDrawer = ({
                 {clientName(booking)}
               </h2>
               {/* One-line summary for quick scanning on mobile */}
-              <p className="mt-1 text-[11px] text-white/40 truncate">
+              <p className="mt-1 text-xs text-white/40 truncate">
                 {fmt.time(booking.start_time)} – {fmt.time(booking.end_time)} ·{" "}
                 {new Date(booking.booking_date + "T00:00:00").toLocaleDateString(
                   "en-ZA",
@@ -652,14 +652,11 @@ const TimeGrid = ({
           >
             <p className="text-[10px] uppercase tracking-widest">
               {d.toLocaleDateString("en-ZA", { weekday: "short" })}
-            </p>
-            <p
-              className={`text-lg font-semibold leading-none mt-0.5 ${
-                isToday(d)
-                  ? "w-8 h-8 bg-white/10 rounded-full flex items-center justify-center mx-auto text-white"
-                  : ""
-              }`}
-            >
+            <p className={`text-base font-semibold leading-none mt-0.5 ${
+              isToday(d)
+                ? "w-8 h-8 bg-white/10 rounded-full flex items-center justify-center mx-auto text-white"
+                : ""
+            }`}>
               {d.getDate()}
             </p>
           </div>
@@ -719,7 +716,7 @@ const TimeGrid = ({
                     whileTap={{ scale: 0.97 }}
                     className={`rounded-lg px-2 py-1 text-left overflow-hidden cursor-pointer z-10 ${chip}`}
                   >
-                    <p className="text-[11px] font-semibold leading-tight truncate">{name}</p>
+                    <p className="text-xs font-semibold leading-tight truncate">{name}</p>
                     <p className={`text-[9px] leading-tight truncate mt-0.5 ${pCfg.classes.split(" ")[1]}`}>
                       {fmt.time(b.start_time)}
                       {b.is_call_out && " · 📍"}
@@ -1026,7 +1023,7 @@ const MobileDayList = ({
 
                   {/* Total */}
                   {b.total_amount != null && (
-                    <span className="text-[11px] opacity-50">
+                    <span className="text-xs opacity-50">
                       {fmt.currency(b.total_amount)}
                       {b.balance_due != null && Number(b.balance_due) > 0 && (
                         <span className="text-amber-400 ml-1">
