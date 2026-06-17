@@ -221,7 +221,7 @@ export function useConfirmPayshapBooking() {
       qc.invalidateQueries({ queryKey: PAYSHAP_QUERY_KEY(tenantId) });
       qc.invalidateQueries({ queryKey: ["bookings", tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-bookings", tenantId] });
-      qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-payments", tenantId] });
     },
   });
 }
