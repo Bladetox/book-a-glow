@@ -278,12 +278,14 @@ useEffect(() => {
       const bookingId = await ensureBookingCreated();
 
       if (config.payshapEnabled) {
-        supabase.functions.invoke("send-booking-email", {
-          body: { booking_id: bookingId, email_type: "payshap_instructions" },
-        }).catch((emailErr) => {
+        try {
+          await supabase.functions.invoke("send-booking-email", {
+            body: { booking_id: bookingId, email_type: "payshap_instructions" },
+          });
+        } catch (emailErr) {
           console.warn("payshap_instructions email failed (non-fatal):", emailErr);
-        });
-
+        }
+      
         await releaseHold();
         setPayshapBookingId(bookingId);
         setPayshapSheetOpen(true);
