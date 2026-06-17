@@ -51,7 +51,7 @@ export default function PayshapProof() {
         deposit_paid,
         full_payment_received,
         payshap_reference,
-        booking_services ( services ( name ) )
+        booking_items ( services ( name ) )
       `)
       .eq("id", bookingId)
       .single()
