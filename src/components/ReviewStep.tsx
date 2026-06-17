@@ -109,7 +109,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
   const submitting = phase !== "idle";
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
   const [showPairWith, setShowPairWith] = useState(false);
-
+  const [bookingSubmitted, setBookingSubmitted] = useState(false);
   const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
   const [payshapBookingId, setPayshapBookingId] = useState<string | null>(null);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
@@ -551,33 +551,45 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepPr
       )}
 
       {/* CTA */}
-      <motion.button
-        onClick={handleConfirm}
-        disabled={submitting}
-        whileTap={submitting ? {} : { scale: 0.97 }}
-        className="btn-next w-full flex items-center justify-center gap-2.5"
-      >
-        {submitting ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
-          </>
-        ) : (
-          <>
-            <img
-              src={gatewayLogoSrc}
-              alt={gatewayLogoAlt}
-              className="h-4 w-auto object-contain brightness-0 invert shrink-0"
-            />
-            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
-          </>
-        )}
-      </motion.button>
+      {isPayshap && bookingSubmitted ? (
+        <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 text-center flex flex-col gap-2">
+          <p className="text-sm font-bold text-foreground">Booking submitted</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Check your email for PayShap payment instructions. Your slot is provisionally held.
+          </p>
+        </div>
+      ) : (
+        <motion.button
+          onClick={handleConfirm}
+          disabled={submitting}
+          whileTap={submitting ? {} : { scale: 0.97 }}
+          className="btn-next w-full flex items-center justify-center gap-2.5"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
+            </>
+          ) : (
+            <>
+              <img
+                src={gatewayLogoSrc}
+                alt={gatewayLogoAlt}
+                className="h-4 w-auto object-contain brightness-0 invert shrink-0"
+              />
+              <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
+            </>
+          )}
+        </motion.button>
+      )}
 
       {/* PayShap provisional modal */}
       <PayshapProvisionalModal
         isOpen={payshapSheetOpen}
-        onClose={() => setPayshapSheetOpen(false)}
+        onClose={() => {
+        setPayshapSheetOpen(false);
+        setBookingSubmitted(true);
+        }}
       />
 
       {/* Pair it with sheet */}
