@@ -595,6 +595,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   };
 
   const cancelInlineEdit = () => { setEditingInlineId(null); setEditDraft({}); };
+  
+  // ── Build the PayShap balance URL for a given booking ─────────────────────
+const buildPayshapBalanceUrl = (b: BookingRow) =>
+  `${window.location.origin}/pay/${b.id}?intent=balance`;
 
   const handleRequestBalance = async (b: BookingRow) => {
     if (requestingBalanceId === b.id) return;
@@ -605,95 +609,117 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       if (!clientEmail) throw new Error("No client email on record for this booking");
       if (!balance || balance <= 0) throw new Error("No outstanding balance");
 
-      const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-        body: {
-          amount: Math.round(balance * 100),
-          currency: "ZAR",
-          tenant_id: b.tenantId,
-          booking_id: b.id,
-          payment_type: "balance",
-          success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
-          cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
-        },
-      });
-      if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
-      if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
-        throw new Error(checkoutData?.error || "Failed to create payment link");
-      }
-      const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
-      await supabase
-        .from("bookings")
-        .update({
-          yoco_final_checkout_id: checkoutData.checkoutId ?? null,
-          yoco_final_link: paymentUrl,
-        })
-        .eq("id", b.id);
+      // ── PayShap path: skip Yoco, use the /pay/:bookingId page ─────────────
+    if (isPayshap) {
+      const paymentUrl = buildPayshapBalanceUrl(b);
       const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
         body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
       });
       if (emailErr) console.warn("Email send warning:", emailErr.message);
       toast.success(`Balance request sent to ${clientEmail}`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to send balance request");
-    } finally {
-      setRequestingBalanceId(null);
-    }
-  };
-
-  // ── Generate (or reuse) a Yoco checkout link and open it in WhatsApp.
-  //    Does NOT require yoco_final_link to already exist — generates on demand.
-  const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (sendingWhatsAppBalanceId === b.id) return;
-    if (!b.phone) return;
-    if (!b.balance || b.balance <= 0) return;
-
-    // If a link already exists, skip Yoco call and open immediately.
-    if (b.yocoFinalLink) {
-      window.open(
-        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
-        "_blank",
-        "noopener,noreferrer",
-      );
       return;
     }
 
-    setSendingWhatsAppBalanceId(b.id);
-    try {
-      const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-        body: {
-          amount: Math.round(b.balance * 100),
-          currency: "ZAR",
-          tenant_id: b.tenantId,
-          booking_id: b.id,
-          payment_type: "balance",
-          success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
-          cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
-        },
-      });
-      if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
-      if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
-        throw new Error(checkoutData?.error || "Failed to create payment link");
-      }
-      const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
-      await supabase
-        .from("bookings")
-        .update({
-          yoco_final_checkout_id: checkoutData.checkoutId ?? null,
-          yoco_final_link: paymentUrl,
-        })
-        .eq("id", b.id);
-      queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
-      window.open(
-        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
-        "_blank",
-        "noopener,noreferrer",
-      );
-    } catch (err: any) {
-      toast.error(err.message || "Failed to generate payment link");
-    } finally {
-      setSendingWhatsAppBalanceId(null);
+      // ── Yoco path (default) ───────────────────────────────────────────────
+    const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
+      body: {
+        amount: Math.round(balance * 100),
+        currency: "ZAR",
+        tenant_id: b.tenantId,
+        booking_id: b.id,
+        payment_type: "balance",
+        success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
+        cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
+      },
+    });
+    if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
+    if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
+      throw new Error(checkoutData?.error || "Failed to create payment link");
     }
+    const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
+    await supabase
+      .from("bookings")
+      .update({
+        yoco_final_checkout_id: checkoutData.checkoutId ?? null,
+        yoco_final_link: paymentUrl,
+      })
+      .eq("id", b.id);
+    const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
+      body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
+    });
+    if (emailErr) console.warn("Email send warning:", emailErr.message);
+    toast.success(`Balance request sent to ${clientEmail}`);
+  } catch (e: any) {
+    toast.error(e.message || "Failed to send balance request");
+  } finally {
+    setRequestingBalanceId(null);
+  }
+  };
+
+  // ── Generate (or reuse) a payment link and open it in WhatsApp.
+const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
+  e.stopPropagation();
+  if (sendingWhatsAppBalanceId === b.id) return;
+  if (!b.phone) return;
+  if (!b.balance || b.balance <= 0) return;
+
+  // ── PayShap path: build the /pay link instantly, no Yoco call needed ─────
+  if (isPayshap) {
+    const paymentUrl = buildPayshapBalanceUrl(b);
+    window.open(
+      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
+      "_blank",
+      "noopener,noreferrer",
+    );
+    return;
+  }
+
+  // ── Yoco path: reuse existing link or generate a new one ─────────────────
+  if (b.yocoFinalLink) {
+    window.open(
+      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
+      "_blank",
+      "noopener,noreferrer",
+    );
+    return;
+  }
+
+  setSendingWhatsAppBalanceId(b.id);
+  try {
+    const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
+      body: {
+        amount: Math.round(b.balance * 100),
+        currency: "ZAR",
+        tenant_id: b.tenantId,
+        booking_id: b.id,
+        payment_type: "balance",
+        success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
+        cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
+      },
+    });
+    if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
+    if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
+      throw new Error(checkoutData?.error || "Failed to create payment link");
+    }
+    const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
+    await supabase
+      .from("bookings")
+      .update({
+        yoco_final_checkout_id: checkoutData.checkoutId ?? null,
+        yoco_final_link: paymentUrl,
+      })
+      .eq("id", b.id);
+    queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
+    window.open(
+      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
+      "_blank",
+      "noopener,noreferrer",
+    );
+  } catch (err: any) {
+    toast.error(err.message || "Failed to generate payment link");
+  } finally {
+    setSendingWhatsAppBalanceId(null);
+  }
   };
 
   const handleMarkFullyPaid = async (b: BookingRow) => {
@@ -825,7 +851,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       <ConfirmDialog
         open={!!confirmRequestBalance}
         title="Send payment request?"
-        description={confirmRequestBalance ? `This will send a final payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.email}.` : ""}
+        description={confirmRequestBalance
+        ? isPayshap
+          ? `This will send a PayShap payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.email}.`
+          : `This will send a final payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.email}.`
+        : ""}
         confirmLabel="Send Request"
         confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
         onConfirm={() => { if (confirmRequestBalance) handleRequestBalance(confirmRequestBalance); setConfirmRequestBalance(null); }}
