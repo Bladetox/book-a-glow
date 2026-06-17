@@ -46,6 +46,11 @@ export interface PublicBusinessConfig {
   brandFontUrl: string | null;
   /** Optional hex/hsl colour override for the business name heading only */
   brandNameColor: string | null;
+  // NEW — payment gateway flags
+  /** Whether this tenant uses PayShap as their payment method */
+  payshapEnabled: boolean;
+  /** PayFast mode if enabled, null otherwise */
+  payfastMode: "live" | "sandbox" | null;
 }
 
 const defaults: PublicBusinessConfig = {
@@ -79,6 +84,9 @@ const defaults: PublicBusinessConfig = {
   clientLabelNew: "New Client",
   brandFontUrl: null,
   brandNameColor: null,
+  // NEW — defaults
+  payshapEnabled: false,
+  payfastMode: null,
 };
 
 /**
@@ -155,6 +163,13 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     }
   }
 
+  // NEW — derive payment gateway flags from the already-fetched app_settings map
+  const payshapEnabled = s.payshap_enabled === "true";
+  const payfastMode: "live" | "sandbox" | null =
+    s.payfast_mode === "live" || s.payfast_mode === "sandbox"
+      ? (s.payfast_mode as "live" | "sandbox")
+      : null;
+
   return {
     // Identity
     name: tenantName || s.business_name || defaults.name,
@@ -205,6 +220,10 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     // Per-tenant branding overrides (null for all tenants that haven't set them)
     brandFontUrl: s.brand_font_url || null,
     brandNameColor: s.brand_name_color || null,
+
+    // NEW — payment gateway flags (derived from shared app_settings, no second fetch)
+    payshapEnabled,
+    payfastMode,
 
     loading: tenantLoading || tenantRowLoading || settingsLoading,
   };
