@@ -53,7 +53,6 @@
     --keyboard-height: 0px;
     --visual-viewport-height: 100dvh;
 
-    /* Default font stack — Geist for all tenants unless overridden */
     --font-display: 'Geist', system-ui, sans-serif;
     --font-body:    'Geist', system-ui, sans-serif;
   }
@@ -120,6 +119,7 @@
   }
 
   html {
+    /* Always #000 so any gap around body/root on marketing pages is black not white */
     background: #000;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -130,18 +130,12 @@
   }
 
   body {
-    @apply text-foreground font-body;
-    background: #000;
+    /* bg-background preserved so tenant theme switcher works correctly */
+    @apply bg-background text-foreground font-body;
     height: 100%;
     overflow: hidden;
     user-select: none;
     transition: background-color 0.3s ease, color 0.3s ease;
-  }
-
-  html.dark body   { background: #000; }
-  html:not(.dark) body { background: #000; }
-
-  body {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
@@ -163,9 +157,9 @@
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* =================================================================
    PAIN POINT CARD
-═══════════════════════════════════════════════════════════════ */
+================================================================= */
 .pain-point-card {
   position: relative;
   overflow: hidden;
@@ -191,9 +185,9 @@
   transform: translateY(-2px) scale(1.015);
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* =================================================================
    TENANT LOGO
-═══════════════════════════════════════════════════════════════ */
+================================================================= */
 .tenant-logo img,
 .tenant-logo-img {
   mix-blend-mode: multiply;
@@ -552,9 +546,9 @@ html:not(.dark) .tenant-logo-img {
   .scrollbar-hide::-webkit-scrollbar { display: none; }
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* =================================================================
    NEXTSLOT SITE THEME
-═══════════════════════════════════════════════════════════════ */
+================================================================= */
 .nextslot-theme {
   --background: 0 0% 100%;
   --foreground: 0 0% 7%;
@@ -611,7 +605,7 @@ html:not(.dark) .tenant-logo-img {
   pointer-events: none;
 }
 
-/* ─── Dark brand variant: used by Pricing page ───────────────── */
+/* --- Dark brand variant ---------------------------------------- */
 .nextslot-theme.dark-brand {
   --background: 0 0% 0%;
   --foreground: 0 0% 91%;
@@ -648,10 +642,10 @@ html:not(.dark) .tenant-logo-img {
   color: #e8e8e6;
   font-family: 'Inter', system-ui, sans-serif;
 }
-  
-/* ═══════════════════════════════════════════════════════════════
+
+/* =================================================================
    MOBILE RESPONSIVE OVERRIDES
-═══════════════════════════════════════════════════════════════ */
+================================================================= */
 @media (max-width: 639px) {
   .nextslot-theme h1 {
     font-size: clamp(1.75rem, 7vw, 2.5rem);
