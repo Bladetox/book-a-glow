@@ -10,23 +10,24 @@ import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
 import { PwaUpdater } from "@/components/PwaUpdater";
 
-const Index          = lazy(() => import("./pages/Index"));
-const About          = lazy(() => import("./pages/About"));
-const Book           = lazy(() => import("./pages/Book"));
-const Pricing        = lazy(() => import("./pages/Pricing"));
-const Login          = lazy(() => import("./pages/Login"));
-const Onboarding     = lazy(() => import("./pages/Onboarding"));
-const Signup         = lazy(() => import("./pages/Signup"));
-const Privacy        = lazy(() => import("./pages/Privacy"));
-const SiteTerms      = lazy(() => import("./pages/SiteTerms"));
-const Admin          = lazy(() => import("./pages/Admin"));
-const SuperAdmin     = lazy(() => import("./pages/SuperAdmin"));
-const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
-const NotFound       = lazy(() => import("./pages/NotFound"));
-const TenantNotFound = lazy(() => import("./pages/TenantNotFound"));
-const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
-const Demo           = lazy(() => import("./pages/Demo"));
-const PayshapProof   = lazy(() => import("./pages/PayshapProof"));
+const Index            = lazy(() => import("./pages/Index"));
+const About            = lazy(() => import("./pages/About"));
+const Book             = lazy(() => import("./pages/Book"));
+const Pricing          = lazy(() => import("./pages/Pricing"));
+const Login            = lazy(() => import("./pages/Login"));
+const Onboarding       = lazy(() => import("./pages/Onboarding"));
+const Signup           = lazy(() => import("./pages/Signup"));
+const Privacy          = lazy(() => import("./pages/Privacy"));
+const SiteTerms        = lazy(() => import("./pages/SiteTerms"));
+const Admin            = lazy(() => import("./pages/Admin"));
+const SuperAdmin       = lazy(() => import("./pages/SuperAdmin"));
+const ResetPassword    = lazy(() => import("./pages/ResetPassword"));
+const NotFound         = lazy(() => import("./pages/NotFound"));
+const TenantNotFound   = lazy(() => import("./pages/TenantNotFound"));
+const PaymentSuccess   = lazy(() => import("./pages/PaymentSuccess"));
+const Demo             = lazy(() => import("./pages/Demo"));
+const PayshapProof     = lazy(() => import("./pages/PayshapProof"));
+const PayshapSubmitted = lazy(() => import("./pages/PayshapSubmitted"));
 
 const queryClient = new QueryClient();
 
@@ -109,7 +110,7 @@ const TenantRoutes = () => {
 };
 
 const App = () => {
-  const tenantSlug  = getTenantSlug();
+  const tenantSlug   = getTenantSlug();
   const customDomain = isCustomDomainHost();
   const isSubdomain  = !!tenantSlug || !!customDomain;
 
