@@ -321,7 +321,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                             if (next.has(ins.id)) next.delete(ins.id); else next.add(ins.id);
                             return next;
                           })}
-                          className="text-[11px] text-white/30 hover:text-white/50 transition-colors px-1"
+                          className="text-xs text-white/30 hover:text-white/50 transition-colors px-1"
                         >
                           {isExpanded ? "Show less" : "More details"}
                         </button>
@@ -375,7 +375,7 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white/80 leading-none mb-0.5">{title}</p>
-          <p className="text-[11px] text-white/35 leading-snug truncate">{subtitle}</p>
+          <p className="text-xs text-white/35 leading-snug truncate">{subtitle}</p>
         </div>
         {badge !== undefined && (
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.badgeBg} ${a.badgeText} border ${a.border}`}>
@@ -1008,7 +1008,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 accent="emerald"
                 defaultOpen
               >
-                <p className="text-[11px] text-white/30 leading-relaxed">
+                <p className="text-xs text-white/30 leading-relaxed">
                   How many weeks after their last visit should a client receive a reminder? This drives
                   the <span className="text-amber-400/70">"Time to Book"</span> and <span className="text-red-400/70">"Overdue"</span> statuses.
                 </p>
@@ -1055,7 +1055,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 subtitle={`Service label: "${serviceLabel}"`}
                 accent="sky"
               >
-                <p className="text-[11px] text-white/30 leading-relaxed">
+                <p className="text-xs text-white/30 leading-relaxed">
                   The <strong className="text-white/50">service label</strong> fills the{" "}
                   <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
                   placeholder in your WhatsApp message templates.
@@ -1090,7 +1090,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60 shrink-0" />
                     <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-white/30">Nexty suggestion threshold</p>
                   </div>
-                  <p className="text-[11px] text-white/25 leading-relaxed -mt-1">
+                  <p className="text-xs text-white/25 leading-relaxed -mt-1">
                     Nexty will surface a client as an enrolment candidate once they pass this many bookings (across <em>any</em> service) within the lookback window set above.
                   </p>
                   <div className="flex flex-col gap-1.5">
@@ -1137,7 +1137,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 accent="amber"
                 badge={WA_TEMPLATE_META.length}
               >
-                <p className="text-[11px] text-white/30 leading-relaxed">
+                <p className="text-xs text-white/30 leading-relaxed">
                   Use{" "}
                   <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'name\\'}"}</code>,{" "}
                   <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'business\\'}"}</code> and{" "}
@@ -1182,7 +1182,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           {/* FIX-C: "Enrolled" pill — shows all loyalty_tracker rows */}
           <button
             onClick={() => setFilterStatus(s => s === "enrolled" ? null : "enrolled")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-xs font-semibold border transition-colors ${
               filterStatus === "enrolled"
                 ? "bg-white/[0.12] border-white/[0.20] text-white/90"
                 : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
@@ -1204,7 +1204,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
               <button
                 key={status}
                 onClick={() => setFilterStatus(s => s === status ? null : status)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-[11px] font-semibold border transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-xs font-semibold border transition-colors ${
                   isActive
                     ? "bg-white/[0.12] border-white/[0.20] text-white/90"
                     : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
@@ -1222,7 +1222,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           {filterStatus && (
             <button
               onClick={() => setFilterStatus(null)}
-              className="px-3 py-1.5 shrink-0 rounded-full text-[11px] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
+              className="px-3 py-1.5 shrink-0 rounded-full text-xs border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
             >
               Clear filter
             </button>
