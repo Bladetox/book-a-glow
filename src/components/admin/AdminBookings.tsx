@@ -853,8 +853,8 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
         title="Send payment request?"
         description={confirmRequestBalance
         ? isPayshap
-          ? `This will send a PayShap payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.email}.`
-          : `This will send a final payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.email}.`
+           ? `This will send a PayShap payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.client} (${confirmRequestBalance.email}).`
+           : `This will send a final payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.client} (${confirmRequestBalance.email}).`
         : ""}
         confirmLabel="Send Request"
         confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
