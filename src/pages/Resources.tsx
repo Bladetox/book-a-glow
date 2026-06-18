@@ -819,7 +819,7 @@ const Resources = () => {
               maxWidth: 760,
               margin: "0 auto",
               borderRadius: 24,
-              padding: "56px 48px",
+              padding: "clamp(32px, 6vw, 56px) clamp(24px, 5vw, 48px)",
               background: C.s1,
               border: `1px solid rgba(212,165,116,0.25)`,
               boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
