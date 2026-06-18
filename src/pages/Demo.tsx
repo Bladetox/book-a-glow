@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
+import MarketingLayout from "@/components/site/MarketingLayout";
 import DashboardPreview from "@/components/site/DashboardPreview";
 import MobileDashboardPreview from "@/components/site/MobileDashboardPreview";
 import BookingAppPreview from "@/components/site/BookingAppPreview";
@@ -11,7 +12,6 @@ import {
   EyeOff, SlidersHorizontal, LayoutGrid
 } from "lucide-react";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
-import { HOME_STYLES } from "@/components/home/homeStyles";
 
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
@@ -126,8 +126,7 @@ const Demo = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="nextslot-theme dark-brand" style={{ minHeight: "100vh", background: C.bg, overflowX: "hidden" }}>
-      <style>{HOME_STYLES}</style>
+    <MarketingLayout>
       <SiteHeader />
       <main>
 
@@ -355,7 +354,7 @@ const Demo = () => {
 
       </main>
       <SiteFooter />
-    </div>
+      </MarketingLayout>
   );
 };
 
