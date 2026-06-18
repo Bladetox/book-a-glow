@@ -15,9 +15,9 @@ import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes"
 import { supabase } from "@/integrations/supabase/client";
 
 const availabilityPresets = [
-  { label: "Standard Work Week", desc: "Mon–Fri, 09:00–17:00", schedule: { mon: "09:00–17:00", tue: "09:00–17:00", wed: "09:00–17:00", thu: "09:00–17:00", fri: "09:00–17:00", sat: "Closed", sun: "Closed" } },
-  { label: "Weekend Business", desc: "Thu–Sun, 09:00–18:00", schedule: { mon: "Closed", tue: "Closed", wed: "Closed", thu: "09:00–18:00", fri: "09:00–18:00", sat: "09:00–18:00", sun: "09:00–15:00" } },
-  { label: "Custom Schedule", desc: "Set your own hours", schedule: { mon: "09:00–18:00", tue: "09:00–18:00", wed: "Closed", thu: "09:00–18:00", fri: "09:00–19:00", sat: "09:00–15:00", sun: "Closed" } },
+  { label: "Standard Work Week", desc: "Mon-Fri, 09:00-17:00", schedule: { mon: "09:00-17:00", tue: "09:00-17:00", wed: "09:00-17:00", thu: "09:00-17:00", fri: "09:00-17:00", sat: "Closed", sun: "Closed" } },
+  { label: "Weekend Business", desc: "Thu-Sun, 09:00-18:00", schedule: { mon: "Closed", tue: "Closed", wed: "Closed", thu: "09:00-18:00", fri: "09:00-18:00", sat: "09:00-18:00", sun: "09:00-15:00" } },
+  { label: "Custom Schedule", desc: "Set your own hours", schedule: { mon: "09:00-18:00", tue: "09:00-18:00", wed: "Closed", thu: "09:00-18:00", fri: "09:00-19:00", sat: "09:00-15:00", sun: "Closed" } },
 ];
 
 interface Service { name: string; price: string; duration: string; }
@@ -91,6 +91,11 @@ const Onboarding = () => {
 
   const passwordsMatch = password === confirmPassword;
   const passwordValid = password.length >= 8;
+
+  useEffect(() => {
+    document.documentElement.classList.add("marketing-page");
+    return () => document.documentElement.classList.remove("marketing-page");
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -221,8 +226,8 @@ const Onboarding = () => {
 
   return (
     <div
-      className="nextslot-theme dark-brand min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground"
-      style={themeStyle}
+      className="nextslot-theme dark-brand flex flex-col transition-colors duration-500 bg-background text-foreground"
+      style={{ minHeight: "100dvh", ...themeStyle }}
     >
       <input
         type="text"
@@ -352,7 +357,7 @@ const Onboarding = () => {
                   Your services
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  We've pre-filled these based on your business type — edit prices and times to match yours.
+                  We've pre-filled these based on your business type - edit prices and times to match yours.
                 </p>
               </div>
               <div className="space-y-3">
@@ -424,7 +429,7 @@ const Onboarding = () => {
             <div className="space-y-8 animate-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
-                  Almost there — create your account 🎉
+                  Almost there - create your account
                 </h1>
                 <p className="text-muted-foreground text-sm">
                   Your booking page is ready. Create a free account to launch it. No credit card required.

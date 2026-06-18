@@ -7,8 +7,8 @@ interface MarketingLayoutProps {
 
 const MarketingLayout = ({ children }: MarketingLayoutProps) => {
   useEffect(() => {
-    document.body.classList.add("marketing-page");
-    return () => document.body.classList.remove("marketing-page");
+    document.documentElement.classList.add("marketing-page");
+    return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
   return (

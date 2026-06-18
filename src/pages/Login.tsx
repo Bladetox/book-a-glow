@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,11 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.add("marketing-page");
+    return () => document.documentElement.classList.remove("marketing-page");
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,8 +133,8 @@ const Login = () => {
 
   return (
     <div
-      className="nextslot-theme dark-brand min-h-screen"
-      style={{ background: C.bg, color: C.text, fontFamily: FONT_BODY }}
+      className="nextslot-theme dark-brand"
+      style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: FONT_BODY }}
     >
       <style>{HOME_STYLES}</style>
       <SiteHeader />
@@ -138,7 +143,7 @@ const Login = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "calc(100vh - 65px)",
+          minHeight: "calc(100dvh - 65px)",
           padding: "48px 24px",
         }}
       >
