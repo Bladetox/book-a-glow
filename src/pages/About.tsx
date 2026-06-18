@@ -75,8 +75,8 @@ const timeline = [
     points: [
       "One pattern kept appearing that no booking system could flag: clients were rescheduling because their periods arrived unexpectedly.",
       "It was not a scheduling problem. It was a biology problem. And it was costing Shu-meez real revenue every month.",
-      "So a free tool was built specifically for her clients -- a cycle tracker that opens a booking link at exactly the right window in each person's cycle.",
-      "That tool is TARA-S. It is free, it requires no account, and it is available in English, Afrikaans, isiZulu, and isiXhosa.",
+      "So a free tool was built specifically for her clients. A cycle tracker that opens a booking link at exactly the right window in each person's cycle.",
+      "That tool is TARA-S. It is free and it is available in English, Afrikaans, isiZulu, and isiXhosa.",
     ],
   },
   {
@@ -203,8 +203,8 @@ const About = () => {
                   }}
                 >
                   NextSlot is a booking and business intelligence platform built for South African
-                  service businesses. Designed with the reality of this market in mind, not a
-                  generic global template.
+                  service businesses. PayFast, Yoco, and PayShap are built in, not bolted on.
+                  No workarounds. No sending banking details on WhatsApp.
                 </p>
                 <Link
                   to="/onboarding"
@@ -228,7 +228,7 @@ const About = () => {
                 </Link>
               </div>
 
-              {/* RIGHT: founder belief card */}
+              {/* RIGHT: founder's belief card */}
               <div
                 className="about-belief-card"
                 style={{
@@ -299,8 +299,8 @@ const About = () => {
                     {[
                       { label: "Booking types", value: "Any service" },
                       { label: "Built for", value: "South Africa" },
-                      { label: "Setup time", value: "20 min" },
-                      { label: "Trial", value: "30 days free" },
+                      { label: "Setup time", value: "10 min" },
+                      { label: "Trial", value: "7 days (Starter) / 30 days (Flow+)" },
                     ].map((item) => (
                       <div key={item.label}>
                         <p
@@ -428,7 +428,7 @@ const About = () => {
             >
               Shu-meez has been in the beauty industry for 17 years and has run PhenomeBeauty in
               Cape Town for 6 of them. She was doing everything alone. Bookings on WhatsApp,
-              deposits via EFT, schedules in her head. This is her journey and the reason
+              deposits via EFT, schedules in her head and in her diary. This is her journey and the reason
               NextSlot exists.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -683,6 +683,7 @@ const About = () => {
                   ))}
                 </ul>
 
+                {/* TARA-S inline CTA */}
                 {card.isTara && (
                   <a
                     href="https://tara-s.vercel.app/"
@@ -713,7 +714,7 @@ const About = () => {
           </div>
         </section>
 
-        {/* ── CTA after case study ──────────────────────────────────── */}
+        {/* ── CTA directly after case study ────────────────────────── */}
         <section style={{ padding: "0 24px 80px" }}>
           <div
             style={{
@@ -750,7 +751,7 @@ const About = () => {
                 marginBottom: 16,
               }}
             >
-              Your booking page is 20 minutes away.
+              Your booking page is 10 minutes away.
             </h2>
             <p
               style={{
@@ -796,7 +797,7 @@ const About = () => {
           }}
         />
 
-        {/* ── THE IDEA + MISSION ────────────────────────────────────── */}
+        {/* ── THE IDEA + MISSION merged ─────────────────────────────── */}
         <section style={{ background: C.s1, padding: "64px 24px" }}>
           <div
             style={{
@@ -968,21 +969,62 @@ const About = () => {
             >
               The Founder
             </p>
-            <h2
+        
+            {/* name + photo */}
+            <div
               style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: "clamp(22px,2.4vw,30px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.2,
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
               }}
             >
-              Arshad Segal
-            </h2>
+              <img
+                src="https://iili.io/C9Ktrhu.jpg"
+                alt="Arshad Segal, Founder of NextSlot"
+                width={72}
+                height={72}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  objectPosition: "center top",
+                  flexShrink: 0,
+                  border: "2px solid rgba(212,165,116,0.40)",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+                }}
+              />
+              <div>
+                <h2
+                  style={{
+                    fontFamily: FONT_DISPLAY,
+                    fontSize: "clamp(22px,2.4vw,30px)",
+                    fontWeight: 700,
+                    color: C.text,
+                    lineHeight: 1.2,
+                    margin: 0,
+                  }}
+                >
+                  Arshad Segal
+                </h2>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: C.muted,
+                    fontFamily: FONT_BODY,
+                    margin: "4px 0 0",
+                  }}
+                >
+                  Founder of NextSlot
+                </p>
+              </div>
+            </div>
+        
             <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
               NextSlot was founded by Arshad Segal, an entrepreneur and builder driven by a simple
               belief.
             </p>
+        
             <blockquote
               style={{ borderLeft: `2px solid ${C.gold}`, paddingLeft: 20 }}
             >
@@ -998,17 +1040,20 @@ const About = () => {
                 Sometimes the biggest barrier to progress is waiting too long to start.
               </p>
             </blockquote>
+        
             <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
               Arshad has always been drawn to ideas that combine creativity, technology, and human
               behaviour. His work often sits at the intersection of entrepreneurship, storytelling,
               and systems thinking. He believes that when people are given the right tools and a
               clear path forward, they can build extraordinary things from ordinary beginnings.
             </p>
+        
             <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.8, fontFamily: FONT_BODY }}>
               This philosophy is reflected in his broader creative work and personal brand, centred
               on one belief he returns to constantly:
             </p>
 
+            {/* Just Start / chasing_dweams card */}
             <a
               href="https://www.tiktok.com/@chasing_dweams?_r=1&_t=ZS-94gSp7To9iS"
               target="_blank"
