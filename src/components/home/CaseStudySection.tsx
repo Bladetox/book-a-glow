@@ -25,8 +25,6 @@ import { Eyebrow } from "./Eyebrow";
                              grouped; inter-card gap is wider.
 */
 
-const IMAGE_URL = "https://iili.io/CFVVaHu.jpg";
-
 const STEPS = [
   {
     step: "01",
@@ -63,24 +61,6 @@ export const CaseStudySection = () => {
         overflow: "hidden",
       }}
     >
-      {/* Background image */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage: `url('${IMAGE_URL}')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-          backgroundRepeat: "no-repeat",
-          opacity: 0.35,
-          filter: "blur(0.5px) saturate(0.7)",
-          transform: "scale(1.04)",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
-
       {/* Gold ambient glow */}
       <div
         aria-hidden="true"
@@ -114,7 +94,7 @@ export const CaseStudySection = () => {
             marginBottom: isMobile ? 40 : 64,
           }}
         >
-          <Eyebrow text="Real result. Phenomena Beauty." />
+          <Eyebrow text="Real result. PhenomeBeauty." />
           <h2
             style={{
               fontFamily: FONT_DISPLAY,
@@ -139,8 +119,9 @@ export const CaseStudySection = () => {
               fontFamily: FONT_BODY,
             }}
           >
-            NextSlot showed her exactly which services, time slots, and clients were driving
-            growth. The noise fell away and the path was clear. Within 3 months, her bookings doubled.
+            Shu-meez has been in the beauty industry for 17 years and has run PhenomeBeauty
+            in Cape Town for 6 of them. NextSlot showed her exactly which services, time slots,
+            and clients were driving growth. Within 3 months, her bookings doubled.
           </p>
         </div>
 
@@ -274,12 +255,121 @@ export const CaseStudySection = () => {
           ))}
         </div>
 
+        {/* Pull quote with photo */}
         <div
           style={{
-            textAlign: "center",
-            marginTop: isMobile ? 36 : 48,
+            maxWidth: 760,
+            margin: isMobile ? "36px auto 0" : "52px auto 0",
+            background: "rgba(212,165,116,0.05)",
+            border: "1px solid rgba(212,165,116,0.20)",
+            borderRadius: 20,
+            padding: isMobile ? "28px 22px" : "36px 40px",
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "flex-start" : "center",
+            gap: isMobile ? 20 : 28,
           }}
         >
+          {/* Photo */}
+          <div style={{ flexShrink: 0 }}>
+            <div
+              style={{
+                width: isMobile ? 64 : 80,
+                height: isMobile ? 64 : 80,
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "2px solid rgba(212,165,116,0.40)",
+                background: "rgba(212,165,116,0.08)",
+              }}
+            >
+              <img
+                src="PLACEHOLDER_SHU_MEEZ_IMAGE_URL"
+                alt="Shu-meez, Owner of PhenomeBeauty"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: "center top",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Quote and attribution */}
+          <div style={{ flex: 1 }}>
+            <p
+              style={{
+                fontSize: isMobile ? 14 : 16,
+                color: C.text,
+                fontFamily: FONT_BODY,
+                lineHeight: 1.7,
+                marginBottom: 14,
+                fontStyle: "italic",
+              }}
+            >
+              "I set a non-negotiable 50% deposit, so every booking is confirmed with money,
+              not messages. I'm no longer chasing payments after appointments."
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: C.text,
+                    fontFamily: FONT_BODY,
+                    margin: 0,
+                  }}
+                >
+                  Shu-meez
+                </p>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: C.muted,
+                    fontFamily: FONT_BODY,
+                    margin: 0,
+                  }}
+                >
+                  Owner, PhenomeBeauty · Mobile Beauty Therapist, Cape Town · 17 years in the industry
+                </p>
+              </div>
+              <a
+                href="https://www.tiktok.com/@phenomebeauty"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: C.gold,
+                  textDecoration: "none",
+                  fontFamily: FONT_BODY,
+                  border: "1px solid rgba(212,165,116,0.25)",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  background: "rgba(212,165,116,0.05)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                @phenomebeauty
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Read full story link */}
+        <div style={{ textAlign: "center", marginTop: isMobile ? 24 : 32 }}>
           <Link
             to="/about#case-study"
             style={{
