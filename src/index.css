@@ -155,6 +155,25 @@
 }
 
 /* =================================================================
+   MARKETING PAGE SCROLL OVERRIDE
+   Applied via useEffect in MarketingLayout -- never affects app pages
+================================================================= */
+body.marketing-page {
+  overflow-y: auto !important;
+  height: auto !important;
+}
+
+html:has(body.marketing-page) {
+  overflow-y: auto !important;
+  height: auto !important;
+}
+
+body.marketing-page #root {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* =================================================================
    PAIN POINT CARD
 ================================================================= */
 .pain-point-card {
@@ -712,4 +731,3 @@ html:not(.dark) .tenant-logo-img {
     grid-template-columns: 1fr !important;
   }
 }
-  
