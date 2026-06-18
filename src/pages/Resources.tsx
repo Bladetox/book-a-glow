@@ -30,7 +30,7 @@ const tools: Tool[] = [
     name: "Vula",
     tagline: "Find South African business funding you actually qualify for.",
     description:
-      "A free directory of verified grants, loans, and support programmes for South African SMEs. Filter by business stage -- informal, registered, or looking to formalise. Funders include Yoco Capital, Lula, Merchant Capital, and more.",
+      "A free directory of verified grants, loans, and support programmes for South African SMEs. Filter by business stage; informal, registered, or looking to formalise. Funders include Yoco Capital, Lula, Merchant Capital, and more.",
     cta: "Find Funding",
     url: "https://vula-lac.vercel.app/",
     tag: "Free tool",
@@ -50,7 +50,7 @@ const tools: Tool[] = [
     name: "TARA-S",
     tagline: "Built for beauty and wellness clients who reschedule around their cycle.",
     description:
-      "TARA-S was built after noticing that clients of PhenomeBeauty -- a mobile beauty therapist in Cape Town -- kept rescheduling because their periods arrived unexpectedly. The tool tracks each client's cycle and surfaces a booking link at exactly the right window. Free, no account needed, available in English, Afrikaans, isiZulu, and isiXhosa.",
+      "TARA-S was built after noticing that clients of PhenomeBeauty, a mobile beauty therapist in Cape Town, kept rescheduling because their periods arrived unexpectedly. The tool tracks each client's cycle and surfaces a booking link at exactly the right window. Free, available in English, Afrikaans, isiZulu, and isiXhosa.",
     cta: "Give This to Your Clients",
     url: "https://tara-s.vercel.app/",
     tag: "Free tool",
@@ -849,7 +849,7 @@ const Resources = () => {
                 marginBottom: 16,
               }}
             >
-              Your booking page is 20 minutes away.
+              Your booking page is 10 minutes away.
             </h2>
             <p
               style={{
