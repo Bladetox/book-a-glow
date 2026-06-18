@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,11 +51,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.classList.add("marketing-page");
-    return () => document.documentElement.classList.remove("marketing-page");
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

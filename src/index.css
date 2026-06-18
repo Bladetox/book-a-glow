@@ -119,29 +119,18 @@
   }
 
   html {
-    /* Always #000 so any gap around body/root on marketing pages is black not white */
     background: #000;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overscroll-behavior: none;
-    scroll-padding-bottom: 110px;
-    height: 100%;
-    overflow: hidden;
+    /* No overflow or height lock here -- marketing pages scroll naturally.
+       The .app-shell class below applies the lock only to tenant/admin routes. */
   }
 
   body {
-    /* bg-background preserved so tenant theme switcher works correctly */
-    background: #000; 
+    background: #000;
     @apply bg-background text-foreground font-body;
-    height: 100%;
-    overflow: hidden;
     user-select: none;
     transition: background-color 0.3s ease, color 0.3s ease;
-  }
-
-  #root {
-    height: 100%;
-    overflow: hidden;
   }
 
   input,
@@ -155,16 +144,22 @@
 }
 
 /* =================================================================
-   MARKETING PAGE SCROLL OVERRIDE
-   Applied via useEffect on document.documentElement in MarketingLayout,
-   Login, and Onboarding. Works on all browsers including Safari iOS.
+   APP SHELL
+   Applied by wrapping TenantRoutes in App.tsx.
+   Locks the viewport for the fixed-height booking/admin app.
+   Marketing pages, Login, and Onboarding are never inside this wrapper.
 ================================================================= */
-html.marketing-page,
-html.marketing-page body,
-html.marketing-page #root {
-  height: auto !important;
-  overflow: visible !important;
-  overflow-x: hidden !important;
+.app-shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+.app-shell > * {
+  height: 100%;
+  overflow: hidden;
 }
 
 /* =================================================================

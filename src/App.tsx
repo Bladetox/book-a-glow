@@ -32,12 +32,13 @@ const PayshapSubmitted = lazy(() => import("./pages/PayshapSubmitted"));
 
 const queryClient = new QueryClient();
 
+/* Loading skeletons */
 const MarketingShell = () => (
-  <div className="min-h-screen" style={{ background: "#000" }} aria-hidden="true" />
+  <div style={{ minHeight: "100dvh", background: "#000" }} />
 );
 
 const TenantShell = () => (
-  <div className="min-h-screen bg-background" aria-hidden="true" />
+  <div style={{ position: "fixed", inset: 0, background: "#000" }} />
 );
 
 const ScrollToTop = () => {
@@ -59,6 +60,12 @@ const AuthRecoveryHandler = () => {
   return null;
 };
 
+/* =================================================================
+   MARKETING ROUTES
+   Rendered directly into #root with NO overflow/height constraints.
+   html, body, and #root are all at browser defaults (height: auto,
+   overflow: visible) so pages scroll naturally -- no JS class toggling.
+================================================================= */
 const MarketingRoutes = () => (
   <>
     <AuthRecoveryHandler />
@@ -92,6 +99,11 @@ const MarketingRoutes = () => (
   </>
 );
 
+/* =================================================================
+   TENANT ROUTES
+   Wrapped in .app-shell which applies position:fixed + overflow:hidden,
+   locking the viewport for the native-app-like booking/admin shell.
+================================================================= */
 const TenantRoutes = () => {
   const { notFound } = usePublicTenant();
   if (notFound) return (
@@ -100,18 +112,20 @@ const TenantRoutes = () => {
     </Suspense>
   );
   return (
-    <Suspense fallback={<TenantShell />}>
-      <Routes>
-        <Route path="/" element={<Book />} />
-        <Route path="/book" element={<Book />} />
-        <Route path="/payment" element={<PaymentSuccess />} />
-        <Route path="/payment-success" element={<PaymentSuccess />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/pay/:bookingId" element={<PayshapProof />} />
-        <Route path="/payshap-submitted" element={<PayshapSubmitted />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Suspense>
+    <div className="app-shell">
+      <Suspense fallback={<TenantShell />}>
+        <Routes>
+          <Route path="/" element={<Book />} />
+          <Route path="/book" element={<Book />} />
+          <Route path="/payment" element={<PaymentSuccess />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/pay/:bookingId" element={<PayshapProof />} />
+          <Route path="/payshap-submitted" element={<PayshapSubmitted />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+    </div>
   );
 };
 
