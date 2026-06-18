@@ -1,3 +1,4 @@
+import React from "react";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 
 interface MarketingLayoutProps {
