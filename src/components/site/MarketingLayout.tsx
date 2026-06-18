@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 
 interface MarketingLayoutProps {
@@ -6,21 +6,20 @@ interface MarketingLayoutProps {
 }
 
 const MarketingLayout = ({ children }: MarketingLayoutProps) => {
+  useEffect(() => {
+    document.body.classList.add("marketing-page");
+    return () => document.body.classList.remove("marketing-page");
+  }, []);
+
   return (
     <div
       className="nextslot-theme dark-brand scrollbar-hide"
-style={{
-  position: "fixed",
-  inset: 0,
-  overflowY: "scroll",
-  overflowX: "hidden",
-  background: "#000",
-  WebkitFontSmoothing: "antialiased",
-  paddingTop: "env(safe-area-inset-top)",
-  paddingBottom: "env(safe-area-inset-bottom)",
-  paddingLeft: "env(safe-area-inset-left)",
-  paddingRight: "env(safe-area-inset-right)",
-} as React.CSSProperties}
+      style={{
+        minHeight: "100dvh",
+        background: "#000",
+        overflowX: "hidden",
+        WebkitFontSmoothing: "antialiased",
+      } as React.CSSProperties}
     >
       <style>{HOME_STYLES}</style>
       {children}
