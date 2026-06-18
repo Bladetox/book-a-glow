@@ -690,3 +690,26 @@ html:not(.dark) .tenant-logo-img {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* =================================================================
+   RESOURCES PAGE RESPONSIVE
+================================================================= */
+@media (max-width: 639px) {
+  .resources-tools-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .resources-featured-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .resources-featured-grid > div:first-child {
+    min-height: 220px !important;
+    height: 220px !important;
+  }
+
+  .resources-blog-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+  
