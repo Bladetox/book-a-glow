@@ -228,7 +228,7 @@ const About = () => {
                 </Link>
               </div>
 
-              {/* RIGHT: founder's belief card */}
+              {/* RIGHT: founder belief card */}
               <div
                 className="about-belief-card"
                 style={{
@@ -683,7 +683,6 @@ const About = () => {
                   ))}
                 </ul>
 
-                {/* TARA-S inline CTA */}
                 {card.isTara && (
                   <a
                     href="https://tara-s.vercel.app/"
@@ -714,7 +713,7 @@ const About = () => {
           </div>
         </section>
 
-        {/* ── CTA directly after case study ────────────────────────── */}
+        {/* ── CTA after case study ──────────────────────────────────── */}
         <section style={{ padding: "0 24px 80px" }}>
           <div
             style={{
@@ -797,7 +796,7 @@ const About = () => {
           }}
         />
 
-        {/* ── THE IDEA + MISSION merged ─────────────────────────────── */}
+        {/* ── THE IDEA + MISSION ────────────────────────────────────── */}
         <section style={{ background: C.s1, padding: "64px 24px" }}>
           <div
             style={{
@@ -1010,7 +1009,6 @@ const About = () => {
               on one belief he returns to constantly:
             </p>
 
-            {/* Just Start / chasing_dweams card */}
             <a
               href="https://www.tiktok.com/@chasing_dweams?_r=1&_t=ZS-94gSp7To9iS"
               target="_blank"

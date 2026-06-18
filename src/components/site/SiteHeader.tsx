@@ -3,9 +3,10 @@ import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const navLinks = [
-  { to: "/demo",    label: "Demo" },
-  { to: "/pricing", label: "Pricing" },
-  { to: "/about",   label: "About" },
+  { to: "/demo",      label: "Demo" },
+  { to: "/pricing",   label: "Pricing" },
+  { to: "/resources", label: "Resources" },
+  { to: "/about",     label: "About" },
 ];
 
 const SiteHeader = () => {
@@ -166,25 +167,27 @@ const SiteHeader = () => {
               })}
               <Link
                 to="/login"
-                className="px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
+                className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
                 style={{ color: "hsl(var(--muted-foreground))" }}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Login
               </Link>
             </nav>
-            <Link
-              to="/onboarding"
-              className="flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] transition-all duration-200 active:scale-[0.98]"
-              style={{
-                background: "hsl(var(--foreground))",
-                color: "hsl(var(--background))",
-                boxShadow: "0 0 0 1px hsl(var(--accent) / 0.35), 0 4px 14px -2px hsl(var(--accent) / 0.28)",
-              }}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Try Free for 30 Days
-            </Link>
+            <div className="px-3">
+              <Link
+                to="/onboarding"
+                className="flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] w-full"
+                style={{
+                  background: "hsl(var(--foreground))",
+                  color: "hsl(var(--background))",
+                  boxShadow: "0 0 0 1px hsl(var(--accent) / 0.35), 0 4px 14px -2px hsl(var(--accent) / 0.30)",
+                }}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Try Free for 30 Days
+              </Link>
+            </div>
           </div>
         )}
       </div>

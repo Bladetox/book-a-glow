@@ -12,6 +12,7 @@ import { PwaUpdater } from "@/components/PwaUpdater";
 
 const Index            = lazy(() => import("./pages/Index"));
 const About            = lazy(() => import("./pages/About"));
+const Resources        = lazy(() => import("./pages/Resources"));
 const Book             = lazy(() => import("./pages/Book"));
 const Pricing          = lazy(() => import("./pages/Pricing"));
 const Login            = lazy(() => import("./pages/Login"));
@@ -31,12 +32,10 @@ const PayshapSubmitted = lazy(() => import("./pages/PayshapSubmitted"));
 
 const queryClient = new QueryClient();
 
-// Marketing fallback: always black so safe-area gaps never flash white
 const MarketingShell = () => (
   <div className="min-h-screen" style={{ background: "#000" }} aria-hidden="true" />
 );
 
-// Tenant fallback: inherits bg-background so tenant theme is always respected
 const TenantShell = () => (
   <div className="min-h-screen bg-background" aria-hidden="true" />
 );
@@ -67,6 +66,7 @@ const MarketingRoutes = () => (
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/about" element={<About />} />
+        <Route path="/resources" element={<Resources />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
@@ -84,7 +84,7 @@ const MarketingRoutes = () => (
         <Route path="/payshap-submitted" element={<PublicTenantProvider><PayshapSubmitted /></PublicTenantProvider>} />
         {/* Legacy redirects */}
         <Route path="/product" element={<Navigate to="/" replace />} />
-        <Route path="/blog" element={<Navigate to="/about" replace />} />
+        <Route path="/blog" element={<Navigate to="/resources" replace />} />
         <Route path="/case-study/phenomebeauty" element={<Navigate to="/about" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
