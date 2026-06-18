@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Clock, Check } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
+import MarketingLayout from "@/components/site/MarketingLayout";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 
@@ -259,11 +260,7 @@ const About = () => {
     .filter((a) => !isFiltered || a.category === activeCategory);
 
   return (
-    <div
-      className="nextslot-theme dark-brand"
-      style={{ background: C.bg, color: C.text, fontFamily: FONT_BODY, minHeight: "100vh" }}
-    >
-      <style>{HOME_STYLES}</style>
+    <MarketingLayout>
       <SiteHeader />
       <main>
 
@@ -1119,110 +1116,81 @@ const About = () => {
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: 12,
-                    marginBottom: 20,
-                    position: "relative",
-                    zIndex: 1,
+                    marginBottom: 16,
                   }}
                 >
                   <div>
                     <p
                       style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        marginBottom: 2,
-                        color: card.isFinal ? C.gold : C.muted,
-                        fontFamily: FONT_BODY,
-                      }}
-                    >
-                      {card.label}
-                    </p>
-                    <p
-                      style={{
                         fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: "0.09em",
                         textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                        fontWeight: 500,
-                        color: C.muted,
+                        color: card.isFinal ? C.gold : C.faint,
+                        marginBottom: 4,
                         fontFamily: FONT_BODY,
                       }}
                     >
                       {card.version}
                     </p>
+                    <h3
+                      style={{
+                        fontFamily: FONT_DISPLAY,
+                        fontSize: 17,
+                        fontWeight: 700,
+                        color: C.text,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {card.label}
+                    </h3>
                   </div>
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      fontFamily: FONT_BODY,
-                      ...(card.isFinal
-                        ? { background: C.gold, color: C.bg }
-                        : { background: C.s2, color: C.muted }),
-                    }}
-                  >
-                    {parseInt(card.step)}
-                  </span>
+                  {card.isFinal && (
+                    <Check
+                      style={{
+                        height: 20,
+                        width: 20,
+                        color: C.gold,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
                 </div>
                 <ul
                   style={{
-                    position: "relative",
-                    zIndex: 1,
                     listStyle: "none",
                     padding: 0,
                     margin: 0,
                     display: "flex",
                     flexDirection: "column",
-                    gap: 10,
+                    gap: 8,
                   }}
                 >
-                  {card.points.map((pt, pi) => (
+                  {card.points.map((point) => (
                     <li
-                      key={pi}
-                      style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
+                      key={point}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        fontSize: 13,
+                        color: C.muted,
+                        fontFamily: FONT_BODY,
+                        lineHeight: 1.55,
+                      }}
                     >
-                      {card.isFinal ? (
-                        <Check
-                          style={{
-                            marginTop: 2,
-                            height: 14,
-                            width: 14,
-                            flexShrink: 0,
-                            color: C.gold,
-                          }}
-                        />
-                      ) : (
-                        <span
-                          style={{
-                            marginTop: 7,
-                            width: 6,
-                            height: 6,
-                            borderRadius: "50%",
-                            flexShrink: 0,
-                            background: "rgba(232,232,230,0.25)",
-                            display: "inline-block",
-                          }}
-                        />
-                      )}
                       <span
                         style={{
-                          fontSize: 14,
-                          lineHeight: 1.7,
-                          fontFamily: FONT_BODY,
-                          ...(card.isFinal
-                            ? { fontWeight: 500, color: C.text }
-                            : { color: C.muted }),
+                          display: "inline-block",
+                          width: 4,
+                          height: 4,
+                          borderRadius: "50%",
+                          background: card.isFinal ? C.gold : C.faint,
+                          marginTop: 6,
+                          flexShrink: 0,
                         }}
-                      >
-                        {pt}
-                      </span>
+                      />
+                      {point}
                     </li>
                   ))}
                 </ul>
@@ -1231,226 +1199,204 @@ const About = () => {
           </div>
         </section>
 
-        <div
-          style={{
-            height: 1,
-            background:
-              "linear-gradient(90deg, transparent, rgba(212,165,116,0.4), transparent)",
-          }}
-        />
-
         {/* ── BLOG ─────────────────────────────────────────────────── */}
         <section
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            padding: "80px 24px",
-            background: C.s1,
-          }}
+          id="blog"
+          style={{ background: C.s1, padding: "80px 24px" }}
         >
-          <div
-            style={{
-              pointerEvents: "none",
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(212,165,116,0.06) 0%, transparent 70%)",
-            }}
-          />
-          <div style={{ position: "relative", maxWidth: 1200, margin: "0 auto" }}>
-            <div style={{ marginBottom: 40 }}>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.09em",
-                  textTransform: "uppercase",
-                  color: C.gold,
-                  marginBottom: 16,
-                  fontFamily: FONT_BODY,
-                }}
-              >
-                The NextSlot Blog
-              </p>
-              <h2
-                style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: "clamp(26px,3vw,40px)",
-                  fontWeight: 700,
-                  color: C.text,
-                  lineHeight: 1.08,
-                  marginBottom: 16,
-                }}
-              >
-                Practical thinking for South African service businesses.
-              </h2>
-              <p
-                style={{
-                  fontSize: 15,
-                  color: C.muted,
-                  lineHeight: 1.6,
-                  maxWidth: 440,
-                  fontFamily: FONT_BODY,
-                }}
-              >
-                Business structure, operations, payments, and growth.
-              </p>
-            </div>
-
-            {/* Filter bar */}
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div
               style={{
                 display: "flex",
-                alignItems: "center",
-                gap: 8,
+                alignItems: "flex-end",
+                justifyContent: "space-between",
+                gap: 16,
                 flexWrap: "wrap",
-                marginBottom: 32,
+                marginBottom: 36,
               }}
             >
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveCategory(cat)}
+              <div>
+                <p
                   style={{
-                    padding: "6px 16px",
-                    borderRadius: 100,
-                    fontSize: 12,
-                    fontWeight: 600,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.09em",
+                    textTransform: "uppercase",
+                    color: C.gold,
+                    marginBottom: 8,
                     fontFamily: FONT_BODY,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    border: activeCategory === cat
-                      ? `1px solid ${C.text}`
-                      : `1px solid ${C.border2}`,
-                    background: activeCategory === cat ? C.text : "transparent",
-                    color: activeCategory === cat ? C.bg : C.muted,
                   }}
                 >
-                  {cat}
-                </button>
-              ))}
-              <span
-                style={{
-                  marginLeft: "auto",
-                  fontSize: 12,
-                  color: C.muted,
-                  fontFamily: FONT_BODY,
-                }}
-              >
-                {articles.length} articles
-              </span>
+                  Resources
+                </p>
+                <h2
+                  style={{
+                    fontFamily: FONT_DISPLAY,
+                    fontSize: "clamp(22px,2.4vw,30px)",
+                    fontWeight: 700,
+                    color: C.text,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  For business owners who think ahead.
+                </h2>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    style={{
+                      padding: "6px 16px",
+                      borderRadius: 100,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      fontFamily: FONT_BODY,
+                      cursor: "pointer",
+                      border: `1px solid ${
+                        activeCategory === cat
+                          ? "rgba(212,165,116,0.60)"
+                          : "rgba(212,165,116,0.20)"
+                      }`,
+                      background:
+                        activeCategory === cat
+                          ? "rgba(212,165,116,0.14)"
+                          : "transparent",
+                      color: activeCategory === cat ? C.text : C.muted,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Featured full card */}
-            {featured && showFeatured && (
-              <div style={{ marginBottom: 32 }}>
-                <a
-                  href={featured.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+            {/* Featured article */}
+            {showFeatured && featured && (
+              <a
+                href={featured.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 0,
+                  borderRadius: 20,
+                  overflow: "hidden",
+                  border: `1px solid rgba(212,165,116,0.22)`,
+                  textDecoration: "none",
+                  background: C.s2,
+                  marginBottom: 32,
+                  transition: "border-color 0.2s",
+                }}
+                className="about-featured-grid"
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.50)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.22)";
+                }}
+              >
+                <div
                   style={{
-                    display: "block",
-                    position: "relative",
                     overflow: "hidden",
-                    borderRadius: 24,
-                    textDecoration: "none",
-                    background: C.s2,
-                    border: `1px solid rgba(212,165,116,0.40)`,
-                    boxShadow:
-                      `0 0 0 1px rgba(212,165,116,0.08), inset 0 1px 0 rgba(212,165,116,0.12), 0 8px 40px -8px rgba(0,0,0,0.5)`,
-                    transition: "border-color 0.3s, box-shadow 0.3s",
-                  }}
-                  onMouseEnter={(e) => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.borderColor = "rgba(212,165,116,0.65)";
-                    el.style.boxShadow = `0 0 28px 0 rgba(212,165,116,0.22), 0 8px 40px -8px rgba(0,0,0,0.5)`;
-                  }}
-                  onMouseLeave={(e) => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.borderColor = "rgba(212,165,116,0.40)";
-                    el.style.boxShadow =
-                      `0 0 0 1px rgba(212,165,116,0.08), inset 0 1px 0 rgba(212,165,116,0.12), 0 8px 40px -8px rgba(0,0,0,0.5)`;
+                    position: "relative",
+                    minHeight: 260,
                   }}
                 >
-                  <CoverImage src={featured.image} alt={featured.title} tall />
-                  <div style={{ padding: "32px 40px" }}>
-                    <div
+                  {featured.image ? (
+                    <img
+                      src={featured.image}
+                      alt={featured.title}
+                      loading="lazy"
+                      decoding="async"
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        marginBottom: 16,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
                       }}
-                    >
+                    />
+                  ) : (
+                    <FallbackBand tall />
+                  )}
+                </div>
+                <div
+                  style={{
+                    padding: "36px 36px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    gap: 16,
+                  }}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <CategoryChip category={featured.category} />
                       <span
                         style={{
-                          fontSize: 12,
-                          display: "flex",
+                          display: "inline-flex",
                           alignItems: "center",
                           gap: 4,
-                          color: C.muted,
+                          fontSize: 11,
+                          color: C.faint,
                           fontFamily: FONT_BODY,
                         }}
                       >
-                        <Clock style={{ height: 12, width: 12 }} />
-                        {featured.readTime} read
-                      </span>
-                      <span style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY }}>
-                        {featured.date}
+                        <Clock style={{ height: 10, width: 10 }} />
+                        {featured.readTime}
                       </span>
                     </div>
                     <h3
                       style={{
                         fontFamily: FONT_DISPLAY,
-                        fontSize: "clamp(20px,2.2vw,28px)",
+                        fontSize: "clamp(17px,1.6vw,22px)",
                         fontWeight: 700,
                         color: C.text,
-                        lineHeight: 1.2,
-                        marginBottom: 12,
+                        lineHeight: 1.25,
                       }}
                     >
                       {featured.title}
                     </h3>
                     <p
                       style={{
-                        fontSize: 14,
-                        lineHeight: 1.7,
-                        maxWidth: 640,
-                        marginBottom: 24,
+                        fontSize: 13,
                         color: C.muted,
+                        lineHeight: 1.65,
                         fontFamily: FONT_BODY,
                       }}
                     >
                       {featured.excerpt}
                     </p>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: C.gold,
-                        fontFamily: FONT_BODY,
-                      }}
-                    >
-                      Read article <ArrowUpRight style={{ height: 16, width: 16 }} />
-                    </span>
                   </div>
-                </a>
-              </div>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: C.gold,
+                      fontFamily: FONT_BODY,
+                    }}
+                  >
+                    Read on Medium
+                    <ArrowUpRight style={{ height: 13, width: 13 }} />
+                  </div>
+                </div>
+              </a>
             )}
 
-            {/* Article grid */}
-            {grid.length > 0 ? (
+            {/* Grid */}
+            {grid.length > 0 && (
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: 24,
+                  gridTemplateColumns: "repeat(3,1fr)",
+                  gap: 20,
                 }}
+                className="about-blog-grid"
               >
                 {grid.map((article) => (
                   <a
@@ -1461,204 +1407,121 @@ const About = () => {
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      overflow: "hidden",
                       borderRadius: 16,
-                      textDecoration: "none",
+                      overflow: "hidden",
+                      border: `1px solid rgba(212,165,116,0.18)`,
                       background: C.s2,
-                      border: `1px solid rgba(212,165,116,0.22)`,
-                      boxShadow: "0 2px 16px rgba(0,0,0,0.3)",
-                      transition: "border-color 0.3s, box-shadow 0.3s",
+                      textDecoration: "none",
+                      transition: "border-color 0.2s",
                     }}
                     onMouseEnter={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.borderColor = "rgba(212,165,116,0.55)";
-                      el.style.boxShadow = `0 0 28px 0 rgba(212,165,116,0.18), 0 8px 32px rgba(0,0,0,0.4)`;
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.45)";
                     }}
                     onMouseLeave={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.borderColor = "rgba(212,165,116,0.22)";
-                      el.style.boxShadow = "0 2px 16px rgba(0,0,0,0.3)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.18)";
                     }}
                   >
                     <CoverImage src={article.image} alt={article.title} />
                     <div
                       style={{
+                        padding: "20px 20px 24px",
                         display: "flex",
                         flexDirection: "column",
+                        gap: 10,
                         flex: 1,
-                        padding: 24,
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          marginBottom: 12,
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <CategoryChip category={article.category} small />
                         <span
                           style={{
-                            fontSize: 11,
-                            display: "flex",
+                            display: "inline-flex",
                             alignItems: "center",
                             gap: 4,
-                            color: C.muted,
+                            fontSize: 10,
+                            color: C.faint,
                             fontFamily: FONT_BODY,
                           }}
                         >
-                          <Clock style={{ height: 12, width: 12 }} />
+                          <Clock style={{ height: 9, width: 9 }} />
                           {article.readTime}
                         </span>
                       </div>
                       <h3
                         style={{
-                          fontSize: 15,
-                          fontWeight: 600,
-                          lineHeight: 1.4,
-                          marginBottom: 8,
-                          color: C.text,
                           fontFamily: FONT_DISPLAY,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: C.text,
+                          lineHeight: 1.3,
+                          flex: 1,
                         }}
                       >
                         {article.title}
                       </h3>
                       <p
                         style={{
-                          fontSize: 13,
-                          lineHeight: 1.7,
-                          flex: 1,
+                          fontSize: 12,
                           color: C.muted,
+                          lineHeight: 1.6,
                           fontFamily: FONT_BODY,
-                        }}
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        } as React.CSSProperties}
                       >
                         {article.excerpt}
                       </p>
                       <div
                         style={{
-                          marginTop: 16,
-                          display: "flex",
+                          display: "inline-flex",
                           alignItems: "center",
-                          justifyContent: "space-between",
+                          gap: 4,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: C.gold,
+                          fontFamily: FONT_BODY,
+                          marginTop: 4,
                         }}
                       >
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: C.faint,
-                            fontFamily: FONT_BODY,
-                          }}
-                        >
-                          {article.date}
-                        </span>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: C.gold,
-                            fontFamily: FONT_BODY,
-                          }}
-                        >
-                          Read <ArrowUpRight style={{ height: 14, width: 14 }} />
-                        </span>
+                        Read on Medium
+                        <ArrowUpRight style={{ height: 11, width: 11 }} />
                       </div>
                     </div>
                   </a>
                 ))}
               </div>
-            ) : (
-              <div style={{ padding: "80px 0", textAlign: "center" }}>
-                <p style={{ fontSize: 14, color: C.muted, fontFamily: FONT_BODY }}>
-                  No articles in this category yet.
-                </p>
-              </div>
             )}
 
-            {/* Author strip */}
-            <div
-              style={{
-                marginTop: 56,
-                borderRadius: 16,
-                padding: "40px 32px",
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-                background: C.s2,
-                border: `1px solid ${C.border2}`,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.09em",
-                  textTransform: "uppercase",
-                  color: C.gold,
-                  fontFamily: FONT_BODY,
-                }}
-              >
-                Written by
-              </p>
-              <h3
-                style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: 20,
-                  fontWeight: 700,
-                  color: C.text,
-                }}
-              >
-                Arshad Segal
-              </h3>
+            {isFiltered && grid.length === 0 && !showFeatured && (
               <p
                 style={{
                   fontSize: 14,
-                  lineHeight: 1.7,
                   color: C.muted,
-                  maxWidth: 440,
-                  margin: "0 auto",
                   fontFamily: FONT_BODY,
+                  textAlign: "center",
+                  padding: "40px 0",
                 }}
               >
-                Founder of NextSlot. Writing about what actually works for independent service
-                businesses in South Africa. Structure, systems, payments, and the decisions that
-                compound over time.
+                No articles in this category yet.
               </p>
-              <p style={{ fontSize: 12, color: C.faint, fontFamily: FONT_BODY }}>
-                More articles on{" "}
-                <a
-                  href="https://medium.com/@arshadsegal"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    textDecoration: "underline",
-                    textUnderlineOffset: 2,
-                    color: C.faint,
-                    transition: "color 0.2s",
-                  }}
-                >
-                  medium.com/@arshadsegal
-                </a>
-              </p>
-            </div>
+            )}
           </div>
         </section>
 
-        {/* ── FOOTER CTA ───────────────────────────────────────────── */}
-        <section style={{ background: C.s2, padding: "80px 24px" }}>
+        {/* ── CTA BANNER ───────────────────────────────────────────── */}
+        <section style={{ padding: "80px 24px" }}>
           <div
             style={{
-              maxWidth: 640,
+              maxWidth: 760,
               margin: "0 auto",
+              borderRadius: 24,
+              padding: "56px 48px",
+              background: C.s1,
+              border: `1px solid rgba(212,165,116,0.25)`,
+              boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
               textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              gap: 24,
-              alignItems: "center",
             }}
           >
             <p
@@ -1668,86 +1531,63 @@ const About = () => {
                 letterSpacing: "0.09em",
                 textTransform: "uppercase",
                 color: C.gold,
+                marginBottom: 16,
                 fontFamily: FONT_BODY,
               }}
             >
-              NextSlot
+              Ready to start?
             </p>
             <h2
               style={{
                 fontFamily: FONT_DISPLAY,
-                fontSize: "clamp(22px,2.4vw,32px)",
+                fontSize: "clamp(24px,2.8vw,36px)",
                 fontWeight: 700,
                 color: C.text,
-                lineHeight: 1.2,
+                lineHeight: 1.15,
+                marginBottom: 16,
               }}
             >
-              Built for the people behind the chair, the studio, and the craft.
+              Your booking page is 20 minutes away.
             </h2>
             <p
               style={{
-                fontSize: 14,
+                fontSize: 15,
                 color: C.muted,
                 lineHeight: 1.7,
+                maxWidth: 480,
+                margin: "0 auto 32px",
                 fontFamily: FONT_BODY,
               }}
             >
-              Let your bookings run themselves. Try free for 30 days. No payment required.
+              No payment required. No technical setup. Just your services, your availability, and
+              your booking link ready to share.
             </p>
-            <div
+            <Link
+              to="/onboarding"
               style={{
-                display: "flex",
-                flexDirection: "column",
+                display: "inline-flex",
                 alignItems: "center",
-                gap: 12,
-                paddingTop: 8,
+                gap: 8,
+                background: CTA_BG,
+                boxShadow: CTA_SHADOW,
+                color: "#080808",
+                fontFamily: FONT_BODY,
+                fontSize: 14,
+                fontWeight: 700,
+                padding: "14px 32px",
+                borderRadius: 10,
+                textDecoration: "none",
               }}
             >
-              <Link
-                to="/onboarding"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  fontFamily: FONT_BODY,
-                  padding: "16px 32px",
-                  borderRadius: 10,
-                  textDecoration: "none",
-                  background: CTA_BG,
-                  boxShadow: CTA_SHADOW,
-                  color: "#080808",
-                }}
-              >
-                Create Your Booking Page
-                <ArrowRight style={{ height: 16, width: 16 }} />
-              </Link>
-              <Link
-                to="/demo"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: C.faint,
-                  textDecoration: "none",
-                  transition: "color 0.2s",
-                  fontFamily: FONT_BODY,
-                }}
-              >
-                Or try the live demo first
-                <ArrowRight style={{ height: 14, width: 14 }} />
-              </Link>
-            </div>
+              Create Your Booking Page
+              <ArrowRight style={{ height: 16, width: 16 }} />
+            </Link>
           </div>
         </section>
 
+        <SiteFooter />
       </main>
-      <SiteFooter />
-    </div>
+    </MarketingLayout>
   );
 };
 

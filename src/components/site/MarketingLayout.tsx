@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 
 interface MarketingLayoutProps {
@@ -6,34 +6,18 @@ interface MarketingLayoutProps {
 }
 
 const MarketingLayout = ({ children }: MarketingLayoutProps) => {
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById("root");
-
-    html.style.overflow = "auto";
-    html.style.height = "auto";
-    body.style.overflow = "auto";
-    body.style.height = "auto";
-    if (root) {
-      root.style.overflow = "auto";
-      root.style.height = "auto";
-    }
-
-    return () => {
-      html.style.overflow = "";
-      html.style.height = "";
-      body.style.overflow = "";
-      body.style.height = "";
-      if (root) {
-        root.style.overflow = "";
-        root.style.height = "";
-      }
-    };
-  }, []);
-
   return (
-    <div className="nextslot-theme dark-brand" style={{ overflowX: "hidden", minHeight: "100vh" }}>
+    <div
+      className="nextslot-theme dark-brand scrollbar-hide"
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflowY: "scroll",
+        overflowX: "hidden",
+        background: "#000",
+        WebkitFontSmoothing: "antialiased",
+      } as React.CSSProperties}
+    >
       <style>{HOME_STYLES}</style>
       {children}
     </div>
