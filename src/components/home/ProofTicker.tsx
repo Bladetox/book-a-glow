@@ -10,11 +10,11 @@ const GOLD = "#D4A574";
 
 export const ProofTicker = () => (
   <div style={{
-    borderTop:    "1px solid #e8e8e8",
-    borderBottom: "1px solid #e8e8e8",
+    borderTop:    "1px solid rgba(212,165,116,0.10)",
+    borderBottom: "1px solid rgba(212,165,116,0.10)",
     padding: "14px 0",
     overflow: "hidden",
-    background: "#ffffff",
+    background: "rgba(212,165,116,0.04)",
   }}>
     <div
       className="proof-track"
@@ -26,7 +26,7 @@ export const ProofTicker = () => (
           padding: "0 28px",
           fontFamily: FONT_BODY,
           fontSize: 12, fontWeight: 500,
-          color: "#444444",
+          color: "rgba(232,232,230,0.45)",
           whiteSpace: "nowrap",
         }}>
           <span style={{
