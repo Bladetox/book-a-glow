@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowRight, ArrowUpRight, Clock } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
+import MarketingLayout from "@/components/site/MarketingLayout";
 import { Link } from "react-router-dom";
 
 /* TYPE */
@@ -107,7 +108,7 @@ const Blog = () => {
     .filter((a) => !isFiltered || a.category === activeCategory);
 
   return (
-    <div className="min-h-screen nextslot-theme bg-background">
+    <MarketingLayout>
       <SiteHeader />
       <main>
 
@@ -337,7 +338,7 @@ const Blog = () => {
 
       </main>
       <SiteFooter />
-    </div>
+    </MarketingLayout>
   );
 };
 
