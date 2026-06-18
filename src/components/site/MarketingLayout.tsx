@@ -10,7 +10,7 @@ const MarketingLayout = ({ children }: MarketingLayoutProps) => {
     <div
       className="nextslot-theme dark-brand scrollbar-hide"
 style={{
-  position: "absolute",
+  position: "fixed",
   inset: 0,
   overflowY: "scroll",
   overflowX: "hidden",
