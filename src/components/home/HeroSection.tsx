@@ -164,10 +164,9 @@ export const HeroSection = () => {
             animation: "fadeUp 0.6s 0.2s ease both",
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
-            You already have everything you need to grow. You just cannot see it yet.
+            Built for the person behind the chair, the studio, and the craft.
           </p>
 
-          {/* Line 2: the mechanism, in plain language */}
           <p style={{
             fontSize: isMobile ? 13 : "clamp(13px,1.15vw,15px)",
             fontWeight: 300, color: C.muted,
@@ -176,9 +175,9 @@ export const HeroSection = () => {
             animation: "fadeUp 0.6s 0.25s ease both",
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
-            NextSlot reads your bookings, your revenue, and your patterns, then tells you exactly where to focus.
+            Stop managing bookings on WhatsApp. Get paid upfront, see exactly where your revenue comes from, and run your business like it owes you clarity.
           </p>
-
+          
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", animation: "fadeUp 0.6s 0.3s ease both" } as React.CSSProperties}>
             <Link
               to="/onboarding"
@@ -207,14 +206,53 @@ export const HeroSection = () => {
             </a>
           </div>
 
+          <div
+            style={{
+              marginTop: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              animation: "fadeUp 0.6s 0.45s ease both",
+            } as React.CSSProperties}
+          >
+            <div style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: "rgba(212,165,116,0.10)",
+              border: "1.5px solid rgba(212,165,116,0.30)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              fontSize: 15,
+              color: "#D4A574",
+            }}>
+              ✦
+            </div>
+            <p style={{
+              fontSize: 12,
+              color: "rgba(232,232,230,0.50)",
+              fontFamily: FONT_BODY,
+              lineHeight: 1.5,
+              margin: 0,
+            }}>
+              <span style={{ color: "#D4A574", fontWeight: 600 }}>
+                "From WhatsApp chaos to fully automated bookings."
+              </span>
+              {" "}— Shu-meez, PhenomeBeauty · Cape Town
+            </p>
+          </div>
+
           <p style={{
-            marginTop: 22, fontSize: 11, color: "rgba(232,232,230,0.42)",
+            marginTop: 14, fontSize: 11, color: "rgba(232,232,230,0.42)",
             letterSpacing: "0.04em", fontWeight: 500,
-            animation: "fadeUp 0.6s 0.4s ease both",
+            animation: "fadeUp 0.6s 0.5s ease both",
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
             No Payment Required · 30-day trial · Set up in under 10 minutes
           </p>
+
         </div>
 
         {/* Card world */}
