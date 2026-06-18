@@ -156,21 +156,15 @@
 
 /* =================================================================
    MARKETING PAGE SCROLL OVERRIDE
-   Applied via useEffect in MarketingLayout -- never affects app pages
+   Applied via useEffect on document.documentElement in MarketingLayout,
+   Login, and Onboarding. Works on all browsers including Safari iOS.
 ================================================================= */
-body.marketing-page {
-  overflow-y: auto !important;
-  height: auto !important;
-}
-
-html:has(body.marketing-page) {
-  overflow-y: auto !important;
-  height: auto !important;
-}
-
-body.marketing-page #root {
+html.marketing-page,
+html.marketing-page body,
+html.marketing-page #root {
   height: auto !important;
   overflow: visible !important;
+  overflow-x: hidden !important;
 }
 
 /* =================================================================
