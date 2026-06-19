@@ -312,12 +312,9 @@ const planRank: Record<TenantPlan, number> = {
   studio: 4,
 };
 
-// linear interpolation helper
-const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
-
-// map a value in [inMin,inMax] to [0,1], clamped
-const mapRange = (v: number, inMin: number, inMax: number) =>
-  Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+const mapRange = (v: number, inMin: number, inMax: number) => clamp((v - inMin) / (inMax - inMin), 0, 1);
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 const CellValue = ({ value }: { value: boolean | string }) => {
   if (typeof value === "string") return <span style={{ fontSize: 12, color: C.muted }}>{value}</span>;
@@ -328,21 +325,23 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 
 // ─── R99 Scroll Reveal ────────────────────────────────────────────────────────
 //
-// Scroll timeline (progress 0 -> 1, total scrollable distance = 120vh):
+// What the user sees:
 //
-//  0.00 -> 0.00  R99 fills screen at 55vw, "What it costs" invisible
-//  0.00 -> 0.12  "What it costs" fades in above R99
-//  0.00 -> 0.35  R99 shrinks from 55vw -> 16vw (settles to reading size)
-//  0.28 -> 0.55  Feature lists fade + slide up into view
-//  0.58 -> 0.78  CTA button + tagline fade in
-//  0.80 -> 0.95  R99 fades out (content stays, number exits)
+//  LAND      R99 is large and centred (clamp 22vw desktop / 18vw mobile).
+//            Nothing else visible yet.
 //
-// Section height = 220vh  =>  scrollable distance = 220vh - 100vh = 120vh
-// Progress formula: -rect.top / (sectionHeight - viewportHeight)
-// This gives exactly 0 at entry and 1 when the bottom of the section
-// reaches the bottom of the viewport -- no dead gap.
-
-const SECTION_VH = 220;
+//  p 0→0.18  "What it costs" fades in above R99.
+//            R99 begins shrinking from 22vw toward 14vw.
+//
+//  p 0→0.30  R99 finishes shrinking and settles at 14vw.
+//
+//  p 0.22→0.38  "Your Starter plan automates" fades in below R99.
+//
+//  p 0.35→0.58  Feature lists slide up and fade in.
+//
+//  p 0.62→0.80  CTA fades in.
+//
+// Section = 300vh. Scrollable = 200vh. Progress formula is exact -- no dead gap.
 
 const R99Reveal = ({
   pricingMode,
@@ -352,47 +351,47 @@ const R99Reveal = ({
   manageTierMeta: { label: string; rank: number } | null;
 }) => {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const [p, setP] = useState(0); // scroll progress 0..1
+  const [p, setP] = useState(0);
 
   useEffect(() => {
     const onScroll = () => {
       const el = sectionRef.current;
       if (!el) return;
       const scrollable = el.offsetHeight - window.innerHeight;
-      const raw = -el.getBoundingClientRect().top / scrollable;
-      setP(Math.max(0, Math.min(1, raw)));
+      if (scrollable <= 0) return;
+      setP(clamp(-el.getBoundingClientRect().top / scrollable, 0, 1));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // R99 size: 55vw -> 16vw across p 0..0.35
-  const numberVw = lerp(55, 16, mapRange(p, 0, 0.35));
+  // R99: starts at 22vw on land, shrinks to 14vw by p=0.30
+  // clamp(vw, min, max) keeps it safe on all screen sizes
+  const numberVw = lerp(22, 14, mapRange(p, 0, 0.30));
+  // cap at 18vw equivalent on narrow screens via fontSize with max
+  const numberSize = `clamp(96px, ${numberVw}vw, 260px)`;
 
-  // R99 opacity: full until 0.80, then fades out by 0.95
-  const numberOpacity = 1 - mapRange(p, 0.80, 0.95);
+  // "What it costs" -- fades in from the very first scroll
+  const labelOpacity = mapRange(p, 0, 0.18);
 
-  // "What it costs" label: fades in 0 -> 0.12
-  const labelOpacity = mapRange(p, 0, 0.12);
+  // "Your Starter plan automates" -- appears once R99 has started shrinking
+  const subLabelOpacity = mapRange(p, 0.22, 0.38);
 
-  // "Your Starter plan automates" sub-label: fades in 0.14 -> 0.26
-  const subLabelOpacity = mapRange(p, 0.14, 0.26);
+  // Features
+  const featuresOpacity = mapRange(p, 0.35, 0.58);
+  const featuresY = lerp(20, 0, mapRange(p, 0.35, 0.58));
 
-  // Features: fade + slide in 0.28 -> 0.55
-  const featuresOpacity = mapRange(p, 0.28, 0.55);
-  const featuresY = lerp(28, 0, mapRange(p, 0.28, 0.55));
-
-  // CTA: fade + slide in 0.58 -> 0.78
-  const ctaOpacity = mapRange(p, 0.58, 0.78);
-  const ctaY = lerp(20, 0, mapRange(p, 0.58, 0.78));
+  // CTA
+  const ctaOpacity = mapRange(p, 0.62, 0.80);
+  const ctaY = lerp(16, 0, mapRange(p, 0.62, 0.80));
 
   const starterTier = tiers.find((t) => t.name === "Starter")!;
 
   return (
     <div
       ref={sectionRef}
-      style={{ position: "relative", height: `${SECTION_VH}vh` }}
+      style={{ position: "relative", height: "300vh" }}
     >
       <div
         style={{
@@ -441,7 +440,7 @@ const R99Reveal = ({
           pointerEvents: "none",
         }} />
 
-        {/* Content */}
+        {/* Content stack */}
         <div style={{
           position: "relative",
           zIndex: 2,
@@ -454,7 +453,7 @@ const R99Reveal = ({
           maxWidth: 720,
         }}>
 
-          {/* "What it costs" -- fades in first as you start scrolling */}
+          {/* "What it costs" -- invisible on land, fades in on first scroll */}
           <p style={{
             fontFamily: FONT_BODY,
             fontSize: 11,
@@ -462,42 +461,36 @@ const R99Reveal = ({
             letterSpacing: "0.14em",
             textTransform: "uppercase" as const,
             color: C.gold,
-            marginBottom: 12,
+            margin: "0 0 14px 0",
             opacity: labelOpacity,
-            transition: "none",
           }}>
             What it costs
           </p>
 
-          {/* R99 -- starts huge, shrinks as scroll progresses */}
-          <div style={{ position: "relative", lineHeight: 1 }}>
-            <span
-              style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: `${numberVw}vw`,
-                fontWeight: 800,
-                color: C.text,
-                lineHeight: 1,
-                letterSpacing: "-0.03em",
-                opacity: numberOpacity,
-                display: "block",
-                userSelect: "none",
-                transition: "none",
-              }}
-            >
-              R99
-            </span>
-          </div>
+          {/* R99 -- large on land, shrinks as scroll progresses */}
+          <span
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontSize: numberSize,
+              fontWeight: 800,
+              color: C.text,
+              lineHeight: 1,
+              letterSpacing: "-0.03em",
+              display: "block",
+              userSelect: "none",
+            }}
+          >
+            R99
+          </span>
 
-          {/* "Your Starter plan automates" -- appears on top once R99 settles */}
+          {/* "Your Starter plan automates" */}
           <p style={{
             fontFamily: FONT_BODY,
             fontSize: 14,
             fontWeight: 500,
             color: C.muted,
-            marginTop: 10,
+            margin: "12px 0 0 0",
             opacity: subLabelOpacity,
-            transition: "none",
           }}>
             Your Starter plan automates
           </p>
@@ -507,7 +500,6 @@ const R99Reveal = ({
             marginTop: 24,
             opacity: featuresOpacity,
             transform: `translateY(${featuresY}px)`,
-            transition: "none",
             width: "100%",
             display: "flex",
             flexDirection: "column",
@@ -521,7 +513,7 @@ const R99Reveal = ({
                   letterSpacing: "0.09em",
                   textTransform: "uppercase" as const,
                   color: C.faint,
-                  marginBottom: 10,
+                  margin: "0 0 10px 0",
                   fontFamily: FONT_BODY,
                 }}>
                   {group.label}
@@ -543,7 +535,6 @@ const R99Reveal = ({
             marginTop: 28,
             opacity: ctaOpacity,
             transform: `translateY(${ctaY}px)`,
-            transition: "none",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
