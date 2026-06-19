@@ -341,23 +341,23 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 //
 // HOW THE LOCK WORKS:
 //   wrapper height = calc(100dvh + 300vh)
-//   sticky panel   = 100dvh, top: 0
 //
-//   Scroll distance before release = wrapper - viewport = 300vh
-//   On a 900px screen that is 2700px of locked scroll = ~3 full swipes.
-//   p = scrolled / 300vh  (0 at top, 1 when wrapper bottom exits viewport)
+//   The background image is position:fixed so it is nailed to the viewport
+//   for the entire duration the hero is active. It never moves regardless of
+//   scroll position.
 //
-//   The sticky panel is held in place for ALL of that travel.
-//   Once the wrapper bottom scrolls past the viewport bottom the panel
-//   releases and Plans flows in immediately (padding-top: 0).
+//   The sticky text panel sits on top with a transparent background so the
+//   fixed image shows through. The text animates across 3 scroll lengths.
 //
-// PHASE MAP (p = 0 -> 1, spread evenly across 3 screen heights):
+//   heroActive tracks whether the wrapper bottom is still above the viewport
+//   bottom. Once it exits, heroActive becomes false and the fixed bg is
+//   unmounted. The Plans section carries a solid C.bg background so it
+//   covers the image immediately as it scrolls in.
+//
+// PHASE MAP (p = 0 -> 1):
 //   SCROLL 1  p 0.00 -> 0.33   label fades in, R99 shrinks 22vw -> 14vw
 //   SCROLL 2  p 0.33 -> 0.66   subline + features fade in and settle
 //   SCROLL 3  p 0.66 -> 1.00   CTA fades in and settles
-//
-//   At p = 1 everything is fully visible and the panel releases.
-//   Zero dead scroll, zero gap into Plans.
 
 const R99Reveal = ({
   pricingMode,
@@ -368,15 +368,20 @@ const R99Reveal = ({
 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [p, setP] = useState(0);
+  const [heroActive, setHeroActive] = useState(true);
 
   useEffect(() => {
     const onScroll = () => {
       const el = wrapperRef.current;
       if (!el) return;
-      const scrolled = -el.getBoundingClientRect().top;
+      const rect = el.getBoundingClientRect();
+      const scrolled = -rect.top;
       const scrollable = el.offsetHeight - window.innerHeight;
       if (scrollable <= 0) return;
-      setP(clamp(scrolled / scrollable, 0, 1));
+      const next = clamp(scrolled / scrollable, 0, 1);
+      setP(next);
+      // heroActive = wrapper bottom is still on screen or above
+      setHeroActive(rect.bottom > 0);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
@@ -405,10 +410,70 @@ const R99Reveal = ({
       ref={wrapperRef}
       style={{
         position: "relative",
-        // 300vh of scroll travel = 3 full screen heights locked
         height: "calc(100dvh + 300vh)",
       }}
     >
+      {/* ── FIXED BACKGROUND IMAGE ───────────────────────────────────────
+          Lives outside the sticky panel. Nailed to the viewport.
+          Unmounted once the hero wrapper leaves the screen so it does
+          not bleed over the Plans section.
+      ─────────────────────────────────────────────────────────────────── */}
+      {heroActive && (
+        <>
+          {/* Base dark fill so the page bg matches before the image loads */}
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            background: C.bg,
+            zIndex: 0,
+            pointerEvents: "none",
+          }} />
+
+          {/* The hero image itself */}
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            backgroundImage: "url('https://iili.io/CFs98E7.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            opacity: 0.28,
+            filter: "blur(0.5px) saturate(0.6)",
+            transform: "scale(1.04)",
+            zIndex: 1,
+            pointerEvents: "none",
+          }} />
+
+          {/* Grid overlay */}
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
+            backgroundSize: "44px 44px",
+            WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+            maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+            zIndex: 2,
+            pointerEvents: "none",
+          } as React.CSSProperties} />
+
+          {/* Radial glow */}
+          <div style={{
+            position: "fixed",
+            width: 600, height: 600,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(212,165,116,0.07) 0%, transparent 70%)",
+            top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 2,
+            pointerEvents: "none",
+          }} />
+        </>
+      )}
+
+      {/* ── STICKY TEXT PANEL ────────────────────────────────────────────
+          Transparent background so the fixed image shows through.
+          Sits on top of the fixed layers via zIndex: 10.
+      ─────────────────────────────────────────────────────────────────── */}
       <div
         style={{
           position: "sticky",
@@ -421,47 +486,14 @@ const R99Reveal = ({
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
-          background: C.bg,
+          background: "transparent",
+          zIndex: 10,
         }}
       >
-        {/* Background image */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: "url('https://iili.io/CFs98E7.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          opacity: 0.28,
-          filter: "blur(0.5px) saturate(0.6)",
-          transform: "scale(1.04)",
-          pointerEvents: "none",
-        }} />
-
-        {/* Grid overlay */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
-          backgroundSize: "44px 44px",
-          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-          pointerEvents: "none",
-        } as React.CSSProperties} />
-
-        {/* Radial glow */}
-        <div style={{
-          position: "absolute",
-          width: 600, height: 600,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(212,165,116,0.07) 0%, transparent 70%)",
-          top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
-          pointerEvents: "none",
-        }} />
-
         {/* Content stack */}
         <div style={{
           position: "relative",
-          zIndex: 2,
+          zIndex: 10,
           display: "flex",
           flexDirection: "column" as const,
           alignItems: "center",
@@ -708,11 +740,13 @@ const Pricing = () => {
       )}
 
       {/* ── 2. PLANS GRID ───────────────────────────────────────────────── */}
-      {/* padding-top: 0 -- Plans flows directly against hero release */}
+      {/* Solid background covers the fixed hero image as this section scrolls in */}
       <div
         id="plans"
         style={{
           background: C.bg,
+          position: "relative",
+          zIndex: 20,
           maxWidth: 1200,
           margin: "0 auto",
           padding: "0 24px",
@@ -903,7 +937,7 @@ const Pricing = () => {
       </div>
 
       {/* ── 3. WHAT YOUR 30 DAYS BUILDS ─────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0", position: "relative", zIndex: 20, background: C.bg }}>
         <section>
           <div style={{
             maxWidth: 1100, margin: "0 auto",
@@ -933,7 +967,7 @@ const Pricing = () => {
       </div>
 
       {/* ── 4. FULL FEATURE COMPARISON (COLLAPSED) ──────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0", position: "relative", zIndex: 20, background: C.bg }}>
         <button
           type="button"
           onClick={() => setShowComparison((v) => !v)}
@@ -951,7 +985,7 @@ const Pricing = () => {
       </div>
 
       {showComparison && (
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 0", overflowX: "auto" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 0", overflowX: "auto", position: "relative", zIndex: 20, background: C.bg }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT_BODY }}>
             <thead>
               <tr>
@@ -986,7 +1020,7 @@ const Pricing = () => {
       )}
 
       {/* ── 5. FAQ ──────────────────────────────────────────────────────── */}
-      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0" }}>
+      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0", position: "relative", zIndex: 20, background: C.bg }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY, textAlign: "center" }}>
           FAQ
         </p>
@@ -1031,7 +1065,7 @@ const Pricing = () => {
       </div>
 
       {/* ── 6. READY TO START CTA ───────────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "72px 24px 80px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "72px 24px 80px", position: "relative", zIndex: 20, background: C.bg }}>
         <div style={{
           borderRadius: 24, padding: "56px 48px",
           background: C.s1,
