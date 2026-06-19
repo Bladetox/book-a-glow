@@ -87,8 +87,8 @@ function buildGcalLink(params: {
   const gcalEnd = params.endTime
     ? params.startDate.replace(/-/g, "") + "T" + params.endTime.replace(/:/g, "").slice(0, 6)
     : gcalStart;
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(params.title)}&dates=${gcalStart}/${gcalEnd}&details=${encodeURIComponent(params.details)}&location=${encodeURIComponent(params.location)}`;
-}
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(params.title)}&dates=${gcalStart}/${gcalEnd}&details=${encodeURIComponent(params.details)}&location=${encodeURIComponent(params.location)}&cb=${Date.now()}`;
+  }
 
 const EMAIL_STYLES = `
   @media (prefers-color-scheme:dark){
@@ -472,7 +472,7 @@ Deno.serve(async (req) => {
         );
         const rawPhone = clientPhone.replace(/[^0-9]/g, "");
         const waNumber = rawPhone.startsWith("0") ? "27" + rawPhone.slice(1) : rawPhone;
-        const waLink   = `https://wa.me/${waNumber}?text=${waMessage}`;
+        const waLink = `https://wa.me/${waNumber}?text=${waMessage}&cb=${Date.now()}`;
 
         const ownerPaymentHeading = isFullPayment
           ? "New Payshap Full Payment 💳"
