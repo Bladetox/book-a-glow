@@ -16,9 +16,7 @@ const Index = () => (
   <div
     className="nextslot-theme dark-brand scrollbar-hide"
     style={{
-      position: "absolute",
-      inset: 0,
-      overflowY: "scroll",
+      minHeight: "100dvh",
       overflowX: "hidden",
       background: C.bg,
       color: C.text,
