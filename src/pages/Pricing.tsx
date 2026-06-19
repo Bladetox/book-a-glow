@@ -339,25 +339,25 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 
 // ─── R99 Hero Reveal ──────────────────────────────────────────────────────────
 //
-// THE MATH:
-//   SiteHeader height = 64px (fixed, sits above the page flow).
-//   Wrapper height    = calc(100dvh + 100vh)
-//   Sticky panel      = 100dvh, top: 0  (anchors to page top, under header)
+// HOW THE LOCK WORKS:
+//   wrapper height = calc(100dvh + 300vh)
+//   sticky panel   = 100dvh, top: 0
 //
-//   To make R99 visually centred on the VISIBLE screen (below the header)
-//   we add paddingTop: 64px to the sticky panel. This shifts the flex
-//   centring axis down by one header height so content lands dead centre
-//   in the visible viewport area.
+//   Scroll distance before release = wrapper - viewport = 300vh
+//   On a 900px screen that is 2700px of locked scroll = ~3 full swipes.
+//   p = scrolled / 300vh  (0 at top, 1 when wrapper bottom exits viewport)
 //
-//   Scroll distance = wrapper height - 100dvh = 100vh
-//   p = scrolled / scrollDistance  (0 at top, 1 when wrapper bottom exits)
+//   The sticky panel is held in place for ALL of that travel.
+//   Once the wrapper bottom scrolls past the viewport bottom the panel
+//   releases and Plans flows in immediately (padding-top: 0).
 //
-//   PHASE 1  p 0.00 -> 0.10   label fades in, R99 shrinks 22vw -> 14vw
-//   PHASE 2  p 0.10 -> 0.20   subline + features fade in and settle
-//   PHASE 3  p 0.20 -> 0.30   CTA fades in and settles
-//   p >= 0.30  everything held at final state, no dead scroll
+// PHASE MAP (p = 0 -> 1, spread evenly across 3 screen heights):
+//   SCROLL 1  p 0.00 -> 0.33   label fades in, R99 shrinks 22vw -> 14vw
+//   SCROLL 2  p 0.33 -> 0.66   subline + features fade in and settle
+//   SCROLL 3  p 0.66 -> 1.00   CTA fades in and settles
 //
-//   Plans section padding-top = 2rem (32px) -- snug against hero release
+//   At p = 1 everything is fully visible and the panel releases.
+//   Zero dead scroll, zero gap into Plans.
 
 const R99Reveal = ({
   pricingMode,
@@ -383,16 +383,20 @@ const R99Reveal = ({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const r99Vw     = lerp(22, 14, mapRange(p, 0, 0.10));
-  const r99FontPx = lerp(86, 54, mapRange(p, 0, 0.10));
+  // SCROLL 1: label fades in, R99 shrinks
+  const r99Vw     = lerp(22, 14, mapRange(p, 0, 0.33));
+  const r99FontPx = lerp(86, 54, mapRange(p, 0, 0.33));
   const r99Size   = `clamp(${r99FontPx.toFixed(1)}px, ${r99Vw.toFixed(2)}vw, 260px)`;
+  const labelOpacity = mapRange(p, 0, 0.33);
 
-  const labelOpacity    = mapRange(p, 0, 0.10);
-  const subLabelOpacity = mapRange(p, 0.10, 0.20);
-  const featuresOpacity = mapRange(p, 0.10, 0.20);
-  const featuresY       = lerp(16, 0, mapRange(p, 0.10, 0.20));
-  const ctaOpacity      = mapRange(p, 0.20, 0.30);
-  const ctaY            = lerp(12, 0, mapRange(p, 0.20, 0.30));
+  // SCROLL 2: subline + features
+  const subLabelOpacity = mapRange(p, 0.33, 0.66);
+  const featuresOpacity = mapRange(p, 0.33, 0.66);
+  const featuresY       = lerp(16, 0, mapRange(p, 0.33, 0.66));
+
+  // SCROLL 3: CTA
+  const ctaOpacity = mapRange(p, 0.66, 1.0);
+  const ctaY       = lerp(12, 0, mapRange(p, 0.66, 1.0));
 
   const starterTier = tiers.find((t) => t.name === "Starter")!;
 
@@ -401,7 +405,8 @@ const R99Reveal = ({
       ref={wrapperRef}
       style={{
         position: "relative",
-        height: "calc(100dvh + 100vh)",
+        // 300vh of scroll travel = 3 full screen heights locked
+        height: "calc(100dvh + 300vh)",
       }}
     >
       <div
@@ -409,8 +414,6 @@ const R99Reveal = ({
           position: "sticky",
           top: 0,
           height: "100dvh",
-          // paddingTop: 64px offsets the fixed SiteHeader so flex centering
-          // targets the visible area below the header, not the full dvh.
           paddingTop: 64,
           boxSizing: "border-box" as const,
           display: "flex",
@@ -468,7 +471,7 @@ const R99Reveal = ({
           maxWidth: 640,
         }}>
 
-          {/* Phase 1: label */}
+          {/* SCROLL 1: label */}
           <p style={{
             fontFamily: FONT_BODY,
             fontSize: 11,
@@ -501,7 +504,7 @@ const R99Reveal = ({
             R99
           </span>
 
-          {/* Phase 2: subline */}
+          {/* SCROLL 2: subline */}
           <p style={{
             fontFamily: FONT_BODY,
             fontSize: 13,
@@ -514,7 +517,7 @@ const R99Reveal = ({
             Your Starter plan automates
           </p>
 
-          {/* Phase 2: features */}
+          {/* SCROLL 2: features */}
           <div style={{
             marginTop: 18,
             opacity: featuresOpacity,
@@ -550,7 +553,7 @@ const R99Reveal = ({
             ))}
           </div>
 
-          {/* Phase 3: CTA */}
+          {/* SCROLL 3: CTA */}
           <div style={{
             marginTop: 22,
             opacity: ctaOpacity,
@@ -705,17 +708,17 @@ const Pricing = () => {
       )}
 
       {/* ── 2. PLANS GRID ───────────────────────────────────────────────── */}
-      {/* padding-top: 2rem -- snug against hero, breathing room only */}
+      {/* padding-top: 0 -- Plans flows directly against hero release */}
       <div
         id="plans"
         style={{
           background: C.bg,
           maxWidth: 1200,
           margin: "0 auto",
-          padding: "2rem 24px 0",
+          padding: "0 24px",
         }}
       >
-        <div style={{ marginBottom: 40, textAlign: "center" }}>
+        <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 48 }}>
           <p style={{
             fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
             textTransform: "uppercase" as const,
