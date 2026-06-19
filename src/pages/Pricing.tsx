@@ -35,7 +35,7 @@ const tiers = [
         features: [
           "4 Step, easy booking",
           "Pay, add your booked date to your calendar, and go on with your day",
-          "No app download or sign-in required"
+          "No app download or sign-in required",
         ],
       },
     ],
@@ -312,6 +312,13 @@ const planRank: Record<TenantPlan, number> = {
   studio: 4,
 };
 
+// linear interpolation helper
+const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
+
+// map a value in [inMin,inMax] to [0,1], clamped
+const mapRange = (v: number, inMin: number, inMax: number) =>
+  Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+
 const CellValue = ({ value }: { value: boolean | string }) => {
   if (typeof value === "string") return <span style={{ fontSize: 12, color: C.muted }}>{value}</span>;
   return value
@@ -319,7 +326,24 @@ const CellValue = ({ value }: { value: boolean | string }) => {
     : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
 };
 
-// ─── R99 Scroll Reveal Section ────────────────────────────────────────────────
+// ─── R99 Scroll Reveal ────────────────────────────────────────────────────────
+//
+// Scroll timeline (progress 0 -> 1, total scrollable distance = 120vh):
+//
+//  0.00 -> 0.00  R99 fills screen at 55vw, "What it costs" invisible
+//  0.00 -> 0.12  "What it costs" fades in above R99
+//  0.00 -> 0.35  R99 shrinks from 55vw -> 16vw (settles to reading size)
+//  0.28 -> 0.55  Feature lists fade + slide up into view
+//  0.58 -> 0.78  CTA button + tagline fade in
+//  0.80 -> 0.95  R99 fades out (content stays, number exits)
+//
+// Section height = 220vh  =>  scrollable distance = 220vh - 100vh = 120vh
+// Progress formula: -rect.top / (sectionHeight - viewportHeight)
+// This gives exactly 0 at entry and 1 when the bottom of the section
+// reaches the bottom of the viewport -- no dead gap.
+
+const SECTION_VH = 220;
+
 const R99Reveal = ({
   pricingMode,
   manageTierMeta,
@@ -328,55 +352,48 @@ const R99Reveal = ({
   manageTierMeta: { label: string; rank: number } | null;
 }) => {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const [progress, setProgress] = useState(0); // 0 = top, 1 = fully scrolled through
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const [p, setP] = useState(0); // scroll progress 0..1
 
   useEffect(() => {
     const onScroll = () => {
       const el = sectionRef.current;
       if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const sectionH = el.offsetHeight;
-      // progress 0 when section top is at viewport top, 1 when section bottom exits
-      const raw = -rect.top / (sectionH - window.innerHeight);
-      setProgress(Math.max(0, Math.min(1, raw)));
+      const scrollable = el.offsetHeight - window.innerHeight;
+      const raw = -el.getBoundingClientRect().top / scrollable;
+      setP(Math.max(0, Math.min(1, raw)));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // R99 number: starts huge, shrinks to resting size
-  const numberSize   = 28 - progress * 20;           // vw: 28 -> 8
-  const numberOpacity = progress < 0.55 ? 1 : 1 - (progress - 0.55) / 0.2; // fades out after 55%
-  const numberBlur   = progress > 0.6 ? (progress - 0.6) * 30 : 0;
+  // R99 size: 55vw -> 16vw across p 0..0.35
+  const numberVw = lerp(55, 16, mapRange(p, 0, 0.35));
 
-  // Overlay label: fades in after R99 settles a little
-  const labelOpacity = progress < 0.08 ? 0 : Math.min(1, (progress - 0.08) / 0.12);
+  // R99 opacity: full until 0.80, then fades out by 0.95
+  const numberOpacity = 1 - mapRange(p, 0.80, 0.95);
 
-  // Feature lists: fade + slide in after label
-  const featuresOpacity = progress < 0.22 ? 0 : Math.min(1, (progress - 0.22) / 0.15);
-  const featuresY       = featuresOpacity === 0 ? 24 : (1 - featuresOpacity) * 24;
+  // "What it costs" label: fades in 0 -> 0.12
+  const labelOpacity = mapRange(p, 0, 0.12);
 
-  // CTA: fades in last
-  const ctaOpacity = progress < 0.45 ? 0 : Math.min(1, (progress - 0.45) / 0.15);
-  const ctaY       = ctaOpacity === 0 ? 20 : (1 - ctaOpacity) * 20;
+  // "Your Starter plan automates" sub-label: fades in 0.14 -> 0.26
+  const subLabelOpacity = mapRange(p, 0.14, 0.26);
+
+  // Features: fade + slide in 0.28 -> 0.55
+  const featuresOpacity = mapRange(p, 0.28, 0.55);
+  const featuresY = lerp(28, 0, mapRange(p, 0.28, 0.55));
+
+  // CTA: fade + slide in 0.58 -> 0.78
+  const ctaOpacity = mapRange(p, 0.58, 0.78);
+  const ctaY = lerp(20, 0, mapRange(p, 0.58, 0.78));
 
   const starterTier = tiers.find((t) => t.name === "Starter")!;
 
   return (
     <div
       ref={sectionRef}
-      style={{
-        position: "relative",
-        height: "320vh", // tall enough for scroll-driven reveal
-      }}
+      style={{ position: "relative", height: `${SECTION_VH}vh` }}
     >
-      {/* Sticky container that stays in view as user scrolls the tall div */}
       <div
         style={{
           position: "sticky",
@@ -390,7 +407,7 @@ const R99Reveal = ({
           background: C.bg,
         }}
       >
-        {/* Background texture */}
+        {/* Background image */}
         <div style={{
           position: "absolute", inset: 0,
           backgroundImage: "url('https://iili.io/CFs98E7.jpg')",
@@ -402,6 +419,8 @@ const R99Reveal = ({
           transform: "scale(1.04)",
           pointerEvents: "none",
         }} />
+
+        {/* Grid overlay */}
         <div style={{
           position: "absolute", inset: 0,
           backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
@@ -414,15 +433,15 @@ const R99Reveal = ({
         {/* Radial glow */}
         <div style={{
           position: "absolute",
-          width: 600, height: 600,
+          width: 700, height: 700,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(212,165,116,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(212,165,116,0.07) 0%, transparent 70%)",
           top: "50%", left: "50%",
           transform: "translate(-50%, -50%)",
           pointerEvents: "none",
         }} />
 
-        {/* Central content stack */}
+        {/* Content */}
         <div style={{
           position: "relative",
           zIndex: 2,
@@ -431,73 +450,68 @@ const R99Reveal = ({
           alignItems: "center",
           textAlign: "center",
           padding: "0 24px",
-          maxWidth: 680,
           width: "100%",
+          maxWidth: 720,
         }}>
-          {/* "What it costs" label -- fades in on mount */}
+
+          {/* "What it costs" -- fades in first as you start scrolling */}
           <p style={{
             fontFamily: FONT_BODY,
             fontSize: 11,
             fontWeight: 700,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase" as const,
             color: C.gold,
-            marginBottom: 8,
-            opacity: hasMounted ? 1 : 0,
-            transition: "opacity 0.9s ease 0.2s",
-          } as React.CSSProperties}>
+            marginBottom: 12,
+            opacity: labelOpacity,
+            transition: "none",
+          }}>
             What it costs
           </p>
 
-          {/* R99 number */}
-          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {/* R99 -- starts huge, shrinks as scroll progresses */}
+          <div style={{ position: "relative", lineHeight: 1 }}>
             <span
               style={{
                 fontFamily: FONT_DISPLAY,
-                fontSize: `${numberSize}vw`,
+                fontSize: `${numberVw}vw`,
                 fontWeight: 800,
                 color: C.text,
                 lineHeight: 1,
                 letterSpacing: "-0.03em",
-                opacity: Math.max(0, numberOpacity),
-                filter: `blur(${numberBlur}px)`,
-                transition: "font-size 0.05s linear",
+                opacity: numberOpacity,
                 display: "block",
                 userSelect: "none",
+                transition: "none",
               }}
             >
               R99
             </span>
-
-            {/* Overlay label on top of R99 */}
-            <p style={{
-              position: "absolute",
-              bottom: "calc(100% + 10px)",
-              left: "50%",
-              transform: "translateX(-50%)",
-              whiteSpace: "nowrap",
-              fontFamily: FONT_BODY,
-              fontSize: 13,
-              fontWeight: 500,
-              color: C.muted,
-              opacity: labelOpacity,
-              pointerEvents: "none",
-              margin: 0,
-            }}>
-              Your Starter plan automates
-            </p>
           </div>
+
+          {/* "Your Starter plan automates" -- appears on top once R99 settles */}
+          <p style={{
+            fontFamily: FONT_BODY,
+            fontSize: 14,
+            fontWeight: 500,
+            color: C.muted,
+            marginTop: 10,
+            opacity: subLabelOpacity,
+            transition: "none",
+          }}>
+            Your Starter plan automates
+          </p>
 
           {/* Feature lists */}
           <div style={{
-            marginTop: 28,
+            marginTop: 24,
             opacity: featuresOpacity,
             transform: `translateY(${featuresY}px)`,
-            transition: "opacity 0.1s linear, transform 0.1s linear",
+            transition: "none",
             width: "100%",
             display: "flex",
             flexDirection: "column",
-            gap: 24,
+            gap: 20,
           }}>
             {starterTier.groups.map((group) => (
               <div key={group.label} style={{ textAlign: "left" }}>
@@ -505,17 +519,17 @@ const R99Reveal = ({
                   fontSize: 10,
                   fontWeight: 700,
                   letterSpacing: "0.09em",
-                  textTransform: "uppercase",
+                  textTransform: "uppercase" as const,
                   color: C.faint,
                   marginBottom: 10,
                   fontFamily: FONT_BODY,
-                } as React.CSSProperties}>
+                }}>
                   {group.label}
                 </p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                   {group.features.map((f) => (
-                    <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
-                      <Check style={{ height: 14, width: 14, marginTop: 3, color: C.gold, flexShrink: 0 }} />
+                    <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
+                      <Check style={{ height: 14, width: 14, marginTop: 2, color: C.gold, flexShrink: 0 }} />
                       {f}
                     </li>
                   ))}
@@ -526,10 +540,10 @@ const R99Reveal = ({
 
           {/* CTA */}
           <div style={{
-            marginTop: 32,
+            marginTop: 28,
             opacity: ctaOpacity,
             transform: `translateY(${ctaY}px)`,
-            transition: "opacity 0.1s linear, transform 0.1s linear",
+            transition: "none",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
