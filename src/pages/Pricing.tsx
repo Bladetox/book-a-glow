@@ -3,28 +3,24 @@ import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
 import { Link } from "react-router-dom";
-import { Check, Minus, ArrowRight, ChevronDown, ChevronUp, Zap } from "lucide-react";
+import { Check, Minus, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
-// ─── Keyframes + IntersectionObserver-driven reverse scroll ──────────────────
+// ─── Keyframes + IntersectionObserver reverse-scroll (desktop + mobile) ────────
 //
-// Enter  classes (.hero-bg-layer, .hero-scale-layer, .hero-text-layer)
-//        play the forward animations (blur/scale in).
+// Enter  (.hero-bg-layer, .hero-scale-layer, .hero-text-layer)
+//   play forward blur/scale-in animations.
 //
-// Exit   classes (.hero-bg-layer--out, .hero-scale-layer--out, .hero-text-layer--out)
-//        play the reverse animations (blur/scale back out).
+// Exit   (--out variants)
+//   play reverse blur/scale-out animations.
 //
-// An IntersectionObserver watches the hero root. When the hero leaves the
-// viewport (scrolled past upward), --out classes are toggled on and the
-// elements animate back to their initial hidden state. When it re-enters,
-// the --out classes are removed and the forward animations replay.
-//
-// fill-mode: forwards on all. Easing: cubic-bezier(0.25,0.46,0.45,0.94)
-// ─────────────────────────────────────────────────────────────────────────────
+// IntersectionObserver uses threshold:[0,0.1] + rootMargin so it fires
+// reliably on iOS/Android touch scroll as well as desktop wheel scroll.
+// ───────────────────────────────────────────────────────────────────────────
 const KEYFRAME_ID = "pricing-hero-kf";
 if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
   const s = document.createElement("style");
@@ -55,7 +51,7 @@ if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
       to   { filter: blur(8px); opacity: 0; }
     }
 
-    /* ── Enter state ── */
+    /* ── Enter ── */
     .hero-bg-layer {
       animation: heroBlurIn 2.6s cubic-bezier(0.25,0.46,0.45,0.94) 0.2s forwards;
       opacity: 0;
@@ -73,7 +69,7 @@ if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
       will-change: filter, opacity;
     }
 
-    /* ── Exit state (reverse) ── */
+    /* ── Exit (reverse) ── */
     .hero-bg-layer--out {
       animation: heroBlurOut 1.8s cubic-bezier(0.25,0.46,0.45,0.94) 0s forwards;
     }
@@ -82,6 +78,15 @@ if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
     }
     .hero-text-layer--out {
       animation: heroTextOut 1.4s cubic-bezier(0.25,0.46,0.45,0.94) 0s forwards;
+    }
+
+    /* ── Hide scrollbar on comparison table wrapper, keep scroll ── */
+    .comparison-scroll-wrap {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .comparison-scroll-wrap::-webkit-scrollbar {
+      display: none;
     }
   `;
   document.head.appendChild(s);
@@ -398,19 +403,10 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 
 // ─── PricingHero ─────────────────────────────────────────────────────────────
 //
-// Layout (single content column, top-down):
-//   "What it costs"    <- hero-text-layer
-//   R99                <- hero-scale-layer (inline block)
-//   Core + Clients     <- hero-text-layer
-//   CTA (no arrow)
-//   7-day trial badge
-//   italic note
-//
-// IntersectionObserver on heroRef:
-//   intersecting  -> remove --out classes, forward animations replay
-//   not intersecting -> add --out classes, reverse animations play
-// ─────────────────────────────────────────────────────────────────────────────
-
+// IntersectionObserver uses threshold:[0,0.1] so it fires on both
+// desktop wheel scroll and mobile touch scroll (iOS/Android).
+// rootMargin nudges the trigger point slightly inside the viewport.
+// ───────────────────────────────────────────────────────────────────────────
 const PricingHero = ({
   pricingMode,
   manageTierMeta,
@@ -441,7 +437,10 @@ const PricingHero = ({
           textEls.forEach((el) => el.classList.add("hero-text-layer--out"));
         }
       },
-      { threshold: 0.05 }
+      {
+        threshold: [0, 0.1],
+        rootMargin: "0px 0px -5% 0px",
+      }
     );
 
     observer.observe(root);
@@ -505,7 +504,6 @@ const PricingHero = ({
           paddingRight: 24,
         }}
       >
-        {/* "What it costs" */}
         <p
           className="hero-text-layer"
           style={{
@@ -521,7 +519,6 @@ const PricingHero = ({
           What it costs
         </p>
 
-        {/* R99 */}
         <span
           className="hero-scale-layer"
           style={{
@@ -539,7 +536,6 @@ const PricingHero = ({
           R99
         </span>
 
-        {/* Features + CTA */}
         <div
           className="hero-text-layer"
           style={{
@@ -552,7 +548,6 @@ const PricingHero = ({
             gap: 0,
           }}
         >
-          {/* Feature groups */}
           <div style={{
             width: "100%",
             display: "flex",
@@ -604,7 +599,7 @@ const PricingHero = ({
             ))}
           </div>
 
-          {/* CTA - no arrow */}
+          {/* CTA ─ no arrow */}
           {pricingMode === "manage" ? (
             <div style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -779,22 +774,24 @@ const Pricing = () => {
           padding: "0 24px",
         }}
       >
-        {/* Heading: eyebrow is the descriptive line, large heading is "Plans" */}
+        {/* "Plans" (gold, same clamp size) above descriptive line */}
         <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 48 }}>
-          <p style={{
-            fontSize: 13, fontWeight: 500, letterSpacing: "0.01em",
-            color: C.muted, marginBottom: 10, fontFamily: FONT_BODY,
-          }}>
-            Pick the plan that fits where you are.
-          </p>
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: "clamp(36px, 5vw, 64px)",
-            fontWeight: 700, color: C.text, lineHeight: 1.05,
-            margin: 0,
+            fontWeight: 700,
+            color: C.gold,
+            lineHeight: 1.05,
+            margin: "0 0 10px 0",
           }}>
             Plans
           </h2>
+          <p style={{
+            fontSize: 13, fontWeight: 500, letterSpacing: "0.01em",
+            color: C.muted, margin: 0, fontFamily: FONT_BODY,
+          }}>
+            Pick the plan that fits where you are.
+          </p>
         </div>
 
         {pricingMode === "manage" && manageNotice && (
@@ -889,6 +886,7 @@ const Pricing = () => {
                   ))}
                 </div>
 
+                {/* Plan CTAs ─ no arrows anywhere */}
                 {pricingMode === "manage" ? (
                   <>
                     <button
@@ -902,19 +900,18 @@ const Pricing = () => {
                         background: "rgba(212,165,116,0.08)", color: C.text,
                         border: "1px solid rgba(212,165,116,0.20)", opacity: 0.6,
                       } : tier.featured ? {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
                         padding: "13px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
                         background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808", border: "none", opacity: tier.comingSoon ? 0.5 : 1,
                       } : {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
                         padding: "12px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
                         background: "transparent", color: C.muted, border: `1px solid ${C.border2}`, opacity: tier.comingSoon ? 0.5 : 1,
                       }}
                     >
                       {isBusy ? "Saving..." : ctaLabel}
-                      {!isCurrent && !tier.comingSoon && <ArrowRight style={{ height: 13, width: 13 }} />}
                     </button>
                     <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
                       {isCurrent ? "This is your current subscription." : isUpgrade ? "Upgrade request recorded for billing." : isDowngrade ? "Downgrade applies next billing cycle." : tier.comingSoon ? "Available soon." : "Select the plan you want to move to."}
@@ -936,13 +933,13 @@ const Pricing = () => {
                       <Link
                         to="/onboarding"
                         style={tier.featured ? {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
                           padding: "13px 20px", borderRadius: 10,
                           background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808",
                           textDecoration: "none",
                         } : {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
                           padding: "12px 20px", borderRadius: 10,
                           background: "transparent", color: C.muted,
@@ -950,7 +947,6 @@ const Pricing = () => {
                         }}
                       >
                         {tier.cta}
-                        <ArrowRight style={{ height: 13, width: 13 }} />
                       </Link>
                     )}
                     <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
@@ -1013,7 +1009,11 @@ const Pricing = () => {
       </div>
 
       {showComparison && (
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 0", overflowX: "auto", position: "relative", zIndex: 1, background: C.bg }}>
+        /* comparison-scroll-wrap hides the scrollbar via CSS while keeping touch/wheel scroll */
+        <div
+          className="comparison-scroll-wrap"
+          style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 0", overflowX: "auto", position: "relative", zIndex: 1, background: C.bg }}
+        >
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT_BODY }}>
             <thead>
               <tr>
@@ -1105,7 +1105,7 @@ const Pricing = () => {
             Ready to start?
           </p>
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(24px,2.8vw,36px)", fontWeight: 700, color: C.text, lineHeight: 1.15, marginBottom: 16 }}>
-            Your booking page is 20 minutes away.
+            Your booking page is 10 minutes away.
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto 32px", fontFamily: FONT_BODY }}>
             No payment required. No technical setup. Just your services, your availability, and your booking link ready to share.
@@ -1114,7 +1114,7 @@ const Pricing = () => {
             <Link
               to="/onboarding"
               style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
+                display: "inline-flex", alignItems: "center",
                 background: CTA_BG, boxShadow: CTA_SHADOW,
                 color: "#080808", fontFamily: FONT_BODY,
                 fontSize: 14, fontWeight: 700,
@@ -1123,7 +1123,6 @@ const Pricing = () => {
               }}
             >
               Create Your Booking Page
-              <ArrowRight style={{ height: 16, width: 16 }} />
             </Link>
           )}
         </div>
