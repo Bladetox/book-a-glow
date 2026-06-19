@@ -13,16 +13,37 @@ const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba
 // iPhone 14 logical height = 844px
 const HERO_VH = "844px";
 
+// ─── Fey-matched entry keyframes ─────────────────────────────────────────────
+//
+// r99FadeScale  mirrors Fey's price image: opacity 0.2->1, scale 1.07->1
+//               duration 2.6s, delay 0.2s, cubic-bezier(0.25,0.46,0.45,0.94)
+//
+// labelFadeIn   mirrors Fey's "What it costs." heading: opacity 0->1
+//               duration 3s, delay 1.2s, cubic-bezier(0.25,0.4,0.4,1)
+//
+// Both use fill-mode "forwards" so they settle at their end state.
+// ─────────────────────────────────────────────────────────────────────────────
 const KEYFRAME_ID = "r99-entry-kf";
 if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
   const s = document.createElement("style");
   s.id = KEYFRAME_ID;
   s.textContent = `
-    @keyframes r99FadeIn {
-      from { opacity: 0; transform: scale(0.92); }
-      to   { opacity: 1; transform: scale(1); }
+    @keyframes r99FadeScale {
+      from { opacity: 0.2; transform: scale(1.07); }
+      to   { opacity: 1;   transform: scale(1);    }
     }
-    .r99-entry { animation: r99FadeIn 1.1s cubic-bezier(0.22,1,0.36,1) both; }
+    @keyframes labelFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .r99-entry {
+      animation: r99FadeScale 2.6s cubic-bezier(0.25,0.46,0.45,0.94) 0.2s forwards;
+      opacity: 0.2;
+    }
+    .r99-label-entry {
+      animation: labelFadeIn 3s cubic-bezier(0.25,0.4,0.4,1) 1.2s forwards;
+      opacity: 0;
+    }
   `;
   document.head.appendChild(s);
 }
@@ -358,7 +379,9 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 //   SCROLL 2 p 0.33->0.66 subline + features fade in below R99
 //   SCROLL 3 p 0.66->1.00 CTA fades in below features
 //
-// Only text elements animate. The bg image is static throughout.
+// The R99 number and "What it costs" label use pure CSS auto-play animations
+// (Fey-matched keyframes) on page load. Subsequent scroll phases remain
+// JS-driven via scroll progress.
 
 const R99Reveal = ({
   pricingMode,
@@ -388,7 +411,10 @@ const R99Reveal = ({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // SCROLL 1: label
+  // SCROLL 1: label -- driven by scroll after the CSS animation has settled
+  // The CSS animation runs for 3s + 1.2s delay = 4.2s at page load.
+  // Once scrolling begins the label is already visible (opacity:1 from forwards fill),
+  // so the scroll-driven labelOpacity value takes over seamlessly.
   const labelOpacity = mapRange(p, 0, 0.33);
 
   // SCROLL 2: subline + features
@@ -502,22 +528,28 @@ const R99Reveal = ({
           maxWidth: 640,
         }}>
 
-          {/* SCROLL 1: label -- hidden on land, fades in on first scroll */}
-          <p style={{
-            fontFamily: FONT_BODY,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase" as const,
-            color: C.gold,
-            margin: "0 0 14px 0",
-            opacity: labelOpacity,
-            willChange: "opacity",
-          }}>
+          {/* SCROLL 1: "What it costs" label
+              On page load: CSS r99-label-entry plays (opacity 0->1, 3s, 1.2s delay).
+              Once scroll begins: labelOpacity from scroll progress takes over.
+              The transition is seamless because the CSS animation fills forwards. */}
+          <p
+            className={p === 0 ? "r99-label-entry" : undefined}
+            style={{
+              fontFamily: FONT_BODY,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase" as const,
+              color: C.gold,
+              margin: "0 0 14px 0",
+              opacity: p === 0 ? undefined : labelOpacity,
+              willChange: "opacity",
+            }}
+          >
             What it costs
           </p>
 
-          {/* R99 -- visible immediately on land, centred, fades in via CSS animation */}
+          {/* R99 -- CSS r99-entry plays on mount (opacity 0.2->1, scale 1.07->1, 2.6s, 0.2s delay) */}
           <span
             className="r99-entry"
             style={{
