@@ -144,7 +144,7 @@ export function useConfirmPayshapBooking() {
       // Step 1: Read the booking to determine payment amounts before confirming.
       const { data: bookingData, error: bookingReadError } = await supabase
         .from("bookings")
-        .select("total_amount, deposit_amount, balance_due, deposit_paid, full_payment_received")
+        .select("total_amount, deposit_amount, balance_due, deposit_paid, full_payment_received, payshap_payment_intent")
         .eq("id", bookingId)
         .eq("tenant_id", tenantId)
         .single();
@@ -157,7 +157,12 @@ export function useConfirmPayshapBooking() {
       // Determine which financial flags to set.
       // If no deposit is configured (depositAmount === 0) OR balanceDue === 0
       // after deposit, the client paid in full via Payshap.
-      const isFullPayment = depositAmount === 0 || balanceDue === 0 || totalAmount === depositAmount;
+      const intentField = (bookingData as any)?.payshap_payment_intent as string | null;
+      const isFullPayment =
+        intentField === "full" ||
+        depositAmount === 0 ||
+        balanceDue === 0 ||
+        totalAmount === depositAmount;
       const bookingFlags = isFullPayment
         ? { deposit_paid: true, full_payment_received: true, balance_due: 0 }
         : { deposit_paid: true };
