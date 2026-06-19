@@ -283,7 +283,7 @@ export const CaseStudySection = () => {
               }}
             >
               <img
-                src="PLACEHOLDER_SHU_MEEZ_IMAGE_URL"
+                src="https://iili.io/Cxw0jRI.jpg"
                 alt="Shu-meez, Owner of PhenomeBeauty"
                 style={{
                   width: "100%",
