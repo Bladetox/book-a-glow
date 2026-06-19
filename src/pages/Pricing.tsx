@@ -10,16 +10,19 @@ import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
+// iPhone 14 logical height = 844px
+const HERO_VH = "844px";
+
 const KEYFRAME_ID = "r99-entry-kf";
 if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
   const s = document.createElement("style");
   s.id = KEYFRAME_ID;
   s.textContent = `
     @keyframes r99FadeIn {
-      from { opacity: 0; transform: translateY(16px) scale(0.96); }
-      to   { opacity: 1; transform: translateY(0)   scale(1); }
+      from { opacity: 0; transform: scale(0.92); }
+      to   { opacity: 1; transform: scale(1); }
     }
-    .r99-entry { animation: r99FadeIn 1s cubic-bezier(0.22,1,0.36,1) both; }
+    .r99-entry { animation: r99FadeIn 1.1s cubic-bezier(0.22,1,0.36,1) both; }
   `;
   document.head.appendChild(s);
 }
@@ -339,25 +342,23 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 
 // ─── R99 Hero Reveal ──────────────────────────────────────────────────────────
 //
-// HOW THE LOCK WORKS:
-//   wrapper height = calc(100dvh + 300vh)
+// LAYOUT
+//   wrapper height = HERO_VH (844px, iPhone 14) + 3 scroll lengths (300vh)
 //
-//   The background image is position:fixed so it is nailed to the viewport
-//   for the entire duration the hero is active. It never moves regardless of
-//   scroll position.
+//   The background image is position:fixed, nailed to the full viewport.
+//   The sticky text panel is transparent so the image shows through.
 //
-//   The sticky text panel sits on top with a transparent background so the
-//   fixed image shows through. The text animates across 3 scroll lengths.
+//   heroActive unmounts the fixed layers the moment the wrapper bottom
+//   leaves the viewport. Plans carries a solid C.bg so it covers the image
+//   as it scrolls in. Zero gap, zero bleed.
 //
-//   heroActive tracks whether the wrapper bottom is still above the viewport
-//   bottom. Once it exits, heroActive becomes false and the fixed bg is
-//   unmounted. The Plans section carries a solid C.bg background so it
-//   covers the image immediately as it scrolls in.
+// PHASE MAP (p = scroll progress 0 -> 1 across the extra 300vh)
+//   LAND     p == 0       R99 fades in centred, nothing else visible
+//   SCROLL 1 p 0.00->0.33 "What it costs" label fades in above R99
+//   SCROLL 2 p 0.33->0.66 subline + features fade in below R99
+//   SCROLL 3 p 0.66->1.00 CTA fades in below features
 //
-// PHASE MAP (p = 0 -> 1):
-//   SCROLL 1  p 0.00 -> 0.33   label fades in, R99 shrinks 22vw -> 14vw
-//   SCROLL 2  p 0.33 -> 0.66   subline + features fade in and settle
-//   SCROLL 3  p 0.66 -> 1.00   CTA fades in and settles
+// Only text elements animate. The bg image is static throughout.
 
 const R99Reveal = ({
   pricingMode,
@@ -375,12 +376,11 @@ const R99Reveal = ({
       const el = wrapperRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const scrolled = -rect.top;
+      // scrollable distance = total height minus one viewport
       const scrollable = el.offsetHeight - window.innerHeight;
       if (scrollable <= 0) return;
-      const next = clamp(scrolled / scrollable, 0, 1);
-      setP(next);
-      // heroActive = wrapper bottom is still on screen or above
+      const scrolled = -rect.top;
+      setP(clamp(scrolled / scrollable, 0, 1));
       setHeroActive(rect.bottom > 0);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -388,16 +388,13 @@ const R99Reveal = ({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // SCROLL 1: label fades in, R99 shrinks
-  const r99Vw     = lerp(22, 14, mapRange(p, 0, 0.33));
-  const r99FontPx = lerp(86, 54, mapRange(p, 0, 0.33));
-  const r99Size   = `clamp(${r99FontPx.toFixed(1)}px, ${r99Vw.toFixed(2)}vw, 260px)`;
+  // SCROLL 1: label
   const labelOpacity = mapRange(p, 0, 0.33);
 
   // SCROLL 2: subline + features
-  const subLabelOpacity = mapRange(p, 0.33, 0.66);
-  const featuresOpacity = mapRange(p, 0.33, 0.66);
-  const featuresY       = lerp(16, 0, mapRange(p, 0.33, 0.66));
+  const subLabelOpacity  = mapRange(p, 0.33, 0.66);
+  const featuresOpacity  = mapRange(p, 0.33, 0.66);
+  const featuresY        = lerp(16, 0, mapRange(p, 0.33, 0.66));
 
   // SCROLL 3: CTA
   const ctaOpacity = mapRange(p, 0.66, 1.0);
@@ -410,17 +407,17 @@ const R99Reveal = ({
       ref={wrapperRef}
       style={{
         position: "relative",
-        height: "calc(100dvh + 300vh)",
+        // Hero viewport = iPhone 14 height. 3 extra scroll lengths for the animation phases.
+        height: `calc(${HERO_VH} + 300vh)`,
       }}
     >
-      {/* ── FIXED BACKGROUND IMAGE ───────────────────────────────────────
-          Lives outside the sticky panel. Nailed to the viewport.
-          Unmounted once the hero wrapper leaves the screen so it does
-          not bleed over the Plans section.
+      {/* ── FIXED BACKGROUND LAYERS ──────────────────────────────────────
+          All position:fixed so they are locked to the viewport for the
+          entire hero duration. Unmounted once the wrapper exits.
       ─────────────────────────────────────────────────────────────────── */}
       {heroActive && (
         <>
-          {/* Base dark fill so the page bg matches before the image loads */}
+          {/* Dark base fill */}
           <div style={{
             position: "fixed",
             inset: 0,
@@ -429,7 +426,7 @@ const R99Reveal = ({
             pointerEvents: "none",
           }} />
 
-          {/* The hero image itself */}
+          {/* Hero image */}
           <div style={{
             position: "fixed",
             inset: 0,
@@ -471,15 +468,15 @@ const R99Reveal = ({
       )}
 
       {/* ── STICKY TEXT PANEL ────────────────────────────────────────────
+          Height matches the hero viewport (iPhone 14 = 844px).
           Transparent background so the fixed image shows through.
-          Sits on top of the fixed layers via zIndex: 10.
+          Centred flex so R99 lands dead-centre on arrival.
       ─────────────────────────────────────────────────────────────────── */}
       <div
         style={{
           position: "sticky",
           top: 0,
-          height: "100dvh",
-          paddingTop: 64,
+          height: HERO_VH,
           boxSizing: "border-box" as const,
           display: "flex",
           flexDirection: "column" as const,
@@ -488,6 +485,8 @@ const R99Reveal = ({
           overflow: "hidden",
           background: "transparent",
           zIndex: 10,
+          // Account for the fixed site header (64px) so content is visually centred
+          paddingTop: 64,
         }}
       >
         {/* Content stack */}
@@ -503,7 +502,7 @@ const R99Reveal = ({
           maxWidth: 640,
         }}>
 
-          {/* SCROLL 1: label */}
+          {/* SCROLL 1: label -- hidden on land, fades in on first scroll */}
           <p style={{
             fontFamily: FONT_BODY,
             fontSize: 11,
@@ -518,19 +517,18 @@ const R99Reveal = ({
             What it costs
           </p>
 
-          {/* R99 */}
+          {/* R99 -- visible immediately on land, centred, fades in via CSS animation */}
           <span
             className="r99-entry"
             style={{
               fontFamily: FONT_DISPLAY,
-              fontSize: r99Size,
+              fontSize: "clamp(86px, 22vw, 260px)",
               fontWeight: 800,
               color: C.text,
               lineHeight: 1,
               letterSpacing: "-0.03em",
               display: "block",
               userSelect: "none" as const,
-              willChange: "font-size",
             }}
           >
             R99
@@ -740,7 +738,11 @@ const Pricing = () => {
       )}
 
       {/* ── 2. PLANS GRID ───────────────────────────────────────────────── */}
-      {/* Solid background covers the fixed hero image as this section scrolls in */}
+      {/*
+        position:relative + zIndex:20 + background:C.bg acts as the curtain.
+        As this section scrolls up it covers the fixed hero image naturally.
+        No gap, no flash.
+      */}
       <div
         id="plans"
         style={{
