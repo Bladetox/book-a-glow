@@ -118,14 +118,19 @@
     outline-offset: 2px;
   }
 
-  html {
-    background: #000;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* No overflow or height lock here -- marketing pages scroll naturally.
-       The .app-shell class below applies the lock only to tenant/admin routes. */
-  }
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
+html:not(:has(.app-shell)) {
+  background: #000;
+}
+
+html:has(.app-shell) {
+  background: hsl(var(--background));
+}
+  
   body {
     /* @apply bg-background resolves to white from :root on marketing pages
        because .dark-brand lives on a child div, not on body itself.
