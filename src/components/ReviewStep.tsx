@@ -198,7 +198,16 @@ useEffect(() => {
   const gatewayLogoAlt = isPayshap ? "PayShap" : payfastMode ? "PayFast" : "Yoco";
 
   const ensureBookingCreated = async (): Promise<string> => {
-    if (pendingBookingId) return pendingBookingId;
+    if (pendingBookingId) {
+      if (config.payshapEnabled) {
+        const intent = paymentChoice === "payshap_full" ? "full" : "deposit";
+        await supabase
+          .from("bookings")
+          .update({ payshap_payment_intent: intent })
+          .eq("id", pendingBookingId);
+      }
+      return pendingBookingId;
+    }
 
     if (!booking.selectedTreatments.length) {
       toast.error("No services selected. Please go back and choose a service.");
@@ -267,6 +276,16 @@ useEffect(() => {
     const bookingId: string = data?.[0]?.booking_id;
     if (!bookingId) throw new Error("Booking creation returned no ID.");
     setPendingBookingId(bookingId);
+
+    // Persist the client's payment intent so the admin confirm can honour it.
+    if (config.payshapEnabled) {
+      const intent = paymentChoice === "payshap_full" ? "full" : "deposit";
+      await supabase
+        .from("bookings")
+        .update({ payshap_payment_intent: intent })
+        .eq("id", bookingId);
+    }
+
     return bookingId;
   };
 
