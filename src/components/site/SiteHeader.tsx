@@ -17,7 +17,7 @@ const SiteHeader = () => {
 
   return (
     <header
-      className="sticky top-0 z-50 backdrop-blur-lg"
+      className="fixed top-0 z-50 w-full backdrop-blur-lg"
       style={{
         background: "rgba(0, 0, 0, 0.92)",
         borderBottom: "1px solid hsl(var(--accent) / 0.12)",
