@@ -269,7 +269,7 @@ useEffect(() => {
       p_guest_email: booking.email || null,
       p_guest_phone: guestPhone,
       p_total_amount: total,
-      p_deposit_amount: deposit,
+      p_deposit_amount: (paymentChoice === "payshap_full" || paymentChoice === "full") ? total : deposit,
     });
 
     if (error) throw error;
