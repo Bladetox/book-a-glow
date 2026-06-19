@@ -334,8 +334,12 @@ Deno.serve(async (req) => {
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
-              detailRow(amountLabel + " Due", amountValue, !isFullPayment ? false : true) +
-              (!isFullPayment ? detailRow("Balance on the Day", balanceDue, true) : "")
+              detailRow(
+              isFullPayment ? "Amount to Pay" : "Deposit Due",
+              amountValue,
+              isFullPayment ? true : false
+            ) +
+            (!isFullPayment ? detailRow("Balance on the Day", balanceDue, true) : "")
             )}
           </td></tr>
 
