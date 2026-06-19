@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
@@ -319,145 +319,275 @@ const CellValue = ({ value }: { value: boolean | string }) => {
     : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
 };
 
-const StarterHeroCard = ({
-  tier,
+// ─── R99 Scroll Reveal Section ────────────────────────────────────────────────
+const R99Reveal = ({
   pricingMode,
-  currentPlan,
-  submittingPlan,
-  handlePlanChange,
+  manageTierMeta,
 }: {
-  tier: typeof tiers[0];
   pricingMode: PricingMode;
-  currentPlan: TenantPlan | null;
-  submittingPlan: TenantPlan | null;
-  handlePlanChange: (plan: TenantPlan) => void;
+  manageTierMeta: { label: string; rank: number } | null;
 }) => {
-  const tierPlan = planKeyMap[tier.name];
-  const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
-  const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
-  const isDowngrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] < planRank[currentPlan];
-  const isBusy = submittingPlan === tierPlan;
-  const ctaLabel = pricingMode === "manage"
-    ? isCurrent ? "Current Plan" : isUpgrade ? "Upgrade" : isDowngrade ? "Downgrade" : "Select Plan"
-    : tier.cta;
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState(0); // 0 = top, 1 = fully scrolled through
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const el = sectionRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const sectionH = el.offsetHeight;
+      // progress 0 when section top is at viewport top, 1 when section bottom exits
+      const raw = -rect.top / (sectionH - window.innerHeight);
+      setProgress(Math.max(0, Math.min(1, raw)));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // R99 number: starts huge, shrinks to resting size
+  const numberSize   = 28 - progress * 20;           // vw: 28 -> 8
+  const numberOpacity = progress < 0.55 ? 1 : 1 - (progress - 0.55) / 0.2; // fades out after 55%
+  const numberBlur   = progress > 0.6 ? (progress - 0.6) * 30 : 0;
+
+  // Overlay label: fades in after R99 settles a little
+  const labelOpacity = progress < 0.08 ? 0 : Math.min(1, (progress - 0.08) / 0.12);
+
+  // Feature lists: fade + slide in after label
+  const featuresOpacity = progress < 0.22 ? 0 : Math.min(1, (progress - 0.22) / 0.15);
+  const featuresY       = featuresOpacity === 0 ? 24 : (1 - featuresOpacity) * 24;
+
+  // CTA: fades in last
+  const ctaOpacity = progress < 0.45 ? 0 : Math.min(1, (progress - 0.45) / 0.15);
+  const ctaY       = ctaOpacity === 0 ? 20 : (1 - ctaOpacity) * 20;
+
+  const starterTier = tiers.find((t) => t.name === "Starter")!;
 
   return (
-    <div style={{
-      background: C.s1,
-      border: `1px solid ${C.border2}`,
-      borderRadius: 20,
-      padding: "36px 36px 32px",
-      position: "relative",
-      overflow: "hidden",
-      display: "flex",
-      flexDirection: "column",
-    }}>
-      <div style={{
-        position: "absolute", top: -40, right: -40,
-        width: 200, height: 200, borderRadius: "50%",
-        background: `radial-gradient(circle, rgba(212,165,116,0.08) 0%, transparent 70%)`,
-        pointerEvents: "none",
-      }} />
-
-      {/* Header */}
-      <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${C.border}` }}>
+    <div
+      ref={sectionRef}
+      style={{
+        position: "relative",
+        height: "320vh", // tall enough for scroll-driven reveal
+      }}
+    >
+      {/* Sticky container that stays in view as user scrolls the tall div */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          background: C.bg,
+        }}
+      >
+        {/* Background texture */}
         <div style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
-          textTransform: "uppercase" as const,
-          padding: "4px 12px", borderRadius: 100, marginBottom: 12,
-          background: `rgba(212,165,116,0.08)`,
-          border: `1px solid rgba(212,165,116,0.20)`,
-          color: C.gold, fontFamily: FONT_BODY,
+          position: "absolute", inset: 0,
+          backgroundImage: "url('https://iili.io/CFs98E7.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.28,
+          filter: "blur(0.5px) saturate(0.6)",
+          transform: "scale(1.04)",
+          pointerEvents: "none",
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
+          backgroundSize: "44px 44px",
+          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+          pointerEvents: "none",
+        } as React.CSSProperties} />
+
+        {/* Radial glow */}
+        <div style={{
+          position: "absolute",
+          width: 600, height: 600,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(212,165,116,0.06) 0%, transparent 70%)",
+          top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* Central content stack */}
+        <div style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
+          padding: "0 24px",
+          maxWidth: 680,
+          width: "100%",
         }}>
-          7-day free trial
-        </div>
-        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 6 }}>{tier.name}</h3>
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 700, color: C.text }}>{tier.price}</span>
-          <span style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>{tier.period}</span>
-        </div>
-        <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.5, marginBottom: tier.subline ? 6 : 0 }}>{tier.description}</p>
-        {tier.subline && (
-          <p style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, marginBottom: 0 }}>{tier.subline}</p>
-        )}
-      </div>
+          {/* "What it costs" label -- fades in on mount */}
+          <p style={{
+            fontFamily: FONT_BODY,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: C.gold,
+            marginBottom: 8,
+            opacity: hasMounted ? 1 : 0,
+            transition: "opacity 0.9s ease 0.2s",
+          } as React.CSSProperties}>
+            What it costs
+          </p>
 
-      {/* Features */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
-        {tier.groups.map((group) => (
-          <div key={group.label}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.faint, marginBottom: 10, fontFamily: FONT_BODY }}>
-              {group.label}
+          {/* R99 number */}
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span
+              style={{
+                fontFamily: FONT_DISPLAY,
+                fontSize: `${numberSize}vw`,
+                fontWeight: 800,
+                color: C.text,
+                lineHeight: 1,
+                letterSpacing: "-0.03em",
+                opacity: Math.max(0, numberOpacity),
+                filter: `blur(${numberBlur}px)`,
+                transition: "font-size 0.05s linear",
+                display: "block",
+                userSelect: "none",
+              }}
+            >
+              R99
+            </span>
+
+            {/* Overlay label on top of R99 */}
+            <p style={{
+              position: "absolute",
+              bottom: "calc(100% + 10px)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              whiteSpace: "nowrap",
+              fontFamily: FONT_BODY,
+              fontSize: 13,
+              fontWeight: 500,
+              color: C.muted,
+              opacity: labelOpacity,
+              pointerEvents: "none",
+              margin: 0,
+            }}>
+              Your Starter plan automates
             </p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-              {group.features.map((f) => (
-                <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
-                  <Check style={{ height: 14, width: 14, marginTop: 2, color: C.gold, flexShrink: 0 }} />
-                  {f}
-                </li>
-              ))}
-            </ul>
           </div>
-        ))}
+
+          {/* Feature lists */}
+          <div style={{
+            marginTop: 28,
+            opacity: featuresOpacity,
+            transform: `translateY(${featuresY}px)`,
+            transition: "opacity 0.1s linear, transform 0.1s linear",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 24,
+          }}>
+            {starterTier.groups.map((group) => (
+              <div key={group.label} style={{ textAlign: "left" }}>
+                <p style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.09em",
+                  textTransform: "uppercase",
+                  color: C.faint,
+                  marginBottom: 10,
+                  fontFamily: FONT_BODY,
+                } as React.CSSProperties}>
+                  {group.label}
+                </p>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {group.features.map((f) => (
+                    <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
+                      <Check style={{ height: 14, width: 14, marginTop: 3, color: C.gold, flexShrink: 0 }} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div style={{
+            marginTop: 32,
+            opacity: ctaOpacity,
+            transform: `translateY(${ctaY}px)`,
+            transition: "opacity 0.1s linear, transform 0.1s linear",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 10,
+            width: "100%",
+          }}>
+            {pricingMode === "manage" ? (
+              <div style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
+                padding: "14px 28px", borderRadius: 10,
+                background: `rgba(212,165,116,0.10)`,
+                border: `1px solid rgba(212,165,116,0.25)`,
+                color: C.text,
+              }}>
+                You are on the {manageTierMeta?.label ?? "Starter"} plan
+              </div>
+            ) : (
+              <Link
+                to="/onboarding"
+                style={{
+                  background: CTA_BG,
+                  boxShadow: CTA_SHADOW,
+                  color: "#080808",
+                  fontFamily: FONT_BODY,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  padding: "14px 32px",
+                  borderRadius: 10,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  minHeight: 48,
+                }}
+              >
+                Start Free Trial
+                <ArrowRight style={{ height: 16, width: 16 }} />
+              </Link>
+            )}
+            <p style={{
+              fontSize: 12,
+              color: C.faint,
+              fontFamily: FONT_BODY,
+              fontStyle: "italic",
+              margin: 0,
+              letterSpacing: "0.01em",
+            }}>
+              Start right, take your business seriously and focus on your craft, not admin
+            </p>
+          </div>
+        </div>
       </div>
-
-      {/* Footer tagline */}
-      <p style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.6, marginBottom: 16, fontStyle: "italic" }}>
-        Start right, take your business seriously and focus on your craft, not admin.
-      </p>
-
-      {/* CTA */}
-      {pricingMode === "manage" ? (
-        <>
-          <button
-            type="button"
-            disabled={isCurrent || !!submittingPlan}
-            onClick={() => handlePlanChange(tierPlan)}
-            style={isCurrent ? {
-              width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-              padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
-              background: `rgba(212,165,116,0.08)`, color: C.text,
-              border: `1px solid rgba(212,165,116,0.20)`, opacity: 0.6,
-            } : {
-              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-              padding: "12px 20px", borderRadius: 10, cursor: "pointer",
-              background: "transparent", color: C.muted, border: `1px solid ${C.border2}`,
-            }}
-          >
-            {isBusy ? "Saving..." : ctaLabel}
-            {!isCurrent && <ArrowRight style={{ height: 13, width: 13 }} />}
-          </button>
-          <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
-            {isCurrent ? "This is your current subscription." : isUpgrade ? "Upgrade request recorded for billing." : isDowngrade ? "Downgrade applies next billing cycle." : "Select the plan you want to move to."}
-          </p>
-        </>
-      ) : (
-        <>
-          <Link
-            to="/onboarding"
-            style={{
-              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-              padding: "12px 20px", borderRadius: 10,
-              background: "transparent", color: C.muted,
-              border: `1px solid ${C.border2}`, textDecoration: "none",
-            }}
-          >
-            {tier.cta}
-            <ArrowRight style={{ height: 13, width: 13 }} />
-          </Link>
-          <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
-            Free for 7 days. No payment required.
-          </p>
-        </>
-      )}
     </div>
   );
 };
 
+// ─── Main Pricing Component ───────────────────────────────────────────────────
 const Pricing = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showComparison, setShowComparison] = useState(false);
@@ -537,232 +667,47 @@ const Pricing = () => {
     }
   };
 
-  const starterTier = tiers.find((t) => t.name === "Starter")!;
   const nonStarterTiers = tiers.filter((t) => t.name !== "Starter");
 
   return (
     <MarketingLayout>
       <SiteHeader />
 
-      {/* HERO */}
-      <section
+      {/* ── 1. R99 SCROLL REVEAL ───────────────────────────────────────── */}
+      {!loadingTenantContext && (
+        <R99Reveal pricingMode={pricingMode} manageTierMeta={manageTierMeta} />
+      )}
+
+      {/* ── 2. PLANS GRID ─────────────────────────────────────────────── */}
+      <div
+        id="plans"
         style={{
-          position: "relative",
-          overflow: "hidden",
           background: C.bg,
-          padding: "80px 24px 60px",
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "80px 24px 0",
         }}
       >
-        <div style={{
-          position:           "absolute",
-          inset:              0,
-          backgroundImage:    "url('https://iili.io/CFs98E7.jpg')",
-          backgroundSize:     "cover",
-          backgroundPosition: "center",
-          backgroundRepeat:   "no-repeat",
-          opacity:            0.42,
-          filter:             "blur(0.5px) saturate(0.75)",
-          transform:          "scale(1.04)",
-          zIndex:             0,
-          pointerEvents:      "none",
-        }} />
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
-          backgroundSize: "44px 44px",
-          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-          zIndex: 1,
-          pointerEvents: "none",
-        } as React.CSSProperties} />
-        <div style={{
-          position: "absolute", width: 640, height: 640, borderRadius: "50%",
-          background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
-          top: "50%", left: "50%",
-          transform: "translate(-50%,-50%)",
-          animation: "heroBreathe 7s ease-in-out infinite",
-          zIndex: 1,
-          pointerEvents: "none",
-        }} />
-
-        <div style={{ position: "relative", zIndex: 2, maxWidth: 1200, margin: "0 auto" }}>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}
-            className="pricing-hero-grid"
-          >
-            {/* LEFT */}
-            <div>
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: `rgba(212,165,116,0.08)`,
-                border: `1px solid rgba(212,165,116,0.2)`,
-                borderRadius: 100, padding: "5px 14px",
-                fontSize: 11, fontWeight: 600, color: C.gold,
-                letterSpacing: "0.08em", textTransform: "uppercase",
-                marginBottom: 28, fontFamily: FONT_BODY,
-              } as React.CSSProperties}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block" }} />
-                30-day free trial on Flow and above.
-              </div>
-
-              <h1 style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: "clamp(36px,4.2vw,58px)",
-                fontWeight: 700, color: C.text,
-                marginBottom: 20, lineHeight: 1.08,
-              }}>
-                Pricing that earns<br />
-                <span style={{ color: C.gold, fontStyle: "italic" }}>its keep.</span>
-              </h1>
-
-              <p style={{
-                fontSize: "clamp(15px,1.4vw,18px)", fontWeight: 500,
-                color: C.text, lineHeight: 1.5, marginBottom: 10,
-                maxWidth: 460, fontFamily: FONT_BODY,
-              }}>
-                Run your bookings, let NextSlot learn your business, then decide which plan fits.
-              </p>
-              <p style={{
-                fontSize: "clamp(13px,1.15vw,15px)", fontWeight: 300,
-                color: C.muted, lineHeight: 1.7, marginBottom: 36,
-                maxWidth: 420, fontFamily: FONT_BODY,
-              }}>
-                No pressure. No payment. Starter from R99 per month.
-              </p>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                {pricingMode === "manage" ? (
-                  <div style={{
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
-                    padding: "14px 28px", borderRadius: 10,
-                    background: `rgba(212,165,116,0.10)`,
-                    border: `1px solid rgba(212,165,116,0.25)`,
-                    color: C.text,
-                  }}>
-                    You are on the {manageTierMeta?.label ?? "Starter"} plan
-                  </div>
-                ) : (
-                  <Link
-                    to="/onboarding"
-                    style={{
-                      background: CTA_BG, boxShadow: CTA_SHADOW,
-                      color: "#080808", fontFamily: FONT_BODY,
-                      fontSize: 14, fontWeight: 700,
-                      padding: "14px 30px", borderRadius: 10,
-                      textDecoration: "none",
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      minHeight: 48,
-                    }}
-                  >
-                    Start for free
-                    <ArrowRight style={{ height: 16, width: 16 }} />
-                  </Link>
-                )}
-                <a
-                  href="#plans"
-                  style={{
-                    fontFamily: FONT_BODY, fontSize: 14, fontWeight: 500, color: C.muted,
-                    textDecoration: "none", padding: "14px 4px",
-                    minHeight: 48, display: "inline-flex", alignItems: "center",
-                  }}
-                >
-                  See plans
-                </a>
-              </div>
-
-              <p style={{ marginTop: 18, fontSize: 11, color: C.faint, letterSpacing: "0.04em", fontWeight: 500, fontFamily: FONT_BODY }}>
-                No Payment Required · Starter trial 7 days · Flow and above 30 days
-              </p>
-
-              {pricingMode === "manage" && manageNotice && (
-                <p style={{ marginTop: 12, fontSize: 13, color: C.gold, fontFamily: FONT_BODY }}>{manageNotice}</p>
-              )}
-              {loadingTenantContext && (
-                <p style={{ marginTop: 10, fontSize: 11, color: C.muted, fontFamily: FONT_BODY }}>Checking your account...</p>
-              )}
-            </div>
-
-            {/* RIGHT: Starter plan card */}
-            <StarterHeroCard
-              tier={starterTier}
-              pricingMode={pricingMode}
-              currentPlan={currentPlan}
-              submittingPlan={submittingPlan}
-              handlePlanChange={handlePlanChange}
-            />
-          </div>
-
-          {/* 3-step flow */}
-          <div
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, maxWidth: 720, margin: "56px auto 0" }}
-            className="pricing-steps-row"
-          >
-            {[
-              { num: "01", label: "Sign up free", sub: "No payment. Live in minutes." },
-              { num: "02", label: "Run your bookings", sub: "NextSlot learns your business patterns." },
-              { num: "03", label: "Get your strategy", sub: "Personalised insights ready when your trial ends." },
-            ].map((step, idx) => (
-              <div key={step.num} style={{ display: "flex", alignItems: "center", flex: 1 }}>
-                <div style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                  padding: "20px 16px", borderRadius: 16,
-                  border: `1px solid ${C.border}`, background: C.s1, flex: 1,
-                  textAlign: "center",
-                }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: C.gold, letterSpacing: "0.1em", fontFamily: FONT_BODY }}>{step.num}</span>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: FONT_DISPLAY, margin: 0 }}>{step.label}</p>
-                  <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.4, fontFamily: FONT_BODY, margin: 0 }}>{step.sub}</p>
-                </div>
-                {idx < 2 && (
-                  <ArrowRight style={{ height: 14, width: 14, color: `rgba(212,165,116,0.35)`, flexShrink: 0, margin: "0 6px" }} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* WHAT YOUR 30 DAYS BUILDS */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-        <section style={{ paddingTop: 60, paddingBottom: 0 }}>
-          <div style={{
-            maxWidth: 1100, margin: "0 auto",
-            background: C.s1,
-            border: `1px solid rgba(212,165,116,0.22)`,
-            borderRadius: 20, padding: "40px 40px",
+        <div style={{ marginBottom: 48, textAlign: "center" }}>
+          <p style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
+            textTransform: "uppercase" as const,
+            color: C.gold, marginBottom: 10, fontFamily: FONT_BODY,
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
-              What your 30 days builds
-            </p>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
-              Your data. Your strategy.
-            </h2>
-            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
-              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business. When demand peaks, where clients find you, which services drive the most revenue per hour, and which time slots go to waste. By the time your trial ends, your dashboard is already working as your business advisor.
-            </p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-              {trialBuilds.map((point) => (
-                <li key={point} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
-                  <Check style={{ height: 15, width: 15, marginTop: 2, color: C.gold, flexShrink: 0 }} />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      </div>
-
-      {/* PLANS GRID */}
-      <div id="plans" style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0" }}>
-        <div style={{ marginBottom: 40, textAlign: "center" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
             Plans
           </p>
-          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(24px,2.8vw,36px)", fontWeight: 700, color: C.text, lineHeight: 1.15 }}>
+          <h2 style={{
+            fontFamily: FONT_DISPLAY,
+            fontSize: "clamp(24px,2.8vw,36px)",
+            fontWeight: 700, color: C.text, lineHeight: 1.15,
+          }}>
             Pick the plan that fits where you are.
           </h2>
         </div>
+
+        {pricingMode === "manage" && manageNotice && (
+          <p style={{ textAlign: "center", fontSize: 13, color: C.gold, fontFamily: FONT_BODY, marginBottom: 24 }}>{manageNotice}</p>
+        )}
 
         <div
           style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}
@@ -927,7 +872,37 @@ const Pricing = () => {
         </div>
       </div>
 
-      {/* COMPARISON TABLE TOGGLE */}
+      {/* ── 3. WHAT YOUR 30 DAYS BUILDS ───────────────────────────────── */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0" }}>
+        <section>
+          <div style={{
+            maxWidth: 1100, margin: "0 auto",
+            background: C.s1,
+            border: `1px solid rgba(212,165,116,0.22)`,
+            borderRadius: 20, padding: "40px 40px",
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
+              What your 30 days builds
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
+              Your data. Your strategy.
+            </h2>
+            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
+              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business. When demand peaks, where clients find you, which services drive the most revenue per hour, and which time slots go to waste. By the time your trial ends, your dashboard is already working as your business advisor.
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+              {trialBuilds.map((point) => (
+                <li key={point} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
+                  <Check style={{ height: 15, width: 15, marginTop: 2, color: C.gold, flexShrink: 0 }} />
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      {/* ── 4. FULL FEATURE COMPARISON (COLLAPSED) ────────────────────── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0" }}>
         <button
           type="button"
@@ -945,7 +920,6 @@ const Pricing = () => {
         </button>
       </div>
 
-      {/* COMPARISON TABLE */}
       {showComparison && (
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 0", overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT_BODY }}>
@@ -981,8 +955,8 @@ const Pricing = () => {
         </div>
       )}
 
-      {/* FAQ */}
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0" }}>
+      {/* ── 5. FAQ ────────────────────────────────────────────────────── */}
+      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0" }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY, textAlign: "center" }}>
           FAQ
         </p>
@@ -1026,7 +1000,7 @@ const Pricing = () => {
         </div>
       </div>
 
-      {/* CTA BANNER */}
+      {/* ── 6. READY TO START CTA ─────────────────────────────────────── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "72px 24px 80px" }}>
         <div style={{
           borderRadius: 24, padding: "56px 48px",
