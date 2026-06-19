@@ -10,6 +10,21 @@ import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
+// Entry keyframe injected once
+const KEYFRAME_ID = "r99-entry-kf";
+if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
+  const s = document.createElement("style");
+  s.id = KEYFRAME_ID;
+  s.textContent = `
+    @keyframes r99FadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .r99-entry { animation: r99FadeIn 0.9s cubic-bezier(0.22,1,0.36,1) both; }
+  `;
+  document.head.appendChild(s);
+}
+
 const tiers = [
   {
     name: "Starter",
@@ -325,23 +340,27 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 
 // ─── R99 Scroll Reveal ────────────────────────────────────────────────────────
 //
-// What the user sees:
+// Mobile math (390 x 844):
+//   R99 at clamp(72px, 19vw, 220px) = ~74px tall at 390px wide. Fits inside 844px.
+//   Section wrapper = 500vh. Sticky panel = 100dvh. Scrollable distance = 400vh.
 //
-//  LAND      R99 is large and centred (clamp 22vw desktop / 18vw mobile).
-//            Nothing else visible yet.
+// Scroll timeline (p = 0..1 over 400vh of scroll):
 //
-//  p 0→0.18  "What it costs" fades in above R99.
-//            R99 begins shrinking from 22vw toward 14vw.
+//   LAND       R99 fades in via CSS entry animation. No scroll needed.
+//              "What it costs" invisible. Everything else invisible.
 //
-//  p 0→0.30  R99 finishes shrinking and settles at 14vw.
+//   p 0..0.25  "What it costs" fades in above R99.
+//              R99 shrinks: clamp(72px,19vw,220px) -> clamp(52px,13vw,160px).
+//              Feels like R99 is settling into position.
 //
-//  p 0.22→0.38  "Your Starter plan automates" fades in below R99.
+//   p 0.25..0.50  "Your Starter plan automates" fades in below R99.
 //
-//  p 0.35→0.58  Feature lists slide up and fade in.
+//   p 0.40..0.65  Feature lists slide up and fade in.
 //
-//  p 0.62→0.80  CTA fades in.
+//   p 0.65..0.85  CTA button + tagline fade in.
 //
-// Section = 300vh. Scrollable = 200vh. Progress formula is exact -- no dead gap.
+// When wrapper ends the sticky panel releases and Plans flows in immediately.
+// No extra margin or padding between wrapper end and Plans section.
 
 const R99Reveal = ({
   pricingMode,
@@ -350,12 +369,12 @@ const R99Reveal = ({
   pricingMode: PricingMode;
   manageTierMeta: { label: string; rank: number } | null;
 }) => {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [p, setP] = useState(0);
 
   useEffect(() => {
     const onScroll = () => {
-      const el = sectionRef.current;
+      const el = wrapperRef.current;
       if (!el) return;
       const scrollable = el.offsetHeight - window.innerHeight;
       if (scrollable <= 0) return;
@@ -366,38 +385,28 @@ const R99Reveal = ({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // R99: starts at 22vw on land, shrinks to 14vw by p=0.30
-  // clamp(vw, min, max) keeps it safe on all screen sizes
-  const numberVw = lerp(22, 14, mapRange(p, 0, 0.30));
-  // cap at 18vw equivalent on narrow screens via fontSize with max
-  const numberSize = `clamp(96px, ${numberVw}vw, 260px)`;
+  // R99 size: large on land, shrinks to settled size by p=0.25
+  const r99Size = `clamp(${lerp(72, 52, mapRange(p, 0, 0.25)).toFixed(1)}px, ${lerp(19, 13, mapRange(p, 0, 0.25)).toFixed(2)}vw, ${lerp(220, 160, mapRange(p, 0, 0.25)).toFixed(1)}px)`;
 
-  // "What it costs" -- fades in from the very first scroll
-  const labelOpacity = mapRange(p, 0, 0.18);
-
-  // "Your Starter plan automates" -- appears once R99 has started shrinking
-  const subLabelOpacity = mapRange(p, 0.22, 0.38);
-
-  // Features
-  const featuresOpacity = mapRange(p, 0.35, 0.58);
-  const featuresY = lerp(20, 0, mapRange(p, 0.35, 0.58));
-
-  // CTA
-  const ctaOpacity = mapRange(p, 0.62, 0.80);
-  const ctaY = lerp(16, 0, mapRange(p, 0.62, 0.80));
+  const labelOpacity   = mapRange(p, 0, 0.25);
+  const subLabelOpacity = mapRange(p, 0.25, 0.50);
+  const featuresOpacity = mapRange(p, 0.40, 0.65);
+  const featuresY       = lerp(18, 0, mapRange(p, 0.40, 0.65));
+  const ctaOpacity      = mapRange(p, 0.65, 0.85);
+  const ctaY            = lerp(14, 0, mapRange(p, 0.65, 0.85));
 
   const starterTier = tiers.find((t) => t.name === "Starter")!;
 
   return (
     <div
-      ref={sectionRef}
-      style={{ position: "relative", height: "300vh" }}
+      ref={wrapperRef}
+      style={{ position: "relative", height: "500vh" }}
     >
       <div
         style={{
           position: "sticky",
           top: 0,
-          height: "100vh",
+          height: "100dvh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -432,7 +441,7 @@ const R99Reveal = ({
         {/* Radial glow */}
         <div style={{
           position: "absolute",
-          width: 700, height: 700,
+          width: 600, height: 600,
           borderRadius: "50%",
           background: "radial-gradient(circle, rgba(212,165,116,0.07) 0%, transparent 70%)",
           top: "50%", left: "50%",
@@ -440,7 +449,7 @@ const R99Reveal = ({
           pointerEvents: "none",
         }} />
 
-        {/* Content stack */}
+        {/* Content stack -- centred column, constrained width */}
         <div style={{
           position: "relative",
           zIndex: 2,
@@ -450,7 +459,7 @@ const R99Reveal = ({
           textAlign: "center",
           padding: "0 24px",
           width: "100%",
-          maxWidth: 720,
+          maxWidth: 680,
         }}>
 
           {/* "What it costs" -- invisible on land, fades in on first scroll */}
@@ -461,23 +470,26 @@ const R99Reveal = ({
             letterSpacing: "0.14em",
             textTransform: "uppercase" as const,
             color: C.gold,
-            margin: "0 0 14px 0",
+            margin: "0 0 16px 0",
             opacity: labelOpacity,
+            willChange: "opacity",
           }}>
             What it costs
           </p>
 
-          {/* R99 -- large on land, shrinks as scroll progresses */}
+          {/* R99 -- entry animation on mount, shrinks on first scroll */}
           <span
+            className="r99-entry"
             style={{
               fontFamily: FONT_DISPLAY,
-              fontSize: numberSize,
+              fontSize: r99Size,
               fontWeight: 800,
               color: C.text,
               lineHeight: 1,
               letterSpacing: "-0.03em",
               display: "block",
               userSelect: "none",
+              willChange: "font-size",
             }}
           >
             R99
@@ -489,21 +501,23 @@ const R99Reveal = ({
             fontSize: 14,
             fontWeight: 500,
             color: C.muted,
-            margin: "12px 0 0 0",
+            margin: "14px 0 0 0",
             opacity: subLabelOpacity,
+            willChange: "opacity",
           }}>
             Your Starter plan automates
           </p>
 
           {/* Feature lists */}
           <div style={{
-            marginTop: 24,
+            marginTop: 22,
             opacity: featuresOpacity,
             transform: `translateY(${featuresY}px)`,
+            willChange: "opacity, transform",
             width: "100%",
             display: "flex",
             flexDirection: "column",
-            gap: 20,
+            gap: 18,
           }}>
             {starterTier.groups.map((group) => (
               <div key={group.label} style={{ textAlign: "left" }}>
@@ -513,7 +527,7 @@ const R99Reveal = ({
                   letterSpacing: "0.09em",
                   textTransform: "uppercase" as const,
                   color: C.faint,
-                  margin: "0 0 10px 0",
+                  margin: "0 0 8px 0",
                   fontFamily: FONT_BODY,
                 }}>
                   {group.label}
@@ -532,9 +546,10 @@ const R99Reveal = ({
 
           {/* CTA */}
           <div style={{
-            marginTop: 28,
+            marginTop: 26,
             opacity: ctaOpacity,
             transform: `translateY(${ctaY}px)`,
+            willChange: "opacity, transform",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
