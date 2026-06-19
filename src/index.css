@@ -127,10 +127,23 @@
   }
 
   body {
-    background: #000;
+    /* @apply bg-background resolves to white from :root on marketing pages
+       because .dark-brand lives on a child div, not on body itself.
+       The !important below ensures body stays black regardless of what
+       Tailwind resolves --background to at this level. */
     @apply bg-background text-foreground font-body;
+    background-color: #000 !important;
     user-select: none;
     transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* #root must fill the full viewport on marketing pages so no white gap
+     appears below short pages or in the browser chrome overscroll area.
+     min-height (not height) is used so the page can still grow with content. */
+  #root {
+    width: 100%;
+    min-height: 100dvh;
+    background: #000;
   }
 
   input,
@@ -541,7 +554,7 @@ html:not(.dark) .tenant-logo-img {
     padding-bottom: env(safe-area-inset-bottom);
     background: hsl(var(--background));
     border-top: 1px solid hsl(var(--border) / 0.5);
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2s, 1);
   }
 
   .scrollbar-hide {
