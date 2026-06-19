@@ -12,14 +12,14 @@ const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba
 
 // ─── Fey-exact keyframes ──────────────────────────────────────────────────────
 //
-// heroBlurIn   background + dots layer: blur(12px) opacity(0) -> blur(0) opacity(1)
-//              duration 2.6s, delay 0.2s
+// heroBlurIn   background + dots: blur(12px) opacity(0) -> blur(0) opacity(1)
+//              2.6s, 0.2s delay
 //
-// heroScaleIn  R99 price wrapper: scale(1.07) -> scale(1)
-//              duration 2.6s, delay 0.2s
+// heroScaleIn  R99: scale(1.07) -> scale(1)
+//              2.6s, 0.2s delay (separate wrapper, Fey pattern)
 //
-// heroTextIn   subline text: blur(8px) opacity(0) -> blur(0) opacity(1)
-//              duration 3s, delay 1.2s
+// heroTextIn   label + features + CTA: blur(8px) opacity(0) -> blur(0) opacity(1)
+//              3s, 1.2s delay
 //
 // All fill-mode: forwards. Easing: cubic-bezier(0.25,0.46,0.45,0.94)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,15 +55,6 @@ if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
       opacity: 0;
       filter: blur(8px);
       will-change: filter, opacity;
-    }
-
-    @media (max-width: 767px) {
-      .pricing-hero-desktop { display: none; }
-      .pricing-hero-mobile  { display: block; }
-    }
-    @media (min-width: 768px) {
-      .pricing-hero-desktop { display: block; }
-      .pricing-hero-mobile  { display: none; }
     }
   `;
   document.head.appendChild(s);
@@ -378,28 +369,23 @@ const CellValue = ({ value }: { value: boolean | string }) => {
     : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
 };
 
-// ─── Hero ─────────────────────────────────────────────────────────────────────
+// ─── PricingHero ────────────────────────────────────────────────────────────────
 //
-// Matches Fey's pricing hero exactly:
+// Single unified content column (no separate bottom layer):
 //
-//  Layer 1 (bg)   background image + dots overlay
-//                 heroBlurIn: blur(12px) opacity(0) -> blur(0) opacity(1)
-//                 2.6s, 0.2s delay
-//                 dots use mix-blend-mode: color-dodge
+//   "What it costs"          <- hero-text-layer (blur+opacity, 3s, 1.2s delay)
+//   R99                      <- hero-scale-layer (scale, 2.6s, 0.2s delay)
+//                               sits directly below the label in normal flow
+//   ---- feature list ----   <- hero-text-layer (same animation, same element)
+//   Core features
+//   Clients features
+//   CTA button
+//   trial note
 //
-//  Layer 2 (r99)  the large R99 price text
-//                 heroScaleIn: scale(1.07) -> scale(1)
-//                 2.6s, 0.2s delay (separate wrapper, Fey pattern)
-//
-//  Layer 3 (text) subline + CTA
-//                 heroTextIn: blur(8px) opacity(0) -> blur(0) opacity(1)
-//                 3s, 1.2s delay
-//
-// Container height is fixed per breakpoint (mirrors Fey's image dimensions):
-//   desktop >= 768px  640px
-//   mobile  < 768px   370px
-//
-// No scroll logic. No sticky. No 300vh wrapper. Pure CSS auto-play.
+// The background (hero-bg-layer) is position:absolute behind everything.
+// The content column is position:absolute, inset:0, flexDirection:column,
+// justifyContent:"flex-start", paddingTop accounts for header (64px) + breathing room.
+// This puts R99 in the upper-centre area with content flowing naturally below it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PricingHero = ({
@@ -408,180 +394,219 @@ const PricingHero = ({
 }: {
   pricingMode: PricingMode;
   manageTierMeta: { label: string; rank: number } | null;
-}) => (
-  <div style={{
-    position: "relative",
-    width: "100%",
-    overflow: "hidden",
-    // Fixed height per breakpoint via inline + className override below
-    height: 640,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  }}
-  className="pricing-hero-root"
-  >
-    {/* ── Layer 1: background image ──────────────────────────────────── */}
+}) => {
+  const starterTier = tiers.find((t) => t.name === "Starter")!;
+
+  return (
     <div
-      className="hero-bg-layer"
       style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 0,
+        position: "relative",
+        width: "100%",
+        // Hero height is auto so it grows with content, min-height keeps it
+        // visually full on load before the text reveals
+        minHeight: 640,
+        overflow: "hidden",
       }}
     >
-      {/* Base background */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        backgroundImage: "url('https://iili.io/CFs98E7.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        opacity: 0.32,
-        filter: "saturate(0.55)",
-      }} />
-
-      {/* Dots overlay - mix-blend-mode: color-dodge matches Fey exactly */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        backgroundImage: `linear-gradient(rgba(212,165,116,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(212,165,116,0.045) 1px, transparent 1px)`,
-        backgroundSize: "44px 44px",
-        mixBlendMode: "color-dodge" as const,
-        WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
-        maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
-      } as React.CSSProperties} />
-
-      {/* Radial vignette */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        background: `radial-gradient(ellipse 70% 60% at 50% 50%, transparent 40%, ${C.bg} 100%)`,
-      }} />
-
-      {/* Top + bottom fade to page bg */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        background: `linear-gradient(to bottom, ${C.bg} 0%, transparent 18%, transparent 75%, ${C.bg} 100%)`,
-      }} />
-    </div>
-
-    {/* ── Layer 2: R99 price (scale wrapper, Fey pattern) ───────────── */}
-    <div
-      className="hero-scale-layer"
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <span style={{
-        fontFamily: FONT_DISPLAY,
-        fontSize: "clamp(100px, 22vw, 280px)",
-        fontWeight: 800,
-        color: C.text,
-        lineHeight: 1,
-        letterSpacing: "-0.03em",
-        userSelect: "none" as const,
-        // Subtle radial glow behind the number
-        textShadow: "0 0 120px rgba(212,165,116,0.18)",
-      }}>
-        R99
-      </span>
-    </div>
-
-    {/* ── Layer 3: text content (blur+opacity, Fey pattern) ─────────── */}
-    <div
-      className="hero-text-layer"
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 2,
-        display: "flex",
-        flexDirection: "column" as const,
-        alignItems: "center",
-        justifyContent: "flex-end",
-        paddingBottom: 56,
-        gap: 0,
-        textAlign: "center" as const,
-        padding: "0 24px 56px",
-      }}
-    >
-      <p style={{
-        fontFamily: FONT_BODY,
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase" as const,
-        color: C.gold,
-        margin: "0 0 8px 0",
-      }}>
-        What it costs
-      </p>
-      <p style={{
-        fontFamily: FONT_BODY,
-        fontSize: 15,
-        fontWeight: 500,
-        color: C.muted,
-        margin: "0 0 24px 0",
-        lineHeight: 1.5,
-      }}>
-        R99/month to start. No payment required to try it.
-      </p>
-
-      {pricingMode === "manage" ? (
+      {/* ── Layer 1: background (blur+opacity in) ──────────────────── */}
+      <div
+        className="hero-bg-layer"
+        style={{ position: "absolute", inset: 0, zIndex: 0 }}
+      >
         <div style={{
-          display: "inline-flex", alignItems: "center", justifyContent: "center",
-          fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
-          padding: "13px 28px", borderRadius: 10,
-          background: "rgba(212,165,116,0.10)",
-          border: "1px solid rgba(212,165,116,0.25)",
-          color: C.text,
-        }}>
-          You are on the {manageTierMeta?.label ?? "Starter"} plan
-        </div>
-      ) : (
-        <Link
-          to="/onboarding"
+          position: "absolute", inset: 0,
+          backgroundImage: "url('https://iili.io/CFs98E7.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.32,
+          filter: "saturate(0.55)",
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `linear-gradient(rgba(212,165,116,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(212,165,116,0.045) 1px, transparent 1px)`,
+          backgroundSize: "44px 44px",
+          mixBlendMode: "color-dodge" as const,
+          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
+          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
+        } as React.CSSProperties} />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `radial-gradient(ellipse 70% 60% at 50% 50%, transparent 40%, ${C.bg} 100%)`,
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `linear-gradient(to bottom, ${C.bg} 0%, transparent 18%, transparent 75%, ${C.bg} 100%)`,
+        }} />
+      </div>
+
+      {/* ── Content column: label -> R99 (scale) -> features -> CTA ────── */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column" as const,
+          alignItems: "center",
+          textAlign: "center" as const,
+          // paddingTop: header (64px) + 40px breathing room = 104px
+          // This pushes R99 into the upper-centre of the hero
+          paddingTop: 104,
+          paddingBottom: 64,
+          paddingLeft: 24,
+          paddingRight: 24,
+        }}
+      >
+        {/* "What it costs" label - animates in with text layer */}
+        <p
+          className="hero-text-layer"
           style={{
-            background: CTA_BG,
-            boxShadow: CTA_SHADOW,
-            color: "#080808",
             fontFamily: FONT_BODY,
-            fontSize: 14,
+            fontSize: 11,
             fontWeight: 700,
-            padding: "13px 32px",
-            borderRadius: 10,
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            minHeight: 48,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase" as const,
+            color: C.gold,
+            margin: "0 0 10px 0",
           }}
         >
-          Start Free Trial
-          <ArrowRight style={{ height: 16, width: 16 }} />
-        </Link>
-      )}
+          What it costs
+        </p>
 
-      <p style={{
-        fontSize: 12,
-        color: C.faint,
-        fontFamily: FONT_BODY,
-        fontStyle: "italic",
-        margin: "10px 0 0 0",
-        letterSpacing: "0.01em",
-      }}>
-        Start right. Focus on your craft, not admin.
-      </p>
+        {/* R99 - scale animation, sits directly below the label */}
+        <span
+          className="hero-scale-layer"
+          style={{
+            fontFamily: FONT_DISPLAY,
+            fontSize: "clamp(100px, 22vw, 260px)",
+            fontWeight: 800,
+            color: C.text,
+            lineHeight: 1,
+            letterSpacing: "-0.03em",
+            userSelect: "none" as const,
+            display: "block",
+            textShadow: "0 0 120px rgba(212,165,116,0.18)",
+          }}
+        >
+          R99
+        </span>
+
+        {/* Features + CTA - animate in with text layer */}
+        <div
+          className="hero-text-layer"
+          style={{
+            marginTop: 28,
+            width: "100%",
+            maxWidth: 520,
+            display: "flex",
+            flexDirection: "column" as const,
+            alignItems: "center",
+            gap: 0,
+          }}
+        >
+          {/* Feature groups */}
+          <div style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column" as const,
+            gap: 20,
+            marginBottom: 28,
+            textAlign: "left" as const,
+          }}>
+            {starterTier.groups.map((group) => (
+              <div key={group.label}>
+                <p style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.10em",
+                  textTransform: "uppercase" as const,
+                  color: C.faint,
+                  margin: "0 0 8px 0",
+                  fontFamily: FONT_BODY,
+                }}>
+                  {group.label}
+                </p>
+                <ul style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  display: "flex",
+                  flexDirection: "column" as const,
+                  gap: 8,
+                }}>
+                  {group.features.map((f) => (
+                    <li
+                      key={f}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        fontSize: 13,
+                        color: C.text,
+                        fontFamily: FONT_BODY,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <Check style={{ height: 13, width: 13, marginTop: 3, color: C.gold, flexShrink: 0 }} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          {pricingMode === "manage" ? (
+            <div style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
+              padding: "13px 28px", borderRadius: 10,
+              background: "rgba(212,165,116,0.10)",
+              border: "1px solid rgba(212,165,116,0.25)",
+              color: C.text,
+            }}>
+              You are on the {manageTierMeta?.label ?? "Starter"} plan
+            </div>
+          ) : (
+            <Link
+              to="/onboarding"
+              style={{
+                background: CTA_BG,
+                boxShadow: CTA_SHADOW,
+                color: "#080808",
+                fontFamily: FONT_BODY,
+                fontSize: 14,
+                fontWeight: 700,
+                padding: "13px 32px",
+                borderRadius: 10,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                minHeight: 48,
+              }}
+            >
+              Start Free Trial
+              <ArrowRight style={{ height: 16, width: 16 }} />
+            </Link>
+          )}
+
+          <p style={{
+            fontSize: 12,
+            color: C.faint,
+            fontFamily: FONT_BODY,
+            fontStyle: "italic",
+            margin: "10px 0 0 0",
+            letterSpacing: "0.01em",
+          }}>
+            Start right. Focus on your craft, not admin.
+          </p>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── Main Pricing Component ───────────────────────────────────────────────────
 const Pricing = () => {
