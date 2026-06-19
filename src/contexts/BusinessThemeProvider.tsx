@@ -143,14 +143,23 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const cssVars = useMemo(() => getThemeCssVars(theme), [theme]);
 
-  // Apply CSS colour variables + dark/light class to document root
-  // Skipped entirely on admin routes — admin shell owns :root tokens
+  // Apply CSS colour variables + dark/light class to document root.
+  // Also writes the tenant background directly as an inline style on <html>
+  // so that backdrop-blur on the booking header composites against the correct
+  // tenant colour rather than the stylesheet's hardcoded #000 fallback.
+  // Skipped entirely on admin routes — admin shell owns :root tokens.
   useEffect(() => {
     if (adminPath) return;
     const root = document.documentElement;
     Object.entries(cssVars).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
+
+    // Sync html background to the resolved tenant colour so semi-transparent
+    // backdrop-blur elements (booking header, step bar) composite correctly.
+    if (tenantSlug) {
+      root.style.background = `hsl(${theme.colors.background})`;
+    }
 
     const bgParts = theme.colors.background.split(/\s+/);
     const lightness = parseFloat(bgParts[2] ?? "50");
@@ -161,7 +170,7 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       root.classList.add("light");
       root.classList.remove("dark");
     }
-  }, [cssVars, theme, adminPath]);
+  }, [cssVars, theme, adminPath, tenantSlug]);
 
   // Apply tenant-specific fonts via CSS variables
   // Skipped entirely on admin routes
