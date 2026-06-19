@@ -10,17 +10,16 @@ import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
-// Entry keyframe injected once
 const KEYFRAME_ID = "r99-entry-kf";
 if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
   const s = document.createElement("style");
   s.id = KEYFRAME_ID;
   s.textContent = `
     @keyframes r99FadeIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(16px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0)   scale(1); }
     }
-    .r99-entry { animation: r99FadeIn 0.9s cubic-bezier(0.22,1,0.36,1) both; }
+    .r99-entry { animation: r99FadeIn 1s cubic-bezier(0.22,1,0.36,1) both; }
   `;
   document.head.appendChild(s);
 }
@@ -111,7 +110,7 @@ const tiers = [
     price: "R1299",
     period: "/ month",
     description: "Built for teams. Runs like a system.",
-    subline: "1 location · 3 staff included · R89 per additional staff member",
+    subline: "1 location \u00b7 3 staff included \u00b7 R89 per additional staff member",
     trialDays: 30,
     comingSoon: true,
     groups: [
@@ -338,29 +337,35 @@ const CellValue = ({ value }: { value: boolean | string }) => {
     : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
 };
 
-// ─── R99 Scroll Reveal ────────────────────────────────────────────────────────
+// ─── R99 Hero Reveal ──────────────────────────────────────────────────────────
 //
-// Mobile math (390 x 844):
-//   R99 at clamp(72px, 19vw, 220px) = ~74px tall at 390px wide. Fits inside 844px.
-//   Section wrapper = 500vh. Sticky panel = 100dvh. Scrollable distance = 400vh.
+// THE MATH:
+//   Wrapper height  = 200vh
+//   Sticky panel    = 100dvh  (the visible screen)
+//   Scroll distance = 200vh - 100dvh = 100vh of actual scroll
 //
-// Scroll timeline (p = 0..1 over 400vh of scroll):
+//   p = scrolled / scrollDistance   (0 at top, 1 when wrapper bottom hits viewport bottom)
 //
-//   LAND       R99 fades in via CSS entry animation. No scroll needed.
-//              "What it costs" invisible. Everything else invisible.
+//   Three scroll phases, animation complete by p = 0.30:
 //
-//   p 0..0.25  "What it costs" fades in above R99.
-//              R99 shrinks: clamp(72px,19vw,220px) -> clamp(52px,13vw,160px).
-//              Feels like R99 is settling into position.
+//   LAND (p = 0)
+//     R99 fades + rises in via CSS keyframe on mount.
+//     Everything else invisible. No scroll yet.
 //
-//   p 0.25..0.50  "Your Starter plan automates" fades in below R99.
+//   PHASE 1  p 0.00 -> 0.10
+//     "What it costs" fades in above R99.
+//     R99 font-size shrinks from 22vw -> 14vw (settling into position).
 //
-//   p 0.40..0.65  Feature lists slide up and fade in.
+//   PHASE 2  p 0.10 -> 0.20
+//     "/ month" subline fades in.
+//     Feature list slides up 16px and fades in.
 //
-//   p 0.65..0.85  CTA button + tagline fade in.
+//   PHASE 3  p 0.20 -> 0.30
+//     CTA button + tagline fade in and settle.
 //
-// When wrapper ends the sticky panel releases and Plans flows in immediately.
-// No extra margin or padding between wrapper end and Plans section.
+//   p >= 0.30  All values held at 1 / final position.
+//   Sticky releases at p = 1 (wrapper bottom leaves viewport).
+//   Plans section follows immediately with no padding gap.
 
 const R99Reveal = ({
   pricingMode,
@@ -376,31 +381,40 @@ const R99Reveal = ({
     const onScroll = () => {
       const el = wrapperRef.current;
       if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const scrolled = -rect.top;
       const scrollable = el.offsetHeight - window.innerHeight;
       if (scrollable <= 0) return;
-      setP(clamp(-el.getBoundingClientRect().top / scrollable, 0, 1));
+      setP(clamp(scrolled / scrollable, 0, 1));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // R99 size: large on land, shrinks to settled size by p=0.25
-  const r99Size = `clamp(${lerp(72, 52, mapRange(p, 0, 0.25)).toFixed(1)}px, ${lerp(19, 13, mapRange(p, 0, 0.25)).toFixed(2)}vw, ${lerp(220, 160, mapRange(p, 0, 0.25)).toFixed(1)}px)`;
+  // Phase 1: R99 shrinks from 22vw -> 14vw over p 0->0.10
+  const r99Vw      = lerp(22, 14, mapRange(p, 0, 0.10));
+  const r99FontPx  = lerp(86, 54, mapRange(p, 0, 0.10));
+  const r99Size    = `clamp(${r99FontPx.toFixed(1)}px, ${r99Vw.toFixed(2)}vw, 260px)`;
 
-  const labelOpacity   = mapRange(p, 0, 0.25);
-  const subLabelOpacity = mapRange(p, 0.25, 0.50);
-  const featuresOpacity = mapRange(p, 0.40, 0.65);
-  const featuresY       = lerp(18, 0, mapRange(p, 0.40, 0.65));
-  const ctaOpacity      = mapRange(p, 0.65, 0.85);
-  const ctaY            = lerp(14, 0, mapRange(p, 0.65, 0.85));
+  const labelOpacity    = mapRange(p, 0, 0.10);
+  const subLabelOpacity = mapRange(p, 0.10, 0.20);
+  const featuresOpacity = mapRange(p, 0.10, 0.20);
+  const featuresY       = lerp(16, 0, mapRange(p, 0.10, 0.20));
+  const ctaOpacity      = mapRange(p, 0.20, 0.30);
+  const ctaY            = lerp(12, 0, mapRange(p, 0.20, 0.30));
 
   const starterTier = tiers.find((t) => t.name === "Starter")!;
 
   return (
     <div
       ref={wrapperRef}
-      style={{ position: "relative", height: "500vh" }}
+      style={{
+        position: "relative",
+        // 200vh total: 100dvh sticky panel + 100vh scroll distance.
+        // Using 100dvh + 100vh so the math holds on mobile where dvh != vh.
+        height: "calc(100dvh + 100vh)",
+      }}
     >
       <div
         style={{
@@ -449,7 +463,7 @@ const R99Reveal = ({
           pointerEvents: "none",
         }} />
 
-        {/* Content stack -- centred column, constrained width */}
+        {/* Content stack */}
         <div style={{
           position: "relative",
           zIndex: 2,
@@ -459,10 +473,10 @@ const R99Reveal = ({
           textAlign: "center",
           padding: "0 24px",
           width: "100%",
-          maxWidth: 680,
+          maxWidth: 640,
         }}>
 
-          {/* "What it costs" -- invisible on land, fades in on first scroll */}
+          {/* Phase 1: label */}
           <p style={{
             fontFamily: FONT_BODY,
             fontSize: 11,
@@ -470,14 +484,14 @@ const R99Reveal = ({
             letterSpacing: "0.14em",
             textTransform: "uppercase" as const,
             color: C.gold,
-            margin: "0 0 16px 0",
+            margin: "0 0 14px 0",
             opacity: labelOpacity,
             willChange: "opacity",
           }}>
             What it costs
           </p>
 
-          {/* R99 -- entry animation on mount, shrinks on first scroll */}
+          {/* R99: entry animation on mount, shrinks on Phase 1 scroll */}
           <span
             className="r99-entry"
             style={{
@@ -495,29 +509,29 @@ const R99Reveal = ({
             R99
           </span>
 
-          {/* "Your Starter plan automates" */}
+          {/* Phase 2: subline */}
           <p style={{
             fontFamily: FONT_BODY,
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: 500,
             color: C.muted,
-            margin: "14px 0 0 0",
+            margin: "12px 0 0 0",
             opacity: subLabelOpacity,
             willChange: "opacity",
           }}>
             Your Starter plan automates
           </p>
 
-          {/* Feature lists */}
+          {/* Phase 2: features */}
           <div style={{
-            marginTop: 22,
+            marginTop: 18,
             opacity: featuresOpacity,
             transform: `translateY(${featuresY}px)`,
             willChange: "opacity, transform",
             width: "100%",
             display: "flex",
             flexDirection: "column",
-            gap: 18,
+            gap: 14,
           }}>
             {starterTier.groups.map((group) => (
               <div key={group.label} style={{ textAlign: "left" }}>
@@ -527,15 +541,15 @@ const R99Reveal = ({
                   letterSpacing: "0.09em",
                   textTransform: "uppercase" as const,
                   color: C.faint,
-                  margin: "0 0 8px 0",
+                  margin: "0 0 7px 0",
                   fontFamily: FONT_BODY,
                 }}>
                   {group.label}
                 </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 7 }}>
                   {group.features.map((f) => (
-                    <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
-                      <Check style={{ height: 14, width: 14, marginTop: 2, color: C.gold, flexShrink: 0 }} />
+                    <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13, color: C.text, fontFamily: FONT_BODY, lineHeight: 1.45 }}>
+                      <Check style={{ height: 13, width: 13, marginTop: 2, color: C.gold, flexShrink: 0 }} />
                       {f}
                     </li>
                   ))}
@@ -544,25 +558,25 @@ const R99Reveal = ({
             ))}
           </div>
 
-          {/* CTA */}
+          {/* Phase 3: CTA */}
           <div style={{
-            marginTop: 26,
+            marginTop: 22,
             opacity: ctaOpacity,
             transform: `translateY(${ctaY}px)`,
             willChange: "opacity, transform",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 10,
+            gap: 9,
             width: "100%",
           }}>
             {pricingMode === "manage" ? (
               <div style={{
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
                 fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
-                padding: "14px 28px", borderRadius: 10,
-                background: `rgba(212,165,116,0.10)`,
-                border: `1px solid rgba(212,165,116,0.25)`,
+                padding: "13px 28px", borderRadius: 10,
+                background: "rgba(212,165,116,0.10)",
+                border: "1px solid rgba(212,165,116,0.25)",
                 color: C.text,
               }}>
                 You are on the {manageTierMeta?.label ?? "Starter"} plan
@@ -577,7 +591,7 @@ const R99Reveal = ({
                   fontFamily: FONT_BODY,
                   fontSize: 14,
                   fontWeight: 700,
-                  padding: "14px 32px",
+                  padding: "13px 32px",
                   borderRadius: 10,
                   textDecoration: "none",
                   display: "inline-flex",
@@ -693,22 +707,23 @@ const Pricing = () => {
     <MarketingLayout>
       <SiteHeader />
 
-      {/* ── 1. R99 SCROLL REVEAL ───────────────────────────────────────── */}
+      {/* ── 1. R99 HERO REVEAL ─────────────────────────────────────────── */}
       {!loadingTenantContext && (
         <R99Reveal pricingMode={pricingMode} manageTierMeta={manageTierMeta} />
       )}
 
       {/* ── 2. PLANS GRID ─────────────────────────────────────────────── */}
+      {/* padding-top: 0 -- Plans flows in immediately after sticky releases */}
       <div
         id="plans"
         style={{
           background: C.bg,
           maxWidth: 1200,
           margin: "0 auto",
-          padding: "80px 24px 0",
+          padding: "0 24px",
         }}
       >
-        <div style={{ marginBottom: 48, textAlign: "center" }}>
+        <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 64 }}>
           <p style={{
             fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
             textTransform: "uppercase" as const,
@@ -748,7 +763,7 @@ const Pricing = () => {
                 key={tier.name}
                 style={{
                   background: tier.featured ? "rgba(212,165,116,0.06)" : C.s1,
-                  border: tier.featured ? `1.5px solid rgba(212,165,116,0.55)` : `1px solid ${C.border2}`,
+                  border: tier.featured ? "1.5px solid rgba(212,165,116,0.55)" : `1px solid ${C.border2}`,
                   borderRadius: 20,
                   padding: "32px 28px",
                   position: "relative",
@@ -781,8 +796,8 @@ const Pricing = () => {
                       fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
                       textTransform: "uppercase" as const,
                       padding: "3px 10px", borderRadius: 100, marginBottom: 10,
-                      background: `rgba(212,165,116,0.08)`,
-                      border: `1px solid rgba(212,165,116,0.20)`,
+                      background: "rgba(212,165,116,0.08)",
+                      border: "1px solid rgba(212,165,116,0.20)",
                       color: C.gold, fontFamily: FONT_BODY,
                     }}>
                       Coming Soon
@@ -827,8 +842,8 @@ const Pricing = () => {
                         width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
                         padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
-                        background: `rgba(212,165,116,0.08)`, color: C.text,
-                        border: `1px solid rgba(212,165,116,0.20)`, opacity: 0.6,
+                        background: "rgba(212,165,116,0.08)", color: C.text,
+                        border: "1px solid rgba(212,165,116,0.20)", opacity: 0.6,
                       } : tier.featured ? {
                         width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                         fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
@@ -855,7 +870,7 @@ const Pricing = () => {
                         width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
                         padding: "12px 20px", borderRadius: 10,
-                        background: `rgba(212,165,116,0.06)`, color: C.muted,
+                        background: "rgba(212,165,116,0.06)", color: C.muted,
                         border: `1px solid ${C.border}`,
                       }}>
                         Coming Soon
@@ -898,7 +913,7 @@ const Pricing = () => {
           <div style={{
             maxWidth: 1100, margin: "0 auto",
             background: C.s1,
-            border: `1px solid rgba(212,165,116,0.22)`,
+            border: "1px solid rgba(212,165,116,0.22)",
             borderRadius: 20, padding: "40px 40px",
           }}>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
@@ -1025,7 +1040,7 @@ const Pricing = () => {
         <div style={{
           borderRadius: 24, padding: "56px 48px",
           background: C.s1,
-          border: `1px solid rgba(212,165,116,0.25)`,
+          border: "1px solid rgba(212,165,116,0.25)",
           boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
           textAlign: "center",
         }}>
