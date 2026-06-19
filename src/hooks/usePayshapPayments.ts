@@ -52,6 +52,7 @@ const BOOKING_SELECT = `
   payshap_reference,
   payshap_proof_url,
   payshap_claimed_at,
+  payshap_payment_intent,
   client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
   items:booking_items(service_name, price, duration_minutes, sort_order)
 `;
@@ -115,6 +116,7 @@ export function usePayshapClaimQueue() {
         payshapReference: (b as any).payshap_reference as string | null,
         payshapProofUrl: (b as any).payshap_proof_url as string | null,
         payshapClaimedAt: (b as any).payshap_claimed_at as string | null,
+        payshapPaymentIntent: (b as any).payshap_payment_intent  as string | null,
       }));
     },
     enabled: !!tenantId,
@@ -125,6 +127,7 @@ export type PayshapBookingRow = BookingRow & {
   payshapReference: string | null;
   payshapProofUrl: string | null;
   payshapClaimedAt: string | null;
+  payshapPaymentIntent:  string | null;
 };
 
 /**
