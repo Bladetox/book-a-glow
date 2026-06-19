@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
@@ -10,18 +10,20 @@ import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
-// ─── Fey-exact keyframes ──────────────────────────────────────────────────────
+// ─── Keyframes + IntersectionObserver-driven reverse scroll ──────────────────
 //
-// heroBlurIn   background + dots: blur(12px) opacity(0) -> blur(0) opacity(1)
-//              2.6s, 0.2s delay
+// Enter  classes (.hero-bg-layer, .hero-scale-layer, .hero-text-layer)
+//        play the forward animations (blur/scale in).
 //
-// heroScaleIn  R99: scale(1.07) -> scale(1)
-//              2.6s, 0.2s delay (separate wrapper, Fey pattern)
+// Exit   classes (.hero-bg-layer--out, .hero-scale-layer--out, .hero-text-layer--out)
+//        play the reverse animations (blur/scale back out).
 //
-// heroTextIn   label + features + CTA: blur(8px) opacity(0) -> blur(0) opacity(1)
-//              3s, 1.2s delay
+// An IntersectionObserver watches the hero root. When the hero leaves the
+// viewport (scrolled past upward), --out classes are toggled on and the
+// elements animate back to their initial hidden state. When it re-enters,
+// the --out classes are removed and the forward animations replay.
 //
-// All fill-mode: forwards. Easing: cubic-bezier(0.25,0.46,0.45,0.94)
+// fill-mode: forwards on all. Easing: cubic-bezier(0.25,0.46,0.45,0.94)
 // ─────────────────────────────────────────────────────────────────────────────
 const KEYFRAME_ID = "pricing-hero-kf";
 if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
@@ -32,14 +34,28 @@ if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
       from { filter: blur(12px); opacity: 0; }
       to   { filter: blur(0px);  opacity: 1; }
     }
+    @keyframes heroBlurOut {
+      from { filter: blur(0px);  opacity: 1; }
+      to   { filter: blur(12px); opacity: 0; }
+    }
     @keyframes heroScaleIn {
       from { transform: scale(1.07); }
       to   { transform: scale(1);    }
+    }
+    @keyframes heroScaleOut {
+      from { transform: scale(1);    }
+      to   { transform: scale(1.07); }
     }
     @keyframes heroTextIn {
       from { filter: blur(8px); opacity: 0; }
       to   { filter: blur(0px); opacity: 1; }
     }
+    @keyframes heroTextOut {
+      from { filter: blur(0px); opacity: 1; }
+      to   { filter: blur(8px); opacity: 0; }
+    }
+
+    /* ── Enter state ── */
     .hero-bg-layer {
       animation: heroBlurIn 2.6s cubic-bezier(0.25,0.46,0.45,0.94) 0.2s forwards;
       opacity: 0;
@@ -55,6 +71,17 @@ if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
       opacity: 0;
       filter: blur(8px);
       will-change: filter, opacity;
+    }
+
+    /* ── Exit state (reverse) ── */
+    .hero-bg-layer--out {
+      animation: heroBlurOut 1.8s cubic-bezier(0.25,0.46,0.45,0.94) 0s forwards;
+    }
+    .hero-scale-layer--out {
+      animation: heroScaleOut 1.8s cubic-bezier(0.25,0.46,0.45,0.94) 0s forwards;
+    }
+    .hero-text-layer--out {
+      animation: heroTextOut 1.4s cubic-bezier(0.25,0.46,0.45,0.94) 0s forwards;
     }
   `;
   document.head.appendChild(s);
@@ -369,23 +396,19 @@ const CellValue = ({ value }: { value: boolean | string }) => {
     : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
 };
 
-// ─── PricingHero ────────────────────────────────────────────────────────────────
+// ─── PricingHero ─────────────────────────────────────────────────────────────
 //
-// Single unified content column (no separate bottom layer):
+// Layout (single content column, top-down):
+//   "What it costs"    <- hero-text-layer
+//   R99                <- hero-scale-layer (inline block)
+//   Core + Clients     <- hero-text-layer
+//   CTA (no arrow)
+//   7-day trial badge
+//   italic note
 //
-//   "What it costs"          <- hero-text-layer (blur+opacity, 3s, 1.2s delay)
-//   R99                      <- hero-scale-layer (scale, 2.6s, 0.2s delay)
-//                               sits directly below the label in normal flow
-//   ---- feature list ----   <- hero-text-layer (same animation, same element)
-//   Core features
-//   Clients features
-//   CTA button
-//   trial note
-//
-// The background (hero-bg-layer) is position:absolute behind everything.
-// The content column is position:absolute, inset:0, flexDirection:column,
-// justifyContent:"flex-start", paddingTop accounts for header (64px) + breathing room.
-// This puts R99 in the upper-centre area with content flowing naturally below it.
+// IntersectionObserver on heroRef:
+//   intersecting  -> remove --out classes, forward animations replay
+//   not intersecting -> add --out classes, reverse animations play
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PricingHero = ({
@@ -396,19 +419,46 @@ const PricingHero = ({
   manageTierMeta: { label: string; rank: number } | null;
 }) => {
   const starterTier = tiers.find((t) => t.name === "Starter")!;
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = heroRef.current;
+    if (!root) return;
+
+    const bgEl    = root.querySelector<HTMLElement>(".hero-bg-layer");
+    const scaleEl = root.querySelector<HTMLElement>(".hero-scale-layer");
+    const textEls = root.querySelectorAll<HTMLElement>(".hero-text-layer");
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          bgEl?.classList.remove("hero-bg-layer--out");
+          scaleEl?.classList.remove("hero-scale-layer--out");
+          textEls.forEach((el) => el.classList.remove("hero-text-layer--out"));
+        } else {
+          bgEl?.classList.add("hero-bg-layer--out");
+          scaleEl?.classList.add("hero-scale-layer--out");
+          textEls.forEach((el) => el.classList.add("hero-text-layer--out"));
+        }
+      },
+      { threshold: 0.05 }
+    );
+
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div
+      ref={heroRef}
       style={{
         position: "relative",
         width: "100%",
-        // Hero height is auto so it grows with content, min-height keeps it
-        // visually full on load before the text reveals
         minHeight: 640,
         overflow: "hidden",
       }}
     >
-      {/* ── Layer 1: background (blur+opacity in) ──────────────────── */}
+      {/* ── Layer 1: background ───────────────────────────────────────── */}
       <div
         className="hero-bg-layer"
         style={{ position: "absolute", inset: 0, zIndex: 0 }}
@@ -440,7 +490,7 @@ const PricingHero = ({
         }} />
       </div>
 
-      {/* ── Content column: label -> R99 (scale) -> features -> CTA ────── */}
+      {/* ── Content column ────────────────────────────────────────────── */}
       <div
         style={{
           position: "relative",
@@ -449,15 +499,13 @@ const PricingHero = ({
           flexDirection: "column" as const,
           alignItems: "center",
           textAlign: "center" as const,
-          // paddingTop: header (64px) + 40px breathing room = 104px
-          // This pushes R99 into the upper-centre of the hero
           paddingTop: 104,
           paddingBottom: 64,
           paddingLeft: 24,
           paddingRight: 24,
         }}
       >
-        {/* "What it costs" label - animates in with text layer */}
+        {/* "What it costs" */}
         <p
           className="hero-text-layer"
           style={{
@@ -473,7 +521,7 @@ const PricingHero = ({
           What it costs
         </p>
 
-        {/* R99 - scale animation, sits directly below the label */}
+        {/* R99 */}
         <span
           className="hero-scale-layer"
           style={{
@@ -491,7 +539,7 @@ const PricingHero = ({
           R99
         </span>
 
-        {/* Features + CTA - animate in with text layer */}
+        {/* Features + CTA */}
         <div
           className="hero-text-layer"
           style={{
@@ -556,7 +604,7 @@ const PricingHero = ({
             ))}
           </div>
 
-          {/* CTA */}
+          {/* CTA - no arrow */}
           {pricingMode === "manage" ? (
             <div style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -583,13 +631,33 @@ const PricingHero = ({
                 textDecoration: "none",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 8,
                 minHeight: 48,
               }}
             >
               Start Free Trial
-              <ArrowRight style={{ height: 16, width: 16 }} />
             </Link>
+          )}
+
+          {/* 7-day trial badge */}
+          {pricingMode === "signup" && (
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 12,
+              padding: "5px 14px",
+              borderRadius: 100,
+              background: "rgba(212,165,116,0.08)",
+              border: "1px solid rgba(212,165,116,0.20)",
+              fontFamily: FONT_BODY,
+              fontSize: 11,
+              fontWeight: 600,
+              color: C.muted,
+              letterSpacing: "0.01em",
+            }}>
+              <span style={{ color: C.gold, fontWeight: 700 }}>7-day</span>
+              free trial. Flow, Professional &amp; Studio get 30 days.
+            </div>
           )}
 
           <p style={{
@@ -711,20 +779,21 @@ const Pricing = () => {
           padding: "0 24px",
         }}
       >
+        {/* Heading: eyebrow is the descriptive line, large heading is "Plans" */}
         <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 48 }}>
           <p style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
-            textTransform: "uppercase" as const,
-            color: C.gold, marginBottom: 10, fontFamily: FONT_BODY,
+            fontSize: 13, fontWeight: 500, letterSpacing: "0.01em",
+            color: C.muted, marginBottom: 10, fontFamily: FONT_BODY,
           }}>
-            Plans
+            Pick the plan that fits where you are.
           </p>
           <h2 style={{
             fontFamily: FONT_DISPLAY,
-            fontSize: "clamp(24px,2.8vw,36px)",
-            fontWeight: 700, color: C.text, lineHeight: 1.15,
+            fontSize: "clamp(36px, 5vw, 64px)",
+            fontWeight: 700, color: C.text, lineHeight: 1.05,
+            margin: 0,
           }}>
-            Pick the plan that fits where you are.
+            Plans
           </h2>
         </div>
 
