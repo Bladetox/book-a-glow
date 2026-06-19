@@ -340,32 +340,24 @@ const CellValue = ({ value }: { value: boolean | string }) => {
 // ─── R99 Hero Reveal ──────────────────────────────────────────────────────────
 //
 // THE MATH:
-//   Wrapper height  = 200vh
-//   Sticky panel    = 100dvh  (the visible screen)
-//   Scroll distance = 200vh - 100dvh = 100vh of actual scroll
+//   SiteHeader height = 64px (fixed, sits above the page flow).
+//   Wrapper height    = calc(100dvh + 100vh)
+//   Sticky panel      = 100dvh, top: 0  (anchors to page top, under header)
 //
-//   p = scrolled / scrollDistance   (0 at top, 1 when wrapper bottom hits viewport bottom)
+//   To make R99 visually centred on the VISIBLE screen (below the header)
+//   we add paddingTop: 64px to the sticky panel. This shifts the flex
+//   centring axis down by one header height so content lands dead centre
+//   in the visible viewport area.
 //
-//   Three scroll phases, animation complete by p = 0.30:
+//   Scroll distance = wrapper height - 100dvh = 100vh
+//   p = scrolled / scrollDistance  (0 at top, 1 when wrapper bottom exits)
 //
-//   LAND (p = 0)
-//     R99 fades + rises in via CSS keyframe on mount.
-//     Everything else invisible. No scroll yet.
+//   PHASE 1  p 0.00 -> 0.10   label fades in, R99 shrinks 22vw -> 14vw
+//   PHASE 2  p 0.10 -> 0.20   subline + features fade in and settle
+//   PHASE 3  p 0.20 -> 0.30   CTA fades in and settles
+//   p >= 0.30  everything held at final state, no dead scroll
 //
-//   PHASE 1  p 0.00 -> 0.10
-//     "What it costs" fades in above R99.
-//     R99 font-size shrinks from 22vw -> 14vw (settling into position).
-//
-//   PHASE 2  p 0.10 -> 0.20
-//     "/ month" subline fades in.
-//     Feature list slides up 16px and fades in.
-//
-//   PHASE 3  p 0.20 -> 0.30
-//     CTA button + tagline fade in and settle.
-//
-//   p >= 0.30  All values held at 1 / final position.
-//   Sticky releases at p = 1 (wrapper bottom leaves viewport).
-//   Plans section follows immediately with no padding gap.
+//   Plans section padding-top = 2rem (32px) -- snug against hero release
 
 const R99Reveal = ({
   pricingMode,
@@ -381,8 +373,7 @@ const R99Reveal = ({
     const onScroll = () => {
       const el = wrapperRef.current;
       if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const scrolled = -rect.top;
+      const scrolled = -el.getBoundingClientRect().top;
       const scrollable = el.offsetHeight - window.innerHeight;
       if (scrollable <= 0) return;
       setP(clamp(scrolled / scrollable, 0, 1));
@@ -392,10 +383,9 @@ const R99Reveal = ({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Phase 1: R99 shrinks from 22vw -> 14vw over p 0->0.10
-  const r99Vw      = lerp(22, 14, mapRange(p, 0, 0.10));
-  const r99FontPx  = lerp(86, 54, mapRange(p, 0, 0.10));
-  const r99Size    = `clamp(${r99FontPx.toFixed(1)}px, ${r99Vw.toFixed(2)}vw, 260px)`;
+  const r99Vw     = lerp(22, 14, mapRange(p, 0, 0.10));
+  const r99FontPx = lerp(86, 54, mapRange(p, 0, 0.10));
+  const r99Size   = `clamp(${r99FontPx.toFixed(1)}px, ${r99Vw.toFixed(2)}vw, 260px)`;
 
   const labelOpacity    = mapRange(p, 0, 0.10);
   const subLabelOpacity = mapRange(p, 0.10, 0.20);
@@ -411,8 +401,6 @@ const R99Reveal = ({
       ref={wrapperRef}
       style={{
         position: "relative",
-        // 200vh total: 100dvh sticky panel + 100vh scroll distance.
-        // Using 100dvh + 100vh so the math holds on mobile where dvh != vh.
         height: "calc(100dvh + 100vh)",
       }}
     >
@@ -421,8 +409,12 @@ const R99Reveal = ({
           position: "sticky",
           top: 0,
           height: "100dvh",
+          // paddingTop: 64px offsets the fixed SiteHeader so flex centering
+          // targets the visible area below the header, not the full dvh.
+          paddingTop: 64,
+          boxSizing: "border-box" as const,
           display: "flex",
-          flexDirection: "column",
+          flexDirection: "column" as const,
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
@@ -468,9 +460,9 @@ const R99Reveal = ({
           position: "relative",
           zIndex: 2,
           display: "flex",
-          flexDirection: "column",
+          flexDirection: "column" as const,
           alignItems: "center",
-          textAlign: "center",
+          textAlign: "center" as const,
           padding: "0 24px",
           width: "100%",
           maxWidth: 640,
@@ -491,7 +483,7 @@ const R99Reveal = ({
             What it costs
           </p>
 
-          {/* R99: entry animation on mount, shrinks on Phase 1 scroll */}
+          {/* R99 */}
           <span
             className="r99-entry"
             style={{
@@ -502,7 +494,7 @@ const R99Reveal = ({
               lineHeight: 1,
               letterSpacing: "-0.03em",
               display: "block",
-              userSelect: "none",
+              userSelect: "none" as const,
               willChange: "font-size",
             }}
           >
@@ -530,11 +522,11 @@ const R99Reveal = ({
             willChange: "opacity, transform",
             width: "100%",
             display: "flex",
-            flexDirection: "column",
+            flexDirection: "column" as const,
             gap: 14,
           }}>
             {starterTier.groups.map((group) => (
-              <div key={group.label} style={{ textAlign: "left" }}>
+              <div key={group.label} style={{ textAlign: "left" as const }}>
                 <p style={{
                   fontSize: 10,
                   fontWeight: 700,
@@ -565,7 +557,7 @@ const R99Reveal = ({
             transform: `translateY(${ctaY}px)`,
             willChange: "opacity, transform",
             display: "flex",
-            flexDirection: "column",
+            flexDirection: "column" as const,
             alignItems: "center",
             gap: 9,
             width: "100%",
@@ -707,23 +699,23 @@ const Pricing = () => {
     <MarketingLayout>
       <SiteHeader />
 
-      {/* ── 1. R99 HERO REVEAL ─────────────────────────────────────────── */}
+      {/* ── 1. R99 HERO REVEAL ──────────────────────────────────────────── */}
       {!loadingTenantContext && (
         <R99Reveal pricingMode={pricingMode} manageTierMeta={manageTierMeta} />
       )}
 
-      {/* ── 2. PLANS GRID ─────────────────────────────────────────────── */}
-      {/* padding-top: 0 -- Plans flows in immediately after sticky releases */}
+      {/* ── 2. PLANS GRID ───────────────────────────────────────────────── */}
+      {/* padding-top: 2rem -- snug against hero, breathing room only */}
       <div
         id="plans"
         style={{
           background: C.bg,
           maxWidth: 1200,
           margin: "0 auto",
-          padding: "0 24px",
+          padding: "2rem 24px 0",
         }}
       >
-        <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 64 }}>
+        <div style={{ marginBottom: 40, textAlign: "center" }}>
           <p style={{
             fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
             textTransform: "uppercase" as const,
@@ -907,7 +899,7 @@ const Pricing = () => {
         </div>
       </div>
 
-      {/* ── 3. WHAT YOUR 30 DAYS BUILDS ───────────────────────────────── */}
+      {/* ── 3. WHAT YOUR 30 DAYS BUILDS ─────────────────────────────────── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0" }}>
         <section>
           <div style={{
@@ -937,7 +929,7 @@ const Pricing = () => {
         </section>
       </div>
 
-      {/* ── 4. FULL FEATURE COMPARISON (COLLAPSED) ────────────────────── */}
+      {/* ── 4. FULL FEATURE COMPARISON (COLLAPSED) ──────────────────────── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0" }}>
         <button
           type="button"
@@ -990,7 +982,7 @@ const Pricing = () => {
         </div>
       )}
 
-      {/* ── 5. FAQ ────────────────────────────────────────────────────── */}
+      {/* ── 5. FAQ ──────────────────────────────────────────────────────── */}
       <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0" }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY, textAlign: "center" }}>
           FAQ
@@ -1035,7 +1027,7 @@ const Pricing = () => {
         </div>
       </div>
 
-      {/* ── 6. READY TO START CTA ─────────────────────────────────────── */}
+      {/* ── 6. READY TO START CTA ───────────────────────────────────────── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "72px 24px 80px" }}>
         <div style={{
           borderRadius: 24, padding: "56px 48px",
