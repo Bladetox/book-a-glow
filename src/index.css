@@ -168,6 +168,7 @@
   overflow: hidden;
   height: 100%;
   width: 100%;
+  overscroll-behavior: none;
 }
 
 .app-shell > * {
@@ -546,10 +547,7 @@ html:not(.dark) .tenant-logo-img {
 
   /* ===== STICKY BOTTOM BAR ===== */
   .sticky-bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
     z-index: 50;
     padding-bottom: env(safe-area-inset-bottom);
     background: hsl(var(--background));
@@ -733,4 +731,3 @@ html:not(.dark) .tenant-logo-img {
     grid-template-columns: 1fr !important;
   }
 }
-  
