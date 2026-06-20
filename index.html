@@ -33,7 +33,7 @@
       theme-color MUST be declared before the script below that updates it,
       otherwise document.querySelector finds nothing and Safari falls back
       to its own default (black in dark mode) for the status bar.
-      Cache-bust: v4
+      Cache-bust: v5
     -->
     <meta name="theme-color" content="#ffffff" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -50,11 +50,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
     <!--
-      Theme-color: set synchronously before React boots so the iOS/Android
-      status bar matches the tenant background from the very first frame.
+      Theme-color + admin dark mode: set synchronously before React boots so
+      the iOS/Android status bar and body background match from the very first
+      frame — no flash, no white bar on admin routes.
 
       Resolution order:
         1. /admin path               — always #000000 (admin shell is fully black).
+                                       Also stamps html.dark + body background = #000
+                                       so Safari safe-area regions are black before
+                                       React hydrates and applies .dark itself.
         2. localStorage ns_business_theme  — returning visitors get the exact
            colour of their last-known tenant theme instantly, no flash.
         3. Default #ffffff                 — first visit or unknown theme falls
@@ -81,8 +85,21 @@
         var stored = '';
         try { stored = localStorage.getItem('ns_business_theme') || ''; } catch (e) {}
         var color = isAdmin ? '#000000' : (THEME_BACKGROUNDS[stored] || '#ffffff');
+
+        // Update theme-color meta so Safari status bar matches immediately.
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', color);
+
+        // For admin: stamp .dark on <html> and force body background to black
+        // synchronously so Safari reads the correct background colour for the
+        // safe-area regions on the very first paint — before React hydrates.
+        if (isAdmin) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.background = '#000000';
+          // Inline style on body is set here; index.css bg-background then
+          // inherits the correct dark token once Tailwind loads.
+          document.write('<style>body{background:#000000!important}</style>');
+        }
       })();
     </script>
 
@@ -145,12 +162,14 @@
     }
     </script>
     <style>
-      /* Base reset only -- no height or overflow locks here.
-         The .app-shell class in index.css applies those only to app routes. */
+      /* Base reset only — no height or overflow locks here.
+         The .app-shell class in index.css applies those only to app routes.
+         Background is intentionally NOT set here — the inline script above
+         handles admin (#000) vs non-admin (#fff) synchronously so Safari
+         reads the correct safe-area background on the very first paint. */
       html, body {
         margin: 0;
         padding: 0;
-        background: #ffffff;
       }
       #root {
         width: 100%;
