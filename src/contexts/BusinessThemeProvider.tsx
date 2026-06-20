@@ -158,7 +158,7 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     // Sync html background to the resolved tenant colour so semi-transparent
     // backdrop-blur elements (booking header, step bar) composite correctly.
     if (tenantSlug) {
-      root.style.background = `hsl(${theme.colors.background})`;
+      root.style.setProperty('--background', theme.colors.background);
     }
 
     const bgParts = theme.colors.background.split(/\s+/);
