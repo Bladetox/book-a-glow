@@ -8,15 +8,10 @@ import {
 } from "date-fns";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-// Identity resolution — canonical order:
-// 1. client_name/email/phone — denormalised, kept in sync by trg_sync_guest_to_client trigger
-// 2. guest_name/email/phone  — raw guest input (pre-trigger / INSERT edge cases)
-// 3. profiles join            — registered client fallback
 function resolveClientName(b: any): string {
   return b.client_name || b.guest_name || b.client?.full_name || "Unknown";
 }
 
-// Unique client key for deduplication — prefer stable IDs then email then phone (last 9).
 function resolveClientKey(b: any): string {
   if (b.client_id) return b.client_id;
   const email = b.client_email || b.guest_email || b.client?.email;
@@ -34,8 +29,6 @@ function isClientTypeLabel(src: string): boolean {
 const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
 
-// Derive 2-hour heat slots from actual staff availability times.
-// Falls back to 08-18 if availability data has not loaded yet.
 function buildHeatSlots(availRows: any[]): { label: string; hourStart: number }[] {
   const starts = availRows
     .map((r: any) => r.slot_start_time)
@@ -57,9 +50,6 @@ function buildHeatSlots(availRows: any[]): { label: string; hourStart: number }[
 
 const STAFF_ROLES = ["owner", "admin", "staff"] as const;
 
-// ─── helper: build top-5 services from a list of bookings ───────────────────
-// Deduplicates services within a single booking (same service_name only counted
-// once per booking) and sorts by count desc, then revenue desc.
 function buildTopServices(
   bookingRows: any[],
   limit = 5,
@@ -96,10 +86,11 @@ export function useDashboardData() {
   const prevStart    = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
   const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
 
-  const ninetyDaysAgo = format(subDays(now, 90), "yyyy-MM-dd");
-  const fetchFromDate = format(subDays(now, 91), "yyyy-MM-dd");
+  const trendWindowDays = 180;
+  const trendStartDate  = format(subDays(now, trendWindowDays),     "yyyy-MM-dd");
+  const fetchFromDate   = format(subDays(now, trendWindowDays + 1), "yyyy-MM-dd");
 
-  // 1. Bookings — current month (all identity columns + items for service/balance rendering)
+  // 1. Bookings — current month
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
@@ -149,7 +140,7 @@ export function useDashboardData() {
     },
   });
 
-  // 2. Previous month bookings — identity columns needed for client deduplication
+  // 2. Previous month bookings
   const { data: prevBookings = [], isLoading: l2 } = useQuery({
     queryKey:  ["dash-bookings-prev", tenantId, prevStart],
     staleTime: 10 * 60 * 1000,
@@ -176,7 +167,7 @@ export function useDashboardData() {
     },
   });
 
-  // 3. Payments — 91-day window (SAST timezone buffer)
+  // 3. Payments — 180-day window
   const { data: allPayments = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-payments", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
@@ -257,9 +248,7 @@ export function useDashboardData() {
     },
   });
 
-  // 8. 90-day bookings — revenue trend fallback.
-  // We include all non-cancelled bookings; the payments table (query 3) takes
-  // precedence in the merge step, so no payment-status gate is needed here.
+  // 8. 180-day bookings for revenue trend
   const { data: trendBookings = [], isLoading: l6 } = useQuery({
     queryKey:  ["dash-trend-bookings", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
@@ -276,7 +265,7 @@ export function useDashboardData() {
     },
   });
 
-  // 9. All-time bookings (non-cancelled) with booking_items — for allTimeTopServices.
+  // 9. All-time bookings for allTimeTopServices
   const { data: allTimeBookings = [], isLoading: l7 } = useQuery({
     queryKey:  ["dash-alltime-bookings", tenantId],
     staleTime: 15 * 60 * 1000,
@@ -295,7 +284,7 @@ export function useDashboardData() {
     },
   });
 
-  // 10. New vs returning clients split — RPC-based, accurate across all booking history.
+  // 10. New vs returning clients RPC
   const { data: newVsReturningData } = useQuery({
     queryKey:  ["dash-new-vs-returning", tenantId, monthStart, monthEnd],
     staleTime: 5 * 60 * 1000,
@@ -319,84 +308,77 @@ export function useDashboardData() {
       const d = (p.created_at ?? "").slice(0, 10);
       return d >= monthStart && d <= monthEnd;
     }),
-    [allPayments, monthStart, monthEnd]
+    [allPayments, monthStart, monthEnd],
   );
+
   const prevMonthPayments = useMemo(
     () => allPayments.filter((p: any) => {
       const d = (p.created_at ?? "").slice(0, 10);
       return d >= prevStart && d <= prevEnd;
     }),
-    [allPayments, prevStart, prevEnd]
+    [allPayments, prevStart, prevEnd],
+  );
+
+  // ─── revenue totals ───────────────────────────────────────────────────────
+  const monthRevenue = useMemo(
+    () => thisMonthPayments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+    [thisMonthPayments],
+  );
+
+  const prevMonthRevenue = useMemo(
+    () => prevMonthPayments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+    [prevMonthPayments],
+  );
+
+  const todayRevenue = useMemo(
+    () => allPayments
+      .filter((p: any) => (p.created_at ?? "").slice(0, 10) === todayStr)
+      .reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+    [allPayments, todayStr],
   );
 
   // ─── booking splits ───────────────────────────────────────────────────────
   const todayBookings = useMemo(
     () => bookings.filter((b: any) => b.booking_date === todayStr),
-    [bookings, todayStr]
+    [bookings, todayStr],
   );
+
   const active = useMemo(
     () => bookings.filter((b: any) => b.status !== "cancelled"),
-    [bookings]
+    [bookings],
   );
 
-  // Bug 2 fix — cancelled AND no_show are both lost slots.
-  // Every booking required payment/deposit upfront, so both statuses represent
-  // a slot that did not deliver a service. The tenant's actual revenue impact
-  // depends on their individual cancellation terms (stored in app_settings),
-  // which vary per tenant and cannot be parsed programmatically. revenueLost
-  // therefore reflects the full booked value at stake for all lost slots.
   const lostBookings = useMemo(
     () => bookings.filter((b: any) => b.status === "cancelled" || b.status === "no_show"),
-    [bookings]
-  );
-
-  // ─── revenue ─────────────────────────────────────────────────────────────
-  const monthRevenue = useMemo(
-    () => thisMonthPayments.reduce((s: number, p: any) => s + Number(p.amount), 0),
-    [thisMonthPayments]
-  );
-  const prevMonthRevenueFromPayments = useMemo(
-    () => prevMonthPayments.reduce((s: number, p: any) => s + Number(p.amount), 0),
-    [prevMonthPayments]
-  );
-  const prevMonthRevenueFromBookings = useMemo(
-    () => prevBookings.reduce((s: number, b: any) => s + Number(b.total_amount ?? 0), 0),
-    [prevBookings]
-  );
-  const prevMonthRevenue = prevMonthRevenueFromPayments > 0
-    ? prevMonthRevenueFromPayments
-    : prevMonthRevenueFromBookings;
-
-  const todayRevenue = useMemo(
-    () => thisMonthPayments
-      .filter((p: any) => (p.created_at ?? "").slice(0, 10) === todayStr)
-      .reduce((s: number, p: any) => s + Number(p.amount), 0),
-    [thisMonthPayments, todayStr]
+    [bookings],
   );
 
   // ─── next appointment today ───────────────────────────────────────────────
-  const nowMins  = now.getHours() * 60 + now.getMinutes();
-  const upcoming = useMemo(() =>
-    todayBookings
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  const upcoming = useMemo(
+    () => todayBookings
       .filter((b: any) => b.status !== "cancelled")
       .filter((b: any) => {
         const [h, m] = (b.start_time || "00:00").split(":").map(Number);
         return h * 60 + m > nowMins;
       })
       .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time)),
-  [todayBookings, nowMins]);
+    [todayBookings, nowMins],
+  );
+
   const nextAppt = upcoming[0] as any;
 
   // ─── top services (this month) ────────────────────────────────────────────
   const topServices = useMemo(
     () => buildTopServices(active),
-    [active]
+    [active],
   );
 
   // ─── all-time top services ────────────────────────────────────────────────
   const allTimeTopServices = useMemo(
     () => buildTopServices(allTimeBookings),
-    [allTimeBookings]
+    [allTimeBookings],
   );
 
   // ─── revenue trend ────────────────────────────────────────────────────────
@@ -406,14 +388,14 @@ export function useDashboardData() {
     const bookingMap: Record<string, number> = {};
     trendBookings.forEach((b: any) => {
       const d = (b.booking_date ?? "").slice(0, 10);
-      if (!d || d < ninetyDaysAgo || d > todayStr) return;
+      if (!d || d < trendStartDate || d > todayStr) return;
       bookingMap[d] = (bookingMap[d] || 0) + Number(b.total_amount ?? 0);
     });
 
     const paymentsMap: Record<string, number> = {};
     allPayments.forEach((p: any) => {
       const d = (p.created_at ?? "").slice(0, 10);
-      if (d >= ninetyDaysAgo && d <= todayStr) {
+      if (d >= trendStartDate && d <= todayStr) {
         paymentsMap[d] = (paymentsMap[d] || 0) + Number(p.amount);
       }
     });
@@ -425,14 +407,14 @@ export function useDashboardData() {
     });
 
     return eachDayOfInterval({
-      start: parseISO(ninetyDaysAgo),
+      start: parseISO(trendStartDate),
       end:   parseISO(todayStr),
     }).map(day => ({
       day:   day.getDate(),
       date:  format(day, "yyyy-MM-dd"),
       value: trendMap[format(day, "yyyy-MM-dd")] || 0,
     }));
-  }, [allPayments, trendBookings, ninetyDaysAgo, todayStr]);
+  }, [allPayments, trendBookings, trendStartDate, todayStr]);
 
   // ─── booking heatmap ──────────────────────────────────────────────────────
   const heatmap = useMemo(() => {
@@ -477,7 +459,7 @@ export function useDashboardData() {
     };
   }, [active, prevBookings]);
 
-  // ─── lead source / acquisition channel breakdown ──────────────────────────
+  // ─── lead source breakdown ────────────────────────────────────────────────
   const leadSourceBreakdown = useMemo(() => {
     const map = new Map<string, number>();
     allLeadSourceBookings.forEach((b: any) => {
@@ -492,7 +474,7 @@ export function useDashboardData() {
 
   // ─── fill rate ────────────────────────────────────────────────────────────
   const fillRate: number | null = useMemo(() => {
-    if (staffLoading)   return null;
+    if (staffLoading)              return null;
     if (availabilityRows.length === 0) return null;
 
     const monthDays = eachDayOfInterval({
@@ -550,7 +532,7 @@ export function useDashboardData() {
   const alerts = useMemo(() => {
     const list: Alert[] = [];
     const pendingDeposits = bookings.filter(
-      (b: any) => b.deposit_paid !== true && b.status !== "cancelled"
+      (b: any) => b.deposit_paid !== true && b.status !== "cancelled",
     ).length;
     if (pendingDeposits > 0)
       list.push({ text: `${pendingDeposits} deposit${pendingDeposits > 1 ? "s" : ""} still pending`, type: "warning" });
@@ -585,30 +567,19 @@ export function useDashboardData() {
     health: {
       fillRate,
       staffLoading,
-      // Bug 1 fix — avgBasket now uses confirmed payment revenue (monthRevenue)
-      // divided by active appointment count, not the sum of booking.total_amount
-      // which includes unpaid/pending totals and overstates the true average.
       avgBasket:
         active.length > 0 && monthRevenue > 0
           ? Math.round(monthRevenue / active.length)
           : 0,
       totalAppointments: active.length,
-      // Bug 2 fix — cancellationRate numerator now includes no_show.
-      // Both cancelled and no_show are lost slots; every booking required
-      // upfront payment so both represent real business impact.
-      // Denominator is all bookings (total slots attempted this month).
       cancellationRate:
         bookings.length > 0 ? Math.round((lostBookings.length / bookings.length) * 100) : 0,
-      // revenueLost reflects the full booked value at stake for all lost slots.
-      // Actual retained amount depends on each tenant's cancellation terms
-      // (stored in app_settings) which vary per tenant and cannot be parsed
-      // programmatically here.
       revenueLost: lostBookings.reduce((s: number, b: any) => s + Number(b.total_amount), 0),
     },
     clients: {
-      total:         clientKeySet.size,
-      newClients:    Number(newVsReturningData?.new_clients ?? 0),
-      returning:     returningCount,
+      total:      clientKeySet.size,
+      newClients: Number(newVsReturningData?.new_clients ?? 0),
+      returning:  returningCount,
       retentionRate,
     },
     leadSourceBreakdown,
