@@ -578,7 +578,7 @@ useEffect(() => {
               <img
                 src={gatewayLogoSrc}
                 alt={gatewayLogoAlt}
-                className="h-4 w-auto object-contain brightness-0 invert shrink-0"
+                className="h-4 w-auto object-contain dark:invert shrink-0"
               />
               <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
             </>
