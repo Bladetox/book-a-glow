@@ -874,7 +874,7 @@ const MobileDateStrip = ({
   // Scroll today pill into view on mount (centred)
   useEffect(() => {
     if (todayRef.current && scrollRef.current) {
-      const pill   = todayRef.current;
+      const pill  = selectedRef.current;
       const strip  = scrollRef.current;
       const offset = pill.offsetLeft - strip.clientWidth / 2 + pill.clientWidth / 2;
       strip.scrollTo({ left: offset, behavior: "smooth" });
