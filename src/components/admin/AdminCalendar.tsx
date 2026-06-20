@@ -853,10 +853,11 @@ const MobileDateStrip = ({
   const todayRef   = useRef<HTMLButtonElement>(null);
 
   // Build pool once — centred on today
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const anchor = new Date(selected);
+  anchor.setHours(0, 0, 0, 0);
+
   const pool: Date[] = Array.from({ length: STRIP_DAYS }, (_, i) =>
-    addDays(today, i - STRIP_OFFSET)
+    addDays(anchor, i - STRIP_OFFSET)
   );
 
   // Dot colours for a day — returns the dominant status colour
@@ -1173,12 +1174,12 @@ const AdminCalendar = () => {
 
   // Compute mobile strip range (35 days centred on today)
   const mobileRange = useCallback(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const start = addDays(today, -STRIP_OFFSET);
-    const end   = addDays(today, STRIP_DAYS - STRIP_OFFSET - 1);
+    const anchor = new Date(mobileDay);
+    anchor.setHours(0, 0, 0, 0);
+    const start = addDays(anchor, -STRIP_OFFSET);
+    const end   = addDays(anchor, STRIP_DAYS - STRIP_OFFSET - 1);
     return { rangeStart: fmt.date(start), rangeEnd: fmt.date(end) };
-  }, []);
+  }, [mobileDay]);
 
   const { rangeStart, rangeEnd, days = [], title = "" } = isMobile
     ? { ...mobileRange(), days: [], title: "" }
