@@ -186,7 +186,7 @@ const Index = () => {
         )}
 
         {/* ── COMPACT STICKY HEADER ──────────────────────────────────────── */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top,0px),12px)] pb-3 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top,0px),12px)] pb-3 border-b border-border/40 bg-background backdrop-blur-xl">
           <div className="flex items-center gap-3 min-w-0">
             {/* Logo / abbreviation */}
             <div
@@ -229,7 +229,7 @@ const Index = () => {
         </div>
 
         {/* ── STEP INDICATOR ─────────────────────────────────────────────── */}
-        <div className="flex-shrink-0 px-2 py-3 bg-background/60 backdrop-blur-xl border-b border-border/20">
+        <div className="flex-shrink-0 px-2 py-3 bg-background backdrop-blur-xl border-b border-border/20">
           <StepIndicator currentStep={step} />
         </div>
 
