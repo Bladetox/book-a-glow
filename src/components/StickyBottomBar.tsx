@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useViewportFix } from "@/hooks/useViewportFix";
 import { X, ChevronUp, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { PublicService } from "@/hooks/usePublicServices";
 
 interface StickyBottomBarProps {
@@ -46,6 +46,25 @@ const StickyBottomBar = ({
   const { keyboardOpen } = useViewportFix();
   const [cartExpanded, setCartExpanded] = useState(false);
 
+  // Write the bar's actual rendered height to --bottom-bar-height on :root
+  // so the scroll body in Book.tsx can dynamically pad itself to always
+  // clear the bar, regardless of cart expand/collapse state.
+  const barRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const update = () => {
+      document.documentElement.style.setProperty(
+        "--bottom-bar-height",
+        `${el.offsetHeight}px`
+      );
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // On Step 3 (details), hide the sticky bar while the keyboard is open so it
   // never floats in the middle of the screen over form fields.
   if (keyboardOpen && step === 2) {
@@ -57,6 +76,7 @@ const StickyBottomBar = ({
 
   return (
     <div
+      ref={barRef}
       className="sticky-bottom-bar"
       style={{
         transform: `translateY(calc(-1 * var(--keyboard-height, 0px)))`,
