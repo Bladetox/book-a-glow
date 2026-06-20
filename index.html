@@ -33,18 +33,21 @@
       theme-color MUST be declared before the script below that updates it,
       otherwise document.querySelector finds nothing and Safari falls back
       to its own default (black in dark mode) for the status bar.
-      Cache-bust: v2
+      Cache-bust: v3
     -->
     <meta name="theme-color" content="#ffffff" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <!--
-      black-translucent: status bar overlays the app content so the tenant
-      background colour shows behind the clock/signal/battery icons.
-      The booking header already uses pt-[max(env(safe-area-inset-top),12px)]
-      so content is never obscured by the status bar.
+      default: Safari renders the status bar as an opaque bar coloured by
+      theme-color. This is the correct mode for Safari browser (non-PWA) use
+      because it reliably follows the theme-color meta tag with no black flash.
+
+      black-translucent was removed because it composites a black overlay
+      against the app background — causing black bars on first load and when
+      BusinessThemeProvider updates the background on navigation.
     -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
     <!--
       Theme-color: set synchronously before React boots so the iOS/Android
