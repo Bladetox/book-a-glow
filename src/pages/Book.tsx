@@ -240,7 +240,7 @@ const Index = () => {
           AnimatePresence and stepVariants are completely unchanged.
         */}
         <div data-booking-scroll className="flex-1 overflow-y-auto scrollbar-hide">
-          <div className="w-full max-w-md mx-auto px-4 pt-4 pb-4">
+          <div className="w-full max-w-md mx-auto px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}>
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}
