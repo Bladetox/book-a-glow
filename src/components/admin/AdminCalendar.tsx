@@ -871,16 +871,16 @@ const MobileDateStrip = ({
     return "bg-emerald-400";
   };
 
-  // Scroll today pill into view on mount (centred)
-  useEffect(() => {
-    if (todayRef.current && scrollRef.current) {
-      const pill  = selectedRef.current;
-      const strip  = scrollRef.current;
-      const offset = pill.offsetLeft - strip.clientWidth / 2 + pill.clientWidth / 2;
-      strip.scrollTo({ left: offset, behavior: "smooth" });
-    }
-  }, []);
-
+// Scroll selected pill into view on mount (centred)
+useEffect(() => {
+  if (selectedRef.current && scrollRef.current) {
+    const pill  = selectedRef.current;
+    const strip = scrollRef.current;
+    const offset = pill.offsetLeft - strip.clientWidth / 2 + pill.clientWidth / 2;
+    strip.scrollTo({ left: offset, behavior: "smooth" });
+  }
+}, []);
+  
   return (
     <div
       ref={scrollRef}
