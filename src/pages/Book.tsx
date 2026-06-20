@@ -280,6 +280,7 @@ const Index = () => {
                       setStep(s);
                     }}
                     releaseHold={slotHold.releaseHold}
+                    onPayshapComplete={() => setShowSplash(true)}
                   />
                 )}
               </motion.div>
