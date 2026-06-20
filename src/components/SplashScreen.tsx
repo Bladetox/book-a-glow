@@ -110,12 +110,16 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   }
 
   return (
+    /*
+      overflow-hidden + fixed inset-0: the splash is locked to the viewport.
+      No scrolling allowed — all content must fit within the screen height.
+    */
     <div
-      className="fixed inset-0 z-[100] overflow-y-auto"
-      style={{ backgroundColor: bgColor, WebkitOverflowScrolling: "touch" }}
+      className="fixed inset-0 z-[100] overflow-hidden"
+      style={{ backgroundColor: bgColor }}
     >
       {/* Deep ambient gradient */}
-      <div className="fixed inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0" style={{
           background: [
             `radial-gradient(ellipse 90% 55% at 15% 5%, ${orbColor(orbAlpha * 0.45)} 0%, transparent 60%)`,
@@ -135,7 +139,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       </div>
 
       {/* Ambient orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {orbs.map(o => (
           <motion.div
             key={o.id}
@@ -154,7 +158,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       </div>
 
       {/* Star particles */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {particles.map(p => (
           <motion.div
             key={p.id}
@@ -166,116 +170,125 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         ))}
       </div>
 
-      {/* Scroll content — px-6 lives here, chips break out with negative margin */}
+      {/*
+        Content column.
+        - h-full fills the fixed container exactly.
+        - justify-between pushes the footer to the bottom and distributes
+          the remaining content evenly so nothing overflows.
+        - overflow-hidden prevents any child from causing scroll.
+      */}
       <motion.div
-        className="relative flex flex-col items-center w-full min-h-screen px-6"
+        className="relative flex flex-col items-center w-full h-full px-6 overflow-hidden"
         style={{
           paddingTop: "max(env(safe-area-inset-top, 0px), 56px)",
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 40px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 32px)",
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
       >
-        {/* Logo block */}
-        <motion.div
-          initial={{ scale: 0.82, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 160, damping: 24, delay: 0.18 }}
-          className="relative mb-10"
-        >
+        {/* Top block: logo + headings + divider */}
+        <div className="flex flex-col items-center">
+          {/* Logo block */}
           <motion.div
-            className="absolute rounded-[32px] inset-[-14px]"
-            style={{
-              background: `radial-gradient(circle, ${orbColor(0.18)} 0%, transparent 70%)`,
-              filter: "blur(20px)",
-            }}
-            animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.08, 1] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <div
-            className="relative w-[82px] h-[82px] rounded-[26px] overflow-hidden flex items-center justify-center"
-            style={{
-              background: config.logoUrl ? "transparent" : logoBg,
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              boxShadow: logoBoxShadow,
-            }}
+            initial={{ scale: 0.82, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 160, damping: 24, delay: 0.18 }}
+            className="relative mb-6"
           >
-            {config.logoUrl ? (
-              <img
-                src={config.logoUrl}
-                alt={config.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="font-display text-2xl font-bold tracking-tight" style={{ color: textPrimary }}>
-                {config.abbreviation}
-              </span>
-            )}
-            {!config.logoUrl && (
-              <span
-                className="absolute top-0 left-3 right-3 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}
-              />
-            )}
-          </div>
-        </motion.div>
+            <motion.div
+              className="absolute rounded-[32px] inset-[-14px]"
+              style={{
+                background: `radial-gradient(circle, ${orbColor(0.18)} 0%, transparent 70%)`,
+                filter: "blur(20px)",
+              }}
+              animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.08, 1] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <div
+              className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden flex items-center justify-center"
+              style={{
+                background: config.logoUrl ? "transparent" : logoBg,
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                boxShadow: logoBoxShadow,
+              }}
+            >
+              {config.logoUrl ? (
+                <img
+                  src={config.logoUrl}
+                  alt={config.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-display text-2xl font-bold tracking-tight" style={{ color: textPrimary }}>
+                  {config.abbreviation}
+                </span>
+              )}
+              {!config.logoUrl && (
+                <span
+                  className="absolute top-0 left-3 right-3 h-px"
+                  style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}
+                />
+              )}
+            </div>
+          </motion.div>
 
-        {/* Welcome label */}
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.55 }}
-          className="text-[9px] font-bold tracking-[0.5em] uppercase mb-3"
-          style={{ color: textSubtle }}
-        >
-          {config.splashWelcomeLabel}
-        </motion.p>
+          {/* Welcome label */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.55 }}
+            className="text-[9px] font-bold tracking-[0.5em] uppercase mb-2"
+            style={{ color: textSubtle }}
+          >
+            {config.splashWelcomeLabel}
+          </motion.p>
 
-        {/* Business name */}
-        <motion.h1
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.54, duration: 0.55 }}
-          className="font-display leading-none font-bold text-center tracking-tight mb-6"
-          style={brandNameStyle}
-        >
-          {config.name}
-        </motion.h1>
+          {/* Business name */}
+          <motion.h1
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.54, duration: 0.55 }}
+            className="font-display leading-none font-bold text-center tracking-tight mb-4"
+            style={brandNameStyle}
+          >
+            {config.name}
+          </motion.h1>
 
-        {/* Tagline 1 */}
-        <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.45 }}
-          className="text-[10px] font-semibold tracking-[0.35em] uppercase mb-2"
-          style={{ color: textSubtle }}
-        >
-          {config.splashTagline1}
-        </motion.p>
+          {/* Tagline 1 */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.45 }}
+            className="text-[10px] font-semibold tracking-[0.35em] uppercase mb-1"
+            style={{ color: textSubtle }}
+          >
+            {config.splashTagline1}
+          </motion.p>
 
-        {/* Tagline 2 */}
-        <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.82, duration: 0.45 }}
-          className="text-[10px] font-medium tracking-[0.3em] uppercase"
-          style={{ color: textFaint }}
-        >
-          {config.splashTagline2}
-        </motion.p>
+          {/* Tagline 2 */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.82, duration: 0.45 }}
+            className="text-[10px] font-medium tracking-[0.3em] uppercase"
+            style={{ color: textFaint }}
+          >
+            {config.splashTagline2}
+          </motion.p>
 
-        {/* Divider */}
-        <motion.div
-          initial={{ scaleX: 0, opacity: 0 }}
-          animate={{ scaleX: 1, opacity: 1 }}
-          transition={{ delay: 0.98, duration: 0.6, ease: "easeOut" }}
-          className="mt-8 mb-8"
-          style={{ width: 48, height: 1, background: dividerColor }}
-        />
+          {/* Divider */}
+          <motion.div
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ delay: 0.98, duration: 0.6, ease: "easeOut" }}
+            className="mt-6 mb-6"
+            style={{ width: 48, height: 1, background: dividerColor }}
+          />
+        </div>
 
-        {/* Referral section */}
+        {/* Middle block: referral chips */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -298,20 +311,17 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
 
           {/*
             Chip scroll row.
-            - mx-[-1.5rem] cancels the parent px-6 (1.5rem) on both sides so the
-              row is flush with the viewport edges.
-            - px-6 re-applies the same padding as first/last-chip inset so chips
-              align with the rest of the content when the row is not scrolled.
-            - The shake animation is on this same div; it never affects overflow
-              because no ancestor has overflow:hidden on the horizontal axis.
+            - mx-[-1.5rem] cancels the parent px-6 (1.5rem) on both sides so
+              the row is flush with the viewport edges.
+            - px-6 re-applies the same padding as first/last-chip inset.
           */}
           <motion.div
             className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
             style={{
-              marginLeft: "-2rem",
-              marginRight: "-2rem",
-              paddingLeft: "1rem",
-              paddingRight: "1rem",
+              marginLeft: "-1.5rem",
+              marginRight: "-1.5rem",
+              paddingLeft: "1.5rem",
+              paddingRight: "1.5rem",
             }}
             animate={attempted && !isSelected ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -346,53 +356,56 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           </motion.div>
         </motion.div>
 
-        {/* CTA */}
-        <motion.button
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.25, duration: 0.5 }}
-          whileHover={isSelected ? { scale: 1.012 } : {}}
-          whileTap={{ scale: isSelected ? 0.975 : 1 }}
-          onClick={handleCta}
-          className="mt-10 w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase relative overflow-hidden cursor-pointer transition-all duration-300"
-          style={{
-            background: isSelected ? ctaActiveBg  : ctaInactiveBg,
-            backdropFilter: "blur(28px)",
-            WebkitBackdropFilter: "blur(28px)",
-            border: isSelected ? `1px solid ${ctaBorderAct}` : `1px solid ${ctaBorderIna}`,
-            boxShadow: isSelected
-              ? `0 0 40px ${orbColor(0.04)}, 0 1px 0 ${orbColor(0.14)} inset`
-              : "none",
-            color: isSelected ? ctaTextAct : ctaTextIna,
-            cursor: isSelected ? "pointer" : "default",
-          }}
-        >
-          {isSelected && (
-            <motion.span
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: `linear-gradient(105deg, transparent 30%, ${orbColor(0.10)} 50%, transparent 70%)` }}
-              initial={{ x: "-100%" }}
-              whileHover={{ x: "200%" }}
-              transition={{ duration: 0.7, ease: "easeInOut" }}
-            />
-          )}
-          <span className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }} />
-          <span className="relative">{config.splashCtaLabel}</span>
-        </motion.button>
+        {/* Bottom block: CTA + footer — pushed to bottom with mt-auto */}
+        <div className="flex flex-col items-center w-full mt-auto">
+          {/* CTA */}
+          <motion.button
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.25, duration: 0.5 }}
+            whileHover={isSelected ? { scale: 1.012 } : {}}
+            whileTap={{ scale: isSelected ? 0.975 : 1 }}
+            onClick={handleCta}
+            className="mt-6 w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase relative overflow-hidden cursor-pointer transition-all duration-300"
+            style={{
+              background: isSelected ? ctaActiveBg  : ctaInactiveBg,
+              backdropFilter: "blur(28px)",
+              WebkitBackdropFilter: "blur(28px)",
+              border: isSelected ? `1px solid ${ctaBorderAct}` : `1px solid ${ctaBorderIna}`,
+              boxShadow: isSelected
+                ? `0 0 40px ${orbColor(0.04)}, 0 1px 0 ${orbColor(0.14)} inset`
+                : "none",
+              color: isSelected ? ctaTextAct : ctaTextIna,
+              cursor: isSelected ? "pointer" : "default",
+            }}
+          >
+            {isSelected && (
+              <motion.span
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: `linear-gradient(105deg, transparent 30%, ${orbColor(0.10)} 50%, transparent 70%)` }}
+                initial={{ x: "-100%" }}
+                whileHover={{ x: "200%" }}
+                transition={{ duration: 0.7, ease: "easeInOut" }}
+              />
+            )}
+            <span className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }} />
+            <span className="relative">{config.splashCtaLabel}</span>
+          </motion.button>
 
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.6, duration: 0.6 }}
-          className="mt-8 text-[8px] tracking-[0.2em]"
-          style={{ color: textFooter }}
-        >
-          Powered by{" "}
-          <a href="https://nextslot.co.za" target="_blank" rel="noopener noreferrer" style={{ color: textFooterLink, textDecoration: "none" }}>
-            nextslot.co.za
-          </a>
-        </motion.p>
+          {/* Footer */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.6, duration: 0.6 }}
+            className="mt-5 text-[8px] tracking-[0.2em]"
+            style={{ color: textFooter }}
+          >
+            Powered by{" "}
+            <a href="https://nextslot.co.za" target="_blank" rel="noopener noreferrer" style={{ color: textFooterLink, textDecoration: "none" }}>
+              nextslot.co.za
+            </a>
+          </motion.p>
+        </div>
       </motion.div>
     </div>
   );
