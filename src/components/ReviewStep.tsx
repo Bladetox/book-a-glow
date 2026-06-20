@@ -10,7 +10,6 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Sparkles, X, Loader2, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
-import PayshapProvisionalModal from "@/components/PayshapClaimSheet";
 import { toast } from "sonner";
 import type { PublicService } from "@/hooks/usePublicServices";
 import YocoImg from "@/assets/Yoco.svg";
@@ -81,7 +80,6 @@ function redirectToPayfast(payfastUrl: string, fields: Record<string, string>) {
 // Logo component — theme-adaptive via dark:invert
 function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?: string }) {
   const isPayshap = choice === "payshap_deposit" || choice === "payshap_full";
-  const isPayfast = !isPayshap;
 
   if (isPayshap) {
     return (
@@ -93,15 +91,14 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
     );
   }
 
-  // Yoco for non-payfast, Payfast when payfastMode is active — resolved in parent
   return null;
 }
 
-  const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapComplete }: ReviewStepProps) => {
+const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapComplete }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
-  const payfastMode = config.payfastMode; 
+  const payfastMode = config.payfastMode;
   const payshapEnabled = config.payshapEnabled;
   const { tenantId } = usePublicTenant();
   const { data: addonsConfig } = useSuggestedAddons();
@@ -109,24 +106,34 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
   const [showTerms, setShowTerms] = useState(false);
   const [phase, setPhase] = useState<SubmitPhase>("idle");
   const submitting = phase !== "idle";
-const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
 
-useEffect(() => {
-  if (config.payshapEnabled) {
-    setPaymentChoice(
-      config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
-    );
-  }
-}, [config.payshapEnabled, config.depositPercent]);  
-    
+  useEffect(() => {
+    if (config.payshapEnabled) {
+      setPaymentChoice(
+        config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
+      );
+    }
+  }, [config.payshapEnabled, config.depositPercent]);
+
   const [showPairWith, setShowPairWith] = useState(false);
-  const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
-  const [payshapBookingId, setPayshapBookingId] = useState<string | null>(null);
+  const [payshapSuccess, setPayshapSuccess] = useState(false);
+  const [payshapCountdown, setPayshapCountdown] = useState(5);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     setShowPairWith(true);
   }, []);
+
+  useEffect(() => {
+    if (!payshapSuccess) return;
+    if (payshapCountdown <= 0) {
+      onPayshapComplete();
+      return;
+    }
+    const t = setTimeout(() => setPayshapCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [payshapSuccess, payshapCountdown, onPayshapComplete]);
 
   const pairWithAddons = useMemo(() => {
     if (!addonsConfig || !allServices.length) return [];
@@ -188,7 +195,6 @@ useEffect(() => {
   const amountDueNow =
     paymentChoice === "full" || paymentChoice === "payshap_full" ? total : deposit;
 
-  // Resolve which logo src to show
   const gatewayLogoSrc = isPayshap
     ? PayshapImg
     : payfastMode
@@ -277,7 +283,6 @@ useEffect(() => {
     if (!bookingId) throw new Error("Booking creation returned no ID.");
     setPendingBookingId(bookingId);
 
-    // Persist the client's payment intent so the admin confirm can honour it.
     if (config.payshapEnabled) {
       const intent = paymentChoice === "payshap_full" ? "full" : "deposit";
       await supabase
@@ -304,10 +309,10 @@ useEffect(() => {
         } catch (emailErr) {
           console.warn("payshap_instructions email failed (non-fatal):", emailErr);
         }
-      
+
         await releaseHold();
-        setPayshapBookingId(bookingId);
-        setPayshapSheetOpen(true);
+        setPayshapCountdown(5);
+        setPayshapSuccess(true);
         setPhase("idle");
         return;
       }
@@ -554,47 +559,72 @@ useEffect(() => {
       )}
 
       {/* CTA */}
-      {isPayshap && bookingSubmitted ? (
-        <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 text-center flex flex-col gap-2">
-          <p className="text-sm font-bold text-foreground">Booking submitted</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Check your email for PayShap payment instructions. Your slot is provisionally held.
-          </p>
-        </div>
-      ) : (
-        <motion.button
-          onClick={handleConfirm}
-          disabled={submitting}
-          whileTap={submitting ? {} : { scale: 0.97 }}
-          className="btn-next w-full flex items-center justify-center gap-2.5"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
-            </>
-          ) : (
-            <>
-              <img
-                src={gatewayLogoSrc}
-                alt={gatewayLogoAlt}
-                className="h-4 w-auto object-contain dark:invert shrink-0"
-              />
-              <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
-            </>
-          )}
-        </motion.button>
-      )}
+      <motion.button
+        onClick={handleConfirm}
+        disabled={submitting}
+        whileTap={submitting ? {} : { scale: 0.97 }}
+        className="btn-next w-full flex items-center justify-center gap-2.5"
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
+          </>
+        ) : (
+          <>
+            <img
+              src={gatewayLogoSrc}
+              alt={gatewayLogoAlt}
+              className="h-4 w-auto object-contain dark:invert shrink-0"
+            />
+            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
+          </>
+        )}
+      </motion.button>
 
-      {/* PayShap provisional modal */}
-        <PayshapProvisionalModal
-          isOpen={payshapSheetOpen}
-          onClose={() => setPayshapSheetOpen(false)}
-          onComplete={() => {
-            setPayshapSheetOpen(false);
-            onPayshapComplete();
-          }}
-        />
+      {/* PayShap success overlay */}
+      <AnimatePresence>
+        {payshapSuccess && (
+          <motion.div
+            key="payshap-success"
+            className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-background px-6"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-primary"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="flex flex-col gap-2">
+                <p className="text-lg font-bold text-foreground">Booking submitted</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Check your email for PayShap payment instructions. Your slot is provisionally held.
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Redirecting in {payshapCountdown}s
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={onPayshapComplete}
+                className="btn-next w-full"
+              >
+                Done
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Pair it with sheet */}
       <AnimatePresence>
