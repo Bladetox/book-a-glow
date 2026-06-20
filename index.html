@@ -33,7 +33,7 @@
       theme-color MUST be declared before the script below that updates it,
       otherwise document.querySelector finds nothing and Safari falls back
       to its own default (black in dark mode) for the status bar.
-      Cache-bust: v3
+      Cache-bust: v4
     -->
     <meta name="theme-color" content="#ffffff" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -54,9 +54,10 @@
       status bar matches the tenant background from the very first frame.
 
       Resolution order:
-        1. localStorage ns_business_theme  — returning visitors get the exact
+        1. /admin path               — always #000000 (admin shell is fully black).
+        2. localStorage ns_business_theme  — returning visitors get the exact
            colour of their last-known tenant theme instantly, no flash.
-        2. Default #ffffff                 — first visit or unknown theme falls
+        3. Default #ffffff                 — first visit or unknown theme falls
            back to white (standard theme background), never black.
 
       BusinessThemeProvider updates this meta tag again after the Supabase
@@ -76,9 +77,10 @@
           'tattoo-artist': '#141414',
           'barber':        '#1e2530'
         };
+        var isAdmin = window.location.pathname.startsWith('/admin');
         var stored = '';
         try { stored = localStorage.getItem('ns_business_theme') || ''; } catch (e) {}
-        var color = THEME_BACKGROUNDS[stored] || '#ffffff';
+        var color = isAdmin ? '#000000' : (THEME_BACKGROUNDS[stored] || '#ffffff');
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', color);
       })();
