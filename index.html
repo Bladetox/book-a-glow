@@ -28,11 +28,52 @@
       })();
     </script>
 
+    <!--
+      Theme-color: set synchronously before React boots so the iOS/Android
+      status bar matches the tenant background from the very first frame.
+
+      Resolution order:
+        1. localStorage ns_business_theme  — returning visitors get the exact
+           colour of their last-known tenant theme instantly, no flash.
+        2. Default #ffffff                 — first visit or unknown theme falls
+           back to white (standard theme background), never black.
+
+      BusinessThemeProvider updates this meta tag again after the Supabase
+      fetch resolves, keeping it in sync for theme changes mid-session.
+
+      Marketing pages (/), Login, Onboarding: no tenant slug in localStorage
+      on first visit so they get #ffffff which is correct for those light pages.
+    -->
+    <script>
+      (function () {
+        var THEME_BACKGROUNDS = {
+          'standard':      '#ffffff',
+          'makeup-artist': '#ede4d4',
+          'beautician':    '#deebd4',
+          'lash-tech':     '#f0dde3',
+          'nail-tech':     '#f2dde8',
+          'tattoo-artist': '#141414',
+          'barber':        '#1e2530'
+        };
+        var stored = '';
+        try { stored = localStorage.getItem('ns_business_theme') || ''; } catch (e) {}
+        var color = THEME_BACKGROUNDS[stored] || '#ffffff';
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', color);
+      })();
+    </script>
+
     <!-- PWA / Theme -->
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <!--
+      black-translucent: status bar overlays the app content so the tenant
+      background colour shows behind the clock/signal/battery icons.
+      The booking header already uses pt-[max(env(safe-area-inset-top),12px)]
+      so content is never obscured by the status bar.
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <!-- Canonical -->
     <link rel="canonical" href="https://www.nextslot.co.za/" />
