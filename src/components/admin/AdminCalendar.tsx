@@ -850,7 +850,7 @@ const MobileDateStrip = ({
   onSelect: (d: Date) => void;
 }) => {
   const scrollRef  = useRef<HTMLDivElement>(null);
-  const todayRef   = useRef<HTMLButtonElement>(null);
+  const selectedRef = useRef<HTMLButtonElement>(null);
 
   // Build pool once — centred on today
   const anchor = new Date(selected);
@@ -877,7 +877,7 @@ const MobileDateStrip = ({
       const pill   = todayRef.current;
       const strip  = scrollRef.current;
       const offset = pill.offsetLeft - strip.clientWidth / 2 + pill.clientWidth / 2;
-      strip.scrollLeft = offset;
+      strip.scrollTo({ left: offset, behavior: "smooth" });
     }
   }, []);
 
@@ -896,7 +896,7 @@ const MobileDateStrip = ({
         return (
           <button
             key={dateKey}
-            ref={todayD ? todayRef : undefined}
+            ref={active ? selectedRef : undefined}
             onClick={() => onSelect(d)}
             className={`flex flex-col items-center shrink-0 w-11 py-2 rounded-2xl transition-all duration-150 ${
               active
