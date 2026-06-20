@@ -119,6 +119,7 @@
   }
 
   html {
+    background: #000;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* No overflow or height lock here -- marketing pages scroll naturally.
@@ -126,16 +127,23 @@
   }
 
   body {
+    /* @apply bg-background resolves to white from :root on marketing pages
+       because .dark-brand lives on a child div, not on body itself.
+       The !important below ensures body stays black regardless of what
+       Tailwind resolves --background to at this level. */
     @apply bg-background text-foreground font-body;
+    background-color: #000 !important;
     user-select: none;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* #root fills the full viewport so no gap appears below short pages
-     or in the browser chrome overscroll area. */
+  /* #root must fill the full viewport on marketing pages so no white gap
+     appears below short pages or in the browser chrome overscroll area.
+     min-height (not height) is used so the page can still grow with content. */
   #root {
     width: 100%;
     min-height: 100dvh;
+    background: #000;
   }
 
   input,
@@ -528,7 +536,7 @@ html:not(.dark) .tenant-logo-img {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     box-shadow: 0 1px 0 hsl(var(--glass-highlight) / 0.06) inset;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2s, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .selection-circle.checked {
