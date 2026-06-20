@@ -30,33 +30,35 @@ import { toast } from "sonner";
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
 
-// ── FIX 4: All 8 CHECK-constraint statuses covered ───────────────────────────
 const statusDisplayLabel: Record<BookingRow["status"], string> = {
-  pending:         "pending",
-  pending_payment: "awaiting payment",
-  confirmed:       "confirmed",
-  in_progress:     "in progress",
-  completed:       "serviced",
-  complete:        "serviced",
-  cancelled:       "cancelled",
-  no_show:         "no show",
+  pending:          "pending",
+  pending_payment:  "awaiting payment",
+  payment_claimed:  "proof submitted",
+  confirmed:        "confirmed",
+  in_progress:      "in progress",
+  completed:        "serviced",
+  complete:         "serviced",
+  cancelled:        "cancelled",
+  no_show:          "no show",
 };
 
 const statusBorderAccent: Record<BookingRow["status"], string> = {
-  pending:         "border-l-2 border-l-amber-500/50",
-  pending_payment: "border-l-2 border-l-orange-500/40",
-  confirmed:       "border-l-2 border-l-emerald-500/30",
-  in_progress:     "border-l-2 border-l-sky-400/40",
-  completed:       "border-l-2 border-l-sky-500/20",
-  complete:        "border-l-2 border-l-sky-500/20",
-  cancelled:       "border-l-2 border-l-red-500/20",
-  no_show:         "border-l-2 border-l-red-400/30",
+  pending:          "border-l-2 border-l-amber-500/50",
+  pending_payment:  "border-l-2 border-l-orange-500/40",
+  payment_claimed:  "border-l-2 border-l-sky-400/50",
+  confirmed:        "border-l-2 border-l-emerald-500/30",
+  in_progress:      "border-l-2 border-l-sky-400/40",
+  completed:        "border-l-2 border-l-sky-500/20",
+  complete:         "border-l-2 border-l-sky-500/20",
+  cancelled:        "border-l-2 border-l-red-500/20",
+  no_show:          "border-l-2 border-l-red-400/30",
 };
 
 const statusTagColor = (
   status: BookingRow["status"]
 ): "amber" | "emerald" | "sky" | "red" | "default" => {
   if (status === "pending" || status === "pending_payment") return "amber";
+  if (status === "payment_claimed")                         return "sky";
   if (status === "confirmed")                               return "emerald";
   if (status === "completed" || status === "complete" || status === "in_progress") return "sky";
   if (status === "cancelled" || status === "no_show")       return "red";
@@ -83,7 +85,7 @@ const toWhatsAppHref = (phone: string, clientName: string, date: string, time: s
 const toWhatsAppSupportHref = (phone: string, clientName: string, serviceNames: string) => {
   const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
   const text = encodeURIComponent(
-    `Hi ${clientName} 👋\n\nI noticed you tried to make a booking for ${serviceNames}, but it looks like it wasn't completed. Did you experience any challenges?\n\nPlease let me know and I'll be happy to assist! 😊`
+    `Hi ${clientName} \u{1F44B}\n\nI noticed you tried to make a booking for ${serviceNames}, but it looks like it wasn't completed. Did you experience any challenges?\n\nPlease let me know and I'll be happy to assist! \u{1F60A}`
   );
   return `https://wa.me/${digits}?text=${text}`;
 };
@@ -100,7 +102,7 @@ const toWhatsAppBalanceHref = (
   const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
   const isPhenomeBeauty = tenantId === "phenomebeauty";
   const text = isPhenomeBeauty
-    ? `Hi ${clientName} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`
+    ? `Hi ${clientName} \u{1F49B}\n\nThank you so much for your session today \u2014 it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! \u{1F338}\n\u2013 Phenome Beauty`
     : `Hi ${clientName}, your balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is ready to settle online:\n\n${paymentUrl}`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 };
@@ -267,7 +269,7 @@ const RescheduleModal = ({
             <div className="flex items-center justify-between px-5 pt-5 pb-3 sticky top-0 bg-[#0f0f0f] z-10">
               <div>
                 <p className="text-[10px] tracking-[0.14em] uppercase text-white/30">Reschedule</p>
-                <p className="text-sm font-semibold text-white/85">{booking.client} — {booking.service}</p>
+                <p className="text-sm font-semibold text-white/85">{booking.client} \u2014 {booking.service}</p>
               </div>
               <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors">
                 <X className="w-3.5 h-3.5" />
@@ -381,7 +383,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
   const [rescheduleTime, setRescheduleTime] = useState<string | null>(null);
   const [requestingBalanceId, setRequestingBalanceId] = useState<string | null>(null);
-  // Tracks which booking is generating a Yoco link for the WhatsApp balance button
   const [sendingWhatsAppBalanceId, setSendingWhatsAppBalanceId] = useState<string | null>(null);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -488,9 +489,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     return () => { cancelled = true; };
   }, [rescheduleDate, reschedulingBooking, tenantId]);
 
-  // ── FIX 5: Completed tab includes both `completed` and `complete`;
-  //           Cancelled tab includes `cancelled` and `no_show`;
-  //           Pending includes `pending` and `pending_payment`.
+  // payment_claimed is intentionally excluded from Pending -- it lives in its own review state.
   const filtered = useMemo(() => {
     return bookings.filter(b => {
       const matchesSearch = !searchQuery.trim() ||
@@ -498,9 +497,9 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (b.ref ?? "").toLowerCase().includes(searchQuery.toLowerCase());
 
-      if (activeFilter === "All")      return matchesSearch;
-      if (activeFilter === "Today")    return b.date === todayStr && matchesSearch;
-      if (activeFilter === "Pending")  return (b.status === "pending" || b.status === "pending_payment") && matchesSearch;
+      if (activeFilter === "All")       return matchesSearch;
+      if (activeFilter === "Today")     return b.date === todayStr && matchesSearch;
+      if (activeFilter === "Pending")   return (b.status === "pending" || b.status === "pending_payment") && matchesSearch;
       if (activeFilter === "Confirmed") return b.status === "confirmed" && matchesSearch;
       if (activeFilter === "Completed") return (b.status === "completed" || b.status === "complete" || b.status === "in_progress") && matchesSearch;
       if (activeFilter === "Cancelled") return (b.status === "cancelled" || b.status === "no_show") && matchesSearch;
@@ -511,6 +510,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const counts: Record<FilterType, number> = {
     All:       bookings.length,
     Today:     bookings.filter(b => b.date === todayStr).length,
+    // payment_claimed intentionally excluded from Pending count
     Pending:   bookings.filter(b => b.status === "pending" || b.status === "pending_payment").length,
     Confirmed: bookings.filter(b => b.status === "confirmed").length,
     Completed: bookings.filter(b => b.status === "completed" || b.status === "complete" || b.status === "in_progress").length,
@@ -550,318 +550,395 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     try {
       await deleteBooking.mutateAsync(id);
       toast.success("Booking deleted");
-      if (expandedId === id) setExpandedId(null);
+      setExpandedId(null);
     } catch (e: any) {
       toast.error(e.message || "Failed to delete");
     }
   };
 
-  const startInlineEdit = (b: BookingRow) => {
-    setEditingInlineId(b.id);
-    setEditDraft({ ...b });
-  };
-
-  // ── Address routing: call_out_address for call-out bookings,
-  //    guest_address for in-studio guest bookings.
-  const saveInlineEdit = async () => {
-    if (!editingInlineId || !editDraft) return;
-
-    const original = bookings.find(b => b.id === editingInlineId);
-    const isCallOut = original?.isCallOut ?? false;
-
-    try {
-      const updates: Record<string, unknown> = {
-        notes:        editDraft.notes,
-        client_notes: editDraft.clientNotes,
-        staff_notes:  editDraft.staffNotes,
-        client_name:  editDraft.client,
-        client_phone: editDraft.phone,
-        client_email: editDraft.email,
-        ...(isCallOut
-          ? { call_out_address: editDraft.address }
-          : { guest_address: editDraft.address }
-        ),
-      };
-      await updateFields.mutateAsync({ bookingId: editingInlineId, updates });
-      if (editDraft.status) {
-        await updateStatus.mutateAsync({ bookingId: editingInlineId, status: editDraft.status });
-      }
-      toast.success("Booking updated");
-      setEditingInlineId(null);
-      setEditDraft({});
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save");
-    }
-  };
-
-  const cancelInlineEdit = () => { setEditingInlineId(null); setEditDraft({}); };
-  
-  // ── Build the PayShap balance URL for a given booking ─────────────────────
-const buildPayshapBalanceUrl = (b: BookingRow) =>
-  `${window.location.origin}/pay/${b.id}?intent=balance`;
-
-  const handleRequestBalance = async (b: BookingRow) => {
-    if (requestingBalanceId === b.id) return;
-    setRequestingBalanceId(b.id);
-    try {
-      const clientEmail = b.email;
-      const balance = b.balance;
-      if (!clientEmail) throw new Error("No client email on record for this booking");
-      if (!balance || balance <= 0) throw new Error("No outstanding balance");
-
-      // ── PayShap path: skip Yoco, use the /pay/:bookingId page ─────────────
-    if (isPayshap) {
-      const paymentUrl = buildPayshapBalanceUrl(b);
-      const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
-        body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
-      });
-      if (emailErr) console.warn("Email send warning:", emailErr.message);
-      toast.success(`Balance request sent to ${clientEmail}`);
-      return;
-    }
-
-      // ── Yoco path (default) ───────────────────────────────────────────────
-    const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-      body: {
-        amount: Math.round(balance * 100),
-        currency: "ZAR",
-        tenant_id: b.tenantId,
-        booking_id: b.id,
-        payment_type: "balance",
-        success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
-        cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
-      },
-    });
-    if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
-    if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
-      throw new Error(checkoutData?.error || "Failed to create payment link");
-    }
-    const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
-    await supabase
-      .from("bookings")
-      .update({
-        yoco_final_checkout_id: checkoutData.checkoutId ?? null,
-        yoco_final_link: paymentUrl,
-      })
-      .eq("id", b.id);
-    const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
-      body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
-    });
-    if (emailErr) console.warn("Email send warning:", emailErr.message);
-    toast.success(`Balance request sent to ${clientEmail}`);
-  } catch (e: any) {
-    toast.error(e.message || "Failed to send balance request");
-  } finally {
-    setRequestingBalanceId(null);
-  }
-  };
-
-  // ── Generate (or reuse) a payment link and open it in WhatsApp.
-const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
-  e.stopPropagation();
-  if (sendingWhatsAppBalanceId === b.id) return;
-  if (!b.phone) return;
-  if (!b.balance || b.balance <= 0) return;
-
-  // ── PayShap path: build the /pay link instantly, no Yoco call needed ─────
-  if (isPayshap) {
-    const paymentUrl = buildPayshapBalanceUrl(b);
-    window.open(
-      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
-      "_blank",
-      "noopener,noreferrer",
-    );
-    return;
-  }
-
-  // ── Yoco path: reuse existing link or generate a new one ─────────────────
-  if (b.yocoFinalLink) {
-    window.open(
-      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
-      "_blank",
-      "noopener,noreferrer",
-    );
-    return;
-  }
-
-  setSendingWhatsAppBalanceId(b.id);
-  try {
-    const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-      body: {
-        amount: Math.round(b.balance * 100),
-        currency: "ZAR",
-        tenant_id: b.tenantId,
-        booking_id: b.id,
-        payment_type: "balance",
-        success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
-        cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
-      },
-    });
-    if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
-    if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
-      throw new Error(checkoutData?.error || "Failed to create payment link");
-    }
-    const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
-    await supabase
-      .from("bookings")
-      .update({
-        yoco_final_checkout_id: checkoutData.checkoutId ?? null,
-        yoco_final_link: paymentUrl,
-      })
-      .eq("id", b.id);
-    queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
-    window.open(
-      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
-      "_blank",
-      "noopener,noreferrer",
-    );
-  } catch (err: any) {
-    toast.error(err.message || "Failed to generate payment link");
-  } finally {
-    setSendingWhatsAppBalanceId(null);
-  }
-  };
-
-  const handleMarkFullyPaid = async (b: BookingRow) => {
-    if (markingPaidId === b.id) return;
-    setMarkingPaidId(b.id);
-    try {
-      await updateFields.mutateAsync({
-        bookingId: b.id,
-        updates: {
-          balance_due: 0,
-          deposit_paid: true,
-          full_payment_received: true,
-          final_payment_paid: true,
-        },
-      });
-      toast.success(`${b.client}'s booking marked as fully paid`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to mark as paid");
-    } finally {
-      setMarkingPaidId(null);
-    }
-  };
-
-  const handleMarkServiced = async (b: BookingRow) => {
-    if (markingServicedId === b.id) return;
-    setMarkingServicedId(b.id);
-    try {
-      await updateFields.mutateAsync({
-        bookingId: b.id,
-        updates: { completed_at: new Date().toISOString() },
-      });
-      await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
-      toast.success(`${b.client}'s appointment marked as serviced`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to mark as serviced");
-    } finally {
-      setMarkingServicedId(null);
-    }
-  };
-
-  // ── FIX: showRequestBalance excludes both `completed` and `complete` statuses
   const showRequestBalance = (b: BookingRow) =>
     b.balance > 0 &&
     b.status !== "cancelled" &&
     b.status !== "completed" &&
     b.status !== "complete" &&
+    b.status !== "payment_claimed" &&
     !b.fullPaymentReceived;
 
-  // ── Invalidate bookings cache after a service is added so that
-  //    the balance dialog reflects the new total immediately.
-  const handleServiceAdded = () => {
-    queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
-      </div>
-    );
-  }
-
-  const totalRevenue = bookings
-    .filter(b => b.status !== "cancelled" && b.status !== "no_show")
-    .reduce((a, b) => a + b.total, 0);
-  const totalOutstanding = bookings
-    .filter(b => b.status !== "cancelled" && b.status !== "no_show")
-    .reduce((a, b) => a + b.balance, 0);
-  const dueToday = bookings
-    .filter(b =>
-      b.date === todayStr &&
-      b.status !== "cancelled" &&
-      b.status !== "no_show" &&
-      b.status !== "completed" &&
-      b.status !== "complete" &&
-      b.balance > 0 &&
-      !b.fullPaymentReceived
-    )
-    .reduce((a, b) => a + b.balance, 0);
-
   return (
-    <div className="flex flex-col gap-8 pb-12">
+    <div className="flex flex-col gap-4">
+      <AdminPageHeader title="Bookings" />
 
-      <ConfirmDialog
-        open={!!confirmDelete}
-        title="Delete booking?"
-        description={confirmDelete ? `This will permanently delete ${confirmDelete.client}'s booking for ${confirmDelete.service} on ${confirmDelete.date}. This cannot be undone.` : ""}
-        confirmLabel="Delete"
-        confirmClass="bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-        onConfirm={() => { if (confirmDelete) handleDelete(confirmDelete.id); setConfirmDelete(null); }}
-        onCancel={() => setConfirmDelete(null)}
-      />
-      <ConfirmDialog
-        open={!!confirmCancel}
-        title="Cancel booking?"
-        description={confirmCancel ? `Are you sure you want to cancel ${confirmCancel.client}'s booking for ${confirmCancel.service}?` : ""}
-        confirmLabel="Yes, Cancel"
-        confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
-        onConfirm={() => { if (confirmCancel) handleStatusChange(confirmCancel.id, "cancelled"); setConfirmCancel(null); }}
-        onCancel={() => setConfirmCancel(null)}
-      />
-      <ConfirmDialog
-        open={!!confirmConfirm}
-        title="Confirm booking?"
-        description={confirmConfirm ? `Mark ${confirmConfirm.client}'s booking for ${confirmConfirm.service} as confirmed?` : ""}
-        confirmLabel="Confirm"
-        confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
-        onConfirm={() => { if (confirmConfirm) handleStatusChange(confirmConfirm.id, "confirmed"); setConfirmConfirm(null); }}
-        onCancel={() => setConfirmConfirm(null)}
-      />
-      <ConfirmDialog
-        open={!!confirmMarkPaid}
-        title="Mark as fully paid?"
-        description={confirmMarkPaid ? `This will clear the outstanding balance of R${confirmMarkPaid.balance} for ${confirmMarkPaid.client}. The appointment status is unchanged.` : ""}
-        confirmLabel="Mark Paid"
-        confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
-        onConfirm={() => { if (confirmMarkPaid) handleMarkFullyPaid(confirmMarkPaid); setConfirmMarkPaid(null); }}
-        onCancel={() => setConfirmMarkPaid(null)}
-      />
-      <ConfirmDialog
-        open={!!confirmMarkServiced}
-        title="Mark as serviced?"
-        description={confirmMarkServiced ? `This records that ${confirmMarkServiced.client}'s appointment was attended and the service was delivered.` : ""}
-        confirmLabel="Mark Serviced"
-        confirmClass="bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/30"
-        onConfirm={() => { if (confirmMarkServiced) handleMarkServiced(confirmMarkServiced); setConfirmMarkServiced(null); }}
-        onCancel={() => setConfirmMarkServiced(null)}
-      />
-      <ConfirmDialog
-        open={!!confirmRequestBalance}
-        title="Send payment request?"
-        description={confirmRequestBalance
-        ? isPayshap
-           ? `This will send a PayShap payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.client} (${confirmRequestBalance.email}).`
-           : `This will send a final payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.client} (${confirmRequestBalance.email}).`
-        : ""}
-        confirmLabel="Send Request"
-        confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
-        onConfirm={() => { if (confirmRequestBalance) handleRequestBalance(confirmRequestBalance); setConfirmRequestBalance(null); }}
-        onCancel={() => setConfirmRequestBalance(null)}
-      />
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+        <input
+          type="text"
+          placeholder="Search by client, service or ref\u2026"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.03] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/[0.16] transition-colors"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
 
+      {/* Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {filters.map(f => (
+          <button
+            key={f}
+            onClick={() => setActiveFilter(f)}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              activeFilter === f
+                ? "bg-white/[0.10] text-white border border-white/[0.16]"
+                : "text-white/40 border border-white/[0.06] hover:text-white/60 hover:border-white/[0.10]"
+            }`}
+          >
+            {f}
+            {counts[f] > 0 && (
+              <span className={`ml-1.5 text-[10px] ${
+                activeFilter === f ? "text-white/70" : "text-white/25"
+              }`}>
+                {counts[f]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Booking list */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<CalendarCheck className="w-5 h-5" />}
+          title="No bookings"
+          description={searchQuery ? "No bookings match your search." : "No bookings in this category yet."}
+        />
+      ) : (
+        <div className="flex flex-col gap-2">
+          <AnimatePresence initial={false}>
+            {filtered.map(b => {
+              const isExpanded = expandedId === b.id;
+              const isEditing  = editingInlineId === b.id;
+              const blockInfo  = blockStatusMap[b.id];
+
+              return (
+                <motion.div
+                  key={b.id}
+                  layout
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.18 }}
+                  className={`rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden ${
+                    statusBorderAccent[b.status]
+                  }`}
+                >
+                  {/* Card header -- always visible */}
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : b.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-white/85 truncate">{b.client}</span>
+                        <AdminTag color={statusTagColor(b.status)} label={statusDisplayLabel[b.status]} />
+                        {b.depositPaid && !b.fullPaymentReceived && (
+                          <PaymentTag type="deposit" />
+                        )}
+                        {b.fullPaymentReceived && (
+                          <PaymentTag type="paid" />
+                        )}
+                      </div>
+                      <p className="text-xs text-white/40 truncate mt-0.5">
+                        {b.service} \u00b7 {b.date} \u00b7 {b.time}
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-white/60">R{b.total.toFixed(2)}</span>
+                      {isExpanded
+                        ? <ChevronUp className="w-3.5 h-3.5 text-white/30" />
+                        : <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                      }
+                    </div>
+                  </button>
+
+                  {/* Expanded detail */}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-4 pt-1 border-t border-white/[0.06] flex flex-col gap-3">
+
+                          {/* Detail rows */}
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                            <div className="flex items-center gap-1.5 text-white/40">
+                              <Tag className="w-3 h-3 shrink-0" />
+                              <span className="text-white/60 font-mono">{b.ref}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-white/40">
+                              <Clock className="w-3 h-3 shrink-0" />
+                              <span>{b.time}{b.endTime ? ` \u2013 ${b.endTime}` : ""}</span>
+                            </div>
+                            {b.phone && (
+                              <div className="flex items-center gap-1.5 text-white/40">
+                                <Phone className="w-3 h-3 shrink-0" />
+                                <span>{b.phone}</span>
+                              </div>
+                            )}
+                            {b.email && (
+                              <div className="flex items-center gap-1.5 text-white/40 col-span-2">
+                                <Mail className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{b.email}</span>
+                              </div>
+                            )}
+                            {b.isCallOut && b.address && (
+                              <div className="flex items-start gap-1.5 text-white/40 col-span-2">
+                                <Car className="w-3 h-3 shrink-0 mt-0.5" />
+                                <span>{b.address}</span>
+                              </div>
+                            )}
+                            {b.clientNotes && (
+                              <div className="flex items-start gap-1.5 text-white/40 col-span-2">
+                                <MessageSquare className="w-3 h-3 shrink-0 mt-0.5" />
+                                <span className="italic">{b.clientNotes}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Payment summary */}
+                          <div className="flex items-center gap-3 text-xs text-white/40 border-t border-white/[0.06] pt-2">
+                            <span>Total <span className="text-white/70 font-semibold">R{b.total.toFixed(2)}</span></span>
+                            {b.deposit > 0 && (
+                              <span>Deposit <span className={b.depositPaid ? "text-emerald-400 font-semibold" : "text-white/70 font-semibold"}>
+                                R{b.deposit.toFixed(2)}{b.depositPaid ? " \u2713" : ""}
+                              </span></span>
+                            )}
+                            {b.balance > 0 && (
+                              <span>Balance <span className="text-white/70 font-semibold">R{b.balance.toFixed(2)}</span></span>
+                            )}
+                          </div>
+
+                          {/* Inline editing */}
+                          {isEditing ? (
+                            <div className="flex flex-col gap-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <p className="text-[10px] text-white/30 mb-1">Staff notes</p>
+                                  <textarea
+                                    rows={2}
+                                    value={editDraft.staffNotes ?? b.staffNotes}
+                                    onChange={e => setEditDraft(d => ({ ...d, staffNotes: e.target.value }))}
+                                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/70 px-2.5 py-2 resize-none focus:outline-none focus:border-white/[0.16]"
+                                  />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-white/30 mb-1">Notes</p>
+                                  <textarea
+                                    rows={2}
+                                    value={editDraft.notes ?? b.notes}
+                                    onChange={e => setEditDraft(d => ({ ...d, notes: e.target.value }))}
+                                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/70 px-2.5 py-2 resize-none focus:outline-none focus:border-white/[0.16]"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <SaveButton
+                                  label="Save"
+                                  icon={<Check className="w-3 h-3" />}
+                                  onClick={async () => {
+                                    try {
+                                      await updateFields.mutateAsync({
+                                        bookingId: b.id,
+                                        updates: {
+                                          staff_notes: editDraft.staffNotes ?? b.staffNotes,
+                                          notes:       editDraft.notes      ?? b.notes,
+                                        },
+                                      });
+                                      toast.success("Notes saved");
+                                      setEditingInlineId(null);
+                                      setEditDraft({});
+                                    } catch (e: any) {
+                                      toast.error(e.message || "Save failed");
+                                    }
+                                  }}
+                                />
+                                <SaveButton
+                                  label="Cancel"
+                                  variant="secondary"
+                                  onClick={() => { setEditingInlineId(null); setEditDraft({}); }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            b.staffNotes && (
+                              <div className="flex items-start gap-1.5 text-xs text-white/40">
+                                <Edit3 className="w-3 h-3 shrink-0 mt-0.5" />
+                                <span className="italic">{b.staffNotes}</span>
+                              </div>
+                            )
+                          )}
+
+                          {/* Primary CTA: only for pending/pending_payment, not payment_claimed */}
+                          {(b.status === "pending" || b.status === "pending_payment") && (
+                            <SaveButton
+                              label="Confirm Booking"
+                              icon={<CalendarCheck className="w-3 h-3" />}
+                              onClick={() => setConfirmConfirm(b)}
+                            />
+                          )}
+
+                          {/* proof submitted info banner for payment_claimed */}
+                          {b.status === "payment_claimed" && (
+                            <div className="flex items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-3 py-2">
+                              <Sparkles className="w-3 h-3 text-sky-400 shrink-0" />
+                              <p className="text-[11px] text-sky-400/80">
+                                Proof of payment submitted. Review it in the Payshap queue above.
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Action row */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Reschedule */}
+                            <button
+                              onClick={() => { setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+                            >
+                              <CalendarClock className="w-3 h-3" /> Reschedule
+                            </button>
+
+                            {/* Edit notes */}
+                            {!isEditing && (
+                              <button
+                                onClick={() => { setEditingInlineId(b.id); setEditDraft({}); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+                              >
+                                <Edit3 className="w-3 h-3" /> Notes
+                              </button>
+                            )}
+
+                            {/* Add service */}
+                            <button
+                              onClick={() => setAddServiceBooking(b)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+                            >
+                              <PlusCircle className="w-3 h-3" /> Add Service
+                            </button>
+
+                            {/* WhatsApp reminder */}
+                            {b.phone && (
+                              <a
+                                href={toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+                              >
+                                <WhatsAppIcon className="w-3 h-3" /> Remind
+                              </a>
+                            )}
+
+                            {/* WhatsApp support (pending_payment / cancelled) */}
+                            {(b.status === "pending_payment" || b.status === "cancelled") && b.phone && (
+                              <a
+                                href={toWhatsAppSupportHref(b.phone, b.client, b.service)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] text-xs text-amber-400/70 hover:text-amber-400 hover:bg-amber-500/[0.08] transition-colors"
+                              >
+                                <WhatsAppIcon className="w-3 h-3" /> Support
+                              </a>
+                            )}
+
+                            {/* Request balance (Yoco / PayShap) */}
+                            {showRequestBalance(b) && (
+                              isPayshap ? (
+                                <button
+                                  onClick={() => setConfirmRequestBalance(b)}
+                                  disabled={requestingBalanceId === b.id}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.06] disabled:opacity-40 transition-colors"
+                                >
+                                  {requestingBalanceId === b.id
+                                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                                    : <CircleDollarSign className="w-3 h-3" />
+                                  }
+                                  Request Balance
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmRequestBalance(b)}
+                                  disabled={sendingWhatsAppBalanceId === b.id}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.06] disabled:opacity-40 transition-colors"
+                                >
+                                  {sendingWhatsAppBalanceId === b.id
+                                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                                    : <CircleDollarSign className="w-3 h-3" />
+                                  }
+                                  Request Balance
+                                </button>
+                              )
+                            )}
+
+                            {/* Mark paid */}
+                            {!b.fullPaymentReceived && b.status === "confirmed" && (
+                              <button
+                                onClick={() => setConfirmMarkPaid(b)}
+                                disabled={markingPaidId === b.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] text-xs text-emerald-400/70 hover:text-emerald-400 hover:bg-emerald-500/[0.08] disabled:opacity-40 transition-colors"
+                              >
+                                {markingPaidId === b.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                Mark Paid
+                              </button>
+                            )}
+
+                            {/* Mark serviced */}
+                            {(b.status === "confirmed" || b.status === "in_progress") && (
+                              <button
+                                onClick={() => setConfirmMarkServiced(b)}
+                                disabled={markingServicedId === b.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-sky-500/20 bg-sky-500/[0.04] text-xs text-sky-400/70 hover:text-sky-400 hover:bg-sky-500/[0.08] disabled:opacity-40 transition-colors"
+                              >
+                                {markingServicedId === b.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                Mark Serviced
+                              </button>
+                            )}
+
+                            <div className="ml-auto">
+                              <OverflowMenu
+                                isClientBlocked={blockInfo?.isBlocked ?? false}
+                                isCancelled={b.status === "cancelled"}
+                                onBlock={() => setBlockModalBooking(b)}
+                                onCancel={() => setConfirmCancel(b)}
+                                onDelete={() => setConfirmDelete(b)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Reschedule modal */}
       <RescheduleModal
         booking={reschedulingBooking}
         rescheduleDate={rescheduleDate}
@@ -871,556 +948,165 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
         onDateSelect={setRescheduleDate}
         onTimeSelect={setRescheduleTime}
         onConfirm={handleReschedule}
-        onClose={() => { setReschedulingBooking(null); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
+        onClose={() => { setReschedulingBooking(null); setRescheduleDate(undefined); setRescheduleTime(null); }}
       />
 
-      <AddServiceModal
-        bookingId={addServiceBooking?.id ?? null}
-        clientName={addServiceBooking?.client ?? ""}
-        onClose={() => setAddServiceBooking(null)}
-        onAdded={handleServiceAdded}
+      {/* Confirm dialogs */}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete booking?"
+        description={`This will permanently delete the booking for ${confirmDelete?.client}. This cannot be undone.`}
+        confirmLabel="Delete"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+        onConfirm={() => { if (confirmDelete) { handleDelete(confirmDelete.id); setConfirmDelete(null); } }}
+        onCancel={() => setConfirmDelete(null)}
       />
-
-      <BlockClientModal
-        open={!!blockModalBooking}
-        clientName={blockModalBooking?.client ?? ""}
-        clientEmail={blockModalBooking?.email ?? ""}
-        clientPhone={blockModalBooking?.phone ?? ""}
-        clientAddress={blockModalBooking?.address ?? ""}
-        existingBlockId={blockModalBooking ? (blockStatusMap[blockModalBooking.id]?.blockId ?? null) : null}
-        onClose={() => setBlockModalBooking(null)}
-        onSuccess={(nowBlocked) => {
-          if (blockModalBooking) {
-            setBlockStatusMap(prev => ({
-              ...prev,
-              [blockModalBooking.id]: { blockId: nowBlocked ? "pending-refresh" : null, isBlocked: nowBlocked },
-            }));
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancel booking?"
+        description={`This will cancel the booking for ${confirmCancel?.client}.`}
+        confirmLabel="Cancel Booking"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+        onConfirm={() => { if (confirmCancel) { handleStatusChange(confirmCancel.id, "cancelled"); setConfirmCancel(null); } }}
+        onCancel={() => setConfirmCancel(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmConfirm}
+        title="Confirm booking?"
+        description={`Confirm the booking for ${confirmConfirm?.client}?`}
+        confirmLabel="Confirm"
+        confirmClass="bg-emerald-600 hover:bg-emerald-700 text-white"
+        onConfirm={() => { if (confirmConfirm) { handleStatusChange(confirmConfirm.id, "confirmed"); setConfirmConfirm(null); } }}
+        onCancel={() => setConfirmConfirm(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmMarkPaid}
+        title="Mark as fully paid?"
+        description={`Mark ${confirmMarkPaid?.client}'s booking as fully paid?`}
+        confirmLabel="Mark Paid"
+        confirmClass="bg-emerald-600 hover:bg-emerald-700 text-white"
+        onConfirm={async () => {
+          if (!confirmMarkPaid) return;
+          setMarkingPaidId(confirmMarkPaid.id);
+          setConfirmMarkPaid(null);
+          try {
+            await updateFields.mutateAsync({
+              bookingId: confirmMarkPaid.id,
+              updates: { full_payment_received: true, final_payment_paid: true },
+            });
+            toast.success("Marked as paid");
+          } catch (e: any) {
+            toast.error(e.message || "Failed");
+          } finally {
+            setMarkingPaidId(null);
           }
         }}
+        onCancel={() => setConfirmMarkPaid(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmMarkServiced}
+        title="Mark as serviced?"
+        description={`Mark ${confirmMarkServiced?.client}'s booking as completed?`}
+        confirmLabel="Mark Serviced"
+        confirmClass="bg-sky-600 hover:bg-sky-700 text-white"
+        onConfirm={async () => {
+          if (!confirmMarkServiced) return;
+          setMarkingServicedId(confirmMarkServiced.id);
+          setConfirmMarkServiced(null);
+          try {
+            await handleStatusChange(confirmMarkServiced.id, "completed");
+          } finally {
+            setMarkingServicedId(null);
+          }
+        }}
+        onCancel={() => setConfirmMarkServiced(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmRequestBalance}
+        title="Request balance payment?"
+        description={`Send a balance payment request to ${confirmRequestBalance?.client} for R${confirmRequestBalance?.balance.toFixed(2)}?`}
+        confirmLabel="Send Request"
+        confirmClass="bg-white/10 hover:bg-white/20 text-white border border-white/20"
+        onConfirm={async () => {
+          const b = confirmRequestBalance;
+          if (!b) return;
+          setConfirmRequestBalance(null);
+          if (isPayshap) {
+            setRequestingBalanceId(b.id);
+            try {
+              const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+              const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+              const res = await fetch(`${supabaseUrl}/functions/v1/send-payshap-balance-request`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization:  `Bearer ${supabaseKey}`,
+                  apikey:         supabaseKey,
+                },
+                body: JSON.stringify({ booking_id: b.id }),
+              });
+              if (!res.ok) throw new Error(await res.text());
+              toast.success("Balance request sent via WhatsApp");
+            } catch (e: any) {
+              toast.error(e.message || "Failed to send request");
+            } finally {
+              setRequestingBalanceId(null);
+            }
+          } else {
+            setSendingWhatsAppBalanceId(b.id);
+            try {
+              const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+              const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+              const res = await fetch(`${supabaseUrl}/functions/v1/create-yoco-checkout`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization:  `Bearer ${supabaseKey}`,
+                  apikey:         supabaseKey,
+                },
+                body: JSON.stringify({
+                  booking_id:    b.id,
+                  amount_cents:  Math.round(b.balance * 100),
+                  payment_type:  "balance",
+                }),
+              });
+              if (!res.ok) throw new Error(await res.text());
+              const { checkoutUrl } = await res.json();
+              if (!checkoutUrl) throw new Error("No checkout URL returned");
+              const waHref = toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, checkoutUrl, tenantId);
+              window.open(waHref, "_blank", "noopener,noreferrer");
+            } catch (e: any) {
+              toast.error(e.message || "Failed to generate payment link");
+            } finally {
+              setSendingWhatsAppBalanceId(null);
+            }
+          }
+        }}
+        onCancel={() => setConfirmRequestBalance(null)}
       />
 
-      <AdminPageHeader
-        title="Bookings"
-        subtitle="View bookings, update guest details, manage payments, reschedule appointments, and handle client actions."
-      />
+      {/* Add service modal */}
+      {addServiceBooking && (
+        <AddServiceModal
+          booking={addServiceBooking}
+          onClose={() => setAddServiceBooking(null)}
+        />
+      )}
 
-      {/* ── Overview stats ─────────────────────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <SectionLabel label="Overview" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><CalendarCheck className="w-4 h-4 text-white/35" /></div>
-            <div>
-              <p className="text-lg font-bold text-white/90">{counts.Today}</p>
-              <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Today</p>
-            </div>
-          </div>
-          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><Clock className="w-4 h-4 text-amber-400/60" /></div>
-            <div>
-              <p className="text-lg font-bold text-amber-400">{counts.Pending}</p>
-              <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Pending</p>
-            </div>
-          </div>
-          <div className="col-span-2 rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><CircleDollarSign className="w-4 h-4 text-white/35 shrink-0" /></div>
-            <div className="flex flex-1 items-center justify-between gap-3 flex-wrap">
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-white/90">R {totalRevenue.toLocaleString()}</p>
-                <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Total Revenue</p>
-              </div>
-              <div className="h-7 w-px bg-white/[0.07] shrink-0" />
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-red-400">R {totalOutstanding.toLocaleString()}</p>
-                <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Outstanding</p>
-              </div>
-              {dueToday > 0 && (
-                <>
-                  <div className="h-7 w-px bg-white/[0.07] shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-lg font-bold text-amber-400">R {dueToday.toLocaleString()}</p>
-                    <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Due Today</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Bookings list ──────────────────────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <SectionLabel label="Bookings List" />
-
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
-          <input
-            id="bookings-search"
-            name="bookings-search"
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search client, service, or ref…"
-            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] transition-colors"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {filters.map(f => {
-            const showCount = f !== "All" && f !== "Today";
-            const filterLabel = f === "Completed" ? "Serviced" : f;
-            return (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all flex items-center gap-1.5 border ${
-                  activeFilter === f
-                    ? "bg-white/[0.12] text-white border-white/[0.15]"
-                    : "text-white/35 border-white/[0.06] hover:text-white/60"
-                }`}
-              >
-                {filterLabel}
-                {showCount && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? "bg-white/10" : "bg-white/[0.04]"}`}>
-                    {counts[f]}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={CalendarCheck}
-            title={searchQuery ? `No bookings matching "${searchQuery}"` : "No bookings match this filter"}
-            description={searchQuery ? "Try another search term or clear the search." : "Adjust the filter to view a different set of bookings."}
-          />
-        ) : (
-          <div className="flex flex-col gap-3">
-            <AnimatePresence>
-              {(() => {
-                const todayItems = filtered
-                  .filter(b => b.date === todayStr)
-                  .sort((a, b) => a.time.localeCompare(b.time));
-
-                const upcoming = filtered
-                  .filter(b => b.date > todayStr)
-                  .sort((a, b) =>
-                    a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time)
-                  );
-
-                const past = filtered
-                  .filter(b => b.date < todayStr)
-                  .sort((a, b) =>
-                    a.date !== b.date ? b.date.localeCompare(a.date) : b.time.localeCompare(a.time)
-                  );
-
-                const renderCard = (b: BookingRow) => {
-                  const isExpanded = expandedId === b.id;
-                  const isEditingInline = editingInlineId === b.id;
-                  const isRequestingBalance = requestingBalanceId === b.id;
-                  const isSendingWhatsAppBalance = sendingWhatsAppBalanceId === b.id;
-                  const isMarkingPaid = markingPaidId === b.id;
-                  const isMarkingServiced = markingServicedId === b.id;
-                  const blockStatus = blockStatusMap[b.id];
-                  const isClientBlocked = blockStatus?.isBlocked ?? false;
-                  // ── canMarkServiced: exclude all terminal/serviced statuses and future dates
-                  const canMarkServiced =
-                    b.status !== "cancelled" &&
-                    b.status !== "no_show" &&
-                    b.status !== "completed" &&
-                    b.status !== "complete" &&
-                    b.date <= todayStr;
-                  const serviceList = (b.service ?? "").split(", ").filter(Boolean);
-                  // ── Context-aware WhatsApp: support outreach for cancelled/no_show bookings
-                  const isCancelledStatus = b.status === "cancelled" || b.status === "no_show";
-
-                  const primaryCTA = (() => {
-                    if (b.status === "pending" || b.status === "pending_payment") {
-                      return (
-                        <button
-                          onClick={e => { e.stopPropagation(); setConfirmConfirm(b); }}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                        >
-                          <Check className="w-4 h-4" /> Confirm Booking
-                        </button>
-                      );
-                    }
-                    if (showRequestBalance(b)) {
-                      // ── Grouped side-by-side: Email + WhatsApp, equal width ──
-                      return (
-                        <div className="flex flex-col gap-1.5">
-                          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-amber-400/50">Request Final Payment</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            {/* Email button */}
-                            <button
-                              disabled={isRequestingBalance}
-                              onClick={e => { e.stopPropagation(); setConfirmRequestBalance(b); }}
-                              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.10] text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              {isRequestingBalance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                              <span className="text-xs">via Email</span>
-                            </button>
-                            {/* WhatsApp button */}
-                            <button
-                              disabled={isSendingWhatsAppBalance || !b.phone}
-                              onClick={e => handleWhatsAppBalance(b, e)}
-                              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.10] text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              {isSendingWhatsAppBalance ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
-                              <span className="text-xs">via WhatsApp</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    }
-                    if (canMarkServiced) {
-                      return (
-                        <button
-                          disabled={isMarkingServiced}
-                          onClick={e => { e.stopPropagation(); setConfirmMarkServiced(b); }}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-sky-500/25 bg-sky-500/[0.08] text-sm font-semibold text-sky-400 hover:bg-sky-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {isMarkingServiced ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          Mark as Serviced
-                        </button>
-                      );
-                    }
-                    return null;
-                  })();
-
-                  return (
-                    <motion.div
-                      key={b.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      layout
-                      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-hidden ${statusBorderAccent[b.status]}`}
-                    >
-                      {/* ── Card header ──────────────────────────────────── */}
-                      <div
-                        className="p-4 sm:p-5 flex items-start gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                        onClick={() => setExpandedId(isExpanded ? null : b.id)}
-                      >
-                        <div className="flex flex-col items-center shrink-0 w-16 pt-0.5">
-                          <Clock className="w-3 h-3 text-white/25 mb-0.5" />
-                          <span className="text-xs font-semibold text-white/70">{b.time}</span>
-                          <span className="text-[10px] text-white/50 font-medium">
-                            {b.date === todayStr ? "Today" : format(new Date(b.date + "T00:00:00"), "d MMM")}
-                          </span>
-                          {b.date !== todayStr && (
-                            <span className="text-[9px] text-white/25">{format(new Date(b.date + "T00:00:00"), "yyyy")}</span>
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
-                            {isClientBlocked && <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />}
-                            {b.isCallOut && <Car className="w-3 h-3 text-violet-400/70 shrink-0" title="Call-out booking" />}
-                            <AdminTag label={statusDisplayLabel[b.status]} color={statusTagColor(b.status)} />
-                            <PaymentTag
-                              fullPaymentReceived={b.fullPaymentReceived}
-                              balance={b.balance}
-                              depositPaid={b.depositPaid}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="text-[11px] text-white/40">
-                              {serviceList.length === 1 ? serviceList[0] : `${serviceList.length} services`}
-                            </span>
-                            <span className="text-[10px] text-white/20">·</span>
-                            <span className="text-[10px] text-white/25">{b.duration}min</span>
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 text-white/20 pt-0.5">
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </div>
-                      </div>
-
-                      {/* ── Expanded body ─────────────────────────────────── */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-white/[0.06]">
-                              <div className="flex flex-col gap-3 mt-3">
-
-                                {/* Detail grid */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                  <DetailRow icon={User}  label="Client"  value={b.client} />
-                                  <DetailRow icon={Phone} label="Phone"   value={b.phone} />
-                                  <DetailRow icon={Mail}  label="Email"   value={b.email} />
-                                  <DetailRow icon={MapPin} label="Address" value={b.address} />
-                                  <DetailRow icon={Clock} label="Ref"     value={b.ref} />
-                                  {b.isCallOut && (
-                                    <DetailRow
-                                      icon={Car}
-                                      label="Call-out"
-                                      value={[
-                                        b.callOutAddress,
-                                        b.callOutDistanceKm ? `${b.callOutDistanceKm}km` : "",
-                                        b.callOutFee ? `R${b.callOutFee} fee` : "",
-                                      ].filter(Boolean).join(" · ")}
-                                    />
-                                  )}
-                                  {b.leadSource && (
-                                    <DetailRow icon={Tag} label="Lead Source" value={b.leadSource} />
-                                  )}
-                                </div>
-
-                                {(b.status === "cancelled" || b.status === "no_show") && b.cancellationReason && (
-                                  <div className="flex items-start gap-2 rounded-xl bg-red-500/[0.06] border border-red-500/[0.12] px-3 py-2.5">
-                                    <XCircle className="w-3 h-3 text-red-400/60 mt-0.5 shrink-0" />
-                                    <div className="min-w-0">
-                                      <p className="text-[10px] text-red-400/50">Cancellation reason</p>
-                                      <p className="text-xs text-red-300/70">{b.cancellationReason}</p>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {serviceList.length > 0 && (
-                                  <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center gap-1.5">
-                                      <Scissors className="w-3 h-3 text-white/25 shrink-0" />
-                                      <span className="text-[10px] text-white/25">Services booked</span>
-                                      <span className="ml-auto text-[10px] text-white/20">{b.duration}min total</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {serviceList.map((svc, i) => (
-                                        <span key={i} className="px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-[11px] text-white/60">
-                                          {svc}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Payment summary */}
-                                <div className="grid grid-cols-3 gap-2 mt-1">
-                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
-                                    <p className="text-[10px] text-white/30">Total</p>
-                                    <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
-                                  </div>
-                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
-                                    <p className="text-[10px] text-white/30">{b.fullPaymentReceived && b.balance === 0 ? "Full Payment" : "Deposit"}</p>
-                                    <p className={`text-sm font-bold ${b.fullPaymentReceived && b.balance === 0 ? "text-white/50" : "text-emerald-400"}`}>
-                                      {b.fullPaymentReceived && b.balance === 0 ? "Paid ✓" : `R ${b.deposit.toLocaleString()}`}
-                                    </p>
-                                  </div>
-                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
-                                    <p className="text-[10px] text-white/30">Balance</p>
-                                    <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
-                                      {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {(b.staffNotes || b.notes || b.clientNotes) && (
-                                  <div className="flex items-start gap-2 text-xs text-white/40 mt-1">
-                                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                                    <span>{b.staffNotes || b.clientNotes || b.notes}</span>
-                                  </div>
-                                )}
-
-                                <div className="text-[10px] text-white/20">Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}</div>
-
-                                {/* Edit accordion */}
-                                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      isEditingInline ? cancelInlineEdit() : startInlineEdit(b);
-                                    }}
-                                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Edit3 className="w-3 h-3 text-white/30" />
-                                      <span className="text-[11px] font-medium text-white/40">Edit guest details &amp; notes</span>
-                                    </div>
-                                    <ChevronDown className={`w-3.5 h-3.5 text-white/20 transition-transform ${isEditingInline ? "rotate-180" : ""}`} />
-                                  </button>
-
-                                  <AnimatePresence>
-                                    {isEditingInline && (
-                                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                        <div className="px-4 pb-4 pt-2 flex flex-col gap-3 border-t border-white/[0.06]">
-                                          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mt-1">Contact Details</p>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                            <EditField label="Client Name" value={editDraft.client || ""} onChange={v => setEditDraft(d => ({ ...d, client: v }))} />
-                                            <EditField label="Phone" value={editDraft.phone || ""} onChange={v => setEditDraft(d => ({ ...d, phone: v }))} />
-                                            <EditField label="Email" value={editDraft.email || ""} onChange={v => setEditDraft(d => ({ ...d, email: v }))} />
-                                            <EditField label="Address" value={editDraft.address || ""} onChange={v => setEditDraft(d => ({ ...d, address: v }))} />
-                                          </div>
-                                          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Notes</p>
-                                          <EditField label="Staff Notes"  value={editDraft.staffNotes  || ""} onChange={v => setEditDraft(d => ({ ...d, staffNotes: v }))} />
-                                          <EditField label="Client Notes" value={editDraft.clientNotes || ""} onChange={v => setEditDraft(d => ({ ...d, clientNotes: v }))} />
-                                          <div className="flex items-center justify-end gap-2 pt-1">
-                                            <SaveButton label="Cancel" variant="secondary" onClick={e => { e.stopPropagation(); cancelInlineEdit(); }} />
-                                            <SaveButton label="Save Changes" icon={<Edit3 className="w-3 h-3" />} onClick={e => { e.stopPropagation(); saveInlineEdit(); }} />
-                                          </div>
-                                        </div>
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-                                </div>
-
-                                {primaryCTA && (
-                                  <div className="pt-1">
-                                    {primaryCTA}
-                                  </div>
-                                )}
-
-                                {/* ── TIER 2: Secondary icon-button strip ───────── */}
-                                <div className="flex items-center gap-2 flex-wrap">
-
-                                  {b.status !== "cancelled" && b.status !== "no_show" && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); setReschedulingBooking(b); setRescheduleDate(undefined); setRescheduleTime(null); setAvailableSlots([]); }}
-                                      aria-label="Reschedule"
-                                      title="Reschedule"
-                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] text-xs font-medium text-sky-400 hover:bg-sky-500/15 transition-colors"
-                                    >
-                                      <CalendarClock className="w-3.5 h-3.5" />
-                                      <span className="hidden sm:inline">Reschedule</span>
-                                    </button>
-                                  )}
-
-                                  {b.status !== "cancelled" && b.status !== "no_show" && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
-                                      aria-label="Add service"
-                                      title="Add service"
-                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-500/25 bg-violet-500/[0.07] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors"
-                                    >
-                                      <PlusCircle className="w-3.5 h-3.5" />
-                                      <span className="hidden sm:inline">Add Service</span>
-                                    </button>
-                                  )}
-
-                                  {b.status !== "cancelled" && b.status !== "no_show" && !b.fullPaymentReceived && b.balance > 0 && (
-                                    <button
-                                      disabled={isMarkingPaid}
-                                      onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }}
-                                      aria-label="Mark fully paid"
-                                      title="Mark fully paid"
-                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      {isMarkingPaid ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CircleDollarSign className="w-3.5 h-3.5" />}
-                                      <span className="hidden sm:inline">Mark Paid</span>
-                                    </button>
-                                  )}
-
-                                  {b.phone && (
-                                    <a
-                                      href={
-                                        isCancelledStatus
-                                          ? toWhatsAppSupportHref(b.phone, b.client, b.service)
-                                          : toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref ?? "")
-                                      }
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={e => e.stopPropagation()}
-                                      aria-label={isCancelledStatus ? "WhatsApp support" : "WhatsApp client"}
-                                      title={isCancelledStatus ? "Send support message" : "WhatsApp client"}
-                                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#25D366]/25 bg-[#25D366]/[0.07] text-xs font-medium text-[#25D366]/80 hover:bg-[#25D366]/15 hover:text-[#25D366] transition-colors"
-                                    >
-                                      <WhatsAppIcon className="w-3.5 h-3.5" />
-                                      <span className="hidden sm:inline">{isCancelledStatus ? "Support" : "WhatsApp"}</span>
-                                    </a>
-                                  )}
-
-                                  <div className="flex-1" />
-
-                                  <OverflowMenu
-                                    isClientBlocked={isClientBlocked}
-                                    isCancelled={b.status === "cancelled" || b.status === "no_show"}
-                                    onBlock={() => setBlockModalBooking(b)}
-                                    onCancel={() => setConfirmCancel(b)}
-                                    onDelete={() => setConfirmDelete(b)}
-                                  />
-                                </div>
-
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                };
-
-                return (
-                  <>
-                    {activeFilter !== "Today" && todayItems.length > 0 && (
-                      <div className="flex items-center gap-3 px-1 pt-1">
-                        <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400/70">Today</span>
-                        <div className="flex-1 h-px bg-emerald-500/15" />
-                      </div>
-                    )}
-                    {(activeFilter === "Today" ? filtered.sort((a, b) => a.time.localeCompare(b.time)) : todayItems).map(b => renderCard(b))}
-
-                    {activeFilter !== "Today" && upcoming.length > 0 && (
-                      <>
-                        <div className="flex items-center gap-3 px-1 pt-2">
-                          <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-sky-400/70">Upcoming</span>
-                          <div className="flex-1 h-px bg-sky-500/15" />
-                        </div>
-                        {upcoming.map(b => renderCard(b))}
-                      </>
-                    )}
-
-                    {activeFilter !== "Today" && past.length > 0 && (
-                      <>
-                        <div className="flex items-center gap-3 px-1 pt-2">
-                          <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/20">Past</span>
-                          <div className="flex-1 h-px bg-white/[0.05]" />
-                        </div>
-                        {past.map(b => renderCard(b))}
-                      </>
-                    )}
-                  </>
-                );
-              })()}
-            </AnimatePresence>
-          </div>
-        )}
-      </section>
+      {/* Block client modal */}
+      {blockModalBooking && (
+        <BlockClientModal
+          booking={blockModalBooking}
+          blockInfo={blockStatusMap[blockModalBooking.id] ?? { blockId: null, isBlocked: false }}
+          onClose={() => setBlockModalBooking(null)}
+          onBlockChanged={(bookingId, newBlockInfo) => {
+            setBlockStatusMap(prev => ({ ...prev, [bookingId]: newBlockInfo }));
+            queryClient.invalidateQueries({ queryKey: ["blocked-clients", tenantId] });
+          }}
+        />
+      )}
     </div>
   );
 };
-
-const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
-  value ? (
-    <div className="flex items-start gap-2">
-      <Icon className="w-3 h-3 text-white/25 mt-0.5 shrink-0" />
-      <div className="min-w-0">
-        <p className="text-[10px] text-white/25">{label}</p>
-        <p className="text-xs text-white/65 truncate">{value}</p>
-      </div>
-    </div>
-  ) : null
-);
-
-const EditField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
-  <div className="flex flex-col gap-1.5">
-    <label htmlFor={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`} className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">{label}</label>
-    <input
-      id={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`}
-      name={`booking-edit-${label.toLowerCase().replace(/\s+/g, '-')}`}
-      type="text"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.18] transition-colors"
-    />
-  </div>
-);
 
 export default AdminBookings;

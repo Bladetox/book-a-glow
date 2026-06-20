@@ -132,7 +132,7 @@ const AdminPayshapQueue = () => {
       <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
         <div className="flex items-center gap-2 text-white/20 text-xs py-3">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          Loading Payshap queue…
+          Loading Payshap queue\u2026
         </div>
       </motion.section>
     );
@@ -144,7 +144,7 @@ const AdminPayshapQueue = () => {
 
   return (
     <>
-      {/* ── Reject confirmation dialog ──────────────────────────────────── */}
+      {/* Reject confirmation dialog */}
       <AlertDialog
         open={!!rejectTarget}
         onOpenChange={(open) => { if (!open) setRejectTarget(null); }}
@@ -171,18 +171,18 @@ const AdminPayshapQueue = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Queue card ──────────────────────────────────────────────────── */}
+      {/* Queue card */}
       <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] p-5">
+        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.03] p-5">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-1.5 rounded-lg bg-amber-500/10 shrink-0">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+            <div className="p-1.5 rounded-lg bg-sky-500/10 shrink-0">
+              <AlertTriangle className="w-3.5 h-3.5 text-sky-400" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 leading-none">
                 Payshap Payments
               </p>
-              <p className="text-[10px] text-amber-400/70 mt-0.5">
+              <p className="text-[10px] text-sky-400/70 mt-0.5">
                 {queue.length} awaiting verification
               </p>
             </div>
@@ -236,7 +236,7 @@ const AdminPayshapQueue = () => {
                         )}
                       </div>
 
-                      {/* ── Amount: shows the actual claimed figure, not total ── */}
+                      {/* Amount: shows the actual claimed figure, not total */}
                       <div className="flex flex-col items-end gap-0.5 shrink-0">
                         <p className="text-sm font-bold text-emerald-400">
                           R {claimedAmount.toLocaleString()}
@@ -257,14 +257,14 @@ const AdminPayshapQueue = () => {
                         href={booking.payshapProofUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-[11px] text-blue-400/70 hover:text-blue-400 transition-colors"
+                        className="flex items-center gap-1.5 text-[11px] text-sky-400/70 hover:text-sky-400 transition-colors"
                       >
                         <ExternalLink className="w-3 h-3 shrink-0" />
                         View proof of payment
                       </a>
                     )}
 
-                    {/* ── Inline error message ─────────────────────────────── */}
+                    {/* Inline error message */}
                     {inlineError && (
                       <div className="flex items-start gap-1.5 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
                         <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
