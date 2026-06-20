@@ -45,14 +45,16 @@ const PERIOD_COMPARE_LABEL: Record<PeriodLabel, string> = {
   "90D": "prev 90 days",
 };
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function toLocalDateStr(date: Date): string {
   return date.toLocaleDateString("en-CA");
 }
 
+// FIX: stride tuned per period — 7D every bar, 30D every 5th (6 labels), 90D every 30th (3 labels)
 function xAxisStride(period: PeriodLabel): number {
   if (period === "7D")  return 1;
-  if (period === "30D") return 7;
+  if (period === "30D") return 5;
   return 30;
 }
 
@@ -166,13 +168,17 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
 
   const pctUp = pctChange !== null ? pctChange >= 0 : true;
 
+  // FIX: no forced last-bar label — only append last index if it is at least
+  // half a stride away from the previous label, preventing end-crowding
   const xLabelIndices = useMemo(() => {
     if (filtered.length === 0) return [];
     const stride = xAxisStride(period);
     const indices: number[] = [];
     for (let i = 0; i < filtered.length; i += stride) indices.push(i);
-    if (indices[indices.length - 1] !== filtered.length - 1) {
-      indices.push(filtered.length - 1);
+    const last = filtered.length - 1;
+    const prev = indices[indices.length - 1];
+    if (prev !== last && last - prev >= Math.floor(stride / 2)) {
+      indices.push(last);
     }
     return indices;
   }, [filtered, period]);
@@ -252,7 +258,6 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
         <EmptyState />
       ) : (
         <>
-          {/* FIX 1: removed overflow-hidden (was clipping tooltips), replaced with px-1 to give bars a right-edge buffer */}
           <div
             className="relative flex items-end gap-[2px] h-32 mt-1 px-1"
             ref={el => { if (el) setContainerWidth(el.clientWidth); }}
@@ -271,11 +276,11 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
             ))}
 
             {filtered.map((d, i) => {
-              const heightPct  = Math.max((d.value / maxVal) * 100, d.value > 0 ? 5 : 1);
-              const isActive   = activeIdx === i;
-              const isPeak     = bestDay && d.value > 0 && d.value === bestDay.value;
-              const isZero     = d.value === 0;
-              const barX       = (i / filtered.length) * containerWidth;
+              const heightPct = Math.max((d.value / maxVal) * 100, d.value > 0 ? 5 : 1);
+              const isActive  = activeIdx === i;
+              const isPeak    = bestDay && d.value > 0 && d.value === bestDay.value;
+              const isZero    = d.value === 0;
+              const barX      = (i / filtered.length) * containerWidth;
 
               return (
                 <div
@@ -347,7 +352,7 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
             })}
           </div>
 
-          {/* FIX 2: removed overflow-hidden, added px-1 to match bar container; last label right-aligns instead of centering to avoid clip */}
+          {/* FIX: last label right-aligns to avoid clip; 7D uses short weekday ("Sat") to prevent squash; 30D/90D use "26 May" format */}
           <div className="relative h-4 px-1">
             {xLabelIndices.map(idx => {
               const d      = filtered[idx];
@@ -365,7 +370,11 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
                   }}
                 >
                   {d.date
-                    ? new Date(d.date + "T00:00:00").toLocaleDateString("en-ZA", { day: "numeric", month: "short" })
+                    ? new Date(d.date + "T00:00:00").toLocaleDateString("en-ZA",
+                        period === "7D"
+                          ? { weekday: "short" }
+                          : { day: "numeric", month: "short" }
+                      )
                     : `Day ${d.day}`}
                 </span>
               );
