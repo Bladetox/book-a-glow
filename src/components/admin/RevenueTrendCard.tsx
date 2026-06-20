@@ -5,9 +5,9 @@ import { TrendingUp, TrendingDown, Info, X, BarChart3 } from "lucide-react";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RevenueTrendEntry {
-  day: number;    // day-of-month number, e.g. 1–31
-  value: number;  // total revenue for that day
-  date?: string;  // ISO date string e.g. "2026-03-09"
+  day: number;
+  value: number;
+  date?: string;
 }
 
 interface InfoLine {
@@ -17,8 +17,8 @@ interface InfoLine {
 
 interface Props {
   revenueTrend: RevenueTrendEntry[];
-  periodRevenue?: number;      // total for current period (from hero)
-  lastPeriodRevenue?: number;  // total for last period (for % delta)
+  periodRevenue?: number;
+  lastPeriodRevenue?: number;
   loading?: boolean;
 }
 
@@ -45,13 +45,11 @@ const PERIOD_COMPARE_LABEL: Record<PeriodLabel, string> = {
   "90D": "prev 90 days",
 };
 
-// ─── Helper: local YYYY-MM-DD (avoids UTC/SAST off-by-one) ───────────────────
+// ─── Helper ───────────────────────────────────────────────────────────────────
 function toLocalDateStr(date: Date): string {
   return date.toLocaleDateString("en-CA");
 }
 
-// ─── Miller's Law: period-aware x-axis label stride ──────────────────────────
-// 7D → every day (7 labels), 30D → every 7th (~4-5 labels), 90D → every 30th (~3 labels)
 function xAxisStride(period: PeriodLabel): number {
   if (period === "7D")  return 1;
   if (period === "30D") return 7;
@@ -116,13 +114,11 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
   const [period, setPeriod]         = useState<PeriodLabel>("30D");
   const [showInfo, setShowInfo]     = useState(false);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  // Doherty Threshold: tappedIdx drives tooltip on touch devices
   const [tappedIdx, setTappedIdx]   = useState<number | null>(null);
   const [containerWidth, setContainerWidth] = useState(300);
 
   const activeIdx = hoveredIdx ?? tappedIdx;
 
-  // ── Filter to selected period ────────────────────────────────────────────
   const filtered = useMemo(() => {
     const selectedDays = PERIODS.find(p => p.label === period)?.days ?? 30;
     if (!revenueTrend.length) return [];
@@ -136,8 +132,6 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
   }, [revenueTrend, period]);
 
   const maxVal = useMemo(() => Math.max(...filtered.map(d => d.value), 1), [filtered]);
-
-  // ── Period stats ─────────────────────────────────────────────────────────
   const periodTotal = useMemo(() => filtered.reduce((s, d) => s + d.value, 0), [filtered]);
 
   const bestDay = useMemo(
@@ -148,7 +142,6 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
     [filtered]
   );
 
-  // ── % delta vs equivalent prior window ───────────────────────────────────
   const pctChange = useMemo(() => {
     if (!revenueTrend.length || !revenueTrend[0]?.date) {
       if (lastPeriodRevenue && lastPeriodRevenue > 0) {
@@ -173,20 +166,17 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
 
   const pctUp = pctChange !== null ? pctChange >= 0 : true;
 
-  // ── Miller's Law: x-axis label indices ───────────────────────────────────
   const xLabelIndices = useMemo(() => {
     if (filtered.length === 0) return [];
     const stride = xAxisStride(period);
     const indices: number[] = [];
     for (let i = 0; i < filtered.length; i += stride) indices.push(i);
-    // Always include the last bar's label if it's not already included
     if (indices[indices.length - 1] !== filtered.length - 1) {
       indices.push(filtered.length - 1);
     }
     return indices;
   }, [filtered, period]);
 
-  // ── Y-axis gridline values (Aesthetic-Usability) ─────────────────────────
   const gridLines = useMemo(() => {
     if (maxVal <= 1) return [];
     return [0.25, 0.5, 0.75].map(pct => ({
@@ -196,21 +186,17 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
   }, [maxVal]);
 
   if (loading) return (
-    // FIX 1a: p-4 → p-5 on loading state too
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5">
       <Skeleton />
     </div>
   );
 
   return (
-    // Doherty Threshold: tap outside any bar clears the tapped tooltip
-    // FIX 1b: p-4 → p-5, added overflow-hidden
     <div
       className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-3 overflow-hidden"
       onTouchStart={() => setTappedIdx(null)}
     >
 
-      {/* ── Header Row (title + info only — tabs moved below chart per Law of Proximity) ── */}
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Revenue Trend</p>
         <button
@@ -222,13 +208,10 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
         </button>
       </div>
 
-      {/* ── Info Panel ── */}
       <AnimatePresence>
         {showInfo && <InfoPanel lines={INFO_LINES} onClose={() => setShowInfo(false)} />}
       </AnimatePresence>
 
-      {/* ── Summary Stats ── */}
-      {/* Peak-End Rule: delta is the hero number; total is supporting context */}
       <div className="flex items-start justify-between gap-4">
         <div>
           {pctChange !== null ? (
@@ -250,7 +233,6 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
           </p>
         </div>
 
-        {/* Law of Common Region: Best Day wrapped in bordered pill */}
         {bestDay && bestDay.value > 0 && (
           <div className="shrink-0 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-right">
             <p className="text-[9px] tracking-[0.1em] uppercase text-white/20">Best Day</p>
@@ -266,18 +248,15 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
         )}
       </div>
 
-      {/* ── Chart ── */}
       {filtered.length === 0 ? (
         <EmptyState />
       ) : (
         <>
-          {/* Aesthetic-Usability: chart wrapper is relative so gridlines can be absolute */}
-          {/* FIX 2: added overflow-hidden to contain bar overflow */}
+          {/* FIX 1: removed overflow-hidden (was clipping tooltips), replaced with px-1 to give bars a right-edge buffer */}
           <div
-            className="relative flex items-end gap-[2px] h-32 mt-1 overflow-hidden"
+            className="relative flex items-end gap-[2px] h-32 mt-1 px-1"
             ref={el => { if (el) setContainerWidth(el.clientWidth); }}
           >
-            {/* Y-axis gridlines at 25%, 50%, 75% */}
             {gridLines.map(({ pct, value }) => (
               <div
                 key={pct}
@@ -291,11 +270,9 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
               </div>
             ))}
 
-            {/* Bars */}
             {filtered.map((d, i) => {
               const heightPct  = Math.max((d.value / maxVal) * 100, d.value > 0 ? 5 : 1);
               const isActive   = activeIdx === i;
-              // Von Restorff: peak bar gets full opacity + ring
               const isPeak     = bestDay && d.value > 0 && d.value === bestDay.value;
               const isZero     = d.value === 0;
               const barX       = (i / filtered.length) * containerWidth;
@@ -307,14 +284,12 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
                   style={{ height: "100%" }}
                   onMouseEnter={() => setHoveredIdx(i)}
                   onMouseLeave={() => setHoveredIdx(null)}
-                  // Doherty Threshold: tap toggles tooltip on mobile
                   onTouchStart={e => {
                     e.stopPropagation();
                     setTappedIdx(prev => prev === i ? null : i);
                   }}
                   onClick={() => setTappedIdx(prev => prev === i ? null : i)}
                 >
-                  {/* Tooltip — shown on hover (desktop) or tap (mobile) */}
                   <AnimatePresence>
                     {isActive && d.value > 0 && (
                       <motion.div
@@ -343,7 +318,6 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
                     )}
                   </AnimatePresence>
 
-                  {/* Bar */}
                   <motion.div
                     initial={{ scaleY: 0 }}
                     animate={{ scaleY: 1 }}
@@ -352,13 +326,11 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
                       height:          `${heightPct}%`,
                       transformOrigin: "bottom",
                       borderRadius:    "2px 2px 1px 1px",
-                      // Zero bars: dashed outline, no fill — unambiguously "no revenue"
                       ...(isZero ? {
                         backgroundColor: "transparent",
                         border: "1px dashed rgba(255,255,255,0.08)",
                         height: "100%",
                       } : {
-                        // Von Restorff: peak bar at full opacity with ring
                         backgroundColor: isPeak
                           ? "rgba(52,211,153,1)"
                           : isActive
@@ -375,18 +347,22 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
             })}
           </div>
 
-          {/* ── X-axis labels: Miller's Law — stride by period ── */}
-          {/* FIX 3: added overflow-hidden to stop last label clipping outside card */}
-          <div className="relative h-4 overflow-hidden">
+          {/* FIX 2: removed overflow-hidden, added px-1 to match bar container; last label right-aligns instead of centering to avoid clip */}
+          <div className="relative h-4 px-1">
             {xLabelIndices.map(idx => {
-              const d    = filtered[idx];
-              const xPct = filtered.length > 1 ? (idx / (filtered.length - 1)) * 100 : 0;
+              const d      = filtered[idx];
+              const isLast = idx === filtered.length - 1;
+              const xPct   = filtered.length > 1 ? (idx / (filtered.length - 1)) * 100 : 0;
               if (!d) return null;
               return (
                 <span
                   key={idx}
-                  className="absolute text-[9px] text-white/20 tabular-nums -translate-x-1/2"
-                  style={{ left: `${xPct}%` }}
+                  className="absolute text-[9px] text-white/20 tabular-nums"
+                  style={{
+                    left:      isLast ? "auto" : `${xPct}%`,
+                    right:     isLast ? 0 : "auto",
+                    transform: isLast ? "none" : "translateX(-50%)",
+                  }}
                 >
                   {d.date
                     ? new Date(d.date + "T00:00:00").toLocaleDateString("en-ZA", { day: "numeric", month: "short" })
@@ -396,7 +372,6 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
             })}
           </div>
 
-          {/* ── Period Tabs — Law of Proximity: directly below chart ── */}
           <div className="flex justify-center pt-1">
             <div className="flex items-center gap-0.5 rounded-lg bg-white/[0.04] p-0.5">
               {PERIODS.map(p => (
