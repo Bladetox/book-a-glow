@@ -32,13 +32,20 @@ const PayshapSubmitted = lazy(() => import("./pages/PayshapSubmitted"));
 
 const queryClient = new QueryClient();
 
-/* Loading skeletons */
+/**
+ * Suspense fallback shells.
+ *
+ * Background is transparent so the browser-painted background from
+ * index.html's inline script shows through during the JS bundle load.
+ * Previously these were #000 which caused a visible black flash before
+ * BusinessThemeProvider could apply the correct tenant theme colour.
+ */
 const MarketingShell = () => (
-  <div style={{ minHeight: "100dvh", background: "#000" }} />
+  <div style={{ minHeight: "100dvh", background: "transparent" }} />
 );
 
 const TenantShell = () => (
-  <div style={{ position: "fixed", inset: 0, background: "#000" }} />
+  <div style={{ position: "fixed", inset: 0, background: "transparent" }} />
 );
 
 const ScrollToTop = () => {
