@@ -22,6 +22,7 @@ interface ReviewStepProps {
   onUpdate: (updates: Partial<BookingState>) => void;
   onGoToStep: (step: number) => void;
   releaseHold: () => Promise<void>;
+  onPayshapComplete: () => void;
 }
 
 type PaymentChoice = "deposit" | "full" | "payshap_deposit" | "payshap_full";
@@ -96,7 +97,7 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
   return null;
 }
 
-  const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold }: ReviewStepProps) => {
+  const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapComplete }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
@@ -119,7 +120,6 @@ useEffect(() => {
 }, [config.payshapEnabled, config.depositPercent]);  
     
   const [showPairWith, setShowPairWith] = useState(false);
-  const [bookingSubmitted, setBookingSubmitted] = useState(false);
   const [payshapSheetOpen, setPayshapSheetOpen] = useState(false);
   const [payshapBookingId, setPayshapBookingId] = useState<string | null>(null);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
@@ -587,13 +587,14 @@ useEffect(() => {
       )}
 
       {/* PayShap provisional modal */}
-      <PayshapProvisionalModal
-        isOpen={payshapSheetOpen}
-        onClose={() => {
-        setPayshapSheetOpen(false);
-        setBookingSubmitted(true);
-        }}
-      />
+        <PayshapProvisionalModal
+          isOpen={payshapSheetOpen}
+          onClose={() => setPayshapSheetOpen(false)}
+          onComplete={() => {
+            setPayshapSheetOpen(false);
+            onPayshapComplete();
+          }}
+        />
 
       {/* Pair it with sheet */}
       <AnimatePresence>
