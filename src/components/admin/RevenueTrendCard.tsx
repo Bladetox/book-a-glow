@@ -196,15 +196,17 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
   }, [maxVal]);
 
   if (loading) return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+    // FIX 1a: p-4 → p-5 on loading state too
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5">
       <Skeleton />
     </div>
   );
 
   return (
     // Doherty Threshold: tap outside any bar clears the tapped tooltip
+    // FIX 1b: p-4 → p-5, added overflow-hidden
     <div
-      className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 flex flex-col gap-3"
+      className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-3 overflow-hidden"
       onTouchStart={() => setTappedIdx(null)}
     >
 
@@ -270,8 +272,9 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
       ) : (
         <>
           {/* Aesthetic-Usability: chart wrapper is relative so gridlines can be absolute */}
+          {/* FIX 2: added overflow-hidden to contain bar overflow */}
           <div
-            className="relative flex items-end gap-[2px] h-32 mt-1"
+            className="relative flex items-end gap-[2px] h-32 mt-1 overflow-hidden"
             ref={el => { if (el) setContainerWidth(el.clientWidth); }}
           >
             {/* Y-axis gridlines at 25%, 50%, 75% */}
@@ -373,7 +376,8 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
           </div>
 
           {/* ── X-axis labels: Miller's Law — stride by period ── */}
-          <div className="relative h-4">
+          {/* FIX 3: added overflow-hidden to stop last label clipping outside card */}
+          <div className="relative h-4 overflow-hidden">
             {xLabelIndices.map(idx => {
               const d    = filtered[idx];
               const xPct = filtered.length > 1 ? (idx / (filtered.length - 1)) * 100 : 0;
