@@ -214,6 +214,7 @@ const comparisonSections: FeatureSection[] = [
       { label: "Mobile / call-out mode (travel fee calculation)",    starter: false, flow: false, professional: true,  studio: true  },
       { label: "Admin-created bookings",                             starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Blocked time slots",                                 starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "Add booked date to calendar (client)",               starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Suggested add-ons at checkout",                      starter: false, flow: false, professional: true,  studio: true  },
     ],
   },
