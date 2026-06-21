@@ -532,7 +532,7 @@ export default function Pricing() {
       <main style={{ background: "#0a0a0a", minHeight: "100vh" }}>
 
         {/* ── Hero ── */}
-        <section ref={heroRef} style={{ position: "relative", overflow: "hidden", minHeight: 420, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <section ref={heroRef} style={{ position: "relative", overflow: "hidden", minHeight: 520, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
           {/* Background layer */}
           <div ref={bgRef} className="hero-bg-layer" style={{ position: "absolute", inset: 0, zIndex: 0 }}>
             <div ref={scaleRef} className="hero-scale-layer" style={{ width: "100%", height: "100%" }}>
@@ -542,14 +542,41 @@ export default function Pricing() {
           </div>
 
           {/* Text layer */}
-          <div ref={textRef} className="hero-text-layer" style={{ position: "relative", zIndex: 1, textAlign: "center", padding: "80px 24px 60px", maxWidth: 700, margin: "0 auto" }}>
+          <div ref={textRef} className="hero-text-layer" style={{ position: "relative", zIndex: 1, textAlign: "center", padding: "80px 24px 48px", maxWidth: 700, margin: "0 auto", width: "100%" }}>
             <p style={{ fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: "rgba(212,165,116,0.70)", textTransform: "uppercase", marginBottom: 16 }}>Pricing</p>
             <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(2rem,5vw,3.5rem)", fontWeight: 700, color: "rgba(255,255,255,0.92)", lineHeight: 1.1, marginBottom: 16 }}>
               One plan for every stage of your business
             </h1>
-            <p style={{ fontFamily: FONT_BODY, fontSize: 16, color: "rgba(255,255,255,0.45)", lineHeight: 1.65, maxWidth: 520, margin: "0 auto" }}>
+            <p style={{ fontFamily: FONT_BODY, fontSize: 16, color: "rgba(255,255,255,0.45)", lineHeight: 1.65, maxWidth: 520, margin: "0 auto 40px" }}>
               Start free. Upgrade as you grow. No setup fees, no hidden costs.
             </p>
+
+            {/* ── R99 Starter anchor card ── */}
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 16,
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(212,165,116,0.20)",
+              borderRadius: 16,
+              padding: "16px 24px",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+            }}>
+              <div style={{ textAlign: "left" }}>
+                <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, color: "rgba(212,165,116,0.60)", textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 2 }}>Start from just</p>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 36, fontWeight: 700, color: "rgba(255,255,255,0.92)", lineHeight: 1 }}>R99</span>
+                  <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: "rgba(255,255,255,0.35)" }}>/&nbsp;month</span>
+                </div>
+              </div>
+              <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.10)", flexShrink: 0 }} />
+              <div style={{ textAlign: "left" }}>
+                <p style={{ fontFamily: FONT_BODY, fontSize: 12, color: "rgba(255,255,255,0.50)", lineHeight: 1.4, maxWidth: 180 }}>
+                  7-day free trial &middot; No card required
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
