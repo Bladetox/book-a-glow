@@ -789,3 +789,347 @@ const Pricing = () => {
             fontSize: 13, fontWeight: 500, letterSpacing: "0.01em",
             color: C.muted, margin: 0, fontFamily: FONT_BODY,
           }}>
+            Pick the plan that fits where you are.
+          </p>
+        </div>
+
+        {pricingMode === "manage" && manageNotice && (
+          <p style={{ textAlign: "center", fontSize: 13, color: C.gold, fontFamily: FONT_BODY, marginBottom: 24 }}>{manageNotice}</p>
+        )}
+
+        <div
+          style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}
+          className="pricing-plans-grid"
+        >
+          {nonStarterTiers.map((tier) => {
+            const tierPlan = planKeyMap[tier.name];
+            const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
+            const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
+            const isDowngrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] < planRank[currentPlan];
+            const isBusy = submittingPlan === tierPlan;
+            const ctaLabel = pricingMode === "manage"
+              ? isCurrent ? "Current Plan" : isUpgrade ? "Upgrade" : isDowngrade ? "Downgrade" : "Select Plan"
+              : tier.cta;
+
+            return (
+              <div
+                key={tier.name}
+                style={{
+                  background: tier.featured ? "rgba(212,165,116,0.06)" : C.s1,
+                  border: tier.featured ? "1.5px solid rgba(212,165,116,0.55)" : `1px solid ${C.border2}`,
+                  borderRadius: 20,
+                  padding: "32px 28px",
+                  position: "relative",
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                  boxShadow: tier.featured ? "0 8px 40px -8px rgba(212,165,116,0.20)" : "none",
+                }}
+              >
+                {tier.featured && (
+                  <div style={{
+                    position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    background: CTA_BG,
+                    borderRadius: "0 0 10px 10px",
+                    padding: "4px 14px",
+                    fontSize: 10, fontWeight: 700, color: "#080808",
+                    letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                    fontFamily: FONT_BODY,
+                  }}>
+                    <Zap style={{ height: 10, width: 10 }} />
+                    Most popular
+                  </div>
+                )}
+
+                <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+                  {tier.comingSoon && (
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
+                      textTransform: "uppercase" as const,
+                      padding: "3px 10px", borderRadius: 100, marginBottom: 10,
+                      background: "rgba(212,165,116,0.08)",
+                      border: "1px solid rgba(212,165,116,0.20)",
+                      color: C.gold, fontFamily: FONT_BODY,
+                    }}>
+                      Coming Soon
+                    </div>
+                  )}
+                  <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 4 }}>{tier.name}</h3>
+                  <div style={{ marginBottom: 6 }}>
+                    <span style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text }}>{tier.price}</span>
+                    <span style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>{tier.period}</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.5 }}>{tier.description}</p>
+                  {tier.subline && (
+                    <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, fontFamily: FONT_BODY, marginTop: 4 }}>{tier.subline}</p>
+                  )}
+                </div>
+
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
+                  {tier.groups.map((group) => (
+                    <div key={group.label}>
+                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.faint, marginBottom: 8, fontFamily: FONT_BODY }}>
+                        {group.label}
+                      </p>
+                      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 7 }}>
+                        {group.features.map((f) => (
+                          <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
+                            <Check style={{ height: 13, width: 13, marginTop: 2, color: C.gold, flexShrink: 0 }} />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Plan CTAs ─ no arrows anywhere */}
+                {pricingMode === "manage" ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={isCurrent || !!submittingPlan || tier.comingSoon}
+                      onClick={() => !tier.comingSoon && handlePlanChange(tierPlan)}
+                      style={isCurrent ? {
+                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                        padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
+                        background: "rgba(212,165,116,0.08)", color: C.text,
+                        border: "1px solid rgba(212,165,116,0.20)", opacity: 0.6,
+                      } : tier.featured ? {
+                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
+                        padding: "13px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
+                        background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808", border: "none", opacity: tier.comingSoon ? 0.5 : 1,
+                      } : {
+                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                        padding: "12px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
+                        background: "transparent", color: C.muted, border: `1px solid ${C.border2}`, opacity: tier.comingSoon ? 0.5 : 1,
+                      }}
+                    >
+                      {isBusy ? "Saving..." : ctaLabel}
+                    </button>
+                    <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
+                      {isCurrent ? "This is your current subscription." : isUpgrade ? "Upgrade request recorded for billing." : isDowngrade ? "Downgrade applies next billing cycle." : tier.comingSoon ? "Available soon." : "Select the plan you want to move to."}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    {tier.comingSoon ? (
+                      <div style={{
+                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                        padding: "12px 20px", borderRadius: 10,
+                        background: "rgba(212,165,116,0.06)", color: C.muted,
+                        border: `1px solid ${C.border}`,
+                      }}>
+                        Coming Soon
+                      </div>
+                    ) : (
+                      <Link
+                        to="/onboarding"
+                        style={tier.featured ? {
+                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
+                          padding: "13px 20px", borderRadius: 10,
+                          background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808",
+                          textDecoration: "none",
+                        } : {
+                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
+                          padding: "12px 20px", borderRadius: 10,
+                          background: "transparent", color: C.muted,
+                          border: `1px solid ${C.border2}`, textDecoration: "none",
+                        }}
+                      >
+                        {tier.cta}
+                      </Link>
+                    )}
+                    <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
+                      {tier.comingSoon ? "Notify me when available." : `Free for ${tier.trialDays} days. No payment required.`}
+                    </p>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── 3. WHAT YOUR 30 DAYS BUILDS ─────────────────────────────────── */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
+        <section>
+          <div style={{
+            maxWidth: 1100, margin: "0 auto",
+            background: C.s1,
+            border: "1px solid rgba(212,165,116,0.22)",
+            borderRadius: 20, padding: "40px 40px",
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
+              What your 30 days builds
+            </p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
+              Your data. Your strategy.
+            </h2>
+            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
+              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business. When demand peaks, where clients find you, which services drive the most revenue per hour, and which time slots go to waste. By the time your trial ends, your dashboard is already working as your business advisor.
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+              {trialBuilds.map((point) => (
+                <li key={point} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
+                  <Check style={{ height: 15, width: 15, marginTop: 2, color: C.gold, flexShrink: 0 }} />
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      {/* ── 4. FULL FEATURE COMPARISON (COLLAPSED) ──────────────────────── */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
+        <button
+          type="button"
+          onClick={() => setShowComparison((v) => !v)}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, margin: "0 auto",
+            background: "transparent", border: `1px solid ${C.border2}`,
+            borderRadius: 10, padding: "10px 20px",
+            fontSize: 13, fontWeight: 600, color: C.muted,
+            fontFamily: FONT_BODY, cursor: "pointer",
+          }}
+        >
+          {showComparison ? <ChevronUp style={{ height: 15, width: 15 }} /> : <ChevronDown style={{ height: 15, width: 15 }} />}
+          {showComparison ? "Hide" : "Show"} full feature comparison
+        </button>
+      </div>
+
+      {showComparison && (
+        /* comparison-scroll-wrap hides the scrollbar via CSS while keeping touch/wheel scroll */
+        <div
+          className="comparison-scroll-wrap"
+          style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 0", overflowX: "auto", position: "relative", zIndex: 1, background: C.bg }}
+        >
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT_BODY }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: "10px 12px", fontSize: 12, color: C.muted, fontWeight: 600, borderBottom: `1px solid ${C.border}`, width: "40%" }}>Feature</th>
+                {["Starter", "Flow", "Professional", "Studio"].map((name) => (
+                  <th key={name} style={{ textAlign: "center", padding: "10px 12px", fontSize: 12, color: name === "Professional" ? C.gold : C.muted, fontWeight: 700, borderBottom: `1px solid ${C.border}` }}>{name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {comparisonSections.map((section) => (
+                <>
+                  <tr key={section.section}>
+                    <td colSpan={5} style={{ padding: "16px 12px 6px", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold }}>
+                      {section.section}
+                    </td>
+                  </tr>
+                  {section.rows.map((row) => (
+                    <tr key={row.label} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: "9px 12px", fontSize: 13, color: C.muted }}>{row.label}</td>
+                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.starter} /></td>
+                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.flow} /></td>
+                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.professional} /></td>
+                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.studio} /></td>
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── 5. FAQ ──────────────────────────────────────────────────────── */}
+      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY, textAlign: "center" }}>
+          FAQ
+        </p>
+        <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px,2.4vw,30px)", fontWeight: 700, color: C.text, lineHeight: 1.2, marginBottom: 36, textAlign: "center" }}>
+          Common questions.
+        </h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {faqs.map((faq, idx) => (
+            <div
+              key={faq.q}
+              style={{
+                borderRadius: 12,
+                border: `1px solid ${openFaq === idx ? "rgba(212,165,116,0.35)" : C.border}`,
+                background: openFaq === idx ? "rgba(212,165,116,0.04)" : "transparent",
+                overflow: "hidden",
+                marginBottom: 4,
+                transition: "border-color 0.15s",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                  padding: "16px 20px", background: "transparent", border: "none", cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, lineHeight: 1.4 }}>{faq.q}</span>
+                {openFaq === idx
+                  ? <ChevronUp style={{ height: 16, width: 16, color: C.gold, flexShrink: 0 }} />
+                  : <ChevronDown style={{ height: 16, width: 16, color: C.muted, flexShrink: 0 }} />}
+              </button>
+              {openFaq === idx && (
+                <div style={{ padding: "0 20px 18px" }}>
+                  <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.75, fontFamily: FONT_BODY }}>{faq.a}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 6. READY TO START CTA ───────────────────────────────────────── */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "72px 24px 80px", position: "relative", zIndex: 1, background: C.bg }}>
+        <div style={{
+          borderRadius: 24, padding: "56px 48px",
+          background: C.s1,
+          border: "1px solid rgba(212,165,116,0.25)",
+          boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
+          textAlign: "center",
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 16, fontFamily: FONT_BODY }}>
+            Ready to start?
+          </p>
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(24px,2.8vw,36px)", fontWeight: 700, color: C.text, lineHeight: 1.15, marginBottom: 16 }}>
+            Your booking page is 10 minutes away.
+          </h2>
+          <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto 32px", fontFamily: FONT_BODY }}>
+            No payment required. No technical setup. Just your services, your availability, and your booking link ready to share.
+          </p>
+          {pricingMode === "signup" && (
+            <Link
+              to="/onboarding"
+              style={{
+                display: "inline-flex", alignItems: "center",
+                background: CTA_BG, boxShadow: CTA_SHADOW,
+                color: "#080808", fontFamily: FONT_BODY,
+                fontSize: 14, fontWeight: 700,
+                padding: "14px 32px", borderRadius: 10,
+                textDecoration: "none",
+              }}
+            >
+              Create Your Booking Page
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <SiteFooter />
+    </MarketingLayout>
+  );
+};
+
+export default Pricing;
