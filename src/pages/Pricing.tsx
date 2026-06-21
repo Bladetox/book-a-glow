@@ -1024,8 +1024,8 @@ const Pricing = () => {
             </thead>
             <tbody>
               {comparisonSections.map((section) => (
-                <>
-                  <tr key={section.section}>
+                <React.Fragment key={section.section}>
+                  <tr>
                     <td colSpan={5} style={{ padding: "16px 12px 6px", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold }}>
                       {section.section}
                     </td>
@@ -1039,7 +1039,7 @@ const Pricing = () => {
                       <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.studio} /></td>
                     </tr>
                   ))}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
