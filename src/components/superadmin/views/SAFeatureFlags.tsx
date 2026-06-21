@@ -21,10 +21,11 @@ const FLAG_DEFS: FlagDef[] = [
   // ── Payments
   { group: "Payments",         key: "payshap_payments",      label: "PayShap Payments",           desc: "PayShap instant EFT with built-in proof-of-payment verification queue" },
   { group: "Payments",         key: "yoco_payments",         label: "Yoco Full Payment",          desc: "Full Yoco checkout payment at time of booking"                       },
+  { group: "Payments",         key: "payfast_payments",      label: "Payfast Payments",           desc: "Payfast checkout payment at time of booking — Flow, Professional and Studio" },
   { group: "Payments",         key: "deposit_payments",      label: "Deposit Payments",           desc: "Deposit-only Yoco checkout; remainder collected at appointment — available on all tiers, kept on in arrears" },
   // ── Calendar
   { group: "Calendar",         key: "google_calendar_sync",  label: "Google Calendar Sync",       desc: "OAuth connect; auto-create, update and delete Google Calendar events"  },
-  { group: "Calendar",         key: "add_to_calendar",       label: "Add to Calendar (Client)",   desc: "Attaches an .ics calendar invite to client booking confirmation emails — Starter, Professional & Studio" },
+  { group: "Calendar",         key: "add_to_calendar",       label: "Add to Calendar (Client)",   desc: "Attaches an .ics calendar invite to client booking confirmation emails" },
   // ── Reviews & Reputation
   { group: "Reviews",          key: "review_generation",     label: "Review Generation",          desc: "Redirect clients to Google review page after payment"                },
   { group: "Reviews",          key: "gmb_integration",       label: "Google My Business",         desc: "Connect GMB account and reply to reviews from the admin dashboard"    },
@@ -234,7 +235,7 @@ function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) 
         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
         <select id="feature-flags-tenant" name="feature-flags-tenant" value={selectedId} onChange={e => { setSelectedId(e.target.value); setSaved(false); }}
           className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-9 py-2.5 text-sm text-white/70 focus:outline-none focus:border-[rgba(0,200,83,0.30)] transition-colors appearance-none">
-          <option value="" className="bg-[hsl(220,13%,10%)]">— Select a tenant —</option>
+          <option value="" className="bg-[hsl(220,13%,10%)]">-- Select a tenant --</option>
           {tenants.map(t => (
             <option key={t.id} value={t.id} className="bg-[hsl(220,13%,10%)] text-white">
               {t.name}{t.is_lifetime_free ? " ★ Lifetime" : ""}
