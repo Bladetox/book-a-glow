@@ -200,9 +200,13 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
 
     // Operational
     currency: t?.currency || s.currency || defaults.currency,
-    minNoticeHours: t?.min_notice_hours ?? defaults.minNoticeHours,
-    maxAdvanceDays: t?.max_advance_days ?? defaults.maxAdvanceDays,
-
+    minNoticeHours: s.min_notice_minutes
+    ? Number(s.min_notice_minutes) / 60
+    : t?.min_notice_hours ?? defaults.minNoticeHours,
+    maxAdvanceDays: s.max_advance_days
+    ? Number(s.max_advance_days)
+    : t?.max_advance_days ?? defaults.maxAdvanceDays,
+    
     // Pricing
     depositPercent: s.deposit_percent ? Number(s.deposit_percent) : defaults.depositPercent,
     ratePerKm: s.rate_per_km ? Number(s.rate_per_km) : defaults.ratePerKm,
