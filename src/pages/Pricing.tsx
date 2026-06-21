@@ -10,17 +10,7 @@ import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
-// ─── Keyframes + IntersectionObserver reverse-scroll (desktop + mobile) ────────
-//
-// Enter  (.hero-bg-layer, .hero-scale-layer, .hero-text-layer)
-//   play forward blur/scale-in animations.
-//
-// Exit   (--out variants)
-//   play reverse blur/scale-out animations.
-//
-// IntersectionObserver uses threshold:[0,0.1] + rootMargin so it fires
-// reliably on iOS/Android touch scroll as well as desktop wheel scroll.
-// ───────────────────────────────────────────────────────────────────────────
+// ─── Keyframes + IntersectionObserver reverse-scroll (desktop + mobile) ───────────────
 const KEYFRAME_ID = "pricing-hero-kf";
 if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
   const s = document.createElement("style");
@@ -166,6 +156,7 @@ const tiers = [
           "AI-powered add-on suggestions during booking",
           "Custom domain (CNAME)",
           "Actionable recommendations panel",
+          "Stock and inventory management with low-stock alerts",
         ],
       },
     ],
@@ -184,7 +175,6 @@ const tiers = [
       {
         label: "Everything in Professional, plus",
         features: [
-          "Stock and inventory management with low-stock alerts",
           "Barcode and manual stock scanning",
           "Nexty AI insights for loyalty and business growth",
           "Advanced analytics suite",
@@ -245,8 +235,16 @@ const comparisonSections: FeatureSection[] = [
       { label: "Booking cancelled email (client)",                   starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "PayShap payment link email (client)",                starter: true,  flow: false, professional: false, studio: false },
       { label: "Balance due reminder email (client)",                starter: true,  flow: true,  professional: true,  studio: true  },
-      { label: "Consultation form link email (client)",              starter: false, flow: false, professional: false, studio: true  },
-      { label: "Customisable email content",                         starter: false, flow: false, professional: false, studio: true  },
+      { label: "Consultation form link email (client)",              starter: false, flow: false, professional: true,  studio: true  },
+      { label: "Customisable email content",                         starter: false, flow: false, professional: true,  studio: true  },
+    ],
+  },
+  {
+    section: "WhatsApp & Broadcast",
+    rows: [
+      { label: "WhatsApp booking reminders",                         starter: true,  flow: true,  professional: true,  studio: true  },
+      { label: "WhatsApp outstanding balance request",               starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Broadcast email to all clients",                     starter: false, flow: false, professional: true,  studio: true  },
     ],
   },
   {
@@ -349,787 +347,302 @@ const faqs = [
   },
   {
     q: "Can I block a client?",
-    a: "Yes. On Flow and above you can block a client with a reason attached. Blocked clients cannot make a new booking. You stay in control of who walks through your door.",
+    a: "Yes. On Flow and above you can block a client by phone number and attach a reason. The system checks the block list before confirming any new booking from that number.",
   },
   {
-    q: "Is there a contract or lock-in?",
-    a: "None. NextSlot is month-to-month. Cancel anytime from your dashboard. No hidden fees, no exit penalties, no awkward phone calls.",
+    q: "What is the custom domain feature?",
+    a: "On Professional and Studio you can connect your own domain so your booking page lives at book.yourbusiness.com instead of the default NextSlot URL. Setup takes under five minutes with a CNAME record.",
   },
   {
-    q: "Can I upgrade or downgrade my plan?",
-    a: "Yes. Change your plan anytime from your account settings. Upgrades apply immediately. Downgrades take effect at the start of your next billing cycle.",
+    q: "Is my data safe?",
+    a: "Yes. NextSlot runs on Supabase (PostgreSQL) with row-level security. Client data is isolated per business. Payment processing is handled by PCI-compliant providers (Yoco, Payfast, PayShap). We never store raw card details.",
   },
 ];
 
-const trialBuilds = [
-  "See which channel is actually driving your bookings",
-  "Know which services generate the most revenue per hour",
-  "Spot your fastest-filling slots and your dead zones",
-  "Identify clients who have gone quiet and need a nudge",
-  "Get a growth strategy built from your real data, not generic advice",
-];
+// ─── Pill badge ────────────────────────────────────────────────────────────────
+function ComingSoonBadge() {
+  return (
+    <span style={{ fontFamily: FONT_BODY }} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-amber-500/15 text-amber-400 border border-amber-500/25">
+      Coming Soon
+    </span>
+  );
+}
 
-type TenantPlan = "starter" | "flow" | "professional" | "studio";
-type PricingMode = "signup" | "manage";
+// ─── Check / Minus cell ────────────────────────────────────────────────────────
+function Cell({ value }: { value: boolean | string }) {
+  if (value === true)  return <Check  className="w-4 h-4 text-emerald-400 mx-auto" strokeWidth={2.5} />;
+  if (value === false) return <Minus  className="w-4 h-4 text-white/15 mx-auto"   strokeWidth={2}   />;
+  return <span className="text-[11px] text-white/50 font-medium">{value}</span>;
+}
 
-const planKeyMap: Record<string, TenantPlan> = {
-  Starter: "starter",
-  Flow: "flow",
-  Professional: "professional",
-  Studio: "studio",
-};
-
-const planLabelMap: Record<TenantPlan, string> = {
-  starter: "Starter",
-  flow: "Flow",
-  professional: "Professional",
-  studio: "Studio",
-};
-
-const planRank: Record<TenantPlan, number> = {
-  starter: 1,
-  flow: 2,
-  professional: 3,
-  studio: 4,
-};
-
-const CellValue = ({ value }: { value: boolean | string }) => {
-  if (typeof value === "string") return <span style={{ fontSize: 12, color: C.muted }}>{value}</span>;
-  return value
-    ? <Check style={{ height: 16, width: 16, color: C.gold, margin: "0 auto", display: "block" }} />
-    : <Minus style={{ height: 16, width: 16, color: C.faint, margin: "0 auto", display: "block" }} />;
-};
-
-// ─── PricingHero ─────────────────────────────────────────────────────────────
-//
-// IntersectionObserver uses threshold:[0,0.1] so it fires on both
-// desktop wheel scroll and mobile touch scroll (iOS/Android).
-// rootMargin nudges the trigger point slightly inside the viewport.
-// ───────────────────────────────────────────────────────────────────────────
-const PricingHero = ({
-  pricingMode,
-  manageTierMeta,
-}: {
-  pricingMode: PricingMode;
-  manageTierMeta: { label: string; rank: number } | null;
-}) => {
-  const starterTier = tiers.find((t) => t.name === "Starter")!;
-  const heroRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const root = heroRef.current;
-    if (!root) return;
-
-    const bgEl    = root.querySelector<HTMLElement>(".hero-bg-layer");
-    const scaleEl = root.querySelector<HTMLElement>(".hero-scale-layer");
-    const textEls = root.querySelectorAll<HTMLElement>(".hero-text-layer");
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          bgEl?.classList.remove("hero-bg-layer--out");
-          scaleEl?.classList.remove("hero-scale-layer--out");
-          textEls.forEach((el) => el.classList.remove("hero-text-layer--out"));
-        } else {
-          bgEl?.classList.add("hero-bg-layer--out");
-          scaleEl?.classList.add("hero-scale-layer--out");
-          textEls.forEach((el) => el.classList.add("hero-text-layer--out"));
-        }
-      },
-      {
-        threshold: [0, 0.1],
-        rootMargin: "0px 0px -5% 0px",
-      }
-    );
-
-    observer.observe(root);
-    return () => observer.disconnect();
-  }, []);
+// ─── Tier card ─────────────────────────────────────────────────────────────────
+function TierCard({ tier, onCta }: { tier: typeof tiers[number]; onCta: () => void }) {
+  const featuredStyle = tier.featured
+    ? { background: "linear-gradient(160deg,#1a1207 0%,#2a1a0a 60%,#1a1207 100%)", border: "1px solid rgba(212,165,116,0.30)" }
+    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" };
 
   return (
-    <div
-      ref={heroRef}
-      style={{
-        position: "relative",
-        width: "100%",
-        minHeight: 640,
-        overflow: "hidden",
-      }}
-    >
-      {/* ── Layer 1: background ───────────────────────────────────────── */}
-      <div
-        className="hero-bg-layer"
-        style={{ position: "absolute", inset: 0, zIndex: 0 }}
-      >
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: "url('https://iili.io/CFs98E7.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          opacity: 0.32,
-          filter: "saturate(0.55)",
-        }} />
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: `linear-gradient(rgba(212,165,116,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(212,165,116,0.045) 1px, transparent 1px)`,
-          backgroundSize: "44px 44px",
-          mixBlendMode: "color-dodge" as const,
-          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
-          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
-        } as React.CSSProperties} />
-        <div style={{
-          position: "absolute", inset: 0,
-          background: `radial-gradient(ellipse 70% 60% at 50% 50%, transparent 40%, ${C.bg} 100%)`,
-        }} />
-        <div style={{
-          position: "absolute", inset: 0,
-          background: `linear-gradient(to bottom, ${C.bg} 0%, transparent 18%, transparent 75%, ${C.bg} 100%)`,
-        }} />
+    <div style={{ ...featuredStyle, borderRadius: 20, padding: "28px 24px 24px", display: "flex", flexDirection: "column", gap: 20, position: "relative" }}>
+      {tier.featured && (
+        <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: CTA_BG, boxShadow: CTA_SHADOW, borderRadius: 999, padding: "4px 14px", display: "flex", alignItems: "center", gap: 5 }}>
+          <Zap className="w-3 h-3 text-amber-900" fill="currentColor" />
+          <span style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, color: "#3d1f00", letterSpacing: "0.05em" }}>Most Popular</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600, color: tier.featured ? "#e8c99a" : "rgba(255,255,255,0.85)" }}>{tier.name}</span>
+          {tier.comingSoon && <ComingSoonBadge />}
+        </div>
+        {tier.subline && <p style={{ fontFamily: FONT_BODY, fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>{tier.subline}</p>}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 700, color: tier.featured ? "#e8c99a" : "rgba(255,255,255,0.90)" }}>{tier.price}</span>
+          <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: "rgba(255,255,255,0.35)" }}>{tier.period}</span>
+        </div>
+        <p style={{ fontFamily: FONT_BODY, fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 8, lineHeight: 1.5 }}>{tier.description}</p>
       </div>
 
-      {/* ── Content column ────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 2,
-          display: "flex",
-          flexDirection: "column" as const,
-          alignItems: "center",
-          textAlign: "center" as const,
-          paddingTop: 104,
-          paddingBottom: 64,
-          paddingLeft: 24,
-          paddingRight: 24,
-        }}
-      >
-        <p
-          className="hero-text-layer"
-          style={{
-            fontFamily: FONT_BODY,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase" as const,
-            color: C.gold,
-            margin: "0 0 10px 0",
-          }}
-        >
-          What it costs
+      {/* Trial badge */}
+      <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "8px 12px" }}>
+        <p style={{ fontFamily: FONT_BODY, fontSize: 12, color: "rgba(255,255,255,0.40)" }}>
+          <span style={{ color: "rgba(255,255,255,0.70)", fontWeight: 600 }}>{tier.trialDays}-day free trial</span> &middot; No card required
         </p>
+      </div>
 
-        <span
-          className="hero-scale-layer"
-          style={{
-            fontFamily: FONT_DISPLAY,
-            fontSize: "clamp(100px, 22vw, 260px)",
-            fontWeight: 800,
-            color: C.text,
-            lineHeight: 1,
-            letterSpacing: "-0.03em",
-            userSelect: "none" as const,
-            display: "block",
-            textShadow: "0 0 120px rgba(212,165,116,0.18)",
-          }}
-        >
-          R99
-        </span>
-
-        <div
-          className="hero-text-layer"
-          style={{
-            marginTop: 28,
-            width: "100%",
-            maxWidth: 520,
-            display: "flex",
-            flexDirection: "column" as const,
-            alignItems: "center",
-            gap: 0,
-          }}
-        >
-          <div style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column" as const,
-            gap: 20,
-            marginBottom: 28,
-            textAlign: "left" as const,
-          }}>
-            {starterTier.groups.map((group) => (
-              <div key={group.label}>
-                <p style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.10em",
-                  textTransform: "uppercase" as const,
-                  color: C.faint,
-                  margin: "0 0 8px 0",
-                  fontFamily: FONT_BODY,
-                }}>
-                  {group.label}
-                </p>
-                <ul style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: 0,
-                  display: "flex",
-                  flexDirection: "column" as const,
-                  gap: 8,
-                }}>
-                  {group.features.map((f) => (
-                    <li
-                      key={f}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 10,
-                        fontSize: 13,
-                        color: C.text,
-                        fontFamily: FONT_BODY,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      <Check style={{ height: 13, width: 13, marginTop: 3, color: C.gold, flexShrink: 0 }} />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+      {/* Feature groups */}
+      {tier.groups.map((g, gi) => (
+        <div key={gi}>
+          {g.label && <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.30)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>{g.label}</p>}
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            {g.features.map((feat, fi) => (
+              <li key={fi} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: tier.featured ? "#c8935a" : "rgba(255,255,255,0.35)" }} strokeWidth={2.5} />
+                <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: "rgba(255,255,255,0.60)", lineHeight: 1.45 }}>{feat}</span>
+              </li>
             ))}
-          </div>
-
-          {/* CTA ─ no arrow */}
-          {pricingMode === "manage" ? (
-            <div style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
-              padding: "13px 28px", borderRadius: 10,
-              background: "rgba(212,165,116,0.10)",
-              border: "1px solid rgba(212,165,116,0.25)",
-              color: C.text,
-            }}>
-              You are on the {manageTierMeta?.label ?? "Starter"} plan
-            </div>
-          ) : (
-            <Link
-              to="/onboarding"
-              style={{
-                background: CTA_BG,
-                boxShadow: CTA_SHADOW,
-                color: "#080808",
-                fontFamily: FONT_BODY,
-                fontSize: 14,
-                fontWeight: 700,
-                padding: "13px 32px",
-                borderRadius: 10,
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                minHeight: 48,
-              }}
-            >
-              Start Free Trial
-            </Link>
-          )}
-
-          {/* 7-day trial badge */}
-          {pricingMode === "signup" && (
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              marginTop: 12,
-              padding: "5px 14px",
-              borderRadius: 100,
-              background: "rgba(212,165,116,0.08)",
-              border: "1px solid rgba(212,165,116,0.20)",
-              fontFamily: FONT_BODY,
-              fontSize: 11,
-              fontWeight: 600,
-              color: C.muted,
-              letterSpacing: "0.01em",
-            }}>
-              <span style={{ color: C.gold, fontWeight: 700 }}>7-day</span>
-              free trial. Flow, Professional &amp; Studio get 30 days.
-            </div>
-          )}
-
-          <p style={{
-            fontSize: 12,
-            color: C.faint,
-            fontFamily: FONT_BODY,
-            fontStyle: "italic",
-            margin: "10px 0 0 0",
-            letterSpacing: "0.01em",
-          }}>
-            Start right. Focus on your craft, not admin.
-          </p>
+          </ul>
         </div>
+      ))}
+
+      {/* CTA */}
+      <div style={{ marginTop: "auto" }}>
+        {tier.comingSoon ? (
+          <button disabled style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.25)", cursor: "not-allowed" }}>
+            Coming Soon
+          </button>
+        ) : tier.featured ? (
+          <button onClick={onCta} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: "none", background: CTA_BG, boxShadow: CTA_SHADOW, fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: "#3d1f00", cursor: "pointer" }}>
+            {tier.cta}
+          </button>
+        ) : (
+          <button onClick={onCta} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.75)", cursor: "pointer" }}>
+            {tier.cta}
+          </button>
+        )}
       </div>
     </div>
   );
-};
+}
 
-// ─── Main Pricing Component ───────────────────────────────────────────────────
-const Pricing = () => {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [showComparison, setShowComparison] = useState(false);
-  const [pricingMode, setPricingMode] = useState<PricingMode>("signup");
-  const [tenantId, setTenantId] = useState<string | null>(null);
-  const [currentPlan, setCurrentPlan] = useState<TenantPlan | null>(null);
-  const [loadingTenantContext, setLoadingTenantContext] = useState(true);
-  const [submittingPlan, setSubmittingPlan] = useState<TenantPlan | null>(null);
-  const [manageNotice, setManageNotice] = useState<string | null>(null);
+// ─── FAQ item ─────────────────────────────────────────────────────────────────
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", paddingBottom: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "20px 0", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+      >
+        <span style={{ fontFamily: FONT_BODY, fontSize: 15, fontWeight: 500, color: "rgba(255,255,255,0.80)", lineHeight: 1.4 }}>{q}</span>
+        {open
+          ? <ChevronUp  className="w-4 h-4 shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
+          : <ChevronDown className="w-4 h-4 shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />}
+      </button>
+      {open && (
+        <p style={{ fontFamily: FONT_BODY, fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.65, paddingBottom: 20, margin: 0 }}>{a}</p>
+      )}
+    </div>
+  );
+}
 
+// ─── Main component ────────────────────────────────────────────────────────────
+export default function Pricing() {
+  const heroRef       = useRef<HTMLDivElement>(null);
+  const bgRef         = useRef<HTMLDivElement>(null);
+  const scaleRef      = useRef<HTMLDivElement>(null);
+  const textRef       = useRef<HTMLDivElement>(null);
+  const [email, setEmail]       = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted]   = useState(false);
+  const [error, setError]           = useState("");
+
+  // IntersectionObserver: toggle exit animation classes on scroll out/in
   useEffect(() => {
-    let isMounted = true;
-    const loadTenantContext = async () => {
-      try {
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError || !authData?.user) {
-          if (isMounted) { setPricingMode("signup"); setLoadingTenantContext(false); }
-          return;
+    const hero = heroRef.current;
+    if (!hero) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const bg    = bgRef.current;
+        const scale = scaleRef.current;
+        const text  = textRef.current;
+        if (!bg || !scale || !text) return;
+        if (entry.isIntersecting) {
+          bg.classList.remove("hero-bg-layer--out");
+          scale.classList.remove("hero-scale-layer--out");
+          text.classList.remove("hero-text-layer--out");
+        } else {
+          bg.classList.add("hero-bg-layer--out");
+          scale.classList.add("hero-scale-layer--out");
+          text.classList.add("hero-text-layer--out");
         }
-        const userId = authData.user.id;
-        const { data: tenant, error: tenantError } = await supabase
-          .from("tenants").select("id, plan").eq("id", userId).maybeSingle();
-        if (tenantError || !tenant) {
-          if (isMounted) { setPricingMode("signup"); setLoadingTenantContext(false); }
-          return;
-        }
-        const normalizedPlan = String(tenant.plan ?? "").trim().toLowerCase();
-        const safePlan: TenantPlan =
-          normalizedPlan === "flow" ? "flow"
-          : normalizedPlan === "professional" ? "professional"
-          : normalizedPlan === "studio" ? "studio"
-          : "starter";
-        if (isMounted) {
-          setTenantId(tenant.id);
-          setCurrentPlan(safePlan);
-          setPricingMode("manage");
-          setLoadingTenantContext(false);
-        }
-      } catch (error) {
-        console.error("Failed to load pricing context:", error);
-        if (isMounted) { setPricingMode("signup"); setLoadingTenantContext(false); }
-      }
-    };
-    loadTenantContext();
-    return () => { isMounted = false; };
+      },
+      { threshold: [0, 0.1], rootMargin: "0px 0px -10% 0px" },
+    );
+    io.observe(hero);
+    return () => io.disconnect();
   }, []);
 
-  const manageTierMeta = useMemo(() => {
-    if (!currentPlan) return null;
-    return { label: planLabelMap[currentPlan], rank: planRank[currentPlan] };
-  }, [currentPlan]);
+  const handleCta = () => {
+    const el = document.getElementById("waitlist");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
 
-  const handlePlanChange = async (selectedPlan: TenantPlan) => {
-    if (!tenantId || pricingMode !== "manage" || currentPlan === selectedPlan) return;
-    setManageNotice(null);
-    setSubmittingPlan(selectedPlan);
-    try {
-      const currentRank = currentPlan ? planRank[currentPlan] : 0;
-      const selectedRank = planRank[selectedPlan];
-      const nextStatus = selectedRank > currentRank ? "pending_payment" : "pending_downgrade";
-      const { error } = await supabase
-        .from("tenants")
-        .update({ plan: selectedPlan, subscription_status: nextStatus })
-        .eq("id", tenantId);
-      if (error) throw error;
-      setCurrentPlan(selectedPlan);
-      setManageNotice(
-        nextStatus === "pending_payment"
-          ? `${planLabelMap[selectedPlan]} selected. Your upgrade has been recorded and is awaiting billing confirmation.`
-          : `${planLabelMap[selectedPlan]} selected. Your downgrade has been recorded for the next billing cycle.`
-      );
-    } catch (error) {
-      console.error("Failed to update tenant plan:", error);
-      setManageNotice("We could not update your plan right now. Please try again.");
-    } finally {
-      setSubmittingPlan(null);
+  const handleWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSubmitting(true); setError("");
+    const { error: sbErr } = await supabase.from("waitlist").insert({ email: email.trim() });
+    setSubmitting(false);
+    if (sbErr) {
+      if (sbErr.code === "23505") { setSubmitted(true); }
+      else { setError("Something went wrong. Please try again."); }
+    } else {
+      setSubmitted(true);
     }
   };
 
-  const nonStarterTiers = tiers.filter((t) => t.name !== "Starter");
+  const colHeaders = useMemo(() => tiers.map(t => t.name), []);
 
   return (
     <MarketingLayout>
       <SiteHeader />
+      <main style={{ background: "#0a0a0a", minHeight: "100vh" }}>
 
-      {/* ── 1. HERO ─────────────────────────────────────────────────────── */}
-      {!loadingTenantContext && (
-        <PricingHero pricingMode={pricingMode} manageTierMeta={manageTierMeta} />
-      )}
+        {/* ── Hero ── */}
+        <section ref={heroRef} style={{ position: "relative", overflow: "hidden", minHeight: 420, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {/* Background layer */}
+          <div ref={bgRef} className="hero-bg-layer" style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+            <div ref={scaleRef} className="hero-scale-layer" style={{ width: "100%", height: "100%" }}>
+              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 40%, rgba(212,165,116,0.18) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(139,90,43,0.12) 0%, transparent 55%)" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 60%, #0a0a0a 100%)" }} />
+            </div>
+          </div>
 
-      {/* ── 2. PLANS GRID ───────────────────────────────────────────────── */}
-      <div
-        id="plans"
-        style={{
-          background: C.bg,
-          position: "relative",
-          zIndex: 1,
-          maxWidth: 1200,
-          margin: "0 auto",
-          padding: "0 24px",
-        }}
-      >
-        {/* "Plans" (gold, same clamp size) above descriptive line */}
-        <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 48 }}>
-          <h2 style={{
-            fontFamily: FONT_DISPLAY,
-            fontSize: "clamp(36px, 5vw, 64px)",
-            fontWeight: 700,
-            color: C.gold,
-            lineHeight: 1.05,
-            margin: "0 0 10px 0",
-          }}>
-            Plans
-          </h2>
-          <p style={{
-            fontSize: 13, fontWeight: 500, letterSpacing: "0.01em",
-            color: C.muted, margin: 0, fontFamily: FONT_BODY,
-          }}>
-            Pick the plan that fits where you are.
-          </p>
-        </div>
-
-        {pricingMode === "manage" && manageNotice && (
-          <p style={{ textAlign: "center", fontSize: 13, color: C.gold, fontFamily: FONT_BODY, marginBottom: 24 }}>{manageNotice}</p>
-        )}
-
-        <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}
-          className="pricing-plans-grid"
-        >
-          {nonStarterTiers.map((tier) => {
-            const tierPlan = planKeyMap[tier.name];
-            const isCurrent = pricingMode === "manage" && currentPlan === tierPlan;
-            const isUpgrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] > planRank[currentPlan];
-            const isDowngrade = pricingMode === "manage" && !!currentPlan && planRank[tierPlan] < planRank[currentPlan];
-            const isBusy = submittingPlan === tierPlan;
-            const ctaLabel = pricingMode === "manage"
-              ? isCurrent ? "Current Plan" : isUpgrade ? "Upgrade" : isDowngrade ? "Downgrade" : "Select Plan"
-              : tier.cta;
-
-            return (
-              <div
-                key={tier.name}
-                style={{
-                  background: tier.featured ? "rgba(212,165,116,0.06)" : C.s1,
-                  border: tier.featured ? "1.5px solid rgba(212,165,116,0.55)" : `1px solid ${C.border2}`,
-                  borderRadius: 20,
-                  padding: "32px 28px",
-                  position: "relative",
-                  overflow: "hidden",
-                  display: "flex",
-                  flexDirection: "column",
-                  boxShadow: tier.featured ? "0 8px 40px -8px rgba(212,165,116,0.20)" : "none",
-                }}
-              >
-                {tier.featured && (
-                  <div style={{
-                    position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    background: CTA_BG,
-                    borderRadius: "0 0 10px 10px",
-                    padding: "4px 14px",
-                    fontSize: 10, fontWeight: 700, color: "#080808",
-                    letterSpacing: "0.08em", textTransform: "uppercase" as const,
-                    fontFamily: FONT_BODY,
-                  }}>
-                    <Zap style={{ height: 10, width: 10 }} />
-                    Most popular
-                  </div>
-                )}
-
-                <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
-                  {tier.comingSoon && (
-                    <div style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
-                      textTransform: "uppercase" as const,
-                      padding: "3px 10px", borderRadius: 100, marginBottom: 10,
-                      background: "rgba(212,165,116,0.08)",
-                      border: "1px solid rgba(212,165,116,0.20)",
-                      color: C.gold, fontFamily: FONT_BODY,
-                    }}>
-                      Coming Soon
-                    </div>
-                  )}
-                  <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 4 }}>{tier.name}</h3>
-                  <div style={{ marginBottom: 6 }}>
-                    <span style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text }}>{tier.price}</span>
-                    <span style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>{tier.period}</span>
-                  </div>
-                  <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY, lineHeight: 1.5 }}>{tier.description}</p>
-                  {tier.subline && (
-                    <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, fontFamily: FONT_BODY, marginTop: 4 }}>{tier.subline}</p>
-                  )}
-                </div>
-
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
-                  {tier.groups.map((group) => (
-                    <div key={group.label}>
-                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.faint, marginBottom: 8, fontFamily: FONT_BODY }}>
-                        {group.label}
-                      </p>
-                      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 7 }}>
-                        {group.features.map((f) => (
-                          <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13, color: C.text, fontFamily: FONT_BODY }}>
-                            <Check style={{ height: 13, width: 13, marginTop: 2, color: C.gold, flexShrink: 0 }} />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Plan CTAs ─ no arrows anywhere */}
-                {pricingMode === "manage" ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={isCurrent || !!submittingPlan || tier.comingSoon}
-                      onClick={() => !tier.comingSoon && handlePlanChange(tierPlan)}
-                      style={isCurrent ? {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
-                        background: "rgba(212,165,116,0.08)", color: C.text,
-                        border: "1px solid rgba(212,165,116,0.20)", opacity: 0.6,
-                      } : tier.featured ? {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
-                        padding: "13px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
-                        background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808", border: "none", opacity: tier.comingSoon ? 0.5 : 1,
-                      } : {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
-                        background: "transparent", color: C.muted, border: `1px solid ${C.border2}`, opacity: tier.comingSoon ? 0.5 : 1,
-                      }}
-                    >
-                      {isBusy ? "Saving..." : ctaLabel}
-                    </button>
-                    <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
-                      {isCurrent ? "This is your current subscription." : isUpgrade ? "Upgrade request recorded for billing." : isDowngrade ? "Downgrade applies next billing cycle." : tier.comingSoon ? "Available soon." : "Select the plan you want to move to."}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    {tier.comingSoon ? (
-                      <div style={{
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10,
-                        background: "rgba(212,165,116,0.06)", color: C.muted,
-                        border: `1px solid ${C.border}`,
-                      }}>
-                        Coming Soon
-                      </div>
-                    ) : (
-                      <Link
-                        to="/onboarding"
-                        style={tier.featured ? {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
-                          padding: "13px 20px", borderRadius: 10,
-                          background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808",
-                          textDecoration: "none",
-                        } : {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                          padding: "12px 20px", borderRadius: 10,
-                          background: "transparent", color: C.muted,
-                          border: `1px solid ${C.border2}`, textDecoration: "none",
-                        }}
-                      >
-                        {tier.cta}
-                      </Link>
-                    )}
-                    <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
-                      {tier.comingSoon ? "Notify me when available." : `Free for ${tier.trialDays} days. No payment required.`}
-                    </p>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── 3. WHAT YOUR 30 DAYS BUILDS ─────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
-        <section>
-          <div style={{
-            maxWidth: 1100, margin: "0 auto",
-            background: C.s1,
-            border: "1px solid rgba(212,165,116,0.22)",
-            borderRadius: 20, padding: "40px 40px",
-          }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
-              What your 30 days builds
+          {/* Text layer */}
+          <div ref={textRef} className="hero-text-layer" style={{ position: "relative", zIndex: 1, textAlign: "center", padding: "80px 24px 60px", maxWidth: 700, margin: "0 auto" }}>
+            <p style={{ fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: "rgba(212,165,116,0.70)", textTransform: "uppercase", marginBottom: 16 }}>Pricing</p>
+            <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(2rem,5vw,3.5rem)", fontWeight: 700, color: "rgba(255,255,255,0.92)", lineHeight: 1.1, marginBottom: 16 }}>
+              One plan for every stage of your business
+            </h1>
+            <p style={{ fontFamily: FONT_BODY, fontSize: 16, color: "rgba(255,255,255,0.45)", lineHeight: 1.65, maxWidth: 520, margin: "0 auto" }}>
+              Start free. Upgrade as you grow. No setup fees, no hidden costs.
             </p>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
-              Your data. Your strategy.
-            </h2>
-            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
-              Most booking tools just hold appointments. NextSlot uses your first 30 days to map your business. When demand peaks, where clients find you, which services drive the most revenue per hour, and which time slots go to waste. By the time your trial ends, your dashboard is already working as your business advisor.
-            </p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-              {trialBuilds.map((point) => (
-                <li key={point} style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: C.text, fontFamily: FONT_BODY }}>
-                  <Check style={{ height: 15, width: 15, marginTop: 2, color: C.gold, flexShrink: 0 }} />
-                  {point}
-                </li>
-              ))}
-            </ul>
           </div>
         </section>
-      </div>
 
-      {/* ── 4. FULL FEATURE COMPARISON (COLLAPSED) ──────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
-        <button
-          type="button"
-          onClick={() => setShowComparison((v) => !v)}
-          style={{
-            display: "flex", alignItems: "center", gap: 8, margin: "0 auto",
-            background: "transparent", border: `1px solid ${C.border2}`,
-            borderRadius: 10, padding: "10px 20px",
-            fontSize: 13, fontWeight: 600, color: C.muted,
-            fontFamily: FONT_BODY, cursor: "pointer",
-          }}
-        >
-          {showComparison ? <ChevronUp style={{ height: 15, width: 15 }} /> : <ChevronDown style={{ height: 15, width: 15 }} />}
-          {showComparison ? "Hide" : "Show"} full feature comparison
-        </button>
-      </div>
+        {/* ── Tier cards ── */}
+        <section style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px 80px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+            {tiers.map(t => <TierCard key={t.name} tier={t} onCta={handleCta} />)}
+          </div>
+        </section>
 
-      {showComparison && (
-        /* comparison-scroll-wrap hides the scrollbar via CSS while keeping touch/wheel scroll */
-        <div
-          className="comparison-scroll-wrap"
-          style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 0", overflowX: "auto", position: "relative", zIndex: 1, background: C.bg }}
-        >
-          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT_BODY }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: "10px 12px", fontSize: 12, color: C.muted, fontWeight: 600, borderBottom: `1px solid ${C.border}`, width: "40%" }}>Feature</th>
-                {["Starter", "Flow", "Professional", "Studio"].map((name) => (
-                  <th key={name} style={{ textAlign: "center", padding: "10px 12px", fontSize: 12, color: name === "Professional" ? C.gold : C.muted, fontWeight: 700, borderBottom: `1px solid ${C.border}` }}>{name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {comparisonSections.map((section) => (
-                <React.Fragment key={section.section}>
-                  <tr>
-                    <td colSpan={5} style={{ padding: "16px 12px 6px", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold }}>
-                      {section.section}
-                    </td>
-                  </tr>
-                  {section.rows.map((row) => (
-                    <tr key={row.label} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: "9px 12px", fontSize: 13, color: C.muted }}>{row.label}</td>
-                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.starter} /></td>
-                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.flow} /></td>
-                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.professional} /></td>
-                      <td style={{ padding: "9px 12px", textAlign: "center" }}><CellValue value={row.studio} /></td>
-                    </tr>
+        {/* ── Comparison table ── */}
+        <section style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px 100px" }}>
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(1.5rem,3vw,2.25rem)", fontWeight: 700, color: "rgba(255,255,255,0.88)", textAlign: "center", marginBottom: 48 }}>Compare plans</h2>
+
+          <div className="comparison-scroll-wrap" style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "40%", textAlign: "left", paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.08)" }} />
+                  {colHeaders.map(h => (
+                    <th key={h} style={{ textAlign: "center", paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.08)", fontFamily: FONT_DISPLAY, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.65)", letterSpacing: "0.03em" }}>{h}</th>
                   ))}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                </tr>
+              </thead>
+              <tbody>
+                {comparisonSections.map(sec => (
+                  <>
+                    <tr key={`sec-${sec.section}`}>
+                      <td colSpan={5} style={{ paddingTop: 32, paddingBottom: 8 }}>
+                        <span style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(212,165,116,0.60)" }}>{sec.section}</span>
+                      </td>
+                    </tr>
+                    {sec.rows.map((row, ri) => (
+                      <tr key={ri} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                        <td style={{ paddingTop: 11, paddingBottom: 11, paddingRight: 16, fontFamily: FONT_BODY, fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>{row.label}</td>
+                        <td style={{ textAlign: "center", paddingTop: 11, paddingBottom: 11 }}><Cell value={row.starter}      /></td>
+                        <td style={{ textAlign: "center", paddingTop: 11, paddingBottom: 11 }}><Cell value={row.flow}         /></td>
+                        <td style={{ textAlign: "center", paddingTop: 11, paddingBottom: 11 }}><Cell value={row.professional} /></td>
+                        <td style={{ textAlign: "center", paddingTop: 11, paddingBottom: 11 }}><Cell value={row.studio}       /></td>
+                      </tr>
+                    ))}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-      {/* ── 5. FAQ ──────────────────────────────────────────────────────── */}
-      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY, textAlign: "center" }}>
-          FAQ
-        </p>
-        <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px,2.4vw,30px)", fontWeight: 700, color: C.text, lineHeight: 1.2, marginBottom: 36, textAlign: "center" }}>
-          Common questions.
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {faqs.map((faq, idx) => (
-            <div
-              key={faq.q}
-              style={{
-                borderRadius: 12,
-                border: `1px solid ${openFaq === idx ? "rgba(212,165,116,0.35)" : C.border}`,
-                background: openFaq === idx ? "rgba(212,165,116,0.04)" : "transparent",
-                overflow: "hidden",
-                marginBottom: 4,
-                transition: "border-color 0.15s",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                  padding: "16px 20px", background: "transparent", border: "none", cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                <span style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, lineHeight: 1.4 }}>{faq.q}</span>
-                {openFaq === idx
-                  ? <ChevronUp style={{ height: 16, width: 16, color: C.gold, flexShrink: 0 }} />
-                  : <ChevronDown style={{ height: 16, width: 16, color: C.muted, flexShrink: 0 }} />}
-              </button>
-              {openFaq === idx && (
-                <div style={{ padding: "0 20px 18px" }}>
-                  <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.75, fontFamily: FONT_BODY }}>{faq.a}</p>
-                </div>
-              )}
+        {/* ── FAQ ── */}
+        <section style={{ maxWidth: 720, margin: "0 auto", padding: "0 20px 100px" }}>
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(1.5rem,3vw,2.25rem)", fontWeight: 700, color: "rgba(255,255,255,0.88)", textAlign: "center", marginBottom: 48 }}>Frequently asked questions</h2>
+          {faqs.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
+        </section>
+
+        {/* ── Waitlist / CTA ── */}
+        <section id="waitlist" style={{ maxWidth: 560, margin: "0 auto", padding: "0 20px 120px", textAlign: "center" }}>
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(1.5rem,3vw,2.25rem)", fontWeight: 700, color: "rgba(255,255,255,0.88)", marginBottom: 12 }}>Ready to get started?</h2>
+          <p style={{ fontFamily: FONT_BODY, fontSize: 15, color: "rgba(255,255,255,0.40)", lineHeight: 1.6, marginBottom: 32 }}>Join businesses that have already automated their bookings with NextSlot.</p>
+
+          {submitted ? (
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 16, padding: "28px 24px" }}>
+              <p style={{ fontFamily: FONT_BODY, fontSize: 15, color: "rgba(255,255,255,0.70)" }}>You are on the list. We will be in touch soon.</p>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── 6. READY TO START CTA ───────────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "72px 24px 80px", position: "relative", zIndex: 1, background: C.bg }}>
-        <div style={{
-          borderRadius: 24, padding: "56px 48px",
-          background: C.s1,
-          border: "1px solid rgba(212,165,116,0.25)",
-          boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
-          textAlign: "center",
-        }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 16, fontFamily: FONT_BODY }}>
-            Ready to start?
-          </p>
-          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(24px,2.8vw,36px)", fontWeight: 700, color: C.text, lineHeight: 1.15, marginBottom: 16 }}>
-            Your booking page is 10 minutes away.
-          </h2>
-          <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto 32px", fontFamily: FONT_BODY }}>
-            No payment required. No technical setup. Just your services, your availability, and your booking link ready to share.
-          </p>
-          {pricingMode === "signup" && (
-            <Link
-              to="/onboarding"
-              style={{
-                display: "inline-flex", alignItems: "center",
-                background: CTA_BG, boxShadow: CTA_SHADOW,
-                color: "#080808", fontFamily: FONT_BODY,
-                fontSize: 14, fontWeight: 700,
-                padding: "14px 32px", borderRadius: 10,
-                textDecoration: "none",
-              }}
-            >
-              Create Your Booking Page
-            </Link>
+          ) : (
+            <form onSubmit={handleWaitlist} style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              <input
+                type="email"
+                required
+                placeholder="your@email.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                style={{ flex: "1 1 220px", padding: "12px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", fontFamily: FONT_BODY, fontSize: 14, color: "rgba(255,255,255,0.80)", outline: "none" }}
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{ padding: "12px 24px", borderRadius: 12, border: "none", background: CTA_BG, boxShadow: CTA_SHADOW, fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: "#3d1f00", cursor: "pointer", opacity: submitting ? 0.6 : 1 }}
+              >
+                {submitting ? "Joining..." : "Join Waitlist"}
+              </button>
+            </form>
           )}
-        </div>
-      </div>
+          {error && <p style={{ fontFamily: FONT_BODY, fontSize: 13, color: "#f87171", marginTop: 10 }}>{error}</p>}
+        </section>
 
+        {/* ── Footer CTA strip ── */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px 20px", textAlign: "center" }}>
+          <p style={{ fontFamily: FONT_BODY, fontSize: 13, color: "rgba(255,255,255,0.25)" }}>
+            Already have an account? <Link to="/login" style={{ color: "rgba(212,165,116,0.70)", textDecoration: "none" }}>Sign in</Link>
+          </p>
+        </div>
+
+      </main>
       <SiteFooter />
     </MarketingLayout>
   );
-};
-
-export default Pricing;
+}
