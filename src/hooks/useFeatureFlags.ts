@@ -26,9 +26,10 @@ export const FLAG_KEYS = [
   "whatsapp_balance",
   "broadcast_email",
   // Payments
-  "yoco_payments",
-  "deposit_payments",
   "payshap_payments",
+  "yoco_payments",
+  "payfast_payments",
+  "deposit_payments",
   // Calendar
   "google_calendar_sync",
   "add_to_calendar",
@@ -58,9 +59,10 @@ export type FeatureFlags = Record<FlagKey, boolean>;
  * Bookings tab + payment methods so they can still operate and collect money.
  */
 const ARREARS_ALLOWED: ReadonlySet<FlagKey> = new Set<FlagKey>([
-  "yoco_payments",
-  "deposit_payments",
   "payshap_payments",
+  "yoco_payments",
+  "payfast_payments",
+  "deposit_payments",
 ]);
 
 const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
