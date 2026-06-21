@@ -19,8 +19,9 @@ const FLAG_DEFS: FlagDef[] = [
   { group: "Notifications",    key: "whatsapp_balance",      label: "WhatsApp Balance Request",   desc: "Send a WhatsApp outstanding balance message to the client"           },
   { group: "Notifications",    key: "broadcast_email",       label: "Broadcast Email",            desc: "Bulk email to all clients (superadmin-triggered from SA Broadcast)"  },
   // ── Payments
+  { group: "Payments",         key: "payshap_payments",      label: "PayShap Payments",           desc: "PayShap instant EFT with built-in proof-of-payment verification queue" },
   { group: "Payments",         key: "yoco_payments",         label: "Yoco Full Payment",          desc: "Full Yoco checkout payment at time of booking"                       },
-  { group: "Payments",         key: "deposit_payments",      label: "Deposit Payments",           desc: "Deposit-only Yoco checkout; remainder collected at appointment"       },
+  { group: "Payments",         key: "deposit_payments",      label: "Deposit Payments",           desc: "Deposit-only Yoco checkout; remainder collected at appointment — available on all tiers, kept on in arrears" },
   // ── Calendar
   { group: "Calendar",         key: "google_calendar_sync",  label: "Google Calendar Sync",       desc: "OAuth connect; auto-create, update and delete Google Calendar events"  },
   { group: "Calendar",         key: "add_to_calendar",       label: "Add to Calendar (Client)",   desc: "Attaches an .ics calendar invite to client booking confirmation emails — Starter, Professional & Studio" },
