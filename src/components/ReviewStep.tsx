@@ -760,16 +760,18 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col gap-5 scrollbar-hide">
-                {termsSections.map((section, i) => (
-                  <div key={i} className="flex flex-col gap-2">
-                    {section.heading && (
-                      <p className="text-sm font-bold text-foreground">{section.heading}</p>
-                    )}
-                    {section.body && (
-                      <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">{section.body}</p>
-                    )}
-                  </div>
-                ))}
+              {termsSections.map((section, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  {section.title && (
+                    <p className="text-sm font-bold text-foreground">{section.title}</p>
+                  )}
+                  {section.content && (
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                      {section.content}
+                    </p>
+                  )}
+                </div>
+              ))}
               </div>
               <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
                 <motion.button
