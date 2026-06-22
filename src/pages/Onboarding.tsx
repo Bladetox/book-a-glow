@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type CSSProperties } from "react";
+import { useState, useMemo, useEffect, useRef, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -77,6 +77,11 @@ const Onboarding = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
 
+  // Deferred theme style — applied one rAF after selection so the card
+  // selection visual lands first and the background shift follows smoothly.
+  const [appliedThemeStyle, setAppliedThemeStyle] = useState<CSSProperties>({});
+  const rafRef = useRef<number | null>(null);
+
   const schedule = availabilityPresets[0].schedule;
 
   const activeTheme = useMemo(() => {
@@ -88,6 +93,17 @@ const Onboarding = () => {
     if (!activeTheme) return {};
     return getThemeCssVars(activeTheme) as CSSProperties;
   }, [activeTheme]);
+
+  // Defer theme application by one animation frame
+  useEffect(() => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      setAppliedThemeStyle(themeStyle);
+    });
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [themeStyle]);
 
   const passwordsMatch = password === confirmPassword;
   const passwordValid = password.length >= 8;
@@ -226,8 +242,12 @@ const Onboarding = () => {
 
   return (
     <div
-      className="nextslot-theme dark-brand flex flex-col transition-colors duration-500 bg-background text-foreground"
-      style={{ minHeight: "100dvh", ...themeStyle }}
+      className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
+      style={{
+        minHeight: "100dvh",
+        transition: "background-color 400ms ease, color 400ms ease",
+        ...appliedThemeStyle,
+      }}
     >
       <input
         type="text"
@@ -242,7 +262,8 @@ const Onboarding = () => {
 
       <div className="border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          {/* Fix: p-1 on Link gives the logo a 48px+ tap target */}
+          <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
             <img
               src="/web-app-manifest-192x192.png"
               alt="NextSlot"
@@ -282,7 +303,8 @@ const Onboarding = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex items-start justify-center pt-12 pb-20 px-4">
+      {/* Fix: pb-[max(80px,env(safe-area-inset-bottom,80px))] covers iPhone home indicator */}
+      <div className="flex-1 flex items-start justify-center pt-12 px-4" style={{ paddingBottom: "max(80px, env(safe-area-inset-bottom, 80px))" }}>
         <div className="w-full max-w-lg">
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
@@ -342,7 +364,6 @@ const Onboarding = () => {
                     onChange={(e) => setBusinessName(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                     placeholder="e.g. Glow by Tash"
-                    autoFocus
                   />
                   <p className="text-xs text-muted-foreground">This becomes your booking page name. You can change it later.</p>
                 </div>
@@ -383,10 +404,12 @@ const Onboarding = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">R</span>
+                        {/* Fix: inputMode="decimal" opens numeric keypad on mobile */}
                         <input
                           id={`service-price-${i}`}
                           name={`service-price-${i}`}
                           type="text"
+                          inputMode="decimal"
                           value={service.price}
                           onChange={(e) => updateService(i, "price", e.target.value)}
                           placeholder="Price"
@@ -460,7 +483,6 @@ const Onboarding = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                     placeholder="you@example.com"
-                    autoFocus
                   />
                 </div>
 
@@ -533,12 +555,13 @@ const Onboarding = () => {
             </div>
           )}
 
+          {/* Fix: min-h-[48px] on both nav buttons meets the 44px+ tap target standard */}
           <div className="mt-8 flex items-center justify-between gap-3">
             {step > 1 ? (
               <button
                 onClick={() => setStep(step - 1)}
                 disabled={submitting}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 min-h-[48px] rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
               >
                 <ArrowLeft className="h-4 w-4" />Back
               </button>
@@ -550,7 +573,7 @@ const Onboarding = () => {
               <button
                 onClick={() => setStep(step + 1)}
                 disabled={!canProceed()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue<ArrowRight className="h-4 w-4" />
               </button>
@@ -558,7 +581,7 @@ const Onboarding = () => {
               <button
                 onClick={handleComplete}
                 disabled={submitting || !canProceed()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
