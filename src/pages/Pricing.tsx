@@ -88,9 +88,96 @@ if (typeof document !== "undefined" && !document.getElementById(KEYFRAME_ID)) {
     .comparison-scroll-wrap::-webkit-scrollbar {
       display: none;
     }
+
+    /* ── WhatsApp bubble ── */
+    @keyframes wa-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(37,211,102,0.45); }
+      50%       { box-shadow: 0 0 0 10px rgba(37,211,102,0); }
+    }
+    .wa-bubble {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #25D366;
+      border-radius: 100px;
+      padding: 12px 20px 12px 14px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.35), 0 1px 6px rgba(0,0,0,0.2);
+      text-decoration: none;
+      cursor: pointer;
+      animation: wa-pulse 2.8s ease-in-out infinite;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      max-width: 220px;
+    }
+    .wa-bubble:hover {
+      transform: translateY(-2px);
+      opacity: 0.93;
+      animation: none;
+      box-shadow: 0 8px 32px rgba(37,211,102,0.35), 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .wa-bubble-icon {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wa-bubble-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .wa-bubble-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+    }
+    .wa-bubble-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.75);
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
   `;
   document.head.appendChild(s);
 }
+
+// ─── WhatsApp Bubble ──────────────────────────────────────────────────────────
+const WaBubble = () => (
+  <a
+    href="https://wa.me/27686806115"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="wa-bubble"
+    aria-label="Chat with us on WhatsApp"
+    style={{ fontFamily: FONT_BODY }}
+  >
+    <span className="wa-bubble-icon">
+      {/* WhatsApp SVG icon */}
+      <svg viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="16" fill="rgba(255,255,255,0.18)" />
+        <path
+          d="M16 6C10.477 6 6 10.477 6 16c0 1.89.523 3.656 1.434 5.168L6 26l4.98-1.406A9.94 9.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 6 16 6z"
+          fill="#fff"
+        />
+        <path
+          d="M21.32 18.413c-.292-.146-1.726-.852-1.994-.949-.267-.097-.462-.146-.656.146-.194.292-.754.95-.924 1.144-.17.194-.34.219-.632.073-.292-.146-1.232-.454-2.347-1.448-.867-.773-1.452-1.727-1.622-2.019-.17-.292-.018-.45.128-.595.131-.13.292-.34.438-.511.146-.17.194-.292.292-.486.097-.195.049-.365-.025-.511-.073-.146-.656-1.582-.9-2.166-.237-.57-.478-.492-.656-.501l-.559-.01c-.194 0-.511.073-.778.365-.267.292-1.02 1-.02 2.436s2.02 2.892 4.38 3.97c.61.263 1.086.42 1.457.537.612.194 1.169.167 1.61.101.491-.073 1.512-.618 1.725-1.215.213-.597.213-1.108.15-1.215-.063-.106-.243-.17-.535-.316z"
+          fill="#25D366"
+        />
+      </svg>
+    </span>
+    <span className="wa-bubble-text">
+      <span className="wa-bubble-label">Chat with us</span>
+      <span className="wa-bubble-sub">We reply in minutes</span>
+    </span>
+  </a>
+);
 
 const tiers = [
   {
@@ -1129,6 +1216,9 @@ const Pricing = () => {
       </div>
 
       <SiteFooter />
+
+      {/* ── WhatsApp Support Bubble (Pricing page only) ──────────────────── */}
+      <WaBubble />
     </MarketingLayout>
   );
 };
