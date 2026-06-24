@@ -328,24 +328,78 @@ export function useUpdateBookingFields() {
         .eq("tenant_id", tenantId);
       if (error) throw error;
 
+      // ── Only write a payments row when the admin explicitly marks the booking
+      //    as fully paid (Mark Paid button). This covers PayShap, cash/EFT and
+      //    Yoco bookings where the admin is settling the outstanding balance.
+      //
+      //    Yoco webhooks write their own payments rows automatically, so we must
+      //    never double-count. The logic is:
+      //
+      //    1. Check how many payments rows already exist for this booking.
+      //    2. No existing rows  => PayShap / cash / EFT: insert total_amount as
+      //       a single full_payment row.
+      //    3. Existing rows     => Yoco already wrote a deposit row; only insert
+      //       the remaining balance_due (if any) as a "balance" row.
+      //    4. balance_due = 0 and rows already exist => Yoco paid in full online;
+      //       nothing to insert.
       if (updates.full_payment_received === true) {
-        const { data: bk } = await supabase
-          .from("bookings")
-          .select("total_amount")
-          .eq("id", bookingId)
-          .single();
+        const [{ data: bk }, { data: existingPayments }] = await Promise.all([
+          supabase
+            .from("bookings")
+            .select("total_amount, balance_due")
+            .eq("id", bookingId)
+            .single(),
+          supabase
+            .from("payments")
+            .select("id")
+            .eq("booking_id", bookingId),
+        ]);
 
-        const { error: payErr } = await supabase
-          .from("payments")
-          .insert({
-            tenant_id:    tenantId,
-            booking_id:   bookingId,
-            amount:       Number(bk?.total_amount ?? 0),
-            status:       "completed",
-            payment_type: "manual",
-            created_at:   new Date().toISOString(),
-          });
-        if (payErr) console.warn("Payment record insert failed:", payErr.message);
+        const hasExistingPayments = (existingPayments ?? []).length > 0;
+
+        if (!hasExistingPayments) {
+          // PayShap / cash / EFT — no prior payment row at all.
+          // Insert the full booking total as one completed payment.
+          const amount = Number(bk?.total_amount ?? 0);
+          if (amount > 0) {
+            const { error: payErr } = await supabase
+              .from("payments")
+              .insert({
+                tenant_id:      tenantId,
+                booking_id:     bookingId,
+                amount,
+                status:         "completed",
+                payment_type:   "full_payment",
+                payment_method: "other",
+                gateway:        "manual",
+                completed_at:   new Date().toISOString(),
+                created_at:     new Date().toISOString(),
+              });
+            if (payErr) console.warn("Payment record insert failed:", payErr.message);
+          }
+        } else {
+          // Yoco already wrote at least one row (the deposit).
+          // Only insert the outstanding balance — avoid double-counting.
+          const amount = Number(bk?.balance_due ?? 0);
+          if (amount > 0) {
+            const { error: payErr } = await supabase
+              .from("payments")
+              .insert({
+                tenant_id:      tenantId,
+                booking_id:     bookingId,
+                amount,
+                status:         "completed",
+                payment_type:   "balance",
+                payment_method: "card",
+                gateway:        "yoco",
+                completed_at:   new Date().toISOString(),
+                created_at:     new Date().toISOString(),
+              });
+            if (payErr) console.warn("Balance payment record insert failed:", payErr.message);
+          }
+          // If balance_due is already 0 the Yoco webhook settled everything
+          // online — nothing to insert here.
+        }
       }
     },
     onSuccess: () => {
