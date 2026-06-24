@@ -327,10 +327,31 @@ export function useUpdateBookingFields() {
         .eq("id", bookingId)
         .eq("tenant_id", tenantId);
       if (error) throw error;
+
+      if (updates.full_payment_received === true) {
+        const { data: bk } = await supabase
+          .from("bookings")
+          .select("total_amount")
+          .eq("id", bookingId)
+          .single();
+
+        const { error: payErr } = await supabase
+          .from("payments")
+          .insert({
+            tenant_id:    tenantId,
+            booking_id:   bookingId,
+            amount:       Number(bk?.total_amount ?? 0),
+            status:       "completed",
+            payment_type: "manual",
+            created_at:   new Date().toISOString(),
+          });
+        if (payErr) console.warn("Payment record insert failed:", payErr.message);
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings",              tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-bookings",         tenantId] });
+      qc.invalidateQueries({ queryKey: ["dash-payments",         tenantId] });
       qc.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] });
     },
   });
