@@ -176,7 +176,7 @@ export function useDashboardData() {
         .from("payments")
         .select("amount, created_at, payment_type")
         .eq("tenant_id", tenantId)
-        .eq("status", "completed")
+        .in("status", ["completed", "paid"])
         .gte("created_at", fetchFromDate)
         .lte("created_at", todayStr + "T23:59:59");
       if (error) throw error;
