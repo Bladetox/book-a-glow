@@ -545,7 +545,7 @@ const Onboarding = () => {
                     Almost there - create your account
                   </h1>
                   <p className="text-muted-foreground text-sm">
-                    Your booking page is ready. Create a free account to launch it. No credit card required.
+                    Your booking page is ready. Create a free account to launch it. No payment required.
                   </p>
                 </div>
 
@@ -635,7 +635,7 @@ const Onboarding = () => {
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground">Free for 30 days. No credit card required. Cancel anytime.</p>
+                <p className="text-xs text-muted-foreground">Free for 30 days. No payment required. Cancel anytime.</p>
 
                 {submitError && (
                   <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -652,7 +652,7 @@ const Onboarding = () => {
                     Choose your plan
                   </h1>
                   <p className="text-muted-foreground text-sm">
-                    Every plan starts with a free trial. No credit card needed today.
+                    Every plan starts with a free trial. No payment needed today.
                   </p>
                 </div>
 
