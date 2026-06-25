@@ -10,6 +10,10 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Zap,
+  Star,
+  Crown,
+  Building2,
 } from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +25,95 @@ const availabilityPresets = [
 ];
 
 interface Service { name: string; price: string; duration: string; }
+
+type PlanId = "starter" | "flow" | "professional" | "enterprise";
+
+interface Plan {
+  id: PlanId;
+  name: string;
+  price: string;
+  priceNote: string;
+  trial: string;
+  tagline: string;
+  icon: React.ElementType;
+  popular: boolean;
+  features: string[];
+}
+
+const PLANS: Plan[] = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: "R99",
+    priceNote: "/month",
+    trial: "7-day free trial",
+    tagline: "Get off the diary. Accept bookings online.",
+    icon: Zap,
+    popular: false,
+    features: [
+      "Online booking page",
+      "Unlimited appointments",
+      "PayShap payment collection",
+      "Manual proof-of-payment verification",
+      "Basic availability management",
+      "Email booking confirmations",
+    ],
+  },
+  {
+    id: "flow",
+    name: "Flow",
+    price: "R399",
+    priceNote: "/month",
+    trial: "30-day free trial",
+    tagline: "Real payments, deposits, and client control.",
+    icon: Star,
+    popular: false,
+    features: [
+      "Everything in Starter",
+      "Yoco & Payfast at checkout",
+      "Deposit collection with balance tracking",
+      "Client blocking with reason",
+      "Custom T&Cs at checkout",
+      "Revenue trend metrics",
+    ],
+  },
+  {
+    id: "professional",
+    name: "Professional",
+    price: "R699",
+    priceNote: "/month",
+    trial: "30-day free trial",
+    tagline: "The full toolkit for serious beauty pros.",
+    icon: Crown,
+    popular: true,
+    features: [
+      "Everything in Flow",
+      "Call-out mode with travel fee calculation",
+      "Full loyalty system (New / Regular / VIP)",
+      "Loyalty points & tier progression",
+      "Advanced analytics dashboard",
+      "Priority support",
+    ],
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: "R1,299",
+    priceNote: "/month",
+    trial: "30-day free trial",
+    tagline: "Multi-location, teams, and white-glove setup.",
+    icon: Building2,
+    popular: false,
+    features: [
+      "Everything in Professional",
+      "Multi-location management",
+      "Team & staff management",
+      "Custom branding & domain",
+      "Dedicated onboarding support",
+      "SLA-backed uptime guarantee",
+    ],
+  },
+];
 
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -79,6 +172,7 @@ const Onboarding = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [services, setServices] = useState<Service[]>([{ ...BLANK_SERVICE }]);
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("professional");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
@@ -153,6 +247,7 @@ const Onboarding = () => {
       passwordValid &&
       passwordsMatch
     );
+    if (step === 4) return true;
     return true;
   };
 
@@ -217,6 +312,7 @@ const Onboarding = () => {
               activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
             services: services.filter((s) => s.name.trim()),
             schedule,
+            selected_plan: selectedPlan,
           }),
         }
       );
@@ -241,7 +337,7 @@ const Onboarding = () => {
     }
   };
 
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   return (
     // Root locked to the exact viewport — no page-level overflow or scrollbar
@@ -566,6 +662,88 @@ const Onboarding = () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground">Free for 30 days. No credit card required. Cancel anytime.</p>
+
+                {submitError && (
+                  <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {submitError}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="space-y-8 animate-fade-in">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
+                    Choose your plan
+                  </h1>
+                  <p className="text-muted-foreground text-sm">
+                    Every plan starts with a free trial. No credit card needed today.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {PLANS.map((plan) => {
+                    const Icon = plan.icon;
+                    const isSelected = selectedPlan === plan.id;
+                    return (
+                      <button
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan.id)}
+                        className={`w-full text-left rounded-xl border transition-all duration-300 overflow-hidden ${
+                          isSelected
+                            ? "border-primary shadow-elevated"
+                            : "border-border hover:border-foreground/20 hover:shadow-soft"
+                        }`}
+                      >
+                        <div className={`px-5 py-4 transition-colors duration-300 ${isSelected ? "gradient-card" : "gradient-surface"}`}>
+                          <div className="flex items-start gap-4">
+                            <div
+                              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-300 ${
+                                isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                              }`}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-semibold text-foreground">{plan.name}</span>
+                                {plan.popular && (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                                    Most Popular
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-muted-foreground ml-auto">{plan.trial}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span className="text-sm font-bold text-foreground">{plan.price}</span>
+                              <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-1 gap-1.5 animate-fade-in">
+                              {plan.features.map((feature) => (
+                                <div key={feature} className="flex items-center gap-2">
+                                  <Check className="h-3 w-3 text-primary shrink-0" />
+                                  <span className="text-xs text-muted-foreground">{feature}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  You can change your plan at any time from your dashboard settings.
+                </p>
 
                 {submitError && (
                   <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
