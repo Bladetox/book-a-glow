@@ -423,6 +423,10 @@ const faqs = [
     q: "Which payment options does NextSlot support?",
     a: "Starter plan businesses collect payments via PayShap instant EFT with a built-in proof-of-payment verification queue. Flow, Professional, and Studio plans unlock Yoco and Payfast so clients pay at the time of booking. Deposits are collected automatically.",
   },
+{
+  q: "What is PayShap?",
+  a: "PayShap is a real-time interbank payment system built into South African banking apps. It was launched by BankservAfrica and is available directly inside FNB, Standard Bank, Absa, Nedbank, Capitec, and Discovery Bank. Your client taps 'Pay' in their banking app, enters your ShapID or phone number, and the money arrives in your account instantly. No waiting for end-of-day batch processing, no EFT clearance delays. On the Starter plan, NextSlot emails your client a PayShap payment link and holds their booking slot for a set window. Once payment clears, your verification queue updates automatically so you can confirm with one click.",
+},  
   {
     q: "What happens if a client does not pay the deposit?",
     a: "The booking is not confirmed until the deposit is paid. No manual follow-up, no guessing if they are serious. Your calendar only fills with clients who have committed.",
