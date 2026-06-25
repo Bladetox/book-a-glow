@@ -23,7 +23,7 @@ const availabilityPresets = [
 
 interface Service { name: string; price: string; duration: string; }
 
-type PlanId = "starter" | "flow" | "professional" ;
+type PlanId = "starter" | "flow" | "professional";
 
 interface Plan {
   id: PlanId;
@@ -32,7 +32,6 @@ interface Plan {
   priceNote: string;
   trial: string;
   tagline: string;
-  icon: React.ElementType;
   popular: boolean;
   features: string[];
 }
@@ -79,7 +78,6 @@ const PLANS: Plan[] = [
     priceNote: "/month",
     trial: "30-day free trial",
     tagline: "The full toolkit for serious beauty pros.",
-    icon: Crown,
     popular: true,
     features: [
       "Everything in Flow",
@@ -133,7 +131,6 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
 
 const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
 
-// Hides the scrollbar track on Firefox + IE while keeping scroll functional
 const scrollbarHide: CSSProperties = {
   msOverflowStyle: "none",
   scrollbarWidth: "none",
@@ -317,7 +314,6 @@ const Onboarding = () => {
   const totalSteps = 4;
 
   return (
-    // Root locked to the exact viewport — no page-level overflow or scrollbar
     <div
       className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
       style={{
@@ -338,10 +334,9 @@ const Onboarding = () => {
         style={{ display: "none" }}
       />
 
-      {/* Inject webkit scrollbar hide once — targets the scroll region below */}
       <style>{`#ob-scroll::-webkit-scrollbar{display:none}`}</style>
 
-      {/* HEADER — shrink-0 so it never compresses or scrolls away */}
+      {/* HEADER */}
       <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
@@ -371,7 +366,7 @@ const Onboarding = () => {
         </div>
       </div>
 
-      {/* PROGRESS BAR — shrink-0 so it stays pinned below the header */}
+      {/* PROGRESS BAR */}
       <div className="shrink-0 max-w-2xl mx-auto px-4 w-full mt-6">
         <div className="flex gap-1.5">
           {Array.from({ length: totalSteps }).map((_, i) => (
@@ -385,7 +380,7 @@ const Onboarding = () => {
         </div>
       </div>
 
-      {/* SCROLLABLE REGION — only this area scrolls; bar is hidden */}
+      {/* SCROLLABLE REGION */}
       <div
         id="ob-scroll"
         className="flex-1 overflow-y-auto"
@@ -661,8 +656,8 @@ const Onboarding = () => {
 
                 <div className="space-y-3">
                   {PLANS.map((plan) => {
-                    const Icon = plan.icon;
                     const isSelected = selectedPlan === plan.id;
+                    const isProfessional = plan.id === "professional";
                     return (
                       <button
                         key={plan.id}
@@ -674,18 +669,13 @@ const Onboarding = () => {
                         }`}
                       >
                         <div className={`px-5 py-4 transition-colors duration-300 ${isSelected ? "gradient-card" : "gradient-surface"}`}>
-                          <div className="flex items-start gap-4">
-                            <div
-                              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-300 ${
-                                isSelected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                              }`}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </div>
-
+                          <div className="flex items-start gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-sm font-semibold text-foreground">{plan.name}</span>
+                                {isProfessional && (
+                                  <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
+                                )}
                                 {plan.popular && (
                                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
                                     Most Popular
