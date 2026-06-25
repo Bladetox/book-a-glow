@@ -10,10 +10,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Zap,
-  Star,
   Crown,
-  Building2,
 } from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +23,7 @@ const availabilityPresets = [
 
 interface Service { name: string; price: string; duration: string; }
 
-type PlanId = "starter" | "flow" | "professional" | "enterprise";
+type PlanId = "starter" | "flow" | "professional" ;
 
 interface Plan {
   id: PlanId;
