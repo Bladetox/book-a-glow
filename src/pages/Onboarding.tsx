@@ -48,7 +48,8 @@ const PLANS: Plan[] = [
     features: [
       "Online booking page",
       "Unlimited appointments",
-      "PayShap payment collection. Clients pay you, using your number",
+      "PayShap payment collection",
+      "Clients pay you, using your number",
       "Manual proof-of-payment verification",
       "Basic availability management",
       "Email booking confirmations",
