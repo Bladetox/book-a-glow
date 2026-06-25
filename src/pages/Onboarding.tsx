@@ -64,8 +64,9 @@ const PLANS: Plan[] = [
     tagline: "Real payments, deposits, and client control.",
     popular: false,
     features: [
-      "Everything in Starter",
+      "Everything in Starter, No PayShap",
       "Yoco & Payfast at checkout",
+      "Full automated workflow",
       "Deposit collection with balance tracking",
       "Client blocking with reason",
       "Custom T&Cs at checkout",
