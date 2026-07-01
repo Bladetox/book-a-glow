@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   Crown,
+  Mail,
 } from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +32,7 @@ interface Plan {
   price: string;
   priceNote: string;
   trial: string;
+  trialDays: number;
   tagline: string;
   popular: boolean;
   features: string[];
@@ -43,6 +45,7 @@ const PLANS: Plan[] = [
     price: "R99",
     priceNote: "/month",
     trial: "7-day free trial",
+    trialDays: 7,
     tagline: "Get off the diary. Accept bookings online.",
     popular: false,
     features: [
@@ -61,6 +64,7 @@ const PLANS: Plan[] = [
     price: "R399",
     priceNote: "/month",
     trial: "30-day free trial",
+    trialDays: 30,
     tagline: "Real payments, deposits, and client control.",
     popular: false,
     features: [
@@ -79,6 +83,7 @@ const PLANS: Plan[] = [
     price: "R699",
     priceNote: "/month",
     trial: "30-day free trial",
+    trialDays: 30,
     tagline: "The full toolkit for serious beauty pros.",
     popular: true,
     features: [
@@ -91,6 +96,8 @@ const PLANS: Plan[] = [
     ],
   },
 ];
+
+const PENDING_ONBOARDING_KEY = "nextslot_pending_onboarding";
 
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -109,26 +116,40 @@ function buildAdminUrl(tenantId: string): string {
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
 
-async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
-  const { error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: businessName } },
-  });
+async function createTenant(
+  accessToken: string,
+  payload: {
+    business_name: string;
+    business_type: string;
+    theme_id: string;
+    services: Service[];
+    schedule: Record<string, string>;
+    selected_plan: PlanId;
+  }
+): Promise<string> {
+  const res = await fetch(
+    "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
 
-  if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
-    throw signUpError;
+  const json = await res.json();
+
+  if (!res.ok) {
+    if (res.status === 409 && json.tenant_id) {
+      return json.tenant_id as string;
+    }
+    throw new Error(json.error ?? `Server error ${res.status}`);
   }
 
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (signInError) throw signInError;
-  if (!signInData.session?.access_token) throw new Error("Could not establish session. Please try again.");
-
-  return signInData.session.access_token;
+  return json.tenant_id as string;
 }
 
 const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
@@ -149,9 +170,12 @@ const Onboarding = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [services, setServices] = useState<Service[]>([{ ...BLANK_SERVICE }]);
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("professional");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [finishingSetup, setFinishingSetup] = useState(false);
 
   const [appliedThemeStyle, setAppliedThemeStyle] = useState<CSSProperties>({});
   const rafRef = useRef<number | null>(null);
@@ -167,6 +191,8 @@ const Onboarding = () => {
     if (!activeTheme) return {};
     return getThemeCssVars(activeTheme) as CSSProperties;
   }, [activeTheme]);
+
+  const activePlan = useMemo(() => PLANS.find((p) => p.id === selectedPlan) ?? PLANS[2], [selectedPlan]);
 
   useEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -186,6 +212,48 @@ const Onboarding = () => {
     return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
+  // Listen for auth state change — fires when user clicks the confirmation email link
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+
+        const adminRole =
+          roles?.find((r) => r.role === "owner") ??
+          roles?.find((r) => r.role === "admin");
+
+        if (adminRole?.tenant_id) {
+          window.location.href = buildAdminUrl(adminRole.tenant_id);
+          return;
+        }
+
+        const pendingRaw = localStorage.getItem(PENDING_ONBOARDING_KEY);
+        if (pendingRaw) {
+          try {
+            setFinishingSetup(true);
+            const pending = JSON.parse(pendingRaw);
+            const tenantId = await createTenant(session.access_token, pending);
+            localStorage.removeItem(PENDING_ONBOARDING_KEY);
+            window.location.href = buildAdminUrl(tenantId);
+          } catch (err) {
+            setFinishingSetup(false);
+            setSubmitError(
+              err instanceof Error ? err.message : "Setup failed. Please contact support."
+            );
+          }
+          return;
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // On mount: redirect already-authenticated owners straight to their dashboard
   useEffect(() => {
     (async () => {
       try {
@@ -211,6 +279,7 @@ const Onboarding = () => {
           setEmail(session.user.email);
         }
       } catch {
+        // ignore
       }
     })();
   }, []);
@@ -223,7 +292,7 @@ const Onboarding = () => {
       passwordValid &&
       passwordsMatch
     );
-    if (step === 4) return true;
+    if (step === 4) return termsAccepted;
     return true;
   };
 
@@ -250,60 +319,40 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      const accessToken = await signUpAndGetToken(
-        email.trim(),
+      // Save onboarding payload to localStorage BEFORE signup so the
+      // onAuthStateChange callback can pick it up after email confirmation
+      const pendingPayload = {
+        business_name: businessName.trim(),
+        business_type: businessType ?? "General",
+        theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
+        services: services.filter((s) => s.name.trim()),
+        schedule,
+        selected_plan: selectedPlan,
+      };
+      localStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(pendingPayload));
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
-        businessName.trim()
-      );
+        options: { data: { full_name: businessName.trim() } },
+      });
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role, tenant_id")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        const adminRole =
-          roles?.find((r) => r.role === "owner") ??
-          roles?.find((r) => r.role === "admin");
-        if (adminRole?.tenant_id) {
-          window.location.href = buildAdminUrl(adminRole.tenant_id);
-          return;
-        }
+      if (signUpError) {
+        localStorage.removeItem(PENDING_ONBOARDING_KEY);
+        throw signUpError;
       }
 
-      const res = await fetch(
-        "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            business_name: businessName.trim(),
-            business_type: businessType ?? "General",
-            theme_id:
-              activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
-            services: services.filter((s) => s.name.trim()),
-            schedule,
-            selected_plan: selectedPlan,
-          }),
-        }
-      );
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 409 && json.tenant_id) {
-          window.location.href = buildAdminUrl(json.tenant_id);
-          return;
-        }
-        throw new Error(json.error ?? `Server error ${res.status}`);
+      // If Supabase returned a session immediately (email confirmations disabled in project settings)
+      // skip the waiting screen and go straight to tenant creation
+      if (data.session?.access_token) {
+        const tenantId = await createTenant(data.session.access_token, pendingPayload);
+        localStorage.removeItem(PENDING_ONBOARDING_KEY);
+        window.location.href = buildAdminUrl(tenantId);
+        return;
       }
 
-      window.location.href = buildAdminUrl(json.tenant_id);
+      // Email confirmation required — show the waiting screen
+      setAwaitingConfirmation(true);
     } catch (err: unknown) {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong. Please try again."
@@ -314,6 +363,90 @@ const Onboarding = () => {
   };
 
   const totalSteps = 4;
+
+  // Full-screen finishing setup overlay
+  if (finishingSetup) {
+    return (
+      <div className="nextslot-theme dark-brand flex flex-col items-center justify-center bg-background text-foreground" style={{ height: "100dvh" }}>
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-sm text-muted-foreground">Finishing your setup...</p>
+      </div>
+    );
+  }
+
+  // Email confirmation waiting screen
+  if (awaitingConfirmation) {
+    return (
+      <div className="nextslot-theme dark-brand flex flex-col bg-background text-foreground" style={{ height: "100dvh", overflow: "hidden" }}>
+        <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm">
+          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center">
+            <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
+              <img
+                src="/web-app-manifest-192x192.png"
+                alt="NextSlot"
+                width={40}
+                height={40}
+                loading="lazy"
+                decoding="async"
+                className="h-10 w-10 object-contain rounded-lg shrink-0"
+              />
+              <span className="text-base font-bold tracking-tight leading-none">
+                Next<span className="text-accent">Slot</span>
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-md text-center space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <Mail className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                Check your inbox
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                We sent a confirmation link to <span className="text-foreground font-medium">{email}</span>.
+                Click it to finish setting up your booking page.
+              </p>
+            </div>
+            <div className="gradient-surface border border-border rounded-xl p-4 text-left space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">What happens next</p>
+              <div className="space-y-1.5">
+                {[
+                  "Open the email from NextSlot",
+                  "Click the confirmation link",
+                  "Your dashboard launches automatically",
+                ].map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                    <span className="text-xs text-muted-foreground">{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {submitError && (
+              <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive text-left">
+                {submitError}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Didn't receive it?{" "}
+              <button
+                className="underline text-foreground hover:text-primary transition-colors"
+                onClick={async () => {
+                  await supabase.auth.resend({ type: "signup", email: email.trim() });
+                }}
+              >
+                Resend email
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -663,7 +796,10 @@ const Onboarding = () => {
                     return (
                       <button
                         key={plan.id}
-                        onClick={() => setSelectedPlan(plan.id)}
+                        onClick={() => {
+                          setSelectedPlan(plan.id);
+                          setTermsAccepted(false);
+                        }}
                         className={`w-full text-left rounded-xl border transition-all duration-300 overflow-hidden ${
                           isSelected
                             ? "border-primary shadow-elevated"
@@ -708,6 +844,43 @@ const Onboarding = () => {
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Trial summary and terms acknowledgement */}
+                <div className="gradient-surface border border-border rounded-xl p-4 space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-foreground">Your selection</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-foreground font-semibold">{activePlan.name} plan</span>
+                      <span className="text-xs text-muted-foreground">{activePlan.trial}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Your free trial lasts <span className="text-foreground font-medium">{activePlan.trialDays} days</span>. After that, you'll be billed <span className="text-foreground font-medium">{activePlan.price}/month</span>. No payment is collected today. You can cancel or change your plan at any time from your dashboard.
+                    </p>
+                  </div>
+
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative mt-0.5 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className={`w-4 h-4 rounded border transition-colors ${
+                        termsAccepted
+                          ? "bg-primary border-primary"
+                          : "border-input bg-background group-hover:border-foreground/40"
+                      }`}>
+                        {termsAccepted && (
+                          <Check className="h-3 w-3 text-primary-foreground absolute top-0.5 left-0.5" />
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground leading-relaxed">
+                      I understand my {activePlan.trialDays}-day free trial begins today. After the trial ends I'll be billed {activePlan.price}/month for the {activePlan.name} plan. I can cancel anytime before then at no charge.
+                    </span>
+                  </label>
                 </div>
 
                 <p className="text-xs text-muted-foreground text-center">
