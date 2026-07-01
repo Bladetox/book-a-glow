@@ -255,36 +255,41 @@ const Onboarding = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // On mount: redirect already-authenticated owners straight to their dashboard
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+// On mount: redirect already-authenticated owners straight to their dashboard
+useEffect(() => {
+  (async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role, tenant_id")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role, tenant_id")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
 
-        const adminRole =
-          roles?.find((r) => r.role === "owner") ??
-          roles?.find((r) => r.role === "admin");
+      const adminRole =
+        roles?.find((r) => r.role === "owner") ??
+        roles?.find((r) => r.role === "admin");
 
-        if (adminRole?.tenant_id) {
-          window.location.href = buildAdminUrl(adminRole.tenant_id);
-          return;
-        }
+      if (adminRole?.tenant_id) {
+        window.location.href = buildAdminUrl(adminRole.tenant_id);
+        return;
+      }
 
-        if (session.user.email) {
+      // Only pre-fill email if the user has a pending onboarding payload
+      // for their own email — never pre-fill a stranger's session
+      if (session.user.email) {
+        const pendingRaw = localStorage.getItem(getPendingKey(session.user.email));
+        if (pendingRaw) {
           setEmail(session.user.email);
         }
-      } catch {
-        // ignore
       }
-    })();
-  }, []);
+    } catch {
+      // ignore
+    }
+  })();
+}, []);
 
   const canProceed = () => {
     if (step === 1) return businessType !== null && businessName.trim().length >= 2;
