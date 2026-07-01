@@ -432,7 +432,7 @@ const Onboarding = () => {
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Didn't receive it?{" "}
+              Didn't receive it? Check your Spam{" "}
               <button
                 className="underline text-foreground hover:text-primary transition-colors"
                 onClick={async () => {
