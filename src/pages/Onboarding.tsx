@@ -342,8 +342,7 @@ const Onboarding = () => {
         throw signUpError;
       }
 
-      // If Supabase returned a session immediately (email confirmations disabled in project settings)
-      // skip the waiting screen and go straight to tenant creation
+      // Session already active (email confirmations disabled in project settings)
       if (data.session?.access_token) {
         const tenantId = await createTenant(data.session.access_token, pendingPayload);
         localStorage.removeItem(PENDING_ONBOARDING_KEY);
@@ -351,7 +350,16 @@ const Onboarding = () => {
         return;
       }
 
-      // Email confirmation required — show the waiting screen
+      // Silent duplicate: Supabase returns a user but with no identities.
+      // This means the email already exists but was never confirmed.
+      // Resend the confirmation email so they actually receive it.
+      if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+        await supabase.auth.resend({ type: "signup", email: email.trim() });
+        setAwaitingConfirmation(true);
+        return;
+      }
+
+      // Normal new signup — email confirmation required
       setAwaitingConfirmation(true);
     } catch (err: unknown) {
       setSubmitError(
