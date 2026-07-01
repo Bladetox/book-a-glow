@@ -1,11 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
-
-const HCAPTCHA_SITE_KEY = "0dd0e842-7d24-4fba-9fd0-59a61b6ab782";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -14,8 +11,6 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const captchaRef = useRef<HCaptcha>(null);
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -27,44 +22,54 @@ const Signup = () => {
       return;
     }
 
-    if (!captchaToken) {
-      setError("Please complete the CAPTCHA verification.");
-      return;
-    }
-
     setLoading(true);
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
-          emailRedirectTo: window.location.origin,
-          data: { full_name: fullName },
-          captchaToken,
+          emailRedirectTo: `${window.location.origin}/onboarding`,
+          data: { full_name: fullName.trim() },
         },
       });
 
       if (signUpError) {
         setError(signUpError.message);
-        captchaRef.current?.resetCaptcha();
-        setCaptchaToken(null);
+        setLoading(false);
+        return;
+      }
+
+      // Detect duplicate unconfirmed email — Supabase returns user with empty identities
+      const isDuplicate =
+        data.user &&
+        (!data.user.identities || data.user.identities.length === 0);
+
+      if (isDuplicate) {
+        // Resend the confirmation email so they can proceed
+        await supabase.auth.resend({
+          type: "signup",
+          email: email.trim(),
+        });
+        setSuccess(true);
         setLoading(false);
         return;
       }
 
       if (data.user) {
+        // Upsert profile — safe even if the row does not exist yet
         await supabase
           .from("profiles")
-          .update({ full_name: fullName })
+          .upsert({ id: data.user.id, full_name: fullName.trim() })
           .eq("id", data.user.id);
 
         setSuccess(true);
-        setTimeout(() => navigate("/onboarding"), 1500);
+        // If session is immediately available (email confirm disabled) go straight to onboarding
+        if (data.session) {
+          setTimeout(() => navigate("/onboarding"), 1200);
+        }
       }
     } catch {
-      setError("An unexpected error occurred");
-      captchaRef.current?.resetCaptcha();
-      setCaptchaToken(null);
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -81,8 +86,11 @@ const Signup = () => {
 
         {success ? (
           <div className="rounded-xl border border-border bg-secondary/50 p-6 text-center space-y-2">
-            <p className="text-sm font-medium text-foreground">Account created!</p>
-            <p className="text-xs text-muted-foreground">Redirecting to setup...</p>
+            <p className="text-sm font-medium text-foreground">Check your email</p>
+            <p className="text-xs text-muted-foreground">
+              We sent a confirmation link to <span className="font-medium text-foreground">{email.trim()}</span>.
+              Click it to activate your account.
+            </p>
           </div>
         ) : (
           <>
@@ -130,22 +138,11 @@ const Signup = () => {
                 />
               </div>
 
-              {/* hCaptcha widget */}
-              <div className="flex justify-center">
-                <HCaptcha
-                  ref={captchaRef}
-                  sitekey={HCAPTCHA_SITE_KEY}
-                  onVerify={(token) => setCaptchaToken(token)}
-                  onExpire={() => setCaptchaToken(null)}
-                  theme="dark"
-                />
-              </div>
-
               {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
               <button
                 type="submit"
-                disabled={loading || !captchaToken}
+                disabled={loading}
                 className="w-full bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
