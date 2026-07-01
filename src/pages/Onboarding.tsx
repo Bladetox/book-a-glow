@@ -97,7 +97,8 @@ const PLANS: Plan[] = [
   },
 ];
 
-const PENDING_ONBOARDING_KEY = "nextslot_pending_onboarding";
+const getPendingKey = (email: string) =>
+  `nextslot_pending_onboarding_${email.trim().toLowerCase()}`;
 
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -231,13 +232,14 @@ const Onboarding = () => {
           return;
         }
 
-        const pendingRaw = localStorage.getItem(PENDING_ONBOARDING_KEY);
+        const userEmail = session.user.email ?? "";
+        const pendingRaw = localStorage.getItem(getPendingKey(userEmail));
         if (pendingRaw) {
           try {
             setFinishingSetup(true);
             const pending = JSON.parse(pendingRaw);
             const tenantId = await createTenant(session.access_token, pending);
-            localStorage.removeItem(PENDING_ONBOARDING_KEY);
+            localStorage.removeItem(getPendingKey(userEmail));
             window.location.href = buildAdminUrl(tenantId);
           } catch (err) {
             setFinishingSetup(false);
@@ -319,8 +321,6 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      // Save onboarding payload to localStorage BEFORE signup so the
-      // onAuthStateChange callback can pick it up after email confirmation
       const pendingPayload = {
         business_name: businessName.trim(),
         business_type: businessType ?? "General",
@@ -329,7 +329,7 @@ const Onboarding = () => {
         schedule,
         selected_plan: selectedPlan,
       };
-      localStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(pendingPayload));
+      localStorage.setItem(getPendingKey(email.trim()), JSON.stringify(pendingPayload));
 
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
@@ -338,14 +338,14 @@ const Onboarding = () => {
       });
 
       if (signUpError) {
-        localStorage.removeItem(PENDING_ONBOARDING_KEY);
+        localStorage.removeItem(getPendingKey(email.trim()));
         throw signUpError;
       }
 
       // Session already active (email confirmations disabled in project settings)
       if (data.session?.access_token) {
         const tenantId = await createTenant(data.session.access_token, pendingPayload);
-        localStorage.removeItem(PENDING_ONBOARDING_KEY);
+        localStorage.removeItem(getPendingKey(email.trim()));
         window.location.href = buildAdminUrl(tenantId);
         return;
       }
