@@ -24,6 +24,12 @@ const Signup = () => {
 
     setLoading(true);
     try {
+      // Always clear any stale session before attempting a new signup.
+      // Without this, Supabase picks up the existing authenticated context
+      // and fires user_repeated_signup for whoever is already logged in
+      // instead of registering the new email address.
+      await supabase.auth.signOut();
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -133,7 +139,7 @@ const Signup = () => {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
                   placeholder="Min 6 characters"
-                  className="w-full px-4 py-2.5 rounded-[10px] border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                  className="w-full px-4 py-2.5 rounded-[10px] hover:opacity-90 border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                   required
                 />
               </div>
