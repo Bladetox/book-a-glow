@@ -186,6 +186,23 @@ const Onboarding = () => {
     return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
+  /*
+   * AUTH CHECK
+   * -----------------------------------------------------------------------
+   * If a session exists AND the user already has a tenant, redirect them
+   * straight to their dashboard — they don't need to go through onboarding.
+   *
+   * We intentionally do NOT pre-fill the email field. Pre-filling caused
+   * two problems during testing:
+   *   1. A logged-in tester couldn't type a fresh email to create a new
+   *      account — the field would be locked to their current session email.
+   *   2. The signUp call would fail with "already registered" for that email,
+   *      then signIn would succeed for the existing account, silently
+   *      attaching the new tenant to the wrong user.
+   *
+   * The email field is left blank every time. The user types what they want.
+   * -----------------------------------------------------------------------
+   */
   useEffect(() => {
     (async () => {
       try {
@@ -204,13 +221,11 @@ const Onboarding = () => {
 
         if (adminRole?.tenant_id) {
           window.location.href = buildAdminUrl(adminRole.tenant_id);
-          return;
         }
 
-        if (session.user.email) {
-          setEmail(session.user.email);
-        }
+        // No pre-fill. Leave the email field blank so any email can be entered.
       } catch {
+        // Silently ignore — session check is best-effort
       }
     })();
   }, []);
@@ -334,7 +349,7 @@ const Onboarding = () => {
      * -----------------------------------------------------------------------
      */
     <div
-      className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
+      className="nextslot-theme flex flex-col bg-background text-foreground"
       style={{
         position: "fixed",
         inset: 0,
@@ -479,13 +494,6 @@ const Onboarding = () => {
                       onChange={(e) => setBusinessName(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                       placeholder="e.g. Glow by Tash"
-                      /*
-                       * MOBILE: font-size >= 16px on inputs prevents iOS from
-                       * auto-zooming the viewport when an input is focused.
-                       * text-sm resolves to 14px which DOES trigger zoom.
-                       * The inline style forces 16px on this field only
-                       * without changing the visual design.
-                       */
                       style={{ fontSize: "16px" }}
                     />
                     <p className="text-xs text-muted-foreground">This becomes your booking page name. You can change it later.</p>
