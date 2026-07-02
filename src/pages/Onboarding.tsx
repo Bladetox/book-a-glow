@@ -110,15 +110,30 @@ function buildAdminUrl(tenantId: string): string {
 }
 
 async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
-  await supabase.auth.signOut({ scope: "local" });
-  const { error: signUpError } = await supabase.auth.signUp({
+  await supabase.auth.signOut({ scope: "global" });
+
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { full_name: businessName } },
   });
 
-  if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
-    throw signUpError;
+  if (signUpError) {
+    const msg = signUpError.message.toLowerCase();
+    if (msg.includes("already registered") || msg.includes("user already registered")) {
+      // Known account — try signing in directly
+    } else {
+      throw signUpError;
+    }
+  }
+
+  // If signUp succeeded but email is unconfirmed, surface a clear error
+  if (signUpData?.user && !signUpData.session) {
+    const identities = signUpData.user.identities ?? [];
+    if (identities.length === 0) {
+      throw new Error("This email is already registered but not yet confirmed. Please check your inbox and click the confirmation link first.");
+    }
+    throw new Error("Check your email — we sent you a confirmation link to activate your account.");
   }
 
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -126,7 +141,14 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
     password,
   });
 
-  if (signInError) throw signInError;
+  if (signInError) {
+    const msg = signInError.message.toLowerCase();
+    if (msg.includes("email not confirmed")) {
+      throw new Error("Your email isn't confirmed yet. Please check your inbox and click the confirmation link, then try again.");
+    }
+    throw signInError;
+  }
+
   if (!signInData.session?.access_token) throw new Error("Could not establish session. Please try again.");
 
   return signInData.session.access_token;
