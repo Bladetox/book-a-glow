@@ -109,40 +109,79 @@ function buildAdminUrl(tenantId: string): string {
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
 
-async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
+// ---------------------------------------------------------------------------
+// signUpAndGetToken
+//
+// Uses raw fetch for all GoTrue calls so the Supabase JS client's in-memory
+// session can never bleed in via the Authorization header.  The anon key is
+// the only credential sent until we have a real user token.
+// ---------------------------------------------------------------------------
+const SUPABASE_URL = "https://kjibbbuceipnialfgflt.supabase.co";
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+async function rawGoTrue(
+  path: string,
+  body: Record<string, unknown>
+): Promise<{ data: Record<string, unknown> | null; status: number }> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      // Intentionally NO Authorization header — anon key only.
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => null);
+  return { data, status: res.status };
+}
+
+async function signUpAndGetToken(
+  email: string,
+  password: string,
+  businessName: string
+): Promise<string> {
+  // 1. Destroy any existing Supabase JS client session so nothing leaks.
   await supabase.auth.signOut({ scope: "global" });
 
-  // Step 1: try signing in first. If this succeeds the user already exists
-  // and we return their token immediately so the flow can redirect them.
-  const { data: signInFirst, error: signInFirstError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  // 2. Try signing in first (handles returning users or existing accounts).
+  const signIn = await rawGoTrue("token?grant_type=password", { email, password });
 
-  if (!signInFirstError && signInFirst.session?.access_token) {
-    return signInFirst.session.access_token;
+  if (signIn.status === 200 && signIn.data?.access_token) {
+    // Hydrate the Supabase JS client so subsequent .from() calls are authed.
+    await supabase.auth.setSession({
+      access_token: signIn.data.access_token as string,
+      refresh_token: signIn.data.refresh_token as string,
+    });
+    return signIn.data.access_token as string;
   }
 
-  // Step 2: sign-in failed — determine why before attempting sign-up.
-  if (signInFirstError) {
-    const msg = signInFirstError.message.toLowerCase();
+  // 3. Inspect the sign-in error before attempting sign-up.
+  if (signIn.data?.error_description || signIn.data?.msg || signIn.data?.error) {
+    const msg = (
+      (signIn.data.error_description as string) ??
+      (signIn.data.msg as string) ??
+      (signIn.data.error as string) ??
+      ""
+    ).toLowerCase();
 
-    // Wrong password for an existing account — do not attempt sign-up.
     if (
       msg.includes("invalid login credentials") ||
       msg.includes("invalid credentials") ||
       msg.includes("wrong password")
     ) {
-      throw new Error("An account with this email already exists. Please check your password and try again.");
+      throw new Error(
+        "An account with this email already exists. Please check your password and try again."
+      );
     }
 
-    // Email exists but not yet confirmed.
     if (msg.includes("email not confirmed")) {
-      throw new Error("Your email isn't confirmed yet. Please check your inbox and click the confirmation link, then try again.");
+      throw new Error(
+        "Your email isn't confirmed yet. Please check your inbox and click the confirmation link, then try again."
+      );
     }
 
-    // Any error that is NOT "user not found" / "no user" should be surfaced as-is.
-    // Only proceed to sign-up when the error clearly indicates the user does not exist.
+    // If the error is not clearly "user not found", surface it and stop.
     const isUserNotFound =
       msg.includes("user not found") ||
       msg.includes("no user") ||
@@ -150,47 +189,65 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
       msg.includes("email");
 
     if (!isUserNotFound) {
-      throw signInFirstError;
+      throw new Error(msg || "Sign-in failed. Please try again.");
     }
   }
 
-  // Step 3: user does not exist — create the account.
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+  // 4. User does not exist — create the account.
+  const signUp = await rawGoTrue("signup", {
     email,
     password,
-    options: { data: { full_name: businessName } },
+    data: { full_name: businessName },
   });
 
-  if (signUpError) {
-    const msg = signUpError.message.toLowerCase();
+  if (signUp.status !== 200 && signUp.status !== 201) {
+    const msg = (
+      (signUp.data?.msg as string) ??
+      (signUp.data?.error_description as string) ??
+      (signUp.data?.error as string) ??
+      ""
+    ).toLowerCase();
+
     if (msg.includes("already registered") || msg.includes("user already registered")) {
-      throw new Error("An account with this email already exists. Please log in instead or reset your password.");
+      throw new Error(
+        "An account with this email already exists. Please log in instead or reset your password."
+      );
     }
-    throw signUpError;
+    throw new Error(msg || `Sign-up failed (${signUp.status}). Please try again.`);
   }
 
-  // Sign-up succeeded but email confirmation is required before a session is issued.
-  if (signUpData?.user && !signUpData.session) {
-    throw new Error("Check your email — we sent you a confirmation link to activate your account.");
+  // 5. Sign-up OK but email confirmation required — no session yet.
+  if (signUp.data && !signUp.data.access_token) {
+    throw new Error(
+      "Check your email — we sent you a confirmation link to activate your account."
+    );
   }
 
-  // Step 4: sign-up created an auto-confirmed session — sign in to get a clean token.
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+  // 6. Auto-confirmed — sign in to get a clean token.
+  const signIn2 = await rawGoTrue("token?grant_type=password", { email, password });
+
+  if (signIn2.status !== 200 || !signIn2.data?.access_token) {
+    const msg = (
+      (signIn2.data?.error_description as string) ??
+      (signIn2.data?.msg as string) ??
+      ""
+    ).toLowerCase();
+
+    if (msg.includes("email not confirmed")) {
+      throw new Error(
+        "Your email isn't confirmed yet. Please check your inbox and click the confirmation link, then try again."
+      );
+    }
+    throw new Error("Could not establish session. Please try again.");
+  }
+
+  // Hydrate the Supabase JS client.
+  await supabase.auth.setSession({
+    access_token: signIn2.data.access_token as string,
+    refresh_token: signIn2.data.refresh_token as string,
   });
 
-  if (signInError) {
-    const msg = signInError.message.toLowerCase();
-    if (msg.includes("email not confirmed")) {
-      throw new Error("Your email isn't confirmed yet. Please check your inbox and click the confirmation link, then try again.");
-    }
-    throw signInError;
-  }
-
-  if (!signInData.session?.access_token) throw new Error("Could not establish session. Please try again.");
-
-  return signInData.session.access_token;
+  return signIn2.data.access_token as string;
 }
 
 const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
@@ -251,9 +308,9 @@ const Onboarding = () => {
   useEffect(() => {
     (async () => {
       try {
-        // Clear any stale session before checking for an existing tenant redirect.
-        // This prevents a previous user's session from bleeding into this onboarding flow.
-        await supabase.auth.signOut({ scope: "local" });
+        // Wipe any stale session on mount so a previous user's data never
+        // bleeds into this onboarding flow.
+        await supabase.auth.signOut({ scope: "global" });
 
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
@@ -273,7 +330,7 @@ const Onboarding = () => {
           return;
         }
 
-        // Do NOT pre-fill email from session — a new user must always enter their own email.
+        // Never pre-fill the email field from session data.
       } catch {
       }
     })();
@@ -337,13 +394,13 @@ const Onboarding = () => {
       }
 
       const res = await fetch(
-        "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
+        `${SUPABASE_URL}/functions/v1/create-tenant`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            apikey: SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             business_name: businessName.trim(),
@@ -630,9 +687,12 @@ const Onboarding = () => {
                     </label>
                     <input
                       id="onboarding-email"
-                      name="email"
+                      name="onboarding-email"
                       type="email"
-                      autoComplete="email"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
@@ -647,7 +707,7 @@ const Onboarding = () => {
                     <div className="relative">
                       <input
                         id="onboarding-password"
-                        name="password"
+                        name="onboarding-password"
                         type={showPassword ? "text" : "password"}
                         autoComplete="new-password"
                         value={password}
@@ -676,7 +736,7 @@ const Onboarding = () => {
                     <div className="relative">
                       <input
                         id="onboarding-confirm-password"
-                        name="confirm-password"
+                        name="onboarding-confirm-password"
                         type={showConfirm ? "text" : "password"}
                         autoComplete="new-password"
                         value={confirmPassword}
