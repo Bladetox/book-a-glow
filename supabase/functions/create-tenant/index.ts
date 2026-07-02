@@ -465,7 +465,7 @@ Deno.serve(async (req) => {
     const availRows: any[] = [];
     for (const [day, hours] of Object.entries(schedule)) {
       if (!hours || hours === "Closed") continue;
-      const [start, end] = (hours as string).split("\u2013");
+      const [start, end] = (hours as string).split("-");
       if (!start || !end) continue;
       const slots = generateSlots(start.trim(), end.trim());
       for (const slot of slots) {
