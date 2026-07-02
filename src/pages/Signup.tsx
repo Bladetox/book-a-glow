@@ -1,8 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
+
+/** Remove every key the Supabase JS client writes to localStorage.
+ *  This kills any persisted session from a previous user so that
+ *  the next signUp call runs against a clean, unauthenticated context. */
+function purgeSupabaseStorage() {
+  const prefix = "sb-kjibbbuceipnialfgflt-auth";
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith(prefix))
+    .forEach((k) => localStorage.removeItem(k));
+}
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -12,6 +22,16 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+
+  // On mount: sign out + wipe localStorage so no foreign session
+  // can ever bleed into this signup flow.
+  useEffect(() => {
+    const clear = async () => {
+      purgeSupabaseStorage();
+      await supabase.auth.signOut();
+    };
+    clear();
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +44,8 @@ const Signup = () => {
 
     setLoading(true);
     try {
-      // Always clear any stale session before attempting a new signup.
-      // Without this, Supabase picks up the existing authenticated context
-      // and fires user_repeated_signup for whoever is already logged in
-      // instead of registering the new email address.
+      // Purge again right before the call as a second safety net.
+      purgeSupabaseStorage();
       await supabase.auth.signOut();
 
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -139,7 +157,7 @@ const Signup = () => {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
                   placeholder="Min 6 characters"
-                  className="w-full px-4 py-2.5 rounded-[10px] hover:opacity-90 border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                  className="w-full px-4 py-2.5 rounded-[10px] border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                   required
                 />
               </div>
