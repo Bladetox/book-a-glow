@@ -212,6 +212,10 @@ const Onboarding = () => {
   useEffect(() => {
     (async () => {
       try {
+        // Clear any stale session before checking for an existing tenant redirect.
+        // This prevents a previous user's session from bleeding into this onboarding flow.
+        await supabase.auth.signOut({ scope: "local" });
+
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
@@ -230,9 +234,7 @@ const Onboarding = () => {
           return;
         }
 
-        if (session.user.email) {
-          setEmail(session.user.email);
-        }
+        // Do NOT pre-fill email from session — a new user must always enter their own email.
       } catch {
       }
     })();
