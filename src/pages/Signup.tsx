@@ -14,6 +14,7 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [alreadyExists, setAlreadyExists] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captchaRef = useRef<HCaptcha>(null);
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Signup = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setAlreadyExists(false);
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
@@ -46,6 +48,22 @@ const Signup = () => {
 
       if (signUpError) {
         setError(signUpError.message);
+        captchaRef.current?.resetCaptcha();
+        setCaptchaToken(null);
+        setLoading(false);
+        return;
+      }
+
+      // Supabase returns 200 with a user but NO session when the email already
+      // exists (user_repeated_signup). Detect this and tell the user to log in.
+      const isRepeatedSignup =
+        data.user &&
+        !data.session &&
+        data.user.identities &&
+        data.user.identities.length === 0;
+
+      if (isRepeatedSignup) {
+        setAlreadyExists(true);
         captchaRef.current?.resetCaptcha();
         setCaptchaToken(null);
         setLoading(false);
@@ -83,6 +101,31 @@ const Signup = () => {
           <div className="rounded-xl border border-border bg-secondary/50 p-6 text-center space-y-2">
             <p className="text-sm font-medium text-foreground">Account created!</p>
             <p className="text-xs text-muted-foreground">Redirecting to setup...</p>
+          </div>
+        ) : alreadyExists ? (
+          <div className="rounded-xl border border-border bg-secondary/50 p-6 text-center space-y-3">
+            <p className="text-sm font-medium text-foreground">Account already exists</p>
+            <p className="text-xs text-muted-foreground">
+              An account with <span className="font-medium text-foreground">{email}</span> already
+              exists. Please sign in instead.
+            </p>
+            <Link
+              to="/login"
+              className="inline-block mt-2 w-full bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity text-center"
+            >
+              Sign in
+            </Link>
+            <button
+              onClick={() => {
+                setAlreadyExists(false);
+                setEmail("");
+                setPassword("");
+                setFullName("");
+              }}
+              className="text-xs text-muted-foreground hover:underline mt-1"
+            >
+              Use a different email
+            </button>
           </div>
         ) : (
           <>
