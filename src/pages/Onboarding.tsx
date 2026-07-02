@@ -162,9 +162,6 @@ const scrollbarHide: CSSProperties = {
  */
 async function checkEmailTaken(email: string): Promise<boolean> {
   try {
-    // Attempt a password sign-in with a deliberately wrong password.
-    // GoTrue returns different error messages for "user not found" vs
-    // "invalid credentials" - we use that distinction to detect existence.
     const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: {
@@ -183,7 +180,6 @@ async function checkEmailTaken(email: string): Promise<boolean> {
       ""
     ).toLowerCase();
 
-    // If GoTrue says invalid credentials, the user EXISTS (password was wrong).
     if (
       msg.includes("invalid login credentials") ||
       msg.includes("invalid credentials") ||
@@ -193,7 +189,6 @@ async function checkEmailTaken(email: string): Promise<boolean> {
       return true;
     }
 
-    // Any other error means the user does NOT exist.
     return false;
   } catch {
     return false;
@@ -211,7 +206,6 @@ async function signUpUser(
   password: string,
   businessName: string
 ): Promise<{ userId: string }> {
-  // Ensure no stale session can leak into downstream calls.
   await supabase.auth.signOut({ scope: "local" });
 
   const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
@@ -219,7 +213,6 @@ async function signUpUser(
     headers: {
       "Content-Type": "application/json",
       apikey: SUPABASE_ANON_KEY,
-      // Intentionally NO Authorization header.
     },
     body: JSON.stringify({
       email,
@@ -246,7 +239,6 @@ async function signUpUser(
     throw new Error(msg || `Sign-up failed (${res.status}). Please try again.`);
   }
 
-  // Supabase returns the user object even when email confirmation is required.
   const userId = data?.id ?? data?.user?.id;
   if (!userId) {
     throw new Error(
@@ -498,12 +490,12 @@ const Onboarding = () => {
   if (stage === "sent") {
     return (
       <div
-        className="nextslot-theme dark-brand flex flex-col items-center justify-center bg-background text-foreground"
+        className="nextslot-theme dark-brand flex flex-col items-center justify-center"
         style={{ height: "100dvh", overflow: "hidden", ...appliedThemeStyle }}
       >
         <div className="w-full max-w-md px-6 text-center space-y-6 animate-fade-in">
           <div className="flex items-center justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl glass-card flex items-center justify-center">
               <Mail className="h-8 w-8 text-primary" />
             </div>
           </div>
@@ -520,7 +512,7 @@ const Onboarding = () => {
             </p>
           </div>
 
-          <div className="gradient-card border border-border rounded-xl p-5 text-left space-y-3">
+          <div className="glass-card rounded-xl p-5 text-left space-y-3">
             <p className="text-sm text-foreground font-medium">What happens next</p>
             <ol className="space-y-2">
               <li className="flex items-start gap-3">
@@ -559,7 +551,7 @@ const Onboarding = () => {
 
   return (
     <div
-      className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
+      className="nextslot-theme dark-brand flex flex-col"
       style={{
         height: "100dvh",
         overflow: "hidden",
@@ -623,6 +615,19 @@ const Onboarding = () => {
             />
           ))}
         </div>
+        {/* Step indicators */}
+        <div className="flex justify-between mt-3 px-0.5">
+          {["Business", "Services", "Account", "Plan"].map((label, i) => (
+            <div key={label} className="flex flex-col items-center gap-1">
+              <div className={`step-indicator ${i + 1 < step ? "completed" : i + 1 === step ? "active" : "upcoming"}`}>
+                {i + 1 < step ? <Check className="h-3.5 w-3.5" /> : <span>{i + 1}</span>}
+              </div>
+              <span className={`text-[10px] font-medium transition-colors duration-300 ${i + 1 === step ? "text-foreground" : "text-muted-foreground"}`}>
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* SCROLLABLE REGION */}
@@ -636,7 +641,7 @@ const Onboarding = () => {
       >
         <div
           className="flex justify-center px-4 pt-10"
-          style={{ paddingBottom: "max(80px, env(safe-area-inset-bottom, 80px))" }}
+          style={{ paddingBottom: "max(100px, env(safe-area-inset-bottom, 100px))" }}
         >
           <div className="w-full max-w-lg">
 
@@ -661,8 +666,8 @@ const Onboarding = () => {
                       onClick={() => handleSelectBusinessType(type.label)}
                       className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 text-left ${
                         businessType === type.label
-                          ? "border-primary gradient-card shadow-elevated"
-                          : "border-border hover:border-foreground/20 hover:shadow-soft gradient-surface"
+                          ? "border-primary glass-card-service selected"
+                          : "border-border hover:border-foreground/20 glass-card-service"
                       }`}
                     >
                       <div
@@ -682,7 +687,12 @@ const Onboarding = () => {
                         {type.vibe}
                       </span>
                       {businessType === type.label && (
-                        <Check className="h-4 w-4 text-primary" />
+                        <div className="selection-circle checked">
+                          <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                        </div>
+                      )}
+                      {businessType !== type.label && (
+                        <div className="selection-circle" />
                       )}
                     </button>
                   ))}
@@ -702,7 +712,7 @@ const Onboarding = () => {
                       type="text"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
+                      className="glass-input w-full px-4 py-3 rounded-xl text-foreground text-sm focus:outline-none"
                       placeholder="e.g. Glow by Tash"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -731,7 +741,7 @@ const Onboarding = () => {
                   {services.map((service, i) => (
                     <div
                       key={i}
-                      className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft"
+                      className="glass-card rounded-xl p-4 space-y-3"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-muted-foreground">
@@ -754,7 +764,7 @@ const Onboarding = () => {
                         value={service.name}
                         onChange={(e) => updateService(i, "name", e.target.value)}
                         placeholder="Service name"
-                        className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                        className="glass-input w-full px-3 py-2.5 rounded-lg text-foreground text-sm focus:outline-none"
                       />
                       <div className="grid grid-cols-2 gap-3">
                         <div className="relative">
@@ -769,7 +779,7 @@ const Onboarding = () => {
                             value={service.price}
                             onChange={(e) => updateService(i, "price", e.target.value)}
                             placeholder="Price"
-                            className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                            className="glass-input w-full pl-8 pr-3 py-2.5 rounded-lg text-foreground text-sm focus:outline-none"
                           />
                         </div>
                         <div className="relative">
@@ -779,7 +789,7 @@ const Onboarding = () => {
                             name={`service-duration-${i}`}
                             value={service.duration}
                             onChange={(e) => updateService(i, "duration", e.target.value)}
-                            className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all appearance-none"
+                            className="glass-input w-full pl-8 pr-3 py-2.5 rounded-lg text-foreground text-sm focus:outline-none appearance-none"
                           >
                             <option value="15">15 min</option>
                             <option value="20">20 min</option>
@@ -797,7 +807,7 @@ const Onboarding = () => {
 
                   <button
                     onClick={addService}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:shadow-soft transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all"
                   >
                     <Plus className="h-4 w-4" />Add another service
                   </button>
@@ -819,7 +829,7 @@ const Onboarding = () => {
                   </p>
                 </div>
 
-                <div className="gradient-surface rounded-xl p-4 border border-border/50 space-y-1.5">
+                <div className="glass-card rounded-xl p-4 space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground mb-2">Your booking page</p>
                   <p className="text-sm text-foreground">
                     <span className="text-muted-foreground">Business: </span>{businessName}
@@ -853,8 +863,8 @@ const Onboarding = () => {
                         value={email}
                         onChange={(e) => handleEmailChange(e.target.value)}
                         onBlur={handleEmailBlur}
-                        className={`w-full px-4 py-3 rounded-xl border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300 ${
-                          emailError ? "border-destructive" : "border-input"
+                        className={`glass-input w-full px-4 py-3 rounded-xl text-foreground text-sm focus:outline-none ${
+                          emailError ? "invalid" : emailChecked && !emailError ? "valid" : ""
                         }`}
                         placeholder="you@example.com"
                       />
@@ -885,7 +895,9 @@ const Onboarding = () => {
                         autoComplete="new-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
+                        className={`glass-input w-full px-4 py-3 pr-11 rounded-xl text-foreground text-sm focus:outline-none ${
+                          password && !passwordValid ? "invalid" : password && passwordValid ? "valid" : ""
+                        }`}
                         placeholder="Minimum 8 characters"
                       />
                       <button
@@ -919,7 +931,9 @@ const Onboarding = () => {
                         autoComplete="new-password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
+                        className={`glass-input w-full px-4 py-3 pr-11 rounded-xl text-foreground text-sm focus:outline-none ${
+                          confirmPassword && !passwordsMatch ? "invalid" : confirmPassword && passwordsMatch && passwordValid ? "valid" : ""
+                        }`}
                         placeholder="Re-enter your password"
                       />
                       <button
@@ -967,15 +981,11 @@ const Onboarding = () => {
                         onClick={() => setSelectedPlan(plan.id)}
                         className={`w-full text-left rounded-xl border transition-all duration-300 overflow-hidden ${
                           isSelected
-                            ? "border-primary shadow-elevated"
-                            : "border-border hover:border-foreground/20 hover:shadow-soft"
+                            ? "border-primary glass-card-service selected"
+                            : "border-border glass-card-service"
                         }`}
                       >
-                        <div
-                          className={`px-5 py-4 transition-colors duration-300 ${
-                            isSelected ? "gradient-card" : "gradient-surface"
-                          }`}
-                        >
+                        <div className="px-5 py-4">
                           <div className="flex items-start gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -998,9 +1008,14 @@ const Onboarding = () => {
                                 {plan.tagline}
                               </p>
                             </div>
-                            <div className="text-right shrink-0">
-                              <span className="text-sm font-bold text-foreground">{plan.price}</span>
-                              <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
+                            <div className="text-right shrink-0 flex items-center gap-2">
+                              <div>
+                                <span className="text-sm font-bold text-foreground">{plan.price}</span>
+                                <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
+                              </div>
+                              <div className={`selection-circle ${isSelected ? "checked" : ""}`}>
+                                {isSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                              </div>
                             </div>
                           </div>
 
@@ -1025,8 +1040,9 @@ const Onboarding = () => {
                   className={`rounded-xl border p-4 transition-colors duration-300 ${
                     trialAcknowledged
                       ? "border-primary/50 bg-primary/5"
-                      : "border-border bg-background"
+                      : "border-border"
                   }`}
+                  style={trialAcknowledged ? {} : { background: "linear-gradient(145deg, hsl(var(--glass-bg) / 0.10), hsl(var(--glass-bg) / 0.04))" }}
                 >
                   <label className="flex items-start gap-3 cursor-pointer">
                     <div
@@ -1061,56 +1077,64 @@ const Onboarding = () => {
               </div>
             )}
 
-            {/* ---------------------------------------------------------------- */}
-            {/* NAV BUTTONS */}
-            {/* ---------------------------------------------------------------- */}
-            <div className="mt-8 flex items-center justify-between gap-3">
-              {step > 1 ? (
-                <button
-                  onClick={() => setStep(step - 1)}
-                  disabled={submitting}
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all disabled:opacity-40"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {step < totalSteps ? (
-                <button
-                  onClick={() => setStep(step + 1)}
-                  disabled={!canProceed()}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-elevated"
-                >
-                  Continue
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={handleComplete}
-                  disabled={submitting || !canProceed()}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-elevated"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Setting up...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-4 w-4" />
-                      Send Activation Email
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-
           </div>
         </div>
       </div>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* STICKY BOTTOM NAV BAR */}
+      {/* ---------------------------------------------------------------- */}
+      <div className="sticky-bottom-bar">
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+          {step > 1 ? (
+            <button
+              onClick={() => setStep(step - 1)}
+              disabled={submitting}
+              className="btn-back flex-shrink-0 w-auto px-5"
+              style={{ paddingTop: "0.875rem", paddingBottom: "0.875rem" }}
+            >
+              <span className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          {step < totalSteps ? (
+            <button
+              onClick={() => setStep(step + 1)}
+              disabled={!canProceed()}
+              className="btn-next flex-1"
+            >
+              <span className="flex items-center justify-center gap-2">
+                Continue
+                <ArrowRight className="h-4 w-4" />
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={handleComplete}
+              disabled={submitting || !canProceed()}
+              className="btn-next flex-1"
+            >
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Setting up...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Send Activation Email
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 };
