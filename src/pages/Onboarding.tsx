@@ -11,7 +11,6 @@ import {
   Eye,
   EyeOff,
   Crown,
-  Mail,
 } from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +31,6 @@ interface Plan {
   price: string;
   priceNote: string;
   trial: string;
-  trialDays: number;
   tagline: string;
   popular: boolean;
   features: string[];
@@ -45,7 +43,6 @@ const PLANS: Plan[] = [
     price: "R99",
     priceNote: "/month",
     trial: "7-day free trial",
-    trialDays: 7,
     tagline: "Get off the diary. Accept bookings online.",
     popular: false,
     features: [
@@ -64,7 +61,6 @@ const PLANS: Plan[] = [
     price: "R399",
     priceNote: "/month",
     trial: "30-day free trial",
-    trialDays: 30,
     tagline: "Real payments, deposits, and client control.",
     popular: false,
     features: [
@@ -83,7 +79,6 @@ const PLANS: Plan[] = [
     price: "R699",
     priceNote: "/month",
     trial: "30-day free trial",
-    trialDays: 30,
     tagline: "The full toolkit for serious beauty pros.",
     popular: true,
     features: [
@@ -96,9 +91,6 @@ const PLANS: Plan[] = [
     ],
   },
 ];
-
-const getPendingKey = (email: string) =>
-  `nextslot_pending_onboarding_${email.trim().toLowerCase()}`;
 
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -117,40 +109,26 @@ function buildAdminUrl(tenantId: string): string {
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
 
-async function createTenant(
-  accessToken: string,
-  payload: {
-    business_name: string;
-    business_type: string;
-    theme_id: string;
-    services: Service[];
-    schedule: Record<string, string>;
-    selected_plan: PlanId;
-  }
-): Promise<string> {
-  const res = await fetch(
-    "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify(payload),
-    }
-  );
+async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
+  const { error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: businessName } },
+  });
 
-  const json = await res.json();
-
-  if (!res.ok) {
-    if (res.status === 409 && json.tenant_id) {
-      return json.tenant_id as string;
-    }
-    throw new Error(json.error ?? `Server error ${res.status}`);
+  if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
+    throw signUpError;
   }
 
-  return json.tenant_id as string;
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) throw signInError;
+  if (!signInData.session?.access_token) throw new Error("Could not establish session. Please try again.");
+
+  return signInData.session.access_token;
 }
 
 const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
@@ -171,12 +149,9 @@ const Onboarding = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [services, setServices] = useState<Service[]>([{ ...BLANK_SERVICE }]);
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("professional");
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
-  const [finishingSetup, setFinishingSetup] = useState(false);
 
   const [appliedThemeStyle, setAppliedThemeStyle] = useState<CSSProperties>({});
   const rafRef = useRef<number | null>(null);
@@ -192,8 +167,6 @@ const Onboarding = () => {
     if (!activeTheme) return {};
     return getThemeCssVars(activeTheme) as CSSProperties;
   }, [activeTheme]);
-
-  const activePlan = useMemo(() => PLANS.find((p) => p.id === selectedPlan) ?? PLANS[2], [selectedPlan]);
 
   useEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -213,49 +186,6 @@ const Onboarding = () => {
     return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
-  // Listen for auth state change — fires when user clicks the confirmation email link
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role, tenant_id")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
-
-        const adminRole =
-          roles?.find((r) => r.role === "owner") ??
-          roles?.find((r) => r.role === "admin");
-
-        if (adminRole?.tenant_id) {
-          window.location.href = buildAdminUrl(adminRole.tenant_id);
-          return;
-        }
-
-        const userEmail = session.user.email ?? "";
-        const pendingRaw = localStorage.getItem(getPendingKey(userEmail));
-        if (pendingRaw) {
-          try {
-            setFinishingSetup(true);
-            const pending = JSON.parse(pendingRaw);
-            const tenantId = await createTenant(session.access_token, pending);
-            localStorage.removeItem(getPendingKey(userEmail));
-            window.location.href = buildAdminUrl(tenantId);
-          } catch (err) {
-            setFinishingSetup(false);
-            setSubmitError(
-              err instanceof Error ? err.message : "Setup failed. Please contact support."
-            );
-          }
-          return;
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // On mount: redirect already-authenticated owners straight to their dashboard
   useEffect(() => {
     (async () => {
       try {
@@ -277,16 +207,10 @@ const Onboarding = () => {
           return;
         }
 
-        // Only pre-fill email if the user has a pending onboarding payload
-        // for their own email — never pre-fill a stranger's session
         if (session.user.email) {
-          const pendingRaw = localStorage.getItem(getPendingKey(session.user.email));
-          if (pendingRaw) {
-            setEmail(session.user.email);
-          }
+          setEmail(session.user.email);
         }
       } catch {
-        // ignore
       }
     })();
   }, []);
@@ -299,7 +223,7 @@ const Onboarding = () => {
       passwordValid &&
       passwordsMatch
     );
-    if (step === 4) return termsAccepted;
+    if (step === 4) return true;
     return true;
   };
 
@@ -326,51 +250,60 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      // Clear any stale session from another user on this device before signing up.
-      // Without this, Supabase sees the existing session and returns
-      // user_repeated_signup for the wrong account instead of registering the new one.
-      await supabase.auth.signOut({ scope: "local" });
-
-      const pendingPayload = {
-        business_name: businessName.trim(),
-        business_type: businessType ?? "General",
-        theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
-        services: services.filter((s) => s.name.trim()),
-        schedule,
-        selected_plan: selectedPlan,
-      };
-      localStorage.setItem(getPendingKey(email.trim()), JSON.stringify(pendingPayload));
-
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
+      const accessToken = await signUpAndGetToken(
+        email.trim(),
         password,
-        options: { data: { full_name: businessName.trim() } },
-      });
+        businessName.trim()
+      );
 
-      if (signUpError) {
-        localStorage.removeItem(getPendingKey(email.trim()));
-        throw signUpError;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        const adminRole =
+          roles?.find((r) => r.role === "owner") ??
+          roles?.find((r) => r.role === "admin");
+        if (adminRole?.tenant_id) {
+          window.location.href = buildAdminUrl(adminRole.tenant_id);
+          return;
+        }
       }
 
-      // Session already active (email confirmations disabled in project settings)
-      if (data.session?.access_token) {
-        const tenantId = await createTenant(data.session.access_token, pendingPayload);
-        localStorage.removeItem(getPendingKey(email.trim()));
-        window.location.href = buildAdminUrl(tenantId);
-        return;
+      const res = await fetch(
+        "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            business_name: businessName.trim(),
+            business_type: businessType ?? "General",
+            theme_id:
+              activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
+            services: services.filter((s) => s.name.trim()),
+            schedule,
+            selected_plan: selectedPlan,
+          }),
+        }
+      );
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 409 && json.tenant_id) {
+          window.location.href = buildAdminUrl(json.tenant_id);
+          return;
+        }
+        throw new Error(json.error ?? `Server error ${res.status}`);
       }
 
-      // Silent duplicate: Supabase returns a user but with no identities.
-      // This means the email already exists but was never confirmed.
-      // Resend the confirmation email so they actually receive it.
-      if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
-        await supabase.auth.resend({ type: "signup", email: email.trim() });
-        setAwaitingConfirmation(true);
-        return;
-      }
-
-      // Normal new signup — email confirmation required
-      setAwaitingConfirmation(true);
+      window.location.href = buildAdminUrl(json.tenant_id);
     } catch (err: unknown) {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong. Please try again."
@@ -381,90 +314,6 @@ const Onboarding = () => {
   };
 
   const totalSteps = 4;
-
-  // Full-screen finishing setup overlay
-  if (finishingSetup) {
-    return (
-      <div className="nextslot-theme dark-brand flex flex-col items-center justify-center bg-background text-foreground" style={{ height: "100dvh" }}>
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-sm text-muted-foreground">Finishing your setup...</p>
-      </div>
-    );
-  }
-
-  // Email confirmation waiting screen
-  if (awaitingConfirmation) {
-    return (
-      <div className="nextslot-theme dark-brand flex flex-col bg-background text-foreground" style={{ height: "100dvh", overflow: "hidden" }}>
-        <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm">
-          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center">
-            <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
-              <img
-                src="/web-app-manifest-192x192.png"
-                alt="NextSlot"
-                width={40}
-                height={40}
-                loading="lazy"
-                decoding="async"
-                className="h-10 w-10 object-contain rounded-lg shrink-0"
-              />
-              <span className="text-base font-bold tracking-tight leading-none">
-                Next<span className="text-accent">Slot</span>
-              </span>
-            </Link>
-          </div>
-        </div>
-
-        <div className="flex-1 flex items-center justify-center px-4">
-          <div className="w-full max-w-md text-center space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-              <Mail className="h-8 w-8 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                Check your inbox
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                We sent a confirmation link to <span className="text-foreground font-medium">{email}</span>.
-                Click it to finish setting up your booking page.
-              </p>
-            </div>
-            <div className="gradient-surface border border-border rounded-xl p-4 text-left space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">What happens next</p>
-              <div className="space-y-1.5">
-                {[
-                  "Open the email from NextSlot",
-                  "Click the confirmation link",
-                  "Your dashboard launches automatically",
-                ].map((s, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
-                    <span className="text-xs text-muted-foreground">{s}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {submitError && (
-              <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive text-left">
-                {submitError}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Didn't receive it? Check your Spam{" "}
-              <button
-                className="underline text-foreground hover:text-primary transition-colors"
-                onClick={async () => {
-                  await supabase.auth.resend({ type: "signup", email: email.trim() });
-                }}
-              >
-                Resend email
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -803,74 +652,67 @@ const Onboarding = () => {
                     Choose your plan
                   </h1>
                   <p className="text-muted-foreground text-sm">
-                    Start free. Upgrade when you're ready. Cancel anytime.
+                    Every plan starts with a free trial. No payment needed today.
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  {PLANS.map((plan) => (
-                    <button
-                      key={plan.id}
-                      onClick={() => setSelectedPlan(plan.id)}
-                      className={`w-full text-left rounded-xl border p-4 transition-all duration-300 ${
-                        selectedPlan === plan.id
-                          ? "border-primary gradient-card shadow-elevated"
-                          : "border-border gradient-surface hover:border-foreground/20 hover:shadow-soft"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-sm font-semibold text-foreground">{plan.name}</span>
-                            {plan.popular && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
-                                <Crown className="h-2.5 w-2.5" />Most popular
-                              </span>
-                            )}
+                  {PLANS.map((plan) => {
+                    const isSelected = selectedPlan === plan.id;
+                    const isProfessional = plan.id === "professional";
+                    return (
+                      <button
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan.id)}
+                        className={`w-full text-left rounded-xl border transition-all duration-300 overflow-hidden ${
+                          isSelected
+                            ? "border-primary shadow-elevated"
+                            : "border-border hover:border-foreground/20 hover:shadow-soft"
+                        }`}
+                      >
+                        <div className={`px-5 py-4 transition-colors duration-300 ${isSelected ? "gradient-card" : "gradient-surface"}`}>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-semibold text-foreground">{plan.name}</span>
+                                {isProfessional && (
+                                  <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
+                                )}
+                                {plan.popular && (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                                    Most Popular
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-muted-foreground ml-auto">{plan.trial}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span className="text-sm font-bold text-foreground">{plan.price}</span>
+                              <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground mb-2">{plan.tagline}</p>
-                          <p className="text-[11px] font-medium text-primary">{plan.trial}</p>
+
+                          {isSelected && (
+                            <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-1 gap-1.5 animate-fade-in">
+                              {plan.features.map((feature) => (
+                                <div key={feature} className="flex items-center gap-2">
+                                  <Check className="h-3 w-3 text-primary shrink-0" />
+                                  <span className="text-xs text-muted-foreground">{feature}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-lg font-bold text-foreground">{plan.price}</span>
-                          <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
-                        </div>
-                      </div>
-                      {selectedPlan === plan.id && (
-                        <ul className="mt-3 space-y-1.5 border-t border-border/50 pt-3">
-                          {plan.features.map((f) => (
-                            <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
-                              <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                              {f}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <div className="gradient-surface rounded-xl border border-border p-4 space-y-3">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
-                    />
-                    <span className="text-xs text-muted-foreground leading-relaxed">
-                      I agree to the{" "}
-                      <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-foreground underline hover:text-primary transition-colors">
-                        Terms of Service
-                      </a>{" "}
-                      and{" "}
-                      <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-foreground underline hover:text-primary transition-colors">
-                        Privacy Policy
-                      </a>
-                      . I understand my {activePlan.trial} starts today and I can cancel anytime before it ends.
-                    </span>
-                  </label>
-                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  You can change your plan at any time from your dashboard settings.
+                </p>
 
                 {submitError && (
                   <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -880,44 +722,43 @@ const Onboarding = () => {
               </div>
             )}
 
+            <div className="mt-8 flex items-center justify-between gap-3">
+              {step > 1 ? (
+                <button
+                  onClick={() => setStep(step - 1)}
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-4 py-2.5 min-h-[48px] rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />Back
+                </button>
+              ) : (
+                <div />
+              )}
+
+              {step < totalSteps ? (
+                <button
+                  onClick={() => setStep(step + 1)}
+                  disabled={!canProceed()}
+                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue<ArrowRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleComplete}
+                  disabled={submitting || !canProceed()}
+                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
+                  ) : (
+                    <>Launch My Dashboard<ArrowRight className="h-4 w-4" /></>
+                  )}
+                </button>
+              )}
+            </div>
+
           </div>
-        </div>
-      </div>
-
-      {/* STICKY FOOTER NAV */}
-      <div className="shrink-0 border-t border-border bg-background/90 backdrop-blur-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3"
-          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 1rem))" }}>
-          {step > 1 ? (
-            <button
-              onClick={() => setStep((s) => s - 1)}
-              disabled={submitting}
-              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            >
-              <ArrowLeft className="h-4 w-4" />Back
-            </button>
-          ) : (
-            <div />
-          )}
-
-          {step < totalSteps ? (
-            <button
-              onClick={() => setStep((s) => s + 1)}
-              disabled={!canProceed()}
-              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
-            >
-              Continue <ArrowRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <button
-              onClick={handleComplete}
-              disabled={submitting || !canProceed()}
-              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
-            >
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {submitting ? "Creating your page..." : "Launch my booking page"}
-            </button>
-          )}
         </div>
       </div>
     </div>
