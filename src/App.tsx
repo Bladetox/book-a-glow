@@ -17,7 +17,6 @@ const Book             = lazy(() => import("./pages/Book"));
 const Pricing          = lazy(() => import("./pages/Pricing"));
 const Login            = lazy(() => import("./pages/Login"));
 const Onboarding       = lazy(() => import("./pages/Onboarding"));
-const Signup           = lazy(() => import("./pages/Signup"));
 const Privacy          = lazy(() => import("./pages/Privacy"));
 const SiteTerms        = lazy(() => import("./pages/SiteTerms"));
 const Admin            = lazy(() => import("./pages/Admin"));
@@ -84,7 +83,7 @@ const MarketingRoutes = () => (
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<SiteTerms />} />
         <Route path="/admin" element={<Navigate to="/login" replace />} />
