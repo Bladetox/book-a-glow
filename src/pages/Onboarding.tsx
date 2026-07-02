@@ -110,6 +110,7 @@ function buildAdminUrl(tenantId: string): string {
 }
 
 async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
+  await supabase.auth.signOut({ scope: "local" });
   const { error: signUpError } = await supabase.auth.signUp({
     email,
     password,
