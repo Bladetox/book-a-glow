@@ -255,41 +255,41 @@ const Onboarding = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-// On mount: redirect already-authenticated owners straight to their dashboard
-useEffect(() => {
-  (async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
+  // On mount: redirect already-authenticated owners straight to their dashboard
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
 
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role, tenant_id")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
 
-      const adminRole =
-        roles?.find((r) => r.role === "owner") ??
-        roles?.find((r) => r.role === "admin");
+        const adminRole =
+          roles?.find((r) => r.role === "owner") ??
+          roles?.find((r) => r.role === "admin");
 
-      if (adminRole?.tenant_id) {
-        window.location.href = buildAdminUrl(adminRole.tenant_id);
-        return;
-      }
-
-      // Only pre-fill email if the user has a pending onboarding payload
-      // for their own email — never pre-fill a stranger's session
-      if (session.user.email) {
-        const pendingRaw = localStorage.getItem(getPendingKey(session.user.email));
-        if (pendingRaw) {
-          setEmail(session.user.email);
+        if (adminRole?.tenant_id) {
+          window.location.href = buildAdminUrl(adminRole.tenant_id);
+          return;
         }
+
+        // Only pre-fill email if the user has a pending onboarding payload
+        // for their own email — never pre-fill a stranger's session
+        if (session.user.email) {
+          const pendingRaw = localStorage.getItem(getPendingKey(session.user.email));
+          if (pendingRaw) {
+            setEmail(session.user.email);
+          }
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-  })();
-}, []);
+    })();
+  }, []);
 
   const canProceed = () => {
     if (step === 1) return businessType !== null && businessName.trim().length >= 2;
@@ -326,6 +326,11 @@ useEffect(() => {
     setSubmitError(null);
 
     try {
+      // Clear any stale session from another user on this device before signing up.
+      // Without this, Supabase sees the existing session and returns
+      // user_repeated_signup for the wrong account instead of registering the new one.
+      await supabase.auth.signOut({ scope: "local" });
+
       const pendingPayload = {
         business_name: businessName.trim(),
         business_type: businessType ?? "General",
@@ -798,107 +803,74 @@ useEffect(() => {
                     Choose your plan
                   </h1>
                   <p className="text-muted-foreground text-sm">
-                    Every plan starts with a free trial. No payment needed today.
+                    Start free. Upgrade when you're ready. Cancel anytime.
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  {PLANS.map((plan) => {
-                    const isSelected = selectedPlan === plan.id;
-                    const isProfessional = plan.id === "professional";
-                    return (
-                      <button
-                        key={plan.id}
-                        onClick={() => {
-                          setSelectedPlan(plan.id);
-                          setTermsAccepted(false);
-                        }}
-                        className={`w-full text-left rounded-xl border transition-all duration-300 overflow-hidden ${
-                          isSelected
-                            ? "border-primary shadow-elevated"
-                            : "border-border hover:border-foreground/20 hover:shadow-soft"
-                        }`}
-                      >
-                        <div className={`px-5 py-4 transition-colors duration-300 ${isSelected ? "gradient-card" : "gradient-surface"}`}>
-                          <div className="flex items-start gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-semibold text-foreground">{plan.name}</span>
-                                {isProfessional && (
-                                  <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
-                                )}
-                                {plan.popular && (
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
-                                    Most Popular
-                                  </span>
-                                )}
-                                <span className="text-[10px] text-muted-foreground ml-auto">{plan.trial}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
-                            </div>
-
-                            <div className="text-right shrink-0">
-                              <span className="text-sm font-bold text-foreground">{plan.price}</span>
-                              <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
-                            </div>
+                  {PLANS.map((plan) => (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`w-full text-left rounded-xl border p-4 transition-all duration-300 ${
+                        selectedPlan === plan.id
+                          ? "border-primary gradient-card shadow-elevated"
+                          : "border-border gradient-surface hover:border-foreground/20 hover:shadow-soft"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-foreground">{plan.name}</span>
+                            {plan.popular && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
+                                <Crown className="h-2.5 w-2.5" />Most popular
+                              </span>
+                            )}
                           </div>
-
-                          {isSelected && (
-                            <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-1 gap-1.5 animate-fade-in">
-                              {plan.features.map((feature) => (
-                                <div key={feature} className="flex items-center gap-2">
-                                  <Check className="h-3 w-3 text-primary shrink-0" />
-                                  <span className="text-xs text-muted-foreground">{feature}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          <p className="text-xs text-muted-foreground mb-2">{plan.tagline}</p>
+                          <p className="text-[11px] font-medium text-primary">{plan.trial}</p>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <div className="text-right shrink-0">
+                          <span className="text-lg font-bold text-foreground">{plan.price}</span>
+                          <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
+                        </div>
+                      </div>
+                      {selectedPlan === plan.id && (
+                        <ul className="mt-3 space-y-1.5 border-t border-border/50 pt-3">
+                          {plan.features.map((f) => (
+                            <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                              <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Trial summary and terms acknowledgement */}
-                <div className="gradient-surface border border-border rounded-xl p-4 space-y-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-foreground">Your selection</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-foreground font-semibold">{activePlan.name} plan</span>
-                      <span className="text-xs text-muted-foreground">{activePlan.trial}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Your free trial lasts <span className="text-foreground font-medium">{activePlan.trialDays} days</span>. After that, you'll be billed <span className="text-foreground font-medium">{activePlan.price}/month</span>. No payment is collected today. You can cancel or change your plan at any time from your dashboard.
-                    </p>
-                  </div>
-
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <div className="relative mt-0.5 shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div className={`w-4 h-4 rounded border transition-colors ${
-                        termsAccepted
-                          ? "bg-primary border-primary"
-                          : "border-input bg-background group-hover:border-foreground/40"
-                      }`}>
-                        {termsAccepted && (
-                          <Check className="h-3 w-3 text-primary-foreground absolute top-0.5 left-0.5" />
-                        )}
-                      </div>
-                    </div>
+                <div className="gradient-surface rounded-xl border border-border p-4 space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+                    />
                     <span className="text-xs text-muted-foreground leading-relaxed">
-                      I understand my {activePlan.trialDays}-day free trial begins today. After the trial ends I'll be billed {activePlan.price}/month for the {activePlan.name} plan. I can cancel anytime before then at no charge.
+                      I agree to the{" "}
+                      <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-foreground underline hover:text-primary transition-colors">
+                        Terms of Service
+                      </a>{" "}
+                      and{" "}
+                      <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-foreground underline hover:text-primary transition-colors">
+                        Privacy Policy
+                      </a>
+                      . I understand my {activePlan.trial} starts today and I can cancel anytime before it ends.
                     </span>
                   </label>
                 </div>
-
-                <p className="text-xs text-muted-foreground text-center">
-                  You can change your plan at any time from your dashboard settings.
-                </p>
 
                 {submitError && (
                   <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -908,43 +880,44 @@ useEffect(() => {
               </div>
             )}
 
-            <div className="mt-8 flex items-center justify-between gap-3">
-              {step > 1 ? (
-                <button
-                  onClick={() => setStep(step - 1)}
-                  disabled={submitting}
-                  className="flex items-center gap-2 px-4 py-2.5 min-h-[48px] rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
-                >
-                  <ArrowLeft className="h-4 w-4" />Back
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {step < totalSteps ? (
-                <button
-                  onClick={() => setStep(step + 1)}
-                  disabled={!canProceed()}
-                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Continue<ArrowRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={handleComplete}
-                  disabled={submitting || !canProceed()}
-                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {submitting ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
-                  ) : (
-                    <>Launch My Dashboard<ArrowRight className="h-4 w-4" /></>
-                  )}
-                </button>
-              )}
-            </div>
-
           </div>
+        </div>
+      </div>
+
+      {/* STICKY FOOTER NAV */}
+      <div className="shrink-0 border-t border-border bg-background/90 backdrop-blur-sm">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 1rem))" }}>
+          {step > 1 ? (
+            <button
+              onClick={() => setStep((s) => s - 1)}
+              disabled={submitting}
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              <ArrowLeft className="h-4 w-4" />Back
+            </button>
+          ) : (
+            <div />
+          )}
+
+          {step < totalSteps ? (
+            <button
+              onClick={() => setStep((s) => s + 1)}
+              disabled={!canProceed()}
+              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
+            >
+              Continue <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={handleComplete}
+              disabled={submitting || !canProceed()}
+              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitting ? "Creating your page..." : "Launch my booking page"}
+            </button>
+          )}
         </div>
       </div>
     </div>
