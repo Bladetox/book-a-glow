@@ -124,7 +124,7 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_deposit_signoff: "See you at your lash appointment.",
     success_final_title: "Lash day is confirmed!",
     success_final_body: "Your appointment is locked in. We'll see you soon with clean lashes ready to go.",
-    success_final_rebook: "Infills are due every 2-3 weeks — don't wait too long!",
+    success_final_rebook: "Infills are due every 2–3 weeks — don't wait too long!",
     success_final_review_cta: "Share your lash transformation",
     success_final_signoff: "See you soon.",
   },
@@ -144,7 +144,7 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_deposit_signoff: "See you at the barber.",
     success_final_title: "You're booked!",
     success_final_body: "Your appointment is confirmed. We'll see you when you get here.",
-    success_final_rebook: "Regular cuts keep the fade fresh — rebook in 2-4 weeks.",
+    success_final_rebook: "Regular cuts keep the fade fresh — rebook in 2–4 weeks.",
     success_final_review_cta: "Rate your experience",
     success_final_signoff: "Stay sharp.",
   },
@@ -164,7 +164,7 @@ const THEME_COPY: Record<string, ThemeCopy> = {
     success_deposit_signoff: "See you at your nail appointment.",
     success_final_title: "Nails appointment confirmed!",
     success_final_body: "You're all booked. We'll see you soon for your nail session.",
-    success_final_rebook: "Infills needed in 2-3 weeks — book ahead so you don't miss your slot.",
+    success_final_rebook: "Infills needed in 2–3 weeks — book ahead so you don't miss your slot.",
     success_final_review_cta: "Show off your nails",
     success_final_signoff: "See you soon.",
   },
@@ -277,13 +277,6 @@ const THEME_COLORS: Record<string, ThemeColors> = {
   },
 };
 
-// Trial lengths per plan (in days)
-const PLAN_TRIAL_DAYS: Record<string, number> = {
-  starter:      7,
-  flow:         30,
-  professional: 30,
-};
-
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -381,17 +374,9 @@ Deno.serve(async (req) => {
       theme_id,
       services = [],
       schedule = {},
-      selected_plan = "professional",
     } = body;
 
     if (!business_name?.trim()) return json({ error: "business_name is required" }, 400);
-
-    // Validate plan — fall back to professional if unrecognised
-    const resolvedPlan = ["starter", "flow", "professional"].includes(selected_plan)
-      ? (selected_plan as string)
-      : "professional";
-
-    const trialDays = PLAN_TRIAL_DAYS[resolvedPlan] ?? 30;
 
     const resolvedThemeId = (theme_id && THEME_COPY[theme_id]) ? theme_id : "standard";
     const copy   = THEME_COPY[resolvedThemeId];
@@ -439,7 +424,7 @@ Deno.serve(async (req) => {
       is_active:           true,
       subscription_status: "trial",
       trial_started_at:    new Date().toISOString(),
-      trial_ends_at:       new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString(),
+      trial_ends_at:       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     });
     if (tenantErr) throw new Error(`tenant: ${tenantErr.message}`);
 
@@ -503,54 +488,54 @@ Deno.serve(async (req) => {
     const abbrev = business_name.trim().replace(/[^a-zA-Z]/g, "").substring(0, 2).toUpperCase() || "BZ";
 
     const defaultSettings: { key: string; value: string; description: string | null }[] = [
-      // Identity
+      // ── Identity
       { key: "business_name",              value: business_name.trim(),             description: null },
       { key: "abbreviation",               value: abbrev,                            description: null },
       { key: "tagline",                    value: copy.tagline,                      description: null },
       { key: "subtitle",                   value: copy.subtitle,                     description: null },
       { key: "sign_off",                   value: copy.sign_off,                     description: null },
-      // Booking rules
+      // ── Booking rules
       { key: "requires_deposit",           value: "false",                           description: null },
       { key: "deposit_percent",            value: "50",                              description: null },
       { key: "min_notice_hours",           value: "24",                              description: null },
       { key: "max_advance_days",           value: "60",                              description: null },
       { key: "booking_ref_prefix",         value: "",                                description: null },
-      // Mobile service
+      // ── Mobile service
       { key: "mobile_service_enabled",     value: "false",                           description: null },
       { key: "default_distance_km",        value: "10",                              description: null },
       { key: "rate_per_km",                value: "3.5",                             description: null },
       { key: "fixed_origin_address",       value: "",                                description: "Fixed origin for distance calculations" },
-      // Client labels
+      // ── Client labels
       { key: "client_label_new",           value: "New Client",                      description: null },
       { key: "client_label_existing",      value: "Existing Client",                 description: null },
-      // Booking page copy
+      // ── Booking page copy
       { key: "cta_label",                  value: copy.cta_label,                    description: null },
       { key: "confirmation_title",         value: copy.confirmation_title,           description: null },
       { key: "confirmation_intro",         value: copy.confirmation_intro,           description: null },
       { key: "confirmation_outro",         value: copy.confirmation_outro,           description: null },
-      // Deposit success page
+      // ── Deposit success page
       { key: "success_deposit_title",      value: copy.success_deposit_title,        description: null },
       { key: "success_deposit_tagline",    value: copy.success_deposit_tagline,      description: null },
       { key: "success_deposit_body",       value: copy.success_deposit_body,         description: null },
       { key: "success_deposit_intent",     value: copy.success_deposit_intent,       description: null },
       { key: "success_deposit_closing",    value: copy.success_deposit_closing,      description: null },
       { key: "success_deposit_signoff",    value: copy.success_deposit_signoff,      description: null },
-      // Final success page
+      // ── Final success page
       { key: "success_final_title",        value: copy.success_final_title,          description: null },
       { key: "success_final_body",         value: copy.success_final_body,           description: null },
       { key: "success_final_rebook",       value: copy.success_final_rebook,         description: null },
       { key: "success_final_review_cta",   value: copy.success_final_review_cta,     description: null },
       { key: "success_final_signoff",      value: copy.success_final_signoff,        description: null },
-      // Plan — stored as the actual selected plan id
-      { key: "plan",                       value: resolvedPlan,                      description: null },
-      // Admin / notifications
+      // ── Plan
+      { key: "plan",                       value: "\"free\"",                        description: null },
+      // ── Admin / notifications
       { key: "admin_email",                value: user.email ?? "",                  description: "Admin email for notifications" },
       { key: "app_base_url",               value: "",                                description: "Base URL of the application" },
-      // Yoco payments (blank — configure in admin)
+      // ── Yoco payments (blank — configure in admin)
       { key: "yoco_public_key",            value: "",                                description: null },
       { key: "yoco_secret_key",            value: "",                                description: "Yoco secret key for payment API" },
       { key: "yoco_webhook_secret",        value: "",                                description: "Yoco webhook signature verification secret" },
-      // Google integrations (blank — configure in admin)
+      // ── Google integrations (blank — configure in admin)
       { key: "google_maps_api_key",        value: "",                                description: "Google Maps API key for distance calculation" },
       { key: "google_calendar_id",         value: "",                                description: "Google Calendar ID for bookings" },
       { key: "google_place_id",            value: "",                                description: null },
@@ -558,12 +543,12 @@ Deno.serve(async (req) => {
       { key: "google_review_url",          value: "",                                description: null },
       { key: "gcal_connected",             value: "false",                           description: null },
       { key: "gmb_connected",              value: "false",                           description: null },
-      // Loyalty
+      // ── Loyalty
       { key: "loyalty_qualifying_service", value: "",                                description: "Loyalty: loyalty_qualifying_service" },
       { key: "loyalty_min_bookings",       value: "3",                               description: "Loyalty: loyalty_min_bookings" },
       { key: "loyalty_lookback_days",      value: "90",                              description: "Loyalty: loyalty_lookback_days" },
       { key: "loyalty_reminder_weeks",     value: "5",                               description: "Loyalty: loyalty_reminder_weeks" },
-      // Theme CSS color variables
+      // ── Theme CSS color variables
       { key: "theme_background",           value: colors.background,                 description: "CSS --background HSL value" },
       { key: "theme_foreground",           value: colors.foreground,                 description: "CSS --foreground HSL value" },
       { key: "theme_card",                 value: colors.card,                       description: "CSS --card HSL value" },
@@ -605,7 +590,7 @@ Deno.serve(async (req) => {
       .update({ is_setup_complete: true })
       .eq("id", tenantId);
 
-    console.log(`[create-tenant] success: tenant=${tenantId} theme=${resolvedThemeId} plan=${resolvedPlan} trial_days=${trialDays} user=${user.id}`);
+    console.log(`[create-tenant] success: tenant=${tenantId} theme=${resolvedThemeId} user=${user.id}`);
     return json({ success: true, tenant_id: tenantId });
 
   } catch (err: unknown) {
