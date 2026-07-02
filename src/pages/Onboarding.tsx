@@ -96,6 +96,11 @@ const Onboarding = () => {
   // If this field has any value when the form is submitted, silently block it.
   const [honeypot, setHoneypot] = useState("");
 
+  // DOM ref for the email input — read at submit time to capture whatever the
+  // browser actually has in the field (including any autofill that bypassed
+  // React's onChange). Falls back to React state if the ref is unavailable.
+  const emailRef = useRef<HTMLInputElement>(null);
+
   // Always use default schedule (Standard Work Week) — editable in admin later
   const schedule = availabilityPresets[0].schedule;
 
@@ -225,6 +230,13 @@ const Onboarding = () => {
     // Honeypot check — bots fill hidden fields, humans don't
     if (honeypot) return;
 
+    // Read the email directly from the DOM at submit time.
+    // This captures whatever the browser actually has in the field, including
+    // any autofill value that bypassed React's onChange (e.g. browser
+    // credential managers injecting a saved address after the controlled
+    // render). Falls back to React state only if the ref is unavailable.
+    const resolvedEmail = (emailRef.current?.value ?? email).trim();
+
     // Hard re-validation before touching the API — canProceed() disables the
     // button, but this is the last line of defence against any bypass.
     if (!canProceed()) {
@@ -239,7 +251,7 @@ const Onboarding = () => {
       // 1. Sign up + immediately sign in to get a guaranteed session token.
       //    See signUpAndGetToken() above for why signIn is always called.
       const accessToken = await signUpAndGetToken(
-        email.trim(),
+        resolvedEmail,
         password,
         businessName.trim()
       );
@@ -454,12 +466,20 @@ const Onboarding = () => {
                   <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">
                     Email address
                   </label>
-
+                  {/*
+                    autoComplete="off" — prevents the browser credential manager
+                    from overwriting this field with a saved address after React's
+                    controlled render (which bypasses onChange and leaves React
+                    state out of sync with the DOM value).
+                    The DOM value is also read directly via emailRef at submit time
+                    as a second layer of defence.
+                  */}
                   <input
+                    ref={emailRef}
                     id="onboarding-email"
                     name="email"
                     type="email"
-                    autoComplete="email"
+                    autoComplete="off"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
