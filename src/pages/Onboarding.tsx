@@ -190,12 +190,12 @@ const Onboarding = () => {
    * AUTH CHECK
    * -----------------------------------------------------------------------
    * If a session exists AND the user already has a tenant, redirect them
-   * straight to their dashboard — they don't need to go through onboarding.
+   * straight to their dashboard - they don't need to go through onboarding.
    *
    * We intentionally do NOT pre-fill the email field. Pre-filling caused
    * two problems during testing:
    *   1. A logged-in tester couldn't type a fresh email to create a new
-   *      account — the field would be locked to their current session email.
+   *      account - the field would be locked to their current session email.
    *   2. The signUp call would fail with "already registered" for that email,
    *      then signIn would succeed for the existing account, silently
    *      attaching the new tenant to the wrong user.
@@ -225,7 +225,7 @@ const Onboarding = () => {
 
         // No pre-fill. Leave the email field blank so any email can be entered.
       } catch {
-        // Silently ignore — session check is best-effort
+        // Silently ignore - session check is best-effort
       }
     })();
   }, []);
@@ -334,18 +334,13 @@ const Onboarding = () => {
     /*
      * MOBILE KEYBOARD FIX
      * -----------------------------------------------------------------------
-     * Using position:fixed + inset:0 instead of height:100dvh.
+     * position:fixed + inset:0 pins the shell to the INITIAL viewport rect.
+     * When the iOS/Android virtual keyboard opens it slides up OVER the page
+     * instead of compressing it. This prevents the header, progress bar, and
+     * CTA button from reflowing mid-keystroke.
      *
-     * Why: On iOS/Android, when the virtual keyboard opens it resizes the
-     * viewport, which causes 100dvh to shrink. The browser then tries to
-     * re-layout the entire page mid-keystroke, making inputs jump, the
-     * header reflow, and the CTA button fly off screen.
-     *
-     * position:fixed with inset:0 pins the shell to the INITIAL viewport
-     * rect. The keyboard slides up OVER the page instead of compressing it.
-     * The scrollable inner region (#ob-scroll) handles its own overflow
-     * independently via flex-1 + min-h-0 so it fills remaining space
-     * without overflowing the fixed shell.
+     * The scrollable inner region (#ob-scroll) uses flex-1 + min-h-0 so it
+     * always fills remaining space without overflowing the fixed shell.
      * -----------------------------------------------------------------------
      */
     <div
@@ -384,12 +379,23 @@ const Onboarding = () => {
               className="h-10 w-10 object-contain rounded-lg shrink-0"
             />
             <span className="text-base font-bold tracking-tight leading-none">
-              Next<span className="text-accent">Slot</span>
+              Next<span className="text-primary">Slot</span>
             </span>
           </Link>
           <div className="flex items-center gap-3">
+            {/*
+             * VIBE BADGE CONTRAST FIX
+             * Previously used bg-accent/20 + text-accent-foreground.
+             * On light themes the accent is often a mid-lightness hue so
+             * bg-accent/20 is nearly invisible and text-accent-foreground
+             * could be near-black on a near-black tinted surface — unreadable.
+             * Using bg-primary/10 + text-primary instead guarantees contrast
+             * because primary is always defined as a high-contrast value
+             * relative to the background on every theme (dark on light themes,
+             * bright on dark themes).
+             */}
             {activeTheme && (
-              <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-accent/20 text-accent-foreground transition-colors duration-500">
+              <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary transition-colors duration-500 tracking-wide">
                 {activeTheme.vibe}
               </span>
             )}
@@ -416,11 +422,10 @@ const Onboarding = () => {
 
       {/*
        * SCROLLABLE REGION
-       * min-h-0 is required here. Without it, a flex child in a flex-col
-       * container will refuse to shrink below its content height, causing
-       * the scroll region to overflow the fixed shell on long step content.
-       * flex-1 + min-h-0 together mean: "take all remaining space, but
-       * never exceed the parent bounds - scroll instead."
+       * flex-1 + min-h-0: fills all remaining space in the fixed shell
+       * without overflowing. Without min-h-0, a flex child refuses to shrink
+       * below its content height and the scroll region escapes the shell.
+       * WebkitOverflowScrolling:touch enables momentum scrolling on iOS.
        */}
       <div
         id="ob-scroll"
@@ -768,14 +773,16 @@ const Onboarding = () => {
               </div>
             )}
 
+            {/* CTA BUTTONS */}
             <div className="mt-8 flex items-center justify-between gap-3">
               {step > 1 ? (
                 <button
                   onClick={() => setStep(step - 1)}
                   disabled={submitting}
-                  className="flex items-center gap-2 px-4 py-2.5 min-h-[48px] rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all disabled:opacity-50"
                 >
-                  <ArrowLeft className="h-4 w-4" />Back
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
                 </button>
               ) : (
                 <div />
@@ -785,20 +792,27 @@ const Onboarding = () => {
                 <button
                   onClick={() => setStep(step + 1)}
                   disabled={!canProceed()}
-                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-soft"
                 >
-                  Continue<ArrowRight className="h-4 w-4" />
+                  Continue
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               ) : (
                 <button
                   onClick={handleComplete}
                   disabled={submitting || !canProceed()}
-                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-soft"
                 >
                   {submitting ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Setting up...
+                    </>
                   ) : (
-                    <>Launch My Dashboard<ArrowRight className="h-4 w-4" /></>
+                    <>
+                      Launch my page
+                      <ArrowRight className="h-4 w-4" />
+                    </>
                   )}
                 </button>
               )}
