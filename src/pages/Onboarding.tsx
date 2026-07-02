@@ -316,11 +316,28 @@ const Onboarding = () => {
   const totalSteps = 4;
 
   return (
+    /*
+     * MOBILE KEYBOARD FIX
+     * -----------------------------------------------------------------------
+     * Using position:fixed + inset:0 instead of height:100dvh.
+     *
+     * Why: On iOS/Android, when the virtual keyboard opens it resizes the
+     * viewport, which causes 100dvh to shrink. The browser then tries to
+     * re-layout the entire page mid-keystroke, making inputs jump, the
+     * header reflow, and the CTA button fly off screen.
+     *
+     * position:fixed with inset:0 pins the shell to the INITIAL viewport
+     * rect. The keyboard slides up OVER the page instead of compressing it.
+     * The scrollable inner region (#ob-scroll) handles its own overflow
+     * independently via flex-1 + min-h-0 so it fills remaining space
+     * without overflowing the fixed shell.
+     * -----------------------------------------------------------------------
+     */
     <div
       className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
       style={{
-        height: "100dvh",
-        overflow: "hidden",
+        position: "fixed",
+        inset: 0,
         transition: "background-color 400ms ease, color 400ms ease",
         ...appliedThemeStyle,
       }}
@@ -382,10 +399,17 @@ const Onboarding = () => {
         </div>
       </div>
 
-      {/* SCROLLABLE REGION */}
+      {/*
+       * SCROLLABLE REGION
+       * min-h-0 is required here. Without it, a flex child in a flex-col
+       * container will refuse to shrink below its content height, causing
+       * the scroll region to overflow the fixed shell on long step content.
+       * flex-1 + min-h-0 together mean: "take all remaining space, but
+       * never exceed the parent bounds - scroll instead."
+       */}
       <div
         id="ob-scroll"
-        className="flex-1 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-y-auto"
         style={{
           ...scrollbarHide,
           WebkitOverflowScrolling: "touch",
@@ -455,6 +479,14 @@ const Onboarding = () => {
                       onChange={(e) => setBusinessName(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                       placeholder="e.g. Glow by Tash"
+                      /*
+                       * MOBILE: font-size >= 16px on inputs prevents iOS from
+                       * auto-zooming the viewport when an input is focused.
+                       * text-sm resolves to 14px which DOES trigger zoom.
+                       * The inline style forces 16px on this field only
+                       * without changing the visual design.
+                       */
+                      style={{ fontSize: "16px" }}
                     />
                     <p className="text-xs text-muted-foreground">This becomes your booking page name. You can change it later.</p>
                   </div>
@@ -491,6 +523,7 @@ const Onboarding = () => {
                         onChange={(e) => updateService(i, "name", e.target.value)}
                         placeholder="Service name"
                         className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                        style={{ fontSize: "16px" }}
                       />
                       <div className="grid grid-cols-2 gap-3">
                         <div className="relative">
@@ -504,6 +537,7 @@ const Onboarding = () => {
                             onChange={(e) => updateService(i, "price", e.target.value)}
                             placeholder="Price"
                             className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                            style={{ fontSize: "16px" }}
                           />
                         </div>
                         <div className="relative">
@@ -514,6 +548,7 @@ const Onboarding = () => {
                             value={service.duration}
                             onChange={(e) => updateService(i, "duration", e.target.value)}
                             className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all appearance-none"
+                            style={{ fontSize: "16px" }}
                           >
                             <option value="15">15 min</option>
                             <option value="20">20 min</option>
@@ -573,6 +608,7 @@ const Onboarding = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                       placeholder="you@example.com"
+                      style={{ fontSize: "16px" }}
                     />
                   </div>
 
@@ -590,6 +626,7 @@ const Onboarding = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                         placeholder="Minimum 8 characters"
+                        style={{ fontSize: "16px" }}
                       />
                       <button
                         type="button"
@@ -619,6 +656,7 @@ const Onboarding = () => {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                         placeholder="Re-enter your password"
+                        style={{ fontSize: "16px" }}
                       />
                       <button
                         type="button"
