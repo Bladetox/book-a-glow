@@ -112,6 +112,49 @@ function buildAdminUrl(tenantId: string): string {
 async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
   await supabase.auth.signOut({ scope: "global" });
 
+  // Step 1: try signing in first. If this succeeds the user already exists
+  // and we return their token immediately so the flow can redirect them.
+  const { data: signInFirst, error: signInFirstError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (!signInFirstError && signInFirst.session?.access_token) {
+    return signInFirst.session.access_token;
+  }
+
+  // Step 2: sign-in failed — determine why before attempting sign-up.
+  if (signInFirstError) {
+    const msg = signInFirstError.message.toLowerCase();
+
+    // Wrong password for an existing account — do not attempt sign-up.
+    if (
+      msg.includes("invalid login credentials") ||
+      msg.includes("invalid credentials") ||
+      msg.includes("wrong password")
+    ) {
+      throw new Error("An account with this email already exists. Please check your password and try again.");
+    }
+
+    // Email exists but not yet confirmed.
+    if (msg.includes("email not confirmed")) {
+      throw new Error("Your email isn't confirmed yet. Please check your inbox and click the confirmation link, then try again.");
+    }
+
+    // Any error that is NOT "user not found" / "no user" should be surfaced as-is.
+    // Only proceed to sign-up when the error clearly indicates the user does not exist.
+    const isUserNotFound =
+      msg.includes("user not found") ||
+      msg.includes("no user") ||
+      msg.includes("invalid login") ||
+      msg.includes("email");
+
+    if (!isUserNotFound) {
+      throw signInFirstError;
+    }
+  }
+
+  // Step 3: user does not exist — create the account.
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -121,21 +164,17 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
   if (signUpError) {
     const msg = signUpError.message.toLowerCase();
     if (msg.includes("already registered") || msg.includes("user already registered")) {
-      // Known account — try signing in directly
-    } else {
-      throw signUpError;
+      throw new Error("An account with this email already exists. Please log in instead or reset your password.");
     }
+    throw signUpError;
   }
 
-  // If signUp succeeded but email is unconfirmed, surface a clear error
+  // Sign-up succeeded but email confirmation is required before a session is issued.
   if (signUpData?.user && !signUpData.session) {
-    const identities = signUpData.user.identities ?? [];
-    if (identities.length === 0) {
-      throw new Error("This email is already registered but not yet confirmed. Please check your inbox and click the confirmation link first.");
-    }
     throw new Error("Check your email — we sent you a confirmation link to activate your account.");
   }
 
+  // Step 4: sign-up created an auto-confirmed session — sign in to get a clean token.
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email,
     password,
