@@ -109,7 +109,32 @@ function buildAdminUrl(tenantId: string): string {
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
 
-async function signUpAndGetToken(email: string, password: string, businessName: string): Promise<string> {
+interface SignInResult {
+  accessToken: string;
+  user: { id: string; email?: string };
+}
+
+/*
+ * signUpAndGetToken
+ * -------------------------------------------------------------------------
+ * 1. Sign out any existing session FIRST so a stale token (e.g. from a
+ *    previous tester's iCloud account) cannot pollute the new sign-in.
+ * 2. Attempt sign-up. "Already registered" is treated as a no-op — the
+ *    user just needs to sign in.
+ * 3. Sign in and return BOTH the access token and the user object directly
+ *    from signInData. This means callers never need a second getUser() call
+ *    that could accidentally return a stale identity if the session cookie
+ *    races during hydration.
+ * -------------------------------------------------------------------------
+ */
+async function signUpAndGetToken(
+  email: string,
+  password: string,
+  businessName: string
+): Promise<SignInResult> {
+  // Flush any stale session before we do anything else.
+  await supabase.auth.signOut();
+
   const { error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -127,8 +152,12 @@ async function signUpAndGetToken(email: string, password: string, businessName: 
 
   if (signInError) throw signInError;
   if (!signInData.session?.access_token) throw new Error("Could not establish session. Please try again.");
+  if (!signInData.user) throw new Error("Sign-in succeeded but no user was returned. Please try again.");
 
-  return signInData.session.access_token;
+  return {
+    accessToken: signInData.session.access_token,
+    user: signInData.user,
+  };
 }
 
 const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
@@ -265,26 +294,36 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      const accessToken = await signUpAndGetToken(
+      /*
+       * signUpAndGetToken flushes any stale session with signOut() before
+       * signing in, then returns the user directly from signInData so we
+       * never risk reading a stale identity from a second getUser() call.
+       */
+      const { accessToken, user } = await signUpAndGetToken(
         email.trim(),
         password,
         businessName.trim()
       );
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role, tenant_id")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        const adminRole =
-          roles?.find((r) => r.role === "owner") ??
-          roles?.find((r) => r.role === "admin");
-        if (adminRole?.tenant_id) {
-          window.location.href = buildAdminUrl(adminRole.tenant_id);
-          return;
-        }
+      /*
+       * If this user already owns a tenant (e.g. they refreshed mid-flow),
+       * redirect them straight to their dashboard instead of creating a
+       * duplicate tenant. We use the user object from signInData — not a
+       * separate getUser() call — so the identity is guaranteed correct.
+       */
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role, tenant_id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      const adminRole =
+        roles?.find((r) => r.role === "owner") ??
+        roles?.find((r) => r.role === "admin");
+
+      if (adminRole?.tenant_id) {
+        window.location.href = buildAdminUrl(adminRole.tenant_id);
+        return;
       }
 
       const res = await fetch(
@@ -681,18 +720,10 @@ const Onboarding = () => {
                       </button>
                     </div>
                     {confirmPassword && !passwordsMatch && (
-                      <p className="text-xs text-destructive mt-1.5">Passwords don't match</p>
+                      <p className="text-xs text-destructive mt-1.5">Passwords do not match</p>
                     )}
                   </div>
                 </div>
-
-                <p className="text-xs text-muted-foreground">Free for 30 days. No payment required. Cancel anytime.</p>
-
-                {submitError && (
-                  <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                    {submitError}
-                  </div>
-                )}
               </div>
             )}
 
@@ -703,123 +734,106 @@ const Onboarding = () => {
                     Choose your plan
                   </h1>
                   <p className="text-muted-foreground text-sm">
-                    Every plan starts with a free trial. No payment needed today.
+                    Start free. Upgrade or downgrade any time.
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  {PLANS.map((plan) => {
-                    const isSelected = selectedPlan === plan.id;
-                    const isProfessional = plan.id === "professional";
-                    return (
-                      <button
-                        key={plan.id}
-                        onClick={() => setSelectedPlan(plan.id)}
-                        className={`w-full text-left rounded-xl border transition-all duration-300 overflow-hidden ${
-                          isSelected
-                            ? "border-primary shadow-elevated"
-                            : "border-border hover:border-foreground/20 hover:shadow-soft"
-                        }`}
-                      >
-                        <div className={`px-5 py-4 transition-colors duration-300 ${isSelected ? "gradient-card" : "gradient-surface"}`}>
-                          <div className="flex items-start gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-semibold text-foreground">{plan.name}</span>
-                                {isProfessional && (
-                                  <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
-                                )}
-                                {plan.popular && (
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
-                                    Most Popular
-                                  </span>
-                                )}
-                                <span className="text-[10px] text-muted-foreground ml-auto">{plan.trial}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
-                            </div>
-
-                            <div className="text-right shrink-0">
-                              <span className="text-sm font-bold text-foreground">{plan.price}</span>
-                              <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
-                            </div>
-                          </div>
-
-                          {isSelected && (
-                            <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-1 gap-1.5 animate-fade-in">
-                              {plan.features.map((feature) => (
-                                <div key={feature} className="flex items-center gap-2">
-                                  <Check className="h-3 w-3 text-primary shrink-0" />
-                                  <span className="text-xs text-muted-foreground">{feature}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                  {PLANS.map((plan) => (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`w-full text-left rounded-xl border p-5 transition-all duration-300 relative ${
+                        selectedPlan === plan.id
+                          ? "border-primary gradient-card shadow-elevated"
+                          : "border-border hover:border-foreground/20 hover:shadow-soft gradient-surface"
+                      }`}
+                    >
+                      {plan.popular && (
+                        <span className="absolute -top-2.5 left-4 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground flex items-center gap-1 tracking-wide">
+                          <Crown className="h-2.5 w-2.5" />MOST POPULAR
+                        </span>
+                      )}
+                      <div className="flex items-start justify-between mb-1">
+                        <div>
+                          <p className="text-sm font-bold text-foreground">{plan.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <div className="text-right shrink-0 ml-4">
+                          <span className="text-lg font-bold text-foreground">{plan.price}</span>
+                          <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
+                          <p className="text-[10px] text-primary font-medium">{plan.trial}</p>
+                        </div>
+                      </div>
+                      <ul className="mt-3 space-y-1.5">
+                        {plan.features.map((f) => (
+                          <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                            <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                      {selectedPlan === plan.id && (
+                        <div className="absolute top-4 right-4">
+                          <Check className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
                 </div>
-
-                <p className="text-xs text-muted-foreground text-center">
-                  You can change your plan at any time from your dashboard settings.
-                </p>
-
-                {submitError && (
-                  <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                    {submitError}
-                  </div>
-                )}
               </div>
             )}
 
-            {/* CTA BUTTONS */}
-            <div className="mt-8 flex items-center justify-between gap-3">
-              {step > 1 ? (
-                <button
-                  onClick={() => setStep(step - 1)}
-                  disabled={submitting}
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all disabled:opacity-50"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {step < totalSteps ? (
-                <button
-                  onClick={() => setStep(step + 1)}
-                  disabled={!canProceed()}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-soft"
-                >
-                  Continue
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={handleComplete}
-                  disabled={submitting || !canProceed()}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-soft"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Setting up...
-                    </>
-                  ) : (
-                    <>
-                      Launch my page
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-
           </div>
         </div>
+      </div>
+
+      {/* STICKY BOTTOM CTA */}
+      <div
+        className="shrink-0 border-t border-border bg-background/90 backdrop-blur-sm"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+          {step > 1 && (
+            <button
+              onClick={() => setStep((s) => s - 1)}
+              disabled={submitting}
+              className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </button>
+          )}
+
+          <button
+            onClick={step < totalSteps ? () => setStep((s) => s + 1) : handleComplete}
+            disabled={!canProceed() || submitting}
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold transition-all duration-300 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Setting up your page...
+              </>
+            ) : step < totalSteps ? (
+              <>
+                Continue
+                <ArrowRight className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Launch my page
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+
+        {submitError && (
+          <div className="max-w-2xl mx-auto px-4 pb-4">
+            <p className="text-xs text-destructive text-center">{submitError}</p>
+          </div>
+        )}
       </div>
     </div>
   );
