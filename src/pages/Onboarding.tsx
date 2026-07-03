@@ -355,7 +355,7 @@ const Onboarding = () => {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/onboarding`,
+          emailRedirectTo: `${window.location.origin}/login`,
           data: { full_name: businessName.trim() },
         },
       });
@@ -463,7 +463,7 @@ const Onboarding = () => {
                     type: "signup",
                     email: email.trim(),
                     options: {
-                      emailRedirectTo: `${window.location.origin}/onboarding`,
+                      emailRedirectTo: `${window.location.origin}/login`,
                     },
                   });
                 }}
