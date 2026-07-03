@@ -144,6 +144,47 @@ const Login = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Safari / new-tab fix: onAuthStateChange can fire before the listener above
+  // is registered when the confirmation link opens in a fresh tab. getSession()
+  // catches an already-active session that the event listener missed.
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const pendingTenantId = await completePendingOnboarding(session.access_token);
+      if (pendingTenantId) {
+        window.location.href = buildAdminUrl(pendingTenantId);
+        return;
+      }
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role, tenant_id")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+
+      const adminRole =
+        roles?.find((r) => r.role === "owner") ??
+        roles?.find((r) => r.role === "admin");
+
+      if (adminRole?.tenant_id) {
+        window.location.href = buildAdminUrl(adminRole.tenant_id);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id, role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile?.tenant_id && (profile.role === "admin" || profile.role === "owner")) {
+        window.location.href = buildAdminUrl(profile.tenant_id);
+      }
+    })();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
