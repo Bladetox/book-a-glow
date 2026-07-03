@@ -224,7 +224,6 @@ const About = () => {
                   }}
                 >
                   Create Your Booking Page
-                  <ArrowRight style={{ height: 16, width: 16 }} />
                 </Link>
               </div>
 
@@ -784,7 +783,6 @@ const About = () => {
               }}
             >
               Create Your Booking Page
-              <ArrowRight style={{ height: 16, width: 16 }} />
             </Link>
           </div>
         </section>
