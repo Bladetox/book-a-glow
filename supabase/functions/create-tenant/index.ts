@@ -336,6 +336,13 @@ function mapCategory(businessType: string): string {
   return CATEGORY_MAP[key] ?? "other";
 }
 
+// FIX 3: resolve selected_plan to a valid subscription_status value
+function resolveSubscriptionStatus(selectedPlan: string | undefined): string {
+  const plan = (selectedPlan ?? "").toLowerCase().trim();
+  const valid = ["trial", "starter", "pro", "premium", "free"];
+  return valid.includes(plan) ? plan : "trial";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -374,6 +381,7 @@ Deno.serve(async (req) => {
       theme_id,
       services = [],
       schedule = {},
+      selected_plan, // FIX 3: read selected_plan from request body
     } = body;
 
     if (!business_name?.trim()) return json({ error: "business_name is required" }, 400);
@@ -381,6 +389,9 @@ Deno.serve(async (req) => {
     const resolvedThemeId = (theme_id && THEME_COPY[theme_id]) ? theme_id : "standard";
     const copy   = THEME_COPY[resolvedThemeId];
     const colors = THEME_COLORS[resolvedThemeId];
+
+    // FIX 3: resolve the plan the user actually chose
+    const subscriptionStatus = resolveSubscriptionStatus(selected_plan);
 
     const { data: existingTenant } = await admin
       .from("tenants")
@@ -422,7 +433,7 @@ Deno.serve(async (req) => {
       theme_id:            resolvedThemeId,
       currency:            "R",
       is_active:           true,
-      subscription_status: "trial",
+      subscription_status: subscriptionStatus, // FIX 3: use resolved plan
       trial_started_at:    new Date().toISOString(),
       trial_ends_at:       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     });
@@ -435,13 +446,16 @@ Deno.serve(async (req) => {
     });
     if (roleErr) { await rollback(); throw new Error(`user_roles: ${roleErr.message}`); }
 
+    // FIX 2: upsert on conflict by email (not id) so retry signups with a new
+    // UUID but same email don't create duplicate profile rows or crash on
+    // the profiles_email_key unique constraint
     const { error: profileErr } = await admin.from("profiles").upsert({
       id:        user.id,
       email:     user.email ?? "",
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
       tenant_id: tenantId,
       role:      "admin",
-    }, { onConflict: "id" });
+    }, { onConflict: "email" });
     if (profileErr) { await rollback(); throw new Error(`profile: ${profileErr.message}`); }
 
     const category = mapCategory(business_type);
@@ -526,8 +540,8 @@ Deno.serve(async (req) => {
       { key: "success_final_rebook",       value: copy.success_final_rebook,         description: null },
       { key: "success_final_review_cta",   value: copy.success_final_review_cta,     description: null },
       { key: "success_final_signoff",      value: copy.success_final_signoff,        description: null },
-      // ── Plan
-      { key: "plan",                       value: "\"free\"",                        description: null },
+      // ── Plan (FIX 3: use actual selected plan)
+      { key: "plan",                       value: JSON.stringify(subscriptionStatus), description: null },
       // ── Admin / notifications
       { key: "admin_email",                value: user.email ?? "",                  description: "Admin email for notifications" },
       { key: "app_base_url",               value: "",                                description: "Base URL of the application" },
@@ -590,7 +604,7 @@ Deno.serve(async (req) => {
       .update({ is_setup_complete: true })
       .eq("id", tenantId);
 
-    console.log(`[create-tenant] success: tenant=${tenantId} theme=${resolvedThemeId} user=${user.id}`);
+    console.log(`[create-tenant] success: tenant=${tenantId} theme=${resolvedThemeId} plan=${subscriptionStatus} user=${user.id}`);
     return json({ success: true, tenant_id: tenantId });
 
   } catch (err: unknown) {
