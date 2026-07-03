@@ -194,13 +194,15 @@ async function signUpAndGetToken(
   password: string,
   businessName: string
 ): Promise<SignInResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+
   const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
   if (signOutError) {
     throw signOutError;
   }
 
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email,
+    email: normalizedEmail,
     password,
     options: {
       data: {
@@ -213,17 +215,24 @@ async function signUpAndGetToken(
     throw signUpError;
   }
 
-  if (isDuplicateSignUp(signUpData)) {
-    throw new Error(
-      "This email is already registered. Please log in or reset your password instead."
-    );
+  if (!signUpData.user) {
+    throw new Error("Signup failed. No user was returned.");
   }
 
-  const { data: signInData, error: signInError } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  if (isDuplicateSignUp(signUpData)) {
+    throw new Error("This email is already registered. Please log in or reset your password instead.");
+  }
+
+  const returnedEmail = signUpData.user.email?.trim().toLowerCase();
+  if (returnedEmail && returnedEmail !== normalizedEmail) {
+    await supabase.auth.signOut({ scope: "local" });
+    throw new Error("Supabase returned a mismatched signup identity. Please log in or reset your password.");
+  }
+
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password,
+  });
 
   if (signInError) {
     throw signInError;
@@ -237,12 +246,17 @@ async function signUpAndGetToken(
     throw new Error("Sign-in succeeded but no user was returned. Please try again.");
   }
 
+  const signedInEmail = signInData.user.email?.trim().toLowerCase();
+  if (signedInEmail && signedInEmail !== normalizedEmail) {
+    await supabase.auth.signOut({ scope: "local" });
+    throw new Error("Signed into the wrong account. Please try again.");
+  }
+
   return {
     accessToken: signInData.session.access_token,
     user: signInData.user,
   };
 }
-
 const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
