@@ -10,16 +10,23 @@ interface AdminLoginProps {
 type View = "login" | "forgot";
 
 // ── Resolve tenant slug from hostname ─────────────────────────────────────────
-// Works for both subdomain routing (slug.nextslot.co.za) and
-// custom domains where the full slug is the first path segment fallback.
+// nextslot.co.za         = 3 parts → marketing site, no slug
+// phenomebeauty.nextslot.co.za = 4 parts → slug = "phenomebeauty"
+// localhost?tenant=demo  → slug = "demo"
 function getTenantSlugFromUrl(): string {
-  const host = window.location.hostname; // e.g. zo-beauty-bar.nextslot.co.za
+  const host = window.location.hostname;
+  const isLocal =
+    host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
+
+  if (isLocal) {
+    return new URLSearchParams(window.location.search).get("tenant") ?? "";
+  }
+
   const parts = host.split(".");
-  // If subdomain routing: first part is the slug
-  if (parts.length >= 3) return parts[0];
-  // Fallback: first path segment
-  const pathParts = window.location.pathname.split("/").filter(Boolean);
-  return pathParts[0] ?? "";
+  // Require 4+ parts: subdomain.nextslot.co.za
+  if (parts.length >= 4) return parts[0];
+
+  return "";
 }
 
 const AdminLogin = ({ onLogin }: AdminLoginProps) => {
@@ -70,7 +77,6 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
         return;
       }
 
-      // Check if user has admin/owner role
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setError("Authentication failed");
@@ -78,16 +84,25 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
         return;
       }
 
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
+      // ── Verify user has owner/admin role for THIS specific subdomain tenant ──
+      const subdomainSlug = getTenantSlugFromUrl();
 
-      const isAdmin = roles?.some(r => r.role === "owner" || r.role === "admin");
+      const query = supabase
+        .from("user_roles")
+        .select("role, tenant_id")
+        .eq("user_id", user.id)
+        .in("role", ["owner", "admin"]);
+
+      // If we know the subdomain, scope the check to that tenant only.
+      // This prevents any cross-tenant login at the form level.
+      if (subdomainSlug) query.eq("tenant_id", subdomainSlug);
+
+      const { data: roles } = await query;
+      const isAdmin = (roles?.length ?? 0) > 0;
 
       if (!isAdmin) {
         await supabase.auth.signOut();
-        setError("You do not have admin access");
+        setError("You do not have admin access for this business");
         setLoading(false);
         return;
       }
