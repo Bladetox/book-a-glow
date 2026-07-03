@@ -11,57 +11,18 @@ import {
   Eye,
   EyeOff,
   Crown,
+  Mail,
 } from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
 
 const availabilityPresets = [
-  {
-    label: "Standard Work Week",
-    desc: "Mon-Fri, 09:00-17:00",
-    schedule: {
-      mon: "09:00-17:00",
-      tue: "09:00-17:00",
-      wed: "09:00-17:00",
-      thu: "09:00-17:00",
-      fri: "09:00-17:00",
-      sat: "Closed",
-      sun: "Closed",
-    },
-  },
-  {
-    label: "Weekend Business",
-    desc: "Thu-Sun, 09:00-18:00",
-    schedule: {
-      mon: "Closed",
-      tue: "Closed",
-      wed: "Closed",
-      thu: "09:00-18:00",
-      fri: "09:00-18:00",
-      sat: "09:00-18:00",
-      sun: "09:00-15:00",
-    },
-  },
-  {
-    label: "Custom Schedule",
-    desc: "Set your own hours",
-    schedule: {
-      mon: "09:00-18:00",
-      tue: "09:00-18:00",
-      wed: "Closed",
-      thu: "09:00-18:00",
-      fri: "09:00-19:00",
-      sat: "09:00-15:00",
-      sun: "Closed",
-    },
-  },
+  { label: "Standard Work Week", desc: "Mon-Fri, 09:00-17:00", schedule: { mon: "09:00-17:00", tue: "09:00-17:00", wed: "09:00-17:00", thu: "09:00-17:00", fri: "09:00-17:00", sat: "Closed", sun: "Closed" } },
+  { label: "Weekend Business", desc: "Thu-Sun, 09:00-18:00", schedule: { mon: "Closed", tue: "Closed", wed: "Closed", thu: "09:00-18:00", fri: "09:00-18:00", sat: "09:00-18:00", sun: "09:00-15:00" } },
+  { label: "Custom Schedule", desc: "Set your own hours", schedule: { mon: "09:00-18:00", tue: "09:00-18:00", wed: "Closed", thu: "09:00-18:00", fri: "09:00-19:00", sat: "09:00-15:00", sun: "Closed" } },
 ];
 
-interface Service {
-  name: string;
-  price: string;
-  duration: string;
-}
+interface Service { name: string; price: string; duration: string; }
 
 type PlanId = "starter" | "flow" | "professional";
 
@@ -71,17 +32,10 @@ interface Plan {
   price: string;
   priceNote: string;
   trial: string;
+  trialDays: number;
   tagline: string;
   popular: boolean;
   features: string[];
-}
-
-interface SignInResult {
-  accessToken: string;
-  user: {
-    id: string;
-    email?: string;
-  };
 }
 
 const PLANS: Plan[] = [
@@ -91,6 +45,7 @@ const PLANS: Plan[] = [
     price: "R99",
     priceNote: "/month",
     trial: "7-day free trial",
+    trialDays: 7,
     tagline: "Get off the diary. Accept bookings online.",
     popular: false,
     features: [
@@ -109,6 +64,7 @@ const PLANS: Plan[] = [
     price: "R399",
     priceNote: "/month",
     trial: "30-day free trial",
+    trialDays: 30,
     tagline: "Real payments, deposits, and client control.",
     popular: false,
     features: [
@@ -127,6 +83,7 @@ const PLANS: Plan[] = [
     price: "R699",
     priceNote: "/month",
     trial: "30-day free trial",
+    trialDays: 30,
     tagline: "The full toolkit for serious beauty pros.",
     popular: true,
     features: [
@@ -140,12 +97,7 @@ const PLANS: Plan[] = [
   },
 ];
 
-const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
-
-const scrollbarHide: CSSProperties = {
-  msOverflowStyle: "none",
-  scrollbarWidth: "none",
-} as CSSProperties;
+const PENDING_ONBOARDING_KEY = "nextslot_pending_onboarding";
 
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -161,102 +113,52 @@ function buildAdminUrl(tenantId: string): string {
   const parts = hostname.split(".");
   const rootDomain =
     parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
-
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
 
-function isDuplicateSignUp(signUpData: unknown): boolean {
-  const data = signUpData as {
-    user?: {
-      identities?: Array<unknown> | null;
-    } | null;
-  };
-
-  const identities = data?.user?.identities;
-
-  return Array.isArray(identities) && identities.length === 0;
-}
-
-/*
- * signUpAndGetToken
- * -------------------------------------------------------------------------
- * 1. Clear ONLY the current browser session first so stale local auth state
- *    cannot bleed into a fresh signup attempt. Supabase JS defaults signOut()
- *    to global scope, so we pass local explicitly.
- * 2. Attempt sign-up.
- * 3. Detect the duplicate-email / repeated-signup case using identities,
- *    because Supabase may intentionally obscure duplicate signups.
- * 4. Only sign in when this looks like a real fresh signup.
- * -------------------------------------------------------------------------
- */
-async function signUpAndGetToken(
-  email: string,
-  password: string,
-  businessName: string
-): Promise<SignInResult> {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
-  if (signOutError) {
-    throw signOutError;
+async function createTenant(
+  accessToken: string,
+  payload: {
+    business_name: string;
+    business_type: string;
+    theme_id: string;
+    services: Service[];
+    schedule: Record<string, string>;
+    selected_plan: PlanId;
   }
-
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email: normalizedEmail,
-    password,
-    options: {
-      data: {
-        full_name: businessName,
+): Promise<string> {
+  const res = await fetch(
+    "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
       },
-    },
-  });
+      body: JSON.stringify(payload),
+    }
+  );
 
-  if (signUpError) {
-    throw signUpError;
+  const json = await res.json();
+
+  if (!res.ok) {
+    if (res.status === 409 && json.tenant_id) {
+      return json.tenant_id as string;
+    }
+    throw new Error(json.error ?? `Server error ${res.status}`);
   }
 
-  if (!signUpData.user) {
-    throw new Error("Signup failed. No user was returned.");
-  }
-
-  if (isDuplicateSignUp(signUpData)) {
-    throw new Error("This email is already registered. Please log in or reset your password instead.");
-  }
-
-  const returnedEmail = signUpData.user.email?.trim().toLowerCase();
-  if (returnedEmail && returnedEmail !== normalizedEmail) {
-    await supabase.auth.signOut({ scope: "local" });
-    throw new Error("Supabase returned a mismatched signup identity. Please log in or reset your password.");
-  }
-
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email: normalizedEmail,
-    password,
-  });
-
-  if (signInError) {
-    throw signInError;
-  }
-
-  if (!signInData.session?.access_token) {
-    throw new Error("Could not establish session. Please try again.");
-  }
-
-  if (!signInData.user) {
-    throw new Error("Sign-in succeeded but no user was returned. Please try again.");
-  }
-
-  const signedInEmail = signInData.user.email?.trim().toLowerCase();
-  if (signedInEmail && signedInEmail !== normalizedEmail) {
-    await supabase.auth.signOut({ scope: "local" });
-    throw new Error("Signed into the wrong account. Please try again.");
-  }
-
-  return {
-    accessToken: signInData.session.access_token,
-    user: signInData.user,
-  };
+  return json.tenant_id as string;
 }
+
+const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
+
+const scrollbarHide: CSSProperties = {
+  msOverflowStyle: "none",
+  scrollbarWidth: "none",
+} as CSSProperties;
+
 const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
@@ -268,9 +170,12 @@ const Onboarding = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [services, setServices] = useState<Service[]>([{ ...BLANK_SERVICE }]);
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("professional");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [finishingSetup, setFinishingSetup] = useState(false);
 
   const [appliedThemeStyle, setAppliedThemeStyle] = useState<CSSProperties>({});
   const rafRef = useRef<number | null>(null);
@@ -287,13 +192,13 @@ const Onboarding = () => {
     return getThemeCssVars(activeTheme) as CSSProperties;
   }, [activeTheme]);
 
+  const activePlan = useMemo(() => PLANS.find((p) => p.id === selectedPlan) ?? PLANS[2], [selectedPlan]);
+
   useEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-
     rafRef.current = requestAnimationFrame(() => {
       setAppliedThemeStyle(themeStyle);
     });
-
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
@@ -307,34 +212,15 @@ const Onboarding = () => {
     return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
-  /*
-   * AUTH CHECK
-   * -----------------------------------------------------------------------
-   * If a session exists AND the user already has a tenant, redirect them
-   * straight to their dashboard. Existing tenants should not go through
-   * onboarding again.
-   *
-   * We intentionally do NOT pre-fill the email field.
-   * -----------------------------------------------------------------------
-   */
+  // Listen for auth state change — fires when user clicks the confirmation email link
   useEffect(() => {
-    (async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.user) return;
-
-        const { data: roles, error: rolesError } = await supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
+        const { data: roles } = await supabase
           .from("user_roles")
           .select("role, tenant_id")
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false });
-
-        if (rolesError) {
-          throw rolesError;
-        }
 
         const adminRole =
           roles?.find((r) => r.role === "owner") ??
@@ -344,8 +230,56 @@ const Onboarding = () => {
           window.location.href = buildAdminUrl(adminRole.tenant_id);
           return;
         }
+
+        const pendingRaw = localStorage.getItem(PENDING_ONBOARDING_KEY);
+        if (pendingRaw) {
+          try {
+            setFinishingSetup(true);
+            const pending = JSON.parse(pendingRaw);
+            const tenantId = await createTenant(session.access_token, pending);
+            localStorage.removeItem(PENDING_ONBOARDING_KEY);
+            window.location.href = buildAdminUrl(tenantId);
+          } catch (err) {
+            setFinishingSetup(false);
+            setSubmitError(
+              err instanceof Error ? err.message : "Setup failed. Please contact support."
+            );
+          }
+          return;
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // On mount: redirect already-authenticated owners straight to their dashboard
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+
+        const adminRole =
+          roles?.find((r) => r.role === "owner") ??
+          roles?.find((r) => r.role === "admin");
+
+        if (adminRole?.tenant_id) {
+          window.location.href = buildAdminUrl(adminRole.tenant_id);
+          return;
+        }
+
+        if (session.user.email) {
+          setEmail(session.user.email);
+        }
       } catch {
-        // Best effort only. Leave onboarding usable if this check fails.
+        // ignore
       }
     })();
   }, []);
@@ -353,27 +287,25 @@ const Onboarding = () => {
   const canProceed = () => {
     if (step === 1) return businessType !== null && businessName.trim().length >= 2;
     if (step === 2) return services.some((s) => s.name.trim());
-    if (step === 3) {
-      return email.trim().includes("@") && passwordValid && passwordsMatch;
-    }
-    if (step === 4) return true;
+    if (step === 3) return (
+      email.trim().includes("@") &&
+      passwordValid &&
+      passwordsMatch
+    );
+    if (step === 4) return termsAccepted;
     return true;
   };
 
   const handleSelectBusinessType = (label: string) => {
     const theme = businessThemes.find((t) => t.label === label);
     setBusinessType(label);
-
     if (theme) {
       setServices(theme.suggestedServices.map((s) => ({ ...s })));
     }
   };
 
   const addService = () => setServices([...services, { ...BLANK_SERVICE }]);
-
-  const removeService = (i: number) =>
-    setServices(services.filter((_, idx) => idx !== i));
-
+  const removeService = (i: number) => setServices(services.filter((_, idx) => idx !== i));
   const updateService = (i: number, field: keyof Service, value: string) => {
     const updated = [...services];
     updated[i] = { ...updated[i], [field]: value };
@@ -387,71 +319,40 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      const trimmedEmail = email.trim().toLowerCase();
-      const trimmedBusinessName = businessName.trim();
+      // Save onboarding payload to localStorage BEFORE signup so the
+      // onAuthStateChange callback can pick it up after email confirmation
+      const pendingPayload = {
+        business_name: businessName.trim(),
+        business_type: businessType ?? "General",
+        theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
+        services: services.filter((s) => s.name.trim()),
+        schedule,
+        selected_plan: selectedPlan,
+      };
+      localStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(pendingPayload));
 
-      const { accessToken, user } = await signUpAndGetToken(
-        trimmedEmail,
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
-        trimmedBusinessName
-      );
+        options: { data: { full_name: businessName.trim() } },
+      });
 
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("role, tenant_id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (rolesError) {
-        throw rolesError;
+      if (signUpError) {
+        localStorage.removeItem(PENDING_ONBOARDING_KEY);
+        throw signUpError;
       }
 
-      const adminRole =
-        roles?.find((r) => r.role === "owner") ??
-        roles?.find((r) => r.role === "admin");
-
-      if (adminRole?.tenant_id) {
-        window.location.href = buildAdminUrl(adminRole.tenant_id);
+      // If Supabase returned a session immediately (email confirmations disabled in project settings)
+      // skip the waiting screen and go straight to tenant creation
+      if (data.session?.access_token) {
+        const tenantId = await createTenant(data.session.access_token, pendingPayload);
+        localStorage.removeItem(PENDING_ONBOARDING_KEY);
+        window.location.href = buildAdminUrl(tenantId);
         return;
       }
 
-      const res = await fetch(
-        "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            business_name: trimmedBusinessName,
-            business_type: businessType ?? "General",
-            theme_id:
-              activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
-            services: services.filter((s) => s.name.trim()),
-            schedule,
-            selected_plan: selectedPlan,
-          }),
-        }
-      );
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 409 && json.tenant_id) {
-          window.location.href = buildAdminUrl(json.tenant_id);
-          return;
-        }
-
-        throw new Error(json.error ?? `Server error ${res.status}`);
-      }
-
-      if (!json.tenant_id) {
-        throw new Error("Tenant created but no tenant id was returned.");
-      }
-
-      window.location.href = buildAdminUrl(json.tenant_id);
+      // Email confirmation required — show the waiting screen
+      setAwaitingConfirmation(true);
     } catch (err: unknown) {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong. Please try again."
@@ -463,12 +364,96 @@ const Onboarding = () => {
 
   const totalSteps = 4;
 
+  // Full-screen finishing setup overlay
+  if (finishingSetup) {
+    return (
+      <div className="nextslot-theme dark-brand flex flex-col items-center justify-center bg-background text-foreground" style={{ height: "100dvh" }}>
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-sm text-muted-foreground">Finishing your setup...</p>
+      </div>
+    );
+  }
+
+  // Email confirmation waiting screen
+  if (awaitingConfirmation) {
+    return (
+      <div className="nextslot-theme dark-brand flex flex-col bg-background text-foreground" style={{ height: "100dvh", overflow: "hidden" }}>
+        <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm">
+          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center">
+            <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
+              <img
+                src="/web-app-manifest-192x192.png"
+                alt="NextSlot"
+                width={40}
+                height={40}
+                loading="lazy"
+                decoding="async"
+                className="h-10 w-10 object-contain rounded-lg shrink-0"
+              />
+              <span className="text-base font-bold tracking-tight leading-none">
+                Next<span className="text-accent">Slot</span>
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-md text-center space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <Mail className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                Check your inbox
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                We sent a confirmation link to <span className="text-foreground font-medium">{email}</span>.
+                Click it to finish setting up your booking page.
+              </p>
+            </div>
+            <div className="gradient-surface border border-border rounded-xl p-4 text-left space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">What happens next</p>
+              <div className="space-y-1.5">
+                {[
+                  "Open the email from NextSlot",
+                  "Click the confirmation link",
+                  "Your dashboard launches automatically",
+                ].map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                    <span className="text-xs text-muted-foreground">{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {submitError && (
+              <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive text-left">
+                {submitError}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Didn't receive it?{" "}
+              <button
+                className="underline text-foreground hover:text-primary transition-colors"
+                onClick={async () => {
+                  await supabase.auth.resend({ type: "signup", email: email.trim() });
+                }}
+              >
+                Resend email
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="nextslot-theme flex flex-col bg-background text-foreground"
+      className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
       style={{
-        position: "fixed",
-        inset: 0,
+        height: "100dvh",
+        overflow: "hidden",
         transition: "background-color 400ms ease, color 400ms ease",
         ...appliedThemeStyle,
       }}
@@ -486,6 +471,7 @@ const Onboarding = () => {
 
       <style>{`#ob-scroll::-webkit-scrollbar{display:none}`}</style>
 
+      {/* HEADER */}
       <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
@@ -499,13 +485,12 @@ const Onboarding = () => {
               className="h-10 w-10 object-contain rounded-lg shrink-0"
             />
             <span className="text-base font-bold tracking-tight leading-none">
-              Next<span className="text-primary">Slot</span>
+              Next<span className="text-accent">Slot</span>
             </span>
           </Link>
-
           <div className="flex items-center gap-3">
             {activeTheme && (
-              <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary transition-colors duration-500 tracking-wide">
+              <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-accent/20 text-accent-foreground transition-colors duration-500">
                 {activeTheme.vibe}
               </span>
             )}
@@ -516,6 +501,7 @@ const Onboarding = () => {
         </div>
       </div>
 
+      {/* PROGRESS BAR */}
       <div className="shrink-0 max-w-2xl mx-auto px-4 w-full mt-6">
         <div className="flex gap-1.5">
           {Array.from({ length: totalSteps }).map((_, i) => (
@@ -529,9 +515,10 @@ const Onboarding = () => {
         </div>
       </div>
 
+      {/* SCROLLABLE REGION */}
       <div
         id="ob-scroll"
-        className="flex-1 min-h-0 overflow-y-auto"
+        className="flex-1 overflow-y-auto"
         style={{
           ...scrollbarHide,
           WebkitOverflowScrolling: "touch",
@@ -542,6 +529,7 @@ const Onboarding = () => {
           style={{ paddingBottom: "max(80px, env(safe-area-inset-bottom, 80px))" }}
         >
           <div className="w-full max-w-lg">
+
             {step === 1 && (
               <div className="space-y-8 animate-fade-in">
                 <div>
@@ -573,16 +561,13 @@ const Onboarding = () => {
                       >
                         <type.icon className="h-5 w-5" />
                       </div>
-
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-foreground">{type.label}</p>
                         <p className="text-xs text-muted-foreground">{type.desc}</p>
                       </div>
-
                       <span className="text-[10px] text-muted-foreground hidden sm:block">
                         {type.vibe}
                       </span>
-
                       {businessType === type.label && (
                         <Check className="h-4 w-4 text-primary" />
                       )}
@@ -592,10 +577,7 @@ const Onboarding = () => {
 
                 {businessType && (
                   <div className="animate-fade-in space-y-2">
-                    <label
-                      htmlFor="onboarding-business-name"
-                      className="block text-sm font-medium text-foreground"
-                    >
+                    <label htmlFor="onboarding-business-name" className="block text-sm font-medium text-foreground">
                       What's your business called?
                     </label>
                     <input
@@ -606,11 +588,8 @@ const Onboarding = () => {
                       onChange={(e) => setBusinessName(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                       placeholder="e.g. Glow by Tash"
-                      style={{ fontSize: "16px" }}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      This becomes your booking page name. You can change it later.
-                    </p>
+                    <p className="text-xs text-muted-foreground">This becomes your booking page name. You can change it later.</p>
                   </div>
                 )}
               </div>
@@ -626,27 +605,17 @@ const Onboarding = () => {
                     We've pre-filled these based on your business type - edit prices and times to match yours.
                   </p>
                 </div>
-
                 <div className="space-y-3">
                   {services.map((service, i) => (
-                    <div
-                      key={i}
-                      className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft"
-                    >
+                    <div key={i} className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Service {i + 1}
-                        </span>
+                        <span className="text-xs font-medium text-muted-foreground">Service {i + 1}</span>
                         {services.length > 1 && (
-                          <button
-                            onClick={() => removeService(i)}
-                            className="text-muted-foreground hover:text-destructive transition-colors"
-                          >
+                          <button onClick={() => removeService(i)} className="text-muted-foreground hover:text-destructive transition-colors">
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>
-
                       <input
                         id={`service-name-${i}`}
                         name={`service-name-${i}`}
@@ -655,14 +624,10 @@ const Onboarding = () => {
                         onChange={(e) => updateService(i, "name", e.target.value)}
                         placeholder="Service name"
                         className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                        style={{ fontSize: "16px" }}
                       />
-
                       <div className="grid grid-cols-2 gap-3">
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-                            R
-                          </span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">R</span>
                           <input
                             id={`service-price-${i}`}
                             name={`service-price-${i}`}
@@ -672,10 +637,8 @@ const Onboarding = () => {
                             onChange={(e) => updateService(i, "price", e.target.value)}
                             placeholder="Price"
                             className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                            style={{ fontSize: "16px" }}
                           />
                         </div>
-
                         <div className="relative">
                           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                           <select
@@ -684,7 +647,6 @@ const Onboarding = () => {
                             value={service.duration}
                             onChange={(e) => updateService(i, "duration", e.target.value)}
                             className="w-full pl-8 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all appearance-none"
-                            style={{ fontSize: "16px" }}
                           >
                             <option value="15">15 min</option>
                             <option value="20">20 min</option>
@@ -699,13 +661,11 @@ const Onboarding = () => {
                       </div>
                     </div>
                   ))}
-
                   <button
                     onClick={addService}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:shadow-soft transition-all"
                   >
-                    <Plus className="h-4 w-4" />
-                    Add another service
+                    <Plus className="h-4 w-4" />Add another service
                   </button>
                 </div>
               </div>
@@ -723,17 +683,9 @@ const Onboarding = () => {
                 </div>
 
                 <div className="gradient-surface rounded-xl p-4 border border-border/50 space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Your booking page
-                  </p>
-                  <p className="text-sm text-foreground">
-                    <span className="text-muted-foreground">Business: </span>
-                    {businessName}
-                  </p>
-                  <p className="text-sm text-foreground">
-                    <span className="text-muted-foreground">Type: </span>
-                    {businessType}
-                  </p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Your booking page</p>
+                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Business: </span>{businessName}</p>
+                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Type: </span>{businessType}</p>
                   <p className="text-sm text-foreground">
                     <span className="text-muted-foreground">Services: </span>
                     {services.filter((s) => s.name.trim()).length} added
@@ -742,10 +694,7 @@ const Onboarding = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <label
-                      htmlFor="onboarding-email"
-                      className="block text-sm font-medium mb-1.5 text-foreground"
-                    >
+                    <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">
                       Email address
                     </label>
                     <input
@@ -757,15 +706,11 @@ const Onboarding = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                       placeholder="you@example.com"
-                      style={{ fontSize: "16px" }}
                     />
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="onboarding-password"
-                      className="block text-sm font-medium mb-1.5 text-foreground"
-                    >
+                    <label htmlFor="onboarding-password" className="block text-sm font-medium mb-1.5 text-foreground">
                       Password
                     </label>
                     <div className="relative">
@@ -778,7 +723,6 @@ const Onboarding = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                         placeholder="Minimum 8 characters"
-                        style={{ fontSize: "16px" }}
                       />
                       <button
                         type="button"
@@ -786,25 +730,16 @@ const Onboarding = () => {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label={showPassword ? "Hide password" : "Show password"}
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                     {password && !passwordValid && (
-                      <p className="text-xs text-destructive mt-1.5">
-                        Password must be at least 8 characters
-                      </p>
+                      <p className="text-xs text-destructive mt-1.5">Password must be at least 8 characters</p>
                     )}
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="onboarding-confirm-password"
-                      className="block text-sm font-medium mb-1.5 text-foreground"
-                    >
+                    <label htmlFor="onboarding-confirm-password" className="block text-sm font-medium mb-1.5 text-foreground">
                       Confirm password
                     </label>
                     <div className="relative">
@@ -817,7 +752,6 @@ const Onboarding = () => {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="w-full px-4 py-3 pr-11 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring shadow-soft transition-all duration-300"
                         placeholder="Re-enter your password"
-                        style={{ fontSize: "16px" }}
                       />
                       <button
                         type="button"
@@ -825,20 +759,22 @@ const Onboarding = () => {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label={showConfirm ? "Hide password" : "Show password"}
                       >
-                        {showConfirm ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                     {confirmPassword && !passwordsMatch && (
-                      <p className="text-xs text-destructive mt-1.5">
-                        Passwords do not match
-                      </p>
+                      <p className="text-xs text-destructive mt-1.5">Passwords don't match</p>
                     )}
                   </div>
                 </div>
+
+                <p className="text-xs text-muted-foreground">Free for 30 days. No payment required. Cancel anytime.</p>
+
+                {submitError && (
+                  <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {submitError}
+                  </div>
+                )}
               </div>
             )}
 
@@ -849,120 +785,154 @@ const Onboarding = () => {
                     Choose your plan
                   </h1>
                   <p className="text-muted-foreground text-sm">
-                    Start free. Upgrade or downgrade any time.
+                    Every plan starts with a free trial. No payment needed today.
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  {PLANS.map((plan) => (
-                    <button
-                      key={plan.id}
-                      onClick={() => setSelectedPlan(plan.id)}
-                      className={`w-full text-left rounded-xl border p-5 transition-all duration-300 relative ${
-                        selectedPlan === plan.id
-                          ? "border-primary gradient-card shadow-elevated"
-                          : "border-border hover:border-foreground/20 hover:shadow-soft gradient-surface"
-                      }`}
-                    >
-                      {plan.popular && (
-                        <span className="absolute -top-2.5 left-4 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground flex items-center gap-1 tracking-wide">
-                          <Crown className="h-2.5 w-2.5" />
-                          MOST POPULAR
-                        </span>
-                      )}
+                  {PLANS.map((plan) => {
+                    const isSelected = selectedPlan === plan.id;
+                    const isProfessional = plan.id === "professional";
+                    return (
+                      <button
+                        key={plan.id}
+                        onClick={() => {
+                          setSelectedPlan(plan.id);
+                          setTermsAccepted(false);
+                        }}
+                        className={`w-full text-left rounded-xl border transition-all duration-300 overflow-hidden ${
+                          isSelected
+                            ? "border-primary shadow-elevated"
+                            : "border-border hover:border-foreground/20 hover:shadow-soft"
+                        }`}
+                      >
+                        <div className={`px-5 py-4 transition-colors duration-300 ${isSelected ? "gradient-card" : "gradient-surface"}`}>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-semibold text-foreground">{plan.name}</span>
+                                {isProfessional && (
+                                  <Crown className="h-3.5 w-3.5 text-primary shrink-0" />
+                                )}
+                                {plan.popular && (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                                    Most Popular
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-muted-foreground ml-auto">{plan.trial}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
+                            </div>
 
-                      <div className="flex items-start justify-between mb-1">
-                        <div>
-                          <p className="text-sm font-bold text-foreground">{plan.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {plan.tagline}
-                          </p>
+                            <div className="text-right shrink-0">
+                              <span className="text-sm font-bold text-foreground">{plan.price}</span>
+                              <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-1 gap-1.5 animate-fade-in">
+                              {plan.features.map((feature) => (
+                                <div key={feature} className="flex items-center gap-2">
+                                  <Check className="h-3 w-3 text-primary shrink-0" />
+                                  <span className="text-xs text-muted-foreground">{feature}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-
-                        <div className="text-right shrink-0 ml-4">
-                          <span className="text-lg font-bold text-foreground">
-                            {plan.price}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {plan.priceNote}
-                          </span>
-                          <p className="text-[10px] text-primary font-medium">
-                            {plan.trial}
-                          </p>
-                        </div>
-                      </div>
-
-                      <ul className="mt-3 space-y-1.5">
-                        {plan.features.map((f) => (
-                          <li
-                            key={f}
-                            className="flex items-start gap-2 text-xs text-muted-foreground"
-                          >
-                            <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
-
-                      {selectedPlan === plan.id && (
-                        <div className="absolute top-4 right-4">
-                          <Check className="h-4 w-4 text-primary" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* Trial summary and terms acknowledgement */}
+                <div className="gradient-surface border border-border rounded-xl p-4 space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-foreground">Your selection</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-foreground font-semibold">{activePlan.name} plan</span>
+                      <span className="text-xs text-muted-foreground">{activePlan.trial}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Your free trial lasts <span className="text-foreground font-medium">{activePlan.trialDays} days</span>. After that, you'll be billed <span className="text-foreground font-medium">{activePlan.price}/month</span>. No payment is collected today. You can cancel or change your plan at any time from your dashboard.
+                    </p>
+                  </div>
+
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative mt-0.5 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className={`w-4 h-4 rounded border transition-colors ${
+                        termsAccepted
+                          ? "bg-primary border-primary"
+                          : "border-input bg-background group-hover:border-foreground/40"
+                      }`}>
+                        {termsAccepted && (
+                          <Check className="h-3 w-3 text-primary-foreground absolute top-0.5 left-0.5" />
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground leading-relaxed">
+                      I understand my {activePlan.trialDays}-day free trial begins today. After the trial ends I'll be billed {activePlan.price}/month for the {activePlan.name} plan. I can cancel anytime before then at no charge.
+                    </span>
+                  </label>
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  You can change your plan at any time from your dashboard settings.
+                </p>
+
+                {submitError && (
+                  <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {submitError}
+                  </div>
+                )}
               </div>
             )}
+
+            <div className="mt-8 flex items-center justify-between gap-3">
+              {step > 1 ? (
+                <button
+                  onClick={() => setStep(step - 1)}
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-4 py-2.5 min-h-[48px] rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all disabled:opacity-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />Back
+                </button>
+              ) : (
+                <div />
+              )}
+
+              {step < totalSteps ? (
+                <button
+                  onClick={() => setStep(step + 1)}
+                  disabled={!canProceed()}
+                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue<ArrowRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleComplete}
+                  disabled={submitting || !canProceed()}
+                  className="flex items-center gap-2 px-6 py-2.5 min-h-[48px] rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Setting up...</>
+                  ) : (
+                    <>Launch My Dashboard<ArrowRight className="h-4 w-4" /></>
+                  )}
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
-      </div>
-
-      <div
-        className="shrink-0 border-t border-border bg-background/90 backdrop-blur-sm"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          {step > 1 && (
-            <button
-              onClick={() => setStep((s) => s - 1)}
-              disabled={submitting}
-              className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
-          )}
-
-          <button
-            onClick={step < totalSteps ? () => setStep((s) => s + 1) : handleComplete}
-            disabled={!canProceed() || submitting}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold transition-all duration-300 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Setting up your page...
-              </>
-            ) : step < totalSteps ? (
-              <>
-                Continue
-                <ArrowRight className="h-4 w-4" />
-              </>
-            ) : (
-              <>
-                Launch my page
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </div>
-
-        {submitError && (
-          <div className="max-w-2xl mx-auto px-4 pb-4">
-            <p className="text-xs text-destructive text-center">{submitError}</p>
-          </div>
-        )}
       </div>
     </div>
   );
