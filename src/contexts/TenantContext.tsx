@@ -50,6 +50,8 @@ interface TenantRenderProps {
   tenant: Tenant | null;
   subscription: TenantSubscription | null;
   loading: boolean;
+  /** Set when the logged-in user does not belong to the subdomain tenant. */
+  unauthorized: boolean;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -59,6 +61,35 @@ const TenantContext = createContext<TenantContextValue | null>(null);
 // Stable fallback so useTenant() never throws during the loading phase.
 const LOADING_CTX: TenantContextValue = { tenantId: "", userId: "", tenant: null };
 
+// ── Subdomain resolver ────────────────────────────────────────────────────────
+
+/**
+ * Returns the tenant slug that should be shown in the admin panel.
+ *
+ * Production:  phenomebeauty.nextslot.co.za  → "phenomebeauty"
+ * Localhost:   localhost/admin?tenant=demo    → "demo"
+ * Fallback:    empty string (caller must handle)
+ */
+function resolveSubdomainTenantId(): string {
+  const hostname = window.location.hostname;
+  const isLocal =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".localhost");
+
+  if (isLocal) {
+    return new URLSearchParams(window.location.search).get("tenant") ?? "";
+  }
+
+  // e.g. "phenomebeauty.nextslot.co.za" → parts[0] = "phenomebeauty"
+  const parts = hostname.split(".");
+  // Only treat it as a tenant subdomain if there are 4+ parts
+  // (subdomain.nextslot.co.za) — 3 parts = nextslot.co.za (marketing site)
+  if (parts.length >= 4) return parts[0];
+
+  return "";
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 interface TenantProviderProps {
@@ -67,16 +98,16 @@ interface TenantProviderProps {
 }
 
 /**
- * Fetches the tenant that belongs to `ownerId`, then invokes `children` as a
- * render-prop with { tenant, subscription, loading }.
+ * SECURITY: Loads the tenant by the URL subdomain slug, then verifies that the
+ * logged-in user (ownerId) actually has an admin/owner role for THAT tenant.
  *
- * Also provides TenantContext so any child component can call useTenant().
- * The Provider is always mounted (even while loading) so useTenant() never
- * throws React error #130 before the fetch resolves.
+ * If verification fails the user is signed out and redirected to their own
+ * correct admin subdomain so they can never silently view another tenant's data.
  */
 export function TenantProvider({ ownerId, children }: TenantProviderProps) {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
     if (!ownerId) {
@@ -84,16 +115,72 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
       return;
     }
 
+    const subdomainTenantId = resolveSubdomainTenantId();
+
+    // ── Step 1: resolve the user's own tenant from user_roles ────────────────
     supabase
-      .from("tenants")
-      .select(
-        "id, name, owner_id, email, phone, address, logo_url, is_active, custom_domain, " +
-        "theme_id, currency, is_lifetime_free, subscription_status, trial_ends_at, plan, " +
-        "paynow_enabled, paynow_number"
-      )
-      .eq("owner_id", ownerId)
-      .maybeSingle()
-      .then(({ data }) => {
+      .from("user_roles")
+      .select("tenant_id, role")
+      .eq("user_id", ownerId)
+      .in("role", ["owner", "admin"])
+      .order("created_at", { ascending: false })
+      .then(async ({ data: roles }) => {
+        const ownerRole =
+          roles?.find((r) => r.role === "owner") ??
+          roles?.find((r) => r.role === "admin");
+        const userTenantId = ownerRole?.tenant_id ?? null;
+
+        // ── Step 2: determine which tenant to load ───────────────────────────
+        // If there is a subdomain slug AND the user does not belong to it →
+        // they are on the wrong admin panel: kick them out immediately.
+        if (subdomainTenantId && userTenantId !== subdomainTenantId) {
+          // Sign out so there is no lingering session on this domain.
+          await supabase.auth.signOut();
+
+          // Redirect to their own admin (if we know it), otherwise to login.
+          if (userTenantId) {
+            const hostname = window.location.hostname;
+            const isLocal =
+              hostname === "localhost" ||
+              hostname === "127.0.0.1" ||
+              hostname.endsWith(".localhost");
+            const dest = isLocal
+              ? `${window.location.origin}/admin?tenant=${userTenantId}`
+              : (() => {
+                  const parts = hostname.split(".");
+                  const root =
+                    parts.length >= 4
+                      ? parts.slice(-3).join(".")
+                      : parts.slice(-2).join(".");
+                  return `${window.location.protocol}//${userTenantId}.${root}/admin`;
+                })();
+            window.location.replace(dest);
+          } else {
+            window.location.replace("/login");
+          }
+
+          setUnauthorized(true);
+          setLoading(false);
+          return;
+        }
+
+        // ── Step 3: load the tenant row (by subdomain slug or user's own) ────
+        const tenantIdToLoad = subdomainTenantId || userTenantId;
+        if (!tenantIdToLoad) {
+          setLoading(false);
+          return;
+        }
+
+        const { data } = await supabase
+          .from("tenants")
+          .select(
+            "id, name, owner_id, email, phone, address, logo_url, is_active, custom_domain, " +
+            "theme_id, currency, is_lifetime_free, subscription_status, trial_ends_at, plan, " +
+            "paynow_enabled, paynow_number"
+          )
+          .eq("id", tenantIdToLoad)
+          .maybeSingle();
+
         setTenant(data ?? null);
         setLoading(false);
       });
@@ -116,6 +203,7 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
         }
       : null,
     loading,
+    unauthorized,
   };
 
   return (
@@ -132,4 +220,3 @@ export function useTenant(): TenantContextValue {
   if (!ctx) throw new Error("useTenant must be used inside TenantProvider (admin layout)");
   return ctx;
 }
-
