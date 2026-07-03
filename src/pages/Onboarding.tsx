@@ -22,6 +22,51 @@ const availabilityPresets = [
 
 interface Service { name: string; price: string; duration: string; }
 
+const plans = [
+  {
+    name: "Starter",
+    price: "R399",
+    period: "/ month",
+    description: "For solo operators just getting started.",
+    features: [
+      "Online booking page, live in minutes",
+      "Service & pricing management",
+      "Availability calendar",
+      "Client capture & booking history",
+      "Deposit & balance payment collection",
+    ],
+    featured: false,
+  },
+  {
+    name: "Professional",
+    price: "R599",
+    period: "/ month",
+    description: "Most popular. For growing businesses.",
+    features: [
+      "Everything in Starter",
+      "Full business dashboard & analytics",
+      "Client source tracking (Instagram, TikTok, Google)",
+      "Google review request system",
+      "Loyalty tiers: New, Regular & VIP clients",
+    ],
+    featured: true,
+  },
+  {
+    name: "Studio",
+    price: "R899",
+    period: "/ month",
+    description: "For teams and multi-operator setups.",
+    features: [
+      "Everything in Professional",
+      "Multiple staff profiles & scheduling",
+      "Stock & inventory management",
+      "Advanced analytics & booking heatmap",
+      "Priority support",
+    ],
+    featured: false,
+  },
+];
+
 /**
  * Builds the correct admin URL after tenant creation — mirrors Login.tsx logic exactly.
  * - localhost / dev  → same origin with ?tenant= param
@@ -82,6 +127,7 @@ const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
 const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -93,12 +139,11 @@ const Onboarding = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Invisible honeypot — bots fill hidden fields; humans never see or touch it.
-  // If this field has any value when the form is submitted, silently block it.
   const [honeypot, setHoneypot] = useState("");
 
   // DOM ref for the email input — read at submit time to capture whatever the
   // browser actually has in the field (including any autofill that bypassed
-  // React's onChange). Falls back to React state if the ref is unavailable.
+  // React's onChange).
   const emailRef = useRef<HTMLInputElement>(null);
 
   // Always use default schedule (Standard Work Week) — editable in admin later
@@ -118,27 +163,11 @@ const Onboarding = () => {
   const passwordValid = password.length >= 8;
 
   // ── Mount guard ──────────────────────────────────────────────────────────
-  // Check if the user already has a valid Supabase session when they land here.
-  //
-  // Case A — session exists + user_roles row found (completed onboarding before):
-  //   → Redirect straight to the admin subdomain. Nothing left to do.
-  //
-  // Case B — session exists + NO user_roles row (abandoned after Step 2, i.e.
-  //   auth account created but create-tenant never finished):
-  //   → Pre-fill their email from the session, skip to Step 2 so they can
-  //     confirm their password and continue. Their service list (seeded from
-  //     Step 1 theme selection) lives in React state and is preserved because
-  //     Step 1 still runs handleSelectBusinessType before advancing; if they
-  //     reload at Step 2 the services default to [BLANK_SERVICE] — acceptable,
-  //     since Step 3 lets them edit freely. We land them at Step 2 so they
-  //     still pass through Step 3 (services) before hitting the submit on Step 4.
-  //
-  // Case C — no session: render normally from Step 1.
   useEffect(() => {
     (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return; // Case C — no session, render wizard normally
+        if (!session?.user) return;
 
         const { data: roles } = await supabase
           .from("user_roles")
@@ -151,21 +180,13 @@ const Onboarding = () => {
           roles?.find((r) => r.role === "admin");
 
         if (adminRole?.tenant_id) {
-          // Case A — already has a complete tenant, redirect immediately
           window.location.href = buildAdminUrl(adminRole.tenant_id);
           return;
         }
 
-        // Case B — auth account exists but tenant was never created.
-        // Pre-fill email from session so Step 2 feels seamless, then skip
-        // them to Step 2. They must still go through Step 3 (services) so
-        // their service list is populated before the final submit.
         if (session.user.email) {
           setEmail(session.user.email);
         }
-        // Stay on Step 1 so they re-pick their business type (which seeds
-        // the suggested services list). handleSelectBusinessType auto-advances
-        // to Step 2 after selection — at that point email is pre-filled.
       } catch {
         // No session or network error — let the wizard render normally
       }
@@ -173,25 +194,20 @@ const Onboarding = () => {
   }, []);
 
   // ── Validation ───────────────────────────────────────────────────────────
-  // canProceed() is checked on every Continue / Go to Dashboard button.
-  // Each step independently validates only the fields it collected.
-  // Step 4 re-validates ALL fields as a final safety net — if a user somehow
-  // skips earlier steps via URL manipulation, the submit is still blocked.
   const canProceed = () => {
-    if (step === 2) return (
-      // Also guard businessType — blocks URL-hacked arrival at step 2
-      // without having selected a business type in step 1.
+    if (step === 2) return !!selectedPlan;
+    if (step === 3) return (
       !!businessType &&
+      !!selectedPlan &&
       businessName.trim().length >= 2 &&
       email.trim().includes("@") &&
       passwordValid &&
       passwordsMatch
     );
-    if (step === 3) return services.some((s) => s.name.trim());
-    if (step === 4) return (
-      // Final re-validation of all required fields before calling the API.
-      // "Go to Dashboard" is disabled until these all pass.
+    if (step === 4) return services.some((s) => s.name.trim());
+    if (step === 5) return (
       !!businessType &&
+      !!selectedPlan &&
       businessName.trim().length >= 2 &&
       email.trim().includes("@") &&
       passwordValid &&
@@ -201,21 +217,23 @@ const Onboarding = () => {
     return true;
   };
 
-  // Step 1: selecting a type auto-advances — no Continue button shown.
-  // Seeds the suggested services from the chosen theme so they carry through
-  // to Step 3 pre-filled, ready for the user to edit prices/durations.
+  // Step 1: selecting a type auto-advances to step 2 (plan selection).
   const handleSelectBusinessType = (label: string) => {
     const theme = businessThemes.find((t) => t.label === label);
     setBusinessType(label);
     if (theme) {
-      // Seed services from the theme's suggested list.
-      // These carry through to Step 3 where the user edits price/duration.
       setServices(theme.suggestedServices.map((s) => ({ ...s })));
     }
     setTimeout(() => setStep(2), 300);
   };
 
-  const handleStep2Next = () => { if (canProceed()) setStep(3); };
+  // Step 2: selecting a plan auto-advances to step 3 (account setup).
+  const handleSelectPlan = (planName: string) => {
+    setSelectedPlan(planName);
+    setTimeout(() => setStep(3), 300);
+  };
+
+  const handleStep3Next = () => { if (canProceed()) setStep(4); };
 
   const addService = () => setServices([...services, { ...BLANK_SERVICE }]);
   const removeService = (i: number) => setServices(services.filter((_, idx) => idx !== i));
@@ -227,18 +245,10 @@ const Onboarding = () => {
 
   // ── handleComplete ────────────────────────────────────────────────────────
   const handleComplete = async () => {
-    // Honeypot check — bots fill hidden fields, humans don't
     if (honeypot) return;
 
-    // Read the email directly from the DOM at submit time.
-    // This captures whatever the browser actually has in the field, including
-    // any autofill value that bypassed React's onChange (e.g. browser
-    // credential managers injecting a saved address after the controlled
-    // render). Falls back to React state only if the ref is unavailable.
     const resolvedEmail = (emailRef.current?.value ?? email).trim();
 
-    // Hard re-validation before touching the API — canProceed() disables the
-    // button, but this is the last line of defence against any bypass.
     if (!canProceed()) {
       setSubmitError("Please complete all required fields before continuing.");
       return;
@@ -248,15 +258,12 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      // 1. Sign up + immediately sign in to get a guaranteed session token.
-      //    See signUpAndGetToken() above for why signIn is always called.
       const accessToken = await signUpAndGetToken(
         resolvedEmail,
         password,
         businessName.trim()
       );
 
-      // 2. Check if this user already has a tenant (re-submit edge case)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: roles } = await supabase
@@ -273,9 +280,6 @@ const Onboarding = () => {
         }
       }
 
-      // 3. Create the tenant (business + services + schedule + user_roles row).
-      //    Services built in Step 3 are passed here — this is the single point
-      //    where auth creation and tenant creation happen together atomically.
       const res = await fetch(
         "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
         {
@@ -289,10 +293,9 @@ const Onboarding = () => {
           body: JSON.stringify({
             business_name: businessName.trim(),
             business_type: businessType ?? "General",
+            plan: selectedPlan ?? "Professional",
             theme_id:
               activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
-            // Pass the full services list the user built in Step 3.
-            // Filtered to only rows where the user entered a name.
             services: services.filter((s) => s.name.trim()),
             schedule,
           }),
@@ -302,7 +305,6 @@ const Onboarding = () => {
       const json = await res.json();
 
       if (!res.ok) {
-        // 409 = tenant already exists for this user → just redirect
         if (res.status === 409 && json.tenant_id) {
           window.location.href = buildAdminUrl(json.tenant_id);
           return;
@@ -310,9 +312,6 @@ const Onboarding = () => {
         throw new Error(json.error ?? `Server error ${res.status}`);
       }
 
-      // 4. Hard redirect to the correct subdomain admin URL.
-      //    Uses window.location.href (not React Router navigate) so the full
-      //    page reloads on the correct subdomain where the admin app lives.
       window.location.href = buildAdminUrl(json.tenant_id);
     } catch (err: unknown) {
       setSubmitError(
@@ -323,14 +322,14 @@ const Onboarding = () => {
     }
   };
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   return (
     <div
       className="nextslot-theme min-h-screen flex flex-col transition-colors duration-500 bg-background text-foreground"
       style={themeStyle}
     >
-      {/* Invisible honeypot — hidden from all users, visible to bots */}
+      {/* Invisible honeypot */}
       <input
         type="text"
         name="website"
@@ -387,7 +386,7 @@ const Onboarding = () => {
       <div className="flex-1 flex items-start justify-center pt-12 pb-20 px-4">
         <div className="w-full max-w-lg">
 
-          {/* ── STEP 1: Business type — tap to select, auto-advances ── */}
+          {/* ── STEP 1: Business type ── */}
           {step === 1 && (
             <div className="space-y-8 onboarding-fade-in">
               <div>
@@ -434,8 +433,69 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* ── STEP 2: Business name + credentials ── */}
+          {/* ── STEP 2: Plan selection ── */}
           {step === 2 && (
+            <div className="space-y-8 onboarding-fade-in">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
+                  Choose your plan
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Pick the plan that fits where you are now. You can upgrade or downgrade anytime.
+                </p>
+              </div>
+              <div className="space-y-3">
+                {plans.map((plan) => (
+                  <button
+                    key={plan.name}
+                    onClick={() => handleSelectPlan(plan.name)}
+                    className={`w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 ${
+                      selectedPlan === plan.name
+                        ? "border-primary gradient-card shadow-elevated"
+                        : plan.featured
+                        ? "border-foreground/30 gradient-surface shadow-soft"
+                        : "border-border hover:border-foreground/20 hover:shadow-soft gradient-surface"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-sm font-semibold text-foreground">{plan.name}</p>
+                          {plan.featured && (
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-accent">
+                              Most Popular
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
+                        <ul className="space-y-1.5">
+                          {plan.features.map((f) => (
+                            <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                              <Check className="h-3.5 w-3.5 mt-0.5 text-foreground/50 shrink-0" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-lg font-semibold text-foreground">{plan.price}</p>
+                        <p className="text-xs text-muted-foreground">{plan.period}</p>
+                        {selectedPlan === plan.name && (
+                          <Check className="h-4 w-4 text-primary ml-auto mt-2" />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-center text-muted-foreground">
+                No contracts. Cancel anytime.
+              </p>
+            </div>
+          )}
+
+          {/* ── STEP 3: Business name + credentials ── */}
+          {step === 3 && (
             <div className="space-y-8 onboarding-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
@@ -466,14 +526,6 @@ const Onboarding = () => {
                   <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">
                     Email address
                   </label>
-                  {/*
-                    autoComplete="off" — prevents the browser credential manager
-                    from overwriting this field with a saved address after React's
-                    controlled render (which bypasses onChange and leaves React
-                    state out of sync with the DOM value).
-                    The DOM value is also read directly via emailRef at submit time
-                    as a second layer of defence.
-                  */}
                   <input
                     ref={emailRef}
                     id="onboarding-email"
@@ -548,8 +600,8 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* ── STEP 3: Services ── */}
-          {step === 3 && (
+          {/* ── STEP 4: Services ── */}
+          {step === 4 && (
             <div className="space-y-8 onboarding-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
@@ -624,8 +676,8 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* ── STEP 4: Summary + complete ── */}
-          {step === 4 && (
+          {/* ── STEP 5: Summary + complete ── */}
+          {step === 5 && (
             <div className="space-y-8 onboarding-fade-in">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2 text-foreground">
@@ -639,6 +691,10 @@ const Onboarding = () => {
                 <p className="text-xs font-medium text-muted-foreground mb-3">Summary</p>
                 <p className="text-sm text-foreground"><span className="text-muted-foreground">Business: </span>{businessName}</p>
                 <p className="text-sm text-foreground"><span className="text-muted-foreground">Type: </span>{businessType}</p>
+                <p className="text-sm text-foreground">
+                  <span className="text-muted-foreground">Plan: </span>
+                  {selectedPlan} — {plans.find((p) => p.name === selectedPlan)?.price}/mo
+                </p>
                 <p className="text-sm text-foreground">
                   <span className="text-muted-foreground">Services: </span>
                   {services.filter((s) => s.name.trim()).length} added
@@ -665,9 +721,9 @@ const Onboarding = () => {
                 <ArrowLeft className="h-4 w-4" />Back
               </button>
 
-              {step === 2 ? (
+              {step === 3 ? (
                 <button
-                  onClick={handleStep2Next}
+                  onClick={handleStep3Next}
                   disabled={!canProceed()}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-elevated hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
