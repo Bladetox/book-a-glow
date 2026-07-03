@@ -254,6 +254,7 @@ const Onboarding = () => {
   }, []);
 
   // On mount: redirect already-authenticated owners straight to their dashboard
+  // or finish tenant setup if confirmation already succeeded and pending onboarding exists
   useEffect(() => {
     (async () => {
       try {
@@ -273,6 +274,24 @@ const Onboarding = () => {
         if (adminRole?.tenant_id) {
           window.location.href = buildAdminUrl(adminRole.tenant_id);
           return;
+        }
+
+        const pendingRaw = localStorage.getItem(PENDING_ONBOARDING_KEY);
+        if (session.access_token && pendingRaw) {
+          try {
+            setFinishingSetup(true);
+            const pending = JSON.parse(pendingRaw);
+            const tenantId = await createTenant(session.access_token, pending);
+            localStorage.removeItem(PENDING_ONBOARDING_KEY);
+            window.location.href = buildAdminUrl(tenantId);
+            return;
+          } catch (err) {
+            setFinishingSetup(false);
+            setSubmitError(
+              err instanceof Error ? err.message : "Setup failed. Please contact support."
+            );
+            return;
+          }
         }
 
         if (session.user.email) {
@@ -334,7 +353,10 @@ const Onboarding = () => {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: businessName.trim() } },
+        options: {
+          emailRedirectTo: `${window.location.origin}/onboarding`,
+          data: { full_name: businessName.trim() },
+        },
       });
 
       if (signUpError) {
@@ -436,7 +458,13 @@ const Onboarding = () => {
               <button
                 className="underline text-foreground hover:text-primary transition-colors"
                 onClick={async () => {
-                  await supabase.auth.resend({ type: "signup", email: email.trim() });
+                  await supabase.auth.resend({
+                    type: "signup",
+                    email: email.trim(),
+                    options: {
+                      emailRedirectTo: `${window.location.origin}/onboarding`,
+                    },
+                  });
                 }}
               >
                 Resend email
@@ -767,7 +795,6 @@ const Onboarding = () => {
                     )}
                   </div>
                 </div>
-
                 <p className="text-xs text-muted-foreground">Free for 30 days. No payment required. Cancel anytime.</p>
 
                 {submitError && (
@@ -858,7 +885,6 @@ const Onboarding = () => {
                       Your free trial lasts <span className="text-foreground font-medium">{activePlan.trialDays} days</span>. After that, you'll be billed <span className="text-foreground font-medium">{activePlan.price}/month</span>. No payment is collected today. You can cancel or change your plan at any time from your dashboard.
                     </p>
                   </div>
-
                   <label className="flex items-start gap-3 cursor-pointer group">
                     <div className="relative mt-0.5 shrink-0">
                       <input
