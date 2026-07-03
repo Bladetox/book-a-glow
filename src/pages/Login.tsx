@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +97,52 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Listen for auth state change — fires when the user arrives on this page
+  // via the email confirmation link (already authenticated, no manual sign-in needed)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
+          // 1. Complete pending onboarding if localStorage payload exists
+          const pendingTenantId = await completePendingOnboarding(session.access_token);
+          if (pendingTenantId) {
+            window.location.href = buildAdminUrl(pendingTenantId);
+            return;
+          }
+
+          // 2. Already has a tenant — redirect straight to admin
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role, tenant_id")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false });
+
+          const adminRole =
+            roles?.find((r) => r.role === "owner") ??
+            roles?.find((r) => r.role === "admin");
+
+          if (adminRole?.tenant_id) {
+            window.location.href = buildAdminUrl(adminRole.tenant_id);
+            return;
+          }
+
+          // 3. Fallback — check profiles table
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("tenant_id, role")
+            .eq("id", session.user.id)
+            .maybeSingle();
+
+          if (profile?.tenant_id && (profile.role === "admin" || profile.role === "owner")) {
+            window.location.href = buildAdminUrl(profile.tenant_id);
+          }
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
