@@ -16,12 +16,52 @@ import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes"
 import { supabase } from "@/integrations/supabase/client";
 
 const availabilityPresets = [
-  { label: "Standard Work Week", desc: "Mon-Fri, 09:00-17:00", schedule: { mon: "09:00-17:00", tue: "09:00-17:00", wed: "09:00-17:00", thu: "09:00-17:00", fri: "09:00-17:00", sat: "Closed", sun: "Closed" } },
-  { label: "Weekend Business", desc: "Thu-Sun, 09:00-18:00", schedule: { mon: "Closed", tue: "Closed", wed: "Closed", thu: "09:00-18:00", fri: "09:00-18:00", sat: "09:00-18:00", sun: "09:00-15:00" } },
-  { label: "Custom Schedule", desc: "Set your own hours", schedule: { mon: "09:00-18:00", tue: "09:00-18:00", wed: "Closed", thu: "09:00-18:00", fri: "09:00-19:00", sat: "09:00-15:00", sun: "Closed" } },
+  {
+    label: "Standard Work Week",
+    desc: "Mon-Fri, 09:00-17:00",
+    schedule: {
+      mon: "09:00-17:00",
+      tue: "09:00-17:00",
+      wed: "09:00-17:00",
+      thu: "09:00-17:00",
+      fri: "09:00-17:00",
+      sat: "Closed",
+      sun: "Closed",
+    },
+  },
+  {
+    label: "Weekend Business",
+    desc: "Thu-Sun, 09:00-18:00",
+    schedule: {
+      mon: "Closed",
+      tue: "Closed",
+      wed: "Closed",
+      thu: "09:00-18:00",
+      fri: "09:00-18:00",
+      sat: "09:00-18:00",
+      sun: "09:00-15:00",
+    },
+  },
+  {
+    label: "Custom Schedule",
+    desc: "Set your own hours",
+    schedule: {
+      mon: "09:00-18:00",
+      tue: "09:00-18:00",
+      wed: "Closed",
+      thu: "09:00-18:00",
+      fri: "09:00-19:00",
+      sat: "09:00-15:00",
+      sun: "Closed",
+    },
+  },
 ];
 
-interface Service { name: string; price: string; duration: string; }
+interface Service {
+  name: string;
+  price: string;
+  duration: string;
+}
 
 type PlanId = "starter" | "flow" | "professional";
 
@@ -34,6 +74,14 @@ interface Plan {
   tagline: string;
   popular: boolean;
   features: string[];
+}
+
+interface SignInResult {
+  accessToken: string;
+  user: {
+    id: string;
+    email?: string;
+  };
 }
 
 const PLANS: Plan[] = [
@@ -92,6 +140,13 @@ const PLANS: Plan[] = [
   },
 ];
 
+const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
+
+const scrollbarHide: CSSProperties = {
+  msOverflowStyle: "none",
+  scrollbarWidth: "none",
+} as CSSProperties;
+
 function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
   const isLocalhost =
@@ -106,25 +161,32 @@ function buildAdminUrl(tenantId: string): string {
   const parts = hostname.split(".");
   const rootDomain =
     parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
+
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
 
-interface SignInResult {
-  accessToken: string;
-  user: { id: string; email?: string };
+function isDuplicateSignUp(signUpData: unknown): boolean {
+  const data = signUpData as {
+    user?: {
+      identities?: Array<unknown> | null;
+    } | null;
+  };
+
+  const identities = data?.user?.identities;
+
+  return Array.isArray(identities) && identities.length === 0;
 }
 
 /*
  * signUpAndGetToken
  * -------------------------------------------------------------------------
- * 1. Sign out any existing session FIRST so a stale token (e.g. from a
- *    previous tester's iCloud account) cannot pollute the new sign-in.
- * 2. Attempt sign-up. "Already registered" is treated as a no-op — the
- *    user just needs to sign in.
- * 3. Sign in and return BOTH the access token and the user object directly
- *    from signInData. This means callers never need a second getUser() call
- *    that could accidentally return a stale identity if the session cookie
- *    races during hydration.
+ * 1. Clear ONLY the current browser session first so stale local auth state
+ *    cannot bleed into a fresh signup attempt. Supabase JS defaults signOut()
+ *    to global scope, so we pass local explicitly.
+ * 2. Attempt sign-up.
+ * 3. Detect the duplicate-email / repeated-signup case using identities,
+ *    because Supabase may intentionally obscure duplicate signups.
+ * 4. Only sign in when this looks like a real fresh signup.
  * -------------------------------------------------------------------------
  */
 async function signUpAndGetToken(
@@ -132,40 +194,54 @@ async function signUpAndGetToken(
   password: string,
   businessName: string
 ): Promise<SignInResult> {
-  // Flush any stale session before we do anything else.
-  await supabase.auth.signOut();
+  const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+  if (signOutError) {
+    throw signOutError;
+  }
 
-  const { error: signUpError } = await supabase.auth.signUp({
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: businessName } },
+    options: {
+      data: {
+        full_name: businessName,
+      },
+    },
   });
 
-  if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
+  if (signUpError) {
     throw signUpError;
   }
 
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  if (isDuplicateSignUp(signUpData)) {
+    throw new Error(
+      "This email is already registered. Please log in or reset your password instead."
+    );
+  }
 
-  if (signInError) throw signInError;
-  if (!signInData.session?.access_token) throw new Error("Could not establish session. Please try again.");
-  if (!signInData.user) throw new Error("Sign-in succeeded but no user was returned. Please try again.");
+  const { data: signInData, error: signInError } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+  if (signInError) {
+    throw signInError;
+  }
+
+  if (!signInData.session?.access_token) {
+    throw new Error("Could not establish session. Please try again.");
+  }
+
+  if (!signInData.user) {
+    throw new Error("Sign-in succeeded but no user was returned. Please try again.");
+  }
 
   return {
     accessToken: signInData.session.access_token,
     user: signInData.user,
   };
 }
-
-const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
-
-const scrollbarHide: CSSProperties = {
-  msOverflowStyle: "none",
-  scrollbarWidth: "none",
-} as CSSProperties;
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);
@@ -199,9 +275,11 @@ const Onboarding = () => {
 
   useEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+
     rafRef.current = requestAnimationFrame(() => {
       setAppliedThemeStyle(themeStyle);
     });
+
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
@@ -219,30 +297,30 @@ const Onboarding = () => {
    * AUTH CHECK
    * -----------------------------------------------------------------------
    * If a session exists AND the user already has a tenant, redirect them
-   * straight to their dashboard - they don't need to go through onboarding.
+   * straight to their dashboard. Existing tenants should not go through
+   * onboarding again.
    *
-   * We intentionally do NOT pre-fill the email field. Pre-filling caused
-   * two problems during testing:
-   *   1. A logged-in tester couldn't type a fresh email to create a new
-   *      account - the field would be locked to their current session email.
-   *   2. The signUp call would fail with "already registered" for that email,
-   *      then signIn would succeed for the existing account, silently
-   *      attaching the new tenant to the wrong user.
-   *
-   * The email field is left blank every time. The user types what they want.
+   * We intentionally do NOT pre-fill the email field.
    * -----------------------------------------------------------------------
    */
   useEffect(() => {
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (!session?.user) return;
 
-        const { data: roles } = await supabase
+        const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
           .select("role, tenant_id")
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false });
+
+        if (rolesError) {
+          throw rolesError;
+        }
 
         const adminRole =
           roles?.find((r) => r.role === "owner") ??
@@ -250,11 +328,10 @@ const Onboarding = () => {
 
         if (adminRole?.tenant_id) {
           window.location.href = buildAdminUrl(adminRole.tenant_id);
+          return;
         }
-
-        // No pre-fill. Leave the email field blank so any email can be entered.
       } catch {
-        // Silently ignore - session check is best-effort
+        // Best effort only. Leave onboarding usable if this check fails.
       }
     })();
   }, []);
@@ -262,11 +339,9 @@ const Onboarding = () => {
   const canProceed = () => {
     if (step === 1) return businessType !== null && businessName.trim().length >= 2;
     if (step === 2) return services.some((s) => s.name.trim());
-    if (step === 3) return (
-      email.trim().includes("@") &&
-      passwordValid &&
-      passwordsMatch
-    );
+    if (step === 3) {
+      return email.trim().includes("@") && passwordValid && passwordsMatch;
+    }
     if (step === 4) return true;
     return true;
   };
@@ -274,13 +349,17 @@ const Onboarding = () => {
   const handleSelectBusinessType = (label: string) => {
     const theme = businessThemes.find((t) => t.label === label);
     setBusinessType(label);
+
     if (theme) {
       setServices(theme.suggestedServices.map((s) => ({ ...s })));
     }
   };
 
   const addService = () => setServices([...services, { ...BLANK_SERVICE }]);
-  const removeService = (i: number) => setServices(services.filter((_, idx) => idx !== i));
+
+  const removeService = (i: number) =>
+    setServices(services.filter((_, idx) => idx !== i));
+
   const updateService = (i: number, field: keyof Service, value: string) => {
     const updated = [...services];
     updated[i] = { ...updated[i], [field]: value };
@@ -294,28 +373,24 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      /*
-       * signUpAndGetToken flushes any stale session with signOut() before
-       * signing in, then returns the user directly from signInData so we
-       * never risk reading a stale identity from a second getUser() call.
-       */
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedBusinessName = businessName.trim();
+
       const { accessToken, user } = await signUpAndGetToken(
-        email.trim(),
+        trimmedEmail,
         password,
-        businessName.trim()
+        trimmedBusinessName
       );
 
-      /*
-       * If this user already owns a tenant (e.g. they refreshed mid-flow),
-       * redirect them straight to their dashboard instead of creating a
-       * duplicate tenant. We use the user object from signInData — not a
-       * separate getUser() call — so the identity is guaranteed correct.
-       */
-      const { data: roles } = await supabase
+      const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("role, tenant_id")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
+
+      if (rolesError) {
+        throw rolesError;
+      }
 
       const adminRole =
         roles?.find((r) => r.role === "owner") ??
@@ -336,7 +411,7 @@ const Onboarding = () => {
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
-            business_name: businessName.trim(),
+            business_name: trimmedBusinessName,
             business_type: businessType ?? "General",
             theme_id:
               activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
@@ -354,7 +429,12 @@ const Onboarding = () => {
           window.location.href = buildAdminUrl(json.tenant_id);
           return;
         }
+
         throw new Error(json.error ?? `Server error ${res.status}`);
+      }
+
+      if (!json.tenant_id) {
+        throw new Error("Tenant created but no tenant id was returned.");
       }
 
       window.location.href = buildAdminUrl(json.tenant_id);
@@ -370,18 +450,6 @@ const Onboarding = () => {
   const totalSteps = 4;
 
   return (
-    /*
-     * MOBILE KEYBOARD FIX
-     * -----------------------------------------------------------------------
-     * position:fixed + inset:0 pins the shell to the INITIAL viewport rect.
-     * When the iOS/Android virtual keyboard opens it slides up OVER the page
-     * instead of compressing it. This prevents the header, progress bar, and
-     * CTA button from reflowing mid-keystroke.
-     *
-     * The scrollable inner region (#ob-scroll) uses flex-1 + min-h-0 so it
-     * always fills remaining space without overflowing the fixed shell.
-     * -----------------------------------------------------------------------
-     */
     <div
       className="nextslot-theme flex flex-col bg-background text-foreground"
       style={{
@@ -404,7 +472,6 @@ const Onboarding = () => {
 
       <style>{`#ob-scroll::-webkit-scrollbar{display:none}`}</style>
 
-      {/* HEADER */}
       <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
@@ -421,18 +488,8 @@ const Onboarding = () => {
               Next<span className="text-primary">Slot</span>
             </span>
           </Link>
+
           <div className="flex items-center gap-3">
-            {/*
-             * VIBE BADGE CONTRAST FIX
-             * Previously used bg-accent/20 + text-accent-foreground.
-             * On light themes the accent is often a mid-lightness hue so
-             * bg-accent/20 is nearly invisible and text-accent-foreground
-             * could be near-black on a near-black tinted surface — unreadable.
-             * Using bg-primary/10 + text-primary instead guarantees contrast
-             * because primary is always defined as a high-contrast value
-             * relative to the background on every theme (dark on light themes,
-             * bright on dark themes).
-             */}
             {activeTheme && (
               <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary transition-colors duration-500 tracking-wide">
                 {activeTheme.vibe}
@@ -445,7 +502,6 @@ const Onboarding = () => {
         </div>
       </div>
 
-      {/* PROGRESS BAR */}
       <div className="shrink-0 max-w-2xl mx-auto px-4 w-full mt-6">
         <div className="flex gap-1.5">
           {Array.from({ length: totalSteps }).map((_, i) => (
@@ -459,13 +515,6 @@ const Onboarding = () => {
         </div>
       </div>
 
-      {/*
-       * SCROLLABLE REGION
-       * flex-1 + min-h-0: fills all remaining space in the fixed shell
-       * without overflowing. Without min-h-0, a flex child refuses to shrink
-       * below its content height and the scroll region escapes the shell.
-       * WebkitOverflowScrolling:touch enables momentum scrolling on iOS.
-       */}
       <div
         id="ob-scroll"
         className="flex-1 min-h-0 overflow-y-auto"
@@ -479,7 +528,6 @@ const Onboarding = () => {
           style={{ paddingBottom: "max(80px, env(safe-area-inset-bottom, 80px))" }}
         >
           <div className="w-full max-w-lg">
-
             {step === 1 && (
               <div className="space-y-8 animate-fade-in">
                 <div>
@@ -511,13 +559,16 @@ const Onboarding = () => {
                       >
                         <type.icon className="h-5 w-5" />
                       </div>
+
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-foreground">{type.label}</p>
                         <p className="text-xs text-muted-foreground">{type.desc}</p>
                       </div>
+
                       <span className="text-[10px] text-muted-foreground hidden sm:block">
                         {type.vibe}
                       </span>
+
                       {businessType === type.label && (
                         <Check className="h-4 w-4 text-primary" />
                       )}
@@ -527,7 +578,10 @@ const Onboarding = () => {
 
                 {businessType && (
                   <div className="animate-fade-in space-y-2">
-                    <label htmlFor="onboarding-business-name" className="block text-sm font-medium text-foreground">
+                    <label
+                      htmlFor="onboarding-business-name"
+                      className="block text-sm font-medium text-foreground"
+                    >
                       What's your business called?
                     </label>
                     <input
@@ -540,7 +594,9 @@ const Onboarding = () => {
                       placeholder="e.g. Glow by Tash"
                       style={{ fontSize: "16px" }}
                     />
-                    <p className="text-xs text-muted-foreground">This becomes your booking page name. You can change it later.</p>
+                    <p className="text-xs text-muted-foreground">
+                      This becomes your booking page name. You can change it later.
+                    </p>
                   </div>
                 )}
               </div>
@@ -556,17 +612,27 @@ const Onboarding = () => {
                     We've pre-filled these based on your business type - edit prices and times to match yours.
                   </p>
                 </div>
+
                 <div className="space-y-3">
                   {services.map((service, i) => (
-                    <div key={i} className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft">
+                    <div
+                      key={i}
+                      className="gradient-card border border-border rounded-xl p-4 space-y-3 shadow-soft"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-muted-foreground">Service {i + 1}</span>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Service {i + 1}
+                        </span>
                         {services.length > 1 && (
-                          <button onClick={() => removeService(i)} className="text-muted-foreground hover:text-destructive transition-colors">
+                          <button
+                            onClick={() => removeService(i)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                          >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>
+
                       <input
                         id={`service-name-${i}`}
                         name={`service-name-${i}`}
@@ -577,9 +643,12 @@ const Onboarding = () => {
                         className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                         style={{ fontSize: "16px" }}
                       />
+
                       <div className="grid grid-cols-2 gap-3">
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">R</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                            R
+                          </span>
                           <input
                             id={`service-price-${i}`}
                             name={`service-price-${i}`}
@@ -592,6 +661,7 @@ const Onboarding = () => {
                             style={{ fontSize: "16px" }}
                           />
                         </div>
+
                         <div className="relative">
                           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                           <select
@@ -615,11 +685,13 @@ const Onboarding = () => {
                       </div>
                     </div>
                   ))}
+
                   <button
                     onClick={addService}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:shadow-soft transition-all"
                   >
-                    <Plus className="h-4 w-4" />Add another service
+                    <Plus className="h-4 w-4" />
+                    Add another service
                   </button>
                 </div>
               </div>
@@ -637,9 +709,17 @@ const Onboarding = () => {
                 </div>
 
                 <div className="gradient-surface rounded-xl p-4 border border-border/50 space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Your booking page</p>
-                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Business: </span>{businessName}</p>
-                  <p className="text-sm text-foreground"><span className="text-muted-foreground">Type: </span>{businessType}</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    Your booking page
+                  </p>
+                  <p className="text-sm text-foreground">
+                    <span className="text-muted-foreground">Business: </span>
+                    {businessName}
+                  </p>
+                  <p className="text-sm text-foreground">
+                    <span className="text-muted-foreground">Type: </span>
+                    {businessType}
+                  </p>
                   <p className="text-sm text-foreground">
                     <span className="text-muted-foreground">Services: </span>
                     {services.filter((s) => s.name.trim()).length} added
@@ -648,7 +728,10 @@ const Onboarding = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="onboarding-email" className="block text-sm font-medium mb-1.5 text-foreground">
+                    <label
+                      htmlFor="onboarding-email"
+                      className="block text-sm font-medium mb-1.5 text-foreground"
+                    >
                       Email address
                     </label>
                     <input
@@ -665,7 +748,10 @@ const Onboarding = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="onboarding-password" className="block text-sm font-medium mb-1.5 text-foreground">
+                    <label
+                      htmlFor="onboarding-password"
+                      className="block text-sm font-medium mb-1.5 text-foreground"
+                    >
                       Password
                     </label>
                     <div className="relative">
@@ -686,16 +772,25 @@ const Onboarding = () => {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label={showPassword ? "Hide password" : "Show password"}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                     {password && !passwordValid && (
-                      <p className="text-xs text-destructive mt-1.5">Password must be at least 8 characters</p>
+                      <p className="text-xs text-destructive mt-1.5">
+                        Password must be at least 8 characters
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="onboarding-confirm-password" className="block text-sm font-medium mb-1.5 text-foreground">
+                    <label
+                      htmlFor="onboarding-confirm-password"
+                      className="block text-sm font-medium mb-1.5 text-foreground"
+                    >
                       Confirm password
                     </label>
                     <div className="relative">
@@ -716,11 +811,17 @@ const Onboarding = () => {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         aria-label={showConfirm ? "Hide password" : "Show password"}
                       >
-                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showConfirm ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                     {confirmPassword && !passwordsMatch && (
-                      <p className="text-xs text-destructive mt-1.5">Passwords do not match</p>
+                      <p className="text-xs text-destructive mt-1.5">
+                        Passwords do not match
+                      </p>
                     )}
                   </div>
                 </div>
@@ -751,28 +852,44 @@ const Onboarding = () => {
                     >
                       {plan.popular && (
                         <span className="absolute -top-2.5 left-4 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground flex items-center gap-1 tracking-wide">
-                          <Crown className="h-2.5 w-2.5" />MOST POPULAR
+                          <Crown className="h-2.5 w-2.5" />
+                          MOST POPULAR
                         </span>
                       )}
+
                       <div className="flex items-start justify-between mb-1">
                         <div>
                           <p className="text-sm font-bold text-foreground">{plan.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {plan.tagline}
+                          </p>
                         </div>
+
                         <div className="text-right shrink-0 ml-4">
-                          <span className="text-lg font-bold text-foreground">{plan.price}</span>
-                          <span className="text-xs text-muted-foreground">{plan.priceNote}</span>
-                          <p className="text-[10px] text-primary font-medium">{plan.trial}</p>
+                          <span className="text-lg font-bold text-foreground">
+                            {plan.price}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {plan.priceNote}
+                          </span>
+                          <p className="text-[10px] text-primary font-medium">
+                            {plan.trial}
+                          </p>
                         </div>
                       </div>
+
                       <ul className="mt-3 space-y-1.5">
                         {plan.features.map((f) => (
-                          <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <li
+                            key={f}
+                            className="flex items-start gap-2 text-xs text-muted-foreground"
+                          >
                             <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
                             {f}
                           </li>
                         ))}
                       </ul>
+
                       {selectedPlan === plan.id && (
                         <div className="absolute top-4 right-4">
                           <Check className="h-4 w-4 text-primary" />
@@ -783,12 +900,10 @@ const Onboarding = () => {
                 </div>
               </div>
             )}
-
           </div>
         </div>
       </div>
 
-      {/* STICKY BOTTOM CTA */}
       <div
         className="shrink-0 border-t border-border bg-background/90 backdrop-blur-sm"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
