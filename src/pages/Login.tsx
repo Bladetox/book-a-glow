@@ -27,12 +27,27 @@ function buildAdminUrl(tenantId: string): string {
   return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
 }
 
-async function completePendingOnboarding(accessToken: string): Promise<string | null> {
+async function completePendingOnboarding(accessToken: string, userId: string): Promise<string | null> {
   try {
-    const raw = localStorage.getItem(PENDING_ONBOARDING_KEY);
-    if (!raw) return null;
+    // Read from DB first — survives Safari new-tab localStorage isolation
+    let pending: Record<string, unknown> | null = null;
 
-    const pending = JSON.parse(raw);
+    const { data: dbRow } = await supabase
+      .from("pending_onboarding")
+      .select("payload")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (dbRow?.payload) {
+      pending = dbRow.payload as Record<string, unknown>;
+    } else {
+      // Fall back to localStorage
+      const raw = localStorage.getItem(PENDING_ONBOARDING_KEY);
+      if (raw) {
+        try { pending = JSON.parse(raw); } catch { pending = null; }
+      }
+    }
+
     if (!pending?.business_name) return null;
 
     const res = await fetch(
@@ -51,12 +66,14 @@ async function completePendingOnboarding(accessToken: string): Promise<string | 
     const json = await res.json();
 
     if (res.ok && json.tenant_id) {
+      await supabase.from("pending_onboarding").delete().eq("user_id", userId);
       localStorage.removeItem(PENDING_ONBOARDING_KEY);
       return json.tenant_id as string;
     }
 
-    // Tenant already exists (409) — still remove pending and return the id
+    // Tenant already exists (409) — still clean up and return the id
     if (res.status === 409 && json.tenant_id) {
+      await supabase.from("pending_onboarding").delete().eq("user_id", userId);
       localStorage.removeItem(PENDING_ONBOARDING_KEY);
       return json.tenant_id as string;
     }
@@ -104,8 +121,8 @@ const Login = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
-          // 1. Complete pending onboarding if localStorage payload exists
-          const pendingTenantId = await completePendingOnboarding(session.access_token);
+          // 1. Complete pending onboarding if DB/localStorage payload exists
+          const pendingTenantId = await completePendingOnboarding(session.access_token, session.user.id);
           if (pendingTenantId) {
             window.location.href = buildAdminUrl(pendingTenantId);
             return;
@@ -152,7 +169,7 @@ const Login = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
-      const pendingTenantId = await completePendingOnboarding(session.access_token);
+      const pendingTenantId = await completePendingOnboarding(session.access_token, session.user.id);
       if (pendingTenantId) {
         window.location.href = buildAdminUrl(pendingTenantId);
         return;
@@ -209,7 +226,7 @@ const Login = () => {
       }
 
       // ── Step 1: Complete any pending onboarding ──────────────────────────
-      const pendingTenantId = await completePendingOnboarding(accessToken);
+      const pendingTenantId = await completePendingOnboarding(accessToken, user.id);
       if (pendingTenantId) {
         window.location.href = buildAdminUrl(pendingTenantId);
         return;

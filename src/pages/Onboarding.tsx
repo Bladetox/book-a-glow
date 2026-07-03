@@ -152,6 +152,29 @@ async function createTenant(
   return json.tenant_id as string;
 }
 
+/** Read pending payload — DB first (survives cross-tab/Safari), localStorage as fallback */
+async function readPendingPayload(userId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const { data } = await supabase
+      .from("pending_onboarding")
+      .select("payload")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (data?.payload) return data.payload as Record<string, unknown>;
+  } catch {
+    // fall through to localStorage
+  }
+  const raw = localStorage.getItem(PENDING_ONBOARDING_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+/** Remove pending payload from both DB and localStorage */
+async function clearPendingPayload(userId: string): Promise<void> {
+  await supabase.from("pending_onboarding").delete().eq("user_id", userId);
+  localStorage.removeItem(PENDING_ONBOARDING_KEY);
+}
+
 const BLANK_SERVICE: Service = { name: "", price: "", duration: "30" };
 
 const scrollbarHide: CSSProperties = {
@@ -231,13 +254,13 @@ const Onboarding = () => {
           return;
         }
 
-        const pendingRaw = localStorage.getItem(PENDING_ONBOARDING_KEY);
-        if (pendingRaw) {
+        // Read from DB first, fall back to localStorage
+        const pending = await readPendingPayload(session.user.id);
+        if (pending) {
           try {
             setFinishingSetup(true);
-            const pending = JSON.parse(pendingRaw);
-            const tenantId = await createTenant(session.access_token, pending);
-            localStorage.removeItem(PENDING_ONBOARDING_KEY);
+            const tenantId = await createTenant(session.access_token, pending as Parameters<typeof createTenant>[1]);
+            await clearPendingPayload(session.user.id);
             window.location.href = buildAdminUrl(tenantId);
           } catch (err) {
             setFinishingSetup(false);
@@ -277,13 +300,13 @@ const Onboarding = () => {
         }
 
         // User is confirmed and has a session but no tenant yet — finish setup
-        const pendingRaw = localStorage.getItem(PENDING_ONBOARDING_KEY);
-        if (session.access_token && pendingRaw) {
+        // Read from DB first, fall back to localStorage
+        const pending = await readPendingPayload(session.user.id);
+        if (session.access_token && pending) {
           try {
             setFinishingSetup(true);
-            const pending = JSON.parse(pendingRaw);
-            const tenantId = await createTenant(session.access_token, pending);
-            localStorage.removeItem(PENDING_ONBOARDING_KEY);
+            const tenantId = await createTenant(session.access_token, pending as Parameters<typeof createTenant>[1]);
+            await clearPendingPayload(session.user.id);
             window.location.href = buildAdminUrl(tenantId);
             return;
           } catch (err) {
@@ -339,8 +362,6 @@ const Onboarding = () => {
     setSubmitError(null);
 
     try {
-      // Save onboarding payload to localStorage BEFORE signup so the
-      // onAuthStateChange callback can pick it up after email confirmation
       const pendingPayload = {
         business_name: businessName.trim(),
         business_type: businessType ?? "General",
@@ -349,6 +370,8 @@ const Onboarding = () => {
         schedule,
         selected_plan: selectedPlan,
       };
+
+      // Always write to localStorage as immediate fallback
       localStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(pendingPayload));
 
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -374,7 +397,16 @@ const Onboarding = () => {
         return;
       }
 
-      // Email confirmation required — show the waiting screen
+      // Email confirmation required — persist payload to DB so it survives
+      // Safari new-tab isolation and cross-device confirmation clicks.
+      // We have the user id from the sign-up response even before confirmation.
+      if (data.user?.id) {
+        await supabase
+          .from("pending_onboarding")
+          .upsert({ user_id: data.user.id, payload: pendingPayload });
+      }
+
+      // Show the waiting screen
       setAwaitingConfirmation(true);
     } catch (err: unknown) {
       setSubmitError(
