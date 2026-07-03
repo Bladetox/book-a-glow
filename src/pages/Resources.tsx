@@ -227,6 +227,66 @@ const Resources = () => {
 
   return (
     <MarketingLayout>
+      <style>{`
+        .resources-tools-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+        }
+        .resources-featured-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0;
+          border-radius: 20px;
+          overflow: hidden;
+          border: 1px solid rgba(212,165,116,0.22);
+          text-decoration: none;
+          margin-bottom: 32px;
+          transition: border-color 0.2s;
+        }
+        .resources-featured-image {
+          overflow: hidden;
+          position: relative;
+          min-height: 260px;
+        }
+        .resources-featured-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .resources-blog-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+          .resources-tools-grid {
+            grid-template-columns: 1fr;
+          }
+          .resources-featured-grid {
+            grid-template-columns: 1fr;
+          }
+          .resources-featured-image {
+            min-height: 200px;
+            max-height: 220px;
+          }
+          .resources-blog-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .resources-tools-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .resources-blog-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+      `}</style>
+
       <SiteHeader />
       <main>
 
@@ -329,14 +389,7 @@ const Resources = () => {
               </h2>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 20,
-              }}
-              className="resources-tools-grid"
-            >
+            <div className="resources-tools-grid">
               {tools.map((tool) => (
                 <div
                   key={tool.name}
@@ -566,6 +619,8 @@ const Resources = () => {
                           : "transparent",
                       color: activeCategory === cat ? C.text : C.muted,
                       transition: "all 0.15s",
+                      minHeight: 44,
+                      minWidth: 44,
                     }}
                   >
                     {cat}
@@ -580,19 +635,11 @@ const Resources = () => {
                 href={featured.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 0,
-                  borderRadius: 20,
-                  overflow: "hidden",
-                  border: `1px solid rgba(212,165,116,0.22)`,
-                  textDecoration: "none",
-                  background: C.s2,
-                  marginBottom: 32,
-                  transition: "border-color 0.2s",
-                }}
                 className="resources-featured-grid"
+                style={{
+                  background: C.s2,
+                  textDecoration: "none",
+                }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.50)";
                 }}
@@ -600,25 +647,13 @@ const Resources = () => {
                   (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.22)";
                 }}
               >
-                <div
-                  style={{
-                    overflow: "hidden",
-                    position: "relative",
-                    minHeight: 260,
-                  }}
-                >
+                <div className="resources-featured-image">
                   {featured.image ? (
                     <img
                       src={featured.image}
                       alt={featured.title}
                       loading="lazy"
                       decoding="async"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        display: "block",
-                      }}
                     />
                   ) : (
                     <FallbackBand tall />
@@ -692,14 +727,7 @@ const Resources = () => {
 
             {/* Grid */}
             {grid.length > 0 && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 20,
-                }}
-                className="resources-blog-grid"
-              >
+              <div className="resources-blog-grid">
                 {grid.map((article) => (
                   <a
                     key={article.title}
