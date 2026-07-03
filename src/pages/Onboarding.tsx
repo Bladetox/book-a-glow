@@ -276,6 +276,7 @@ const Onboarding = () => {
           return;
         }
 
+        // User is confirmed and has a session but no tenant yet — finish setup
         const pendingRaw = localStorage.getItem(PENDING_ONBOARDING_KEY);
         if (session.access_token && pendingRaw) {
           try {
