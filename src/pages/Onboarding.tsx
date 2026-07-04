@@ -202,6 +202,8 @@ const Onboarding = () => {
 
   const [appliedThemeStyle, setAppliedThemeStyle] = useState<CSSProperties>({});
   const rafRef = useRef<number | null>(null);
+  const creatingTenantRef = useRef(false);
+  const redirectedRef = useRef(false);
 
   const schedule = availabilityPresets[0].schedule;
 
@@ -235,91 +237,78 @@ const Onboarding = () => {
     return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
-  // Listen for auth state change — fires when user clicks the confirmation email link
+  const finishTenantSetup = async (
+    session: { access_token: string; user: { id: string; email?: string | null } }
+  ) => {
+    if (creatingTenantRef.current || redirectedRef.current) return;
+
+    creatingTenantRef.current = true;
+    setFinishingSetup(true);
+    setSubmitError(null);
+
+    try {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role, tenant_id")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+
+      const adminRole =
+        roles?.find((r) => r.role === "owner") ??
+        roles?.find((r) => r.role === "admin");
+
+      if (adminRole?.tenant_id) {
+        redirectedRef.current = true;
+        window.location.href = buildAdminUrl(adminRole.tenant_id);
+        return;
+      }
+
+      const pending = await readPendingPayload(session.user.id);
+      if (!pending) {
+        setFinishingSetup(false);
+        creatingTenantRef.current = false;
+        return;
+      }
+
+      const tenantId = await createTenant(
+        session.access_token,
+        pending as Parameters<typeof createTenant>[1]
+      );
+
+      await clearPendingPayload(session.user.id);
+      redirectedRef.current = true;
+      window.location.href = buildAdminUrl(tenantId);
+    } catch (err) {
+      creatingTenantRef.current = false;
+      setFinishingSetup(false);
+      setSubmitError(
+        err instanceof Error ? err.message : "Setup failed. Please contact support."
+      );
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role, tenant_id")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
-
-        const adminRole =
-          roles?.find((r) => r.role === "owner") ??
-          roles?.find((r) => r.role === "admin");
-
-        if (adminRole?.tenant_id) {
-          window.location.href = buildAdminUrl(adminRole.tenant_id);
-          return;
-        }
-
-        // Read from DB first, fall back to localStorage
-        const pending = await readPendingPayload(session.user.id);
-        if (pending) {
-          try {
-            setFinishingSetup(true);
-            const tenantId = await createTenant(session.access_token, pending as Parameters<typeof createTenant>[1]);
-            await clearPendingPayload(session.user.id);
-            window.location.href = buildAdminUrl(tenantId);
-          } catch (err) {
-            setFinishingSetup(false);
-            setSubmitError(
-              err instanceof Error ? err.message : "Setup failed. Please contact support."
-            );
-          }
-          return;
-        }
+        await finishTenantSetup(session);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // On mount: redirect already-authenticated owners straight to their dashboard
-  // or finish tenant setup if confirmation already succeeded and pending onboarding exists
   useEffect(() => {
     (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role, tenant_id")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
-
-        const adminRole =
-          roles?.find((r) => r.role === "owner") ??
-          roles?.find((r) => r.role === "admin");
-
-        if (adminRole?.tenant_id) {
-          window.location.href = buildAdminUrl(adminRole.tenant_id);
-          return;
-        }
-
-        // User is confirmed and has a session but no tenant yet — finish setup
-        // Read from DB first, fall back to localStorage
-        const pending = await readPendingPayload(session.user.id);
-        if (session.access_token && pending) {
-          try {
-            setFinishingSetup(true);
-            const tenantId = await createTenant(session.access_token, pending as Parameters<typeof createTenant>[1]);
-            await clearPendingPayload(session.user.id);
-            window.location.href = buildAdminUrl(tenantId);
-            return;
-          } catch (err) {
-            setFinishingSetup(false);
-            setSubmitError(
-              err instanceof Error ? err.message : "Setup failed. Please contact support."
-            );
-            return;
-          }
-        }
-
         if (session.user.email) {
           setEmail(session.user.email);
+        }
+
+        if (session.access_token) {
+          await finishTenantSetup(session);
         }
       } catch {
         // ignore
@@ -371,7 +360,6 @@ const Onboarding = () => {
         selected_plan: selectedPlan,
       };
 
-      // Always write to localStorage as immediate fallback
       localStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(pendingPayload));
 
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -388,20 +376,17 @@ const Onboarding = () => {
         throw signUpError;
       }
 
-      // If Supabase returned a session immediately (email confirmations disabled in project settings)
-      // skip the waiting screen and go straight to tenant creation
       if (data.session?.access_token) {
-        const tenantId = await createTenant(data.session.access_token, pendingPayload);
-        localStorage.removeItem(PENDING_ONBOARDING_KEY);
-        window.location.href = buildAdminUrl(tenantId);
+        await finishTenantSetup(data.session);
         return;
       }
 
-      // Email confirmation required — persist payload to DB so it survives
-      // Safari new-tab isolation and cross-device confirmation clicks.
-      // We have the user id from the sign-up response even before confirmation.
+      if (data.user?.id) {
+        await supabase
+          .from("pending_onboarding")
+          .upsert({ user_id: data.user.id, payload: pendingPayload });
+      }
 
-      // Show the waiting screen
       setAwaitingConfirmation(true);
     } catch (err: unknown) {
       setSubmitError(
@@ -414,7 +399,6 @@ const Onboarding = () => {
 
   const totalSteps = 4;
 
-  // Full-screen finishing setup overlay
   if (finishingSetup) {
     return (
       <div className="nextslot-theme dark-brand flex flex-col items-center justify-center bg-background text-foreground" style={{ height: "100dvh" }}>
@@ -424,7 +408,6 @@ const Onboarding = () => {
     );
   }
 
-  // Email confirmation waiting screen
   if (awaitingConfirmation) {
     return (
       <div className="nextslot-theme dark-brand flex flex-col bg-background text-foreground" style={{ height: "100dvh", overflow: "hidden" }}>
@@ -527,7 +510,6 @@ const Onboarding = () => {
 
       <style>{`#ob-scroll::-webkit-scrollbar{display:none}`}</style>
 
-      {/* HEADER */}
       <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 p-1 -ml-1">
@@ -557,7 +539,6 @@ const Onboarding = () => {
         </div>
       </div>
 
-      {/* PROGRESS BAR */}
       <div className="shrink-0 max-w-2xl mx-auto px-4 w-full mt-6">
         <div className="flex gap-1.5">
           {Array.from({ length: totalSteps }).map((_, i) => (
@@ -571,7 +552,6 @@ const Onboarding = () => {
         </div>
       </div>
 
-      {/* SCROLLABLE REGION */}
       <div
         id="ob-scroll"
         className="flex-1 overflow-y-auto"
@@ -901,7 +881,6 @@ const Onboarding = () => {
                   })}
                 </div>
 
-                {/* Trial summary and terms acknowledgement */}
                 <div className="gradient-surface border border-border rounded-xl p-4 space-y-3">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-foreground">Your selection</p>
