@@ -336,9 +336,13 @@ function mapCategory(businessType: string): string {
   return CATEGORY_MAP[key] ?? "other";
 }
 
-// FIX 3: resolve selected_plan to a valid subscription_status value
 function resolveSubscriptionStatus(selectedPlan: string | undefined): string {
   const plan = (selectedPlan ?? "").toLowerCase().trim();
+
+  if (plan === "starter") return "starter";
+  if (plan === "flow") return "pro";
+  if (plan === "professional") return "premium";
+
   const valid = ["trial", "starter", "pro", "premium", "free"];
   return valid.includes(plan) ? plan : "trial";
 }
@@ -347,7 +351,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false },
@@ -372,8 +376,11 @@ Deno.serve(async (req) => {
     if (!rawText?.trim()) return json({ error: "Empty request body" }, 400);
 
     let body: any;
-    try { body = JSON.parse(rawText); }
-    catch { return json({ error: "Invalid JSON body" }, 400); }
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return json({ error: "Invalid JSON body" }, 400);
+    }
 
     const {
       business_name,
@@ -381,26 +388,43 @@ Deno.serve(async (req) => {
       theme_id,
       services = [],
       schedule = {},
-      selected_plan, // FIX 3: read selected_plan from request body
+      selected_plan,
     } = body;
 
     if (!business_name?.trim()) return json({ error: "business_name is required" }, 400);
 
     const resolvedThemeId = (theme_id && THEME_COPY[theme_id]) ? theme_id : "standard";
-    const copy   = THEME_COPY[resolvedThemeId];
+    const copy = THEME_COPY[resolvedThemeId];
     const colors = THEME_COLORS[resolvedThemeId];
-
-    // FIX 3: resolve the plan the user actually chose
     const subscriptionStatus = resolveSubscriptionStatus(selected_plan);
 
-    const { data: existingTenant } = await admin
+    const { data: existingTenantByOwner, error: existingTenantErr } = await admin
       .from("tenants")
       .select("id")
       .eq("owner_id", user.id)
       .maybeSingle();
 
-    if (existingTenant) {
-      return json({ error: "User already owns a tenant", tenant_id: existingTenant.id }, 409);
+    if (existingTenantErr) {
+      throw new Error(`existing_tenant: ${existingTenantErr.message}`);
+    }
+
+    if (existingTenantByOwner) {
+      return json({ error: "User already owns a tenant", tenant_id: existingTenantByOwner.id }, 409);
+    }
+
+    const { data: existingOwnerRole, error: existingRoleErr } = await admin
+      .from("user_roles")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .eq("role", "owner")
+      .maybeSingle();
+
+    if (existingRoleErr) {
+      throw new Error(`existing_role: ${existingRoleErr.message}`);
+    }
+
+    if (existingOwnerRole?.tenant_id) {
+      return json({ error: "User already owns a tenant", tenant_id: existingOwnerRole.tenant_id }, 409);
     }
 
     const baseSlug = slugify(business_name) || "business";
@@ -426,54 +450,85 @@ Deno.serve(async (req) => {
     };
 
     const { error: tenantErr } = await admin.from("tenants").insert({
-      id:                  tenantId,
-      name:                business_name.trim(),
-      owner_id:            user.id,
-      email:               user.email ?? "",
-      theme_id:            resolvedThemeId,
-      currency:            "R",
-      is_active:           true,
-      subscription_status: subscriptionStatus, // FIX 3: use resolved plan
-      trial_started_at:    new Date().toISOString(),
-      trial_ends_at:       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      id: tenantId,
+      name: business_name.trim(),
+      owner_id: user.id,
+      email: user.email ?? "",
+      theme_id: resolvedThemeId,
+      currency: "R",
+      is_active: true,
+      subscription_status: subscriptionStatus,
+      trial_started_at: new Date().toISOString(),
+      trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     });
-    if (tenantErr) throw new Error(`tenant: ${tenantErr.message}`);
 
-    const { error: roleErr } = await admin.from("user_roles").insert({
-      user_id:   user.id,
-      tenant_id: tenantId,
-      role:      "owner",
-    });
-    if (roleErr) { await rollback(); throw new Error(`user_roles: ${roleErr.message}`); }
+    if (tenantErr) {
+      const { data: retryTenant } = await admin
+        .from("tenants")
+        .select("id")
+        .eq("owner_id", user.id)
+        .maybeSingle();
 
-    // FIX 2: upsert on conflict by email (not id) so retry signups with a new
-    // UUID but same email don't create duplicate profile rows or crash on
-    // the profiles_email_key unique constraint
+      if (retryTenant?.id) {
+        return json({ error: "User already owns a tenant", tenant_id: retryTenant.id }, 409);
+      }
+
+      throw new Error(`tenant: ${tenantErr.message}`);
+    }
+
+    const { error: roleErr } = await admin
+      .from("user_roles")
+      .upsert(
+        {
+          user_id: user.id,
+          tenant_id: tenantId,
+          role: "owner",
+        },
+        {
+          onConflict: "user_id,tenant_id,role",
+          ignoreDuplicates: true,
+        }
+      );
+
+    if (roleErr) {
+      await rollback();
+      throw new Error(`user_roles: ${roleErr.message}`);
+    }
+
     const { error: profileErr } = await admin.from("profiles").upsert({
-      id:        user.id,
-      email:     user.email ?? "",
+      id: user.id,
+      email: user.email ?? "",
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
       tenant_id: tenantId,
-      role:      "admin",
+      role: "admin",
     }, { onConflict: "email" });
-    if (profileErr) { await rollback(); throw new Error(`profile: ${profileErr.message}`); }
+
+    if (profileErr) {
+      await rollback();
+      throw new Error(`profile: ${profileErr.message}`);
+    }
 
     const category = mapCategory(business_type);
     const validServices = (services as any[]).filter((s: any) => s.name?.trim());
 
     if (validServices.length > 0) {
       const rows = validServices.map((s: any) => ({
-        tenant_id:        tenantId,
-        name:             s.name.trim(),
-        price:            parseFloat(s.price) || 0,
+        tenant_id: tenantId,
+        name: s.name.trim(),
+        price: parseFloat(s.price) || 0,
         duration_minutes: parseInt(s.duration, 10) || 30,
-        category:         category,
-        is_active:        true,
+        category,
+        is_active: true,
       }));
+
       const { error: svcErr } = await admin
         .from("services")
         .upsert(rows, { onConflict: "tenant_id,name,category", ignoreDuplicates: false });
-      if (svcErr) { await rollback(); throw new Error(`services: ${svcErr.message}`); }
+
+      if (svcErr) {
+        await rollback();
+        throw new Error(`services: ${svcErr.message}`);
+      }
     }
 
     const availRows: any[] = [];
@@ -484,110 +539,101 @@ Deno.serve(async (req) => {
       const slots = generateSlots(start.trim(), end.trim());
       for (const slot of slots) {
         availRows.push({
-          tenant_id:       tenantId,
-          staff_id:        user.id,
-          day_of_week:     DAY_OF_WEEK[day] ?? 0,
+          tenant_id: tenantId,
+          staff_id: user.id,
+          day_of_week: DAY_OF_WEEK[day] ?? 0,
           slot_start_time: slot.slot_start_time,
-          slot_end_time:   slot.slot_end_time,
-          is_available:    true,
-          day_enabled:     true,
+          slot_end_time: slot.slot_end_time,
+          is_available: true,
+          day_enabled: true,
         });
       }
     }
+
     if (availRows.length > 0) {
       const { error: availErr } = await admin.from("staff_availability").insert(availRows);
-      if (availErr) { await rollback(); throw new Error(`availability: ${availErr.message}`); }
+      if (availErr) {
+        await rollback();
+        throw new Error(`availability: ${availErr.message}`);
+      }
     }
 
     const abbrev = business_name.trim().replace(/[^a-zA-Z]/g, "").substring(0, 2).toUpperCase() || "BZ";
 
     const defaultSettings: { key: string; value: string; description: string | null }[] = [
-      // ── Identity
-      { key: "business_name",              value: business_name.trim(),             description: null },
-      { key: "abbreviation",               value: abbrev,                            description: null },
-      { key: "tagline",                    value: copy.tagline,                      description: null },
-      { key: "subtitle",                   value: copy.subtitle,                     description: null },
-      { key: "sign_off",                   value: copy.sign_off,                     description: null },
-      // ── Booking rules
-      { key: "requires_deposit",           value: "false",                           description: null },
-      { key: "deposit_percent",            value: "50",                              description: null },
-      { key: "min_notice_hours",           value: "24",                              description: null },
-      { key: "max_advance_days",           value: "60",                              description: null },
-      { key: "booking_ref_prefix",         value: "",                                description: null },
-      // ── Mobile service
-      { key: "mobile_service_enabled",     value: "false",                           description: null },
-      { key: "default_distance_km",        value: "10",                              description: null },
-      { key: "rate_per_km",                value: "3.5",                             description: null },
-      { key: "fixed_origin_address",       value: "",                                description: "Fixed origin for distance calculations" },
-      // ── Client labels
-      { key: "client_label_new",           value: "New Client",                      description: null },
-      { key: "client_label_existing",      value: "Existing Client",                 description: null },
-      // ── Booking page copy
-      { key: "cta_label",                  value: copy.cta_label,                    description: null },
-      { key: "confirmation_title",         value: copy.confirmation_title,           description: null },
-      { key: "confirmation_intro",         value: copy.confirmation_intro,           description: null },
-      { key: "confirmation_outro",         value: copy.confirmation_outro,           description: null },
-      // ── Deposit success page
-      { key: "success_deposit_title",      value: copy.success_deposit_title,        description: null },
-      { key: "success_deposit_tagline",    value: copy.success_deposit_tagline,      description: null },
-      { key: "success_deposit_body",       value: copy.success_deposit_body,         description: null },
-      { key: "success_deposit_intent",     value: copy.success_deposit_intent,       description: null },
-      { key: "success_deposit_closing",    value: copy.success_deposit_closing,      description: null },
-      { key: "success_deposit_signoff",    value: copy.success_deposit_signoff,      description: null },
-      // ── Final success page
-      { key: "success_final_title",        value: copy.success_final_title,          description: null },
-      { key: "success_final_body",         value: copy.success_final_body,           description: null },
-      { key: "success_final_rebook",       value: copy.success_final_rebook,         description: null },
-      { key: "success_final_review_cta",   value: copy.success_final_review_cta,     description: null },
-      { key: "success_final_signoff",      value: copy.success_final_signoff,        description: null },
-      // ── Plan (FIX 3: use actual selected plan)
-      { key: "plan",                       value: JSON.stringify(subscriptionStatus), description: null },
-      // ── Admin / notifications
-      { key: "admin_email",                value: user.email ?? "",                  description: "Admin email for notifications" },
-      { key: "app_base_url",               value: "",                                description: "Base URL of the application" },
-      // ── Yoco payments (blank — configure in admin)
-      { key: "yoco_public_key",            value: "",                                description: null },
-      { key: "yoco_secret_key",            value: "",                                description: "Yoco secret key for payment API" },
-      { key: "yoco_webhook_secret",        value: "",                                description: "Yoco webhook signature verification secret" },
-      // ── Google integrations (blank — configure in admin)
-      { key: "google_maps_api_key",        value: "",                                description: "Google Maps API key for distance calculation" },
-      { key: "google_calendar_id",         value: "",                                description: "Google Calendar ID for bookings" },
-      { key: "google_place_id",            value: "",                                description: null },
-      { key: "google_review_link",         value: "",                                description: null },
-      { key: "google_review_url",          value: "",                                description: null },
-      { key: "gcal_connected",             value: "false",                           description: null },
-      { key: "gmb_connected",              value: "false",                           description: null },
-      // ── Loyalty
-      { key: "loyalty_qualifying_service", value: "",                                description: "Loyalty: loyalty_qualifying_service" },
-      { key: "loyalty_min_bookings",       value: "3",                               description: "Loyalty: loyalty_min_bookings" },
-      { key: "loyalty_lookback_days",      value: "90",                              description: "Loyalty: loyalty_lookback_days" },
-      { key: "loyalty_reminder_weeks",     value: "5",                               description: "Loyalty: loyalty_reminder_weeks" },
-      // ── Theme CSS color variables
-      { key: "theme_background",           value: colors.background,                 description: "CSS --background HSL value" },
-      { key: "theme_foreground",           value: colors.foreground,                 description: "CSS --foreground HSL value" },
-      { key: "theme_card",                 value: colors.card,                       description: "CSS --card HSL value" },
-      { key: "theme_card_foreground",      value: colors.card_foreground,            description: "CSS --card-foreground HSL value" },
-      { key: "theme_primary",              value: colors.primary,                    description: "CSS --primary HSL value" },
-      { key: "theme_primary_foreground",   value: colors.primary_foreground,         description: "CSS --primary-foreground HSL value" },
-      { key: "theme_secondary",            value: colors.secondary,                  description: "CSS --secondary HSL value" },
-      { key: "theme_secondary_foreground", value: colors.secondary_foreground,       description: "CSS --secondary-foreground HSL value" },
-      { key: "theme_muted",                value: colors.muted,                      description: "CSS --muted HSL value" },
-      { key: "theme_muted_foreground",     value: colors.muted_foreground,           description: "CSS --muted-foreground HSL value" },
-      { key: "theme_accent",               value: colors.accent,                     description: "CSS --accent HSL value" },
-      { key: "theme_accent_foreground",    value: colors.accent_foreground,          description: "CSS --accent-foreground HSL value" },
-      { key: "theme_border",               value: colors.border,                     description: "CSS --border HSL value" },
-      { key: "theme_input",                value: colors.input,                      description: "CSS --input HSL value" },
-      { key: "theme_ring",                 value: colors.ring,                       description: "CSS --ring HSL value" },
-      { key: "theme_gradient_hero",        value: colors.gradient_hero,              description: "CSS --gradient-hero value" },
-      { key: "theme_gradient_card",        value: colors.gradient_card,              description: "CSS --gradient-card value" },
-      { key: "theme_gradient_surface",     value: colors.gradient_surface,           description: "CSS --gradient-surface value" },
+      { key: "business_name", value: business_name.trim(), description: null },
+      { key: "abbreviation", value: abbrev, description: null },
+      { key: "tagline", value: copy.tagline, description: null },
+      { key: "subtitle", value: copy.subtitle, description: null },
+      { key: "sign_off", value: copy.sign_off, description: null },
+      { key: "requires_deposit", value: "false", description: null },
+      { key: "deposit_percent", value: "50", description: null },
+      { key: "min_notice_hours", value: "24", description: null },
+      { key: "max_advance_days", value: "60", description: null },
+      { key: "booking_ref_prefix", value: "", description: null },
+      { key: "mobile_service_enabled", value: "false", description: null },
+      { key: "default_distance_km", value: "10", description: null },
+      { key: "rate_per_km", value: "3.5", description: null },
+      { key: "fixed_origin_address", value: "", description: "Fixed origin for distance calculations" },
+      { key: "client_label_new", value: "New Client", description: null },
+      { key: "client_label_existing", value: "Existing Client", description: null },
+      { key: "cta_label", value: copy.cta_label, description: null },
+      { key: "confirmation_title", value: copy.confirmation_title, description: null },
+      { key: "confirmation_intro", value: copy.confirmation_intro, description: null },
+      { key: "confirmation_outro", value: copy.confirmation_outro, description: null },
+      { key: "success_deposit_title", value: copy.success_deposit_title, description: null },
+      { key: "success_deposit_tagline", value: copy.success_deposit_tagline, description: null },
+      { key: "success_deposit_body", value: copy.success_deposit_body, description: null },
+      { key: "success_deposit_intent", value: copy.success_deposit_intent, description: null },
+      { key: "success_deposit_closing", value: copy.success_deposit_closing, description: null },
+      { key: "success_deposit_signoff", value: copy.success_deposit_signoff, description: null },
+      { key: "success_final_title", value: copy.success_final_title, description: null },
+      { key: "success_final_body", value: copy.success_final_body, description: null },
+      { key: "success_final_rebook", value: copy.success_final_rebook, description: null },
+      { key: "success_final_review_cta", value: copy.success_final_review_cta, description: null },
+      { key: "success_final_signoff", value: copy.success_final_signoff, description: null },
+      { key: "plan", value: JSON.stringify(subscriptionStatus), description: null },
+      { key: "admin_email", value: user.email ?? "", description: "Admin email for notifications" },
+      { key: "app_base_url", value: "", description: "Base URL of the application" },
+      { key: "yoco_public_key", value: "", description: null },
+      { key: "yoco_secret_key", value: "", description: "Yoco secret key for payment API" },
+      { key: "yoco_webhook_secret", value: "", description: "Yoco webhook signature verification secret" },
+      { key: "google_maps_api_key", value: "", description: "Google Maps API key for distance calculation" },
+      { key: "google_calendar_id", value: "", description: "Google Calendar ID for bookings" },
+      { key: "google_place_id", value: "", description: null },
+      { key: "google_review_link", value: "", description: null },
+      { key: "google_review_url", value: "", description: null },
+      { key: "gcal_connected", value: "false", description: null },
+      { key: "gmb_connected", value: "false", description: null },
+      { key: "loyalty_qualifying_service", value: "", description: "Loyalty: loyalty_qualifying_service" },
+      { key: "loyalty_min_bookings", value: "3", description: "Loyalty: loyalty_min_bookings" },
+      { key: "loyalty_lookback_days", value: "90", description: "Loyalty: loyalty_lookback_days" },
+      { key: "loyalty_reminder_weeks", value: "5", description: "Loyalty: loyalty_reminder_weeks" },
+      { key: "theme_background", value: colors.background, description: "CSS --background HSL value" },
+      { key: "theme_foreground", value: colors.foreground, description: "CSS --foreground HSL value" },
+      { key: "theme_card", value: colors.card, description: "CSS --card HSL value" },
+      { key: "theme_card_foreground", value: colors.card_foreground, description: "CSS --card-foreground HSL value" },
+      { key: "theme_primary", value: colors.primary, description: "CSS --primary HSL value" },
+      { key: "theme_primary_foreground", value: colors.primary_foreground, description: "CSS --primary-foreground HSL value" },
+      { key: "theme_secondary", value: colors.secondary, description: "CSS --secondary HSL value" },
+      { key: "theme_secondary_foreground", value: colors.secondary_foreground, description: "CSS --secondary-foreground HSL value" },
+      { key: "theme_muted", value: colors.muted, description: "CSS --muted HSL value" },
+      { key: "theme_muted_foreground", value: colors.muted_foreground, description: "CSS --muted-foreground HSL value" },
+      { key: "theme_accent", value: colors.accent, description: "CSS --accent HSL value" },
+      { key: "theme_accent_foreground", value: colors.accent_foreground, description: "CSS --accent-foreground HSL value" },
+      { key: "theme_border", value: colors.border, description: "CSS --border HSL value" },
+      { key: "theme_input", value: colors.input, description: "CSS --input HSL value" },
+      { key: "theme_ring", value: colors.ring, description: "CSS --ring HSL value" },
+      { key: "theme_gradient_hero", value: colors.gradient_hero, description: "CSS --gradient-hero value" },
+      { key: "theme_gradient_card", value: colors.gradient_card, description: "CSS --gradient-card value" },
+      { key: "theme_gradient_surface", value: colors.gradient_surface, description: "CSS --gradient-surface value" },
     ];
 
     const settingsRows = defaultSettings.map((s) => ({
-      key:         s.key,
-      value:       s.value,
+      key: s.key,
+      value: s.value,
       description: s.description,
-      tenant_id:   tenantId,
+      tenant_id: tenantId,
     }));
 
     const { error: settingsErr } = await admin
@@ -606,7 +652,6 @@ Deno.serve(async (req) => {
 
     console.log(`[create-tenant] success: tenant=${tenantId} theme=${resolvedThemeId} plan=${subscriptionStatus} user=${user.id}`);
     return json({ success: true, tenant_id: tenantId });
-
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("[create-tenant] error:", message);
