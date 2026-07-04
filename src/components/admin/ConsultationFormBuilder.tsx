@@ -34,36 +34,52 @@ import {
 type QuestionType = 'yes_no' | 'text' | 'textarea' | 'radio' | 'checkbox';
 
 interface DraftQuestion {
-  id: string | null;       // null = unsaved new row
-  localKey: string;        // stable React key
+  id: string | null;
+  localKey: string;
   label: string;
   type: QuestionType;
-  options: string[];       // relevant for radio/checkbox
+  options: string[];
   required: boolean;
   enabled: boolean;
   sort_order: number;
 }
 
+type ConsultationQuestionRow = {
+  id: string;
+  tenant_id: string;
+  sort_order: number | null;
+  question: string | null;
+  detail: string | null;
+  is_active: boolean | null;
+  label: string | null;
+  type: string | null;
+  options: unknown;
+  required: boolean | null;
+  enabled: boolean | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
-  yes_no:   'Yes / No',
-  text:     'Short text',
+  yes_no: 'Yes / No',
+  text: 'Short text',
   textarea: 'Long text',
-  radio:    'Single choice',
+  radio: 'Single choice',
   checkbox: 'Multiple choice',
 };
 
 const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
-  waxing:   'Waxing',
+  waxing: 'Waxing',
   skincare: 'Skincare / Facials',
-  hair:     'Hair',
-  nails:    'Nails',
-  massage:  'Massage',
-  lashes:   'Lashes',
-  brows:    'Brows',
-  tattoo:   'Tattoo',
+  hair: 'Hair',
+  nails: 'Nails',
+  massage: 'Massage',
+  lashes: 'Lashes',
+  brows: 'Brows',
+  tattoo: 'Tattoo',
   piercing: 'Piercing',
   wellness: 'Wellness',
-  general:  'General / Other',
+  general: 'General / Other',
 };
 
 const BUSINESS_TYPES = Object.keys(BUSINESS_TYPE_LABELS) as BusinessType[];
@@ -85,6 +101,24 @@ function blankDraft(sortOrder: number): DraftQuestion {
   };
 }
 
+function isQuestionType(value: unknown): value is QuestionType {
+  return (
+    value === 'yes_no' ||
+    value === 'text' ||
+    value === 'textarea' ||
+    value === 'radio' ||
+    value === 'checkbox'
+  );
+}
+
+function normalizeOptions(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const ConsultationFormBuilder = () => {
@@ -102,8 +136,10 @@ export const ConsultationFormBuilder = () => {
   // ── Load existing data ────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     if (!tenantId) return;
+
     setLoading(true);
     setError(null);
+
     try {
       const { data: tenantRow, error: tenantErr } = await supabase
         .from('tenants')
@@ -112,6 +148,7 @@ export const ConsultationFormBuilder = () => {
         .single();
 
       if (tenantErr) throw tenantErr;
+
       const bt = (tenantRow?.business_type as BusinessType) ?? '';
       setBusinessType(bt);
       setOriginalBusinessType(bt);
@@ -124,18 +161,22 @@ export const ConsultationFormBuilder = () => {
 
       if (qErr) throw qErr;
 
-      setQuestions(
-        (rows ?? []).map((r) => ({
+      const mappedQuestions: DraftQuestion[] = ((rows ?? []) as unknown as ConsultationQuestionRow[]).map((r) => {
+        const derivedType: QuestionType = isQuestionType(r.type) ? r.type : 'text';
+
+        return {
           id: r.id,
-          localKey: r.id,
-          label: r.label,
-          type: r.type as QuestionType,
-          options: Array.isArray(r.options) ? (r.options as string[]) : [],
-          required: r.required,
-          enabled: r.enabled,
-          sort_order: r.sort_order,
-        }))
-      );
+          localKey: r.id ?? makeLocalKey(),
+          label: (r.label ?? r.question ?? '').trim(),
+          type: derivedType,
+          options: normalizeOptions(r.options),
+          required: r.required ?? false,
+          enabled: r.enabled ?? r.is_active ?? true,
+          sort_order: r.sort_order ?? 0,
+        };
+      });
+
+      setQuestions(mappedQuestions);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load consultation settings');
     } finally {
@@ -143,7 +184,9 @@ export const ConsultationFormBuilder = () => {
     }
   }, [tenantId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const updateQuestion = (localKey: string, patch: Partial<DraftQuestion>) => {
@@ -157,14 +200,18 @@ export const ConsultationFormBuilder = () => {
   };
 
   const removeQuestion = (localKey: string) => {
-    setQuestions((prev) => prev.filter((q) => q.localKey !== localKey));
+    setQuestions((prev) =>
+      prev
+        .filter((q) => q.localKey !== localKey)
+        .map((q, i) => ({ ...q, sort_order: i }))
+    );
   };
 
   const moveQuestion = (localKey: string, dir: -1 | 1) => {
     setQuestions((prev) => {
       const idx = prev.findIndex((q) => q.localKey === localKey);
       const next = idx + dir;
-      if (next < 0 || next >= prev.length) return prev;
+      if (idx === -1 || next < 0 || next >= prev.length) return prev;
       const arr = [...prev];
       [arr[idx], arr[next]] = [arr[next], arr[idx]];
       return arr.map((q, i) => ({ ...q, sort_order: i }));
@@ -205,37 +252,69 @@ export const ConsultationFormBuilder = () => {
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!tenantId) return;
+
     setSaving(true);
     setError(null);
+
     try {
       if (businessType !== originalBusinessType) {
         const { error: btErr } = await supabase
           .from('tenants')
           .update({ business_type: businessType || null })
           .eq('id', tenantId);
+
         if (btErr) throw btErr;
         setOriginalBusinessType(businessType);
       }
+
+      const cleanedQuestions = questions
+        .map((q, i) => {
+          const trimmedLabel = q.label.trim();
+          const normalizedType: QuestionType = isQuestionType(q.type) ? q.type : 'text';
+          const normalizedOptions =
+            normalizedType === 'radio' || normalizedType === 'checkbox'
+              ? q.options.map((opt) => opt.trim()).filter(Boolean)
+              : [];
+
+          return {
+            ...q,
+            label: trimmedLabel,
+            type: normalizedType,
+            options: normalizedOptions,
+            sort_order: i,
+          };
+        })
+        .filter((q) => q.label.length > 0);
 
       const { error: delErr } = await supabase
         .from('consultation_questions')
         .delete()
         .eq('tenant_id', tenantId);
+
       if (delErr) throw delErr;
 
-      if (questions.length > 0) {
-        const inserts = questions.map((q, i) => ({
+      if (cleanedQuestions.length > 0) {
+        const inserts = cleanedQuestions.map((q, i) => ({
           tenant_id: tenantId,
-          label: q.label.trim(),
+
+          // Legacy columns kept in sync for backward compatibility
+          question: q.label,
+          detail: null,
+          is_active: q.enabled,
+
+          // New builder columns
+          label: q.label,
           type: q.type,
-          options: ['radio', 'checkbox'].includes(q.type) ? q.options.filter(Boolean) : null,
+          options: q.options,
           required: q.required,
           enabled: q.enabled,
           sort_order: i,
         }));
+
         const { error: insErr } = await supabase
           .from('consultation_questions')
           .insert(inserts);
+
         if (insErr) throw insErr;
       }
 
@@ -285,7 +364,6 @@ export const ConsultationFormBuilder = () => {
         </p>
       )}
 
-      {/* ── Business Type ── */}
       <div className="flex flex-col gap-1.5">
         <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
           Business Type
@@ -297,7 +375,9 @@ export const ConsultationFormBuilder = () => {
         >
           <option value="">— Select your business type —</option>
           {BUSINESS_TYPES.map((bt) => (
-            <option key={bt} value={bt}>{BUSINESS_TYPE_LABELS[bt]}</option>
+            <option key={bt} value={bt}>
+              {BUSINESS_TYPE_LABELS[bt]}
+            </option>
           ))}
         </select>
         <p className="text-[10px] text-white/20 italic px-1">
@@ -305,7 +385,6 @@ export const ConsultationFormBuilder = () => {
         </p>
       </div>
 
-      {/* ── Custom Questions List ── */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-white/50">
@@ -322,7 +401,6 @@ export const ConsultationFormBuilder = () => {
           </button>
         </div>
 
-        {/* Fallback preview */}
         {previewOpen && (
           <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 flex flex-col gap-2">
             <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-1">
@@ -332,13 +410,14 @@ export const ConsultationFormBuilder = () => {
               <div key={q.key} className="flex items-start gap-2">
                 <span className="text-[10px] text-white/20 mt-0.5 w-4 shrink-0">{i + 1}.</span>
                 <p className="text-xs text-white/50">{q.label}</p>
-                <span className="ml-auto text-[10px] text-white/20 shrink-0">{q.type.replace('_', '/')}</span>
+                <span className="ml-auto text-[10px] text-white/20 shrink-0">
+                  {q.type.replace('_', '/')}
+                </span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Empty state */}
         {!hasCustomQuestions && (
           <EmptyState
             icon={ClipboardList}
@@ -357,13 +436,11 @@ export const ConsultationFormBuilder = () => {
           />
         )}
 
-        {/* Question cards */}
         {questions.map((q, idx) => (
           <div
             key={q.localKey}
             className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 flex flex-col gap-3"
           >
-            {/* Header row */}
             <div className="flex items-center gap-2">
               <GripVertical className="w-3.5 h-3.5 text-white/15 shrink-0" />
               <span className="text-[10px] text-white/25 font-bold shrink-0">Q{idx + 1}</span>
@@ -410,7 +487,6 @@ export const ConsultationFormBuilder = () => {
               </button>
             </div>
 
-            {/* Question label */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
                 Question text
@@ -424,28 +500,29 @@ export const ConsultationFormBuilder = () => {
               />
             </div>
 
-            {/* Question type */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
                 Answer type
               </label>
               <select
                 value={q.type}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const nextType = e.target.value as QuestionType;
                   updateQuestion(q.localKey, {
-                    type: e.target.value as QuestionType,
-                    options: ['radio', 'checkbox'].includes(e.target.value) ? q.options : [],
-                  })
-                }
+                    type: nextType,
+                    options: nextType === 'radio' || nextType === 'checkbox' ? q.options : [],
+                  });
+                }}
                 className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 focus:outline-none focus:border-white/20 transition-colors"
               >
                 {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
-                  <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>
+                  <option key={t} value={t}>
+                    {QUESTION_TYPE_LABELS[t]}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Options editor for radio / checkbox */}
             {['radio', 'checkbox'].includes(q.type) && (
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
@@ -480,7 +557,6 @@ export const ConsultationFormBuilder = () => {
           </div>
         ))}
 
-        {/* Add question button (when there are already questions) */}
         {hasCustomQuestions && (
           <button
             onClick={addQuestion}
