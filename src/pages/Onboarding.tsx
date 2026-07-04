@@ -400,11 +400,6 @@ const Onboarding = () => {
       // Email confirmation required — persist payload to DB so it survives
       // Safari new-tab isolation and cross-device confirmation clicks.
       // We have the user id from the sign-up response even before confirmation.
-      if (data.user?.id) {
-        await supabase
-          .from("pending_onboarding")
-          .upsert({ user_id: data.user.id, payload: pendingPayload });
-      }
 
       // Show the waiting screen
       setAwaitingConfirmation(true);
