@@ -651,6 +651,22 @@ Deno.serve(async (req) => {
     });
 
     if (tenantErr) {
+      if (
+        tenantErr.code === "23505" &&
+        tenantErr.message.includes("tenants_owner_id_unique")
+      ) {
+        const { data: raceWinner } = await admin
+          .from("tenants")
+          .select("id")
+          .eq("owner_id", user.id)
+          .maybeSingle();
+
+        return json({
+          error: "User already owns a tenant",
+          tenant_id: raceWinner?.id ?? null,
+        }, 409);
+      }
+
       throw new Error(`tenant: ${tenantErr.message}`);
     }
 
@@ -979,7 +995,10 @@ Deno.serve(async (req) => {
 
     const { error: settingsErr } = await admin
       .from("app_settings")
-      .insert(settingsRows);
+      .upsert(settingsRows, {
+        onConflict: "tenant_id,key",
+        ignoreDuplicates: false,
+      });
 
     if (settingsErr) {
       await rollback();
