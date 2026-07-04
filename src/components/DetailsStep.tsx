@@ -244,65 +244,116 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
     };
   }, [showSuggestions, updateSuggestionRect]);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    let cancelled = false;
+useEffect(() => {
+  if (!tenantId) return;
+  let cancelled = false;
 
-    const loadQuestions = async () => {
-      setConsultationLoading(true);
+  const parseQuestionOptions = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return value.filter(
+        (opt): opt is string => typeof opt === "string" && opt.trim().length > 0
+      );
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
       try {
-        const { data: customRows } = await supabase
-          .from("consultation_questions")
-          .select("id, question, detail, is_active, sort_order")
-          .eq("tenant_id", tenantId)
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true });
-
-        if (cancelled) return;
-
-        if (customRows && customRows.length > 0) {
-          setConsultationQuestions(
-            customRows.map((r, i) => ({
-              key: `q_${r.sort_order ?? i}_${r.question
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "_")
-                .slice(0, 40)}`,
-              label: r.question,
-              type: "yes_no" as ConsultationQuestionDefinition["type"],
-              required: false,
-              options: undefined,
-            }))
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (opt): opt is string => typeof opt === "string" && opt.trim().length > 0
           );
-          return;
         }
-
-        const { data: tenantRow } = await supabase
-          .from("tenants")
-          .select("business_type")
-          .eq("id", tenantId)
-          .single();
-
-        if (cancelled) return;
-
-        const bt = (tenantRow as any)?.business_type as BusinessType | null;
-        const fallback =
-          bt && defaultConsultationQuestions[bt]
-            ? defaultConsultationQuestions[bt]
-            : defaultConsultationQuestions.general;
-
-        setConsultationQuestions(fallback);
       } catch {
-        if (!cancelled) setConsultationQuestions([]);
-      } finally {
-        if (!cancelled) setConsultationLoading(false);
+        return [];
       }
-    };
+    }
 
-    loadQuestions();
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId]);
+    return [];
+  };
+
+  const loadQuestions = async () => {
+    setConsultationLoading(true);
+    try {
+      const { data: customRows, error } = await supabase
+        .from("consultation_questions")
+        .select("id, question, detail, is_active, sort_order, label, type, options, required, enabled")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (error) throw error;
+      if (cancelled) return;
+
+      if (customRows && customRows.length > 0) {
+        setConsultationQuestions(
+          customRows
+            .map((r, i) => {
+              const label =
+                typeof r.label === "string" && r.label.trim().length > 0
+                  ? r.label.trim()
+                  : typeof r.question === "string"
+                    ? r.question.trim()
+                    : "";
+
+              const rawType = typeof r.type === "string" ? r.type : null;
+
+              const safeType: ConsultationQuestionDefinition["type"] =
+                rawType === "text" ||
+                rawType === "textarea" ||
+                rawType === "radio" ||
+                rawType === "checkbox" ||
+                rawType === "yes_no"
+                  ? rawType
+                  : "yes_no";
+
+              const parsedOptions = parseQuestionOptions(r.options);
+
+              return {
+                key: `q_${r.sort_order ?? i}_${(label || `question_${i}`)
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "_")
+                  .slice(0, 40)}`,
+                label,
+                type: safeType,
+                required: typeof r.required === "boolean" ? r.required : false,
+                options:
+                  safeType === "radio" || safeType === "checkbox"
+                    ? parsedOptions
+                    : undefined,
+              } satisfies ConsultationQuestionDefinition;
+            })
+            .filter((q) => q.label.length > 0)
+        );
+        return;
+      }
+
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("business_type")
+        .eq("id", tenantId)
+        .single();
+
+      if (cancelled) return;
+
+      const bt = (tenantRow as any)?.business_type as BusinessType | null;
+      const fallback =
+        bt && defaultConsultationQuestions[bt]
+          ? defaultConsultationQuestions[bt]
+          : defaultConsultationQuestions.general;
+
+      setConsultationQuestions(fallback);
+    } catch {
+      if (!cancelled) setConsultationQuestions([]);
+    } finally {
+      if (!cancelled) setConsultationLoading(false);
+    }
+  };
+
+  loadQuestions();
+  return () => {
+    cancelled = true;
+  };
+}, [tenantId]);
 
   const handleConsultationAnswer = useCallback(
     (key: string, value: import("@/data/bookingData").ConsultationAnswerValue) => {
