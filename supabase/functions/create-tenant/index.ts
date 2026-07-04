@@ -493,20 +493,10 @@ function mapCategory(businessType: string): string {
   return CATEGORY_MAP[key] ?? "other";
 }
 
-function resolveSubscriptionStatus(selectedPlan: string | undefined): string {
+function resolvePlan(selectedPlan: string | undefined): string {
   const plan = (selectedPlan ?? "").toLowerCase().trim();
-
-  const planMap: Record<string, string> = {
-    starter: "starter",
-    flow: "pro",
-    professional: "premium",
-    trial: "trial",
-    pro: "pro",
-    premium: "premium",
-    free: "free",
-  };
-
-  return planMap[plan] ?? "trial";
+  const validPlans = ["starter", "flow", "professional", "studio", "lifetime_free"];
+  return validPlans.includes(plan) ? plan : "trial";
 }
 
 Deno.serve(async (req) => {
@@ -585,7 +575,8 @@ Deno.serve(async (req) => {
       theme_id && THEME_COPY[theme_id] ? theme_id : "standard";
     const copy = THEME_COPY[resolvedThemeId];
     const colors = THEME_COLORS[resolvedThemeId];
-    const subscriptionStatus = resolveSubscriptionStatus(selected_plan);
+    const resolvedPlan = resolvePlan(selected_plan);
+    const subscriptionStatus = "trial";
 
     const { data: existingTenant } = await admin
       .from("tenants")
@@ -640,10 +631,10 @@ Deno.serve(async (req) => {
     };
 
     const now = new Date();
-    const trialEndsAt =
-      subscriptionStatus === "starter"
-        ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const trialDays = resolvedPlan === "starter" ? 7 : 30;
+    const trialEndsAt = new Date(
+      now.getTime() + trialDays * 24 * 60 * 60 * 1000
+    ).toISOString();
 
     const { error: tenantErr } = await admin.from("tenants").insert({
       id: tenantId,
@@ -654,6 +645,7 @@ Deno.serve(async (req) => {
       currency: "R",
       is_active: true,
       subscription_status: subscriptionStatus,
+      plan: resolvedPlan,
       trial_started_at: now.toISOString(),
       trial_ends_at: trialEndsAt,
     });
@@ -824,7 +816,7 @@ Deno.serve(async (req) => {
       { key: "success_final_review_cta", value: copy.success_final_review_cta, description: null },
       { key: "success_final_signoff", value: copy.success_final_signoff, description: null },
 
-      { key: "plan", value: JSON.stringify(subscriptionStatus), description: null },
+      { key: "plan", value: JSON.stringify(resolvedPlan), description: null },
 
       {
         key: "admin_email",
