@@ -273,6 +273,20 @@ const scrollbarHide: CSSProperties = {
   scrollbarWidth: "none",
 };
 
+// Fixed-viewport style: replaces height:100dvh so the layout is pinned to
+// the visual viewport and does not resize/"blow out" when mobile keyboards
+// or browser chrome show/hide. Only the inner #ob-scroll region scrolls.
+const fixedViewportStyle: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  overflow: "hidden",
+  WebkitFontSmoothing: "antialiased",
+  MozOsxFontSmoothing: "grayscale",
+  textRendering: "optimizeLegibility",
+  WebkitTapHighlightColor: "transparent",
+  overscrollBehavior: "contain",
+};
+
 const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [businessType, setBusinessType] = useState<string | null>(null);
@@ -502,7 +516,7 @@ const Onboarding = () => {
     return (
       <div
         className="nextslot-theme dark-brand flex flex-col items-center justify-center bg-background text-foreground"
-        style={{ height: "100dvh" }}
+        style={fixedViewportStyle}
       >
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-sm text-muted-foreground">Finishing your setup...</p>
@@ -514,7 +528,7 @@ const Onboarding = () => {
     return (
       <div
         className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
-        style={{ height: "100dvh", overflow: "hidden" }}
+        style={fixedViewportStyle}
       >
         <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm">
           <div className="max-w-2xl mx-auto px-4 py-4 flex items-center">
@@ -535,7 +549,7 @@ const Onboarding = () => {
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-4">
+        <div className="flex-1 flex items-center justify-center px-4 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="w-full max-w-md text-center space-y-6">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
               <Mail className="h-8 w-8 text-primary" />
@@ -556,8 +570,9 @@ const Onboarding = () => {
               <p className="text-xs font-medium text-muted-foreground">What happens next</p>
               <div className="space-y-1.5">
                 {[
-                  "Open the email from NextSlot",
+                  "Open the email from NextSlot (Check Spam)",
                   "Click the confirmation link",
+                  "Log into your admin page",
                   "Your dashboard launches automatically",
                 ].map((s, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -577,7 +592,7 @@ const Onboarding = () => {
             )}
 
             <p className="text-xs text-muted-foreground">
-              Didn&apos;t receive it?{" "}
+              Didn&apos;t receive it? Check your Spam or {" "}
               <button
                 className="underline text-foreground hover:text-primary transition-colors"
                 onClick={async () =>
@@ -603,8 +618,7 @@ const Onboarding = () => {
     <div
       className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
       style={{
-        height: "100dvh",
-        overflow: "hidden",
+        ...fixedViewportStyle,
         transition: "background-color 400ms ease, color 400ms ease",
         ...appliedThemeStyle,
       }}
@@ -620,7 +634,48 @@ const Onboarding = () => {
         style={{ display: "none" }}
       />
 
-      <style>{`#ob-scroll::-webkit-scrollbar{display:none}`}</style>
+      <style>{`
+        #ob-scroll::-webkit-scrollbar{display:none}
+
+        /* Prevent iOS Safari from auto-zooming (and leaving the layout
+           "blown out") when a form field is focused. 16px is the minimum
+           font-size iOS will not zoom in on. Desktop keeps the original
+           text-sm sizing via the min-width override below. */
+        @media (max-width: 640px) {
+          #ob-scroll input,
+          #ob-scroll select,
+          #ob-scroll textarea {
+            font-size: 16px !important;
+          }
+        }
+        @media (min-width: 641px) {
+          #ob-scroll input,
+          #ob-scroll select,
+          #ob-scroll textarea {
+            font-size: 0.875rem !important;
+          }
+        }
+
+        /* Crisp, legible text across every theme */
+        .nextslot-theme, .nextslot-theme * {
+          -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
+        }
+        .nextslot-theme h1,
+        .nextslot-theme h2,
+        .nextslot-theme h3,
+        .nextslot-theme p,
+        .nextslot-theme span,
+        .nextslot-theme label,
+        .nextslot-theme button,
+        .nextslot-theme input,
+        .nextslot-theme select,
+        .nextslot-theme textarea {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-rendering: optimizeLegibility;
+        }
+      `}</style>
 
       <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm transition-colors duration-500">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -671,6 +726,7 @@ const Onboarding = () => {
         style={{
           ...scrollbarHide,
           WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
         }}
       >
         <div
