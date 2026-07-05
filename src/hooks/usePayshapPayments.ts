@@ -136,6 +136,9 @@ export type PayshapBookingRow = BookingRow & {
  * 2. Marks the booking confirmed via RPC.
  * 3. Sets deposit_paid and/or full_payment_received flags correctly on the booking row.
  * 4. Updates the payment row to completed (idempotent: only when status = pending).
+ *    FIX: if no pending payshap row exists (e.g. the original submit-proof insert
+ *    failed), self-heal by inserting a completed row directly, so confirmed
+ *    revenue is never silently lost.
  * 5. Fires the booking-confirmed email via send-booking-email edge function.
  */
 export function useConfirmPayshapBooking() {
@@ -147,7 +150,7 @@ export function useConfirmPayshapBooking() {
       // Step 1: Read the booking to determine payment amounts before confirming.
       const { data: bookingData, error: bookingReadError } = await supabase
         .from("bookings")
-        .select("total_amount, deposit_amount, balance_due, deposit_paid, full_payment_received, payshap_payment_intent")
+        .select("total_amount, deposit_amount, balance_due, deposit_paid, full_payment_received, payshap_payment_intent, payshap_reference")
         .eq("id", bookingId)
         .eq("tenant_id", tenantId)
         .single();
@@ -161,6 +164,7 @@ export function useConfirmPayshapBooking() {
       // If no deposit is configured (depositAmount === 0) OR balanceDue === 0
       // after deposit, the client paid in full via Payshap.
       const intentField = (bookingData as any)?.payshap_payment_intent as string | null;
+      const referenceField = (bookingData as any)?.payshap_reference as string | null;
       const isFullPayment =
         intentField === "full" ||
         depositAmount === 0 ||
@@ -189,13 +193,36 @@ export function useConfirmPayshapBooking() {
       if (flagError) throw flagError;
 
       // Step 4: Mark the payment row completed — only if still pending to ensure idempotency.
-      const { error: paymentError } = await supabase
+      // .select("id") lets us tell whether the update actually matched a row.
+      const { data: updatedPayments, error: paymentError } = await supabase
         .from("payments")
         .update({ status: "completed" })
         .eq("booking_id", bookingId)
         .eq("payment_method", "payshap")
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id");
       if (paymentError) throw paymentError;
+
+      if (!updatedPayments || updatedPayments.length === 0) {
+        // FIX: no pending payshap payment row was found for this booking —
+        // previously this was silently a no-op, leaving the booking confirmed
+        // with zero revenue recorded. Self-heal by inserting the completed
+        // payment directly using the amounts already read in Step 1.
+        const { error: paymentInsertError } = await supabase
+          .from("payments")
+          .insert({
+            booking_id: bookingId,
+            tenant_id: tenantId,
+            amount: isFullPayment ? totalAmount : depositAmount,
+            payment_type: isFullPayment ? "full" : "deposit",
+            payment_method: "payshap",
+            status: "completed",
+            gateway: "payshap",
+            transaction_id: referenceField ?? undefined,
+            notes: "Self-healed at confirmation — no pending payshap row found",
+          });
+        if (paymentInsertError) throw paymentInsertError;
+      }
 
       // Step 5: Fire booking-confirmed email.
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
