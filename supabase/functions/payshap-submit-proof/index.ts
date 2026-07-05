@@ -137,8 +137,32 @@ Deno.serve(async (req) => {
       });
 
     if (paymentErr) {
+      // FIX: this used to be logged and swallowed, leaving the booking marked
+      // payment_claimed with no corresponding payments row — money collected
+      // but invisible to revenue reporting. Roll the booking back to its
+      // pre-claim state and fail loudly so the client can retry and the
+      // tenant isn't left thinking the claim succeeded.
       console.error("payshap-submit-proof: payments insert error", paymentErr);
-      // Non-fatal — booking is already updated, just log it
+
+      const { error: rollbackErr } = await supabase
+        .from("bookings")
+        .update({
+          status:             "pending_payment",
+          payshap_reference:  null,
+          payshap_proof_url:  null,
+          payshap_claimed_at: null,
+          updated_at:         new Date().toISOString(),
+        })
+        .eq("id", booking_id);
+
+      if (rollbackErr) {
+        console.error("payshap-submit-proof: rollback error", rollbackErr);
+      }
+
+      return new Response(
+        JSON.stringify({ error: "Failed to record payment. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // ── 6. Notify tenant via send-booking-email ───────────────────────────────
