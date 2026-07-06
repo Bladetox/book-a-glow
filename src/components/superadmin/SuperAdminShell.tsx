@@ -10,6 +10,7 @@ import {
 // ─── Lazy Views ────────────────────────────────────────────────────────────────
 const SAOverview        = lazy(() => import("./views/SAOverview"));
 const SAUsers           = lazy(() => import("./views/SAUsers"));
+const SATenants         = lazy(() => import("./views/SATenants"));
 const SARevenue         = lazy(() => import("./views/SARevenue"));
 const SASystemHealth    = lazy(() => import("./views/SASystemHealth"));
 const SAAuditLog        = lazy(() => import("./views/SAAuditLog"));
@@ -27,7 +28,7 @@ const SAPaymentConfig   = lazy(() => import("./views/SAPaymentConfig"));
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ViewId =
-  | "overview" | "users" | "bookings" | "revenue"
+  | "overview" | "users" | "tenants" | "bookings" | "revenue"
   | "health" | "audit" | "broadcast" | "webhooks"
   | "flags" | "settings" | "troubleshoot" | "growth"
   | "tenant-health" | "cohort-retention" | "feature-adoption"
@@ -40,6 +41,7 @@ const NAV_GROUPS: NavGroup[] = [
   { label: "Operate", items: [
     { id: "overview",          label: "Overview",          icon: LayoutDashboard },
     { id: "growth",            label: "Growth Engine",      icon: TrendingUp },
+    { id: "tenants",           label: "Tenants",            icon: Building2 },
     { id: "users",             label: "Users",              icon: Users },
     { id: "bookings",          label: "Booking Health",     icon: CalendarDays },
   ]},
@@ -78,7 +80,6 @@ const TabLoader = () => (
   </div>
 );
 
-// ─── NavItemButton hoisted outside SuperAdminShell to prevent remount on every render ─
 interface NavItemButtonProps extends NavItem {
   activeView: ViewId;
   onSelect: (id: ViewId) => void;
@@ -147,6 +148,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
     switch (activeView) {
       case "overview":          return <SAOverview />;
       case "growth":            return <SAGrowth />;
+      case "tenants":           return <SATenants />;
       case "users":             return <SAUsers />;
       case "bookings":          return <SABookings />;
       case "revenue":           return <SARevenue />;
