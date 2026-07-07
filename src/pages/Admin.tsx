@@ -13,6 +13,7 @@ import { ArrearsBanner } from "@/components/admin/ArrearsBanner";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useLocation } from "react-router-dom";
 
 const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminCalendar         = lazy(() => import("@/components/admin/AdminCalendar"));
@@ -163,6 +164,16 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
   const [activeView, setActiveView] = useState<ViewName>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const viewParam = params.get("view");
+    if (viewParam && (ALL_VIEWS as readonly string[]).includes(viewParam)) {
+      setActiveView(viewParam as ViewName);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (!flagsLoading && !allowedViews.includes(activeView)) {
