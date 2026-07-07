@@ -16,7 +16,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { cn } from "@/lib/utils";
 
-// ── Type config: colour, label, and whether it is a payment event ──
 const TYPE_CONFIG: Record<
   string,
   { dot: string; bg: string; border: string; label: string; isPayment: boolean }
@@ -29,9 +28,9 @@ const TYPE_CONFIG: Record<
     isPayment: false,
   },
   deposit_received: {
-    dot: "bg-green-500",
-    bg: "bg-green-50",
-    border: "border-green-200",
+    dot: "bg-purple-500",
+    bg: "bg-purple-50",
+    border: "border-purple-200",
     label: "Deposit Received",
     isPayment: true,
   },
@@ -43,9 +42,9 @@ const TYPE_CONFIG: Record<
     isPayment: true,
   },
   full_payment_received: {
-    dot: "bg-purple-500",
-    bg: "bg-purple-50",
-    border: "border-purple-200",
+    dot: "bg-green-500",
+    bg: "bg-green-50",
+    border: "border-green-200",
     label: "Full Payment Received",
     isPayment: true,
   },
@@ -66,7 +65,6 @@ const FALLBACK_CONFIG = {
   isPayment: false,
 };
 
-// ── Section divider ──
 const SectionLabel = ({ label, count }: { label: string; count?: number }) => (
   <div className="flex items-center gap-2 px-4 py-2">
     <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">
@@ -89,14 +87,12 @@ export function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // ── Client alerts ──
   const { data: alertData } = useClientAlerts();
   const overdueClients = alertData?.overdueLoyaltyClients ?? [];
   const inactiveClients = alertData?.inactiveClients ?? [];
   const overdueCount = overdueClients.length;
   const inactiveCount = inactiveClients.length;
 
-  // ── Birthday query: next 7 days, with client names ──
   const { data: upcomingBirthdays = [] } = useQuery({
     queryKey: ["birthday-bell-detail", tenantId],
     queryFn: async () => {
@@ -128,13 +124,11 @@ export function NotificationBell() {
   const birthdayCount = upcomingBirthdays.length;
   const clientAlertCount = overdueCount + inactiveCount + birthdayCount;
 
-  // ── Separate unread from read so unread are always processed first (Miller's Law) ──
   const unreadNotifications = notifications.filter((n) => !n.read);
   const readNotifications = notifications.filter((n) => n.read);
 
   const totalBadge = unreadCount + clientAlertCount;
 
-  // ── Close on outside click ──
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -145,34 +139,29 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // ── Deep-link navigation helpers (Hick's Law: send them exactly where they need to go) ──
   const goToBirthdays = () => {
     setOpen(false);
-    navigate("/admin/clients?tab=occasions");
+    navigate("/admin?view=Special+Occasions");
   };
 
   const goToOverdueLoyalty = () => {
     setOpen(false);
-    navigate("/admin/clients?tab=loyalty&filter=overdue");
+    navigate("/admin?view=Loyalty&filter=overdue");
   };
 
   const goToInactiveClients = () => {
     setOpen(false);
-    navigate("/admin/clients?tab=all&filter=inactive");
+    navigate("/admin?view=Client+Management&filter=inactive");
   };
 
   const goToBooking = (bookingId: string | null, notifId: string) => {
     markOneRead(notifId);
-    if (bookingId) {
-      setOpen(false);
-      navigate(`/admin/bookings?highlight=${bookingId}`);
-    }
+    setOpen(false);
+    navigate(`/admin?view=Bookings${bookingId ? `&highlight=${bookingId}` : ""}`);
   };
 
   return (
     <div ref={ref} className="relative">
-
-      {/* ── Bell button ── */}
       <button
         onClick={() => setOpen((o) => !o)}
         className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -186,17 +175,13 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* ── Dropdown panel ── */}
       {open && (
         <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <span className="font-semibold text-sm text-gray-800">
               Notifications
             </span>
             {unreadCount > 0 && (
-              // Fitts's Law: give this enough padding to be a comfortable tap target
               <button
                 onClick={markAllRead}
                 className="text-xs text-blue-600 hover:underline px-2 py-1 rounded hover:bg-blue-50 transition-colors"
@@ -207,14 +192,10 @@ export function NotificationBell() {
           </div>
 
           <div className="max-h-[520px] overflow-y-auto">
-
-            {/* ── ACTION REQUIRED section ── */}
             {clientAlertCount > 0 && (
               <div>
                 <SectionLabel label="Action Required" count={clientAlertCount} />
                 <div className="px-3 pb-2 flex flex-col gap-1">
-
-                  {/* Birthdays: list each name so the owner knows who without clicking (Selective Attention) */}
                   {birthdayCount > 0 && (
                     <button
                       onClick={goToBirthdays}
@@ -237,7 +218,6 @@ export function NotificationBell() {
                     </button>
                   )}
 
-                  {/* Overdue loyalty: show most overdue client as a hint */}
                   {overdueCount > 0 && (
                     <button
                       onClick={goToOverdueLoyalty}
@@ -263,7 +243,6 @@ export function NotificationBell() {
                     </button>
                   )}
 
-                  {/* Inactive: show how long the longest-inactive client has been gone */}
                   {inactiveCount > 0 && (
                     <button
                       onClick={goToInactiveClients}
@@ -288,17 +267,14 @@ export function NotificationBell() {
                       <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-1" />
                     </button>
                   )}
-
                 </div>
               </div>
             )}
 
-            {/* Divider */}
             {clientAlertCount > 0 && notifications.length > 0 && (
               <div className="mx-4 border-t border-gray-100" />
             )}
 
-            {/* ── UNREAD booking notifications ── */}
             {unreadNotifications.length > 0 && (
               <div>
                 <SectionLabel label="New" count={unreadNotifications.length} />
@@ -306,8 +282,6 @@ export function NotificationBell() {
                   {unreadNotifications.map((n) => {
                     const config = TYPE_CONFIG[n.type] ?? FALLBACK_CONFIG;
                     return (
-                      // Von Restorff: unread items have a coloured left border and tinted bg
-                      // to visually isolate them from the read stack below
                       <div
                         key={n.id}
                         className={cn(
@@ -328,7 +302,6 @@ export function NotificationBell() {
                             <p className="text-sm font-semibold text-gray-900">
                               {n.title}
                             </p>
-                            {/* Body text NOT truncated -- the amount and gateway is the critical information */}
                             {n.body && (
                               <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
                                 {n.body}
@@ -340,7 +313,6 @@ export function NotificationBell() {
                               })}
                             </p>
                           </div>
-                          {/* Selective Attention: payment and booking events get a direct link */}
                           {(config.isPayment || n.type === "new_booking") &&
                             n.booking_id && (
                               <button
@@ -362,7 +334,6 @@ export function NotificationBell() {
               </div>
             )}
 
-            {/* ── READ booking notifications ── */}
             {readNotifications.length > 0 && (
               <div>
                 <SectionLabel
@@ -413,7 +384,6 @@ export function NotificationBell() {
               </div>
             )}
 
-            {/* ── Empty state -- Peak-End Rule: make the resolved state feel good ── */}
             {clientAlertCount === 0 && notifications.length === 0 && (
               <div className="px-4 py-12 flex flex-col items-center gap-2 text-center">
                 <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mb-1">
@@ -427,11 +397,9 @@ export function NotificationBell() {
                 </p>
               </div>
             )}
-
           </div>
         </div>
       )}
     </div>
   );
 }
-
