@@ -140,6 +140,7 @@ export type PayshapBookingRow = BookingRow & {
  *    failed), self-heal by inserting a completed row directly, so confirmed
  *    revenue is never silently lost.
  * 5. Fires the booking-confirmed email via send-booking-email edge function.
+ * 6. Inserts an admin notification so the dashboard reflects the correct gateway.
  */
 export function useConfirmPayshapBooking() {
   const qc = useQueryClient();
@@ -250,6 +251,32 @@ export function useConfirmPayshapBooking() {
           "PayShap confirm: email function returned",
           emailRes.status,
         );
+      }
+
+      // Step 6: Insert admin notification with correct PayShap gateway label.
+      const notifType  = isFullPayment ? "full_payment_received" : "deposit_received";
+      const notifTitle = isFullPayment ? "Full Payment Received" : "Deposit Received";
+      const notifAmount = isFullPayment ? totalAmount : depositAmount;
+      const notifBody  = `Payment of R${notifAmount.toFixed(2)} confirmed via PayShap.`;
+
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("notification_preferences")
+        .eq("id", tenantId)
+        .single();
+
+      const prefs = (tenantRow as any)?.notification_preferences ?? {};
+      if (prefs[notifType] !== false) {
+        const { error: notifError } = await supabase
+          .from("notifications")
+          .insert({
+            tenant_id:  tenantId,
+            type:       notifType,
+            title:      notifTitle,
+            body:       notifBody,
+            booking_id: bookingId,
+          });
+        if (notifError) console.warn("PayShap confirm: notification insert failed", notifError);
       }
     },
     onSuccess: () => {
