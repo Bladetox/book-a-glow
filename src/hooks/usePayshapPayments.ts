@@ -81,7 +81,7 @@ export function usePayshapClaimQueue() {
         (payload) => {
           const newStatus = (payload.new as any)?.status;
           const oldStatus = (payload.old as any)?.status;
-          const payshapStatuses = ["payment_claimed", "pending_payment"];
+          const payshapStatuses = ["payment_claimed", "pending"];
           if (
             payshapStatuses.includes(newStatus) ||
             payshapStatuses.includes(oldStatus)
@@ -286,9 +286,9 @@ export function useConfirmPayshapBooking() {
 }
 
 /**
- * Reject a PayShap proof submission.
- * 1. Resets booking status back to pending_payment.
- * 2. Clears the three payshap columns so the client can resubmit.
+ * Decline a PayShap booking.
+ * 1. Resets booking status back to pending.
+ * 2. Clears the payshap columns so a fresh payment can be made.
  * 3. Voids the orphaned payments row (sets status = voided) rather than
  *    leaving it as pending, which would cause a duplicate on resubmission.
  */
