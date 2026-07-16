@@ -309,12 +309,10 @@ Deno.serve(async (req) => {
     // Triggered immediately when the booking is created for a PayShap tenant.
     // Sends:
     //   1. Client: tenant's PayShap phone number (copyable), amount due,
-    //              step-by-step payment instructions, and a link to
-    //              /payshap-confirm/:bookingId to submit their reference.
+    //              step-by-step payment instructions, and a confirmation note.
     //   2. Tenant: brief holding notification that a booking is pending payment.
     // ======================================================================
     if (email_type === "payshap_instructions") {
-      const confirmUrl  = `${appBaseUrl}/pay/${booking_id}`;
       const amountLabel = isFullPayment ? "Full Payment" : "Deposit";
       const amountValue = isFullPayment ? totalAmount : depositAmount;
 
@@ -335,11 +333,11 @@ Deno.serve(async (req) => {
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
               detailRow(
-              isFullPayment ? "Amount to Pay" : "Deposit Due",
-              amountValue,
-              isFullPayment ? true : false
-            ) +
-            (!isFullPayment ? detailRow("Balance on the Day", balanceDue, true) : "")
+                isFullPayment ? "Amount to Pay" : "Deposit Due",
+                amountValue,
+                isFullPayment ? true : false
+              ) +
+              (!isFullPayment ? detailRow("Balance on the Day", balanceDue, true) : "")
             )}
           </td></tr>
 
@@ -359,20 +357,10 @@ Deno.serve(async (req) => {
               <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 3 &mdash; Use your name as reference</p>
               <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">When prompted for a payment reference, enter your <strong>full name</strong> so we can match the payment.</p>
 
-              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 4 &mdash; Submit your reference</p>
-              <p class="tl" style="margin:0 0 14px;font-size:13px;color:#555;line-height:1.6;">Once you have made the payment, click the button below to confirm it. Your booking will be verified and confirmed by ${tenantName}.</p>
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 4 — Wait for confirmation</p>
+              <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.6;">Once we see your payment come through, we will send you a booking confirmation email.</p>
 
             </div>
-          </td></tr>
-
-          <tr><td style="padding:20px 36px 28px;text-align:center;">
-            <a href="${confirmUrl}" target="_blank"
-              style="display:inline-block;padding:16px 36px;border-radius:10px;background:#000;color:#fff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:.04em;">
-              I have paid &mdash; Submit Reference
-            </a>
-            <p class="tl" style="margin:12px 0 0;font-size:11px;color:#999;">
-              This link is unique to your booking. Do not share it.
-            </p>
           </td></tr>
 
           <tr><td style="padding:0 36px 26px;">
@@ -394,7 +382,69 @@ Deno.serve(async (req) => {
           ),
         });
       }
+
+      // 2. TENANT email
+      if (tenantEmail) {
+        await new Promise((r) => setTimeout(r, 300));
+
+        const adminUrl = `${appBaseUrl}/admin`;
+
+        const ownerPaymentHeading = isFullPayment
+          ? "New PayShap Full Payment Booking 💳"
+          : "New PayShap Deposit Booking 💳";
+
+        const ownerPaymentSubline = isFullPayment
+          ? `${clientName} has booked and will pay the full amount via PayShap. Check your banking app for the incoming payment, then confirm or decline in your dashboard.`
+          : `${clientName} has booked and will pay a deposit via PayShap. Check your banking app for the incoming payment, then confirm or decline in your dashboard.`;
+
+        const ownerHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
+  <style>${OWNER_STYLES}</style>
+</head>
+<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
+  <tr><td style="padding:28px 28px 10px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">${ownerPaymentHeading}</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${ownerPaymentSubline}</p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${row("Client",      clientName)}
+      ${row("Phone",       clientPhone || "—")}
+      ${row("Service",     serviceNames)}
+      ${row("Date",        formattedDate)}
+      ${row("Time",        formattedTime)}
+      ${row("Location",    tenantLocationDisplay || "—")}
+      ${row("Payment",     isFullPayment ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
+      ${!isFullPayment ? row("Balance Due on Day", balanceDue) : ""}
+    </table>
+  </td></tr>
+  <tr><td style="padding:16px 28px 22px;">
+    <a href="${adminUrl}" target="_blank"
+      style="display:inline-block;padding:14px 26px;border-radius:10px;background:#000;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">
+      ✅ Open PayShap queue in dashboard
+    </a>
+  </td></tr>
+  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  </td></tr>
+</table>
+</body></html>`;
+
+        await send({
+          from:     `NextSlot <bookings@nextslot.co.za>`,
+          reply_to: "bookings@nextslot.co.za",
+          to:       [tenantEmail],
+          subject:  isFullPayment
+            ? `⏳ New PayShap full-payment booking — ${clientName} on ${formattedDate}`
+            : `⏳ New PayShap deposit booking — ${clientName} on ${formattedDate}`,
+          html:     ownerHtml,
+        });
+      }
     }
+
     // ======================================================================
     // PAYSHAP PENDING
     // Triggered immediately when the client submits their payment reference.
@@ -439,7 +489,7 @@ Deno.serve(async (req) => {
           <tr><td style="padding:0 36px 26px;">
             <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:14px 18px;border-left:3px solid #000;">
               <p class="tm" style="margin:0;font-size:13px;font-weight:600;color:#000;line-height:1.5;">What happens next?</p>
-              <p class="tl" style="margin:6px 0 0;font-size:13px;color:#555;line-height:1.7;">Keep an eye on your email and WhatsApp. Once your studio has verified your payment you will receive a confirmation there.</p>
+              <p class="tl" style="margin:6px 0 0;font-size:13px;color:#555;line-height:1.7;">Keep an eye on your email. Once your studio has verified your payment you will receive confirmation there.</p>
             </div>
           </td></tr>
         `;
