@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, ExternalLink, Loader2, AlertTriangle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, Loader2, AlertTriangle, Clock, Eye } from "lucide-react";
 import { usePayshapClaimQueue, useConfirmPayshapBooking, useRejectPayshapBooking } from "@/hooks/usePayshapPayments";
 import { format } from "date-fns";
 import {
@@ -17,17 +17,6 @@ import { toast } from "sonner";
 
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
-/**
- * Derive the correct claimed payment amount to display on the queue card.
- *
- * Rules:
- * - If deposit_paid is already true the client has previously paid a deposit
- *   and is now submitting a Payshap proof for the balance. Show balance_due.
- * - If a deposit is configured but not yet paid, the client is paying the
- *   deposit via Payshap. Show deposit_amount.
- * - If no deposit is configured (depositAmount === 0) the client is paying
- *   in full. Show total_amount.
- */
 function resolveClaimedAmount(booking: {
   totalAmount: number | null;
   depositAmount: number | null;
@@ -43,9 +32,6 @@ function resolveClaimedAmount(booking: {
   return total;
 }
 
-/**
- * Derive a human-readable label for the amount being displayed.
- */
 function resolveAmountLabel(booking: {
   totalAmount: number | null;
   depositAmount: number | null;
@@ -64,17 +50,16 @@ const AdminPayshapQueue = () => {
   const confirmMutation = useConfirmPayshapBooking();
   const rejectMutation  = useRejectPayshapBooking();
 
-  // activeId tracks which booking is currently being mutated.
   const [activeId, setActiveId] = useState<string | null>(null);
-
-  // Reject confirmation dialog state.
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [rejectTarget, setRejectTarget] = useState<{ id: string; clientName: string } | null>(null);
-
-  // Error state: maps bookingId -> error message for inline display.
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const clearError = (bookingId: string) =>
     setErrors(prev => { const next = { ...prev }; delete next[bookingId]; return next; });
+
+  const markReviewed = (bookingId: string) =>
+    setReviewedIds(prev => new Set(prev).add(bookingId));
 
   const handleConfirm = (bookingId: string) => {
     clearError(bookingId);
@@ -84,6 +69,7 @@ const AdminPayshapQueue = () => {
       {
         onSettled: () => setActiveId(null),
         onSuccess: () => {
+          setReviewedIds(prev => { const next = new Set(prev); next.delete(bookingId); return next; });
           toast.success("Payment confirmed", {
             description: "Booking confirmed and client notified.",
           });
@@ -97,12 +83,10 @@ const AdminPayshapQueue = () => {
     );
   };
 
-  // Opens the confirmation dialog before any mutation fires.
   const requestReject = (bookingId: string, clientName: string) => {
     setRejectTarget({ id: bookingId, clientName });
   };
 
-  // Called only after the owner confirms the AlertDialog.
   const handleRejectConfirmed = () => {
     if (!rejectTarget) return;
     const { id: bookingId } = rejectTarget;
@@ -114,14 +98,15 @@ const AdminPayshapQueue = () => {
       {
         onSettled: () => setActiveId(null),
         onSuccess: () => {
-          toast.success("Proof rejected", {
-            description: "Client's submission has been cleared and they can resubmit.",
+          setReviewedIds(prev => { const next = new Set(prev); next.delete(bookingId); return next; });
+          toast.success("Payment declined", {
+            description: "Booking has been reset. The client's slot is released.",
           });
         },
         onError: (err) => {
           const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
           setErrors(prev => ({ ...prev, [bookingId]: message }));
-          toast.error("Reject failed", { description: message });
+          toast.error("Decline failed", { description: message });
         },
       },
     );
@@ -132,7 +117,7 @@ const AdminPayshapQueue = () => {
       <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
         <div className="flex items-center gap-2 text-white/20 text-xs py-3">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          Loading Payshap queue\u2026
+          Loading Payshap queue…
         </div>
       </motion.section>
     );
@@ -151,12 +136,11 @@ const AdminPayshapQueue = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reject this payment proof?</AlertDialogTitle>
+            <AlertDialogTitle>Decline this booking?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently clear the proof of payment submitted by{" "}
-              <strong>{rejectTarget?.clientName ?? "this client"}</strong> and reset
-              their booking to awaiting payment. They will need to resubmit.
-              This cannot be undone.
+              This will reset the booking for{" "}
+              <strong>{rejectTarget?.clientName ?? "this client"}</strong> back to
+              awaiting payment and release their provisional slot. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -165,7 +149,7 @@ const AdminPayshapQueue = () => {
               onClick={handleRejectConfirmed}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Yes, reject
+              Yes, decline
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -191,9 +175,10 @@ const AdminPayshapQueue = () => {
           <div className="flex flex-col gap-3">
             <AnimatePresence initial={false}>
               {queue.map((booking) => {
-                const isBusy       = activeId === booking.id;
-                const inlineError  = errors[booking.id];
-                const claimedAt    = booking.payshapClaimedAt
+                const isBusy      = activeId === booking.id;
+                const isReviewed  = reviewedIds.has(booking.id);
+                const inlineError = errors[booking.id];
+                const claimedAt   = booking.payshapClaimedAt
                   ? format(new Date(booking.payshapClaimedAt), "d MMM, HH:mm")
                   : null;
 
@@ -220,6 +205,7 @@ const AdminPayshapQueue = () => {
                     transition={{ duration: 0.2 }}
                     className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3.5 flex flex-col gap-3"
                   >
+                    {/* Booking summary */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white/85 truncate">
@@ -231,12 +217,12 @@ const AdminPayshapQueue = () => {
                         {claimedAt && (
                           <div className="flex items-center gap-1 mt-0.5">
                             <Clock className="w-2.5 h-2.5 text-white/20" />
-                            <span className="text-[10px] text-white/25">Claimed {claimedAt}</span>
+                            <span className="text-[10px] text-white/25">Received {claimedAt}</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Amount: shows the actual claimed figure, not total */}
+                      {/* Amount block */}
                       <div className="flex flex-col items-end gap-0.5 shrink-0">
                         <p className="text-sm font-bold text-emerald-400">
                           R {claimedAmount.toLocaleString()}
@@ -245,8 +231,8 @@ const AdminPayshapQueue = () => {
                           {amountLabel}
                         </p>
                         {booking.payshapReference && (
-                          <p className="text-[10px] text-white/30 font-mono">
-                            {booking.payshapReference}
+                          <p className="text-[10px] text-white/30 font-mono mt-0.5">
+                            Ref: {booking.payshapReference}
                           </p>
                         )}
                       </div>
@@ -264,7 +250,7 @@ const AdminPayshapQueue = () => {
                       </a>
                     )}
 
-                    {/* Inline error message */}
+                    {/* Inline error */}
                     {inlineError && (
                       <div className="flex items-start gap-1.5 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
                         <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
@@ -272,32 +258,58 @@ const AdminPayshapQueue = () => {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleConfirm(booking.id)}
-                        disabled={isBusy}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {isBusy && confirmMutation.isPending ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="w-3 h-3" />
-                        )}
-                        Confirm
-                      </button>
-                      <button
-                        onClick={() => requestReject(booking.id, booking.client || "Client")}
-                        disabled={isBusy}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {isBusy && rejectMutation.isPending ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <XCircle className="w-3 h-3" />
-                        )}
-                        Reject
-                      </button>
-                    </div>
+                    {/* Gate: reveals Confirm / Decline after tenant checks */}
+                    <AnimatePresence mode="wait">
+                      {!isReviewed ? (
+                        <motion.button
+                          key="gate"
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.15 }}
+                          onClick={() => markReviewed(booking.id)}
+                          disabled={isBusy}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-semibold hover:bg-sky-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Eye className="w-3 h-3" />
+                          I have checked — payment received
+                        </motion.button>
+                      ) : (
+                        <motion.div
+                          key="actions"
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.15 }}
+                          className="flex gap-2"
+                        >
+                          <button
+                            onClick={() => handleConfirm(booking.id)}
+                            disabled={isBusy}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isBusy && confirmMutation.isPending ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                            Confirm booking
+                          </button>
+                          <button
+                            onClick={() => requestReject(booking.id, booking.client || "Client")}
+                            disabled={isBusy}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isBusy && rejectMutation.isPending ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <XCircle className="w-3 h-3" />
+                            )}
+                            Decline
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 );
               })}
