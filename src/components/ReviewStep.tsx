@@ -209,8 +209,22 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
         const intent = paymentChoice === "payshap_full" ? "full" : "deposit";
         await supabase
           .from("bookings")
-          .update({ payshap_payment_intent: intent })
+          .update({
+            status: "payment_claimed",
+            payshap_payment_intent: intent,
+            payshap_claimed_at: new Date().toISOString(),
+          })
           .eq("id", pendingBookingId);
+
+        await supabase.from("payments").insert({
+          booking_id:     pendingBookingId,
+          tenant_id:      tenantId,
+          amount:         paymentChoice === "payshap_full" ? total : deposit,
+          payment_type:   paymentChoice === "payshap_full" ? "full" : "deposit",
+          payment_method: "payshap",
+          status:         "pending",
+          gateway:        "payshap",
+        });
       }
       return pendingBookingId;
     }
@@ -287,8 +301,22 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       const intent = paymentChoice === "payshap_full" ? "full" : "deposit";
       await supabase
         .from("bookings")
-        .update({ payshap_payment_intent: intent })
+        .update({
+          status: "payment_claimed",
+          payshap_payment_intent: intent,
+          payshap_claimed_at: new Date().toISOString(),
+        })
         .eq("id", bookingId);
+
+      await supabase.from("payments").insert({
+        booking_id:     bookingId,
+        tenant_id:      tenantId,
+        amount:         paymentChoice === "payshap_full" ? total : deposit,
+        payment_type:   paymentChoice === "payshap_full" ? "full" : "deposit",
+        payment_method: "payshap",
+        status:         "pending",
+        gateway:        "payshap",
+      });
     }
 
     return bookingId;
