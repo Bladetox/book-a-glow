@@ -50,7 +50,6 @@ const BOOKING_SELECT = `
   completed_at,
   cancelled_at,
   payshap_reference,
-  payshap_proof_url,
   payshap_claimed_at,
   payshap_payment_intent,
   client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
@@ -114,7 +113,6 @@ export function usePayshapClaimQueue() {
       return (data ?? []).map((b) => ({
         ...mapBooking(b),
         payshapReference: (b as any).payshap_reference as string | null,
-        payshapProofUrl: (b as any).payshap_proof_url as string | null,
         payshapClaimedAt: (b as any).payshap_claimed_at as string | null,
         payshapPaymentIntent: (b as any).payshap_payment_intent  as string | null,
       }));
@@ -125,7 +123,6 @@ export function usePayshapClaimQueue() {
 
 export type PayshapBookingRow = BookingRow & {
   payshapReference: string | null;
-  payshapProofUrl: string | null;
   payshapClaimedAt: string | null;
   payshapPaymentIntent:  string | null;
 };
@@ -320,7 +317,6 @@ export function useRejectPayshapBooking() {
         .from("bookings")
         .update({
           payshap_reference: null,
-          payshap_proof_url: null,
           payshap_claimed_at: null,
         })
         .eq("id", bookingId)
