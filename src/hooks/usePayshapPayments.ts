@@ -305,7 +305,7 @@ export function useRejectPayshapBooking() {
       // Step 1: Reset booking status via RPC.
       const { data: rpcData, error: rpcError } = await supabase.rpc(
         "update_booking_status",
-        { p_booking_id: bookingId, p_new_status: "pending_payment" },
+        { p_booking_id: bookingId, p_new_status: "pending" },
       );
       if (rpcError) throw rpcError;
       const rpcResult = (rpcData as any)?.[0];
