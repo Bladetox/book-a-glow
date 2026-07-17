@@ -94,15 +94,14 @@ const toWhatsAppBalanceHref = (
   clientName: string,
   balanceDue: number,
   serviceNames: string,
-  paymentUrl: string,
-  tenantId: string,
+  tenantName: string,
+  tenantPhone: string,
 ) => {
   const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
   const isPhenomeBeauty = tenantId === "phenomebeauty";
   const text = isPhenomeBeauty
     ? `Hi ${clientName} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`
-    : `Hi ${clientName}, your balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is ready to settle online:\n\n${paymentUrl}`;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+      `Hi ${clientName} 👋\n\nThank you for choosing ${tenantName} — it was a pleasure having you!\n\nYour remaining balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${tenantPhone}\n2️⃣ Open your banking app → PayShap or Instant EFT\n3️⃣ Send *R${balanceDue.toFixed(2)}* to the number above\n4️⃣ Use your full name as the payment reference\n\nAny questions? Reply here 😊`  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 };
 
 // ── OverflowMenu ─────────────────────────────────────────────────────────────
@@ -663,16 +662,17 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
   if (!b.phone) return;
   if (!b.balance || b.balance <= 0) return;
 
-  // ── PayShap path: build the /pay link instantly, no Yoco call needed ─────
-  if (isPayshap) {
-    const paymentUrl = buildPayshapBalanceUrl(b);
-    window.open(
-      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
-      "_blank",
-      "noopener,noreferrer",
-    );
-    return;
-  }
+// ── PayShap path: send step-by-step PayShap instructions via WhatsApp ──
+if (isPayshap) {
+  const tenantName  = appSettings["business_name"] ?? appSettings["name"] ?? "";
+  const tenantPhone = appSettings["phone"] ?? "";
+  window.open(
+    toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, tenantName, tenantPhone),
+    "_blank",
+    "noopener,noreferrer",
+  );
+  return;
+}
 
   // ── Yoco path: reuse existing link or generate a new one ─────────────────
   if (b.yocoFinalLink) {
@@ -853,7 +853,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
         title="Send payment request?"
         description={confirmRequestBalance
         ? isPayshap
-           ? `This will send a PayShap payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.client} (${confirmRequestBalance.email}).`
+           ? `This will send PayShap final payment instruction of R${confirmRequestBalance.balance} to ${confirmRequestBalance.client} (${confirmRequestBalance.email}).`
            : `This will send a final payment link of R${confirmRequestBalance.balance} to ${confirmRequestBalance.client} (${confirmRequestBalance.email}).`
         : ""}
         confirmLabel="Send Request"
