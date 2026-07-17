@@ -386,11 +386,13 @@ export function useUpdateBookingFields() {
           try {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token ?? supabaseKey;
             await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization:  `Bearer ${supabaseKey}`,
+                Authorization:  `Bearer ${token}`,
                 apikey:         supabaseKey,
               },
               body: JSON.stringify({
