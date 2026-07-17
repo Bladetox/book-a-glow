@@ -377,9 +377,34 @@ export function useUpdateBookingFields() {
               });
             if (payErr) console.warn("Payment record insert failed:", payErr.message);
           }
+
+          // ── Fire balance_paid receipt email for PayShap / cash / EFT only.
+          //    Yoco and PayFast fire this email from their own webhooks, so we
+          //    only send here when there were no prior payment rows (i.e. no
+          //    gateway wrote a row before the admin tapped Mark Paid).
+          //    Fire-and-forget: a failed email must never block the admin action.
+          try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization:  `Bearer ${supabaseKey}`,
+                apikey:         supabaseKey,
+              },
+              body: JSON.stringify({
+                booking_id: bookingId,
+                email_type: "balance_paid",
+              }),
+            });
+          } catch (emailErr) {
+            console.warn("balance_paid email dispatch failed:", emailErr);
+          }
         } else {
           // Yoco already wrote at least one row (the deposit).
           // Only insert the outstanding balance — avoid double-counting.
+          // Email is handled by the yoco-webhook function.
           const amount = Number(bk?.balance_due ?? 0);
           if (amount > 0) {
             const { error: payErr } = await supabase
