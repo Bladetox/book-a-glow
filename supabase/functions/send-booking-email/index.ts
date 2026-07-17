@@ -420,13 +420,12 @@ Deno.serve(async (req) => {
       ${row("Payment",     isFullPayment ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
       ${!isFullPayment ? row("Balance Due on Day", balanceDue) : ""}
     </table>
-  </td></tr>
-  <tr><td style="padding:10px 28px 22px;">
-    <p class="ol" style="margin:0;font-size:13px;color:#888;line-height:1.6;">Open your dashboard to review and confirm this booking.</p>
-  </td></tr>
-  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
-    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
-  </td></tr>
+<tr><td style="padding:10px 28px 22px;">
+  <div style="background:#000;border-radius:10px;padding:16px 20px;text-align:center;">
+    <p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;">Action required</p>
+    <p style="margin:0;font-size:14px;color:#ccc;line-height:1.5;">Open your dashboard to review and confirm this booking.</p>
+  </div>
+</td></tr>
 </table>
 </body></html>`;
 
