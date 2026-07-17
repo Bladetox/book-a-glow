@@ -829,38 +829,54 @@ Deno.serve(async (req) => {
     // ======================================================================
     // BALANCE REQUEST
     // Triggered when the tenant manually requests final payment via email.
-    // Sends the client an email with their outstanding balance and payment link.
+    // No payment_url required — client pays via PayShap.
     // ======================================================================
-    if (email_type === "balance_request") {
-      if (!payment_url) {
-        return new Response(JSON.stringify({ error: "payment_url is required for balance_request" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const balanceAmount = (booking as any).balance_due != null
-        ? `R${Math.round(parseFloat((booking as any).balance_due) * 100) / 100 > 0 ? (Math.round(parseFloat((booking as any).balance_due) * 100) / 100).toFixed(2) : rawBalance.toFixed(2)}`
-        : balanceDue;
+   if (email_type === "balance_request") {
+      const balanceAmount = (booking as any).balance_due != null &&
+        Math.round(parseFloat((booking as any).balance_due) * 100) / 100 > 0
+          ? `R${(Math.round(parseFloat((booking as any).balance_due) * 100) / 100).toFixed(2)}`
+          : balanceDue;
 
       if (clientEmail) {
         const clientBody = `
           <tr><td style="padding:28px 36px 10px;">
             <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
-            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">Your outstanding balance of <strong>${balanceAmount}</strong> for your upcoming appointment is now ready to settle online.</p>
+            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">
+              Thank you for choosing <strong>${tenantName}</strong> — it was a pleasure having you.
+              Your remaining balance of <strong>${balanceAmount}</strong> is now due.
+            </p>
           </td></tr>
-          <tr><td style="padding:18px 36px 26px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Appointment Details</p>
+
+          <tr><td style="padding:18px 36px 10px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
             ${detailTable(
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
-              detailRow("Balance Due", balanceAmount, true)
+              detailRow("Remaining Balance Due", balanceAmount, true)
             )}
           </td></tr>
-          <tr><td style="padding:0 36px 28px;text-align:center;">
-            <a href="${payment_url}" target="_blank" style="display:inline-block;padding:14px 32px;border-radius:10px;background:#000;color:#fff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:.04em;">Pay Balance Now</a>
+
+          <tr><td style="padding:14px 36px 10px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">How to Pay via PayShap</p>
+            <div style="background:#f7f7f7;border-radius:10px;border:1px solid #e0e0e0;padding:20px 22px;">
+
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 1 &mdash; Copy this number</p>
+              <div style="background:#fff;border-radius:8px;border:2px solid #000;padding:14px 18px;margin:0 0 18px;text-align:center;">
+                <p class="tm" style="margin:0;font-size:26px;font-weight:700;letter-spacing:.06em;color:#000;font-family:monospace,monospace;">${tenantPhone}</p>
+                <p class="tl" style="margin:4px 0 0;font-size:11px;color:#888;">PayShap number for ${tenantName}</p>
+              </div>
+
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 2 &mdash; Open your banking app</p>
+              <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">Go to the PayShap or Instant EFT section and send <strong>${balanceAmount}</strong> to the number above.</p>
+
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 3 &mdash; Use your full name as reference</p>
+              <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.6;">When prompted for a payment reference, enter your <strong>full name</strong> so we can match your payment.</p>
+
+            </div>
           </td></tr>
-          <tr><td style="padding:0 36px 26px;">
+
+          <tr><td style="padding:14px 36px 26px;">
             <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
@@ -869,25 +885,27 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Balance Due — ${balanceAmount} for your appointment on ${formattedDate}`,
-          html:     emailWrapper(logoHtml, tenantName, "Balance Due", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
+          subject:  `Remaining balance due — ${balanceAmount}`,
+          html:     emailWrapper(
+            logoHtml,
+            tenantName,
+            "Remaining Balance Due",
+            clientBody,
+            `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`
+          ),
         });
       }
     }
-
+    
     // ======================================================================
     // BALANCE PAID
     // ======================================================================
-    if (email_type === "balance_paid") {
+        if (email_type === "balance_paid") {
 
       if (clientEmail) {
-        const locationDetailRow = clientMapsLink
-          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
-          : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
-
         const clientBody = `
           <tr><td style="padding:28px 36px 10px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your balance has been received! &#10003;</p>
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your payment has been received! &#10003;</p>
           </td></tr>
           <tr><td style="padding:18px 36px 26px;">
             <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
@@ -895,14 +913,13 @@ Deno.serve(async (req) => {
               detailRow("Service", serviceNames) +
               detailRow("Date", formattedDate) +
               detailRow("Time", formattedTime) +
-              locationDetailRow
-            )}
-          </td></tr>
-          <tr><td style="padding:0 36px 22px;">
-            ${detailTable(
+              detailRow("Deposit Paid", depositAmount) +
+              detailRow("Balance Paid", balanceDue) +
               detailRow("Total Paid", `${totalAmount} &#10003;`, true)
             )}
-            <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">You are all paid up. See you on ${formattedDate}!</p>
+          </td></tr>
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Thank you for choosing <strong>${tenantName}</strong> — we hope to see you again soon!</p>
           </td></tr>
           <tr><td style="padding:0 36px 26px;">
             <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
@@ -913,11 +930,10 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Balance received — all paid up ✓`,
-          html:     emailWrapper(logoHtml, tenantName, "Balance Received", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
+          subject:  `Payment received — thank you ✓`,
+          html:     emailWrapper(logoHtml, tenantName, "Payment Complete", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
         });
       }
-
       // Tenant notification
       if (tenantEmail) {
         await new Promise((r) => setTimeout(r, 300));
