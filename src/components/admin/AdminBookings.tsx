@@ -1430,3 +1430,4 @@ const EditField = ({ label, value, onChange }: { label: string; value: string; o
 );
 
 export default AdminBookings;
+
