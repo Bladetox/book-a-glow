@@ -360,6 +360,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const { data: bookings = [], isLoading } = useSupabaseBookings();
   const { tenantId } = useTenant();
   const { data: appSettings = {} } = useAppSettings();
+  const { data: tenantSettings } = useTenantSettings();
   const isPayshap = appSettings["payshap_enabled"] === "true";
   const queryClient = useQueryClient();
   const updateStatus = useUpdateBookingStatus();
@@ -670,7 +671,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
 // ── PayShap path: send step-by-step PayShap instructions via WhatsApp ──
 if (isPayshap) {
   const tenantName  = appSettings["business_name"] ?? appSettings["name"] ?? "";
-  const tenantPhone = appSettings["phone"] ?? "";
+  const tenantPhone = tenantSettings?.phone ?? "";
   window.open(
     toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, tenantName, tenantPhone),
     "_blank",
