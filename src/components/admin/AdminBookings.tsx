@@ -1,4 +1,4 @@
-import { useAppSettings } from "@/hooks/useSupabaseSettings";
+import { useAppSettings, useTenantSettings } from "@/hooks/useSupabaseSettings";
 import AddServiceModal from "@/components/admin/AddServiceModal";
 import BlockClientModal from "@/components/admin/BlockClientModal";
 import {
