@@ -101,7 +101,8 @@ const toWhatsAppBalanceHref = (
   const isPhenomeBeauty = tenantId === "phenomebeauty";
   const text = isPhenomeBeauty
     ? `Hi ${clientName} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`
-      `Hi ${clientName} 👋\n\nThank you for choosing ${tenantName} — it was a pleasure having you!\n\nYour remaining balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${tenantPhone}\n2️⃣ Open your banking app → PayShap or Instant EFT\n3️⃣ Send *R${balanceDue.toFixed(2)}* to the number above\n4️⃣ Use your full name as the payment reference\n\nAny questions? Reply here 😊`  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+    : `Hi ${clientName} 👋\n\nThank you for choosing ${tenantName} — it was a pleasure having you!\n\nYour remaining balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${tenantPhone}\n2️⃣ Open your banking app → PayShap or Instant EFT\n3️⃣ Send *R${balanceDue.toFixed(2)}* to the number above\n4️⃣ Use your full name as the payment reference\n\nAny questions? Reply here 😊`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 };
 
 // ── OverflowMenu ─────────────────────────────────────────────────────────────
