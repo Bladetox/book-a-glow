@@ -48,7 +48,7 @@ const GATE_ITEMS: GateItem[] = [
     label: 'Set your availability',
     action: 'Availability',
     actionLabel: 'Set hours →',
-    hint: 'Add your working hours so the booking calendar knows when you're open.',
+    hint: "Add your working hours so the booking calendar knows when you're open.",
   },
   {
     key: 'hasPricedService',
@@ -67,7 +67,7 @@ const GATE_ITEMS: GateItem[] = [
     label: 'Confirm your Terms & Conditions',
     action: 'Terms',
     actionLabel: 'Review T&Cs →',
-    hint: 'Clients will see your T&Cs at checkout — make sure they're in place.',
+    hint: "Clients will see your T&Cs at checkout — make sure they're in place.",
   },
 ];
 
@@ -244,7 +244,7 @@ export function SetupChecklist({ onNavigate }: Props) {
       {checklist.allComplete && (
         <div className="px-5 py-4 border-t border-amber-100 dark:border-amber-900/30 flex items-center justify-between gap-3">
           <p className="text-sm font-medium text-green-700 dark:text-green-400">
-            🎉 You're all set! Your booking page is live.
+            🎉 You&apos;re all set! Your booking page is live.
           </p>
           <button
             onClick={checklist.dismiss}
