@@ -4,12 +4,14 @@
  * Drives the post-onboarding setup checklist rendered in AdminDashboard.
  *
  * Gates:
- *   1. hasServices              – services table has at least 1 row for this tenant
- *   2. hasAvailability          – staff_availability table has at least 1 row
- *   3. hasPricedService         – at least 1 service with price > 0
- *   4. hasPaymentSetup          – app_settings key 'payment_provider_configured' === 'true'
- *   5. hasSharedBookingLink     – app_settings key 'booking_link_shared' === 'true'
- *   6. hasAcceptedTerms         – app_settings key 'terms_accepted' === 'true'
+ *   1. hasServices          – services table has at least 1 row for this tenant
+ *   2. hasAvailability      – staff_availability table has at least 1 row
+ *   3. hasPricedService     – at least 1 service with price > 0
+ *   4. hasPaymentSetup      – app_settings key 'payment_setup_complete' === 'true'
+ *                             written automatically by SetupChecklistPaymentGate
+ *                             when hasCompletedPaymentSetup() returns true
+ *   5. hasSharedBookingLink – app_settings key 'booking_link_shared' === 'true'
+ *   6. hasAcceptedTerms     – app_settings key 'terms_accepted' === 'true'
  *
  * Dismissal:
  *   Calling dismiss() upserts app_settings key 'setup_checklist_dismissed' = 'true'.
@@ -71,14 +73,14 @@ export function useSetupChecklist(): SetupChecklistState {
           .eq('tenant_id', tenantId)
           .gt('price', 0),
 
-        // Gates 4, 5 & 6: payment_provider_configured, booking_link_shared,
+        // Gates 4, 5 & 6: payment_setup_complete, booking_link_shared,
         //                  terms_accepted, setup_checklist_dismissed
         supabase
           .from('app_settings')
           .select('key, value')
           .eq('tenant_id', tenantId)
           .in('key', [
-            'payment_provider_configured',
+            'payment_setup_complete',
             'booking_link_shared',
             'terms_accepted',
             'setup_checklist_dismissed',
@@ -94,7 +96,7 @@ export function useSetupChecklist(): SetupChecklistState {
         hasServices: (servicesRes.count ?? 0) > 0,
         hasAvailability: (availRes.count ?? 0) > 0,
         hasPricedService: (pricedRes.count ?? 0) > 0,
-        hasPaymentSetup: settingsMap['payment_provider_configured'] === 'true',
+        hasPaymentSetup: settingsMap['payment_setup_complete'] === 'true',
         hasSharedBookingLink: settingsMap['booking_link_shared'] === 'true',
         hasAcceptedTerms: settingsMap['terms_accepted'] === 'true',
         isDismissed: settingsMap['setup_checklist_dismissed'] === 'true',

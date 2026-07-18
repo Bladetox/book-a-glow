@@ -66,6 +66,8 @@ const ALLOWED_APP_SETTING_KEYS = [
   // Sprint 1 — post-onboarding checklist state
   "setup_checklist_dismissed",
   "booking_link_shared",
+  // Sprint 1 — payment gate: written by SetupChecklistPaymentGate when complete
+  "payment_setup_complete",
 ] as const;
 
 // ─── Tenant fields safe to expose to the client ───────────────────────────────

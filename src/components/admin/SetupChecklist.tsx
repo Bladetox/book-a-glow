@@ -12,6 +12,11 @@
  *   // Place just above the KPI hero cards, inside the dashboard scroll region:
  *   <SetupChecklist onNavigate={onNavigate} />
  *
+ * Gate 4 — payment setup — is rendered by <SetupChecklistPaymentGate>, a
+ * self-contained <li> component that reads live tenant columns and writes
+ * 'payment_setup_complete' to app_settings when done. It is injected directly
+ * into the <ul> between Gate 3 and Gate 5 so all 6 rows appear in order.
+ *
  * The component auto-hides once the tenant dismisses it (stored in app_settings).
  * It also hides silently when all 6 gates pass AND the tenant dismisses.
  */
@@ -19,6 +24,7 @@
 import React from 'react';
 import { CheckCircle2, Circle, X, ExternalLink } from 'lucide-react';
 import { useSetupChecklist } from '@/hooks/useSetupChecklist';
+import { SetupChecklistPaymentGate } from '@/components/admin/SetupChecklistPaymentGate';
 import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -29,13 +35,19 @@ interface Props {
 }
 
 interface GateItem {
-  key: keyof ReturnType<typeof useSetupChecklist>['gates'];
+  key: keyof Omit<ReturnType<typeof useSetupChecklist>['gates'], 'hasPaymentSetup'>;
   label: string;
   action?: string;
   actionLabel?: string;
   hint: string;
 }
 
+/**
+ * The 5 statically-defined gate rows.
+ * Gate 4 (hasPaymentSetup) is intentionally excluded here — it is rendered
+ * by <SetupChecklistPaymentGate> which has its own live sub-item checking
+ * and plan-aware logic that a static GATE_ITEMS entry cannot replicate.
+ */
 const GATE_ITEMS: GateItem[] = [
   {
     key: 'hasServices',
@@ -58,13 +70,7 @@ const GATE_ITEMS: GateItem[] = [
     actionLabel: 'Add pricing →',
     hint: 'At least one service needs a price before clients can complete a booking.',
   },
-  {
-    key: 'hasPaymentSetup',
-    label: 'Set up how you get paid',
-    action: 'Settings',
-    actionLabel: 'Configure payments →',
-    hint: 'Connect a payment provider so you can accept deposits and payments at checkout.',
-  },
+  // ── Gate 4 (hasPaymentSetup) injected as <SetupChecklistPaymentGate> in JSX ──
   {
     key: 'hasSharedBookingLink',
     label: 'Let the world find you',
@@ -126,7 +132,8 @@ export function SetupChecklist({ onNavigate }: Props) {
   if (checklist.isLoading || checklist.isDismissed || !tenantId) return null;
 
   const completedCount = Object.values(checklist.gates).filter(Boolean).length;
-  const total = GATE_ITEMS.length;
+  // Total is always 6: 5 from GATE_ITEMS + 1 from SetupChecklistPaymentGate
+  const total = 6;
   const progressPct = Math.round((completedCount / total) * 100);
 
   return (
@@ -175,10 +182,9 @@ export function SetupChecklist({ onNavigate }: Props) {
 
       {/* ── Gate items ── */}
       <ul className="divide-y divide-amber-100 dark:divide-amber-900/30">
-        {GATE_ITEMS.map((item) => {
+        {/* Gates 1–3: hasServices, hasAvailability, hasPricedService */}
+        {GATE_ITEMS.slice(0, 3).map((item) => {
           const done = checklist.gates[item.key];
-          const isShareGate = item.key === 'hasSharedBookingLink';
-
           return (
             <li
               key={item.key}
@@ -187,42 +193,62 @@ export function SetupChecklist({ onNavigate }: Props) {
                 done ? 'opacity-50' : 'opacity-100',
               ].join(' ')}
             >
-              {/* Status icon */}
               <span className="mt-0.5 shrink-0">
                 {done ? (
-                  <CheckCircle2
-                    size={18}
-                    className="text-green-500"
-                    aria-label="Complete"
-                  />
+                  <CheckCircle2 size={18} className="text-green-500" aria-label="Complete" />
                 ) : (
-                  <Circle
-                    size={18}
-                    className="text-amber-400 dark:text-amber-600"
-                    aria-label="Incomplete"
-                  />
+                  <Circle size={18} className="text-amber-400 dark:text-amber-600" aria-label="Incomplete" />
                 )}
               </span>
-
-              {/* Content */}
               <div className="flex-1 min-w-0">
-                <p
-                  className={[
-                    'text-sm font-medium',
-                    done
-                      ? 'line-through text-amber-700/60 dark:text-amber-500/60'
-                      : 'text-amber-900 dark:text-amber-200',
-                  ].join(' ')}
-                >
+                <p className={['text-sm font-medium', done ? 'line-through text-amber-700/60 dark:text-amber-500/60' : 'text-amber-900 dark:text-amber-200'].join(' ')}>
                   {item.label}
                 </p>
-
                 {!done && (
-                  <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">
-                    {item.hint}
-                  </p>
+                  <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">{item.hint}</p>
                 )}
+                {!done && item.action && onNavigate && (
+                  <button
+                    onClick={() => onNavigate(item.action!)}
+                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
+                  >
+                    {item.actionLabel}
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
 
+        {/* Gate 4 — payment setup (plan-aware, live sub-item checking) */}
+        <SetupChecklistPaymentGate onNavigate={onNavigate} />
+
+        {/* Gates 5–6: hasSharedBookingLink, hasAcceptedTerms */}
+        {GATE_ITEMS.slice(3).map((item) => {
+          const done = checklist.gates[item.key];
+          const isShareGate = item.key === 'hasSharedBookingLink';
+          return (
+            <li
+              key={item.key}
+              className={[
+                'flex items-start gap-3 px-5 py-3 transition-opacity',
+                done ? 'opacity-50' : 'opacity-100',
+              ].join(' ')}
+            >
+              <span className="mt-0.5 shrink-0">
+                {done ? (
+                  <CheckCircle2 size={18} className="text-green-500" aria-label="Complete" />
+                ) : (
+                  <Circle size={18} className="text-amber-400 dark:text-amber-600" aria-label="Incomplete" />
+                )}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className={['text-sm font-medium', done ? 'line-through text-amber-700/60 dark:text-amber-500/60' : 'text-amber-900 dark:text-amber-200'].join(' ')}>
+                  {item.label}
+                </p>
+                {!done && (
+                  <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">{item.hint}</p>
+                )}
                 {/* Share gate — inline copy + WhatsApp */}
                 {!done && isShareGate && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -244,7 +270,6 @@ export function SetupChecklist({ onNavigate }: Props) {
                     </button>
                   </div>
                 )}
-
                 {/* Nav deep-link for non-share gates */}
                 {!done && !isShareGate && item.action && onNavigate && (
                   <button
