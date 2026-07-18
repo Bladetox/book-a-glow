@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, KeyRound, Palette, Building2, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy,
   Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell, MapPin, Home,
-  ClipboardList
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";

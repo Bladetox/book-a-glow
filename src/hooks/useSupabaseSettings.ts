@@ -63,6 +63,9 @@ const ALLOWED_APP_SETTING_KEYS = [
   "suggested_addons",
   // Category display order
   "category_order",
+  // Sprint 1 — post-onboarding checklist state
+  "setup_checklist_dismissed",
+  "booking_link_shared",
 ] as const;
 
 // ─── Tenant fields safe to expose to the client ───────────────────────────────
