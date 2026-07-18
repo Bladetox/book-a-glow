@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
+import { buildAdminUrl } from "@/lib/tenant-resolver";
 
 const availabilityPresets = [
   {
@@ -139,26 +140,6 @@ const PLANS: Plan[] = [
 ];
 
 const PENDING_ONBOARDING_KEY = "nextslot_pending_onboarding";
-
-// FIX: Moved buildAdminUrl to module level (was duplicated across Login.tsx + here).
-// Single source of truth — import from @/lib/tenant if you create that util.
-function buildAdminUrl(tenantId: string): string {
-  const hostname = window.location.hostname;
-  const isLocalhost =
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname.endsWith(".localhost");
-
-  if (isLocalhost) {
-    return `${window.location.origin}/admin?tenant=${tenantId}`;
-  }
-
-  const parts = hostname.split(".");
-  const rootDomain =
-    parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
-
-  return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
-}
 
 async function createTenant(
   accessToken: string,
