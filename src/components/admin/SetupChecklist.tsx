@@ -12,8 +12,16 @@
  *   // Place just above the KPI hero cards, inside the dashboard scroll region:
  *   <SetupChecklist onNavigate={onNavigate} />
  *
- * Gate 4 — payment setup — is rendered by <SetupChecklistPaymentGate>, a
- * self-contained <li> component that reads live tenant columns and writes
+ * Gate order:
+ *   1. hasServices          → GATE_ITEMS[0]
+ *   2. hasAvailability      → GATE_ITEMS[1]
+ *   3. hasPricedService     → GATE_ITEMS[2]
+ *   4. hasPaymentSetup      → <SetupChecklistPaymentGate> (injected inline)
+ *   5. hasSharedBookingLink → GATE_ITEMS[3]
+ *   6. hasAcceptedTerms     → GATE_ITEMS[4]
+ *
+ * Gate 4 (hasPaymentSetup) is rendered by <SetupChecklistPaymentGate>, a
+ * self-contained <li> that reads live tenant columns and writes
  * 'payment_setup_complete' to app_settings when done. It is injected directly
  * into the <ul> between Gate 3 and Gate 5 so all 6 rows appear in order.
  *
@@ -43,12 +51,13 @@ interface GateItem {
 }
 
 /**
- * The 5 statically-defined gate rows.
- * Gate 4 (hasPaymentSetup) is intentionally excluded here — it is rendered
- * by <SetupChecklistPaymentGate> which has its own live sub-item checking
- * and plan-aware logic that a static GATE_ITEMS entry cannot replicate.
+ * The 5 statically-defined gate rows (Gates 1, 2, 3, 5, 6).
+ * Gate 4 (hasPaymentSetup / payment_setup_complete) is intentionally absent —
+ * it is rendered by <SetupChecklistPaymentGate> injected inline between
+ * GATE_ITEMS[2] and GATE_ITEMS[3] in the JSX below.
  */
 const GATE_ITEMS: GateItem[] = [
+  // Gate 1
   {
     key: 'hasServices',
     label: 'Tell clients what you offer',
@@ -56,6 +65,7 @@ const GATE_ITEMS: GateItem[] = [
     actionLabel: 'Add your services →',
     hint: 'Add the treatments or services you offer so clients can browse and book.',
   },
+  // Gate 2
   {
     key: 'hasAvailability',
     label: 'Open your doors — set your hours',
@@ -63,6 +73,7 @@ const GATE_ITEMS: GateItem[] = [
     actionLabel: 'Set your hours →',
     hint: "Add your working hours so the booking calendar knows when you're open.",
   },
+  // Gate 3
   {
     key: 'hasPricedService',
     label: 'Put a value on your work',
@@ -70,12 +81,15 @@ const GATE_ITEMS: GateItem[] = [
     actionLabel: 'Add pricing →',
     hint: 'At least one service needs a price before clients can complete a booking.',
   },
-  // ── Gate 4 (hasPaymentSetup) injected as <SetupChecklistPaymentGate> in JSX ──
+  // ── Gate 4 (hasPaymentSetup / payment_setup_complete) injected as
+  //    <SetupChecklistPaymentGate> between index 2 and 3 in the JSX ──
+  // Gate 5
   {
     key: 'hasSharedBookingLink',
     label: 'Let the world find you',
     hint: 'Copy your booking link and send it to your first client — or share via WhatsApp.',
   },
+  // Gate 6
   {
     key: 'hasAcceptedTerms',
     label: 'Protect yourself and your clients',
@@ -132,7 +146,7 @@ export function SetupChecklist({ onNavigate }: Props) {
   if (checklist.isLoading || checklist.isDismissed || !tenantId) return null;
 
   const completedCount = Object.values(checklist.gates).filter(Boolean).length;
-  // Total is always 6: 5 from GATE_ITEMS + 1 from SetupChecklistPaymentGate
+  // Total is always 6: 5 GATE_ITEMS + 1 SetupChecklistPaymentGate (hasPaymentSetup)
   const total = 6;
   const progressPct = Math.round((completedCount / total) * 100);
 
@@ -181,124 +195,159 @@ export function SetupChecklist({ onNavigate }: Props) {
       </div>
 
       {/* ── Gate items ── */}
-      <ul className="divide-y divide-amber-100 dark:divide-amber-900/30">
-        {/* Gates 1–3: hasServices, hasAvailability, hasPricedService */}
+      <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/30 pb-2">
+        {/* Gates 1, 2, 3 — rendered from GATE_ITEMS[0..2] */}
         {GATE_ITEMS.slice(0, 3).map((item) => {
           const done = checklist.gates[item.key];
           return (
-            <li
+            <GateRow
               key={item.key}
-              className={[
-                'flex items-start gap-3 px-5 py-3 transition-opacity',
-                done ? 'opacity-50' : 'opacity-100',
-              ].join(' ')}
-            >
-              <span className="mt-0.5 shrink-0">
-                {done ? (
-                  <CheckCircle2 size={18} className="text-green-500" aria-label="Complete" />
-                ) : (
-                  <Circle size={18} className="text-amber-400 dark:text-amber-600" aria-label="Incomplete" />
-                )}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className={['text-sm font-medium', done ? 'line-through text-amber-700/60 dark:text-amber-500/60' : 'text-amber-900 dark:text-amber-200'].join(' ')}>
-                  {item.label}
-                </p>
-                {!done && (
-                  <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">{item.hint}</p>
-                )}
-                {!done && item.action && onNavigate && (
-                  <button
-                    onClick={() => onNavigate(item.action!)}
-                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
-                  >
-                    {item.actionLabel}
-                  </button>
-                )}
-              </div>
-            </li>
+              done={done}
+              label={item.label}
+              hint={item.hint}
+              action={item.action}
+              actionLabel={item.actionLabel}
+              onNavigate={onNavigate}
+              // booking-link special actions only apply to hasSharedBookingLink
+              onCopyLink={undefined}
+              onWhatsApp={undefined}
+              bookingUrl={undefined}
+            />
           );
         })}
 
-        {/* Gate 4 — payment setup (plan-aware, live sub-item checking) */}
+        {/* Gate 4 — payment setup (plan-aware, self-contained) */}
         <SetupChecklistPaymentGate onNavigate={onNavigate} />
 
-        {/* Gates 5–6: hasSharedBookingLink, hasAcceptedTerms */}
+        {/* Gates 5, 6 — rendered from GATE_ITEMS[3..4] */}
         {GATE_ITEMS.slice(3).map((item) => {
           const done = checklist.gates[item.key];
-          const isShareGate = item.key === 'hasSharedBookingLink';
+          const isBookingLink = item.key === 'hasSharedBookingLink';
           return (
-            <li
+            <GateRow
               key={item.key}
-              className={[
-                'flex items-start gap-3 px-5 py-3 transition-opacity',
-                done ? 'opacity-50' : 'opacity-100',
-              ].join(' ')}
-            >
-              <span className="mt-0.5 shrink-0">
-                {done ? (
-                  <CheckCircle2 size={18} className="text-green-500" aria-label="Complete" />
-                ) : (
-                  <Circle size={18} className="text-amber-400 dark:text-amber-600" aria-label="Incomplete" />
-                )}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className={['text-sm font-medium', done ? 'line-through text-amber-700/60 dark:text-amber-500/60' : 'text-amber-900 dark:text-amber-200'].join(' ')}>
-                  {item.label}
-                </p>
-                {!done && (
-                  <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">{item.hint}</p>
-                )}
-                {/* Share gate — inline copy + WhatsApp */}
-                {!done && isShareGate && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <code className="rounded bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-300 truncate max-w-[240px]">
-                      {bookingUrl || `${tenantId}.nextslot.co.za`}
-                    </code>
-                    <button
-                      onClick={handleCopyLink}
-                      className="inline-flex items-center gap-1 rounded-md bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 px-2.5 py-1 text-xs font-medium text-white transition-colors"
-                    >
-                      Copy link
-                    </button>
-                    <button
-                      onClick={handleWhatsApp}
-                      className="inline-flex items-center gap-1 rounded-md border border-green-400 dark:border-green-600 px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      WhatsApp
-                    </button>
-                  </div>
-                )}
-                {/* Nav deep-link for non-share gates */}
-                {!done && !isShareGate && item.action && onNavigate && (
-                  <button
-                    onClick={() => onNavigate(item.action!)}
-                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
-                  >
-                    {item.actionLabel}
-                  </button>
-                )}
-              </div>
-            </li>
+              done={done}
+              label={item.label}
+              hint={item.hint}
+              action={item.action}
+              actionLabel={item.actionLabel}
+              onNavigate={onNavigate}
+              onCopyLink={isBookingLink ? handleCopyLink : undefined}
+              onWhatsApp={isBookingLink ? handleWhatsApp : undefined}
+              bookingUrl={isBookingLink ? bookingUrl : undefined}
+            />
           );
         })}
       </ul>
-
-      {/* ── All complete call-to-action ── */}
-      {checklist.allComplete && (
-        <div className="px-5 py-4 border-t border-amber-100 dark:border-amber-900/30 flex items-center justify-between gap-3">
-          <p className="text-sm font-medium text-green-700 dark:text-green-400">
-            🎉 You&apos;re all set! Your booking page is live.
-          </p>
-          <button
-            onClick={checklist.dismiss}
-            className="rounded-md bg-green-600 hover:bg-green-700 px-3 py-1.5 text-xs font-medium text-white transition-colors"
-          >
-            Got it — hide this
-          </button>
-        </div>
-      )}
     </div>
+  );
+}
+
+// ─── Internal GateRow sub-component ──────────────────────────────────────────
+
+interface GateRowProps {
+  done: boolean;
+  label: string;
+  hint: string;
+  action?: string;
+  actionLabel?: string;
+  onNavigate?: (section: string) => void;
+  onCopyLink?: () => void;
+  onWhatsApp?: () => void;
+  bookingUrl?: string;
+}
+
+function GateRow({
+  done,
+  label,
+  hint,
+  action,
+  actionLabel,
+  onNavigate,
+  onCopyLink,
+  onWhatsApp,
+  bookingUrl,
+}: GateRowProps) {
+  return (
+    <li
+      className={[
+        'flex items-start gap-3 px-5 py-3 transition-opacity',
+        done ? 'opacity-50' : 'opacity-100',
+      ].join(' ')}
+    >
+      {/* Status icon */}
+      <span className="mt-0.5 shrink-0">
+        {done ? (
+          <CheckCircle2
+            size={18}
+            className="text-green-500"
+            aria-label="Complete"
+          />
+        ) : (
+          <Circle
+            size={18}
+            className="text-amber-400 dark:text-amber-600"
+            aria-label="Incomplete"
+          />
+        )}
+      </span>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <p
+          className={[
+            'text-sm font-medium',
+            done
+              ? 'line-through text-amber-700/60 dark:text-amber-500/60'
+              : 'text-amber-900 dark:text-amber-200',
+          ].join(' ')}
+        >
+          {label}
+        </p>
+
+        {!done && (
+          <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">
+            {hint}
+          </p>
+        )}
+
+        {/* Booking-link share actions */}
+        {!done && bookingUrl && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="rounded bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[11px] text-amber-800 dark:text-amber-300 truncate max-w-[200px]">
+              {bookingUrl}
+            </code>
+            {onCopyLink && (
+              <button
+                onClick={onCopyLink}
+                className="text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
+              >
+                Copy link
+              </button>
+            )}
+            {onWhatsApp && (
+              <button
+                onClick={onWhatsApp}
+                className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 underline underline-offset-2 transition-colors"
+              >
+                <ExternalLink size={11} />
+                Share on WhatsApp
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Deep-link nav action */}
+        {!done && action && actionLabel && onNavigate && (
+          <button
+            onClick={() => onNavigate(action)}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
+          >
+            <ExternalLink size={11} />
+            {actionLabel}
+          </button>
+        )}
+      </div>
+    </li>
   );
 }
