@@ -13,7 +13,7 @@
  *   <SetupChecklist onNavigate={onNavigate} />
  *
  * The component auto-hides once the tenant dismisses it (stored in app_settings).
- * It also hides silently when all 5 gates pass AND the tenant dismisses.
+ * It also hides silently when all 6 gates pass AND the tenant dismisses.
  */
 
 import React from 'react';
@@ -39,36 +39,43 @@ interface GateItem {
 const GATE_ITEMS: GateItem[] = [
   {
     key: 'hasServices',
-    label: 'Add your services',
+    label: 'Tell clients what you offer',
     action: 'Services',
-    actionLabel: 'Go to Services →',
-    hint: 'Add the treatments or services you offer so clients can book them.',
+    actionLabel: 'Add your services →',
+    hint: 'Add the treatments or services you offer so clients can browse and book.',
   },
   {
     key: 'hasAvailability',
-    label: 'Set your availability',
+    label: 'Open your doors — set your hours',
     action: 'Availability',
-    actionLabel: 'Set hours →',
+    actionLabel: 'Set your hours →',
     hint: "Add your working hours so the booking calendar knows when you're open.",
   },
   {
     key: 'hasPricedService',
-    label: 'Add a price to your first service',
+    label: 'Put a value on your work',
     action: 'Services',
-    actionLabel: 'Update pricing →',
-    hint: 'At least one service needs a price before clients can check out.',
+    actionLabel: 'Add pricing →',
+    hint: 'At least one service needs a price before clients can complete a booking.',
+  },
+  {
+    key: 'hasPaymentSetup',
+    label: 'Set up how you get paid',
+    action: 'Settings',
+    actionLabel: 'Configure payments →',
+    hint: 'Connect a payment provider so you can accept deposits and payments at checkout.',
   },
   {
     key: 'hasSharedBookingLink',
-    label: 'Share your booking link',
-    hint: 'Copy your booking link below and send it to your first client.',
+    label: 'Let the world find you',
+    hint: 'Copy your booking link and send it to your first client — or share via WhatsApp.',
   },
   {
     key: 'hasAcceptedTerms',
-    label: 'Confirm your Terms & Conditions',
+    label: 'Protect yourself and your clients',
     action: 'Terms & Conditions',
     actionLabel: 'Review T&Cs →',
-    hint: "Clients will see your T&Cs at checkout — make sure they're in place.",
+    hint: "Clients see your T&Cs at checkout — make sure they reflect your policies.",
   },
 ];
 
