@@ -4,11 +4,18 @@
  *
  * DATA MODEL CLARIFICATION
  * ────────────────────────
- * tenants.plan          → one of: 'trial' | 'starter' | 'flow' | 'professional' | 'studio'
+ * tenants.plan             → one of: 'trial' | 'starter' | 'flow' | 'professional' | 'studio'
  * tenants.is_lifetime_free → boolean state flag set manually by the platform owner
- *                            to reward specific tenants with a permanent free subscription.
- *                            It is NOT a plan slug and must never appear in PlanSlug or
- *                            PLAN_LABELS. Always check this flag alongside plan.
+ *                             to reward specific tenants with a permanent free subscription.
+ *                             It is NOT a plan slug and must never appear in PlanSlug or
+ *                             PLAN_LABELS. Always check this flag alongside plan.
+ *
+ * PAYMENT METHOD CLARIFICATION
+ * ────────────────────────────
+ * PayShap    → the instant bank-to-bank payment method used in book-a-glow.
+ *               Tenants register a PayShap number in their banking app.
+ * PayNow     → a DIFFERENT product. It is NOT used in book-a-glow and must
+ *               never appear in tenant-facing copy or payment gate logic.
  *
  * USAGE
  * ─────
@@ -81,21 +88,23 @@ export function isLifetimeFree(is_lifetime_free: boolean | null | undefined): bo
  * Human-readable payment method focus shown in the Setup Checklist
  * and any onboarding hints.
  *
- * starter      → PayShap / PayNow  (instant bank-to-bank, no merchant account needed)
- * flow         → PayShap / PayNow + Yoco + PayFast  (online card checkout unlocked)
- * professional → PayShap / PayNow + Yoco + PayFast
- * studio       → PayShap / PayNow + Yoco + PayFast
- * trial        → PayShap / PayNow  (same requirement as starter during trial)
+ * starter      → PayShap  (instant bank-to-bank, tenant registers a number in their banking app)
+ * flow         → Yoco + PayFast  (online card checkout unlocked)
+ * professional → Yoco + PayFast
+ * studio       → Yoco + PayFast
+ * trial        → PayShap  (same requirement as starter during trial)
+ *
+ * NOTE: PayNow is NOT a book-a-glow payment option and must never appear here.
  *
  * Lifetime-free tenants inherit their plan's payment focus (e.g. a lifetime-free
- * tenant on 'starter' sees the starter payment instructions).
+ * tenant on 'starter' sees the PayShap instructions).
  */
 export interface PlanPaymentFocus {
   /** Short label shown next to the payment gate step */
   label: string;
   /** Whether this plan requires Yoco secret key + PayFast merchant details */
   requiresYocoPayfast: boolean;
-  /** Whether PayShap / PayNow instant payment is the primary method */
+  /** Whether PayShap instant payment is the primary method */
   primaryInstant: boolean;
   /** Hint copy shown inside the setup gate */
   hint: string;
@@ -103,34 +112,34 @@ export interface PlanPaymentFocus {
 
 export const PLAN_PAYMENT_FOCUS: Record<string, PlanPaymentFocus> = {
   trial: {
-    label: 'PayShap / PayNow',
+    label: 'PayShap',
     requiresYocoPayfast: false,
     primaryInstant: true,
-    hint: 'Enter your PayShap or PayNow number in Integrations so clients can pay instantly via their banking app.',
+    hint: 'Enter your PayShap registered number in Integrations so clients can pay instantly via their banking app.',
   },
   starter: {
-    label: 'PayShap / PayNow',
+    label: 'PayShap',
     requiresYocoPayfast: false,
     primaryInstant: true,
-    hint: 'Enter your PayShap or PayNow number in Integrations so clients can pay instantly via their banking app.',
+    hint: 'Enter your PayShap registered number in Integrations so clients can pay instantly via their banking app.',
   },
   flow: {
-    label: 'PayShap / PayNow + Yoco + PayFast',
+    label: 'Yoco + PayFast',
     requiresYocoPayfast: true,
-    primaryInstant: true,
-    hint: 'Add your PayShap / PayNow number for instant payments, and your Yoco secret key + PayFast merchant details to enable online card checkout.',
+    primaryInstant: false,
+    hint: 'Add your Yoco secret key + PayFast merchant details to enable online card checkout.',
   },
   professional: {
-    label: 'PayShap / PayNow + Yoco + PayFast',
+    label: 'Yoco + PayFast',
     requiresYocoPayfast: true,
-    primaryInstant: true,
-    hint: 'Add your PayShap / PayNow number for instant payments, and your Yoco secret key + PayFast merchant details to enable online card checkout.',
+    primaryInstant: false,
+    hint: 'Add your Yoco secret key + PayFast merchant details to enable online card checkout.',
   },
   studio: {
-    label: 'PayShap / PayNow + Yoco + PayFast',
+    label: 'Yoco + PayFast',
     requiresYocoPayfast: true,
-    primaryInstant: true,
-    hint: 'Add your PayShap / PayNow number for instant payments, and your Yoco secret key + PayFast merchant details to enable online card checkout.',
+    primaryInstant: false,
+    hint: 'Add your Yoco secret key + PayFast merchant details to enable online card checkout.',
   },
 };
 
@@ -148,7 +157,7 @@ export function isYocoPlan(plan: string | null | undefined): boolean {
 }
 
 /**
- * True for plans where PayShap / PayNow is the sole payment requirement.
+ * True for plans where PayShap is the sole payment requirement.
  * Note: lifetime-free tenants are not listed here because is_lifetime_free
  * is a state, not a plan. Their plan column (e.g. 'starter') drives this.
  */
@@ -160,17 +169,20 @@ export function isInstantPaymentPlan(plan: string | null | undefined): boolean {
  * Returns true when the tenant has completed minimum payment configuration
  * for their plan tier:
  *
- *   starter / trial           → payshap_account_number OR paynow_number present
- *   flow / professional / studio → above + yoco_secret_key + payfast_merchant_id
+ *   starter / trial              → payshap_account_number must be present
+ *   flow / professional / studio → yoco_secret_key (live or test) + payfast_merchant_id
  *
  * is_lifetime_free is accepted here so the gate can short-circuit to the
  * starter-tier check for rewarded tenants regardless of their plan column.
+ *
+ * NOTE: paynow_number is NOT checked here. PayNow is not a book-a-glow
+ * payment method. The tenants.paynow_number column exists as a legacy
+ * DB field but must not surface in any tenant-facing UI or gate logic.
  */
 export function hasCompletedPaymentSetup(params: {
   plan: string | null | undefined;
   is_lifetime_free?: boolean | null;
   payshap_account_number?: string | null;
-  paynow_number?: string | null;
   yoco_secret_key_live?: string | null;
   yoco_secret_key_test?: string | null;
   payfast_merchant_id?: string | null;
@@ -179,25 +191,24 @@ export function hasCompletedPaymentSetup(params: {
     plan,
     is_lifetime_free,
     payshap_account_number,
-    paynow_number,
     yoco_secret_key_live,
     yoco_secret_key_test,
     payfast_merchant_id,
   } = params;
 
-  const hasInstant =
-    !!(payshap_account_number?.trim()) || !!(paynow_number?.trim());
+  const hasPayShap = !!(payshap_account_number?.trim());
 
-  // Lifetime-free tenants: instant payment number is sufficient regardless of plan
-  if (isLifetimeFree(is_lifetime_free)) return hasInstant;
+  // Lifetime-free tenants: PayShap number is sufficient regardless of plan
+  if (isLifetimeFree(is_lifetime_free)) return hasPayShap;
 
-  // Starter / Trial: instant payment number is sufficient
-  if (!isYocoPlan(plan)) return hasInstant;
+  // Starter / Trial: PayShap number is sufficient
+  if (!isYocoPlan(plan)) return hasPayShap;
 
-  // Flow / Professional / Studio: needs instant + Yoco key + PayFast merchant ID
+  // Flow / Professional / Studio: Yoco key + PayFast merchant ID required
+  // (PayShap is not enforced at this tier — card checkout is the primary gateway)
   const hasYoco =
     !!(yoco_secret_key_live?.trim()) || !!(yoco_secret_key_test?.trim());
   const hasPayfast = !!(payfast_merchant_id?.trim());
 
-  return hasInstant && hasYoco && hasPayfast;
+  return hasYoco && hasPayfast;
 }

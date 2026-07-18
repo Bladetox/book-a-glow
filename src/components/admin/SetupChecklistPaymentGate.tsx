@@ -5,11 +5,11 @@
  * payment setup instructions based on the tenant's plan.
  *
  * ┌──────────────────────────────────────────────────────────────────┐
- * │ Plan       │ Required                                            │
+ * │ Plan         │ Required                                          │
  * ├──────────────────────────────────────────────────────────────────┤
- * │ starter    │ PayShap or PayNow number in Integrations            │
- * │ flow       │ PayShap/PayNow + Yoco secret key + PayFast merchant │
- * │ professional│ Same as flow                                       │
+ * │ starter      │ PayShap registered number                         │
+ * │ flow         │ Yoco secret key + PayFast merchant ID             │
+ * │ professional │ Yoco secret key + PayFast merchant ID             │
  * └──────────────────────────────────────────────────────────────────┘
  *
  * HOW TO ADD TO SetupChecklist
@@ -18,23 +18,23 @@
  *
  *      import { SetupChecklistPaymentGate } from './SetupChecklistPaymentGate';
  *
- * 2. Add as the 6th list item at the end of the <ul>, inside the gate map:
+ * 2. After the GATE_ITEMS.map(...) block, still inside <ul>:
  *
  *      <SetupChecklistPaymentGate onNavigate={onNavigate} />
  *
- *    Place it AFTER the existing {GATE_ITEMS.map(...)} block, still inside <ul>.
- *
- * 3. Update the `total` count in SetupChecklist from 5 to 6.
+ * 3. Update the total count in SetupChecklist from 5 to 6.
  *
  * No other changes to existing files are needed.
  *
  * MARK COMPLETE LOGIC
  * ────────────────────
- * The gate reads live tenant columns (payshap_account_number, paynow_number,
- * yoco_secret_key_live, yoco_secret_key_test, payfast_merchant_id) and checks
- * plan-appropriate completion via hasCompletedPaymentSetup() from planConfig.
- * When complete it auto-writes payment_setup_complete=true to app_settings
- * so the parent checklist can count it as a gate.
+ * The gate reads live tenant columns and checks plan-appropriate completion
+ * via hasCompletedPaymentSetup() from planConfig. When complete it
+ * auto-writes payment_setup_complete=true to app_settings so the parent
+ * checklist can count it as a gate.
+ *
+ * NOTE: paynow_number is intentionally excluded from the query and gate
+ * logic. PayNow is not a book-a-glow payment method.
  */
 
 import React, { useEffect } from 'react';
@@ -48,6 +48,7 @@ import {
   getPlanLabel,
   hasCompletedPaymentSetup,
   isYocoPlan,
+  isLifetimeFree,
 } from '@/lib/planConfig';
 
 interface Props {
@@ -58,8 +59,8 @@ interface Props {
 /** Minimal tenant payment fields — only what we need for gate evaluation */
 interface TenantPaymentFields {
   plan: string | null;
+  is_lifetime_free: boolean | null;
   payshap_account_number: string | null;
-  paynow_number: string | null;
   yoco_secret_key_live: string | null;
   yoco_secret_key_test: string | null;
   payfast_merchant_id: string | null;
@@ -74,7 +75,8 @@ function useTenantPaymentFields(tenantId: string | null) {
       const { data, error } = await supabase
         .from('tenants')
         .select(
-          'plan, payshap_account_number, paynow_number, yoco_secret_key_live, yoco_secret_key_test, payfast_merchant_id'
+          // paynow_number intentionally excluded — not a book-a-glow payment method
+          'plan, is_lifetime_free, payshap_account_number, yoco_secret_key_live, yoco_secret_key_test, payfast_merchant_id'
         )
         .eq('id', tenantId!)
         .maybeSingle();
@@ -91,13 +93,14 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
   const upsertSetting = useUpsertAppSetting();
 
   const plan = tenant?.plan ?? null;
+  const lifetimeFree = isLifetimeFree(tenant?.is_lifetime_free);
   const paymentFocus = getPlanPaymentFocus(plan);
-  const planLabel = getPlanLabel(plan);
+  const planLabel = getPlanLabel(plan, tenant?.is_lifetime_free);
 
   const done = !isLoading && !!tenant && hasCompletedPaymentSetup({
     plan,
+    is_lifetime_free: tenant.is_lifetime_free,
     payshap_account_number: tenant.payshap_account_number,
-    paynow_number: tenant.paynow_number,
     yoco_secret_key_live: tenant.yoco_secret_key_live,
     yoco_secret_key_test: tenant.yoco_secret_key_test,
     payfast_merchant_id: tenant.payfast_merchant_id,
@@ -108,21 +111,16 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
     if (done) {
       upsertSetting.mutate({ payment_setup_complete: 'true' });
     }
-    // Only run when `done` transitions to true — ignore the mutate reference
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done]);
 
   if (isLoading) return null;
 
-  // ── Checklist rows for Yoco / PayFast (only shown on flow+ plans) ──
-  const yocoPlan = isYocoPlan(plan);
+  const yocoPlan = isYocoPlan(plan) && !lifetimeFree;
 
+  // Sub-items shown when gate is incomplete
   const subItems = yocoPlan
     ? [
-        {
-          label: 'PayShap or PayNow number',
-          done: !!(tenant?.payshap_account_number?.trim() || tenant?.paynow_number?.trim()),
-        },
         {
           label: 'Yoco secret key',
           done: !!(tenant?.yoco_secret_key_live?.trim() || tenant?.yoco_secret_key_test?.trim()),
@@ -134,8 +132,8 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
       ]
     : [
         {
-          label: 'PayShap or PayNow number',
-          done: !!(tenant?.payshap_account_number?.trim() || tenant?.paynow_number?.trim()),
+          label: 'PayShap registered number',
+          done: !!tenant?.payshap_account_number?.trim(),
         },
       ];
 
@@ -175,9 +173,9 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
           ].join(' ')}
         >
           Set up payments
-          {/* Plan badge */}
+          {/* Plan + lifetime badge */}
           <span className="ml-2 text-[10px] font-semibold tracking-wide text-amber-600/70 dark:text-amber-500/70 normal-case">
-            {planLabel} plan
+            {planLabel}
           </span>
         </p>
 
