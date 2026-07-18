@@ -19,8 +19,9 @@
 import React from 'react';
 import { CheckCircle2, Circle, X, ExternalLink } from 'lucide-react';
 import { useSetupChecklist } from '@/hooks/useSetupChecklist';
-import { useTenantSettings } from '@/hooks/useSupabaseSettings';
 import { useTenant } from '@/contexts/TenantContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 interface Props {
   /** Pass AdminDashboard's onNavigate so checklist items can deep-link */
@@ -71,27 +72,39 @@ const GATE_ITEMS: GateItem[] = [
   },
 ];
 
+/** Resolves the tenant's public booking URL.
+ *  Priority: custom_domain > {tenantId}.nextslot.co.za
+ *  Mirrors the logic in AdminSettings.tsx. */
+function useBookingUrl(tenantId: string | null): string {
+  const { data } = useQuery({
+    queryKey: ['tenant-domain', tenantId],
+    enabled: !!tenantId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('tenants')
+        .select('custom_domain')
+        .eq('id', tenantId!)
+        .maybeSingle();
+      return data?.custom_domain ?? null;
+    },
+  });
+
+  if (!tenantId) return '';
+  if (data) return `https://${data}`;
+  return `https://${tenantId}.nextslot.co.za`;
+}
+
 export function SetupChecklist({ onNavigate }: Props) {
   const checklist = useSetupChecklist();
   const { tenantId } = useTenant();
-  const { data: settings } = useTenantSettings();
-
-  // Derive public booking slug from tenant name or custom_domain
-  const tenantSlug = React.useMemo(() => {
-    if (!settings) return '';
-    const name: string = (settings as Record<string, unknown>)?.name as string ?? '';
-    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  }, [settings]);
-
-  const bookingUrl = tenantSlug
-    ? `${window.location.origin}/book/${tenantSlug}`
-    : `${window.location.origin}/book/${tenantId}`;
+  const bookingUrl = useBookingUrl(tenantId);
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(bookingUrl);
     } catch {
-      // fallback: select the input
+      // fallback silent
     }
     checklist.markBookingLinkShared();
   };
@@ -206,8 +219,8 @@ export function SetupChecklist({ onNavigate }: Props) {
                 {/* Share gate — inline copy + WhatsApp */}
                 {!done && isShareGate && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <code className="rounded bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-300 truncate max-w-[200px]">
-                      {bookingUrl}
+                    <code className="rounded bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-300 truncate max-w-[240px]">
+                      {bookingUrl || `${tenantId}.nextslot.co.za`}
                     </code>
                     <button
                       onClick={handleCopyLink}
