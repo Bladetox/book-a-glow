@@ -66,7 +66,7 @@ const GATE_ITEMS: GateItem[] = [
   {
     key: 'hasAcceptedTerms',
     label: 'Confirm your Terms & Conditions',
-    action: 'Terms',
+    action: 'Terms & Conditions',
     actionLabel: 'Review T&Cs →',
     hint: "Clients will see your T&Cs at checkout — make sure they're in place.",
   },
