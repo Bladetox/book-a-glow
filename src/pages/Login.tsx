@@ -1,31 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 import { HOME_STYLES } from "@/components/home/homeStyles";
+import { buildAdminUrl, edgeFunctionUrl, edgeFunctionHeaders } from "@/lib/tenant-resolver";
 
 const PENDING_ONBOARDING_KEY = "nextslot_pending_onboarding";
 
 type ViewMode = "login" | "forgot";
-
-function buildAdminUrl(tenantId: string): string {
-  const hostname = window.location.hostname;
-  const isLocalhost =
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname.endsWith(".localhost");
-
-  if (isLocalhost) {
-    return `${window.location.origin}/admin?tenant=${tenantId}`;
-  }
-
-  const parts = hostname.split(".");
-  const rootDomain =
-    parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
-  return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
-}
 
 async function completePendingOnboarding(accessToken: string, userId: string): Promise<string | null> {
   try {
@@ -50,18 +34,11 @@ async function completePendingOnboarding(accessToken: string, userId: string): P
 
     if (!pending?.business_name) return null;
 
-    const res = await fetch(
-      "https://kjibbbuceipnialfgflt.supabase.co/functions/v1/create-tenant",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify(pending),
-      }
-    );
+    const res = await fetch(edgeFunctionUrl("create-tenant"), {
+      method: "POST",
+      headers: edgeFunctionHeaders(accessToken),
+      body: JSON.stringify(pending),
+    });
 
     const json = await res.json();
 
@@ -114,6 +91,48 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const redirectedRef = useRef(false);
+
+  const redirectToTenant = async (accessToken: string, userId: string) => {
+    if (redirectedRef.current) return;
+
+    // 1. Complete pending onboarding if DB/localStorage payload exists
+    const pendingTenantId = await completePendingOnboarding(accessToken, userId);
+    if (pendingTenantId) {
+      redirectedRef.current = true;
+      window.location.href = buildAdminUrl(pendingTenantId);
+      return;
+    }
+
+    // 2. Look up tenant via user_roles
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role, tenant_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    const adminRole =
+      roles?.find((r) => r.role === "owner") ??
+      roles?.find((r) => r.role === "admin");
+
+    if (adminRole?.tenant_id) {
+      redirectedRef.current = true;
+      window.location.href = buildAdminUrl(adminRole.tenant_id);
+      return;
+    }
+
+    // 3. Fallback — check profiles table
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id, role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profile?.tenant_id && (profile.role === "admin" || profile.role === "owner")) {
+      redirectedRef.current = true;
+      window.location.href = buildAdminUrl(profile.tenant_id);
+    }
+  };
 
   // Listen for auth state change — fires when the user arrives on this page
   // via the email confirmation link (already authenticated, no manual sign-in needed)
@@ -121,39 +140,7 @@ const Login = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
-          // 1. Complete pending onboarding if DB/localStorage payload exists
-          const pendingTenantId = await completePendingOnboarding(session.access_token, session.user.id);
-          if (pendingTenantId) {
-            window.location.href = buildAdminUrl(pendingTenantId);
-            return;
-          }
-
-          // 2. Already has a tenant — redirect straight to admin
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role, tenant_id")
-            .eq("user_id", session.user.id)
-            .order("created_at", { ascending: false });
-
-          const adminRole =
-            roles?.find((r) => r.role === "owner") ??
-            roles?.find((r) => r.role === "admin");
-
-          if (adminRole?.tenant_id) {
-            window.location.href = buildAdminUrl(adminRole.tenant_id);
-            return;
-          }
-
-          // 3. Fallback — check profiles table
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("tenant_id, role")
-            .eq("id", session.user.id)
-            .maybeSingle();
-
-          if (profile?.tenant_id && (profile.role === "admin" || profile.role === "owner")) {
-            window.location.href = buildAdminUrl(profile.tenant_id);
-          }
+          await redirectToTenant(session.access_token, session.user.id);
         }
       }
     );
@@ -168,37 +155,7 @@ const Login = () => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
-
-      const pendingTenantId = await completePendingOnboarding(session.access_token, session.user.id);
-      if (pendingTenantId) {
-        window.location.href = buildAdminUrl(pendingTenantId);
-        return;
-      }
-
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role, tenant_id")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
-
-      const adminRole =
-        roles?.find((r) => r.role === "owner") ??
-        roles?.find((r) => r.role === "admin");
-
-      if (adminRole?.tenant_id) {
-        window.location.href = buildAdminUrl(adminRole.tenant_id);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id, role")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (profile?.tenant_id && (profile.role === "admin" || profile.role === "owner")) {
-        window.location.href = buildAdminUrl(profile.tenant_id);
-      }
+      await redirectToTenant(session.access_token, session.user.id);
     })();
   }, []);
 
@@ -225,42 +182,9 @@ const Login = () => {
         return;
       }
 
-      // ── Step 1: Complete any pending onboarding ──────────────────────────
-      const pendingTenantId = await completePendingOnboarding(accessToken, user.id);
-      if (pendingTenantId) {
-        window.location.href = buildAdminUrl(pendingTenantId);
-        return;
-      }
+      await redirectToTenant(accessToken, user.id);
 
-      // ── Step 2: Look up tenant via user_roles ────────────────────────────
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role, tenant_id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      const adminRole =
-        roles?.find((r) => r.role === "owner") ??
-        roles?.find((r) => r.role === "admin");
-
-      if (adminRole?.tenant_id) {
-        window.location.href = buildAdminUrl(adminRole.tenant_id);
-        return;
-      }
-
-      // ── Step 3: Fallback — look up tenant via profiles ───────────────────
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id, role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profile?.tenant_id && (profile.role === "admin" || profile.role === "owner")) {
-        window.location.href = buildAdminUrl(profile.tenant_id);
-        return;
-      }
-
-      // ── Step 4: No tenant found ──────────────────────────────────────────
+      // If we reach here, no tenant was found
       await supabase.auth.signOut();
       setError("No business account found for this user.");
     } catch {
