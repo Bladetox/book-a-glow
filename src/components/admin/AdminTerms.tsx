@@ -60,14 +60,26 @@ function useSaveTerms() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (sections: TermsSection[]) => {
+      // Batch-upsert both keys in a single round-trip:
+      //   • terms_sections  — the actual T&C content
+      //   • terms_accepted  — signals the checklist gate (hasAcceptedTerms)
+      // Any save action (edit, add, delete, reorder, reset) counts as confirmation.
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ tenant_id: tenantId, key: "terms_sections", value: JSON.stringify(sections) }, { onConflict: "tenant_id,key" });
+        .upsert(
+          [
+            { tenant_id: tenantId, key: "terms_sections", value: JSON.stringify(sections) },
+            { tenant_id: tenantId, key: "terms_accepted",  value: "true" },
+          ],
+          { onConflict: "tenant_id,key" }
+        );
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["terms-sections", tenantId] });
       qc.invalidateQueries({ queryKey: ["public-terms", tenantId] });
+      // Invalidate the checklist so the hasAcceptedTerms gate re-evaluates immediately
+      qc.invalidateQueries({ queryKey: ["setup-checklist", tenantId] });
     },
   });
 }
