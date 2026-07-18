@@ -363,7 +363,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
   const handleChange = (key: string, value: string) =>
     setDraft((p) => ({ ...p, [key]: value }));
 
-  const handleSave = async () => {
+const handleSave = async () => {
     if (payshapEnabled) {
       toast.error("Disable PayShap before enabling PayFast.");
       return;
@@ -410,6 +410,10 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
       toast.success("PayFast credentials saved.");
       onSaved();
       setEditing(false);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save PayFast credentials.");
+    } finally {
+      setSaving(false);
     }
   };
 
