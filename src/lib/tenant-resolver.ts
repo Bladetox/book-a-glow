@@ -97,3 +97,43 @@ export function isCustomDomainHost(): string | null {
   const resolution = resolveTenantSync();
   return resolution.isCustomDomain ? resolution.customDomainHost : null;
 }
+
+// ── Edge function utilities ─────────────────────────────────────────────────
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+/**
+ * Builds the admin URL for a given tenant ID.
+ * Uses subdomain routing on production, query-param on localhost.
+ */
+export function buildAdminUrl(tenantId: string): string {
+  const hostname = window.location.hostname;
+  const isLocalhost =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".localhost");
+
+  if (isLocalhost) {
+    return `${window.location.origin}/admin?tenant=${tenantId}`;
+  }
+
+  const parts = hostname.split(".");
+  const rootDomain =
+    parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
+  return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
+}
+
+/** Returns the full URL for a named Supabase Edge Function. */
+export function edgeFunctionUrl(name: string): string {
+  return `${SUPABASE_URL}/functions/v1/${name}`;
+}
+
+/** Standard headers for authenticated Edge Function calls. */
+export function edgeFunctionHeaders(accessToken: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    apikey: SUPABASE_ANON_KEY,
+  };
+}
