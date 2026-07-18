@@ -2,59 +2,78 @@
  * planConfig.ts — Single source of truth for plan slugs, display names,
  * payment focus, and feature-gate helpers.
  *
- * WHY THIS FILE EXISTS
- * ─────────────────────
- * Plan labels were previously scattered across:
- *   • AdminSettings.tsx  — PLAN_LABELS (missing 'flow')
- *   • TrialExpiredPaywall.tsx — inline strings
- *   • SARevenue.tsx — inline option labels
- * This file centralises them and adds payment-focus metadata so the
- * SetupChecklist can render the right instructions per plan tier without
- * any conditional logic leaking into UI components.
+ * DATA MODEL CLARIFICATION
+ * ────────────────────────
+ * tenants.plan          → one of: 'trial' | 'starter' | 'flow' | 'professional' | 'studio'
+ * tenants.is_lifetime_free → boolean state flag set manually by the platform owner
+ *                            to reward specific tenants with a permanent free subscription.
+ *                            It is NOT a plan slug and must never appear in PlanSlug or
+ *                            PLAN_LABELS. Always check this flag alongside plan.
  *
  * USAGE
  * ─────
- * import { PLAN_LABELS, getPlanPaymentFocus, isYocoPlan } from '@/lib/planConfig';
+ * import { PLAN_LABELS, getPlanPaymentFocus, isYocoPlan, isLifetimeFree } from '@/lib/planConfig';
  *
  * // Display name in any component:
- * PLAN_LABELS[tenant.plan] ?? tenant.plan
+ * getPlanLabel(tenant.plan, tenant.is_lifetime_free)
  *
  * // Drive the payment gate hint:
  * const focus = getPlanPaymentFocus(tenant.plan);
  *
  * // Gate Yoco/PayFast fields:
  * if (isYocoPlan(tenant.plan)) { ... }
+ *
+ * // Badge lifetime-free tenants in super-admin views:
+ * if (isLifetimeFree(tenant.is_lifetime_free)) { ... }
  */
 
-// ─── Plan slugs (matches tenants.plan column) ────────────────────────────────
+// ─── Plan slugs (matches tenants.plan column only) ───────────────────────────
+/**
+ * Real plan slugs stored in tenants.plan.
+ * 'lifetime_free' is NOT here — it is a state (tenants.is_lifetime_free boolean).
+ */
 export type PlanSlug =
   | 'trial'
   | 'starter'
   | 'flow'
   | 'professional'
-  | 'studio'
-  | 'lifetime_free';
+  | 'studio';
 
 // ─── Display names shown in UI ───────────────────────────────────────────────
 /**
- * Canonical display labels for every plan slug.
+ * Canonical display labels for real plan slugs only.
+ * For lifetime-free tenants, use getPlanLabel() which appends the badge.
  *
- * Previously AdminSettings had this map but was MISSING 'flow'.
+ * Previously AdminSettings had a local copy of this map but was MISSING 'flow'.
  * This is now the single source — import here, delete local copies.
  */
 export const PLAN_LABELS: Record<string, string> = {
-  trial:         'Free Trial',
-  starter:       'Starter',
-  flow:          'Flow',          // ← was missing in AdminSettings
-  professional:  'Professional',
-  studio:        'Studio',
-  lifetime_free: 'Lifetime Free',
+  trial:        'Free Trial',
+  starter:      'Starter',
+  flow:         'Flow',
+  professional: 'Professional',
+  studio:       'Studio',
 };
 
-/** Safe display name with fallback to the raw slug. */
-export function getPlanLabel(plan: string | null | undefined): string {
-  if (!plan) return 'Free Trial';
-  return PLAN_LABELS[plan] ?? plan;
+/**
+ * Safe display name with fallback to the raw slug.
+ * Appends '· Lifetime Free' badge when is_lifetime_free is true so super-admin
+ * views and billing UI can surface the state without a separate label map.
+ */
+export function getPlanLabel(
+  plan: string | null | undefined,
+  is_lifetime_free?: boolean | null
+): string {
+  const base = plan ? (PLAN_LABELS[plan] ?? plan) : 'Free Trial';
+  return is_lifetime_free ? `${base} · Lifetime Free` : base;
+}
+
+/**
+ * True when this tenant has the is_lifetime_free state flag set.
+ * Use to suppress trial countdowns, billing nudges, and upgrade prompts.
+ */
+export function isLifetimeFree(is_lifetime_free: boolean | null | undefined): boolean {
+  return is_lifetime_free === true;
 }
 
 // ─── Payment focus per plan ───────────────────────────────────────────────────
@@ -62,11 +81,14 @@ export function getPlanLabel(plan: string | null | undefined): string {
  * Human-readable payment method focus shown in the Setup Checklist
  * and any onboarding hints.
  *
- * starter      → PayShap / PayNow  (instant bank-to-bank, no merchant account)
- * flow         → + Yoco + PayFast  (online card checkout)
- * professional → + Yoco + PayFast  (same stack as Flow, higher tier)
- * studio       → + Yoco + PayFast
- * trial        → PayShap / PayNow  (same as starter during trial)
+ * starter      → PayShap / PayNow  (instant bank-to-bank, no merchant account needed)
+ * flow         → PayShap / PayNow + Yoco + PayFast  (online card checkout unlocked)
+ * professional → PayShap / PayNow + Yoco + PayFast
+ * studio       → PayShap / PayNow + Yoco + PayFast
+ * trial        → PayShap / PayNow  (same requirement as starter during trial)
+ *
+ * Lifetime-free tenants inherit their plan's payment focus (e.g. a lifetime-free
+ * tenant on 'starter' sees the starter payment instructions).
  */
 export interface PlanPaymentFocus {
   /** Short label shown next to the payment gate step */
@@ -110,12 +132,6 @@ export const PLAN_PAYMENT_FOCUS: Record<string, PlanPaymentFocus> = {
     primaryInstant: true,
     hint: 'Add your PayShap / PayNow number for instant payments, and your Yoco secret key + PayFast merchant details to enable online card checkout.',
   },
-  lifetime_free: {
-    label: 'PayShap / PayNow',
-    requiresYocoPayfast: false,
-    primaryInstant: true,
-    hint: 'Enter your PayShap or PayNow number in Integrations so clients can pay instantly via their banking app.',
-  },
 };
 
 /** Returns the payment focus config for a given plan slug. Falls back to starter. */
@@ -131,24 +147,28 @@ export function isYocoPlan(plan: string | null | undefined): boolean {
   return ['flow', 'professional', 'studio'].includes(plan ?? '');
 }
 
-/** True for plans that use PayShap / PayNow as the primary payment method. */
+/**
+ * True for plans where PayShap / PayNow is the sole payment requirement.
+ * Note: lifetime-free tenants are not listed here because is_lifetime_free
+ * is a state, not a plan. Their plan column (e.g. 'starter') drives this.
+ */
 export function isInstantPaymentPlan(plan: string | null | undefined): boolean {
-  return ['trial', 'starter', 'lifetime_free'].includes(plan ?? '');
+  return ['trial', 'starter'].includes(plan ?? '');
 }
 
 /**
- * Returns true when the tenant has completed the minimum payment
- * configuration required for their plan:
+ * Returns true when the tenant has completed minimum payment configuration
+ * for their plan tier:
  *
- *   Starter / Trial / Lifetime: payshap_account_number OR paynow_number must be present.
- *   Flow / Professional / Studio: additionally requires yoco_secret_key_live (or test)
- *     AND payfast_merchant_id.
+ *   starter / trial           → payshap_account_number OR paynow_number present
+ *   flow / professional / studio → above + yoco_secret_key + payfast_merchant_id
  *
- * This is the same logic used in SetupChecklistPaymentGate to determine
- * whether to auto-mark payment_setup_complete in app_settings.
+ * is_lifetime_free is accepted here so the gate can short-circuit to the
+ * starter-tier check for rewarded tenants regardless of their plan column.
  */
 export function hasCompletedPaymentSetup(params: {
   plan: string | null | undefined;
+  is_lifetime_free?: boolean | null;
   payshap_account_number?: string | null;
   paynow_number?: string | null;
   yoco_secret_key_live?: string | null;
@@ -157,6 +177,7 @@ export function hasCompletedPaymentSetup(params: {
 }): boolean {
   const {
     plan,
+    is_lifetime_free,
     payshap_account_number,
     paynow_number,
     yoco_secret_key_live,
@@ -167,10 +188,11 @@ export function hasCompletedPaymentSetup(params: {
   const hasInstant =
     !!(payshap_account_number?.trim()) || !!(paynow_number?.trim());
 
-  if (!isYocoPlan(plan)) {
-    // Starter / Trial: instant payment number is sufficient
-    return hasInstant;
-  }
+  // Lifetime-free tenants: instant payment number is sufficient regardless of plan
+  if (isLifetimeFree(is_lifetime_free)) return hasInstant;
+
+  // Starter / Trial: instant payment number is sufficient
+  if (!isYocoPlan(plan)) return hasInstant;
 
   // Flow / Professional / Studio: needs instant + Yoco key + PayFast merchant ID
   const hasYoco =
