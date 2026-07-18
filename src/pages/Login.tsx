@@ -1,4 +1,3 @@
-import { buildAdminUrl } from "@/lib/tenant";
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -12,7 +11,10 @@ const PENDING_ONBOARDING_KEY = "nextslot_pending_onboarding";
 
 type ViewMode = "login" | "forgot";
 
-async function completePendingOnboarding(accessToken: string, userId: string): Promise<string | null> {
+async function completePendingOnboarding(
+  accessToken: string,
+  userId: string
+): Promise<string | null> {
   try {
     // Read from DB first — survives Safari new-tab localStorage isolation
     let pending: Record<string, unknown> | null = null;
@@ -29,7 +31,11 @@ async function completePendingOnboarding(accessToken: string, userId: string): P
       // Fall back to localStorage
       const raw = localStorage.getItem(PENDING_ONBOARDING_KEY);
       if (raw) {
-        try { pending = JSON.parse(raw); } catch { pending = null; }
+        try {
+          pending = JSON.parse(raw);
+        } catch {
+          pending = null;
+        }
       }
     }
 
@@ -92,6 +98,9 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Single ref guards ALL redirect paths — prevents the onAuthStateChange and
+  // getSession() effects from both firing and double-calling completePendingOnboarding.
   const redirectedRef = useRef(false);
 
   const redirectToTenant = async (accessToken: string, userId: string) => {
@@ -129,34 +138,47 @@ const Login = () => {
       .eq("id", userId)
       .maybeSingle();
 
-    if (profile?.tenant_id && (profile.role === "admin" || profile.role === "owner")) {
+    if (
+      profile?.tenant_id &&
+      (profile.role === "admin" || profile.role === "owner")
+    ) {
       redirectedRef.current = true;
       window.location.href = buildAdminUrl(profile.tenant_id);
     }
   };
 
-  // Listen for auth state change — fires when the user arrives on this page
-  // via the email confirmation link (already authenticated, no manual sign-in needed)
+  // Fires when the user arrives via the email confirmation link
+  // (already authenticated — no manual sign-in needed).
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
-          await redirectToTenant(session.access_token, session.user.id);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (
+        (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") &&
+        session?.access_token
+      ) {
+        await redirectToTenant(session.access_token, session.user.id);
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
   // Safari / new-tab fix: onAuthStateChange can fire before the listener above
-  // is registered when the confirmation link opens in a fresh tab. getSession()
-  // catches an already-active session that the event listener missed.
+  // is registered when the confirmation link opens in a fresh tab.
+  // getSession() catches an already-active session the event missed.
+  // redirectedRef ensures only one of these two effects proceeds.
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      await redirectToTenant(session.access_token, session.user.id);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        await redirectToTenant(session.access_token, session.user.id);
+      } catch {
+        // ignore — non-critical path
+      }
     })();
   }, []);
 
@@ -165,6 +187,8 @@ const Login = () => {
     setError("");
     setSuccess("");
     setLoading(true);
+
+    let redirecting = false;
 
     try {
       const { data: signInData, error: signInError } =
@@ -185,13 +209,21 @@ const Login = () => {
 
       await redirectToTenant(accessToken, user.id);
 
-      // If we reach here, no tenant was found
+      // If redirectedRef is true, a redirect was initiated — don't reset loading
+      // state as the page is about to navigate away.
+      if (redirectedRef.current) {
+        redirecting = true;
+        return;
+      }
+
+      // No tenant found
       await supabase.auth.signOut();
       setError("No business account found for this user.");
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
-      setLoading(false);
+      // Keep the spinner running if we're navigating away
+      if (!redirecting) setLoading(false);
     }
   };
 
@@ -237,7 +269,6 @@ const Login = () => {
         }}
       >
         <div style={{ width: "100%", maxWidth: 400 }}>
-
           {/* Card */}
           <div
             style={{
@@ -245,7 +276,8 @@ const Login = () => {
               border: `1px solid ${C.border2}`,
               borderRadius: 20,
               padding: "40px 36px",
-              boxShadow: "0 8px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
+              boxShadow:
+                "0 8px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
             }}
           >
             {/* Logo */}
@@ -257,7 +289,14 @@ const Login = () => {
                 height={36}
                 style={{ borderRadius: 8, objectFit: "contain" }}
               />
-              <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 700, color: C.text }}>
+              <span
+                style={{
+                  fontFamily: FONT_DISPLAY,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: C.text,
+                }}
+              >
                 Next<span style={{ color: C.gold }}>Slot</span>
               </span>
             </div>
@@ -273,7 +312,14 @@ const Login = () => {
             >
               {view === "login" ? "Welcome back" : "Reset your password"}
             </h1>
-            <p style={{ fontSize: 14, color: C.muted, fontFamily: FONT_BODY, marginBottom: 28 }}>
+            <p
+              style={{
+                fontSize: 14,
+                color: C.muted,
+                fontFamily: FONT_BODY,
+                marginBottom: 28,
+              }}
+            >
               {view === "login"
                 ? "Sign in to your NextSlot dashboard."
                 : "Enter your email and we'll send you a reset link."}
@@ -284,13 +330,18 @@ const Login = () => {
               onSubmit={view === "login" ? handleLogin : handleForgotPassword}
             >
               <div>
-                <label htmlFor="login-email" style={labelStyle}>Email</label>
+                <label htmlFor="login-email" style={labelStyle}>
+                  Email
+                </label>
                 <input
                   id="login-email"
                   name="email"
                   type="email"
                   value={email}
-                  onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError("");
+                  }}
                   placeholder="you@example.com"
                   style={inputStyle}
                   onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
@@ -301,13 +352,18 @@ const Login = () => {
 
               {view === "login" && (
                 <div>
-                  <label htmlFor="login-password" style={labelStyle}>Password</label>
+                  <label htmlFor="login-password" style={labelStyle}>
+                    Password
+                  </label>
                   <input
                     id="login-password"
                     name="password"
                     type="password"
                     value={password}
-                    onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError("");
+                    }}
                     placeholder="Enter your password"
                     style={inputStyle}
                     onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
@@ -318,12 +374,26 @@ const Login = () => {
               )}
 
               {error && (
-                <p style={{ fontSize: 13, color: "#ff5757", textAlign: "center", fontFamily: FONT_BODY }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "#ff5757",
+                    textAlign: "center",
+                    fontFamily: FONT_BODY,
+                  }}
+                >
                   {error}
                 </p>
               )}
               {success && (
-                <p style={{ fontSize: 13, color: C.gold, textAlign: "center", fontFamily: FONT_BODY }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: C.gold,
+                    textAlign: "center",
+                    fontFamily: FONT_BODY,
+                  }}
+                >
                   {success}
                 </p>
               )}
@@ -351,7 +421,15 @@ const Login = () => {
                   marginTop: 4,
                 }}
               >
-                {loading && <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} />}
+                {loading && (
+                  <Loader2
+                    style={{
+                      width: 16,
+                      height: 16,
+                      animation: "spin 1s linear infinite",
+                    }}
+                  />
+                )}
                 {view === "login" ? "Sign In" : "Send Reset Link"}
               </button>
             </form>
@@ -382,8 +460,16 @@ const Login = () => {
             </button>
 
             {view === "login" && (
-              <p style={{ fontSize: 13, color: C.muted, textAlign: "center", marginTop: 16, fontFamily: FONT_BODY }}>
-                Don't have an account?{" "}
+              <p
+                style={{
+                  fontSize: 13,
+                  color: C.muted,
+                  textAlign: "center",
+                  marginTop: 16,
+                  fontFamily: FONT_BODY,
+                }}
+              >
+                Don&apos;t have an account?{" "}
                 <Link
                   to="/onboarding"
                   style={{ color: C.text, fontWeight: 600, textDecoration: "none" }}
