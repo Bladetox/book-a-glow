@@ -398,13 +398,18 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
       });
       const result = await res.json();
       if (!result.success) throw new Error(result.error ?? "Save failed");
+
+      // ── Checklist Gate 4: mark payment setup complete ──
+      await supabase
+        .from("app_settings")
+        .upsert(
+          { tenant_id: (await supabase.auth.getSession()).data.session?.user.id, key: "payment_setup_complete", value: "true" },
+          { onConflict: "tenant_id,key" }
+        );
+
       toast.success("PayFast credentials saved.");
       onSaved();
       setEditing(false);
-    } catch (err: any) {
-      toast.error(err.message ?? "Failed to save PayFast credentials.");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -607,6 +612,7 @@ interface YocoCardProps {
   userId: string;
   onSaved: () => void;
   payshapEnabled: boolean;
+  tenantId: string;
 }
 
 const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoCardProps) => {
@@ -1029,6 +1035,16 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
 
       if (error) throw error;
 
+      // ── Checklist Gate 4: mark payment setup complete when PayShap is enabled ──
+      if (newValue) {
+        await supabase
+          .from("app_settings")
+          .upsert(
+            { tenant_id: tenantId, key: "payment_setup_complete", value: "true" },
+            { onConflict: "tenant_id,key" }
+          );
+      }
+
       toast.success(
         newValue
           ? "PayShap enabled. Yoco and PayFast are now disabled for your booking page."
@@ -1228,6 +1244,7 @@ const AdminIntegrations = () => {
               settings={settings}
               onSaved={refetch}
               payshapEnabled={payshapEnabled}
+              tenantId={tenantId}
             />
 
             <IntegrationCard
