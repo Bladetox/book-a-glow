@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { SetupChecklist } from '@/components/admin/SetupChecklist';
 import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp, TrendingDown, CalendarCheck,
@@ -689,6 +690,7 @@ const AdminDashboard = ({
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5 flex flex-col gap-4">
+            <SetupChecklist onNavigate={onNavigate} />
 
             {/* ── Month revenue header ── */}
             <div className="flex items-start justify-between gap-3">
