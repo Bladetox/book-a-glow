@@ -1,11 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
-
-const HCAPTCHA_SITE_KEY = "0dd0e842-7d24-4fba-9fd0-59a61b6ab782";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -15,22 +12,27 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [alreadyExists, setAlreadyExists] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const captchaRef = useRef<HCaptcha>(null);
   const navigate = useNavigate();
+
+  // FIX: Clear the redirect timer on unmount to avoid no-op state updates
+  // (React Strict Mode double-invoke, or user navigating away before 1500ms).
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current !== null) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setAlreadyExists(false);
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    if (!captchaToken) {
-      setError("Please complete the CAPTCHA verification.");
+    // FIX: Standardised minimum password length to 8 (matches Onboarding.tsx).
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -42,14 +44,11 @@ const Signup = () => {
         options: {
           emailRedirectTo: `${window.location.origin}/onboarding`,
           data: { full_name: fullName },
-          captchaToken,
         },
       });
 
       if (signUpError) {
         setError(signUpError.message);
-        captchaRef.current?.resetCaptcha();
-        setCaptchaToken(null);
         setLoading(false);
         return;
       }
@@ -64,8 +63,6 @@ const Signup = () => {
 
       if (isRepeatedSignup) {
         setAlreadyExists(true);
-        captchaRef.current?.resetCaptcha();
-        setCaptchaToken(null);
         setLoading(false);
         return;
       }
@@ -77,12 +74,12 @@ const Signup = () => {
           .eq("id", data.user.id);
 
         setSuccess(true);
-        setTimeout(() => navigate("/onboarding"), 1500);
+        // FIX: Store the timer ref so it can be cleared if the component unmounts
+        // before the 1500ms elapses (Strict Mode, early navigation, etc.).
+        redirectTimerRef.current = setTimeout(() => navigate("/onboarding"), 1500);
       }
     } catch {
       setError("An unexpected error occurred");
-      captchaRef.current?.resetCaptcha();
-      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
@@ -167,20 +164,9 @@ const Signup = () => {
                   type="password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                  placeholder="Min 6 characters"
+                  placeholder="Min 8 characters"
                   className="w-full px-4 py-2.5 rounded-[10px] border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                   required
-                />
-              </div>
-
-              {/* hCaptcha widget */}
-              <div className="flex justify-center">
-                <HCaptcha
-                  ref={captchaRef}
-                  sitekey={HCAPTCHA_SITE_KEY}
-                  onVerify={(token) => setCaptchaToken(token)}
-                  onExpire={() => setCaptchaToken(null)}
-                  theme="dark"
                 />
               </div>
 
@@ -188,7 +174,7 @@ const Signup = () => {
 
               <button
                 type="submit"
-                disabled={loading || !captchaToken}
+                disabled={loading}
                 className="w-full bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
