@@ -13,11 +13,12 @@
  * No new npm packages required.
  */
 
-import React, { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 
 // Lazily inject the canvas-confetti CDN script once per session.
 let confettiLoaded = false;
+
 function loadConfetti(): Promise<void> {
   return new Promise((resolve) => {
     if (confettiLoaded || (window as any).confetti) {
@@ -25,18 +26,22 @@ function loadConfetti(): Promise<void> {
       resolve();
       return;
     }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js';
+
+    const script = document.createElement("script");
+    script.src =
+      "https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js";
     script.onload = () => {
       confettiLoaded = true;
       resolve();
     };
+
     document.head.appendChild(script);
   });
 }
 
 async function fireConfetti() {
   await loadConfetti();
+
   const confetti = (window as any).confetti;
   if (!confetti) return;
 
@@ -44,14 +49,18 @@ async function fireConfetti() {
   const defaults = { origin: { y: 0.55 } };
 
   function fire(particleRatio: number, opts: object) {
-    confetti({ ...defaults, ...opts, particleCount: Math.floor(count * particleRatio) });
+    confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio),
+    });
   }
 
-  fire(0.25, { spread: 26,  startVelocity: 55 });
-  fire(0.20, { spread: 60 });
+  fire(0.25, { spread: 26, startVelocity: 55 });
+  fire(0.2, { spread: 60 });
   fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-  fire(0.10, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-  fire(0.10, { spread: 120, startVelocity: 45 });
+  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+  fire(0.1, { spread: 120, startVelocity: 45 });
 }
 
 interface Props {
@@ -67,6 +76,7 @@ export function ChecklistCelebration({ open, onClose }: Props) {
       firedRef.current = true;
       fireConfetti();
     }
+
     if (!open) {
       firedRef.current = false;
     }
@@ -88,43 +98,42 @@ export function ChecklistCelebration({ open, onClose }: Props) {
       />
 
       {/* Card */}
-      <div className="relative w-full max-w-sm rounded-2xl border border-amber-200 bg-white dark:bg-zinc-900 dark:border-amber-800/50 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        {/* Amber gradient top band */}
+      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-2xl animate-in zoom-in-95 duration-300 dark:border-amber-800/50 dark:bg-zinc-900">
+        {/* Top band */}
         <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500" />
 
-        {/* Dismiss */}
+        {/* Close */}
         <button
           onClick={onClose}
           aria-label="Close celebration"
-          className="absolute top-4 right-4 rounded-md p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          className="absolute right-4 top-4 rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
         >
           <X size={16} />
         </button>
 
-          {/* Copy */}
+        {/* Content */}
+        <div className="flex flex-col gap-4 p-6 pt-7">
           <div>
             <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
               You&apos;re all set up! 🎉
             </h2>
-            <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Every step is complete. Your booking page is live and ready
-              to take appointments.
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Every step is complete. Your booking page is live and ready to
+              take appointments.
             </p>
           </div>
 
-          {/* Motivational stat strip */}
-          <div className="w-full rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/30 px-4 py-3">
-            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+          <div className="w-full rounded-xl border border-amber-200/60 bg-amber-50 px-4 py-3 dark:border-amber-800/30 dark:bg-amber-950/30">
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
               Share your booking link and get your first appointment today.
             </p>
           </div>
 
-          {/* CTA */}
           <button
             onClick={onClose}
-            className="w-full rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm py-2.5 transition-colors"
+            className="w-full rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-600"
           >
-            Let&apos;s go 
+            Let&apos;s go
           </button>
         </div>
       </div>
