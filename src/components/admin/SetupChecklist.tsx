@@ -26,13 +26,17 @@
  * into the <ul> between Gate 3 and Gate 5 so all 6 rows appear in order.
  *
  * The component auto-hides once the tenant dismisses it (stored in app_settings).
- * It also hides silently when all 6 gates pass AND the tenant dismisses.
+ * It also hides silently when all 5 are checked AND the tenant dismisses.
+ *
+ * 100% completion fires <ChecklistCelebration> — a confetti burst + modal
+ * that auto-opens when completedCount === total and closes by calling dismiss().
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, X, ExternalLink } from 'lucide-react';
 import { useSetupChecklist } from '@/hooks/useSetupChecklist';
 import { SetupChecklistPaymentGate } from '@/components/admin/SetupChecklistPaymentGate';
+import { ChecklistCelebration } from '@/components/admin/ChecklistCelebration';
 import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -127,6 +131,12 @@ export function SetupChecklist({ onNavigate }: Props) {
   const { tenantId } = useTenant();
   const bookingUrl = useBookingUrl(tenantId);
 
+  // ── Celebration state ───────────────────────────────────────────────────────
+  // celebrationSeen tracks whether the modal has already been shown in this
+  // session so it only fires once even if the component re-renders.
+  const [celebrationSeen, setCelebrationSeen] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(bookingUrl);
@@ -148,98 +158,129 @@ export function SetupChecklist({ onNavigate }: Props) {
   const completedCount = Object.values(checklist.gates).filter(Boolean).length;
   // Total is always 6: 5 GATE_ITEMS + 1 SetupChecklistPaymentGate (hasPaymentSetup)
   const total = 6;
+  const allDone = completedCount === total;
   const progressPct = Math.round((completedCount / total) * 100);
 
+  // Fire celebration the moment we hit 100% (only once per session)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (allDone && !celebrationSeen && !checklist.isDismissed) {
+      setCelebrationSeen(true);
+      setShowCelebration(true);
+    }
+  }, [allDone, celebrationSeen, checklist.isDismissed]);
+
+  const handleCelebrationClose = () => {
+    setShowCelebration(false);
+    // Dismiss the checklist so it disappears permanently after celebrating
+    checklist.dismiss();
+  };
+
   return (
-    <div
-      className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20 shadow-sm"
-      role="region"
-      aria-label="Setup checklist"
-    >
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
-            Finish setting up your account
-          </h2>
-          <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
-            {completedCount} of {total} steps complete
-          </p>
+    <>
+      {/* ── 100% Celebration Modal ── */}
+      <ChecklistCelebration
+        open={showCelebration}
+        onClose={handleCelebrationClose}
+      />
+
+      <div
+        className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20 shadow-sm"
+        role="region"
+        aria-label="Setup checklist"
+      >
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
+              {allDone ? '🎉 Setup complete!' : 'Finish setting up your account'}
+            </h2>
+            <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+              {allDone
+                ? "You're all set. Your booking page is live."
+                : `${completedCount} of ${total} steps complete`}
+            </p>
+          </div>
+
+          {/* Progress pill */}
+          <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+            {progressPct}%
+          </span>
+
+          {/* Dismiss */}
+          <button
+            onClick={checklist.dismiss}
+            aria-label="Dismiss setup checklist"
+            className="shrink-0 rounded-md p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        {/* Progress pill */}
-        <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
-          {progressPct}%
-        </span>
+        {/* ── Progress bar ── */}
+        <div className="mx-5 mb-4 h-1.5 overflow-hidden rounded-full bg-amber-200 dark:bg-amber-900/40">
+          <div
+            className={[
+              'h-full rounded-full transition-all duration-500',
+              allDone
+                ? 'bg-green-500 dark:bg-green-400'
+                : 'bg-amber-500 dark:bg-amber-400',
+            ].join(' ')}
+            style={{ width: `${progressPct}%` }}
+            role="progressbar"
+            aria-valuenow={progressPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          />
+        </div>
 
-        {/* Dismiss */}
-        <button
-          onClick={checklist.dismiss}
-          aria-label="Dismiss setup checklist"
-          className="shrink-0 rounded-md p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-        >
-          <X size={16} />
-        </button>
+        {/* ── Gate items ── */}
+        <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/30 pb-2">
+          {/* Gates 1, 2, 3 — rendered from GATE_ITEMS[0..2] */}
+          {GATE_ITEMS.slice(0, 3).map((item) => {
+            const done = checklist.gates[item.key];
+            return (
+              <GateRow
+                key={item.key}
+                done={done}
+                label={item.label}
+                hint={item.hint}
+                action={item.action}
+                actionLabel={item.actionLabel}
+                onNavigate={onNavigate}
+                // booking-link special actions only apply to hasSharedBookingLink
+                onCopyLink={undefined}
+                onWhatsApp={undefined}
+                bookingUrl={undefined}
+              />
+            );
+          })}
+
+          {/* Gate 4 — payment setup (plan-aware, self-contained) */}
+          <SetupChecklistPaymentGate onNavigate={onNavigate} />
+
+          {/* Gates 5, 6 — rendered from GATE_ITEMS[3..4] */}
+          {GATE_ITEMS.slice(3).map((item) => {
+            const done = checklist.gates[item.key];
+            const isBookingLink = item.key === 'hasSharedBookingLink';
+            return (
+              <GateRow
+                key={item.key}
+                done={done}
+                label={item.label}
+                hint={item.hint}
+                action={item.action}
+                actionLabel={item.actionLabel}
+                onNavigate={onNavigate}
+                onCopyLink={isBookingLink ? handleCopyLink : undefined}
+                onWhatsApp={isBookingLink ? handleWhatsApp : undefined}
+                bookingUrl={isBookingLink ? bookingUrl : undefined}
+              />
+            );
+          })}
+        </ul>
       </div>
-
-      {/* ── Progress bar ── */}
-      <div className="mx-5 mb-4 h-1.5 overflow-hidden rounded-full bg-amber-200 dark:bg-amber-900/40">
-        <div
-          className="h-full rounded-full bg-amber-500 dark:bg-amber-400 transition-all duration-500"
-          style={{ width: `${progressPct}%` }}
-          role="progressbar"
-          aria-valuenow={progressPct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        />
-      </div>
-
-      {/* ── Gate items ── */}
-      <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/30 pb-2">
-        {/* Gates 1, 2, 3 — rendered from GATE_ITEMS[0..2] */}
-        {GATE_ITEMS.slice(0, 3).map((item) => {
-          const done = checklist.gates[item.key];
-          return (
-            <GateRow
-              key={item.key}
-              done={done}
-              label={item.label}
-              hint={item.hint}
-              action={item.action}
-              actionLabel={item.actionLabel}
-              onNavigate={onNavigate}
-              // booking-link special actions only apply to hasSharedBookingLink
-              onCopyLink={undefined}
-              onWhatsApp={undefined}
-              bookingUrl={undefined}
-            />
-          );
-        })}
-
-        {/* Gate 4 — payment setup (plan-aware, self-contained) */}
-        <SetupChecklistPaymentGate onNavigate={onNavigate} />
-
-        {/* Gates 5, 6 — rendered from GATE_ITEMS[3..4] */}
-        {GATE_ITEMS.slice(3).map((item) => {
-          const done = checklist.gates[item.key];
-          const isBookingLink = item.key === 'hasSharedBookingLink';
-          return (
-            <GateRow
-              key={item.key}
-              done={done}
-              label={item.label}
-              hint={item.hint}
-              action={item.action}
-              actionLabel={item.actionLabel}
-              onNavigate={onNavigate}
-              onCopyLink={isBookingLink ? handleCopyLink : undefined}
-              onWhatsApp={isBookingLink ? handleWhatsApp : undefined}
-              bookingUrl={isBookingLink ? bookingUrl : undefined}
-            />
-          );
-        })}
-      </ul>
-    </div>
+    </>
   );
 }
 
