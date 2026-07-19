@@ -529,12 +529,14 @@ export function AdminBilling() {
         <p className="text-[10px] text-white/20 leading-relaxed px-1">
           Upgrades take effect within 1 business day of payment confirmation.
           Downgrades take effect at the end of the current billing period.
-          For assistance contact{" "}
+          For assistance{" "}
           <a
-            href="mailto:support@nextslot.co.za"
+            href="https://wa.me/message/JTPFWTWZFJGE1"
+            target="_blank"
+            rel="noopener noreferrer"
             className="underline underline-offset-2 hover:text-white/40 transition-colors"
           >
-            support@nextslot.co.za
+            chat with us on WhatsApp
           </a>.
         </p>
       )}
