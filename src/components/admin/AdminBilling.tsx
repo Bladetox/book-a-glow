@@ -31,12 +31,12 @@ import { toast } from "sonner";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 /** Your PayShap registered number. Update this when it changes. */
-const NEXTSLOT_PAYSHAP_NUMBER = "0844297240"; 
+const NEXTSLOT_PAYSHAP_NUMBER = "0844297240";
 
 const PLAN_PRICES: Record<string, number> = {
-  starter:      149,
-  flow:         299,
-  professional: 499,
+  starter:      99,
+  flow:         399,
+  professional: 699,
 };
 
 const PLAN_LABELS: Record<string, string> = {
@@ -50,28 +50,30 @@ const PLAN_LABELS: Record<string, string> = {
 
 const PLAN_FEATURES: Record<string, string[]> = {
   starter: [
-    "Core booking calendar",
-    "Email confirmations",
-    "Client management",
-    "1 staff member",
-    "PayShap payments",
+    "Automated bookings — ditch the pen and diary",
+    "PayShap instant EFT with proof-of-payment queue",
+    "Confirm bookings with one click",
+    "Email notifications and WhatsApp templates",
+    "Essential dashboard",
   ],
   flow: [
     "Everything in Starter",
-    "Nexty AI insights",
-    "Loyalty module",
-    "Stock management",
-    "Multi-staff support",
-    "WhatsApp reminders",
-    "Consultation forms",
+    "Yoco and Payfast payments",
+    "Deposit collection with balance tracking",
+    "Custom Terms & Conditions at checkout",
+    "Client blocking with reason attached",
+    "Revenue trends and business health metrics",
   ],
   professional: [
     "Everything in Flow",
-    "Custom domain",
-    "Broadcast email",
-    "Special occasions",
-    "Google Calendar sync",
-    "Priority support",
+    "Call-out mode with travel fee calculation",
+    "Loyalty tiers: New, Regular and VIP clients",
+    "WhatsApp templates per loyalty status",
+    "Special occasions tracker (birthdays, etc.)",
+    "Custom consultation form builder",
+    "AI-powered add-on suggestions during booking",
+    "Custom domain (CNAME)",
+    "Actionable recommendations panel",
   ],
 };
 
@@ -220,10 +222,10 @@ function PlanCard({
 export function AdminBilling() {
   const { tenant, tenantId } = useTenant();
 
-  const currentPlan       = tenant?.plan ?? "trial";
+  const currentPlan        = tenant?.plan ?? "trial";
   const subscriptionStatus = tenant?.subscription_status ?? "trial";
-  const trialEndsAt       = tenant?.trial_ends_at ?? null;
-  const isLifetimeFree    = tenant?.is_lifetime_free ?? false;
+  const trialEndsAt        = tenant?.trial_ends_at ?? null;
+  const isLifetimeFree     = tenant?.is_lifetime_free ?? false;
 
   const accountState = getAccountState(
     subscriptionStatus,
@@ -231,13 +233,9 @@ export function AdminBilling() {
     isLifetimeFree,
   );
 
-  // Which plan the tenant is selecting to move to
-  const [selectedPlan, setSelectedPlan] = useState<string>(currentPlan);
-  // Whether the PayShap payment instructions panel is visible
+  const [selectedPlan, setSelectedPlan]         = useState<string>(currentPlan);
   const [showInstructions, setShowInstructions] = useState(false);
-  // Loading state for the downgrade mutation
-  const [downgrading, setDowngrading] = useState(false);
-  // Whether the downgrade confirmation prompt is open
+  const [downgrading, setDowngrading]           = useState(false);
   const [confirmDowngrade, setConfirmDowngrade] = useState(false);
 
   const reference  = buildReference(tenantId);
@@ -250,7 +248,6 @@ export function AdminBilling() {
   const isDowngrade = selectedPlanIndex < currentPlanIndex && selectedPlanIndex !== -1;
   const isSamePlan  = selectedPlan === currentPlan;
 
-  // Lifetime free and studio tenants see read-only state
   const isReadOnly = isLifetimeFree || currentPlan === "studio";
 
   // ── Downgrade handler ──────────────────────────────────────────────────────
@@ -392,7 +389,6 @@ export function AdminBilling() {
           {/* ── Action area ── */}
           <div className="mt-4 flex flex-col gap-3">
 
-            {/* Upgrade path: show PayShap instructions */}
             {isUpgrade && !showInstructions && (
               <button
                 onClick={() => setShowInstructions(true)}
@@ -402,7 +398,6 @@ export function AdminBilling() {
               </button>
             )}
 
-            {/* Downgrade path: confirm before writing to DB */}
             {isDowngrade && !confirmDowngrade && (
               <button
                 onClick={() => setConfirmDowngrade(true)}
@@ -412,7 +407,6 @@ export function AdminBilling() {
               </button>
             )}
 
-            {/* Downgrade confirmation prompt */}
             {isDowngrade && confirmDowngrade && (
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 flex flex-col gap-3">
                 <div className="flex items-start gap-2">
@@ -459,7 +453,6 @@ export function AdminBilling() {
               Your plan will be activated within 1 business day after payment is confirmed.
             </p>
 
-            {/* Payment details */}
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
                 <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
@@ -500,7 +493,6 @@ export function AdminBilling() {
 
             <div className="border-t border-white/[0.06]" />
 
-            {/* Step-by-step */}
             <div className="flex flex-col gap-2">
               <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
                 Steps
