@@ -328,7 +328,7 @@ const PaymentSuccess = () => {
                            bg-white/[0.06] border border-white/[0.08] text-sm font-semibold text-white/70
                            hover:bg-white/[0.1] transition-colors"
               >
-                <Star className="w-4 h-4 text-yellow-400" /
+                <Star className="w-4 h-4 text-yellow-400" />
                 Share your experience on Google
               </a>
             )}
