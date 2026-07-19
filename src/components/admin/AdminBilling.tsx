@@ -531,7 +531,7 @@ export function AdminBilling() {
           Downgrades take effect at the end of the current billing period.
           For assistance{" "}
           <a
-            href="https://wa.me/message/JTPFWTWZFJGE1"
+            href="https://wa.me/27686806115"
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 hover:text-white/40 transition-colors"
