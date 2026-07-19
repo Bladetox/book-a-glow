@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Loader2, Star, MapPin, X } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useBrandFont } from "@/hooks/useBrandFont";
@@ -30,7 +30,7 @@ const PaymentSuccess = () => {
   // ── Brand font (sister-studios only; null for all other tenants) ──────────
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
 
-  // ── Snapshot all URL params into refs on mount so replaceState can’t nuke them
+  // ── Snapshot all URL params into refs on mount so replaceState can't nuke them
   // useSearchParams() is reactive — once replaceState fires with ?confirmed=1,
   // every param-derived variable re-evaluates to its default, causing isFinal
   // to flip false and the component to fall through to the deposit/countdown screen.
@@ -244,7 +244,7 @@ const PaymentSuccess = () => {
             <p className="text-sm text-muted-foreground italic">
               {type === "full"
                 ? "Full payment received — nothing due on the day."
-                : "Full payment received. You’re all settled."}
+                : "Full payment received. You're all settled."}
             </p>
           </motion.div>
 
@@ -306,7 +306,7 @@ const PaymentSuccess = () => {
             {isPhenomebeauty ? (
               <>
                 <p className="text-sm text-foreground leading-relaxed">Thank you for letting me into your sanctuary today. 💛</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">I’m honored you chose me as your self-care partner.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">I'm honored you chose me as your self-care partner.</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">As mothers, sisters, and daughters, we know how easily we put ourselves last. By sharing your experience on Google, you help other women remember they matter too. Your words might be exactly what they need to hear.</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">Kindly share your experience so they find their way here:</p>
               </>
@@ -314,7 +314,7 @@ const PaymentSuccess = () => {
               <>
                 <p className="text-sm text-foreground leading-relaxed">Your balance is fully settled — nothing more is due.</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">Thank you for your support. We look forward to seeing you.</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">If you enjoyed your experience, we’d love it if you shared it on Google — it helps others find us.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">If you enjoyed your experience, we'd love it if you shared it on Google — it helps others find us.</p>
               </>
             )}
 
@@ -385,7 +385,7 @@ const PaymentSuccess = () => {
               >
                 {config.confirmationTitle || "Deposit Paid"}
               </h2>
-              <p className="text-sm text-muted-foreground italic">You’re all confirmed.</p>
+              <p className="text-sm text-muted-foreground italic">You're all confirmed.</p>
             </div>
 
             {config.confirmationIntro && (
