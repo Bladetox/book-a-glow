@@ -1002,11 +1002,14 @@ if (isPayshap) {
         </div>
 
         {filtered.length === 0 ? (
-          <EmptyState
-            icon={CalendarCheck}
-            title={searchQuery ? `No bookings matching "${searchQuery}"` : "No bookings match this filter"}
-            description={searchQuery ? "Try another search term or clear the search." : "Adjust the filter to view a different set of bookings."}
-          />
+        <EmptyState
+          icon={CalendarCheck}
+          title={searchQuery ? "Nothing matched that search" : "Your calendar is wide open"}
+          description={searchQuery
+            ? "Try a different name, date or service — bookings scroll back in time too."
+            : "Once clients book, appointments appear here. Share your booking link to get your first one."
+          }
+        />
         ) : (
           <div className="flex flex-col gap-3">
             <AnimatePresence>
