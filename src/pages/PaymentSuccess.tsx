@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Loader2, Star, MapPin } from "lucide-react";
@@ -27,14 +27,27 @@ const PaymentSuccess = () => {
   // ── Brand font (sister-studios only; null for all other tenants) ──────────
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
 
-  const payment   = searchParams.get("payment");
-  const bookingId = searchParams.get("booking_id");
-  const tenant    = searchParams.get("tenant") ?? "";
-  const type      = searchParams.get("type") ?? "deposit";
+  // ── Snapshot all URL params into refs on mount so replaceState can't nuke them
+  // useSearchParams() is reactive — once replaceState fires with ?confirmed=1,
+  // every param-derived variable re-evaluates to its default, causing isFinal
+  // to flip false and the component to fall through to the deposit/countdown screen.
+  const paymentRef   = useRef(searchParams.get("payment"));
+  const bookingIdRef = useRef(searchParams.get("booking_id"));
+  const tenantRef    = useRef(searchParams.get("tenant") ?? "");
+  const typeRef      = useRef(searchParams.get("type") ?? "deposit");
+  const urlDateRef   = useRef(searchParams.get("date") ?? "");
+  const urlTimeRef   = useRef(searchParams.get("time") ?? "");
+  const urlDepositRef = useRef(
+    searchParams.get("deposit") ? Number(searchParams.get("deposit")) : null
+  );
 
-  const urlDate    = searchParams.get("date")    ?? "";
-  const urlTime    = searchParams.get("time")    ?? "";
-  const urlDeposit = searchParams.get("deposit") ? Number(searchParams.get("deposit")) : null;
+  const payment   = paymentRef.current;
+  const bookingId = bookingIdRef.current;
+  const tenant    = tenantRef.current;
+  const type      = typeRef.current;
+  const urlDate   = urlDateRef.current;
+  const urlTime   = urlTimeRef.current;
+  const urlDeposit = urlDepositRef.current;
 
   const [booking,    setBooking]    = useState<BookingSummary | null>(null);
   const [reviewLink, setReviewLink] = useState<string>("");
@@ -61,9 +74,7 @@ const PaymentSuccess = () => {
   // ── Clean up orphan GCal event when payment is cancelled ─────────────────
   useEffect(() => {
     if (!isCancelled) return;
-    // booking_id may not be in the cancel URL — only attempt if present
-    const cancelBookingId = searchParams.get("booking_id");
-    if (!cancelBookingId) return;
+    if (!bookingId) return;
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -75,9 +86,9 @@ const PaymentSuccess = () => {
         Authorization: `Bearer ${supabaseKey}`,
         apikey: supabaseKey,
       },
-      body: JSON.stringify({ booking_id: cancelBookingId }),
+      body: JSON.stringify({ booking_id: bookingId }),
     }).catch((err) => console.error("GCal cleanup on cancel failed:", err));
-  }, [isCancelled, searchParams]);
+  }, [isCancelled, bookingId]);
 
   // Fixed-salon mode: show the salon address when mobile service is NOT enabled
   const showSalonAddress = !config.mobileServiceEnabled && !!config.salonAddress;
@@ -126,7 +137,8 @@ const PaymentSuccess = () => {
       }
     };
     poll();
-  }, [bookingId, isSuccess]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isSuccess || isFinal || loading) return;
@@ -167,7 +179,7 @@ const PaymentSuccess = () => {
           <XCircle className="w-14 h-14 text-destructive" />
           <h2 className="font-display text-2xl font-bold text-foreground">Payment Cancelled</h2>
           <p className="text-sm text-muted-foreground">Your booking has not been confirmed. No payment was taken.</p>
-          <a href={`/?tenant=${searchParams.get("tenant") ?? ""}`} className="btn-next mt-2 inline-flex items-center gap-2">Try Again</a>
+          <a href={`/?tenant=${tenant}`} className="btn-next mt-2 inline-flex items-center gap-2">Try Again</a>
         </motion.div>
       </div>
     );
