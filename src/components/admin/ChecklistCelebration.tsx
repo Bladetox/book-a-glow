@@ -14,7 +14,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { CheckCircle2, X, Sparkles } from 'lucide-react';
+import { X } from 'lucide-react';
 
 // Lazily inject the canvas-confetti CDN script once per session.
 let confettiLoaded = false;
@@ -101,18 +101,6 @@ export function ChecklistCelebration({ open, onClose }: Props) {
           <X size={16} />
         </button>
 
-        <div className="px-8 py-8 flex flex-col items-center text-center gap-4">
-          {/* Icon cluster */}
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-amber-500" />
-            </div>
-            <Sparkles
-              className="absolute -top-1 -right-2 w-5 h-5 text-yellow-400"
-              aria-hidden="true"
-            />
-          </div>
-
           {/* Copy */}
           <div>
             <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
@@ -127,7 +115,7 @@ export function ChecklistCelebration({ open, onClose }: Props) {
           {/* Motivational stat strip */}
           <div className="w-full rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/30 px-4 py-3">
             <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-              ✨ Share your booking link and get your first appointment today.
+              Share your booking link and get your first appointment today.
             </p>
           </div>
 
@@ -136,7 +124,7 @@ export function ChecklistCelebration({ open, onClose }: Props) {
             onClick={onClose}
             className="w-full rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm py-2.5 transition-colors"
           >
-            Let&apos;s go →
+            Let&apos;s go 
           </button>
         </div>
       </div>
