@@ -1,3 +1,25 @@
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CheckCircle2, XCircle, Loader2, Star, MapPin, X } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
+import { useBusinessTheme } from "@/hooks/useBusinessTheme";
+import { useBrandFont } from "@/hooks/useBrandFont";
+
+const REDIRECT_SECONDS = 12;
+
+interface BookingSummary {
+  id?: string;
+  booking_date?: string;
+  start_time?: string;
+  deposit_amount?: number;
+  total_amount?: number;
+  deposit_paid?: boolean;
+  full_payment_received?: boolean;
+  tenant_id?: string;
+}
+
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate       = useNavigate();
@@ -119,13 +141,14 @@ const PaymentSuccess = () => {
       } else if (attempts < 5) {
         setTimeout(poll, 2000);
       } else {
-      if (!isFinal) setLoading(false);
+        if (!isFinal) setLoading(false);
       }
     };
     poll();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Countdown — deposit screen only (not isFinal) ─────────────────────────
   useEffect(() => {
     if (!isSuccess || isFinal || loading) return;
     const interval = setInterval(() => {
@@ -156,7 +179,7 @@ const PaymentSuccess = () => {
   };
   const hasBrand = Object.keys(brandNameStyle).length > 0;
 
-  // ── CANCELLED ───────────────────────────────────────────────────────────
+  // ── CANCELLED ─────────────────────────────────────────────────────────────
   if (isCancelled) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -171,7 +194,7 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ── FULL / FINAL PAYMENT SUCCESS ─────────────────────────────────────────
+  // ── FULL / FINAL PAYMENT SUCCESS ──────────────────────────────────────────
   if (isFinal && isSuccess && !loading) {
     const bookingAppUrl = `${window.location.origin}/?tenant=${tenant}`;
     const reviewHref    = reviewLink || `https://search.google.com/local/writereview?placeid=${tenant}`;
@@ -180,7 +203,17 @@ const PaymentSuccess = () => {
       : (displayDeposit ?? displayTotal);
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className="relative min-h-screen flex items-center justify-center p-6 bg-background">
+
+        {/* ── Close / dismiss button ── */}
+        <button
+          onClick={() => navigate(`/?tenant=${tenant}`)}
+          aria-label="Close"
+          className="absolute top-4 right-4 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface-offset transition"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
