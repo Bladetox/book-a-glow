@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Check, KeyRound, Palette, Building2, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy,
-  Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell, MapPin, Home,
+  Zap, Plus, ChevronDown, CreditCard, ShieldCheck, Bell, MapPin, Home, Star,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -287,6 +287,7 @@ const AdminSettings = () => {
         theme_id: tenant.theme_id ?? "standard",
         custom_domain: tenant.custom_domain ?? "",
         logo_url: tenant.logo_url ?? "",
+        google_review_url: (tenant as any).google_review_url ?? "",
       }));
     }
   }, [tenant]);
@@ -439,7 +440,7 @@ const AdminSettings = () => {
               <SavedBadge section="info" />
             </div>
           </SettingsCard>
-
+      
           <SettingsCard title="Branding & Logo" icon={Image} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             {draft.logo_url && (
               <img src={draft.logo_url} alt="Logo" className="w-16 h-16 rounded-2xl border border-white/[0.1] bg-white/[0.02] object-cover" />
@@ -456,9 +457,25 @@ const AdminSettings = () => {
             </div>
             <input id="logo-upload" name="logo-upload" ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
           </SettingsCard>
+      
+          {/* ── GOOGLE REVIEWS ── */}
+          <SettingsCard title="Google Reviews" icon={Star} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
+            <SettingRow
+              id="google-review-url"
+              label="Google Review Link"
+              placeholder="https://g.page/r/XXXXXXXX/review"
+              value={draft.google_review_url}
+              onChange={(v) => update("google_review_url", v)}
+              hint="Paste your Google Business review link here. Clients will be prompted to leave a review after their appointment is completed."
+            />
+            <div className="flex items-center gap-3">
+              <SaveBtn onClick={() => saveTenantFields("reviews", ["google_review_url"])} loading={updateTenant.isPending} />
+              <SavedBadge section="reviews" />
+            </div>
+          </SettingsCard>
         </div>
       </section>
-
+      
       {/* ── APPEARANCE ── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Appearance" />
