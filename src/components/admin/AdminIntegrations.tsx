@@ -1135,15 +1135,16 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
                       </span>
                     </div>
                   )}
-                  <p className="text-[10px] text-white/20 italic px-1">
-                    This is the number clients will search for in their banking app to send payment. Update it in your profile settings if it is incorrect.
+                  <p className="text-[11px] text-white/50 font-medium px-1">
+                    This is the number clients will search for in their banking app to send payment.{" "}
+                    <span className="text-amber-400/70">Update it in your profile settings if it is incorrect.</span>
                   </p>
                 </div>
 
                 <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
-                  <p className="text-[11px] text-white/25 leading-relaxed">
-                    When PayShap is enabled, clients will see your phone number on the booking payment step and are instructed to pay via their banking app. They submit a payment reference which you review and confirm manually in the PayShap queue. Yoco and PayFast are hidden from clients while this is active.
+                <p className="text-[11px] text-white/25 leading-relaxed">
+                  When PayShap is enabled, your phone number appears on the booking payment step and clients pay you directly via their banking app, payment reflects in your account immediately. Once paid, open your banking app to verify the amount, then return here to confirm the booking. Your client will receive a confirmation email as soon as you confirm.
                   </p>
                 </div>
 
@@ -1151,7 +1152,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
                   <div className="flex items-start gap-2.5 rounded-xl bg-amber-400/[0.04] border border-amber-400/[0.12] px-3.5 py-3">
                     <AlertCircle className="w-3.5 h-3.5 text-amber-400/50 mt-0.5 shrink-0" />
                     <p className="text-[11px] text-amber-400/60 leading-relaxed">
-                      Enabling PayShap will deactivate Yoco and PayFast on your booking page. Existing credentials are not deleted and will reactivate when you disable PayShap.
+                      Enabling PayShap will deactivate Yoco and PayFast on your booking page.
                     </p>
                   </div>
                 )}
