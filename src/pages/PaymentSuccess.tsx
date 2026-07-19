@@ -1,23 +1,3 @@
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Loader2, Star, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
-import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
-import { useBrandFont } from "@/hooks/useBrandFont";
-
-interface BookingSummary {
-  booking_date?: string;
-  start_time?: string;
-  deposit_amount?: number;
-  total_amount?: number;
-  deposit_paid?: boolean;
-  full_payment_received?: boolean;
-}
-
-const REDIRECT_SECONDS = 12;
-
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate       = useNavigate();
@@ -31,29 +11,39 @@ const PaymentSuccess = () => {
   // useSearchParams() is reactive — once replaceState fires with ?confirmed=1,
   // every param-derived variable re-evaluates to its default, causing isFinal
   // to flip false and the component to fall through to the deposit/countdown screen.
-  const paymentRef   = useRef(searchParams.get("payment"));
-  const bookingIdRef = useRef(searchParams.get("booking_id"));
-  const tenantRef    = useRef(searchParams.get("tenant") ?? "");
-  const typeRef      = useRef(searchParams.get("type") ?? "deposit");
-  const urlDateRef   = useRef(searchParams.get("date") ?? "");
-  const urlTimeRef   = useRef(searchParams.get("time") ?? "");
+  const paymentRef    = useRef(searchParams.get("payment"));
+  const bookingIdRef  = useRef(searchParams.get("booking_id"));
+  const tenantRef     = useRef(searchParams.get("tenant") ?? "");
+  const typeRef       = useRef(searchParams.get("type") ?? "deposit");
+  const urlDateRef    = useRef(searchParams.get("date") ?? "");
+  const urlTimeRef    = useRef(searchParams.get("time") ?? "");
   const urlDepositRef = useRef(
     searchParams.get("deposit") ? Number(searchParams.get("deposit")) : null
   );
 
-  const payment   = paymentRef.current;
-  const bookingId = bookingIdRef.current;
-  const tenant    = tenantRef.current;
-  const type      = typeRef.current;
-  const urlDate   = urlDateRef.current;
-  const urlTime   = urlTimeRef.current;
+  // Stable constants — immune to replaceState re-renders
+  const payment    = paymentRef.current;
+  const bookingId  = bookingIdRef.current;
+  const tenant     = tenantRef.current;
+  const type       = typeRef.current;
+  const urlDate    = urlDateRef.current;
+  const urlTime    = urlTimeRef.current;
   const urlDeposit = urlDepositRef.current;
 
+  // ── Derived flags — declared BEFORE useState so !isFinal is valid ─────────
+  const isSuccess   = payment === "success";
+  const isCancelled = payment === "cancelled";
+  const isFinal     = type === "final" || type === "full";
+
+  // ── State ─────────────────────────────────────────────────────────────────
   const [booking,    setBooking]    = useState<BookingSummary | null>(null);
   const [reviewLink, setReviewLink] = useState<string>("");
-  const [loading,    setLoading]    = useState(true);
+  // isFinal flows start with loading=false — the guard `isFinal && isSuccess && !loading`
+  // renders immediately. The poll still runs to enrich booking details progressively.
+  const [loading,    setLoading]    = useState(!isFinal);
   const [countdown,  setCountdown]  = useState(REDIRECT_SECONDS);
 
+  // ── Theme ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!tenant) return;
     supabase
@@ -66,10 +56,6 @@ const PaymentSuccess = () => {
         if (data?.theme_id) setThemeById(data.theme_id);
       });
   }, [tenant, setThemeById]);
-
-  const isSuccess   = payment === "success";
-  const isCancelled = payment === "cancelled";
-  const isFinal     = type === "final" || type === "full";
 
   // ── Clean up orphan GCal event when payment is cancelled ─────────────────
   useEffect(() => {
@@ -122,7 +108,7 @@ const PaymentSuccess = () => {
         .single();
       if (data) {
         setBooking(data);
-        setLoading(false);
+        if (!isFinal) setLoading(false);
         const { data: settings } = await supabase
           .from("app_settings")
           .select("value")
@@ -133,7 +119,7 @@ const PaymentSuccess = () => {
       } else if (attempts < 5) {
         setTimeout(poll, 2000);
       } else {
-        setLoading(false);
+      if (!isFinal) setLoading(false);
       }
     };
     poll();
