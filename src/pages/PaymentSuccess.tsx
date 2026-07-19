@@ -8,6 +8,7 @@ import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useBrandFont } from "@/hooks/useBrandFont";
 
 const REDIRECT_SECONDS = 12;
+const PHENOMEBEAUTY_TENANT_ID = "phenomebeauty";
 
 interface BookingSummary {
   id?: string;
@@ -29,7 +30,7 @@ const PaymentSuccess = () => {
   // ── Brand font (sister-studios only; null for all other tenants) ──────────
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
 
-  // ── Snapshot all URL params into refs on mount so replaceState can't nuke them
+  // ── Snapshot all URL params into refs on mount so replaceState can’t nuke them
   // useSearchParams() is reactive — once replaceState fires with ?confirmed=1,
   // every param-derived variable re-evaluates to its default, causing isFinal
   // to flip false and the component to fall through to the deposit/countdown screen.
@@ -53,9 +54,10 @@ const PaymentSuccess = () => {
   const urlDeposit = urlDepositRef.current;
 
   // ── Derived flags — declared BEFORE useState so !isFinal is valid ─────────
-  const isSuccess   = payment === "success";
-  const isCancelled = payment === "cancelled";
-  const isFinal     = type === "final" || type === "full";
+  const isSuccess        = payment === "success";
+  const isCancelled      = payment === "cancelled";
+  const isFinal          = type === "final" || type === "full";
+  const isPhenomebeauty  = tenant === PHENOMEBEAUTY_TENANT_ID;
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [booking,    setBooking]    = useState<BookingSummary | null>(null);
@@ -197,7 +199,6 @@ const PaymentSuccess = () => {
   // ── FULL / FINAL PAYMENT SUCCESS ──────────────────────────────────────────
   if (isFinal && isSuccess && !loading) {
     const bookingAppUrl = `${window.location.origin}/?tenant=${tenant}`;
-    const reviewHref    = reviewLink || `https://search.google.com/local/writereview?placeid=${tenant}`;
     const paidAmount    = type === "full"
       ? (displayTotal ?? displayDeposit)
       : (displayDeposit ?? displayTotal);
@@ -243,7 +244,7 @@ const PaymentSuccess = () => {
             <p className="text-sm text-muted-foreground italic">
               {type === "full"
                 ? "Full payment received — nothing due on the day."
-                : "Full payment received. You're all settled."}
+                : "Full payment received. You’re all settled."}
             </p>
           </motion.div>
 
@@ -301,24 +302,47 @@ const PaymentSuccess = () => {
               </div>
             )}
 
-            <p className="text-sm text-foreground leading-relaxed">Thank you for letting me into your sanctuary today. 💛</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">I'm honored you chose me as your self-care partner.</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">As mothers, sisters, and daughters, we know how easily we put ourselves last. By sharing your experience on Google, you help other women remember they matter too. Your words might be exactly what they need to hear.</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">Kindly share your experience so they find their way here:</p>
+            {/* ── Body copy — branched by tenant ── */}
+            {isPhenomebeauty ? (
+              <>
+                <p className="text-sm text-foreground leading-relaxed">Thank you for letting me into your sanctuary today. 💛</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">I’m honored you chose me as your self-care partner.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">As mothers, sisters, and daughters, we know how easily we put ourselves last. By sharing your experience on Google, you help other women remember they matter too. Your words might be exactly what they need to hear.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">Kindly share your experience so they find their way here:</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-foreground leading-relaxed">Your balance is fully settled — nothing more is due.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">Thank you for your support. We look forward to seeing you.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">If you enjoyed your experience, we’d love it if you shared it on Google — it helps others find us.</p>
+              </>
+            )}
 
-            <a
-              href={reviewHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-primary/30 bg-primary/[0.06] text-sm font-semibold text-primary hover:bg-primary/[0.12] transition-all duration-200"
-            >
-              <Star className="w-4 h-4 fill-primary" />
-              Share your experience on Google
-            </a>
+            {/* ── Google review CTA — only if a URL is configured for this tenant ── */}
+            {reviewLink && (
+              <a
+                href={reviewLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-primary/30 bg-primary/[0.06] text-sm font-semibold text-primary hover:bg-primary/[0.12] transition-all duration-200"
+              >
+                <Star className="w-4 h-4 fill-primary" />
+                Share your experience on Google
+              </a>
+            )}
 
-            <p className="text-sm text-muted-foreground leading-relaxed">Consistency is how we grow, inside and out. Now go ahead and honor yourself in the same way.</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">Looking forward to our next girl time.</p>
-            <p className="text-sm font-semibold text-foreground">Toodles. 🌸</p>
+            {/* ── Phenomebeauty extra copy ── */}
+            {isPhenomebeauty && (
+              <>
+                <p className="text-sm text-muted-foreground leading-relaxed">Consistency is how we grow, inside and out. Now go ahead and honor yourself in the same way.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">Looking forward to our next girl time.</p>
+              </>
+            )}
+
+            {/* ── Sign-off — branched by tenant ── */}
+            <p className="text-sm font-semibold text-foreground">
+              {isPhenomebeauty ? "Toodles. 🌸" : config.signOff}
+            </p>
           </motion.div>
 
           <motion.div
@@ -361,7 +385,7 @@ const PaymentSuccess = () => {
               >
                 {config.confirmationTitle || "Deposit Paid"}
               </h2>
-              <p className="text-sm text-muted-foreground italic">You're all confirmed.</p>
+              <p className="text-sm text-muted-foreground italic">You’re all confirmed.</p>
             </div>
 
             {config.confirmationIntro && (
