@@ -422,7 +422,7 @@ export const ConsultationFormBuilder = () => {
           <EmptyState
             icon={ClipboardList}
             title="No custom questions"
-            description={`Clients will see the standard ${
+            description={`Add questions to your form to collect skin history, consent, or intake notes before appointments ${
               businessType ? BUSINESS_TYPE_LABELS[businessType] : 'general'
             } consultation form. Add custom questions below to override.`}
             action={
