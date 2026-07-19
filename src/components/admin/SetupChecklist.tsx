@@ -131,11 +131,26 @@ export function SetupChecklist({ onNavigate }: Props) {
   const { tenantId } = useTenant();
   const bookingUrl = useBookingUrl(tenantId);
 
-  // ── Celebration state ───────────────────────────────────────────────────────
-  // celebrationSeen tracks whether the modal has already been shown in this
-  // session so it only fires once even if the component re-renders.
+  // ── ALL hooks declared first, before any conditional return ────────────────
   const [celebrationSeen, setCelebrationSeen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+
+  const completedCount = Object.values(checklist.gates).filter(Boolean).length;
+  // Total is always 6: 5 GATE_ITEMS + 1 SetupChecklistPaymentGate (hasPaymentSetup)
+  const total = 6;
+  const allDone = completedCount === total;
+  const progressPct = Math.round((completedCount / total) * 100);
+
+  // Fire celebration the moment we hit 100% (only once per session)
+  useEffect(() => {
+    if (allDone && !celebrationSeen && !checklist.isDismissed) {
+      setCelebrationSeen(true);
+      setShowCelebration(true);
+    }
+  }, [allDone, celebrationSeen, checklist.isDismissed]);
+
+  // ── Early return AFTER all hooks ───────────────────────────────────────────
+  if (checklist.isLoading || checklist.isDismissed || !tenantId) return null;
 
   const handleCopyLink = async () => {
     try {
@@ -151,24 +166,6 @@ export function SetupChecklist({ onNavigate }: Props) {
     window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer');
     checklist.markBookingLinkShared();
   };
-
-  // Don't render if loading, already dismissed, or tenantId missing
-  if (checklist.isLoading || checklist.isDismissed || !tenantId) return null;
-
-  const completedCount = Object.values(checklist.gates).filter(Boolean).length;
-  // Total is always 6: 5 GATE_ITEMS + 1 SetupChecklistPaymentGate (hasPaymentSetup)
-  const total = 6;
-  const allDone = completedCount === total;
-  const progressPct = Math.round((completedCount / total) * 100);
-
-  // Fire celebration the moment we hit 100% (only once per session)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    if (allDone && !celebrationSeen && !checklist.isDismissed) {
-      setCelebrationSeen(true);
-      setShowCelebration(true);
-    }
-  }, [allDone, celebrationSeen, checklist.isDismissed]);
 
   const handleCelebrationClose = () => {
     setShowCelebration(false);
@@ -248,7 +245,6 @@ export function SetupChecklist({ onNavigate }: Props) {
                 action={item.action}
                 actionLabel={item.actionLabel}
                 onNavigate={onNavigate}
-                // booking-link special actions only apply to hasSharedBookingLink
                 onCopyLink={undefined}
                 onWhatsApp={undefined}
                 bookingUrl={undefined}
