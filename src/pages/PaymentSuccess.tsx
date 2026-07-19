@@ -319,14 +319,16 @@ const PaymentSuccess = () => {
             )}
 
             {/* ── Google review CTA — only if a URL is configured for this tenant ── */}
-            {reviewLink && (
+            {googleReviewUrl && (
               <a
-                href={reviewLink}
+                href={googleReviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-primary/30 bg-primary/[0.06] text-sm font-semibold text-primary hover:bg-primary/[0.12] transition-all duration-200"
+                className="mt-4 flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl
+                           bg-white/[0.06] border border-white/[0.08] text-sm font-semibold text-white/70
+                           hover:bg-white/[0.1] transition-colors"
               >
-                <Star className="w-4 h-4 fill-primary" />
+                <Star className="w-4 h-4 text-yellow-400" /
                 Share your experience on Google
               </a>
             )}
