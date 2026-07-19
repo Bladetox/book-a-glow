@@ -31,7 +31,7 @@ import { toast } from "sonner";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 /** Your PayShap registered number. Update this when it changes. */
-const NEXTSLOT_PAYSHAP_NUMBER = "0600000000"; // TODO: replace with your live PayShap number
+const NEXTSLOT_PAYSHAP_NUMBER = "0844297240"; 
 
 const PLAN_PRICES: Record<string, number> = {
   starter:      149,
