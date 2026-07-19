@@ -1144,7 +1144,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
                 <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                 <p className="text-[11px] text-white/25 leading-relaxed">
-                  When PayShap is enabled, your phone number appears on the booking payment step and clients pay you directly via their banking app, payment reflects in your account immediately. Once paid, open your banking app to verify the amount, then return here to confirm the booking. Your client will receive a confirmation email as soon as you confirm.
+                  When PayShap is enabled, your phone number appears on the booking payment step and clients pay you directly via their banking app, payment reflects in your account immediately. Once paid, open your banking app to verify the amount, return to your dashboard to confirm the booking. Your client will receive a confirmation email as soon as you confirm.
                   </p>
                 </div>
 
