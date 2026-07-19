@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Loader2, Star, MapPin, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
-import { useBusinessTheme } from "@/hooks/useBusinessTheme";
+import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useBrandFont } from "@/hooks/useBrandFont";
 
 const REDIRECT_SECONDS = 12;
