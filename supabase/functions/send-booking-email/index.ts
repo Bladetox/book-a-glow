@@ -1001,7 +1001,7 @@ Deno.serve(async (req) => {
       ${row("Date",           formattedDate)}
       ${row("Time",           formattedTime)}
       ${row("Location",       tenantLocationDisplay || "—")}
-      ${row("Total received", totalAmount, true)}
+      ${row("Balance received", balanceDue, true)}
     </table>
   </td></tr>
   <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
