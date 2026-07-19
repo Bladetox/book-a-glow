@@ -18,6 +18,7 @@ import { useNextyInsights } from "@/hooks/useNextyInsights";
 import BusinessHealthSection, { MetricExpandOverlay, type ExpandedCard } from "@/components/admin/BusinessHealthSection";
 import DashboardStockAlerts from "@/components/admin/DashboardStockAlerts";
 import AdminPayshapQueue from "@/components/admin/AdminPayshapQueue";
+import { TrialCountdownNudge } from "@/components/admin/TrialCountdownNudge";
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 
@@ -686,6 +687,7 @@ const AdminDashboard = ({
 
       {/* PayShap verification queue — gated by flags.payshap_payments */}
       {flags.payshap_payments && <AdminPayshapQueue />}
+      <TrialCountdownNudge />
 
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
