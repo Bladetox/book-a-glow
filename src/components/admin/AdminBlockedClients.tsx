@@ -88,7 +88,7 @@ const AdminBlockedClients = () => {
           <EmptyState
             icon={ShieldCheck}
             title="No blocked clients"
-            description="When a client is blocked, they will appear here and can be unblocked at any time."
+            description="Block a client from the Bookings tab when you need to prevent future appointments."
           />
         ) : (
           <div className="flex flex-col gap-2">
