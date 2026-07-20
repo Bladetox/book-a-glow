@@ -5,14 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// iKhokha path used for both signing and the webhook callbackUrl base
 const IK_API_PATH = "/public-api/v1/api/payment";
-const IK_API_BASE_LIVE = "https://api.ikhokha.com";
-const IK_API_BASE_TEST = "https://api.ikhokha.com"; // iKhokha uses same base; mode field controls behaviour
+const IK_API_BASE = "https://api.ikhokha.com";
 
 /**
- * Replicates the JS SDK jsStringEscape then HMAC-SHA256.
- * Signature = hmac_sha256( jsEscape(path + JSON.stringify(body)), AppSecret )
+ * Replicates jsStringEscape from the iKhokha JS SDK sample.
+ * Signature = HMAC-SHA256( jsEscape(path + JSON.stringify(body)), AppSecret )
  */
 function jsStringEscape(str: string): string {
   return str
@@ -23,9 +21,9 @@ function jsStringEscape(str: string): string {
 }
 
 async function buildIkSign(appSecret: string, path: string, bodyStr: string): Promise<string> {
-  const payload    = jsStringEscape(path + bodyStr);
-  const encoder    = new TextEncoder();
-  const cryptoKey  = await crypto.subtle.importKey(
+  const payload   = jsStringEscape(path + bodyStr);
+  const encoder   = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
     "raw",
     encoder.encode(appSecret),
     { name: "HMAC", hash: "SHA-256" },
@@ -44,7 +42,6 @@ Deno.serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
 
-    // Auth resolution — guests use booking UUID as implicit auth
     const authHeader = req.headers.get("Authorization");
     let authedUserId: string | null = null;
     if (authHeader) {
@@ -56,13 +53,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const {
-      booking_id,
-      tenant_slug,
-      success_url,
-      cancel_url,
-      payment_type = "deposit",
-    } = body;
+    const { booking_id, tenant_slug, success_url, cancel_url, payment_type = "deposit" } = body;
 
     if (!booking_id) {
       return new Response(
@@ -71,7 +62,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Fetch booking ─────────────────────────────────────────────────────
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
       .select("id, deposit_amount, deposit_paid, balance_due, total_amount, client_id, tenant_id")
@@ -85,7 +75,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Resolve iKhokha credentials from app_settings ─────────────────────
     const { data: settings } = await supabase
       .from("app_settings")
       .select("key, value")
@@ -96,10 +85,10 @@ Deno.serve(async (req) => {
     for (const row of settings ?? []) sm[row.key] = row.value;
 
     const appId     = sm["ikhokha_app_id"];
-    const appSecret = sm["ikhokha_app_key"]; // AppSecret used for signing
+    const appSecret = sm["ikhokha_app_key"];
     const mode      = sm["ikhokha_mode"] ?? "test";
 
-    console.log(`[ikhokha-checkout] tenant=${booking.tenant_id} mode=${mode} app_id=${appId}`);
+    console.log(`[ikhokha-checkout] tenant=${booking.tenant_id} mode=${mode} appId=${appId}`);
 
     if (!appId || !appSecret) {
       return new Response(
@@ -108,8 +97,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Ownership check ───────────────────────────────────────────────────
-    if (payment_type !== "balance" && authedUserId && booking.client_id && booking.client_id !== authedUserId) {
+    if (authedUserId && booking.client_id && booking.client_id !== authedUserId) {
       return new Response(
         JSON.stringify({ error: "Not your booking" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -123,7 +111,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Determine amount in cents ─────────────────────────────────────────
     let amountInCents: number;
     if (payment_type === "balance") {
       amountInCents = Number(booking.balance_due) > 0
@@ -142,7 +129,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Build URLs ────────────────────────────────────────────────────────
     const origin    = req.headers.get("origin") || "https://book-a-glow.vercel.app";
     const slug      = tenant_slug || booking.tenant_id;
     const typeLabel = payment_type === "balance" ? "final" : payment_type === "full" ? "full" : "deposit";
@@ -152,14 +138,9 @@ Deno.serve(async (req) => {
     const failurePageUrl = `${origin}/payment-success?payment=failed&tenant=${slug}`;
     const finalCancelUrl = cancel_url  ||
       `${origin}/payment-success?payment=cancelled&tenant=${slug}`;
-
-    // Webhook callback URL — our ikhokha-webhook edge function
-    const callbackUrl = `${supabaseUrl}/functions/v1/ikhokha-webhook`;
-
-    // Unique transaction ID per attempt
+    const callbackUrl    = `${supabaseUrl}/functions/v1/ikhokha-webhook`;
     const externalTransactionID = `${booking_id}-${payment_type}-${Date.now()}`;
 
-    // ── Build iKhokha request payload (exact field names from docs) ───────
     const ikPayload = {
       entityID:             appId,
       externalEntityID:     booking_id,
@@ -167,7 +148,7 @@ Deno.serve(async (req) => {
       currency:             "ZAR",
       requesterUrl:         origin,
       mode:                 mode === "live" ? "live" : "test",
-      description:          `Booking ${booking_id} — ${typeLabel} payment`,
+      description:          `Booking ${booking_id} - ${typeLabel} payment`,
       externalTransactionID,
       urls: {
         callbackUrl,
@@ -179,12 +160,11 @@ Deno.serve(async (req) => {
 
     const requestBodyStr = JSON.stringify(ikPayload);
     const signature      = await buildIkSign(appSecret, IK_API_PATH, requestBodyStr);
-    const apiUrl         = `${mode === "live" ? IK_API_BASE_LIVE : IK_API_BASE_TEST}${IK_API_PATH}`;
+    const apiUrl         = `${IK_API_BASE}${IK_API_PATH}`;
 
     console.log(`[ikhokha-checkout] POST ${apiUrl} amount=${amountInCents}`);
 
-    // ── Call iKhokha ──────────────────────────────────────────────────────
-    const ikRes = await fetch(apiUrl, {
+    const ikRes  = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -205,11 +185,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // paylinkUrl and paylinkID are the correct response fields per docs
     const paylinkUrl = ikData.paylinkUrl;
     const paylinkID  = ikData.paylinkID;
 
-    // ── Persist link on booking row ───────────────────────────────────────
     if (payment_type === "balance" || payment_type === "full") {
       await supabase.from("bookings").update({
         ikhokha_final_checkout_id: paylinkID,
@@ -223,11 +201,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({
-        checkoutId:  paylinkID,
-        url:         paylinkUrl,
-        redirectUrl: paylinkUrl,
-      }),
+      JSON.stringify({ checkoutId: paylinkID, url: paylinkUrl, redirectUrl: paylinkUrl }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
