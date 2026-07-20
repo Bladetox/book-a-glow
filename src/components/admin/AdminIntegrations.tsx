@@ -1185,7 +1185,6 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
     </motion.div>
   );
 };
-<IkhokhaCard tenantId={tenantId} />
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AdminIntegrations
@@ -1253,6 +1252,8 @@ const AdminIntegrations = () => {
               payshapEnabled={payshapEnabled}
               tenantId={tenantId}
             />
+
+            <IkhokhaCard tenantId={tenantId} />
 
             <IntegrationCard
               icon={MapPin}
