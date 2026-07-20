@@ -19,6 +19,7 @@ import {
   HintTooltip,
 } from "@/components/admin/AdminSharedUI";
 import IntegrationsGuidePanel from "@/components/admin/IntegrationsGuidePanel";
+import IkhokhaCard from './IkhokhaCard';
 
 const MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
 
@@ -1184,6 +1185,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
     </motion.div>
   );
 };
+<IkhokhaCard tenantId={tenantId} />
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AdminIntegrations
