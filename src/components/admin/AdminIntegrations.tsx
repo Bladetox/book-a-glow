@@ -1253,7 +1253,12 @@ const AdminIntegrations = () => {
               tenantId={tenantId}
             />
 
-            <IkhokhaCard tenantId={tenantId} />
+            <IkhokhaCard 
+              settings={settings} 
+              onSaved={refetch} 
+              payshapEnabled={payshapEnabled} 
+              tenantId={tenantId}
+            />
 
             <IntegrationCard
               icon={MapPin}
