@@ -3,14 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 /**
  * iKhokha Webhook Handler
  *
- * iKhokha POSTs to this URL after each payment attempt (success or failure).
+ * iKhokha POSTs to this URL after each payment attempt.
  * Headers: ik-appid, ik-sign
  * Body:    { paylinkID, status, externalTransactionID, responseCode }
  *
- * Signature verification:
- *   ik-sign = hmac_sha256( jsEscape(callbackPath + JSON.stringify(body)), AppSecret )
- *   where callbackPath = pathname of the callbackUrl embedded in the original paylink request
- *   i.e. "/functions/v1/ikhokha-webhook"
+ * Signature: hmac_sha256( jsEscape(callbackPath + rawBody), AppSecret )
  */
 
 const CALLBACK_PATH = "/functions/v1/ikhokha-webhook";
@@ -44,7 +41,6 @@ async function verifyIkSign(
 }
 
 Deno.serve(async (req) => {
-  // iKhokha sends POST; OPTIONS for CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
@@ -63,10 +59,9 @@ Deno.serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
 
-    // ── Read raw body for signature verification ──────────────────────────
-    const rawBody   = await req.text();
-    const ikAppId   = req.headers.get("ik-appid")  ?? "";
-    const ikSign    = req.headers.get("ik-sign")   ?? "";
+    const rawBody = await req.text();
+    const ikAppId = req.headers.get("ik-appid") ?? "";
+    const ikSign  = req.headers.get("ik-sign")  ?? "";
 
     console.log(`[ikhokha-webhook] ik-appid=${ikAppId} body=${rawBody.slice(0, 120)}`);
 
@@ -74,7 +69,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing iKhokha headers" }), { status: 400 });
     }
 
-    // ── Look up the tenant's AppSecret by app_id ──────────────────────────
+    // Look up tenant by app_id
     const { data: settingRow } = await supabase
       .from("app_settings")
       .select("tenant_id, value")
@@ -101,35 +96,32 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Configuration error" }), { status: 500 });
     }
 
-    const appSecret = secretRow.value;
-
-    // ── Verify signature ──────────────────────────────────────────────────
-    const valid = await verifyIkSign(appSecret, CALLBACK_PATH, rawBody, ikSign);
+    const valid = await verifyIkSign(secretRow.value, CALLBACK_PATH, rawBody, ikSign);
     if (!valid) {
-      console.error(`[ikhokha-webhook] Signature mismatch for tenant=${tenantId}`);
+      console.error(`[ikhokha-webhook] Signature mismatch tenant=${tenantId}`);
       return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 403 });
     }
 
-    // ── Parse and process payload ─────────────────────────────────────────
     const payload: {
       paylinkID:             string;
-      status:                string; // "SUCCESS" | "FAILURE"
-      externalTransactionID: string; // "bookingId-paymentType-timestamp"
-      responseCode:          string; // "00" = good to process
+      status:                string;
+      externalTransactionID: string;
+      responseCode:          string;
     } = JSON.parse(rawBody);
 
     const { paylinkID, status, externalTransactionID, responseCode } = payload;
 
     console.log(`[ikhokha-webhook] paylinkID=${paylinkID} status=${status} txn=${externalTransactionID}`);
 
-    // Only process if responseCode indicates payload is trustworthy
     if (responseCode !== "00") {
       console.log(`[ikhokha-webhook] Non-00 responseCode=${responseCode}, skipping`);
       return new Response("OK", { status: 200 });
     }
 
-    // externalTransactionID format: "<booking_id>-<payment_type>-<timestamp>"
-    const [bookingId, paymentType] = externalTransactionID.split("-");
+    // externalTransactionID = "<bookingId>-<paymentType>-<timestamp>"
+    const parts       = externalTransactionID.split("-");
+    const bookingId   = parts[0];
+    const paymentType = parts[1]; // deposit | balance | full
 
     if (!bookingId) {
       console.error(`[ikhokha-webhook] Cannot parse bookingId from txn=${externalTransactionID}`);
@@ -137,22 +129,20 @@ Deno.serve(async (req) => {
     }
 
     if (status === "SUCCESS") {
-      // Determine which fields to update based on payment type
-      const isDeposit = !paymentType || paymentType === "deposit";
-      const isFull    = paymentType === "full";
+      const updateData: Record<string, unknown> = { payment_provider: "ikhokha" };
 
-      const updateData: Record<string, unknown> = {};
-
-      if (isDeposit) {
-        updateData.deposit_paid            = true;
-        updateData.ikhokha_checkout_id     = paylinkID;
-        updateData.payment_provider        = "ikhokha";
-      } else if (paymentType === "balance" || isFull) {
-        updateData.balance_paid            = true;
-        updateData.balance_due             = 0;
+      if (!paymentType || paymentType === "deposit") {
+        updateData.deposit_paid        = true;
+        updateData.ikhokha_checkout_id = paylinkID;
+      } else if (paymentType === "balance") {
+        updateData.balance_paid              = true;
+        updateData.balance_due               = 0;
         updateData.ikhokha_final_checkout_id = paylinkID;
-        updateData.payment_provider        = "ikhokha";
-        if (isFull) updateData.deposit_paid = true;
+      } else if (paymentType === "full") {
+        updateData.deposit_paid              = true;
+        updateData.balance_paid              = true;
+        updateData.balance_due               = 0;
+        updateData.ikhokha_final_checkout_id = paylinkID;
       }
 
       const { error: updateErr } = await supabase
@@ -163,21 +153,17 @@ Deno.serve(async (req) => {
 
       if (updateErr) {
         console.error(`[ikhokha-webhook] booking update error:`, updateErr);
-        // Still return 200 so iKhokha doesn't retry endlessly
       } else {
         console.log(`[ikhokha-webhook] booking=${bookingId} updated OK type=${paymentType}`);
       }
     } else {
-      // FAILURE — log but no booking state change needed
-      console.log(`[ikhokha-webhook] payment FAILED for booking=${bookingId}`);
+      console.log(`[ikhokha-webhook] FAILURE for booking=${bookingId}`);
     }
 
-    // iKhokha expects a 200 response
     return new Response("OK", { status: 200 });
 
   } catch (err) {
     console.error("[ikhokha-webhook] unhandled error:", err);
-    // Return 200 to prevent iKhokha retries on our internal errors
     return new Response("OK", { status: 200 });
   }
 });
