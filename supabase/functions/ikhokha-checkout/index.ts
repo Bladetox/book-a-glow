@@ -1,215 +1,165 @@
+/**
+ * ikhokha-checkout
+ * Creates an iKhokha paylink for a booking deposit or balance.
+ *
+ * Request body:
+ *   booking_id     string   – UUID of the booking row
+ *   amount_cents   number   – amount in ZAR cents (e.g. 15000 = R150.00)
+ *   description    string   – shown on iKhokha checkout
+ *   return_url     string   – where to redirect after payment
+ *   cancel_url     string   – where to redirect on cancel
+ *
+ * Returns:
+ *   { success: true, paylink_url: string, transaction_id: string }
+ */
+
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts";
+import { encodeHex } from "https://deno.land/std@0.177.0/encoding/hex.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const IK_API_PATH = "/public-api/v1/api/payment";
-const IK_API_BASE = "https://api.ikhokha.com";
+// iKhokha API base URLs
+const IK_API = {
+  live: "https://api.ikhokha.com/v1",
+  test: "https://api.ikhokha.com/v1", // same base; sandbox toggled via app credentials
+};
 
 /**
- * Replicates jsStringEscape from the iKhokha JS SDK sample.
- * Signature = HMAC-SHA256( jsEscape(path + JSON.stringify(body)), AppSecret )
+ * Build the HMAC-SHA256 signature iKhokha expects.
+ * Signature = HMAC-SHA256(appKey, requestBody)
+ * Header: IK-APPID: <app_id>   IK-SIGN: <hex_signature>
  */
-function jsStringEscape(str: string): string {
-  return str
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/'/g, "\\'")
-    .replace(/\u0000/g, "\\0");
-}
+async function sign(appKey: string, body: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(appKey);
+  const messageData = encoder.encode(body);
 
-async function buildIkSign(appSecret: string, path: string, bodyStr: string): Promise<string> {
-  const payload   = jsStringEscape(path + bodyStr);
-  const encoder   = new TextEncoder();
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(appSecret),
+    keyData,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(payload));
-  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+  return encodeHex(new Uint8Array(signature));
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase    = createClient(supabaseUrl, serviceKey);
-
     const authHeader = req.headers.get("Authorization");
-    let authedUserId: string | null = null;
-    if (authHeader) {
-      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: { user } } = await anonClient.auth.getUser();
-      if (user) authedUserId = user.id;
-    }
+    if (!authHeader) throw new Error("Missing Authorization header");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Verify caller
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { booking_id, tenant_slug, success_url, cancel_url, payment_type = "deposit" } = body;
-
-    if (!booking_id) {
-      return new Response(
-        JSON.stringify({ error: "booking_id required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { data: booking, error: bookingErr } = await supabase
-      .from("bookings")
-      .select("id, deposit_amount, deposit_paid, balance_due, total_amount, client_id, tenant_id")
-      .eq("id", booking_id)
-      .single();
-
-    if (bookingErr || !booking) {
-      return new Response(
-        JSON.stringify({ error: "Booking not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { data: settings } = await supabase
-      .from("app_settings")
-      .select("key, value")
-      .eq("tenant_id", booking.tenant_id)
-      .in("key", ["ikhokha_app_id", "ikhokha_app_key", "ikhokha_mode"]);
-
-    const sm: Record<string, string> = {};
-    for (const row of settings ?? []) sm[row.key] = row.value;
-
-    const appId     = sm["ikhokha_app_id"];
-    const appSecret = sm["ikhokha_app_key"];
-    const mode      = sm["ikhokha_mode"] ?? "test";
-
-    console.log(`[ikhokha-checkout] tenant=${booking.tenant_id} mode=${mode} appId=${appId}`);
-
-    if (!appId || !appSecret) {
-      return new Response(
-        JSON.stringify({ error: "iKhokha not configured for this tenant" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (authedUserId && booking.client_id && booking.client_id !== authedUserId) {
-      return new Response(
-        JSON.stringify({ error: "Not your booking" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (payment_type === "deposit" && booking.deposit_paid) {
-      return new Response(
-        JSON.stringify({ error: "Deposit already paid" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    let amountInCents: number;
-    if (payment_type === "balance") {
-      amountInCents = Number(booking.balance_due) > 0
-        ? Math.round(Number(booking.balance_due) * 100)
-        : Math.round((Number(booking.total_amount) - Number(booking.deposit_amount)) * 100);
-    } else if (payment_type === "full") {
-      amountInCents = Math.round(Number(booking.total_amount) * 100);
-    } else {
-      amountInCents = Math.round(Number(booking.deposit_amount) * 100);
-    }
-
-    if (amountInCents <= 0) {
-      return new Response(
-        JSON.stringify({ error: "Amount must be greater than zero" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const origin    = req.headers.get("origin") || "https://book-a-glow.vercel.app";
-    const slug      = tenant_slug || booking.tenant_id;
-    const typeLabel = payment_type === "balance" ? "final" : payment_type === "full" ? "full" : "deposit";
-
-    const successPageUrl = success_url ||
-      `${origin}/payment-success?payment=success&booking_id=${booking_id}&tenant=${slug}&type=${typeLabel}`;
-    const failurePageUrl = `${origin}/payment-success?payment=failed&tenant=${slug}`;
-    const finalCancelUrl = cancel_url  ||
-      `${origin}/payment-success?payment=cancelled&tenant=${slug}`;
-    const callbackUrl    = `${supabaseUrl}/functions/v1/ikhokha-webhook`;
-    const externalTransactionID = `${booking_id}-${payment_type}-${Date.now()}`;
-
-    const ikPayload = {
-      entityID:             appId,
-      externalEntityID:     booking_id,
-      amount:               amountInCents,
-      currency:             "ZAR",
-      requesterUrl:         origin,
-      mode:                 mode === "live" ? "live" : "test",
-      description:          `Booking ${booking_id} - ${typeLabel} payment`,
-      externalTransactionID,
-      urls: {
-        callbackUrl,
-        successPageUrl,
-        failurePageUrl,
-        cancelUrl: finalCancelUrl,
-      },
+    const { booking_id, amount_cents, description, return_url, cancel_url } = body as {
+      booking_id: string;
+      amount_cents: number;
+      description: string;
+      return_url: string;
+      cancel_url: string;
     };
 
-    const requestBodyStr = JSON.stringify(ikPayload);
-    const signature      = await buildIkSign(appSecret, IK_API_PATH, requestBodyStr);
-    const apiUrl         = `${IK_API_BASE}${IK_API_PATH}`;
+    if (!booking_id)     throw new Error("booking_id is required");
+    if (!amount_cents || amount_cents <= 0) throw new Error("amount_cents must be > 0");
+    if (!return_url)     throw new Error("return_url is required");
 
-    console.log(`[ikhokha-checkout] POST ${apiUrl} amount=${amountInCents}`);
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const tenantId = user.id;
 
-    const ikRes  = await fetch(apiUrl, {
+    // Fetch iKhokha credentials for this tenant
+    const { data: settingsRows, error: settingsErr } = await adminClient
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", tenantId)
+      .in("key", ["ikhokha_app_id", "ikhokha_app_key", "ikhokha_mode"]);
+
+    if (settingsErr) throw settingsErr;
+
+    const settings: Record<string, string> = {};
+    for (const row of settingsRows ?? []) settings[row.key] = row.value;
+
+    const appId  = settings.ikhokha_app_id;
+    const appKey = settings.ikhokha_app_key;
+    const mode   = (settings.ikhokha_mode ?? "test") as "live" | "test";
+
+    if (!appId || !appKey) throw new Error("iKhokha credentials not configured for this tenant");
+
+    // Build paylink request payload
+    const amountRands = (amount_cents / 100).toFixed(2);
+    const requestId = crypto.randomUUID();
+
+    const payload = JSON.stringify({
+      requestId,
+      amount: amountRands,
+      currency: "ZAR",
+      description: description ?? "Booking deposit",
+      returnUrl: return_url,
+      cancelUrl: cancel_url ?? return_url,
+      externalReference: booking_id,
+    });
+
+    const signature = await sign(appKey, payload);
+    const apiBase = IK_API[mode];
+
+    const ikRes = await fetch(`${apiBase}/payment/paylink`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "IK-APPID":     appId,
-        "IK-SIGN":      signature,
+        "IK-APPID": appId,
+        "IK-SIGN": signature,
       },
-      body: requestBodyStr,
+      body: payload,
     });
 
-    const ikData = await ikRes.json();
-    console.log(`[ikhokha-checkout] response:`, JSON.stringify(ikData));
+    const ikBody = await ikRes.json();
 
-    if (!ikRes.ok || ikData.responseCode !== "00") {
-      console.error("[ikhokha-checkout] API error:", ikData);
-      return new Response(
-        JSON.stringify({ error: "Failed to create iKhokha paylink", detail: ikData }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    if (!ikRes.ok || !ikBody.paylinkUrl) {
+      console.error("[ikhokha-checkout] API error", ikRes.status, ikBody);
+      throw new Error(
+        ikBody.message ?? ikBody.error ?? `iKhokha API error ${ikRes.status}`
       );
     }
 
-    const paylinkUrl = ikData.paylinkUrl;
-    const paylinkID  = ikData.paylinkID;
-
-    if (payment_type === "balance" || payment_type === "full") {
-      await supabase.from("bookings").update({
-        ikhokha_final_checkout_id: paylinkID,
-        ikhokha_final_link:        paylinkUrl,
-      }).eq("id", booking.id);
-    } else {
-      await supabase.from("bookings").update({
-        ikhokha_checkout_id: paylinkID,
-        ikhokha_link:        paylinkUrl,
-      }).eq("id", booking.id);
-    }
+    // Persist the requestId against the booking for webhook reconciliation
+    await adminClient
+      .from("bookings")
+      .update({ ikhokha_request_id: requestId })
+      .eq("id", booking_id);
 
     return new Response(
-      JSON.stringify({ checkoutId: paylinkID, url: paylinkUrl, redirectUrl: paylinkUrl }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: true,
+        paylink_url: ikBody.paylinkUrl,
+        transaction_id: requestId,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
-  } catch (err) {
-    console.error("[ikhokha-checkout] error:", err);
+  } catch (err: any) {
+    console.error("[ikhokha-checkout] Unhandled error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: err.message ?? "Unknown error" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,25 +1,16 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CreditCard,
-  Eye, EyeOff,
-  CheckCircle2,
-  FlaskConical,
-  AlertCircle,
-  ChevronDown,
-  Edit2,
+  CreditCard, Eye, EyeOff, Edit2,
+  AlertCircle, ChevronDown, FlaskConical, CheckCircle2,
 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  AdminTag,
-  SaveButton,
-  HintTooltip,
-} from "@/components/admin/AdminSharedUI";
+import { AdminTag, SaveButton, HintTooltip } from "@/components/admin/AdminSharedUI";
 
 const MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
 
-// ─── tiny shared Field (local copy so this file is self-contained) ────────────
+// ─── Field ───────────────────────────────────────────────────────────────────
 interface FieldProps {
   label: string;
   fieldKey: string;
@@ -28,7 +19,7 @@ interface FieldProps {
   value: string;
   masked: boolean;
   editing: boolean;
-  onChange: (key: string, value: string) => void;
+  onChange: (value: string) => void;
   hint?: string;
   tooltip?: string;
 }
@@ -61,7 +52,7 @@ const Field = ({
           disabled={isMasked && !editing}
           value={displayValue}
           placeholder={placeholder}
-          onChange={(e) => onChange(fieldKey, e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed pr-9 transition-colors"
         />
         {isSecret && (
@@ -79,23 +70,27 @@ const Field = ({
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// IkhokhaCard
-// ─────────────────────────────────────────────────────────────────────────────
-export interface IkhokhaCardProps {
+// ─── IkhokhaCard ─────────────────────────────────────────────────────────────
+interface IkhokhaCardProps {
   settings: Record<string, string>;
   onSaved: () => void;
   payshapEnabled: boolean;
+  tenantId: string;
 }
 
-export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardProps) => {
-  const ikMode = (settings.ikhokha_mode as "live" | "test" | undefined) ?? null;
+const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCardProps) => {
   const anyConfigured = !!settings.ikhokha_app_id || !!settings.ikhokha_app_key;
+  const ikhokhaMode = (settings.ikhokha_mode as "live" | "test" | undefined) ?? null;
 
-  const [draft, setDraft] = useState({ app_id: "", app_key: "", mode: ikMode ?? "test" as "live" | "test" });
+  const [draft, setDraft] = useState({ app_id: "", app_key: "", mode: ikhokhaMode ?? "test" as "live" | "test" });
   const [editing, setEditing] = useState(!anyConfigured);
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const getToken = async (): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  };
 
   const handleSave = async () => {
     if (payshapEnabled) {
@@ -107,15 +102,14 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
       return;
     }
     if (!draft.app_key || draft.app_key === MASK) {
-      toast.error("App Key (secret) is required.");
+      toast.error("App Key is required.");
       return;
     }
+    const token = await getToken();
+    if (!token) { toast.error("Not authenticated — please refresh."); return; }
+
     setSaving(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error("Not authenticated — please refresh.");
-
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const res = await fetch(`${supabaseUrl}/functions/v1/save-ikhokha-keys`, {
         method: "POST",
@@ -124,19 +118,27 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          app_id:  draft.app_id,
+          app_id: draft.app_id,
           app_key: draft.app_key,
-          mode:    draft.mode,
+          mode: draft.mode,
         }),
       });
       const result = await res.json();
       if (!result.success) throw new Error(result.error ?? "Save failed");
 
-      toast.success(`iKhokha credentials saved — ${draft.mode === "live" ? "Live" : "Test"} mode active.`);
+      // Mark payment setup complete
+      await supabase
+        .from("app_settings")
+        .upsert(
+          { tenant_id: tenantId, key: "payment_setup_complete", value: "true" },
+          { onConflict: "tenant_id,key" }
+        );
+
+      toast.success("iKhokha credentials saved.");
       onSaved();
       setEditing(false);
-    } catch (err: unknown) {
-      toast.error((err as Error).message ?? "Failed to save iKhokha credentials.");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save iKhokha credentials.");
     } finally {
       setSaving(false);
     }
@@ -148,7 +150,7 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
       ? "flex items-center gap-1 text-[9px] font-bold rounded-full px-2 py-0.5"
       : "flex items-center gap-1.5 text-[10px] font-bold rounded-full px-2.5 py-1";
     const iconSize = size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
-    if (ikMode === "test") {
+    if (ikhokhaMode === "test") {
       return (
         <span className={`${base} text-amber-400/90 bg-amber-400/10 border border-amber-400/20`}>
           <FlaskConical className={iconSize} /> Test Mode
@@ -166,7 +168,7 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
     ? "border-l-2 border-l-white/10 opacity-50"
     : !anyConfigured
       ? "border-l-2 border-l-amber-400/30"
-      : ikMode === "test"
+      : ikhokhaMode === "test"
         ? "border-l-2 border-l-amber-400/50"
         : "border-l-2 border-l-emerald-400/40";
 
@@ -176,7 +178,7 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
       animate={{ opacity: 1, y: 0 }}
       className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
     >
-      {/* ── Header (always visible) ── */}
+      {/* Header */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -189,7 +191,7 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
           <div>
             <h4 className="text-sm font-bold text-white/80">iKhokha Payments</h4>
             <p className="text-[10px] text-white/30 mt-0.5 font-medium">
-              South African checkout. Online card transactions
+              SA card &amp; instant EFT via iKhokha paylinks
             </p>
             {payshapEnabled && (
               <p className="text-[10px] text-white/20 mt-1 font-medium italic">
@@ -198,7 +200,7 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
             )}
             {!payshapEnabled && !anyConfigured && (
               <p className="text-[10px] text-amber-400/60 mt-1 font-medium">
-                Add your iKhokha App ID &amp; Key to enable payments
+                Add your iKhokha App ID &amp; Key to enable online payments
               </p>
             )}
           </div>
@@ -214,11 +216,11 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
         </div>
       </button>
 
-      {/* ── Expandable body ── */}
+      {/* Body */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
-            key="ik-body"
+            key="body"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -244,7 +246,7 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
                   )}
 
                   <div className="flex flex-col gap-3 px-5 pt-5">
-                    {/* Mode selector */}
+                    {/* Mode */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">
                         Mode
@@ -262,29 +264,30 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
 
                     <Field
                       label="App ID"
-                      fieldKey="app_id"
-                      placeholder="your-ikhokha-app-id"
+                      fieldKey="ikhokha_app_id"
+                      placeholder="your-app-id"
                       value={editing ? draft.app_id : (anyConfigured ? (settings.ikhokha_app_id ?? "") : "")}
                       masked={anyConfigured && !editing}
                       editing={editing}
-                      onChange={(_, v) => setDraft((p) => ({ ...p, app_id: v }))}
-                      hint="Found in iKhokha Business Portal → API Management → App ID"
-                      tooltip="Log in to the iKhokha Business Portal, navigate to API Management and copy your App ID."
+                      onChange={(v) => setDraft((p) => ({ ...p, app_id: v }))}
+                      hint="From iKhokha Developer Portal > My Apps"
+                      tooltip="Log in to the iKhokha Developer Portal, open My Apps and copy your App ID."
                     />
 
                     <Field
                       label="App Key (Secret)"
-                      fieldKey="app_key"
-                      placeholder="your-ikhokha-app-secret"
+                      fieldKey="ikhokha_app_key"
+                      placeholder="your-app-key"
                       type="password"
-                      value={editing ? draft.app_key : (anyConfigured ? MASK : "")}
+                      value={editing ? draft.app_key : (anyConfigured ? (settings.ikhokha_app_key ?? "") : "")}
                       masked={anyConfigured && !editing}
                       editing={editing}
-                      onChange={(_, v) => setDraft((p) => ({ ...p, app_key: v }))}
-                      hint="Keep this secret — it signs every payment request"
-                      tooltip="Located next to your App ID. Never share this value publicly — it is used to sign API requests."
+                      onChange={(v) => setDraft((p) => ({ ...p, app_key: v }))}
+                      hint="Keep this private — never share or expose in the browser"
+                      tooltip="Found next to your App ID. Used to sign each API request with HMAC-SHA256."
                     />
 
+                    {/* Actions */}
                     <div className="flex items-center justify-end gap-3 pt-1">
                       {anyConfigured && !editing && (
                         <button
@@ -303,19 +306,19 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
                       )}
                     </div>
 
+                    {/* Info note */}
                     <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3 mb-5">
                       <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                       <p className="text-[11px] text-white/25 leading-relaxed">
-                        iKhokha generates a hosted paylink for each booking. Clients are redirected to
-                        iKhokha&apos;s checkout page and returned to your booking confirmation screen after
-                        payment. The webhook callback is auto-configured — no manual setup needed.
+                        iKhokha generates a secure paylink for each booking. Clients are
+                        redirected to iKhokha's hosted payment page and returned to your
+                        booking confirmation once paid. Each request is signed with
+                        HMAC-SHA256 — your App Key never leaves the server.
                       </p>
                     </div>
                   </div>
                 </>
               )}
-
-              {payshapEnabled && <div className="pb-5" />}
             </div>
           </motion.div>
         )}
