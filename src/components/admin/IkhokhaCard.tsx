@@ -189,7 +189,7 @@ export const IkhokhaCard = ({ settings, onSaved, payshapEnabled }: IkhokhaCardPr
           <div>
             <h4 className="text-sm font-bold text-white/80">iKhokha Payments</h4>
             <p className="text-[10px] text-white/30 mt-0.5 font-medium">
-              South African paylink checkout — no redirect page needed
+              South African checkout. Online card transactions
             </p>
             {payshapEnabled && (
               <p className="text-[10px] text-white/20 mt-1 font-medium italic">
