@@ -44,7 +44,7 @@ serve(async (req) => {
       { tenant_id: tenantId, key: "ikhokha_app_id",  value: app_id.trim() },
       { tenant_id: tenantId, key: "ikhokha_app_key", value: app_key.trim() },
       { tenant_id: tenantId, key: "ikhokha_mode",    value: mode },
-      { tenant_id: tenantId, key: "ikhokha_enabled", value: String(enabled) },
+      {tenant_id: tenantId, key: "ikhokha_enabled", value: "true" },
     ];
 
     const { error } = await adminClient
