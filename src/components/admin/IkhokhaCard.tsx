@@ -135,6 +135,7 @@ const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCar
           app_id: draft.app_id,
           app_key: draft.app_key,
           mode: draft.mode,
+          tenant_id: tenantId,  // ← pass the slug so the edge function saves under the correct tenant
         }),
       });
       const result = await res.json();
