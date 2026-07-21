@@ -15,6 +15,7 @@ import type { PublicService } from "@/hooks/usePublicServices";
 import YocoImg from "@/assets/Yoco.svg";
 import PayfastImg from "@/assets/Payfast.webp";
 import PayshapImg from "@/assets/payshap.png";
+import IkhokhaImg from "@/assets/ikhokha.svg";
 
 interface ReviewStepProps {
   booking: BookingState;
@@ -24,7 +25,7 @@ interface ReviewStepProps {
   onPayshapComplete: () => void;
 }
 
-type PaymentChoice = "deposit" | "full" | "payshap_deposit" | "payshap_full";
+type PaymentChoice = "deposit" | "full" | "payshap_deposit" | "payshap_full" | "ikhokha_deposit" | "ikhokha_full";
 
 type SubmitPhase =
   | "idle"
@@ -39,6 +40,8 @@ function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: Pay
     default:
       if (choice === "payshap_deposit") return `Continue to PayShap ${cur}${amount.toLocaleString()}`;
       if (choice === "payshap_full")    return `Continue to PayShap ${cur}${amount.toLocaleString()}`;
+      if (choice === "ikhokha_deposit")  return `Confirm & Pay Deposit ${cur}${amount.toLocaleString()}`;
+      if (choice === "ikhokha_full")     return `Confirm & Pay ${cur}${amount.toLocaleString()}`;
       return choice === "full"
         ? `Confirm & Pay ${cur}${amount.toLocaleString()}`
         : `Confirm & Pay Deposit ${cur}${amount.toLocaleString()}`;
@@ -113,8 +116,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       setPaymentChoice(
         config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
       );
+    } else if (config.ikhokhaEnabled) {
+      setPaymentChoice(
+        config.depositPercent >= 100 ? "ikhokha_full" : "ikhokha_deposit"
+      );
     }
-  }, [config.payshapEnabled, config.depositPercent]);
+  }, [config.payshapEnabled, config.ikhokhaEnabled, config.depositPercent]);
 
   const [showPairWith, setShowPairWith] = useState(false);
   const [payshapSuccess, setPayshapSuccess] = useState(false);
@@ -190,18 +197,24 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
 
   const cur = config.currency;
 
-  const isPayshap = paymentChoice === "payshap_deposit" || paymentChoice === "payshap_full";
+  const isPayshap  = paymentChoice === "payshap_deposit"  || paymentChoice === "payshap_full";
+  const isIkhokha  = paymentChoice === "ikhokha_deposit"  || paymentChoice === "ikhokha_full";
 
-  const amountDueNow =
-    paymentChoice === "full" || paymentChoice === "payshap_full" ? total : deposit;
 
+    const amountDueNow =
+    paymentChoice === "full" || paymentChoice === "payshap_full" || paymentChoice === "ikhokha_full"
+      ? total
+      : deposit;
+  
   const gatewayLogoSrc = isPayshap
     ? PayshapImg
+    : isIkhokha
+    ? IkhokhaImg
     : payfastMode
     ? PayfastImg
     : YocoImg;
 
-  const gatewayLogoAlt = isPayshap ? "PayShap" : payfastMode ? "PayFast" : "Yoco";
+  const gatewayLogoAlt = isPayshap ? "PayShap" : isIkhokha ? "iKhokha" : payfastMode ? "PayFast" : "Yoco";
 
   const ensureBookingCreated = async (): Promise<string> => {
     if (pendingBookingId) {
@@ -289,7 +302,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       p_guest_email: booking.email || null,
       p_guest_phone: guestPhone,
       p_total_amount: total,
-      p_deposit_amount: (paymentChoice === "payshap_full" || paymentChoice === "full") ? total : deposit,
+      p_deposit_amount: (paymentChoice === "payshap_full" || paymentChoice === "full" || paymentChoice === "ikhokha_full") ? total : deposit,
     });
 
     if (error) throw error;
@@ -346,8 +359,29 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       }
 
       setPhase("gateway");
+            if (isIkhokha) {
+        const ikType = paymentChoice === "ikhokha_full" ? "full" : "deposit";
+        const amountCents = ikType === "full" ? total * 100 : deposit * 100;
+        const origin = window.location.origin;
+        const { data: ikData, error: ikErr } = await supabase.functions.invoke("ikhokha-checkout", {
+          body: {
+            booking_id:   bookingId,
+            payment_type: ikType,
+            amount_cents: amountCents,
+            description:  `Booking – ${config.name}`,
+            return_url:   `${origin}/booking/success?booking_id=${bookingId}`,
+            failure_url:  `${origin}/booking/failure?booking_id=${bookingId}`,
+            cancel_url:   `${origin}/booking/cancel?booking_id=${bookingId}`,
+          },
+        });
+        if (ikErr || !ikData?.paylink_url) throw new Error(ikErr?.message ?? "Payment gateway error.");
+        redirectingRef.current = true;
+        window.location.href = ikData.paylink_url;
+        return;
+      }
 
       if (config.payfastMode) {
+        
         const { data: pfData, error: pfErr } = await supabase.functions.invoke("payfast-initiate", {
           body: { booking_id: bookingId, payment_type: paymentChoice },
         });
@@ -449,7 +483,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       </div>
 
       {/* Payment summary - Yoco / PayFast */}
-      {!isPayshap && (
+      {!isPayshap && !isIkhokha && (
         <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
@@ -486,6 +520,65 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
         </div>
       )}
 
+            {/* Payment summary - iKhokha */}
+      {isIkhokha && (
+        <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+          <div className="px-4 pt-3 pb-2 border-b border-border/30">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
+          </div>
+          <div className="divide-y divide-border/20">
+            {paymentChoice === "ikhokha_deposit" && (
+              <>
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <p className="text-sm text-muted-foreground">Deposit due now ({depositPercent}%)</p>
+                  <p className="text-sm font-semibold text-primary">{cur}{deposit.toLocaleString()}</p>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <p className="text-sm text-muted-foreground">Balance on the day</p>
+                  <p className="text-sm font-medium text-foreground">{cur}{balance.toLocaleString()}</p>
+                </div>
+              </>
+            )}
+            {paymentChoice === "ikhokha_full" && (
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <p className="text-sm text-muted-foreground">Paying in full</p>
+                <p className="text-sm font-semibold text-primary">{cur}{total.toLocaleString()}</p>
+              </div>
+            )}
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <p className="text-sm text-muted-foreground">Pay with</p>
+              <img src={IkhokhaImg} alt="iKhokha" className="h-5 w-auto object-contain" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* iKhokha deposit / full toggle */}
+      {isIkhokha && config.depositPercent < 100 && (
+        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
+          <button
+            onClick={() => setPaymentChoice("ikhokha_deposit")}
+            className={`flex-1 py-2.5 font-medium transition-colors ${
+              paymentChoice === "ikhokha_deposit"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+            }`}
+          >
+            Pay deposit
+          </button>
+          <button
+            onClick={() => setPaymentChoice("ikhokha_full")}
+            className={`flex-1 py-2.5 font-medium transition-colors ${
+              paymentChoice === "ikhokha_full"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+            }`}
+          >
+            Pay in full
+          </button>
+        </div>
+      )}
+      
       {/* Payment summary - PayShap */}
       {isPayshap && (
         <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
@@ -525,7 +618,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       )}
 
       {/* Payment method toggle - Yoco / PayFast */}
-      {!isPayshap && depositPercent < 100 && (
+      {!isPayshap && !isIkhokha && depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("deposit")}
