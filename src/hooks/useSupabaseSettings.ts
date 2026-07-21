@@ -57,6 +57,11 @@ const ALLOWED_APP_SETTING_KEYS = [
   "payfast_merchant_key",
   "payfast_passphrase",
   "payfast_mode",
+  // iKhokha Payments
+  "ikhokha_app_id",
+  "ikhokha_app_key",
+  "ikhokha_mode",
+  "ikhokha_enabled",
   // PayShap
   "payshap_enabled",
   // Suggested add-ons (booking flow upsell)
