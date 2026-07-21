@@ -40,13 +40,14 @@ serve(async (req) => {
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
     const tenantId = user.id;
 
+    const now = new Date().toISOString();
     const rows = [
-      { tenant_id: tenantId, key: "ikhokha_app_id",  value: app_id.trim() },
-      { tenant_id: tenantId, key: "ikhokha_app_key", value: app_key.trim() },
-      { tenant_id: tenantId, key: "ikhokha_mode",    value: mode },
-      {tenant_id: tenantId, key: "ikhokha_enabled", value: "true" },
+      { tenant_id: tenantId, key: "ikhokha_app_id",  value: app_id.trim(),  updated_at: now },
+      { tenant_id: tenantId, key: "ikhokha_app_key", value: app_key.trim(), updated_at: now },
+      { tenant_id: tenantId, key: "ikhokha_mode",    value: mode,           updated_at: now },
+      { tenant_id: tenantId, key: "ikhokha_enabled", value: "true",         updated_at: now },
     ];
-
+    
     const { error } = await adminClient
       .from("app_settings")
       .upsert(rows, { onConflict: "tenant_id,key" });
