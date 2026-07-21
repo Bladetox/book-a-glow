@@ -3,12 +3,12 @@ import {
   CreditCard, Eye, EyeOff, Edit2,
   AlertCircle, ChevronDown, FlaskConical, CheckCircle2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AdminTag, SaveButton, HintTooltip } from "@/components/admin/AdminSharedUI";
 
-const MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
+const MASK = "????????????????";
 
 // ─── Field ───────────────────────────────────────────────────────────────────
 interface FieldProps {
@@ -86,6 +86,20 @@ const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCar
   const [editing, setEditing] = useState(!anyConfigured);
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (ikhokhaMode && draft.mode !== ikhokhaMode) {
+      setDraft((p) => ({ ...p, mode: ikhokhaMode }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ikhokhaMode]);
+
+  useEffect(() => {
+    if (anyConfigured && editing) {
+      setEditing(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.ikhokha_app_id, settings.ikhokha_app_key]);
 
   const getToken = async (): Promise<string | null> => {
     const { data: { session } } = await supabase.auth.getSession();
