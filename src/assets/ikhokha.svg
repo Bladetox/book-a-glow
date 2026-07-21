@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" id="Logo_-_Yellow_and_black_32px" width="157.746" height="32" viewBox="0 0 157.746 32">
+  <g id="Paths">
+    <g id="Group_1" data-name="Group 1">
+      <path id="Path_1" data-name="Path 1" d="M143.588,5.309h-1.631V26.691h1.631Z" transform="translate(-106.587 0)" fill="#ffcb00"/>
+      <path id="Path_2" data-name="Path 2" d="M191.981,5.309H177.617V8.556h5.5V26.691h3.36V8.556h5.5Z" transform="translate(-133.131 0)" fill="#ffcb00"/>
+      <path id="Path_3" data-name="Path 3" d="M134.208,5.309h-3.36V14.27l-6.858-8.961h-3.219V26.691h3.36V11.914l9.077,14.777Z" transform="translate(-90.578 0)" fill="#ffcb00"/>
+      <path id="Path_4" data-name="Path 4" d="M90.829,23.445H82.9V5.309H79.54V26.691H90.829Z" transform="translate(-59.657 0)" fill="#ffcb00"/>
+      <path id="Path_5" data-name="Path 5" d="M64.535,5.309H61.175V26.691h3.36Z" transform="translate(-45.865 0)" fill="#ffcb00"/>
+      <path id="Path_6" data-name="Path 6" d="M42.61,14.27,35.752,5.309H32.533V26.691h3.36V11.914l6.858,8.961,6.858-8.961V26.691h3.36V5.309H49.749Z" transform="translate(-24.395 0)" fill="#ffcb00"/>
+      <path id="Path_7" data-name="Path 7" d="M8.138,5.309H0V26.691H8.138a10.691,10.691,0,0,0,0-21.382Zm0,18.136H3.36V8.556H8.138a7.444,7.444,0,0,1,0,14.889Z" transform="translate(0 0)" fill="#ffcb00"/>
+    </g>
+    <g id="Group_2" data-name="Group 2" transform="translate(110.07 0)">
+      <path id="Path_8" data-name="Path 8" d="M259.483,5.309h-4.2l-6.442,9.272V5.309h-3.36V26.691h3.36V20.049l2.021-2.908,4.974,9.55h3.782l-6.537-12.553Z" transform="translate(-245.484 0)" fill="#ffcb00"/>
+    </g>
+  </g>
+  <g id="Tagline" transform="translate(119.878 20.824)">
+    <path id="Path_9" data-name="Path 9" d="M286.043,48.965v-.627h-.473v-.154h1.112v.154h-.473v.627Z" transform="translate(-285.57 -48.184)" fill="#ffcb00"/>
+    <path id="Path_10" data-name="Path 10" d="M288.631,48.965l-.007-.492-.245.411h-.075l-.244-.407v.488h-.157v-.781h.138l.306.513.3-.513h.137l.008.781Z" transform="translate(-286.695 -48.184)" fill="#ffcb00"/>
+  </g>
+  <g id="Dot" transform="translate(108.439 0)">
+    <circle id="Ellipse_1" data-name="Ellipse 1" cx="1.631" cy="1.631" r="1.631" fill="#ffcb00"/>
+  </g>
+</svg>
