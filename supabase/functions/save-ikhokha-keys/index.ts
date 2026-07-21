@@ -19,7 +19,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller
+    // Verify caller is authenticated
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -27,27 +27,43 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { app_id, app_key, mode = "test" } = body as {
+    const { app_id, app_key, mode = "test", tenant_id } = body as {
       app_id: string;
       app_key: string;
       mode: "live" | "test";
+      tenant_id: string;
     };
 
     if (!app_id?.trim()) throw new Error("app_id is required");
     if (!app_key?.trim()) throw new Error("app_key is required");
-    if (![ "live", "test" ].includes(mode)) throw new Error("mode must be live or test");
+    if (!["live", "test"].includes(mode)) throw new Error("mode must be live or test");
+    if (!tenant_id?.trim()) throw new Error("tenant_id is required");
 
+    // Verify the caller actually owns this tenant
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
-    const tenantId = user.id;
+    const { data: tenant, error: tenantError } = await adminClient
+      .from("tenants")
+      .select("id")
+      .eq("id", tenant_id)
+      .eq("owner_id", user.id)
+      .maybeSingle();
+
+    // Fallback: also allow if tenant_id matches user.id (legacy UUID-as-tenant pattern)
+    const tenantOwned = !tenantError && tenant;
+    const uuidFallback = tenant_id === user.id;
+
+    if (!tenantOwned && !uuidFallback) {
+      throw new Error("Forbidden: you do not own this tenant");
+    }
 
     const now = new Date().toISOString();
     const rows = [
-      { tenant_id: tenantId, key: "ikhokha_app_id",  value: app_id.trim(),  updated_at: now },
-      { tenant_id: tenantId, key: "ikhokha_app_key", value: app_key.trim(), updated_at: now },
-      { tenant_id: tenantId, key: "ikhokha_mode",    value: mode,           updated_at: now },
-      { tenant_id: tenantId, key: "ikhokha_enabled", value: "true",         updated_at: now },
+      { tenant_id, key: "ikhokha_app_id",  value: app_id.trim(),  updated_at: now },
+      { tenant_id, key: "ikhokha_app_key", value: app_key.trim(), updated_at: now },
+      { tenant_id, key: "ikhokha_mode",    value: mode,           updated_at: now },
+      { tenant_id, key: "ikhokha_enabled", value: "true",         updated_at: now },
     ];
-    
+
     const { error } = await adminClient
       .from("app_settings")
       .upsert(rows, { onConflict: "tenant_id,key" });
