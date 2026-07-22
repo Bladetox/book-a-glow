@@ -365,6 +365,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
         const origin = window.location.origin;
         const { data: ikData, error: ikErr } = await supabase.functions.invoke("ikhokha-checkout", {
           body: {
+            tenant_id:    tenantId,
             booking_id:   bookingId,
             payment_type: ikType,
             amount_cents: amountCents,
