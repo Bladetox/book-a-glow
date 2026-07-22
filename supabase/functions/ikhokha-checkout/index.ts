@@ -3,6 +3,7 @@
  * Creates an iKhokha paylink for a booking deposit, balance, or full payment.
  *
  * Request body:
+ *   tenant_id      string   – tenant slug (e.g. "juststart")
  *   booking_id     string   – UUID of the booking row
  *   payment_type   string   – "deposit" | "balance" | "full"
  *   amount_cents   number   – amount in ZAR cents (e.g. 15000 = R150.00)
@@ -12,14 +13,7 @@
  *   cancel_url     string   – cancel redirect URL (optional, defaults to return_url)
  *
  * Returns:
- *   { success: true, paylink_url: string, transaction_id: string }
- *
- * Signing spec (iKhokha docs):
- *   IK-SIGN = HMAC-SHA256( jsStringEscape(urlPath + requestBodyStr), appKey )
- *   where urlPath = "/public-api/v1/api/payment"
- *
- * externalTransactionID format (must match ikhokha-webhook parser):
- *   "<bookingId>-<paymentType>-<timestamp>"
+ *   { success: true, paylink_url: string, paylink_id: string, transaction_id: string }
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -34,10 +28,6 @@ const corsHeaders = {
 const IK_API_ENDPOINT = "https://api.ikhokha.com/public-api/v1/api/payment";
 const IK_API_PATH     = "/public-api/v1/api/payment";
 
-/**
- * JS-string-escape — mirrors the exact escaping used in ikhokha-webhook
- * and in iKhokha's own reference implementations.
- */
 function jsStringEscape(str: string): string {
   return str
     .replace(/\\/g, "\\\\")
@@ -46,11 +36,6 @@ function jsStringEscape(str: string): string {
     .replace(/\u0000/g, "\\0");
 }
 
-/**
- * Build the HMAC-SHA256 signature iKhokha expects.
- *
- * IK-SIGN = HMAC-SHA256( jsStringEscape(path + bodyStr), appKey )
- */
 async function buildSignature(
   appKey: string,
   path: string,
@@ -91,7 +76,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey    = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // ── 1. Verify caller ───────────────────────────────────────────────────
+    // ── 1. Verify caller is authenticated ─────────────────────────────────
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -104,6 +89,7 @@ serve(async (req) => {
     // ── 2. Parse & validate input ──────────────────────────────────────────
     const body = await req.json();
     const {
+      tenant_id,
       booking_id,
       payment_type = "deposit",
       amount_cents,
@@ -112,6 +98,7 @@ serve(async (req) => {
       failure_url,
       cancel_url,
     } = body as {
+      tenant_id:    string;
       booking_id:   string;
       payment_type: "deposit" | "balance" | "full";
       amount_cents: number;
@@ -121,22 +108,37 @@ serve(async (req) => {
       cancel_url?:  string;
     };
 
-    if (!booking_id)              throw new Error("booking_id is required");
+    if (!tenant_id)                    throw new Error("tenant_id is required");
+    if (!booking_id)                   throw new Error("booking_id is required");
     if (!amount_cents || amount_cents <= 0)
-                                  throw new Error("amount_cents must be > 0");
-    if (!return_url)              throw new Error("return_url is required");
-    if (!failure_url)             throw new Error("failure_url is required");
+                                       throw new Error("amount_cents must be > 0");
+    if (!return_url)                   throw new Error("return_url is required");
+    if (!failure_url)                  throw new Error("failure_url is required");
     if (!["deposit", "balance", "full"].includes(payment_type))
-                                  throw new Error("payment_type must be deposit | balance | full");
+                                       throw new Error("payment_type must be deposit | balance | full");
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
-    const tenantId    = user.id;
 
-    // ── 3. Fetch iKhokha credentials for this tenant ───────────────────────
+    // ── 3. Verify caller owns this tenant ──────────────────────────────────
+    const { data: tenant, error: tenantError } = await adminClient
+      .from("tenants")
+      .select("id")
+      .eq("id", tenant_id)
+      .eq("owner_id", user.id)
+      .maybeSingle();
+
+    const tenantOwned = !tenantError && tenant;
+    const uuidFallback = tenant_id === user.id;
+
+    if (!tenantOwned && !uuidFallback) {
+      throw new Error("Forbidden: you do not own this tenant");
+    }
+
+    // ── 4. Fetch iKhokha credentials using tenant slug ─────────────────────
     const { data: settingsRows, error: settingsErr } = await adminClient
       .from("app_settings")
       .select("key, value")
-      .eq("tenant_id", tenantId)
+      .eq("tenant_id", tenant_id)
       .in("key", ["ikhokha_app_id", "ikhokha_app_key", "ikhokha_mode"]);
 
     if (settingsErr) throw settingsErr;
@@ -151,17 +153,16 @@ serve(async (req) => {
     if (!appId || !appKey)
       throw new Error("iKhokha credentials not configured for this tenant");
 
-    // ── 4. Derive the Supabase-hosted webhook callback URL ─────────────────
+    // ── 5. Derive webhook callback URL ─────────────────────────────────────
     const callbackUrl = `${supabaseUrl}/functions/v1/ikhokha-webhook`;
 
-    // ── 5. Build externalTransactionID — must match ikhokha-webhook regex:
-    //       /^(<uuid>)-(\w+)-(\d+)$/
+    // ── 6. Build externalTransactionID ────────────────────────────────────
     const externalTransactionID = `${booking_id}-${payment_type}-${Date.now()}`;
 
-    // ── 6. Build the iKhokha request payload ──────────────────────────────
+    // ── 7. Build iKhokha request payload ──────────────────────────────────
     const ikPayload = {
       entityID:             appId,
-      amount:               amount_cents,             // integer cents (ZAR)
+      amount:               amount_cents,
       currency:             "ZAR",
       requesterUrl:         return_url,
       mode,
@@ -179,11 +180,11 @@ serve(async (req) => {
     const signature = await buildSignature(appKey, IK_API_PATH, bodyStr);
 
     console.log(
-      `[ikhokha-checkout] tenant=${tenantId} booking=${booking_id} ` +
+      `[ikhokha-checkout] tenant=${tenant_id} booking=${booking_id} ` +
       `type=${payment_type} amount=${amount_cents} mode=${mode}`
     );
 
-    // ── 7. Call iKhokha API ────────────────────────────────────────────────
+    // ── 8. Call iKhokha API ────────────────────────────────────────────────
     const ikRes = await fetch(IK_API_ENDPOINT, {
       method: "POST",
       headers: {
@@ -208,7 +209,7 @@ serve(async (req) => {
       );
     }
 
-    // ── 8. Persist the paylinkID + externalTransactionID against the booking
+    // ── 9. Persist paylinkID + externalTransactionID against the booking ───
     const updateData: Record<string, unknown> = {
       payment_provider: "ikhokha",
     };
@@ -226,7 +227,7 @@ serve(async (req) => {
       .from("bookings")
       .update(updateData)
       .eq("id", booking_id)
-      .eq("tenant_id", tenantId);
+      .eq("tenant_id", tenant_id);
 
     if (updateErr) {
       console.warn(
