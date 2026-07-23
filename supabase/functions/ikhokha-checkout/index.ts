@@ -241,29 +241,9 @@ serve(async (req) => {
       `txn=${externalTransactionID}`
     );
 
-    // ── 10. Fire email notification (non-fatal) ────────────────────────────
-    // Mirrors the Yoco/PayFast autonomous pattern:
-    //   deposit → booking_confirmed  (slot held, payment link sent to client)
-    //   full    → booking_confirmed  (slot held, full payment link sent)
-    //   balance → balance_request    (balance collection link sent to client)
-    try {
-      await adminClient.functions.invoke("send-booking-email", {
-        body: {
-          booking_id,
-          email_type:
-            payment_type === "balance"
-              ? "balance_request"
-              : "booking_confirmed",
-        },
-      });
-      console.log(
-        `[ikhokha-checkout] email fired email_type=${
-          payment_type === "balance" ? "balance_request" : "booking_confirmed"
-        } booking=${booking_id}`
-      );
-    } catch (emailErr) {
-      console.warn("[ikhokha-checkout] email send failed (non-fatal):", emailErr);
-    }
+    // ── 10. Email is fired by ikhokha-webhook on payment SUCCESS ──────────
+    // Sending confirmation here (before the client has paid) was dead code.
+    // The webhook handles: deposit/full → booking_confirmed, balance → payment_confirmed.
 
     return new Response(
       JSON.stringify({
