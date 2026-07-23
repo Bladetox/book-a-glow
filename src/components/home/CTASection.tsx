@@ -13,7 +13,7 @@ export const CTASection = () => {
   return (
     <section style={{ background: C.bg, padding: isMobile ? "80px 24px" : "120px 24px" }}>
       <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
-        <Eyebrow text="30-day free trial" />
+        <Eyebrow text="free trial" />
         <h2 style={{
           fontFamily: FONT_DISPLAY,
           fontSize: isMobile ? "clamp(28px,8vw,42px)" : "clamp(32px,4vw,52px)",
@@ -27,7 +27,7 @@ export const CTASection = () => {
         </p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
           <Link
-            to="/onboarding"
+            to="/pricing"
             style={{
               background: CTA_BG,
               boxShadow: CTA_SHADOW,
@@ -43,7 +43,7 @@ export const CTASection = () => {
           </Link>
         </div>
         <p style={{ marginTop: 20, fontSize: 12, color: C.faint, letterSpacing: "0.04em", fontFamily: FONT_BODY }}>
-          No credit card required · 30-day free trial · Cancel anytime
+          No payment required · Free trial · Cancel anytime
         </p>
       </div>
     </section>
