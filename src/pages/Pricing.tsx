@@ -219,7 +219,7 @@ const tiers = [
       {
         label: "Everything in Starter, plus",
         features: [
-          "Yoco and Payfast payments",
+          "Yoco, Ikhokha and Payfast payments",
           "Deposit collection with balance tracking",
           "Custom Terms and Conditions at checkout",
           "Client blocking with reason attached",
@@ -317,6 +317,7 @@ const comparisonSections: FeatureSection[] = [
       { label: "PayShap instant EFT",                                starter: true,  flow: false, professional: false, studio: false },
       { label: "PayShap real-time verification queue",               starter: true,  flow: false, professional: false, studio: false },
       { label: "Yoco payments",                                      starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "Ikhokha payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Payfast payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Deposit vs. balance tracking per booking",           starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Payment records (per-booking history)",              starter: true,  flow: true,  professional: true,  studio: true  },
@@ -327,7 +328,6 @@ const comparisonSections: FeatureSection[] = [
     rows: [
       { label: "Booking confirmed email (client)",                   starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Booking cancelled email (client)",                   starter: true,  flow: true,  professional: true,  studio: true  },
-      { label: "PayShap payment link email (client)",                starter: true,  flow: false, professional: false, studio: false },
       { label: "Balance due reminder email (client)",                starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Consultation form link email (client)",              starter: false, flow: false, professional: false, studio: true  },
       { label: "Customisable email content",                         starter: false, flow: false, professional: false, studio: true  },
@@ -417,7 +417,7 @@ const faqs = [
   },
   {
     q: "Which payment options does NextSlot support?",
-    a: "Starter plan businesses collect payments via PayShap instant EFT with a built-in proof-of-payment verification queue. Flow, Professional, and Studio plans unlock Yoco and Payfast so clients pay at the time of booking. Deposits are collected automatically.",
+    a: "Starter Plan uses PayShap, clients pay directly from their banking app and you confirm the booking with one click when the money lands. Upgrade to Flow or Professional to unlock Yoco, iKhokha, and PayFast: clients pay at checkout and their slot confirms automatically.",
   },
 {
   q: "What is PayShap?",
