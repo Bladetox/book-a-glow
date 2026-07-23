@@ -988,6 +988,10 @@ const About = () => {
                   objectFit: "cover",
                   objectPosition: "center top",
                   flexShrink: 0,
+                  width: 72,
+                  height: 72,
+                  minWidth: 72,
+                  minHeight: 72,
                   border: "2px solid rgba(212,165,116,0.40)",
                   boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
                 }}
@@ -1164,8 +1168,16 @@ const About = () => {
                     color: C.text,
                   }}
                 >
+                    <img
+                    src="/assets/tiktok_1.png"
+                    alt="TikTok"
+                    width={16}
+                    height={16}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ objectFit: "contain", flexShrink: 0 }}
+                  />
                   Watch on TikTok
-                  <ArrowUpRight style={{ height: 14, width: 14, color: C.gold }} />
                 </span>
               </div>
             </a>
