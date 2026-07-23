@@ -4,16 +4,26 @@
  *
  * DATA MODEL CLARIFICATION
  * ────────────────────────
- * tenants.plan             → one of: 'trial' | 'starter' | 'flow' | 'professional' | 'studio'
+ * tenants.plan             → one of: 'starter' | 'flow' | 'professional' | 'studio'
  * tenants.is_lifetime_free → boolean state flag set manually by the platform owner
  *                             to reward specific tenants with a permanent free subscription.
  *                             It is NOT a plan slug and must never appear in PlanSlug or
  *                             PLAN_LABELS. Always check this flag alongside plan.
  *
+ * TRIAL CLARIFICATION
+ * ───────────────────
+ * 'trial' is NOT a plan slug. It is a time-limited free period applied on top
+ * of the chosen plan (starter = 7 days, flow/professional/studio = 30 days).
+ * tenants.trial_ends_at tracks when this period expires. The plan slug never
+ * changes during or after trial — use plan for all feature and payment gating.
+ *
  * PAYMENT METHOD CLARIFICATION
  * ────────────────────────────
  * PayShap    → the instant bank-to-bank payment method used in book-a-glow.
  *               Tenants register a PayShap number in their banking app.
+ *               Available on starter plan only.
+ * Yoco / iKhokha / PayFast → online card checkout providers.
+ *               Available on flow, professional and studio plans only.
  * PayNow     → a DIFFERENT product. It is NOT used in book-a-glow and must
  *               never appear in tenant-facing copy or payment gate logic.
  *
@@ -37,10 +47,10 @@
 // ─── Plan slugs (matches tenants.plan column only) ───────────────────────────
 /**
  * Real plan slugs stored in tenants.plan.
+ * 'trial' is NOT here — trial is a time period, not a plan.
  * 'lifetime_free' is NOT here — it is a state (tenants.is_lifetime_free boolean).
  */
 export type PlanSlug =
-  | 'trial'
   | 'starter'
   | 'flow'
   | 'professional'
@@ -55,7 +65,6 @@ export type PlanSlug =
  * This is now the single source — import here, delete local copies.
  */
 export const PLAN_LABELS: Record<string, string> = {
-  trial:        'Free Trial',
   starter:      'Starter',
   flow:         'Flow',
   professional: 'Professional',
@@ -71,7 +80,7 @@ export function getPlanLabel(
   plan: string | null | undefined,
   is_lifetime_free?: boolean | null
 ): string {
-  const base = plan ? (PLAN_LABELS[plan] ?? plan) : 'Free Trial';
+  const base = plan ? (PLAN_LABELS[plan] ?? plan) : 'Starter';
   return is_lifetime_free ? `${base} · Lifetime Free` : base;
 }
 
@@ -89,10 +98,9 @@ export function isLifetimeFree(is_lifetime_free: boolean | null | undefined): bo
  * and any onboarding hints.
  *
  * starter      → PayShap  (instant bank-to-bank, tenant registers a number in their banking app)
- * flow         → Yoco + PayFast  (online card checkout unlocked)
- * professional → Yoco + PayFast
- * studio       → Yoco + PayFast
- * trial        → PayShap  (same requirement as starter during trial)
+ * flow         → Yoco / iKhokha / PayFast  (online card checkout unlocked)
+ * professional → Yoco / iKhokha / PayFast
+ * studio       → Yoco / iKhokha / PayFast
  *
  * NOTE: PayNow is NOT a book-a-glow payment option and must never appear here.
  *
@@ -111,12 +119,6 @@ export interface PlanPaymentFocus {
 }
 
 export const PLAN_PAYMENT_FOCUS: Record<string, PlanPaymentFocus> = {
-  trial: {
-    label: 'PayShap',
-    requiresYocoPayfast: false,
-    primaryInstant: true,
-    hint: 'Enter your PayShap registered number in Integrations so clients can pay instantly via their banking app.',
-  },
   starter: {
     label: 'PayShap',
     requiresYocoPayfast: false,
@@ -151,7 +153,7 @@ export function getPlanPaymentFocus(plan: string | null | undefined): PlanPaymen
 
 // ─── Feature-gate helpers ─────────────────────────────────────────────────────
 
-/** True for plans that unlock Yoco + PayFast online card checkout. */
+/** True for plans that unlock Yoco + iKhokha + PayFast online card checkout. */
 export function isYocoPlan(plan: string | null | undefined): boolean {
   return ['flow', 'professional', 'studio'].includes(plan ?? '');
 }
@@ -162,15 +164,16 @@ export function isYocoPlan(plan: string | null | undefined): boolean {
  * is a state, not a plan. Their plan column (e.g. 'starter') drives this.
  */
 export function isInstantPaymentPlan(plan: string | null | undefined): boolean {
-  return ['trial', 'starter'].includes(plan ?? '');
+  return plan === 'starter';
 }
 
 /**
  * Returns true when the tenant has completed minimum payment configuration
  * for their plan tier:
  *
- *   starter / trial              → payshap_account_number must be present
- *   flow / professional / studio → yoco_secret_key (live or test) + payfast_merchant_id
+ *   starter              → payshap_account_number must be present
+ *   flow / professional / studio → at least one of: yoco_secret_key (live or test),
+ *                                  ikhokha_merchant_id, or payfast_merchant_id
  *
  * is_lifetime_free is accepted here so the gate can short-circuit to the
  * starter-tier check for rewarded tenants regardless of their plan column.
@@ -195,6 +198,7 @@ export function hasCompletedPaymentSetup(params: {
     yoco_secret_key_live,
     yoco_secret_key_test,
     payfast_merchant_id,
+    ikhokha_merchant_id,
   } = params;
 
   const hasPayShap = !!(payshap_account_number?.trim());
@@ -202,10 +206,10 @@ export function hasCompletedPaymentSetup(params: {
   // Lifetime-free tenants: PayShap number is sufficient regardless of plan
   if (isLifetimeFree(is_lifetime_free)) return hasPayShap;
 
-  // Starter / Trial: PayShap number is sufficient
+  // Starter: PayShap number is sufficient
   if (!isYocoPlan(plan)) return hasPayShap;
 
-  // Flow / Professional / Studio: Yoco key + PayFast merchant ID required
+  // Flow / Professional / Studio: at least one card provider required
   // (PayShap is not enforced at this tier — card checkout is the primary gateway)
   const hasYoco =
     !!(yoco_secret_key_live?.trim()) || !!(yoco_secret_key_test?.trim());
