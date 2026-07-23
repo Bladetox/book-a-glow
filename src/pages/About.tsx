@@ -1,7 +1,6 @@
-import tiktokIcon from './assets/tiktok_1.png'
+import tiktokIcon from "@/assets/tiktok_1.png";
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
@@ -483,6 +482,7 @@ const About = () => {
               >
                 "For the first time, the business felt like it was running itself."
               </p>
+        
               <div
                 style={{
                   display: "flex",
@@ -512,10 +512,10 @@ const About = () => {
                       margin: 0,
                     }}
                   >
-                    Owner, PhenomeBeauty · Mobile Beauty Therapist, Cape Town · 17 years in the
-                    industry
+                    Owner, PhenomeBeauty · Mobile Beauty Therapist, Cape Town · 17 years in the industry
                   </p>
                 </div>
+        
                 <a
                   href="https://www.tiktok.com/@phenomebeauty"
                   target="_blank"
@@ -536,7 +536,7 @@ const About = () => {
                     whiteSpace: "nowrap",
                   }}
                 >
-                    <img
+                  <img
                     src={tiktokIcon}
                     alt="TikTok"
                     width={20}
@@ -546,12 +546,11 @@ const About = () => {
                     style={{ objectFit: "contain", flexShrink: 0 }}
                   />
                   Watch on TikTok
-              </a> 
-            </div>
+                </a>
+              </div>
             </blockquote>
           </div>
         </section>
-
         {/* ── TIMELINE ─────────────────────────────────────────────── */}
         <section style={{ padding: "0 24px 56px" }}>
           <div
