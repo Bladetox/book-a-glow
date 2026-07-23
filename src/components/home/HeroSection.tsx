@@ -83,30 +83,6 @@ export const HeroSection = () => {
         background: C.bg,
       }}
     >
-      {/* Background image */}
-      <div style={{
-        position:           "absolute",
-        inset:              0,
-        backgroundImage:    "url('https://iili.io/CCLle5l.webp')",
-        backgroundSize:     "cover",
-        backgroundPosition: "center",
-        backgroundRepeat:   "no-repeat",
-        opacity:            0.25,
-        filter:             "blur(0.5px) saturate(0.75) brightness(0.6)",
-        transform:          "scale(1.04)",
-        zIndex:             0,
-        pointerEvents:      "none",
-      }} />
-
-      {/* Grid overlay */}
-      <div style={{
-        position: "absolute", inset: 0,
-        backgroundImage: `linear-gradient(rgba(212,165,116,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,165,116,0.03) 1px,transparent 1px)`,
-        backgroundSize: "44px 44px",
-        WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-        maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
-      } as React.CSSProperties} />
-
       {/* Ambient glow */}
       <div style={{
         position: "absolute", width: 640, height: 640, borderRadius: "50%",
@@ -164,7 +140,7 @@ export const HeroSection = () => {
             animation: "fadeUp 0.6s 0.2s ease both",
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
-            Built for the person behind the chair, the studio, and the craft.
+            The only booking platform that tells you what to do next, so your business can grow.
           </p>
 
           <p style={{
@@ -175,7 +151,7 @@ export const HeroSection = () => {
             animation: "fadeUp 0.6s 0.25s ease both",
             fontFamily: FONT_BODY,
           } as React.CSSProperties}>
-            Stop managing bookings on WhatsApp. Get paid upfront, see exactly where your revenue comes from, and run your business like it owes you clarity.
+            Frictionless bookings and automated payments. While you focus on your clients, your dashboard is already spotting the client going quiet and why your slots are empty.  NextSlot doesn't just manage your diary; it runs the intelligence layer your business has been missing.
           </p>
           
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", animation: "fadeUp 0.6s 0.3s ease both" } as React.CSSProperties}>
@@ -238,7 +214,7 @@ export const HeroSection = () => {
               margin: 0,
             }}>
               <span style={{ color: "#D4A574", fontWeight: 600 }}>
-                "From WhatsApp chaos to fully automated bookings."
+                "My dashboard showed me exactly what to focus on, in 2 months my bookings doubled."
               </span>
               {" "}— Shu-meez, PhenomeBeauty · Cape Town
             </p>
