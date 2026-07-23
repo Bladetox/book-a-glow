@@ -1,3 +1,4 @@
+import tiktokIcon from "@/assets/tiktok_1.png";
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
@@ -1169,7 +1170,7 @@ const About = () => {
                   }}
                 >
                     <img
-                    src="/assets/tiktok_1.png"
+                    src={tiktokIcon}
                     alt="TikTok"
                     width={16}
                     height={16}
