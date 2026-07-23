@@ -226,7 +226,12 @@ export const HeroSection = () => {
           </div>
 
           {/* 5. PRICE-ANCHORED CTA — the ask, after trust is earned */}
-          <div style={{ animation: "fadeUp 0.6s 0.45s ease both" } as React.CSSProperties}>
+          <div style={{
+              animation: "fadeUp 0.6s 0.45s ease both",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: isMobile ? "center" : "flex-start",
+            } as React.CSSProperties}>
             <Link
               to="/pricing"
               style={{
