@@ -547,6 +547,7 @@ const About = () => {
                   />
                   Watch on TikTok
               </a> 
+            </div>
             </blockquote>
           </div>
         </section>
