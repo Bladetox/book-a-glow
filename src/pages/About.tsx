@@ -540,8 +540,8 @@ const About = () => {
                   <img
                     src={tiktokIcon}
                     alt="TikTok"
-                    width={20}
-                    height={20}
+                    width={26}
+                    height={26}
                     loading="lazy"
                     decoding="async"
                     style={{ objectFit: "contain", flexShrink: 0 }}
@@ -1180,8 +1180,8 @@ const About = () => {
                     <img
                     src={tiktokIcon}
                     alt="TikTok"
-                    width={20}
-                    height={20}
+                    width={26}
+                    height={26}
                     loading="lazy"
                     decoding="async"
                     style={{ objectFit: "contain", flexShrink: 0 }}
