@@ -189,7 +189,7 @@ const About = () => {
                     marginBottom: 20,
                   }}
                 >
-                  Built from real problems.
+                  Built from real challenges.
                   <br />
                   <span style={{ color: C.gold, fontStyle: "italic" }}>Not a boardroom.</span>
                 </h1>
@@ -536,9 +536,16 @@ const About = () => {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  @phenomebeauty
-                  <ArrowUpRight style={{ height: 11, width: 11 }} />
-                </a>
+                    <img
+                    src={tiktokIcon}
+                    alt="TikTok"
+                    width={20}
+                    height={20}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ objectFit: "contain", flexShrink: 0 }}
+                  />
+                  Watch on TikTok
               </div>
             </blockquote>
           </div>
@@ -1172,8 +1179,8 @@ const About = () => {
                     <img
                     src={tiktokIcon}
                     alt="TikTok"
-                    width={16}
-                    height={16}
+                    width={20}
+                    height={20}
                     loading="lazy"
                     decoding="async"
                     style={{ objectFit: "contain", flexShrink: 0 }}
