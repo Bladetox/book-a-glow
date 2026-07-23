@@ -8,8 +8,9 @@
  * │ Plan         │ Required                                          │
  * ├──────────────────────────────────────────────────────────────────┤
  * │ starter      │ PayShap registered number                         │
- * │ flow         │ Yoco secret key + PayFast merchant ID             │
- * │ professional │ Yoco secret key + PayFast merchant ID             │
+ * │ flow         │ At least one of: Yoco, iKhokha, or PayFast        │
+ * │ professional │ At least one of: Yoco, iKhokha, or PayFast        │
+ * │ studio       │ At least one of: Yoco, iKhokha, or PayFast        │
  * └──────────────────────────────────────────────────────────────────┘
  *
  * HOW TO ADD TO SetupChecklist
@@ -64,6 +65,7 @@ interface TenantPaymentFields {
   yoco_secret_key_live: string | null;
   yoco_secret_key_test: string | null;
   payfast_merchant_id: string | null;
+  ikhokha_merchant_id: string | null;
 }
 
 function useTenantPaymentFields(tenantId: string | null) {
@@ -76,7 +78,7 @@ function useTenantPaymentFields(tenantId: string | null) {
         .from('tenants')
         .select(
           // paynow_number intentionally excluded — not a book-a-glow payment method
-          'plan, is_lifetime_free, payshap_account_number, yoco_secret_key_live, yoco_secret_key_test, payfast_merchant_id'
+          'plan, is_lifetime_free, payshap_account_number, yoco_secret_key_live, yoco_secret_key_test, payfast_merchant_id , ikhokha_merchant_id'
         )
         .eq('id', tenantId!)
         .maybeSingle();
@@ -104,6 +106,7 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
     yoco_secret_key_live: tenant.yoco_secret_key_live,
     yoco_secret_key_test: tenant.yoco_secret_key_test,
     payfast_merchant_id: tenant.payfast_merchant_id,
+    ikhokha_merchant_id: tenant.ikhokha_merchant_id,
   });
 
   // Auto-persist to app_settings when gate flips to complete
@@ -124,6 +127,10 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
         {
           label: 'Yoco secret key',
           done: !!(tenant?.yoco_secret_key_live?.trim() || tenant?.yoco_secret_key_test?.trim()),
+        },
+        {
+          label: 'iKhokha merchant ID',
+          done: !!tenant?.ikhokha_merchant_id?.trim(),
         },
         {
           label: 'PayFast merchant ID',
