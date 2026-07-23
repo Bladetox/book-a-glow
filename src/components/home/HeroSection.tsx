@@ -214,7 +214,7 @@ export const HeroSection = () => {
           {/* 5. PRICE-ANCHORED CTA — the ask, after trust is earned */}
           <div style={{ animation: "fadeUp 0.6s 0.45s ease both" } as React.CSSProperties}>
             <Link
-              to="/onboarding"
+              to="/pricing"
               style={{
                 background: CTA_BG,
                 boxShadow: CTA_SHADOW,
@@ -223,8 +223,8 @@ export const HeroSection = () => {
                 padding: "15px 32px", borderRadius: 10,
                 textDecoration: "none",
                 display: "inline-flex", alignItems: "center", gap: 8,
-                minHeight: 52, width: isMobile ? "100%" : "auto",
-                justifyContent: isMobile ? "center" : "flex-start",
+                minHeight: 52, width: "auto",
+                justifyContent: "flex-start",
               }}
             >
               Get clarity from R99
