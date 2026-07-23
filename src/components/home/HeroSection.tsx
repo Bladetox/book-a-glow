@@ -9,9 +9,9 @@ const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
 const HOW_IT_WORKS = [
-  { icon: "✦", text: "Clients book and pay online — no back-and-forth" },
-  { icon: "✦", text: "Deposits collected automatically, diary filled without lifting a finger" },
-  { icon: "✦", text: "Your dashboard spots quiet clients, empty slots, and lost revenue before you do" },
+  { icon: "✦", text: "Frictionless bookings and automated payments" },
+  { icon: "✦", text: "While you focus on your clients, your dashboard spots the clients going quiet and why your slots are empty" },
+  { icon: "✦", text: "NextSlot does'nt just manage your dairy, it runs the intelligence layer most booking systems are missing" },
 ];
 
 export const HeroSection = () => {
@@ -202,12 +202,12 @@ export const HeroSection = () => {
                 fontFamily: FONT_BODY, lineHeight: 1.55,
                 fontWeight: 500, margin: 0, marginBottom: 4,
               }}>
-                "My dashboard showed me exactly what to focus on, in 2 months my bookings doubled."
+                "My dashboard showed me exactly what to focus on, in 3 months my bookings doubled."
               </p>
               <p style={{
                 fontSize: 11, color: C.muted,
                 fontFamily: FONT_BODY, margin: 0,
-              }}>— Shu-meez, PhenomeBeauty · Cape Town</p>
+              }}> Shu-meez, PhenomeBeauty · Cape Town</p>
             </div>
           </div>
 
@@ -227,7 +227,7 @@ export const HeroSection = () => {
                 justifyContent: isMobile ? "center" : "flex-start",
               }}
             >
-              Start getting clarity — from R99
+              Get clarity from R99
             </Link>
             <p style={{
               marginTop: 12, fontSize: 11,
@@ -236,7 +236,7 @@ export const HeroSection = () => {
               fontFamily: FONT_BODY,
               textAlign: isMobile ? "center" : "left",
             } as React.CSSProperties}>
-              No card required · 30-day trial · Live in under 10 minutes
+              Free 7-day trial on Starter · Free 30-day trial Flow/ Professional· Live in under 10 minutes
             </p>
           </div>
         </div>
