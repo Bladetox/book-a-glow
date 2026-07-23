@@ -1,6 +1,7 @@
 import tiktokIcon from "@/assets/tiktok_1.png";
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
