@@ -10,8 +10,7 @@ const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba
 
 const HOW_IT_WORKS = [
   { icon: "✦", text: "Frictionless bookings and automated payments" },
-  { icon: "✦", text: "While you focus on your clients, your dashboard spots the clients going quiet and why your slots are empty" },
-  { icon: "✦", text: "NextSlot does'nt just manage your dairy, it runs the intelligence layer most booking systems are missing" },
+  { icon: "✦", text: "While you focus on your clients, your dashboard spots the clients that aren't returning and why your slots are empty" },
 ];
 
 export const HeroSection = () => {
@@ -179,6 +178,21 @@ export const HeroSection = () => {
             ))}
           </div>
 
+          {/* Standalone statement */}
+          <p style={{
+            fontSize: isMobile ? 13 : 14,
+            fontWeight: 500,
+            color: C.text,
+            lineHeight: 1.6,
+            marginBottom: 32,
+            fontFamily: FONT_BODY,
+            animation: "fadeUp 0.6s 0.3s ease both",
+            borderLeft: `2px solid rgba(212,165,116,0.4)`,
+            paddingLeft: 14,
+          } as React.CSSProperties}>
+            NextSlot doesn't just manage your diary. It runs the intelligence layer most booking systems are missing.
+          </p>
+          
           {/* 4. TRUST — social proof BEFORE the ask */}
           <div style={{
             display: "flex", alignItems: "flex-start", gap: 12,
