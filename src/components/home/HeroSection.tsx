@@ -11,6 +11,7 @@ const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba
 const HOW_IT_WORKS = [
   { icon: "✦", text: "Frictionless bookings and automated payments" },
   { icon: "✦", text: "Focus on your clients while your dashboard shows you which clients aren't returning, where you have empty slots, and how to fill them." },
+  ];
   
 export const HeroSection = () => {
   const width      = useWindowWidth();
