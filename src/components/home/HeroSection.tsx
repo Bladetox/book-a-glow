@@ -238,7 +238,7 @@ export const HeroSection = () => {
                 textDecoration: "none",
                 display: "inline-flex", alignItems: "center", gap: 8,
                 minHeight: 52, width: "auto",
-                justifyContent: isMobile ? "flex-start",
+                justifyContent: isMobile ? "center" : "flex-start",
               }}
             >
               Get clarity from R99
