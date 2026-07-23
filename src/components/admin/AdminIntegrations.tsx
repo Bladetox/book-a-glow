@@ -20,6 +20,7 @@ import {
 } from "@/components/admin/AdminSharedUI";
 import IntegrationsGuidePanel from "@/components/admin/IntegrationsGuidePanel";
 import IkhokhaCard from './IkhokhaCard';
+import { isYocoPlan } from "@/lib/planConfig";
 
 const MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
 
@@ -364,7 +365,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
   const handleChange = (key: string, value: string) =>
     setDraft((p) => ({ ...p, [key]: value }));
 
-const handleSave = async () => {
+  const handleSave = async () => {
     if (payshapEnabled) {
       toast.error("Disable PayShap before enabling PayFast.");
       return;
@@ -1019,7 +1020,6 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
     setEnabled(newValue);
     setSaving(true);
     try {
-      // Resolve current tenant phone so payshap_phone stays fresh
       const { data: tenantRow } = await supabase
         .from("tenants")
         .select("phone")
@@ -1027,7 +1027,6 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
         .single();
       const phone = tenantRow?.phone ?? "";
 
-      // Write all three keys atomically
       const rows = [
         { tenant_id: tenantId, key: "payshap_enabled", value: String(newValue) },
         { tenant_id: tenantId, key: "feature_flag_payshap_payments", value: String(newValue) },
@@ -1040,7 +1039,6 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
 
       if (error) throw error;
 
-      // ── Checklist Gate 4: mark payment setup complete when PayShap is enabled ──
       if (newValue) {
         await supabase
           .from("app_settings")
@@ -1144,8 +1142,8 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
 
                 <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
-                <p className="text-[11px] text-white/25 leading-relaxed">
-                  When PayShap is enabled, your phone number appears on the booking payment step and clients pay you directly via their banking app, payment reflects in your account immediately. Once paid, open your banking app to verify the amount, return to your dashboard to confirm the booking. Your client will receive a confirmation email as soon as you confirm.
+                  <p className="text-[11px] text-white/25 leading-relaxed">
+                    When PayShap is enabled, your phone number appears on the booking payment step and clients pay you directly via their banking app, payment reflects in your account immediately. Once paid, open your banking app to verify the amount, return to your dashboard to confirm the booking. Your client will receive a confirmation email as soon as you confirm.
                   </p>
                 </div>
 
@@ -1190,13 +1188,17 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
 // AdminIntegrations
 // ─────────────────────────────────────────────────────────────────────────────
 const AdminIntegrations = () => {
-  const { tenantId, userId } = useTenant();
+  const { tenantId, userId, tenant } = useTenant();
   const { data: settings = {}, isLoading, refetch } = useAppSettings();
   const upsert = useUpsertAppSetting();
 
   const [guideOpen, setGuideOpen] = useState(false);
 
-  const yocoMode = (settings.yoco_mode as "live" | "test" | undefined) ?? null;
+  const plan        = tenant?.plan ?? null;
+  const isStarter   = plan === 'starter';
+  const isCardPlan  = isYocoPlan(plan); // flow | professional | studio
+
+  const yocoMode       = (settings.yoco_mode as "live" | "test" | undefined) ?? null;
   const mapsConfigured = isConfigured(settings, ["google_maps_api_key"]);
   const payshapEnabled = settings.payshap_enabled === "true";
 
@@ -1232,33 +1234,41 @@ const AdminIntegrations = () => {
           <SectionLabel label="Connected Services" />
           <div className="flex flex-col gap-3">
 
-            <PayshapCard
-              settings={settings}
-              tenantId={tenantId}
-              onSaved={refetch}
-            />
+            {/* starter only — PayShap */}
+            {isStarter && (
+              <PayshapCard
+                settings={settings}
+                tenantId={tenantId}
+                onSaved={refetch}
+              />
+            )}
 
-            <YocoCard
-              settings={settings}
-              yocoMode={yocoMode}
-              userId={userId}
-              onSaved={refetch}
-              payshapEnabled={payshapEnabled}
-            />
+            {/* flow / professional / studio only — card providers */}
+            {isCardPlan && (
+              <>
+                <YocoCard
+                  settings={settings}
+                  yocoMode={yocoMode}
+                  userId={userId}
+                  onSaved={refetch}
+                  payshapEnabled={payshapEnabled}
+                  tenantId={tenantId}
+                />
 
-            <PayfastCard
-              settings={settings}
-              onSaved={refetch}
-              payshapEnabled={payshapEnabled}
-              tenantId={tenantId}
-            />
+                <PayfastCard
+                  settings={settings}
+                  onSaved={refetch}
+                  payshapEnabled={payshapEnabled}
+                />
 
-            <IkhokhaCard 
-              settings={settings} 
-              onSaved={refetch} 
-              payshapEnabled={payshapEnabled} 
-              tenantId={tenantId}
-            />
+                <IkhokhaCard
+                  settings={settings}
+                  onSaved={refetch}
+                  payshapEnabled={payshapEnabled}
+                  tenantId={tenantId}
+                />
+              </>
+            )}
 
             <IntegrationCard
               icon={MapPin}
