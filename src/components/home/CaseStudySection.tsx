@@ -94,7 +94,7 @@ export const CaseStudySection = () => {
             marginBottom: isMobile ? 40 : 64,
           }}
         >
-          <Eyebrow text="Real result. PhenomeBeauty." />
+          <Eyebrow text="3 month results. PhenomeBeauty." />
           <h2
             style={{
               fontFamily: FONT_DISPLAY,
