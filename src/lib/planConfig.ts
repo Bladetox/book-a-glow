@@ -124,22 +124,22 @@ export const PLAN_PAYMENT_FOCUS: Record<string, PlanPaymentFocus> = {
     hint: 'Enter your PayShap registered number in Integrations so clients can pay instantly via their banking app.',
   },
   flow: {
-    label: 'Yoco + PayFast',
+    label: 'Yoco / iKhokha / PayFast',
     requiresYocoPayfast: true,
     primaryInstant: false,
-    hint: 'Add your Yoco secret key + PayFast merchant details to enable online card checkout.',
+    hint: 'Connect at least one payment provider — Yoco, iKhokha, or PayFast — in Integrations to enable online checkout.',
   },
   professional: {
-    label: 'Yoco + PayFast',
+    label: 'Yoco / iKhokha / PayFast',
     requiresYocoPayfast: true,
     primaryInstant: false,
-    hint: 'Add your Yoco secret key + PayFast merchant details to enable online card checkout.',
+    hint: 'Connect at least one payment provider — Yoco, iKhokha, or PayFast — in Integrations to enable online checkout.',
   },
   studio: {
-    label: 'Yoco + PayFast',
+    label: 'Yoco / iKhokha / PayFast',
     requiresYocoPayfast: true,
     primaryInstant: false,
-    hint: 'Add your Yoco secret key + PayFast merchant details to enable online card checkout.',
+    hint: 'Connect at least one payment provider — Yoco, iKhokha, or PayFast — in Integrations to enable online checkout.',
   },
 };
 
@@ -186,6 +186,7 @@ export function hasCompletedPaymentSetup(params: {
   yoco_secret_key_live?: string | null;
   yoco_secret_key_test?: string | null;
   payfast_merchant_id?: string | null;
+  ikhokha_merchant_id?: string | null;
 }): boolean {
   const {
     plan,
@@ -208,7 +209,8 @@ export function hasCompletedPaymentSetup(params: {
   // (PayShap is not enforced at this tier — card checkout is the primary gateway)
   const hasYoco =
     !!(yoco_secret_key_live?.trim()) || !!(yoco_secret_key_test?.trim());
+  const hasIkhokha = !!(ikhokha_merchant_id?.trim());
   const hasPayfast = !!(payfast_merchant_id?.trim());
 
-  return hasYoco && hasPayfast;
+  return hasYoco || hasIkhokha || hasPayfast;
 }
