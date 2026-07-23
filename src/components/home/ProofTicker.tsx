@@ -1,7 +1,7 @@
 import { FONT_BODY } from "./tokens";
 
 const ITEMS = [
-  "Payment Gateway Integration", "WhatsApp Reminders", "Google Calendar Sync",
+  "Local Payment Gateway Integration", "WhatsApp Reminders", "Google Calendar Sync",
   "POPIA Compliant", "No Setup Fees", "Built for South African Businesses",
   "Real-time Revenue Intelligence", "Intelligent Insights",
 ];
