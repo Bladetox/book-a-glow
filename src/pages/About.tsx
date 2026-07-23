@@ -1,4 +1,4 @@
-import tiktokIcon from "@/assets/tiktok_1.png";
+import tiktokIcon from './assets/tiktok_1.png'
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
@@ -546,7 +546,7 @@ const About = () => {
                     style={{ objectFit: "contain", flexShrink: 0 }}
                   />
                   Watch on TikTok
-              </div>
+              </a> 
             </blockquote>
           </div>
         </section>
