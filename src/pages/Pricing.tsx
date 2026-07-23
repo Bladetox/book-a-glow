@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Check, Minus, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
+import waIcon from "@/assets/whatsapp.png";
 
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
@@ -159,9 +160,15 @@ const WaBubble = () => (
     style={{ fontFamily: FONT_BODY }}
   >
     <span className="wa-bubble-icon">
-      {/* WhatsApp SVG icon */}
-      <svg viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="16" fill="rgba(255,255,255,0.18)" />
+      {/* WhatsApp png icon */}
+      <img
+        src={waIcon}
+        alt="WhatsApp"
+        width={28}
+        height={28}
+        style={{ display: "block", objectFit: "contain" }}
+      />
+              <circle cx="16" cy="16" r="16" fill="rgba(255,255,255,0.18)" />
         <path
           d="M16 6C10.477 6 6 10.477 6 16c0 1.89.523 3.656 1.434 5.168L6 26l4.98-1.406A9.94 9.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 6 16 6z"
           fill="#fff"
