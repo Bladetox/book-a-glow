@@ -37,6 +37,7 @@ const PLAN_PRICES: Record<string, number> = {
   starter:      99,
   flow:         399,
   professional: 699,
+  studio:       1200,
 };
 
 const PLAN_LABELS: Record<string, string> = {
