@@ -53,7 +53,7 @@ const daysUntil = (dateStr: string | null) => {
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const PLAN_PRICES: Record<string, number> = {
-  starter: 299, professional: 499, studio: 799,
+  starter: 99, flow: 399, professional: 699, studio: 1299,
 };
 
 // ─── Shared UI Components ────────────────────────────────────────────────────
@@ -387,9 +387,10 @@ function CreateInvoiceModal({ tenants, onClose, onCreated }: {
               value={plan}
               onChange={e => handlePlanChange(e.target.value)}
             >
-              <option value="starter">Starter — R299</option>
-              <option value="professional">Professional — R499</option>
-              <option value="studio">Studio — R799</option>
+              <option value="starter">Starter — R99</option>
+              <option value="flow">flow — R399</option>
+              <option value="professional">Professional — R699</option>
+              <option value="studio">Studio — R1299</option>
             </select>
           </div>
 
