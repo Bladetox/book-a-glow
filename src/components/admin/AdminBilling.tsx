@@ -101,6 +101,12 @@ function daysLeft(iso: string | null | undefined): number | null {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
+/** Returns the current YYYYMM billing month string. */
+function currentBillingMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 // ── Sub-components ───────────────────────────────────────────────────────────
 
 const SectionLabel = ({ label }: { label: string }) => (
@@ -245,17 +251,35 @@ export function AdminBilling() {
     if (!tenantId || !isUpgrade || selectedPlan === "studio") return;
     setCheckoutLoading(true);
     try {
+      const billingMonth = currentBillingMonth();
+      // return_url is the base path — platform-billing-checkout appends ?status=...
+      const returnUrl  = `${window.location.origin}/billing-success`;
+      const failureUrl = `${window.location.origin}/billing-success?status=cancelled&tenant=${tenantId}`;
+
       const { data, error } = await supabase.functions.invoke("platform-billing-checkout", {
-        body: { plan: selectedPlan, tenantId },
+        body: {
+          subscriber_tenant_id: tenantId,
+          plan:                 selectedPlan,
+          billing_month:        billingMonth,
+          return_url:           returnUrl,
+          failure_url:          failureUrl,
+        },
       });
-      if (error || !data?.paymentUrl) {
-        toast.error("Could not start checkout. Please try again or contact support.");
+
+      if (error || !data?.paylink_url) {
+        toast.error(
+          error?.message ??
+          data?.error ??
+          "Could not start checkout. Please try again or contact support."
+        );
         return;
       }
+
       // Redirect tenant to iKhokha hosted payment page
-      window.location.href = data.paymentUrl;
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+      window.location.href = data.paylink_url;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(msg);
     } finally {
       setCheckoutLoading(false);
     }

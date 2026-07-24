@@ -25,6 +25,7 @@ const ResetPassword    = lazy(() => import("./pages/ResetPassword"));
 const NotFound         = lazy(() => import("./pages/NotFound"));
 const TenantNotFound   = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess   = lazy(() => import("./pages/PaymentSuccess"));
+const BillingSuccess   = lazy(() => import("./pages/BillingSuccess"));
 const Demo             = lazy(() => import("./pages/Demo"));
 
 const queryClient = new QueryClient();
@@ -90,6 +91,8 @@ const MarketingRoutes = () => (
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
         <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
+        {/* Platform billing return URL — iKhokha redirects here after checkout */}
+        <Route path="/billing-success" element={<BillingSuccess />} />
         <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
         {/* Legacy redirects */}
         <Route path="/product" element={<Navigate to="/" replace />} />
