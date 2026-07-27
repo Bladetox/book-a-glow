@@ -4,15 +4,8 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Orb } from "./Orb";
 import { FloatCard, FloatCardData } from "./FloatCard";
+import heroImage from "../../assets/NexSlot_Hero.png";
 
-const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
-const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
-
-const HOW_IT_WORKS = [
-  { icon: "✦", text: "Frictionless bookings and automated payments" },
-  { icon: "✦", text: "Focus on your clients while your dashboard shows you which clients aren't returning, where you have empty slots, and how to fill them." },
-  ];
-  
 export const HeroSection = () => {
   const width      = useWindowWidth();
   const isMobile   = width < BP;
@@ -87,16 +80,26 @@ export const HeroSection = () => {
         background: C.bg,
       }}
     >
-      {/* Ambient glow */}
+      {/* ── Background image ── */}
       <div style={{
-        position: "absolute", width: 640, height: 640, borderRadius: "50%",
-        background: "radial-gradient(circle,rgba(212,165,116,0.07) 0%,transparent 70%)",
-        top: "50%", left: "50%",
-        transform: "translate(-50%,-50%)",
-        animation: "heroBreathe 7s ease-in-out infinite",
-        pointerEvents: "none",
+        position: "absolute",
+        inset: 0,
+        backgroundImage: `url(${heroImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center 30%",
+        backgroundRepeat: "no-repeat",
       }} />
 
+      {/* ── Directional overlay: heavier left (copy), lighter right (cards) ── */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: isMobile
+          ? "rgba(8,8,8,0.72)"
+          : "linear-gradient(to right, rgba(8,8,8,0.82) 0%, rgba(8,8,8,0.72) 50%, rgba(8,8,8,0.52) 100%)",
+      }} />
+
+      {/* ── Content ── */}
       <div style={{
         position: "relative", zIndex: 2,
         display: isMobile ? "flex" : "grid",
@@ -111,153 +114,121 @@ export const HeroSection = () => {
         {/* ── COPY COLUMN ── */}
         <div>
 
-          {/* 1. WHO IS THIS FOR */}
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            background: "rgba(212,165,116,0.08)",
-            border: "1px solid rgba(212,165,116,0.2)",
-            borderRadius: 100, padding: "5px 14px",
-            fontSize: 11, fontWeight: 600, color: C.gold,
-            letterSpacing: "0.08em", textTransform: "uppercase",
-            marginBottom: 24, animation: "fadeUp 0.6s ease both",
+          {/* 1. LABEL — plain, no pulse dot */}
+          <p style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: C.muted,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
             fontFamily: FONT_BODY,
+            marginBottom: 28,
+            animation: "fadeUp 0.5s ease both",
           } as React.CSSProperties}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block", animation: "pulseDot 2s ease-in-out infinite" }} />
-            Intelligent · Built for Service Businesses
-          </div>
+            For solo service businesses
+          </p>
 
-          {/* H1 */}
+          {/* 2. HEADLINE — aspirational, identity-first */}
           <h1 style={{
             fontFamily: FONT_DISPLAY,
-            fontSize: isMobile ? "clamp(32px,8vw,46px)" : "clamp(36px,4.2vw,58px)",
-            fontWeight: 700, color: C.text,
-            marginBottom: 16,
-            animation: "fadeUp 0.6s 0.1s ease both",
-            lineHeight: 1.08,
+            fontSize: isMobile ? "clamp(30px,8vw,44px)" : "clamp(34px,3.8vw,52px)",
+            fontWeight: 700,
+            color: C.text,
+            lineHeight: 1.1,
+            marginBottom: 20,
+            animation: "fadeUp 0.5s 0.08s ease both",
           } as React.CSSProperties}>
-            Your dashboard<br />
-            should be <span style={{ color: C.gold, fontStyle: "italic" }}>speaking.</span>
+            You've outgrown your side hustle.<br />
+            <span style={{ color: C.gold }}>Finally</span>, a system that reflects<br />
+            your ambition.
           </h1>
 
-          {/* 2. WHAT MAKES US DIFFERENT */}
+          {/* 3. DIFFERENTIATOR — owned, competitor-aware */}
           <p style={{
-            fontSize: isMobile ? 15 : "clamp(15px,1.4vw,18px)",
-            fontWeight: 500, color: C.text,
-            lineHeight: 1.5, marginBottom: 32,
-            maxWidth: 460,
-            animation: "fadeUp 0.6s 0.2s ease both",
+            fontSize: isMobile ? 15 : "clamp(15px,1.3vw,17px)",
+            color: C.muted,
+            lineHeight: 1.65,
+            marginBottom: 40,
+            maxWidth: 440,
             fontFamily: FONT_BODY,
+            fontWeight: 400,
+            animation: "fadeUp 0.5s 0.16s ease both",
           } as React.CSSProperties}>
-            The only booking platform that tells you what to do next, so your business can grow.
+            Most booking apps just fill your diary.
+            Nextslot shows you why it's not full enough
+            — and exactly what to do about it.
           </p>
 
-          {/* 3. HOW IT WORKS — scannable list */}
+          {/* 4. TESTIMONIAL — real name, no icon avatar */}
           <div style={{
-            display: "flex", flexDirection: "column", gap: 14,
             marginBottom: 40,
-            animation: "fadeUp 0.6s 0.25s ease both",
+            padding: "14px 16px",
+            borderLeft: `3px solid ${C.gold}`,
+            background: "rgba(212,165,116,0.06)",
+            borderRadius: "0 8px 8px 0",
+            animation: "fadeUp 0.5s 0.24s ease both",
           } as React.CSSProperties}>
-            {HOW_IT_WORKS.map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <span style={{
-                  flexShrink: 0,
-                  marginTop: 2,
-                  fontSize: 10,
-                  color: C.gold,
-                  opacity: 0.7,
-                  lineHeight: 1.6,
-                }}>✦</span>
-                <span style={{
-                  fontSize: isMobile ? 13 : 14,
-                  color: C.muted,
-                  lineHeight: 1.65,
-                  fontFamily: FONT_BODY,
-                  fontWeight: 300,
-                }}>{item.text}</span>
-              </div>
-            ))}
+            <p style={{
+              fontSize: 13,
+              color: C.text,
+              fontFamily: FONT_BODY,
+              lineHeight: 1.6,
+              fontWeight: 400,
+              margin: 0,
+              marginBottom: 6,
+            }}>
+              "In 3 months my bookings doubled and I stopped losing clients to no-shows."
+            </p>
+            <p style={{
+              fontSize: 11,
+              color: C.muted,
+              fontFamily: FONT_BODY,
+              margin: 0,
+              fontWeight: 500,
+            }}>
+              Shu-meez — PhenomeBeauty, Cape Town
+            </p>
           </div>
 
-          {/* Standalone statement */}
-          <p style={{
-            fontSize: isMobile ? 13 : 14,
-            fontWeight: 500,
-            color: C.text,
-            lineHeight: 1.6,
-            marginBottom: 32,
-            fontFamily: FONT_BODY,
-            animation: "fadeUp 0.6s 0.3s ease both",
-            borderLeft: `2px solid rgba(212,165,116,0.4)`,
-            paddingLeft: 14,
-          } as React.CSSProperties}>
-            NextSlot doesn't just manage your diary. It runs the intelligence layer most booking systems are missing.
-          </p>
-          
-          {/* 4. TRUST — social proof BEFORE the ask */}
+          {/* 5. CTA — solid gold, no gradient, low-stakes framing */}
           <div style={{
-            display: "flex", alignItems: "flex-start", gap: 12,
-            marginBottom: 40,
-            padding: "16px 18px",
-            background: "rgba(212,165,116,0.05)",
-            border: "1px solid rgba(212,165,116,0.15)",
-            borderRadius: 12,
-            animation: "fadeUp 0.6s 0.35s ease both",
+            animation: "fadeUp 0.5s 0.32s ease both",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: isMobile ? "stretch" : "flex-start",
           } as React.CSSProperties}>
-            <div style={{
-              width: 34, height: 34, borderRadius: "50%",
-              background: "rgba(212,165,116,0.10)",
-              border: "1.5px solid rgba(212,165,116,0.30)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0, fontSize: 13, color: C.gold,
-            }}>✦</div>
-            <div>
-              <p style={{
-                fontSize: 13, color: C.text,
-                fontFamily: FONT_BODY, lineHeight: 1.55,
-                fontWeight: 500, margin: 0, marginBottom: 4,
-              }}>
-                "My dashboard showed me exactly what to focus on, in 3 months my bookings doubled."
-              </p>
-              <p style={{
-                fontSize: 11, color: C.muted,
-                fontFamily: FONT_BODY, margin: 0,
-              }}> Shu-meez, PhenomeBeauty · Cape Town</p>
-            </div>
-          </div>
-
-          {/* 5. PRICE-ANCHORED CTA — the ask, after trust is earned */}
-          <div style={{
-              animation: "fadeUp 0.6s 0.45s ease both",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: isMobile ? "center" : "flex-start",
-            } as React.CSSProperties}>
             <Link
               to="/pricing"
               style={{
-                background: CTA_BG,
-                boxShadow: CTA_SHADOW,
+                background: C.gold,
                 color: "#080808",
-                fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700,
-                padding: "15px 32px", borderRadius: 10,
+                fontFamily: FONT_BODY,
+                fontSize: 15,
+                fontWeight: 700,
+                padding: "15px 32px",
+                borderRadius: 8,
                 textDecoration: "none",
-                display: "inline-flex", alignItems: "center", gap: 8,
-                minHeight: 52, width: "auto",
-                justifyContent: isMobile ? "center" : "flex-start",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 52,
+                letterSpacing: "0.01em",
               }}
             >
-              Get clarity from R99
+              Start for free
             </Link>
             <p style={{
-              marginTop: 12, fontSize: 11,
-              color: "rgba(232,232,230,0.38)",
-              letterSpacing: "0.03em", fontWeight: 400,
+              marginTop: 10,
+              fontSize: 11,
+              color: C.faint,
               fontFamily: FONT_BODY,
+              fontWeight: 400,
               textAlign: isMobile ? "center" : "left",
             } as React.CSSProperties}>
-              Free 7-day trial on Starter · Free 30-day trial Flow/ Professional· Live in under 10 minutes
+              No card needed · Live in under 10 minutes
             </p>
           </div>
+
         </div>
 
         {/* ── CARD WORLD (desktop: right column / mobile: below copy) ── */}
@@ -285,6 +256,7 @@ export const HeroSection = () => {
             />
           ))}
         </div>
+
       </div>
     </section>
   );
