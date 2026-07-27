@@ -156,16 +156,12 @@ export const HeroSection = () => {
           } as React.CSSProperties}>
             Most booking apps just fill your diary.
             Nextslot shows you why it's not full enough
-            — and exactly what to do about it.
+            and exactly what to do about it.
           </p>
 
           {/* 4. TESTIMONIAL — real name, no icon avatar */}
           <div style={{
             marginBottom: 40,
-            padding: "14px 16px",
-            borderLeft: `3px solid ${C.gold}`,
-            background: "rgba(212,165,116,0.06)",
-            borderRadius: "0 8px 8px 0",
             animation: "fadeUp 0.5s 0.24s ease both",
           } as React.CSSProperties}>
             <p style={{
@@ -186,7 +182,7 @@ export const HeroSection = () => {
               margin: 0,
               fontWeight: 500,
             }}>
-              Shu-meez — PhenomeBeauty, Cape Town
+              Shu-meez, PhenomeBeauty, Cape Town
             </p>
           </div>
 
