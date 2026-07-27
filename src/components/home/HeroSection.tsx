@@ -225,7 +225,7 @@ export const HeroSection = () => {
               fontWeight: 400,
               textAlign: isMobile ? "center" : "left",
             } as React.CSSProperties}>
-              No card needed · Live in under 10 minutes
+              No payment required · Live in under 10 minutes
             </p>
           </div>
 
