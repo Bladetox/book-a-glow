@@ -136,8 +136,8 @@ const METRIC_COPY: MetricCopyShape = {
   },
   leadSource: {
     title: "Acquisition Channel",
-    explain: "Where your clients are discovering you. All-time booking history is shown. Tap to see the full breakdown.",
-    benchmark: "Double down on your top channel. If 'Not specified' leads, prompt clients to answer at booking.",
+    explain: "Where your clients are discovering you. All-time booking history is shown. Full breakdown below.",
+    benchmark: "Focus on your top channel. Put your energy where clients are already finding you.",
   },
   revenueTrend: [
     { term: "Revenue Trend", def: "Daily revenue plotted across the month." },
