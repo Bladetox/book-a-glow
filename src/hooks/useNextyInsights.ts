@@ -520,10 +520,9 @@ export function useNextyInsights() {
           title: "Revenue With No Source Recorded",
           message:
             `${uCount} completed booking${uCount === 1 ? "" : "s"} have no acquisition channel recorded, ` +
-            `representing ${formatRand(Math.round(uRev))} in revenue you cannot attribute to any channel. ` +
-            `You cannot make informed decisions about where to invest your time or content without this data. ` +
-            `Ask every new client at the start of the session how they found you, and update the booking record immediately. ` +
-            `Even recovering 50% of this attribution changes what your channel data tells you.`,
+            `representing ${formatRand(Math.round(uRev))} in revenue outside your channel data. ` +
+            `These are typically bookings created directly from the admin panel, which does not yet include a channel field. ` +
+            `This does not affect bookings made through your booking page, those are attributed automatically.`,
           actionLabel: "View Bookings",
           actionView: "Bookings",
           impactRand: Math.round(uRev),
