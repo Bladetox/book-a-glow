@@ -99,6 +99,24 @@ const Login = () => {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // FIX (checking-session gate): blocks the login form from rendering while
+  // the initial-mount getSession() check is still deciding whether this
+  // visitor already has a valid session that should be auto-redirected.
+  // Without this, a user could submit the form manually while the mount
+  // effect's redirectToTenant() call is still in flight, racing it (the
+  // redirectedRef guard prevents a double-redirect, but the form was still
+  // interactable and confusing during that window).
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // FIX (no more forced sign-out on failed setup): if redirectToTenant can't
+  // find a tenant AND a pending_onboarding row still exists for this user,
+  // their create-tenant call likely failed mid-flight (network blip, etc).
+  // We keep them signed in and offer a retry instead of signing them out
+  // and telling them "No business account found" — a dead end with no path
+  // forward. These hold the credentials needed to retry.
+  const [retryUserId, setRetryUserId] = useState<string | null>(null);
+  const [retryAccessToken, setRetryAccessToken] = useState<string | null>(null);
+
   // Single ref guards ALL redirect paths — prevents the onAuthStateChange and
   // getSession() effects from both firing and double-calling completePendingOnboarding.
   const redirectedRef = useRef(false);
@@ -174,10 +192,17 @@ const Login = () => {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (!session?.access_token) return;
+        if (!session?.access_token) {
+          setCheckingSession(false);
+          return;
+        }
         await redirectToTenant(session.access_token, session.user.id);
+        // If we get here without a redirect having fired, there was a
+        // session but no tenant to send it to — let the form render so the
+        // user isn't stuck on a blank/loading screen forever.
+        if (!redirectedRef.current) setCheckingSession(false);
       } catch {
-        // ignore — non-critical path
+        setCheckingSession(false);
       }
     })();
   }, []);
@@ -216,7 +241,28 @@ const Login = () => {
         return;
       }
 
-      // No tenant found
+      // No tenant found yet. Before treating this as a dead end, check
+      // whether a pending_onboarding draft still exists for this user —
+      // if it does, their tenant creation likely failed mid-flight (e.g. a
+      // network blip during completePendingOnboarding's create-tenant
+      // call). In that case keep them signed in and offer a retry instead
+      // of signing out and showing a misleading "no account" message.
+      const { data: pendingRow } = await supabase
+        .from("pending_onboarding")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (pendingRow) {
+        setRetryUserId(user.id);
+        setRetryAccessToken(accessToken);
+        setError(
+          "We couldn't finish setting up your account. You're still signed in — tap Retry setup below."
+        );
+        return;
+      }
+
+      // No tenant and no pending draft — genuinely no business account.
       await supabase.auth.signOut();
       setError("No business account found for this user.");
     } catch {
@@ -224,6 +270,23 @@ const Login = () => {
     } finally {
       // Keep the spinner running if we're navigating away
       if (!redirecting) setLoading(false);
+    }
+  };
+
+  const handleRetrySetup = async () => {
+    if (!retryUserId || !retryAccessToken) return;
+    setError("");
+    setLoading(true);
+    redirectedRef.current = false;
+    try {
+      await redirectToTenant(retryAccessToken, retryUserId);
+      if (!redirectedRef.current) {
+        setError(
+          "Still couldn't finish setup. Please contact support if this keeps happening."
+        );
+      }
+    } finally {
+      if (!redirectedRef.current) setLoading(false);
     }
   };
 
@@ -269,7 +332,34 @@ const Login = () => {
         }}
       >
         <div style={{ width: "100%", maxWidth: 400 }}>
-          {/* Card */}
+          {checkingSession ? (
+            // FIX (blocking loading state): while the initial getSession()
+            // check on mount is still deciding whether to auto-redirect an
+            // already-authenticated visitor, don't render an interactable
+            // login form underneath it — show a lightweight spinner instead.
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                padding: "60px 0",
+              }}
+            >
+              <Loader2
+                style={{
+                  width: 24,
+                  height: 24,
+                  color: C.muted,
+                  animation: "spin 1s linear infinite",
+                }}
+              />
+              <p style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>
+                Finishing setup…
+              </p>
+            </div>
+          ) : (
           <div
             style={{
               background: C.s1,
@@ -341,6 +431,8 @@ const Login = () => {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setError("");
+                    setRetryUserId(null);
+                    setRetryAccessToken(null);
                   }}
                   placeholder="you@example.com"
                   style={inputStyle}
@@ -363,6 +455,8 @@ const Login = () => {
                     onChange={(e) => {
                       setPassword(e.target.value);
                       setError("");
+                      setRetryUserId(null);
+                      setRetryAccessToken(null);
                     }}
                     placeholder="Enter your password"
                     style={inputStyle}
@@ -384,6 +478,29 @@ const Login = () => {
                 >
                   {error}
                 </p>
+              )}
+
+              {retryUserId && retryAccessToken && (
+                <button
+                  type="button"
+                  onClick={handleRetrySetup}
+                  disabled={loading}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    borderRadius: 10,
+                    border: `1px solid ${C.border2}`,
+                    background: "transparent",
+                    color: C.gold,
+                    fontFamily: FONT_BODY,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.6 : 1,
+                  }}
+                >
+                  Retry setup
+                </button>
               )}
               {success && (
                 <p
@@ -440,6 +557,8 @@ const Login = () => {
                 setView(view === "login" ? "forgot" : "login");
                 setError("");
                 setSuccess("");
+                setRetryUserId(null);
+                setRetryAccessToken(null);
               }}
               style={{
                 width: "100%",
@@ -481,6 +600,7 @@ const Login = () => {
               </p>
             )}
           </div>
+          )}
         </div>
       </main>
     </div>
