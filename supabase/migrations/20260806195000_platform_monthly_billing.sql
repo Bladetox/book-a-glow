@@ -43,7 +43,9 @@ on conflict (id) do update set
 
 alter table public.platform_billing_config enable row level security;
 
-create policy if not exists platform_billing_config_superadmin_read
+drop policy if exists platform_billing_config_superadmin_read on public.platform_billing_config;
+
+create policy platform_billing_config_superadmin_read
   on public.platform_billing_config
   for select
   using (public.is_super_admin());
