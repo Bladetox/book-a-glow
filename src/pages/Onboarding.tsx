@@ -1,18 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties } from "react";
+import { Crown, Eye, EyeOff, Trash2, Loader2, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  ArrowRight,
-  ArrowLeft,
-  Check,
-  Plus,
-  Trash2,
-  Clock,
-  Loader2,
-  Eye,
-  EyeOff,
-  Crown,
-  Mail,
-} from "lucide-react";
 import { businessThemes, getThemeCssVars } from "@/components/onboarding/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { buildAdminUrl } from "@/lib/tenant-resolver";
@@ -152,7 +140,6 @@ async function createTenant(
     selected_plan: PlanId;
   }
 ): Promise<string> {
-  // FIX: Use VITE_SUPABASE_URL env var — no more hardcoded project URL.
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-tenant`,
     {
@@ -166,17 +153,28 @@ async function createTenant(
     }
   );
 
-  const json = await res.json();
-
+  const json = await res.json().catch(() => ({}));
+  
   if (!res.ok) {
-    if (res.status === 409 && json.tenant_id) {
-      return json.tenant_id as string;
+    if (
+      res.status === 409 &&
+      typeof json.tenant_id === "string" &&
+      json.tenant_id.length > 0
+    ) {
+      return json.tenant_id;
     }
+  
     throw new Error(json.error ?? `Server error: ${res.status}`);
   }
-
-  return json.tenant_id as string;
-}
+  
+  if (
+    typeof json.tenant_id !== "string" ||
+    json.tenant_id.trim().length === 0
+  ) {
+    throw new Error("Tenant was not created successfully.");
+  }
+  
+  return json.tenant_id;
 
 async function savePendingOnboarding(
   accessToken: string,
@@ -278,8 +276,6 @@ const Onboarding = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [services, setServices] = useState<Service[]>([{ ...BLANK_SERVICE }]);
-  // FIX: selectedScheduleIndex tracks which preset the user picked (default: Standard Work Week).
-  // The schedule is derived from this index so the value is always live, not a stale closure capture.
   const [selectedScheduleIndex, setSelectedScheduleIndex] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("professional");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -293,19 +289,17 @@ const Onboarding = () => {
   const creatingTenantRef = useRef(false);
   const redirectedRef = useRef(false);
 
-  // FIX: Derive schedule from state so finishTenantSetup (via useCallback) always
-  // reads the current value rather than a stale closure from mount time.
   const schedule = availabilityPresets[selectedScheduleIndex].schedule;
 
-  const activeTheme = useMemo(() => {
+  const active = useMemo(() => {
     if (!businessType) return null;
     return businessThemes.find((t) => t.label === businessType) ?? null;
   }, [businessType]);
 
   const themeStyle = useMemo(() => {
-    if (!activeTheme) return {};
-    return getThemeCssVars(activeTheme) as CSSProperties;
-  }, [activeTheme]);
+    if (!active) return {};
+    return getThemeCssVars(active) as CSSProperties;
+  }, [active]);
 
   const activePlan = useMemo(
     () => PLANS.find((p) => p.id === selectedPlan) ?? PLANS[2],
@@ -321,7 +315,6 @@ const Onboarding = () => {
   }, [themeStyle]);
 
   const passwordsMatch = password === confirmPassword;
-  // FIX: Standardised minimum password length to 8 (was 6 in Signup.tsx — use 8 everywhere).
   const passwordValid = password.length >= 8;
 
   useEffect(() => {
@@ -329,8 +322,6 @@ const Onboarding = () => {
     return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
-  // FIX: Wrapped in useCallback with all deps so the function always closes over
-  // current state values and is stable enough to be called from useEffect safely.
   const finishTenantSetup = useCallback(
     async (session: {
       access_token: string;
@@ -384,18 +375,18 @@ const Onboarding = () => {
         );
       }
     },
-    // schedule is intentionally omitted here — finishTenantSetup reads pending payload
-    // from DB/localStorage, not live state. The schedule dep is only needed in handleComplete.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.access_token) {
-        await finishTenantSetup(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (
+        (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") &&
+        session?.access_token
+      ) {
+        setTimeout(() => {
+          void finishTenantSetup(session);
+        }, 0);
       }
     });
 
@@ -455,10 +446,8 @@ const Onboarding = () => {
       const pendingPayload = {
         business_name: businessName.trim(),
         business_type: businessType ?? "General",
-        theme_id: activeTheme?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
+        theme_id: active?.label.toLowerCase().replace(/\s+/g, "_") ?? "standard",
         services: services.filter((s) => s.name.trim()),
-        // FIX: Read schedule from current state (derived from selectedScheduleIndex)
-        // so the correct preset is captured at submission time, not stale mount value.
         schedule,
         selected_plan: selectedPlan,
       };
@@ -483,8 +472,6 @@ const Onboarding = () => {
         throw new Error("Signup succeeded but no user was returned.");
       }
 
-      // FIX: Check for repeated signup (existing account) before proceeding.
-      // Supabase returns an empty identities array when the email is already registered.
       const isRepeatedSignup =
         data.user.identities !== undefined && data.user.identities.length === 0;
       if (isRepeatedSignup) {
@@ -494,14 +481,10 @@ const Onboarding = () => {
         );
       }
 
-      // FIX: Write to DB first; only fall back to localStorage if DB save fails.
-      // This avoids data loss in Safari Private / cross-origin iframe contexts where
-      // localStorage may be unavailable or cleared between tabs.
       if (data.session?.access_token) {
         try {
           await savePendingOnboarding(data.session.access_token, data.user.id, pendingPayload);
         } catch {
-          // DB save failed — fall back to localStorage so the user isn't blocked.
           localStorage.setItem(
             PENDING_ONBOARDING_KEY,
             JSON.stringify({ ...pendingPayload, user_id: data.user.id })
@@ -511,8 +494,6 @@ const Onboarding = () => {
         return;
       }
 
-      // Email confirmation required path: write localStorage as the fallback carrier.
-      // The DB row will be written when the user confirms and the session fires in Login.tsx.
       localStorage.setItem(
         PENDING_ONBOARDING_KEY,
         JSON.stringify({ ...pendingPayload, user_id: data.user.id })
@@ -533,8 +514,8 @@ const Onboarding = () => {
   if (finishingSetup) {
     return (
       <div
-        className="nextslot-theme dark-brand flex flex-col items-center justify-center bg-background text-foreground"
-        style={fixedViewportStyle}
+        className="nextslot-theme onboarding-shell flex flex-col items-center justify-center bg-background text-foreground"
+        style={{ ...fixedViewportStyle, ...appliedThemeStyle }}
       >
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-sm text-muted-foreground">Finishing your setup...</p>
@@ -545,8 +526,8 @@ const Onboarding = () => {
   if (awaitingConfirmation) {
     return (
       <div
-        className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
-        style={fixedViewportStyle}
+        className="nextslot-theme onboarding-shell flex flex-col bg-background text-foreground"
+        style={{ ...fixedViewportStyle, ...appliedThemeStyle }}
       >
         <div className="shrink-0 border-b border-border bg-background/80 backdrop-blur-sm">
           <div className="max-w-2xl mx-auto px-4 py-4 flex items-center">
@@ -592,7 +573,7 @@ const Onboarding = () => {
 
   return (
     <div
-      className="nextslot-theme dark-brand flex flex-col bg-background text-foreground"
+      className="nextslot-theme onboarding-shell flex flex-col bg-background text-foreground"
       style={{ ...fixedViewportStyle, ...appliedThemeStyle }}
     >
       {/* Header */}
@@ -653,19 +634,27 @@ const Onboarding = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {businessThemes.map((theme) => (
                   <button
+                    type="button"
                     key={theme.label}
                     onClick={() => handleSelectBusinessType(theme.label)}
-                    className={`group relative flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all duration-200 ${
+                    aria-pressed={businessType === theme.label}
+                    className={`group relative flex flex-col items-start gap-2 rounded-xl border p-4 text-left text-foreground transition-all duration-200 ${
                       businessType === theme.label
                         ? "border-primary bg-primary/5 ring-1 ring-primary"
                         : "border-border bg-card hover:border-primary/50 hover:bg-card/80"
                     }`}
                   >
-                    <span className="text-2xl">{theme.emoji}</span>
-                    <span className="text-sm font-medium leading-tight">{theme.label}</span>
+                    <span className="text-sm font-medium leading-tight text-foreground">
+                      {theme.label}
+                    </span>
                     {businessType === theme.label && (
-                      <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary">
-                        <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                      <span
+                        className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary"
+                        aria-hidden="true"
+                      >
+                        <span className="text-xs font-bold leading-none text-primary-foreground">
+                          ✓
+                        </span>
                       </span>
                     )}
                   </button>
@@ -748,7 +737,6 @@ const Onboarding = () => {
                       </div>
 
                       <div className="relative">
-                        <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                         <select
                           value={service.duration}
                           onChange={(e) => updateService(i, "duration", e.target.value)}
@@ -772,12 +760,10 @@ const Onboarding = () => {
                 onClick={addService}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
               >
-                <Plus className="h-4 w-4" />
+                <span className="text-base leading-none" aria-hidden="true">+</span>
                 Add another service
               </button>
 
-              {/* FIX: Exposed schedule selector so the user can choose their hours
-                  instead of silently defaulting to Mon-Fri 09:00-17:00. */}
               <div className="space-y-3 pt-2">
                 <div className="space-y-1">
                   <h2 className="text-sm font-medium">Working hours</h2>
@@ -954,7 +940,7 @@ const Onboarding = () => {
                           <span className="font-semibold">{plan.name}</span>
                           {selectedPlan === plan.id && (
                             <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary">
-                              <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                              <span className="text-xs font-bold text-primary-foreground" aria-hidden="true">✓</span>
                             </span>
                           )}
                         </div>
@@ -970,7 +956,7 @@ const Onboarding = () => {
                     <ul className="mt-3 space-y-1">
                       {plan.features.map((f) => (
                         <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Check className="h-3 w-3 shrink-0 mt-0.5 text-primary" />
+                          <span className="text-xs font-bold leading-none text-primary" aria-hidden="true">✓</span>
                           {f}
                         </li>
                       ))}
@@ -990,7 +976,7 @@ const Onboarding = () => {
                   tabIndex={0}
                   onKeyDown={(e) => e.key === " " && setTermsAccepted(!termsAccepted)}
                 >
-                  {termsAccepted && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                  {termsAccepted && <span className="text-xs font-bold text-primary-foreground" aria-hidden="true">✓</span>}
                 </div>
                 <span className="text-xs text-muted-foreground leading-relaxed">
                   I agree to the{" "}
@@ -1033,7 +1019,7 @@ const Onboarding = () => {
               onClick={() => setStep(step - 1)}
               className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <span aria-hidden="true">←</span>
               Back
             </button>
           ) : (
@@ -1047,7 +1033,7 @@ const Onboarding = () => {
               className="ml-auto flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Continue
-              <ArrowRight className="h-4 w-4" />
+              <span aria-hidden="true">→</span>
             </button>
           ) : (
             <button
@@ -1063,7 +1049,7 @@ const Onboarding = () => {
               ) : (
                 <>
                   Start my free trial
-                  <ArrowRight className="h-4 w-4" />
+                  <span aria-hidden="true">→</span>
                 </>
               )}
             </button>
