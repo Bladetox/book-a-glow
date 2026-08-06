@@ -15,11 +15,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!secret || supplied !== secret) return res.status(401).json({ error: "Unauthorized" });
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
   if (!supabaseUrl) return res.status(500).json({ error: "Supabase URL is not configured" });
+  if (!supabaseAnonKey) return res.status(500).json({ error: "Supabase anon key is not configured" });
 
   const response = await fetch(`${supabaseUrl}/functions/v1/platform-monthly-billing`, {
     method: "POST",
     headers: {
+      "Authorization": `Bearer ${supabaseAnonKey}`,
+      "apikey": supabaseAnonKey,
       "Content-Type": "application/json",
       "x-cron-secret": secret,
     },
