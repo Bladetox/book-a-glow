@@ -446,6 +446,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, tenant_id: existingTenant.id, already_provisioned: true });
     }
 
+    // FIX: pending_onboarding stores the draft nested under a single
+    // `payload` jsonb column (table columns are: user_id, payload,
+    // created_at, updated_at) -- there are NO flat business_name /
+    // business_type / etc columns on this row. Destructuring straight off
+    // `draft` left every one of these fields `undefined`, and the very next
+    // use (`business_name.trim()`) threw a TypeError, causing this function
+    // to 500 before a tenant was ever created. Unwrap `draft.payload` first,
+    // matching the pattern already used correctly on the client in
+    // Login.tsx's completePendingOnboarding (`pending = dbRow.payload`).
+    const draftPayload = (draft.payload ?? draft) as Record<string, unknown>;
+
     const {
       business_name,
       business_type,
@@ -455,7 +466,23 @@ Deno.serve(async (req) => {
       selected_plan,
       trial_days,
       email: draftEmail,
-    } = draft;
+    } = draftPayload as {
+      business_name: string;
+      business_type?: string;
+      theme_id?: string;
+      services?: unknown;
+      schedule?: unknown;
+      selected_plan?: string;
+      trial_days?: string | number;
+      email?: string;
+    };
+
+    if (!business_name?.trim()) {
+      return jsonResponse(
+        { error: "business_name missing from pending onboarding payload" },
+        400
+      );
+    }
 
     const resolvedThemeId = (rawThemeId && THEME_COPY[rawThemeId]) ? rawThemeId : "standard";
     const copy   = THEME_COPY[resolvedThemeId];
@@ -469,7 +496,7 @@ Deno.serve(async (req) => {
       ? JSON.parse(rawSchedule)
       : rawSchedule ?? {};
 
-    const trialDays = parseInt(trial_days ?? "30", 10);
+    const trialDays = parseInt(String(trial_days ?? "30"), 10);
 
     // Build a unique tenant slug.
     const baseSlug = slugify(business_name) || "business";
@@ -508,7 +535,7 @@ Deno.serve(async (req) => {
       currency:            "R",
       is_active:           true,
       subscription_status: "trial",
-      subscription_plan:   selected_plan ?? "professional",
+      plan: selected_plan ?? "professional",
       trial_started_at:    new Date().toISOString(),
       trial_ends_at:       new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString(),
     });
