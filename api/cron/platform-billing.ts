@@ -1,5 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+function previousMonth() {
+  const now = new Date();
+  now.setUTCDate(1);
+  now.setUTCMonth(now.getUTCMonth() - 1);
+  return now.toISOString().slice(0, 7);
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
@@ -16,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       "Content-Type": "application/json",
       "x-cron-secret": secret,
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ month: previousMonth() }),
   });
 
   const body = await response.json().catch(() => ({ error: "Invalid billing response" }));
