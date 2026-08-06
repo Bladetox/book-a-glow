@@ -175,6 +175,7 @@ async function createTenant(
   }
   
   return json.tenant_id;
+  }
 
 async function savePendingOnboarding(
   accessToken: string,
