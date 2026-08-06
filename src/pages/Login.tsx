@@ -5,18 +5,20 @@ import { supabase } from "@/integrations/supabase/client";
 import SiteHeader from "@/components/site/SiteHeader";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 import { HOME_STYLES } from "@/components/home/homeStyles";
-import { buildAdminUrl, edgeFunctionUrl, edgeFunctionHeaders } from "@/lib/tenant-resolver";
+import {
+  buildAdminUrl,
+  edgeFunctionUrl,
+  edgeFunctionHeaders,
+} from "@/lib/tenant-resolver";
 
 const PENDING_ONBOARDING_KEY = "nextslot_pending_onboarding";
-
 type ViewMode = "login" | "forgot";
 
 async function completePendingOnboarding(
   accessToken: string,
-  userId: string
+  userId: string,
 ): Promise<string | null> {
   try {
-    // Read from DB first — survives Safari new-tab localStorage isolation
     let pending: Record<string, unknown> | null = null;
 
     const { data: dbRow } = await supabase
@@ -28,11 +30,10 @@ async function completePendingOnboarding(
     if (dbRow?.payload) {
       pending = dbRow.payload as Record<string, unknown>;
     } else {
-      // Fall back to localStorage
       const raw = localStorage.getItem(PENDING_ONBOARDING_KEY);
       if (raw) {
         try {
-          pending = JSON.parse(raw);
+          pending = JSON.parse(raw) as Record<string, unknown>;
         } catch {
           pending = null;
         }
@@ -47,19 +48,17 @@ async function completePendingOnboarding(
       body: JSON.stringify(pending),
     });
 
-    const json = await res.json();
-
-    if (res.ok && json.tenant_id) {
-      await supabase.from("pending_onboarding").delete().eq("user_id", userId);
-      localStorage.removeItem(PENDING_ONBOARDING_KEY);
-      return json.tenant_id as string;
+    let json: { tenant_id?: string; error?: string } = {};
+    try {
+      json = await res.json();
+    } catch {
+      return null;
     }
 
-    // Tenant already exists (409) — still clean up and return the id
-    if (res.status === 409 && json.tenant_id) {
+    if ((res.ok || res.status === 409) && json.tenant_id) {
       await supabase.from("pending_onboarding").delete().eq("user_id", userId);
       localStorage.removeItem(PENDING_ONBOARDING_KEY);
-      return json.tenant_id as string;
+      return json.tenant_id;
     }
 
     return null;
@@ -75,7 +74,7 @@ const inputStyle = {
   border: `1px solid ${C.border2}`,
   background: C.s1,
   color: C.text,
-  fontSize: 14,
+  fontSize: 16,
   fontFamily: FONT_BODY,
   outline: "none",
   boxSizing: "border-box" as const,
@@ -98,108 +97,90 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // FIX (checking-session gate): blocks the login form from rendering while
-  // the initial-mount getSession() check is still deciding whether this
-  // visitor already has a valid session that should be auto-redirected.
-  // Without this, a user could submit the form manually while the mount
-  // effect's redirectToTenant() call is still in flight, racing it (the
-  // redirectedRef guard prevents a double-redirect, but the form was still
-  // interactable and confusing during that window).
   const [checkingSession, setCheckingSession] = useState(true);
-
-  // FIX (no more forced sign-out on failed setup): if redirectToTenant can't
-  // find a tenant AND a pending_onboarding row still exists for this user,
-  // their create-tenant call likely failed mid-flight (network blip, etc).
-  // We keep them signed in and offer a retry instead of signing them out
-  // and telling them "No business account found" — a dead end with no path
-  // forward. These hold the credentials needed to retry.
   const [retryUserId, setRetryUserId] = useState<string | null>(null);
   const [retryAccessToken, setRetryAccessToken] = useState<string | null>(null);
 
-  // Single ref guards ALL redirect paths — prevents the onAuthStateChange and
-  // getSession() effects from both firing and double-calling completePendingOnboarding.
   const redirectedRef = useRef(false);
+  const activationInFlightRef = useRef(false);
 
   const redirectToTenant = async (accessToken: string, userId: string) => {
-    if (redirectedRef.current) return;
+    if (redirectedRef.current || activationInFlightRef.current) return;
 
-    // 1. Complete pending onboarding if DB/localStorage payload exists
-    const pendingTenantId = await completePendingOnboarding(accessToken, userId);
-    if (pendingTenantId) {
-      redirectedRef.current = true;
-      window.location.href = buildAdminUrl(pendingTenantId);
-      return;
-    }
+    activationInFlightRef.current = true;
 
-    // 2. Look up tenant via user_roles
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role, tenant_id")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+    try {
+      const pendingTenantId = await completePendingOnboarding(accessToken, userId);
+      if (pendingTenantId) {
+        redirectedRef.current = true;
+        window.location.href = buildAdminUrl(pendingTenantId);
+        return;
+      }
 
-    const adminRole =
-      roles?.find((r) => r.role === "owner") ??
-      roles?.find((r) => r.role === "admin");
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role, tenant_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
-    if (adminRole?.tenant_id) {
-      redirectedRef.current = true;
-      window.location.href = buildAdminUrl(adminRole.tenant_id);
-      return;
-    }
+      const adminRole =
+        roles?.find((r) => r.role === "owner") ??
+        roles?.find((r) => r.role === "admin");
 
-    // 3. Fallback — check profiles table
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tenant_id, role")
-      .eq("id", userId)
-      .maybeSingle();
+      if (adminRole?.tenant_id) {
+        redirectedRef.current = true;
+        window.location.href = buildAdminUrl(adminRole.tenant_id);
+        return;
+      }
 
-    if (
-      profile?.tenant_id &&
-      (profile.role === "admin" || profile.role === "owner")
-    ) {
-      redirectedRef.current = true;
-      window.location.href = buildAdminUrl(profile.tenant_id);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id, role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (
+        profile?.tenant_id &&
+        (profile.role === "admin" || profile.role === "owner")
+      ) {
+        redirectedRef.current = true;
+        window.location.href = buildAdminUrl(profile.tenant_id);
+      }
+    } finally {
+      activationInFlightRef.current = false;
     }
   };
 
-  // Fires when the user arrives via the email confirmation link
-  // (already authenticated — no manual sign-in needed).
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (
         (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") &&
         session?.access_token
       ) {
-        await redirectToTenant(session.access_token, session.user.id);
+        setTimeout(() => {
+          void redirectToTenant(session.access_token, session.user.id);
+        }, 0);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Safari / new-tab fix: onAuthStateChange can fire before the listener above
-  // is registered when the confirmation link opens in a fresh tab.
-  // getSession() catches an already-active session the event missed.
-  // redirectedRef ensures only one of these two effects proceeds.
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
+
         if (!session?.access_token) {
           setCheckingSession(false);
           return;
         }
+
         await redirectToTenant(session.access_token, session.user.id);
-        // If we get here without a redirect having fired, there was a
-        // session but no tenant to send it to — let the form render so the
-        // user isn't stuck on a blank/loading screen forever.
         if (!redirectedRef.current) setCheckingSession(false);
       } catch {
         setCheckingSession(false);
@@ -234,19 +215,11 @@ const Login = () => {
 
       await redirectToTenant(accessToken, user.id);
 
-      // If redirectedRef is true, a redirect was initiated — don't reset loading
-      // state as the page is about to navigate away.
       if (redirectedRef.current) {
         redirecting = true;
         return;
       }
 
-      // No tenant found yet. Before treating this as a dead end, check
-      // whether a pending_onboarding draft still exists for this user —
-      // if it does, their tenant creation likely failed mid-flight (e.g. a
-      // network blip during completePendingOnboarding's create-tenant
-      // call). In that case keep them signed in and offer a retry instead
-      // of signing out and showing a misleading "no account" message.
       const { data: pendingRow } = await supabase
         .from("pending_onboarding")
         .select("user_id")
@@ -257,32 +230,34 @@ const Login = () => {
         setRetryUserId(user.id);
         setRetryAccessToken(accessToken);
         setError(
-          "We couldn't finish setting up your account. You're still signed in — tap Retry setup below."
+          "We couldn't finish setting up your account. You're still signed in — tap Retry setup below.",
         );
         return;
       }
 
-      // No tenant and no pending draft — genuinely no business account.
       await supabase.auth.signOut();
-      setError("No business account found for this user.");
+      setError(
+        "No business setup was found for this account. Please start onboarding again.",
+      );
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
-      // Keep the spinner running if we're navigating away
       if (!redirecting) setLoading(false);
     }
   };
 
   const handleRetrySetup = async () => {
     if (!retryUserId || !retryAccessToken) return;
+
     setError("");
     setLoading(true);
     redirectedRef.current = false;
+
     try {
       await redirectToTenant(retryAccessToken, retryUserId);
       if (!redirectedRef.current) {
         setError(
-          "Still couldn't finish setup. Please contact support if this keeps happening."
+          "Still couldn't finish setup. Please contact support if this keeps happening.",
         );
       }
     } finally {
@@ -299,7 +274,7 @@ const Login = () => {
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
-        { redirectTo: `${window.location.origin}/reset-password` }
+        { redirectTo: `${window.location.origin}/reset-password` },
       );
 
       if (resetError) {
@@ -318,7 +293,12 @@ const Login = () => {
   return (
     <div
       className="nextslot-theme dark-brand"
-      style={{ minHeight: "100dvh", background: C.bg, color: C.text, fontFamily: FONT_BODY }}
+      style={{
+        minHeight: "100dvh",
+        background: C.bg,
+        color: C.text,
+        fontFamily: FONT_BODY,
+      }}
     >
       <style>{HOME_STYLES}</style>
       <SiteHeader />
@@ -333,10 +313,6 @@ const Login = () => {
       >
         <div style={{ width: "100%", maxWidth: 400 }}>
           {checkingSession ? (
-            // FIX (blocking loading state): while the initial getSession()
-            // check on mount is still deciding whether to auto-redirect an
-            // already-authenticated visitor, don't render an interactable
-            // login form underneath it — show a lightweight spinner instead.
             <div
               style={{
                 display: "flex",
@@ -360,246 +336,204 @@ const Login = () => {
               </p>
             </div>
           ) : (
-          <div
-            style={{
-              background: C.s1,
-              border: `1px solid ${C.border2}`,
-              borderRadius: 20,
-              padding: "40px 36px",
-              boxShadow:
-                "0 8px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
-            }}
-          >
-            {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-              <img
-                src="/web-app-manifest-192x192.png"
-                alt="NextSlot"
-                width={36}
-                height={36}
-                style={{ borderRadius: 8, objectFit: "contain" }}
-              />
-              <span
-                style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: C.text,
-                }}
-              >
-                Next<span style={{ color: C.gold }}>Slot</span>
-              </span>
-            </div>
-
-            <h1
+            <div
               style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: 22,
-                fontWeight: 700,
-                color: C.text,
-                marginBottom: 6,
+                background: C.s1,
+                border: `1px solid ${C.border2}`,
+                borderRadius: 20,
+                padding: "40px 36px",
+                boxShadow:
+                  "0 8px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
               }}
             >
-              {view === "login" ? "Welcome back" : "Reset your password"}
-            </h1>
-            <p
-              style={{
-                fontSize: 14,
-                color: C.muted,
-                fontFamily: FONT_BODY,
-                marginBottom: 28,
-              }}
-            >
-              {view === "login"
-                ? "Sign in to your NextSlot dashboard."
-                : "Enter your email and we'll send you a reset link."}
-            </p>
-
-            <form
-              style={{ display: "flex", flexDirection: "column", gap: 16 }}
-              onSubmit={view === "login" ? handleLogin : handleForgotPassword}
-            >
-              <div>
-                <label htmlFor="login-email" style={labelStyle}>
-                  Email
-                </label>
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setError("");
-                    setRetryUserId(null);
-                    setRetryAccessToken(null);
-                  }}
-                  placeholder="you@example.com"
-                  style={inputStyle}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = C.border2)}
-                  required
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+                <img
+                  src="/web-app-manifest-192x192.png"
+                  alt="NextSlot"
+                  width={36}
+                  height={36}
+                  style={{ borderRadius: 8, objectFit: "contain" }}
                 />
+                <span
+                  style={{
+                    fontFamily: FONT_DISPLAY,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: C.text,
+                  }}
+                >
+                  Next<span style={{ color: C.gold }}>Slot</span>
+                </span>
               </div>
 
-              {view === "login" && (
+              <h1
+                style={{
+                  fontFamily: FONT_DISPLAY,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: C.text,
+                  marginBottom: 6,
+                }}
+              >
+                {view === "login" ? "Welcome back" : "Reset your password"}
+              </h1>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: C.muted,
+                  fontFamily: FONT_BODY,
+                  marginBottom: 28,
+                }}
+              >
+                {view === "login"
+                  ? "Sign in to your NextSlot dashboard."
+                  : "Enter your email and we'll send you a reset link."}
+              </p>
+
+              <form
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+                onSubmit={view === "login" ? handleLogin : handleForgotPassword}
+              >
                 <div>
-                  <label htmlFor="login-password" style={labelStyle}>
-                    Password
-                  </label>
+                  <label htmlFor="login-email" style={labelStyle}>Email</label>
                   <input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    value={password}
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    value={email}
                     onChange={(e) => {
-                      setPassword(e.target.value);
+                      setEmail(e.target.value);
                       setError("");
                       setRetryUserId(null);
                       setRetryAccessToken(null);
                     }}
-                    placeholder="Enter your password"
+                    placeholder="you@example.com"
                     style={inputStyle}
                     onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
                     onBlur={(e) => (e.currentTarget.style.borderColor = C.border2)}
                     required
                   />
                 </div>
-              )}
 
-              {error && (
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "#ff5757",
-                    textAlign: "center",
-                    fontFamily: FONT_BODY,
-                  }}
-                >
-                  {error}
-                </p>
-              )}
+                {view === "login" && (
+                  <div>
+                    <label htmlFor="login-password" style={labelStyle}>Password</label>
+                    <input
+                      id="login-password"
+                      name="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setError("");
+                        setRetryUserId(null);
+                        setRetryAccessToken(null);
+                      }}
+                      placeholder="Enter your password"
+                      style={inputStyle}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = C.border2)}
+                      required
+                    />
+                  </div>
+                )}
 
-              {retryUserId && retryAccessToken && (
+                {error && (
+                  <p style={{ fontSize: 13, color: "#ff5757", textAlign: "center", fontFamily: FONT_BODY }}>
+                    {error}
+                  </p>
+                )}
+
+                {retryUserId && retryAccessToken && (
+                  <button
+                    type="button"
+                    onClick={handleRetrySetup}
+                    disabled={loading}
+                    style={{
+                      width: "100%",
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      border: `1px solid ${C.border2}`,
+                      background: "transparent",
+                      color: C.gold,
+                      fontFamily: FONT_BODY,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: loading ? "not-allowed" : "pointer",
+                      opacity: loading ? 0.6 : 1,
+                    }}
+                  >
+                    Retry setup
+                  </button>
+                )}
+
+                {success && (
+                  <p style={{ fontSize: 13, color: C.gold, textAlign: "center", fontFamily: FONT_BODY }}>
+                    {success}
+                  </p>
+                )}
+
                 <button
-                  type="button"
-                  onClick={handleRetrySetup}
+                  type="submit"
                   disabled={loading}
                   style={{
                     width: "100%",
-                    padding: "10px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "13px 20px",
                     borderRadius: 10,
-                    border: `1px solid ${C.border2}`,
-                    background: "transparent",
-                    color: C.gold,
+                    background: C.text,
+                    color: C.bg,
                     fontFamily: FONT_BODY,
-                    fontSize: 13,
-                    fontWeight: 600,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    border: "none",
                     cursor: loading ? "not-allowed" : "pointer",
                     opacity: loading ? 0.6 : 1,
+                    transition: "opacity 0.2s",
+                    marginTop: 4,
                   }}
                 >
-                  Retry setup
+                  {loading && <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} />}
+                  {view === "login" ? "Sign In" : "Send Reset Link"}
                 </button>
-              )}
-              {success && (
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: C.gold,
-                    textAlign: "center",
-                    fontFamily: FONT_BODY,
-                  }}
-                >
-                  {success}
-                </p>
-              )}
+              </form>
 
               <button
-                type="submit"
-                disabled={loading}
+                type="button"
+                onClick={() => {
+                  setView(view === "login" ? "forgot" : "login");
+                  setError("");
+                  setSuccess("");
+                  setRetryUserId(null);
+                  setRetryAccessToken(null);
+                }}
                 style={{
                   width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  padding: "13px 20px",
-                  borderRadius: 10,
-                  background: C.text,
-                  color: C.bg,
-                  fontFamily: FONT_BODY,
-                  fontSize: 14,
-                  fontWeight: 700,
+                  marginTop: 12,
+                  padding: "10px",
+                  background: "none",
                   border: "none",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  opacity: loading ? 0.6 : 1,
-                  transition: "opacity 0.2s",
-                  marginTop: 4,
-                }}
-              >
-                {loading && (
-                  <Loader2
-                    style={{
-                      width: 16,
-                      height: 16,
-                      animation: "spin 1s linear infinite",
-                    }}
-                  />
-                )}
-                {view === "login" ? "Sign In" : "Send Reset Link"}
-              </button>
-            </form>
-
-            <button
-              type="button"
-              onClick={() => {
-                setView(view === "login" ? "forgot" : "login");
-                setError("");
-                setSuccess("");
-                setRetryUserId(null);
-                setRetryAccessToken(null);
-              }}
-              style={{
-                width: "100%",
-                marginTop: 12,
-                padding: "10px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 13,
-                color: C.muted,
-                fontFamily: FONT_BODY,
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
-              onMouseLeave={(e) => (e.currentTarget.style.color = C.muted)}
-            >
-              {view === "login" ? "Forgot password?" : "Back to sign in"}
-            </button>
-
-            {view === "login" && (
-              <p
-                style={{
+                  cursor: "pointer",
                   fontSize: 13,
                   color: C.muted,
-                  textAlign: "center",
-                  marginTop: 16,
                   fontFamily: FONT_BODY,
                 }}
               >
-                Don&apos;t have an account?{" "}
-                <Link
-                  to="/onboarding"
-                  style={{ color: C.text, fontWeight: 600, textDecoration: "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = C.gold)}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = C.text)}
-                >
-                  Get started free
-                </Link>
-              </p>
-            )}
-          </div>
+                {view === "login" ? "Forgot password?" : "Back to sign in"}
+              </button>
+
+              {view === "login" && (
+                <p style={{ fontSize: 13, color: C.muted, textAlign: "center", marginTop: 16, fontFamily: FONT_BODY }}>
+                  Don&apos;t have an account?{" "}
+                  <Link to="/onboarding" style={{ color: C.text, fontWeight: 600, textDecoration: "none" }}>
+                    Get started free
+                  </Link>
+                </p>
+              )}
+            </div>
           )}
         </div>
       </main>
