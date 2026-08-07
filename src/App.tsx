@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { BusinessThemeProvider } from "./contexts/BusinessThemeProvider";
 import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantContext";
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
@@ -154,6 +155,7 @@ const App = () => {
               <MarketingRoutes />
             )}
           </BrowserRouter>
+          <Analytics />
         </BusinessThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
