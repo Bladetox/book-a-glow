@@ -25,23 +25,6 @@ function todayLocalStr(): string {
 }
 
 /**
- * Fetch the tenant's min_notice_minutes from app_settings.
- * The stored value is treated as MINUTES (e.g. 30 = 30 minutes notice).
- * Falls back to 0 if the setting is not configured.
- */
-async function fetchMinNoticeMinutes(tenantId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("tenant_id", tenantId)
-    .eq("key", "min_notice_minutes")
-    .maybeSingle();
-  if (error || !data?.value) return 0;
-  const parsed = parseFloat(data.value);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-/**
  * Fetch available slots for an entire month.
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
  */
@@ -80,14 +63,14 @@ export function useMonthAvailability(
 /**
  * Fetch available slots for a specific date.
  *
- * Filters out any slot whose start time falls within the tenant's
- * min_notice_minutes window from now.
- * This also implicitly removes all past slots on today's date.
+ * The booking gap (min_notice_minutes) is enforced server-side in
+ * get_available_slots, which pads each booking by that many minutes.
+ * This hook only strips slots that have already passed.
  *
  * For today's date:
  *   - staleTime = 0       → never serve a cached response
  *   - refetchInterval = 60 000ms → re-fetches every 60 s so slots that
- *     tick into the past (or into the notice window) disappear automatically
+ *     tick into the past disappear automatically
  *   - refetchOnWindowFocus = true → also refetches when the tab regains focus
  *
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
@@ -108,7 +91,7 @@ export function useDateSlots(
     enabled: !!date && !!tenantId,
     staleTime: isToday ? 0 : 2 * 60 * 1000,
     // Re-fetch every 60 s when viewing today so slots that tick into the past
-    // (or into the min-notice window) are removed without a page refresh.
+    // are removed without a page refresh.
     refetchInterval: isToday ? 60 * 1000 : false,
     // Also re-fetch when the user switches back to this tab (today only).
     refetchOnWindowFocus: isToday,
@@ -116,19 +99,15 @@ export function useDateSlots(
       if (!date) return [];
       const sid = resolvedStaffId ?? await getStaffId(tenantId);
 
-      const [{ data, error }, minNoticeMinutes] = await Promise.all([
-        supabase.rpc("get_available_slots", {
-          p_staff_id:         sid,
-          p_date:             date,
-          p_duration_minutes: durationMinutes,
-        } as any),
-        fetchMinNoticeMinutes(tenantId),
-      ]);
+      const { data, error } = await supabase.rpc("get_available_slots", {
+        p_staff_id:         sid,
+        p_date:             date,
+        p_duration_minutes: durationMinutes,
+        p_session_token:    sessionToken ?? null,
+      } as any);
 
       if (error) throw error;
 
-      // Convert minutes → milliseconds for comparison
-      const minNoticeMs = minNoticeMinutes * 60 * 1000;
       const now = Date.now();
 
       return (data ?? [])
@@ -140,9 +119,9 @@ export function useDateSlots(
           // Without this, SAST (UTC+2) clients see slots shifted 2 hours into the past.
           const [yyyy, mo, dd] = date.split("-").map(Number);
           const slotDate = new Date(yyyy, mo - 1, dd, hh, mm, 0, 0);
-          // Slot must start at least minNoticeMinutes from now
-          // (also blocks all past slots when min_notice_minutes = 0)
-          return slotDate.getTime() - now >= minNoticeMs;
+          // Past-slot guard. The booking gap itself is enforced in
+          // get_available_slots, which pads bookings by min_notice_minutes.
+          return slotDate.getTime() >= now;
         })
         .map((s: any) => (s.slot_start as string).slice(0, 5));
     },

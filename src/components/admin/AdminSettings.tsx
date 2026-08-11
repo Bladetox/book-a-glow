@@ -35,10 +35,10 @@ const DEPOSIT_PRESETS = [
 ];
 
 const MIN_NOTICE_PRESETS = [
-  { label: "30 min",  value: "30" },
-  { label: "1 hour",  value: "60" },
-  { label: "1h 30m", value: "90" },
-  { label: "2 hours", value: "120" },
+  { label: "None",   value: "0" },
+  { label: "15 min", value: "15" },
+  { label: "30 min", value: "30" },
+  { label: "1 hour", value: "60" },
 ];
 
 const MAX_DAYS_PRESETS = [
@@ -520,11 +520,11 @@ const AdminSettings = () => {
               onSelect={(v) => update("deposit_percent", v)}
             />
             <PillPicker
-              label="Minimum Notice"
+              label="Gap Between Bookings"
               presets={MIN_NOTICE_PRESETS}
               value={draft.min_notice_minutes}
               onSelect={(v) => update("min_notice_minutes", v)}
-              hint="Minimum time required before a client can book a slot."
+              hint="Turnaround time after a booking ends before the next slot opens."
             />
             <PillPicker
               label="Max Advance Booking"

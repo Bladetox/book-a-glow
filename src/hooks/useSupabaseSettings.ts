@@ -9,8 +9,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   // Booking rules
   "booking_ref_prefix",
   "deposit_percent",
-  "min_notice_hours",    // legacy – kept for backwards-compat reads
-  "min_notice_minutes",  // canonical key used by the admin UI
+  "min_notice_minutes",  // required gap after a booking ends
   "max_advance_days",
   "overrun_minutes",     // how many minutes past closing a booking may end
   // Business / branding
@@ -146,14 +145,6 @@ export function useAppSettings() {
       (data ?? []).forEach((row) => {
         if (row.value) map[row.key] = row.value;
       });
-
-      // ── Legacy migration: if only min_notice_hours exists, derive minutes ──
-      if (!map["min_notice_minutes"] && map["min_notice_hours"]) {
-        const hours = parseFloat(map["min_notice_hours"]);
-        if (!isNaN(hours)) {
-          map["min_notice_minutes"] = String(Math.round(hours * 60));
-        }
-      }
 
       return map;
     },
