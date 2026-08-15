@@ -142,11 +142,16 @@ export function useAppSettings() {
         .eq("tenant_id", tenantId)
         .in("key", ALLOWED_APP_SETTING_KEYS);
       if (error) throw error;
-      const map: Record<string, string> = {};
+    const map: Record<string, string> = {
+        lead_time_minutes: "0",
+      };
+      
       (data ?? []).forEach((row) => {
-        if (row.value) map[row.key] = row.value;
+        if (row.value !== null && row.value !== undefined) {
+          map[row.key] = row.value;
+        }
       });
-
+      
       return map;
     },
   });
