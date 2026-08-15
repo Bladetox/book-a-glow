@@ -8,6 +8,7 @@ import { useTenant } from "@/contexts/TenantContext";
 const ALLOWED_APP_SETTING_KEYS = [
   // Booking rules
   "booking_ref_prefix",
+  "lead_time_minutes",
   "deposit_percent",
   "min_notice_minutes",  // required gap after a booking ends
   "max_advance_days",
