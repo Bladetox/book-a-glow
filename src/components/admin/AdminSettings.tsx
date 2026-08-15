@@ -18,6 +18,13 @@ import { toast } from "sonner";
 import { ConsultationFormBuilder } from "./ConsultationFormBuilder";
 import { AdminBilling } from "./AdminBilling";
 
+const LEAD_TIME_PRESETS = [
+  { label: "No minimum", value: "0" },
+  { label: "2 hours", value: "120" },
+  { label: "12 hours", value: "720" },
+  { label: "24 hours", value: "1440" },
+];
+
 const OVERRUN_PRESETS = [
   { label: "None",   value: "0" },
   { label: "15 min", value: "15" },
@@ -520,6 +527,13 @@ const AdminSettings = () => {
               onSelect={(v) => update("deposit_percent", v)}
             />
             <PillPicker
+              label="Lead Time"
+              presets={LEAD_TIME_PRESETS}
+              value={draft.lead_time_minutes}
+              onSelect={(v) => update("lead_time_minutes", v)}
+              hint="Minimum time required before a client can book an appointment. Earlier slots will not be available online."
+            />
+            <PillPicker
               label="Gap Between Bookings"
               presets={MIN_NOTICE_PRESETS}
               value={draft.min_notice_minutes}
@@ -543,7 +557,7 @@ const AdminSettings = () => {
             />
             <div className="flex items-center gap-3">
               <SaveBtn
-                onClick={() => saveSettings("rules", ["deposit_percent", "min_notice_minutes", "max_advance_days", "overrun_minutes"])}
+                onClick={() => saveSettings("rules", ["deposit_percent", "lead_time_minutes", "min_notice_minutes", "max_advance_days", "overrun_minutes"])}
                 loading={upsertSetting.isPending}
               />
               <SavedBadge section="rules" />
