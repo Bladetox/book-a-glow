@@ -36,7 +36,7 @@ export default function Signup() {
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            No credit card required • 14-day free trial • Cancel anytime
+            No payment required • 14-day free trial • Cancel anytime
           </p>
         </CardContent>
       </Card>
