@@ -359,27 +359,29 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       }
 
       setPhase("gateway");
-            if (isIkhokha) {
-        const ikType = paymentChoice === "ikhokha_full" ? "full" : "deposit";
-        const amountCents = ikType === "full" ? total * 100 : deposit * 100;
-        const origin = window.location.origin;
-        const { data: ikData, error: ikErr } = await supabase.functions.invoke("ikhokha-checkout", {
-          body: {
-            tenant_id:    tenantId,
-            booking_id:   bookingId,
-            payment_type: ikType,
-            amount_cents: amountCents,
-            description:  `Booking – ${config.name}`,
-            return_url:   `${origin}/booking/success?booking_id=${bookingId}`,
-            failure_url:  `${origin}/booking/failure?booking_id=${bookingId}`,
-            cancel_url:   `${origin}/booking/cancel?booking_id=${bookingId}`,
-          },
-        });
-        if (ikErr || !ikData?.paylink_url) throw new Error(ikErr?.message ?? "Payment gateway error.");
-        redirectingRef.current = true;
-        window.location.href = ikData.paylink_url;
-        return;
-      }
+        if (isIkhokha) {
+          const ikType = paymentChoice === "ikhokha_full" ? "full" : "deposit";
+          const amountCents = ikType === "full" ? total * 100 : deposit * 100;
+          const origin = window.location.origin;
+        
+          const { data: ikData, error: ikErr } = await supabase.functions.invoke("ikhokha-checkout", {
+            body: {
+              tenant_id:    tenantId,
+              booking_id:   bookingId,
+              payment_type: ikType,
+              amount_cents: amountCents,
+              description:  `Booking – ${config.name}`,
+              return_url:   `${origin}/payment-success?payment=success&booking_id=${bookingId}&tenant=${tenantId}&type=${ikType}`,
+              failure_url:  `${origin}/payment-success?payment=failed&booking_id=${bookingId}&tenant=${tenantId}`,
+              cancel_url:   `${origin}/payment-success?payment=cancelled&booking_id=${bookingId}&tenant=${tenantId}`,
+            },
+          });
+        
+          if (ikErr || !ikData?.paylink_url) throw new Error(ikErr?.message ?? "Payment gateway error.");
+          redirectingRef.current = true;
+          window.location.href = ikData.paylink_url;
+          return;
+        }
 
       if (config.payfastMode) {
         
