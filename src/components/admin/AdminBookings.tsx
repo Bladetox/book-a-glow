@@ -661,32 +661,36 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
   if (!b.phone) return;
   if (!b.balance || b.balance <= 0) return;
 
-  if (tenantId === "phenomebeauty") {
-  const digits = b.phone.replace(/\D/g, "").replace(/^0/, "27");
-  const text = `Hi ${b.client} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${b.balance.toFixed(2)}* for ${b.service} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`;
-  window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-  return;
-}
-
-// ── PayShap path: send step-by-step PayShap instructions via WhatsApp ──
-if (isPayshap) {
-  const tenantName  = appSettings["business_name"] ?? appSettings["name"] ?? "";
-  const tenantPhone = tenantSettings?.phone ?? "";
-  window.open(
-    toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, tenantName, tenantPhone),
-    "_blank",
-    "noopener,noreferrer",
-  );
-  return;
-}
-
-  // ── Yoco path: reuse existing link or generate a new one ─────────────────
-  if (b.yocoFinalLink) {
+  // ── PayShap path: send step-by-step PayShap instructions via WhatsApp ──
+  if (isPayshap) {
+    const tenantName  = appSettings["business_name"] ?? appSettings["name"] ?? "";
+    const tenantPhone = tenantSettings?.phone ?? "";
     window.open(
-      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
+      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, tenantName, tenantPhone),
       "_blank",
       "noopener,noreferrer",
     );
+    return;
+  }
+
+  // ── Helper: phenomebeauty-branded message, called once we HAVE a link ──
+  const sendPhenomeMessage = (paymentUrl: string) => {
+    const digits = b.phone.replace(/\D/g, "").replace(/^0/, "27");
+    const text = `Hi ${b.client} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${b.balance.toFixed(2)}* for ${b.service} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`;
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  };
+
+  // ── Yoco path: reuse existing link or generate a new one ─────────────────
+  if (b.yocoFinalLink) {
+    if (tenantId === "phenomebeauty") {
+      sendPhenomeMessage(b.yocoFinalLink);
+    } else {
+      window.open(
+        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
+        "_blank",
+        "noopener,noreferrer",
+      );
+    }
     return;
   }
 
@@ -716,11 +720,15 @@ if (isPayshap) {
       })
       .eq("id", b.id);
     queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
-    window.open(
-      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
-      "_blank",
-      "noopener,noreferrer",
-    );
+    if (tenantId === "phenomebeauty") {
+      sendPhenomeMessage(paymentUrl);
+    } else {
+      window.open(
+        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
+        "_blank",
+        "noopener,noreferrer",
+      );
+    }
   } catch (err: any) {
     toast.error(err.message || "Failed to generate payment link");
   } finally {
@@ -1433,4 +1441,3 @@ const EditField = ({ label, value, onChange }: { label: string; value: string; o
 );
 
 export default AdminBookings;
-
