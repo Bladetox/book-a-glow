@@ -8,9 +8,39 @@ import { buttonVariants } from "@/components/ui/button";
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
 function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+  // Keep the displayed month in sync with the selected date so that
+  // clicking an outside day (e.g. "1" trailing into the next month)
+  // navigates the visible grid to match the selection, instead of
+  // leaving the user looking at the wrong month with no visual cue.
+  const [month, setMonth] = React.useState<Date | undefined>(
+    props.month ?? (props as any).selected instanceof Date ? (props as any).selected : undefined
+  );
+
+  React.useEffect(() => {
+    const selected = (props as any).selected;
+    if (selected instanceof Date) {
+      setMonth((current) => {
+        if (
+          current &&
+          current.getFullYear() === selected.getFullYear() &&
+          current.getMonth() === selected.getMonth()
+        ) {
+          return current;
+        }
+        return selected;
+      });
+    }
+  }, [(props as any).selected]);
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      fixedWeeks
+      month={props.month ?? month}
+      onMonthChange={(m) => {
+        setMonth(m);
+        props.onMonthChange?.(m);
+      }}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -28,7 +58,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         head_row: "flex",
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative flex items-center justify-center [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
+        cell: "h-9 w-9 text-center text-sm p-0 relative flex items-center justify-center [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
         day_range_end: "day-range-end",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
