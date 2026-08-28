@@ -44,6 +44,13 @@ export type BasketTrendRow = {
   booking_count: number;
 };
 
+export type AttachRateRow = {
+  total_bookings: number;
+  multi_service_bookings: number;
+  attach_rate_pct: number | string;
+  avg_services_per_booking: number | string;
+};
+
 function formatRand(value: number): string {
   return `R${value % 1 === 0
     ? value.toLocaleString("en-ZA")
@@ -403,47 +410,76 @@ export function useNextyInsights() {
         }
       }
 
-      // -- 8. TikTok Channel ROI Signal -------------------------------------
-      // Fires when TikTok has bookings but average basket is below overall average.
+      // -- 8. Channel Basket Audit --------------------------------------------
+      // Generalized: evaluates EVERY acquisition channel returned by get_channel_roi,
+      // not just TikTok. Excludes "Returning Client" and "Unknown" since these are not
+      // marketable acquisition channels. Falls back to generic wording for any channel
+      // that isn't TikTok or Referral, so new/unseen channel values are never invisible.
+      const NON_ACQUISITION_CHANNELS = new Set(["Returning Client", "Unknown"]);
+      const CHANNEL_MIN_BOOKINGS = 5;
+
       const { data: channelData } = await supabase.rpc<ChannelRoiRow>("get_channel_roi", {
         p_tenant_id: tenantId,
       });
+
       if (channelData && channelData.length > 0) {
-        const tiktokRow   = channelData.find((r) => r.channel === "TikTok");
-        const overallAvg  = computeOverallAvgBasket(channelData);
+        const overallAvg = computeOverallAvgBasket(channelData);
 
-        if (tiktokRow && overallAvg !== null && Number(tiktokRow.booking_count) >= 5) {
-          const tiktokAvg = Number(tiktokRow.avg_basket ?? 0);
-          const tiktokCount = Number(tiktokRow.booking_count);
-          const tiktokRev = Number(tiktokRow.total_revenue ?? 0);
+        if (overallAvg !== null) {
+          const acquisitionChannels = channelData.filter(
+            (r) => !NON_ACQUISITION_CHANNELS.has(r.channel) && Number(r.booking_count) >= CHANNEL_MIN_BOOKINGS
+          );
 
-          if (tiktokAvg < overallAvg * 0.85) {
-            push({
-              id: "tiktok_basket",
-              type: "growth",
-              priority: "info",
-              title: "TikTok Clients: Lower Basket Size",
-              message:
-                `TikTok brought in ${tiktokCount} bookings (${formatRand(Math.round(tiktokRev))}) in the last 90 days. ` +
-                `However, TikTok clients average ${formatRand(Math.round(tiktokAvg))} per booking versus ${formatRand(Math.round(overallAvg))} overall. ` +
-                `This is common when social content focuses only on entry-level services. ` +
-                `Adding one short-form video showing a premium or combo service could lift the basket size from that channel within 30 days.`,
-              actionLabel: "View Services",
-              actionView: "Services",
-            });
-          } else {
-            push({
-              id: "tiktok_top_channel",
-              type: "growth",
-              priority: "info",
-              title: "TikTok Is a Strong Acquisition Channel",
-              message:
-                `TikTok generated ${tiktokCount} bookings and ${formatRand(Math.round(tiktokRev))} in the last 90 days. ` +
-                `Average basket from TikTok clients is ${formatRand(Math.round(tiktokAvg))} which is in line with your overall average. ` +
-                `This channel is working. Posting consistently (3 to 4 times per week) is the single most effective way to scale it further without any additional cost.`,
-              actionLabel: "View Clients",
-              actionView: "Client Management",
-            });
+          for (const row of acquisitionChannels) {
+            const channel = row.channel;
+            const avg = Number(row.avg_basket ?? 0);
+            const count = Number(row.booking_count);
+            const rev = Number(row.total_revenue ?? 0);
+            const slug = channel.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+
+            if (avg < overallAvg * 0.85) {
+              const specificAdvice =
+                channel === "TikTok"
+                  ? `This is common when social content focuses only on entry-level services. ` +
+                    `Adding one short-form video showing a premium or combo service could lift the basket size from that channel within 30 days.`
+                  : channel === "Referral"
+                  ? `This usually means the referring client is recommending a specific entry-level service. ` +
+                    `Create a referral incentive that is tied to a combo or premium service specifically. ` +
+                    `A message like "refer a friend for a Hollywood + leg combo and both of you get 10% off" ` +
+                    `lifts the referred basket while still rewarding the existing client.`
+                  : `Review what you're actually promoting through this channel — if it consistently highlights your cheapest service, that's likely why the basket size is lower here than elsewhere.`;
+
+              push({
+                id: `channel_low_basket_${slug}`,
+                type: "growth",
+                priority: "info",
+                title: `${channel} Clients: Lower Basket Size`,
+                message:
+                  `${channel} brought in ${count} booking${count === 1 ? "" : "s"} (${formatRand(Math.round(rev))}) in the last 90 days. ` +
+                  `However, ${channel} clients average ${formatRand(Math.round(avg))} per booking versus ${formatRand(Math.round(overallAvg))} overall. ` +
+                  specificAdvice,
+                actionLabel: "View Services",
+                actionView: "Services",
+              });
+            } else if (avg > overallAvg * 1.15) {
+              const specificAdvice =
+                channel === "TikTok"
+                  ? `Posting consistently (3 to 4 times per week) is the single most effective way to scale it further without any additional cost.`
+                  : `Since this channel already converts well, putting a little more consistent effort behind it is likely to pay off faster than starting a new one.`;
+
+              push({
+                id: `channel_top_${slug}`,
+                type: "growth",
+                priority: "info",
+                title: `${channel} Is a Strong Acquisition Channel`,
+                message:
+                  `${channel} generated ${count} booking${count === 1 ? "" : "s"} and ${formatRand(Math.round(rev))} in the last 90 days. ` +
+                  `Average basket from ${channel} clients is ${formatRand(Math.round(avg))}, above your overall average of ${formatRand(Math.round(overallAvg))}. ` +
+                  specificAdvice,
+                actionLabel: "View Clients",
+                actionView: "Client Management",
+              });
+            }
           }
         }
       }
@@ -680,32 +716,9 @@ export function useNextyInsights() {
         }
       }
 
-      // -- 17. Referral Channel Low Basket -----------------------------------
-      const { data: chData } = await supabase.rpc<ChannelRoiRow>("get_channel_roi", { p_tenant_id: tenantId });
-      if (chData && chData.length >= 2) {
-        const referralRow = chData.find((r) => r.channel === "Referral");
-        const overallAvg = computeOverallAvgBasket(chData);
-        if (referralRow && overallAvg !== null && Number(referralRow.booking_count) >= 3) {
-          const refAvg = Number(referralRow.avg_basket);
-          if (refAvg < overallAvg * 0.80) {
-            push({
-              id: "referral_low_basket",
-              type: "growth",
-              priority: "info",
-              title: "Referral Clients Book Lower-Value Services",
-              message:
-                `Clients who came through referrals average ${formatRand(Math.round(refAvg))} per booking ` +
-                `versus your overall average of ${formatRand(Math.round(overallAvg))}. ` +
-                `This usually means the referring client is recommending a specific entry-level service. ` +
-                `Create a referral incentive that is tied to a combo or premium service specifically. ` +
-                `A message like "refer a friend for a Hollywood + leg combo and both of you get 10% off" ` +
-                `lifts the referred basket while still rewarding the existing client.`,
-              actionLabel: "View Services",
-              actionView: "Services",
-            });
-          }
-        }
-      }
+      // -- 17. [retired — absorbed into Rule 8: Channel Basket Audit] --------
+      // Referral-specific low-basket logic now runs generically inside Rule 8
+      // for every acquisition channel, including Referral.
 
       // -- 18. SA Seasonal Countdown -----------------------------------------
       // Static SA dates. No RPC needed. Fires 21 days before key events.
@@ -778,6 +791,56 @@ export function useNextyInsights() {
             actionLabel: "View Clients",
             actionView: "Client Management",
           });
+        }
+      }
+
+      // -- 20. Single-Service Attach Rate --------------------------------------
+      // Fires when a low share of bookings include a second service. This is a
+      // margin lever, not an acquisition lever: it doesn't require a new client
+      // or extra calendar time, only better upsell/combo positioning at checkout.
+      const ATTACH_MIN_BOOKINGS = 10;
+      const ATTACH_RATE_THRESHOLD = 40; // percent
+
+      const { data: attachRows } = await supabase.rpc<AttachRateRow>("get_attach_rate", {
+        p_tenant_id: tenantId,
+      });
+
+      if (attachRows && attachRows.length > 0) {
+        const a = attachRows[0];
+        const totalBookings = Number(a.total_bookings ?? 0);
+        const multiServiceBookings = Number(a.multi_service_bookings ?? 0);
+        const attachRatePct = Number(a.attach_rate_pct ?? 0);
+        const avgServicesPerBooking = Number(a.avg_services_per_booking ?? 0);
+
+        if (totalBookings >= ATTACH_MIN_BOOKINGS) {
+          if (attachRatePct < ATTACH_RATE_THRESHOLD) {
+            const singleServiceCount = totalBookings - multiServiceBookings;
+            push({
+              id: "single_service_attach_rate",
+              type: "growth",
+              priority: "info",
+              title: "Most Clients Leave With Just One Service",
+              message:
+                `Only ${attachRatePct}% of your bookings include a second service, averaging ${avgServicesPerBooking} services per visit. ` +
+                `${singleServiceCount} of your last ${totalBookings} bookings were single-service. ` +
+                `These clients already booked and are already in the chair — adding a relevant combo or add-on at checkout earns extra revenue without booking a single new client or using any extra calendar time. ` +
+                `Check whether your top service has a suggested add-on configured at checkout.`,
+              actionLabel: "View Services",
+              actionView: "Services",
+            });
+          } else if (attachRatePct >= 65) {
+            push({
+              id: "strong_attach_rate",
+              type: "growth",
+              priority: "info",
+              title: "Strong Multi-Service Attach Rate",
+              message:
+                `${attachRatePct}% of your bookings include more than one service, averaging ${avgServicesPerBooking} services per visit. ` +
+                `Your combo/add-on positioning is working well — keep featuring these pairings prominently at checkout to maintain it as you grow.`,
+              actionLabel: "View Services",
+              actionView: "Services",
+            });
+          }
         }
       }
 
