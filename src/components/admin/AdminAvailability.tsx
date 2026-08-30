@@ -45,12 +45,20 @@ const AdminAvailability = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<"weekly" | "daily">("weekly");
 
+  // Guard against syncing local state from a refetch that lands in the
+  // middle of a save's delete→insert window (transiently empty rows for
+  // the day being changed). Skipping the sync while a save is in flight
+  // avoids the toggle "flipping back off" before the insert has landed.
+  // React Query's onSuccess invalidation still fires a fresh refetch
+  // right after each mutation settles, so state resyncs correctly once
+  // the save actually completes.
   useEffect(() => {
+    if (saveMutation.isPending || saveDailyMutation.isPending) return;
     if (rawSlots) {
       setWeekAvail(toWeekAvailability(rawSlots));
       setDailyOverrides(toDailyOverrides(rawSlots));
     }
-  }, [rawSlots]);
+  }, [rawSlots, saveMutation.isPending, saveDailyMutation.isPending]);
 
   // ─── Weekly handlers ───
   const persistDay = useCallback(
