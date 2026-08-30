@@ -69,7 +69,15 @@ const AdminAvailability = () => {
 
   const toggleDayEnabled = (day: string) => {
     setWeekAvail((prev) => {
-      const next = { ...prev, [day]: { ...prev[day], enabled: !prev[day].enabled } };
+      const current = prev[day] ?? { enabled: false, slots: [] };
+      const enabled = !current.enabled;
+      const next = {
+        ...prev,
+        [day]: {
+          enabled,
+          slots: enabled && current.slots.length === 0 ? ALL_SLOTS : current.slots,
+        },
+      };
       persistDay(day, next[day]);
       return next;
     });
