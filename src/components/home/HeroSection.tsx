@@ -138,9 +138,8 @@ export const HeroSection = () => {
             marginBottom: 20,
             animation: "fadeUp 0.5s 0.08s ease both",
           } as React.CSSProperties}>
-            You've outgrown your side hustle.<br />
-            <span style={{ color: C.gold }}>Finally</span>, a system that reflects<br />
-            your ambition.
+            A booking system should<br />
+            do more than book <span style={{ color: C.gold }}>appointments.</span>
           </h1>
 
           {/* 3. DIFFERENTIATOR — owned, competitor-aware */}
@@ -154,9 +153,9 @@ export const HeroSection = () => {
             fontWeight: 400,
             animation: "fadeUp 0.5s 0.16s ease both",
           } as React.CSSProperties}>
-            Most booking apps just fill your diary.
-            Nextslot shows you why it's not full enough
-            and exactly what to do about it.
+            Understand your business, find your opportunities,
+            and grow. Built for service businesses that
+            want more from every booking.
           </p>
 
           {/* 4. TESTIMONIAL — real name, no icon avatar */}

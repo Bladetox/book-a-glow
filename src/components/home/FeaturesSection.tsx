@@ -324,7 +324,7 @@ export const FeaturesSection = () => {
             <span style={{ color: C.gold }}>Every tool your business needs.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
-            Bookings, intelligent insights, payments, inventory. Built for South African service businesses. No integrations, no patchwork, no spreadsheets running alongside it.
+            Bookings, insights, payments, inventory. Built for South African service businesses.
           </p>
         </div>
 

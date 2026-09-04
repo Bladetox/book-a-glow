@@ -48,7 +48,7 @@ export const HeatmapSection = () => {
             <span style={{ color: C.gold }}>Now you know why Friday is not.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginBottom: 24 }}>
-            Some weeks feel full. Others feel thin and you cannot explain it. The heatmap makes the pattern visible. When you can see it, you can do something about it.
+            Some weeks feel full, others feel thin, and you cannot always explain why. The heatmap makes the pattern visible.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, fontFamily: FONT_BODY }}>
             {[

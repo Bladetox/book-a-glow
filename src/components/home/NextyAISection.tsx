@@ -24,10 +24,10 @@ export const NextyAISection = () => {
             fontWeight: 700, color: C.text,
             lineHeight: 1.08, marginBottom: 16,
           }}>
-            Your dashboard already knows<br /><span style={{ color: C.gold }}>what your numbers mean.</span>
+            Your numbers already know<br /><span style={{ color: C.gold }}>what to do next.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
-            Every booking, gap, and trend is tracked in real time. The dashboard surfaces what matters. Nexty goes further, she watches for the moments that cost you money and puts them in front of you before you think to look.
+            Nexty watches every booking, gap, and trend, and flags what costs you money before you have to look for it.
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export const NextyAISection = () => {
               type="critical"
               speaker="Nexty"
               label="Critical"
-              message="Your cancellation rate hit 22% this month. That's R 580 walking out the door every single time. Turn on a 30% deposit. One tap in Settings and watch it drop."
+              message="Cancellations hit 22% this month, that's R 580 walking out the door each time. Turn on a 30% deposit."
               action="Fix it now"
               delay={0.1}
             />
@@ -117,7 +117,7 @@ export const NextyAISection = () => {
               type="growth"
               speaker="Nexty"
               label="Growth"
-              message="Thursday afternoons are basically empty. Great to take the rest of the day off to recharge or running a promo to increase bookings. Want me to suggest a promo?"
+              message="Thursday afternoons sit empty most weeks. Worth a promo to fill them."
               action="See the gap"
               delay={0.25}
             />
@@ -125,7 +125,7 @@ export const NextyAISection = () => {
               type="retention"
               speaker="Nexty"
               label="Retention"
-              message="You're at 38% retention, just 2 points shy of the beauty benchmark. Your top 12 regulars aren't on loyalty yet. Enrol them today and you'll cross 40% within 30 days."
+              message="You're at 38% retention. Your top 12 regulars aren't on loyalty yet, enrol them and cross 40% within 30 days."
               action="Enrol them"
               delay={0.4}
             />
@@ -133,7 +133,7 @@ export const NextyAISection = () => {
               type="ops"
               speaker="Nexty"
               label="Operations"
-              message="Three products are below reorder: Hard Wax (2 left), Lash Glue (1 left), Tinting Developer (0 left). Don't let a last-minute stock-out cancel a booking."
+              message="Hard wax, lash glue, and tinting developer are all below reorder point."
               action="Restock now"
               delay={0.55}
             />
