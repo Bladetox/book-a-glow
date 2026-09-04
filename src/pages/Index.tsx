@@ -6,7 +6,6 @@ import { ProofTicker } from "@/components/home/ProofTicker";
 import { CaseStudySection } from "@/components/home/CaseStudySection";
 import { NextyAISection } from "@/components/home/NextyAISection";
 import { RevenueSection } from "@/components/home/RevenueSection";
-import { ProactiveAlertsSection } from "@/components/home/ProactiveAlertsSection";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
 import { HeatmapSection } from "@/components/home/HeatmapSection";
 import { CTASection } from "@/components/home/CTASection";
@@ -31,7 +30,6 @@ const Index = () => (
       <ProofTicker />
       <NextyAISection />
       <RevenueSection />
-      <ProactiveAlertsSection />
       <FeaturesSection />
       <HeatmapSection />
       <CaseStudySection />

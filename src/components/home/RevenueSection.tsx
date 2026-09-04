@@ -97,65 +97,6 @@ export const RevenueSection = () => {
             ))}
           </div>
         </div>
-
-        {/* Intelligence callouts */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 16, marginBottom: 32 }}>
-          {[
-            {
-              title: "Live revenue projection",
-              body:  "Based on your daily pace, NextSlot projects your month-end figure in real time. You know whether to push harder or coast to a record month before the month ends.",
-              quote: "\u201cOn track for R 39,200 this month\u201d",
-            },
-            {
-              title: "Goal-gradient progress bar",
-              body:  "The dashboard shows exactly how far you are from beating last month, down to the rand. That R 4,160 gap is the most motivating number on your screen.",
-              quote: "\u201cR 4,160 to beat last month · 82% there\u201d",
-            },
-            {
-              title: "Urgency signals at a glance",
-              body:  "Still no revenue by noon? All appointments done before 5pm? NextSlot highlights the outlier in amber. The number that needs your attention right now.",
-              quote: "\u201cStill to come: 4 remaining\u201d",
-            },
-          ].map((card, i) => (
-            <div key={i} style={{ background: C.s1, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, fontFamily: FONT_BODY }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 8 }}>{card.title}</div>
-              <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.65, marginBottom: 10 }}>{card.body}</div>
-              <div style={{ fontSize: 11, color: C.gold, fontStyle: "italic" }}>{card.quote}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Alert pills */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 12, marginBottom: 16 }}>
-          {[
-            { label: "High cancellation rate", sub: "22% this month, action needed",      color: C.red   },
-            { label: "Inactive clients",        sub: "9 clients gone quiet · 90+ days",   color: C.amber },
-            { label: "Overdue loyalty rewards", sub: "5 clients due for a stamp / reward", color: C.blue  },
-            { label: "Birthdays this week",     sub: "Thandi · Naledi, send a WhatsApp",   color: C.gold  },
-          ].map((a, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: "rgba(14,13,12,0.60)",
-              backdropFilter: "blur(16px)",
-              WebkitBackdropFilter: "blur(16px)",
-              border: `1px solid ${a.color}44`,
-              borderRadius: 12, padding: "12px 14px",
-              boxShadow: `0 0 16px ${a.color}18`,
-              fontFamily: FONT_BODY,
-            }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{a.label}</div>
-                <div style={{ fontSize: 11, color: C.faint }}>{a.sub}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ fontSize: 12, color: C.faint, fontStyle: "italic", textAlign: "center", marginBottom: 8, fontFamily: FONT_BODY }}>
-          &ldquo;Other software waits for you to look. NextSlot flags it before it costs you.&rdquo;
-        </div>
-        <div style={{ fontSize: 12, color: C.muted, textAlign: "center", fontFamily: FONT_BODY }}>All alerts are one tap away from action.</div>
       </div>
     </section>
   );
