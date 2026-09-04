@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
+import { RevenueChart } from "./RevenueChart";
 
 /*
   Laws of UX applied
@@ -30,7 +31,7 @@ const STEPS = [
     step: "01",
     tag: "The before",
     headline: "Working hard at everything.",
-    body: "Busy every day, but no clear picture of what was actually moving the business forward. Every service, every channel, every time slot felt equally important. None of them were.",
+    body: "Busy every day, with no clear picture of what actually moved the business forward.",
     stat: null,
     isFinal: false,
   },
@@ -38,7 +39,7 @@ const STEPS = [
     step: "02",
     tag: "The shift",
     headline: "Clarity is a competitive advantage.",
-    body: "The data was already there. NextSlot just made it readable. She stopped spreading herself thin, because now she knew where her attention was needed.",
+    body: "The data was already there. NextSlot just made it readable.",
     stat: "2x bookings. 3 months.",
     isFinal: true,
   },
@@ -119,10 +120,23 @@ export const CaseStudySection = () => {
               fontFamily: FONT_BODY,
             }}
           >
-            Shu-meez has been in the beauty industry for 17 years and has run PhenomeBeauty
-            in Cape Town for 6 of them. NextSlot showed her exactly which services, time slots,
-            and clients were driving growth. Within 3 months, her bookings doubled.
+            17 years in beauty, 6 running PhenomeBeauty in Cape Town. NextSlot showed her
+            which services, time slots, and clients were actually driving growth.
           </p>
+        </div>
+
+        {/* Revenue chart */}
+        <div
+          style={{
+            maxWidth: 760,
+            margin: isMobile ? "0 auto 32px" : "0 auto 44px",
+            background: C.s2,
+            border: `1px solid ${C.border2}`,
+            borderRadius: 18,
+            padding: isMobile ? "20px 18px" : "24px 28px",
+          }}
+        >
+          <RevenueChart />
         </div>
 
         {/* Two-step timeline */}
