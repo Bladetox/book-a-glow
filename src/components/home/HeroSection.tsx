@@ -128,7 +128,7 @@ export const HeroSection = () => {
             For solo service businesses
           </p>
 
-          {/* 2. HEADLINE — aspirational, identity-first */}
+          {/* 2. HEADLINE — clear, growth-focused */}
           <h1 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? "clamp(30px,8vw,44px)" : "clamp(34px,3.8vw,52px)",
@@ -138,11 +138,11 @@ export const HeroSection = () => {
             marginBottom: 20,
             animation: "fadeUp 0.5s 0.08s ease both",
           } as React.CSSProperties}>
-            All businesses taking<br />
-            bookings <span style={{ color: C.gold }}>appointments.</span>
+            More than<br />
+            bookings. <span style={{ color: C.gold }}>Built for growth.</span>
           </h1>
-
-          {/* 3. DIFFERENTIATOR — owned, competitor-aware */}
+          
+          {/* 3. DIFFERENTIATOR — growth-focused */}
           <p style={{
             fontSize: isMobile ? 15 : "clamp(15px,1.3vw,17px)",
             color: C.muted,
@@ -153,7 +153,7 @@ export const HeroSection = () => {
             fontWeight: 400,
             animation: "fadeUp 0.5s 0.16s ease both",
           } as React.CSSProperties}>
-            A booking system should assist you in understanding your business, not just taking bookings. 
+            Manage your bookings, understand your business, and discover opportunities to grow.
           </p>
 
           {/* 4. TESTIMONIAL — real name, no icon avatar */}
