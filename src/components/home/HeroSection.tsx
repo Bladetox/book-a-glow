@@ -19,7 +19,7 @@ export const HeroSection = () => {
   const makeCards = useCallback((mobile: boolean, cw: number): FloatCardData[] => {
     if (mobile) {
       return [
-        { id: 0, x: 8,           y: 20,  z: 2, vx:  0.07, vy:  0.05, label: "Revenue today",     value: "R 1,950", sub: "7 bookings · 4 remaining",  color: C.gold,  width: 120 },
+        { id: 0, x: 8,           y: 20,  z: 2, vx:  0.07, vy:  0.05, label: "Revenue today",     value: "R 9,950", sub: "7 bookings · 4 remaining",  color: C.gold,  width: 120 },
         { id: 1, x: cw - 128,    y: 14,  z: 2, vx: -0.06, vy:  0.07, label: "Month progress",    value: "82%",     sub: "R 4,160 to beat last month", color: C.em,    width: 120 },
         { id: 2, x: 10,          y: 210, z: 2, vx:  0.05, vy: -0.07, label: "Cancellation rate", value: "22%",     sub: "Introduce a 30% deposit",   color: C.red,   width: 118 },
         { id: 3, x: cw - 126,    y: 204, z: 2, vx: -0.06, vy: -0.06, label: "Open slots",        value: "14",      sub: "Filling 6 adds R 3,480",    color: C.blue,  width: 118 },
@@ -27,7 +27,7 @@ export const HeroSection = () => {
       ];
     }
     return [
-      { id: 0, x: 18,  y: 40,  z: 2, vx:  0.09, vy:  0.06, label: "Revenue today",     value: "R 1,950",  sub: "7 bookings · 4 remaining",      color: C.gold,  width: 168 },
+      { id: 0, x: 18,  y: 40,  z: 2, vx:  0.09, vy:  0.06, label: "Revenue today",     value: "R 9,950",  sub: "7 bookings · 4 remaining",      color: C.gold,  width: 168 },
       { id: 1, x: 260, y: 20,  z: 2, vx: -0.07, vy:  0.08, label: "Month progress",    value: "82%",      sub: "R 4,160 to beat last month",     color: C.em,    width: 154 },
       { id: 2, x: 48,  y: 250, z: 2, vx:  0.06, vy: -0.09, label: "Cancellation rate", value: "22%",      sub: "Introduce a 30% deposit",        color: C.red,   width: 160 },
       { id: 3, x: 270, y: 230, z: 2, vx: -0.08, vy: -0.07, label: "Open slots · Thu",  value: "14",       sub: "Filling 6 adds R 3,480",         color: C.blue,  width: 156 },
@@ -138,8 +138,8 @@ export const HeroSection = () => {
             marginBottom: 20,
             animation: "fadeUp 0.5s 0.08s ease both",
           } as React.CSSProperties}>
-            A booking system should<br />
-            do more than book <span style={{ color: C.gold }}>appointments.</span>
+            All businesses taking<br />
+            bookings <span style={{ color: C.gold }}>appointments.</span>
           </h1>
 
           {/* 3. DIFFERENTIATOR — owned, competitor-aware */}
@@ -153,9 +153,7 @@ export const HeroSection = () => {
             fontWeight: 400,
             animation: "fadeUp 0.5s 0.16s ease both",
           } as React.CSSProperties}>
-            Understand your business, find your opportunities,
-            and grow. Built for service businesses that
-            want more from every booking.
+            A booking system should assist you in understanding your business, not just taking bookings. 
           </p>
 
           {/* 4. TESTIMONIAL — real name, no icon avatar */}
