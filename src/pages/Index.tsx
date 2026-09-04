@@ -29,12 +29,12 @@ const Index = () => (
     <main>
       <HeroSection />
       <ProofTicker />
-      <CaseStudySection />
       <NextyAISection />
       <RevenueSection />
       <ProactiveAlertsSection />
       <FeaturesSection />
       <HeatmapSection />
+      <CaseStudySection />
       <CTASection />
     </main>
     <SiteFooter />
