@@ -313,15 +313,15 @@ export const FeaturesSection = () => {
 
       <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 52, padding: isMobile ? "0 24px" : 0 }}>
-          <Eyebrow text="Nine tools. One login." />
+          <Eyebrow text="Your dashboard" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? 30 : 44,
             fontWeight: 800, lineHeight: 1.1,
             color: C.text, marginBottom: 14,
           }}>
-            One platform.<br />
-            <span style={{ color: C.gold }}>Every tool your business needs.</span>
+            All the tools to help<br />
+            <span style={{ color: C.gold }}>your business grow.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
             Bookings, insights, payments, inventory. Built for South African service businesses.
