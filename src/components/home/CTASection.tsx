@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
+import waIcon from "@/assets/whatsapp.png";
 
 const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
@@ -41,6 +42,25 @@ export const CTASection = () => {
           >
             Start for free
           </Link>
+          <a
+            href="https://wa.me/27686806115"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat with us on WhatsApp"
+            style={{
+              background: C.s1,
+              border: `1px solid ${C.border2}`,
+              color: C.text,
+              fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700,
+              padding: "16px 30px", borderRadius: 12,
+              textDecoration: "none",
+              display: "inline-flex", alignItems: "center", gap: 10,
+              minHeight: 52,
+            }}
+          >
+            <img src={waIcon} alt="" width={20} height={20} style={{ display: "block" }} />
+            Talk to us
+          </a>
         </div>
         <p style={{ marginTop: 20, fontSize: 12, color: C.faint, letterSpacing: "0.04em", fontFamily: FONT_BODY }}>
           No payment required · Free trial · Cancel anytime
