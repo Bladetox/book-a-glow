@@ -58,6 +58,163 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── ACTION: remove ──────────────────────────────────────────────────
+    if (action === "remove") {
+      const { booking_id, booking_item_id } = body;
+
+      if (!booking_id || !booking_item_id || !tenant_id) {
+        return new Response(JSON.stringify({ error: "Missing booking_id, booking_item_id or tenant_id" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 1. Fetch the booking
+      const { data: booking, error: bookingErr } = await supabase
+        .from("bookings")
+        .select("id, tenant_id, total_amount, balance_due, deposit_amount, deposit_paid, service_duration_minutes, start_time, gcal_event_id, status")
+        .eq("id", booking_id)
+        .eq("tenant_id", tenant_id)
+        .single();
+
+      if (bookingErr || !booking) {
+        return new Response(JSON.stringify({ error: "Booking not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (booking.status === "cancelled") {
+        return new Response(JSON.stringify({ error: "Cannot remove a service from a cancelled booking" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 2. Fetch the booking item being removed
+      const { data: item, error: itemErr } = await supabase
+        .from("booking_items")
+        .select("id, price, duration_minutes, service_name")
+        .eq("id", booking_item_id)
+        .eq("booking_id", booking_id)
+        .eq("tenant_id", tenant_id)
+        .single();
+
+      if (itemErr || !item) {
+        return new Response(JSON.stringify({ error: "Service line item not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 3. Refuse to remove the last remaining service on a booking
+      const { count: itemCount, error: countErr } = await supabase
+        .from("booking_items")
+        .select("id", { count: "exact", head: true })
+        .eq("booking_id", booking_id);
+
+      if (countErr) {
+        return new Response(JSON.stringify({ error: countErr.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if ((itemCount ?? 0) <= 1) {
+        return new Response(JSON.stringify({ error: "A booking must have at least one service — cancel the booking instead" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 4. Recalculate totals (reverse of the add logic)
+      const oldTotal     = Number(booking.total_amount   ?? 0);
+      const oldBalance   = Number(booking.balance_due    ?? 0);
+      const oldDeposit   = Number(booking.deposit_amount ?? 0);
+      const oldDuration  = Number(booking.service_duration_minutes ?? 0);
+      const servicePrice = Number(item.price ?? 0);
+      const serviceDurMin = Number(item.duration_minutes ?? 0);
+
+      const newTotal = Math.max(0, oldTotal - servicePrice);
+
+      let newDeposit = oldDeposit;
+      let newBalance: number;
+      if (booking.deposit_paid) {
+        // Deposit already collected — only the outstanding balance shrinks
+        newBalance = Math.max(0, oldBalance - servicePrice);
+      } else {
+        // Deposit not yet paid — the 50% deposit expectation shrinks too
+        const removedDeposit = (servicePrice * 50) / 100;
+        newDeposit = Math.max(0, oldDeposit - removedDeposit);
+        newBalance = Math.max(0, newTotal - newDeposit);
+      }
+
+      const newDuration = Math.max(0, oldDuration - serviceDurMin);
+
+      // Recalculate end_time
+      const [sh, sm] = (booking.start_time ?? "00:00").split(":").map(Number);
+      const startMs  = sh * 60 * 60 * 1000 + sm * 60 * 1000;
+      const endMs    = startMs + newDuration * 60 * 1000;
+      const endH     = Math.floor(endMs / 3600000) % 24;
+      const endM     = Math.floor((endMs % 3600000) / 60000);
+      const newEndTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`;
+
+      // 5. Delete the booking_items row
+      const { error: deleteErr } = await supabase
+        .from("booking_items")
+        .delete()
+        .eq("id", booking_item_id);
+
+      if (deleteErr) {
+        return new Response(JSON.stringify({ error: "Failed to remove booking item: " + deleteErr.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 6. Update the booking row
+      const { error: updateErr } = await supabase
+        .from("bookings")
+        .update({
+          total_amount:             newTotal,
+          deposit_amount:           newDeposit,
+          balance_due:              newBalance,
+          service_duration_minutes: newDuration,
+          end_time:                 newEndTime,
+        })
+        .eq("id", booking_id);
+
+      if (updateErr) {
+        return new Response(JSON.stringify({ error: "Failed to update booking: " + updateErr.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 7. Update Google Calendar if connected
+      if (booking.gcal_event_id) {
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
+            method: "POST",
+            headers: {
+              "Content-Type":  "application/json",
+              "Authorization": `Bearer ${serviceKey}`,
+              "apikey":        serviceKey,
+            },
+            body: JSON.stringify({ booking_id, tenant_id }),
+          });
+        } catch (gcalErr) {
+          console.error("GCal update error (non-fatal):", gcalErr);
+        }
+      }
+
+      console.log(`Service "${item.service_name}" removed from booking ${booking_id} | new total: R${newTotal} | new balance: R${newBalance}`);
+
+      return new Response(
+        JSON.stringify({
+          success:      true,
+          booking_id,
+          service_name: item.service_name,
+          new_total:    newTotal,
+          new_balance:  newBalance,
+          new_duration: newDuration,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ── ACTION: add (default) ──────────────────────────────────────────
     const { booking_id, service_id } = body;
 

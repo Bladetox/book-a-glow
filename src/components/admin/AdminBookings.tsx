@@ -785,7 +785,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
   // ── Invalidate bookings cache after a service is added so that
   //    the balance dialog reflects the new total immediately.
   const handleServiceAdded = () => {
-    queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
+    queryClient.invalidateQueries({ queryKey: ["bookings", tenantId] });
   };
 
   if (isLoading) {
@@ -891,6 +891,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
       <AddServiceModal
         bookingId={addServiceBooking?.id ?? null}
         clientName={addServiceBooking?.client ?? ""}
+        bookingItems={addServiceBooking?.bookingItems ?? []}
         onClose={() => setAddServiceBooking(null)}
         onAdded={handleServiceAdded}
       />
@@ -1313,12 +1314,12 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
                                   {b.status !== "cancelled" && b.status !== "no_show" && (
                                     <button
                                       onClick={e => { e.stopPropagation(); setAddServiceBooking(b); }}
-                                      aria-label="Add service"
-                                      title="Add service"
+                                      aria-label="Manage services"
+                                      title="Manage services"
                                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-500/25 bg-violet-500/[0.07] text-xs font-medium text-violet-400 hover:bg-violet-500/15 transition-colors"
                                     >
                                       <PlusCircle className="w-3.5 h-3.5" />
-                                      <span className="hidden sm:inline">Add Service</span>
+                                      <span className="hidden sm:inline">Manage Services</span>
                                     </button>
                                   )}
 
