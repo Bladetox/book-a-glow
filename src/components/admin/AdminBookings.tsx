@@ -891,6 +891,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
       <AddServiceModal
         bookingId={addServiceBooking?.id ?? null}
         clientName={addServiceBooking?.client ?? ""}
+        bookingItems={addServiceBooking?.bookingItems ?? []}
         onClose={() => setAddServiceBooking(null)}
         onAdded={handleServiceAdded}
       />
