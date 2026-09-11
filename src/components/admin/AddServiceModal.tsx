@@ -155,7 +155,7 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 pointer-events-none">
             <motion.div
               key="as-modal"
               initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
@@ -163,61 +163,63 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
               className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-                <div>
+              <div className="flex items-center justify-between px-4 sm:px-5 pt-5 pb-3 shrink-0 gap-3">
+                <div className="min-w-0">
                   <p className="text-[10px] tracking-[0.14em] uppercase text-white/30">Manage Services</p>
-                  <p className="text-sm font-semibold text-white/85">{clientName}</p>
+                  <p className="text-sm font-semibold text-white/85 break-words">{clientName}</p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors"
+                  className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors shrink-0"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="mx-5 border-t border-white/[0.06]" />
+              <div className="mx-4 sm:mx-5 border-t border-white/[0.06]" />
 
               <div className="overflow-y-auto flex-1">
                 {/* Currently booked services */}
                 {bookingItems.length > 0 && (
-                  <div className="px-5 pt-4 flex flex-col gap-2">
+                  <div className="px-4 sm:px-5 pt-4 flex flex-col gap-2">
                     <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">
                       Booked ({bookingItems.length})
                     </p>
                     {bookingItems.map(item => (
                       <div
                         key={item.id}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02]"
+                        className="w-full flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02]"
                       >
                         <Scissors className="w-3.5 h-3.5 shrink-0 text-white/25" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white/75 truncate">{item.name}</p>
+                        <div className="flex-1 min-w-[100px]">
+                          <p className="text-xs font-semibold text-white/75 break-words">{item.name}</p>
                           <p className="text-[10px] text-white/30">{item.durationMinutes} min</p>
                         </div>
-                        <span className="text-xs font-semibold text-white/60 shrink-0">
-                          R{Number(item.price).toFixed(2)}
-                        </span>
-                        <button
-                          onClick={() => handleRemove(item)}
-                          disabled={removingId === item.id || bookingItems.length <= 1}
-                          title={bookingItems.length <= 1 ? "Booking must keep at least one service" : "Remove service"}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-25 disabled:cursor-not-allowed shrink-0"
-                        >
-                          {removingId === item.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Trash2 className="w-3.5 h-3.5" />
-                          }
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0 ml-auto">
+                          <span className="text-xs font-semibold text-white/60 whitespace-nowrap">
+                            R{Number(item.price).toFixed(2)}
+                          </span>
+                          <button
+                            onClick={() => handleRemove(item)}
+                            disabled={removingId === item.id || bookingItems.length <= 1}
+                            title={bookingItems.length <= 1 ? "Booking must keep at least one service" : "Remove service"}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-25 disabled:cursor-not-allowed shrink-0"
+                          >
+                            {removingId === item.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />
+                            }
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {/* Add a service */}
-                <div className="px-5 pt-4 pb-1">
+                <div className="px-4 sm:px-5 pt-4 pb-1">
                   <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Add a service</p>
                 </div>
-                <div className="px-5 pb-4 flex flex-col gap-2 max-h-56 overflow-y-auto">
+                <div className="px-4 sm:px-5 pb-4 flex flex-col gap-2 max-h-56 overflow-y-auto">
                   {loading ? (
                     <div className="flex justify-center py-8">
                       <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
@@ -229,22 +231,22 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
                       <button
                         key={s.id}
                         onClick={() => setSelectedId(s.id === selectedId ? null : s.id)}
-                        className={`w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center gap-3 ${
+                        className={`w-full text-left px-3 py-3 rounded-xl border transition-all flex flex-wrap items-center gap-x-3 gap-y-1.5 ${
                           selectedId === s.id
                             ? "border-violet-500/40 bg-violet-500/10"
                             : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
                         }`}
                       >
                         <Scissors className={`w-3.5 h-3.5 shrink-0 ${selectedId === s.id ? "text-violet-400" : "text-white/25"}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-semibold truncate ${selectedId === s.id ? "text-violet-300" : "text-white/75"}`}>
+                        <div className="flex-1 min-w-[100px]">
+                          <p className={`text-xs font-semibold break-words ${selectedId === s.id ? "text-violet-300" : "text-white/75"}`}>
                             {s.name}
                           </p>
                           <p className="text-[10px] text-white/30">{s.duration_minutes} min</p>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0 ml-auto">
                           <CircleDollarSign className={`w-3 h-3 ${selectedId === s.id ? "text-violet-400" : "text-white/25"}`} />
-                          <span className={`text-xs font-semibold ${selectedId === s.id ? "text-violet-300" : "text-white/60"}`}>
+                          <span className={`text-xs font-semibold whitespace-nowrap ${selectedId === s.id ? "text-violet-300" : "text-white/60"}`}>
                             R{Number(s.price).toFixed(2)}
                           </span>
                         </div>
@@ -255,12 +257,12 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
 
                 {/* Summary */}
                 {selectedService && (
-                  <div className="mx-5 mb-3 rounded-xl bg-violet-500/[0.07] border border-violet-500/20 px-3 py-2.5 flex items-center justify-between">
-                    <div>
+                  <div className="mx-4 sm:mx-5 mb-3 rounded-xl bg-violet-500/[0.07] border border-violet-500/20 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <p className="text-[10px] text-violet-300/60">Adding</p>
-                      <p className="text-xs font-semibold text-violet-300">{selectedService.name}</p>
+                      <p className="text-xs font-semibold text-violet-300 break-words">{selectedService.name}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <p className="text-[10px] text-violet-300/60">+ to balance</p>
                       <p className="text-xs font-bold text-violet-300">R{Number(selectedService.price).toFixed(2)}</p>
                     </div>
@@ -268,8 +270,8 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
                 )}
               </div>
 
-              <div className="mx-5 border-t border-white/[0.06] shrink-0" />
-              <div className="px-5 py-4 flex items-center justify-end gap-2 shrink-0">
+              <div className="mx-4 sm:mx-5 border-t border-white/[0.06] shrink-0" />
+              <div className="px-4 sm:px-5 py-4 flex items-center justify-end gap-2 shrink-0">
                 <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs text-white/40 hover:text-white/70 transition-colors">
                   Done
                 </button>
