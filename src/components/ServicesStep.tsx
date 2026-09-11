@@ -1,7 +1,7 @@
 import { usePublicServices, usePublicCategories } from "@/hooks/usePublicServices";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useState, useEffect } from "react";
-import { Loader2, Plus, Check } from "lucide-react";
+import { Loader2, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ServicesStepProps {
@@ -40,16 +40,10 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
     ? treatments.filter((t) => t.category === activeCat)
     : [];
 
-  const selectedSet = new Set(selectedTreatments);
   const totalSelected = selectedTreatments.length;
 
-  const handleToggle = (id: string) => {
-    if (selectedSet.has(id)) {
-      onRemove(id);
-    } else {
-      onAdd(id);
-    }
-  };
+  const quantityFor = (id: string) =>
+    selectedTreatments.filter((selectedId) => selectedId === id).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -102,7 +96,8 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
             </p>
           ) : (
             visibleTreatments.map((t) => {
-              const isSelected = selectedSet.has(t.id);
+              const qty = quantityFor(t.id);
+              const isSelected = qty > 0;
               return (
                 <motion.div
                   key={t.id}
@@ -131,20 +126,41 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                     R{t.price}
                   </span>
 
-                  <motion.button
-                    whileTap={{ scale: 0.85 }}
-                    onClick={() => handleToggle(t.id)}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors shrink-0 ${
-                      isSelected
-                        ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-primary hover:text-primary"
-                    }`}
-                    aria-label={isSelected ? `Remove ${t.name}` : `Add ${t.name}`}
-                  >
-                    {isSelected
-                      ? <Check className="w-3 h-3" strokeWidth={2.5} />
-                      : <Plus className="w-3 h-3" strokeWidth={2.5} />}
-                  </motion.button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {qty > 0 && (
+                      <>
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => onRemove(t.id)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center border border-muted-foreground/30 bg-transparent text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                          aria-label={`Remove one ${t.name}`}
+                        >
+                          <Minus className="w-3 h-3" strokeWidth={2.5} />
+                        </motion.button>
+
+                        <span
+                          aria-live="polite"
+                          aria-label={`${qty} ${t.name} selected`}
+                          className="w-4 text-center text-sm font-bold text-foreground"
+                        >
+                          {qty}
+                        </span>
+                      </>
+                    )}
+
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => onAdd(t.id)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-primary hover:text-primary"
+                      }`}
+                      aria-label={`Add one ${t.name}`}
+                    >
+                      <Plus className="w-3 h-3" strokeWidth={2.5} />
+                    </motion.button>
+                  </div>
                 </motion.div>
               );
             })
