@@ -32,6 +32,7 @@ export interface BookingRow {
   callOutDistanceKm: number;
   serviceIds: string;
   serviceDurationMinutes: number;
+  bookingItems: { id: string; name: string; price: number; durationMinutes: number }[];
   yocoCheckoutId: string | null;
   yocoLink: string | null;
   yocoFinalCheckoutId: string | null;
@@ -126,6 +127,12 @@ export function mapBooking(b: any): BookingRow {
     callOutDistanceKm:     Number(b.call_out_distance_km) || 0,
     serviceIds:            b.service_ids            || "",
     serviceDurationMinutes: Number(b.service_duration_minutes) || 0,
+    bookingItems:          items.map((i: any) => ({
+      id:              i.id,
+      name:            i.service_name,
+      price:           Number(i.price) || 0,
+      durationMinutes: Number(i.duration_minutes) || 0,
+    })),
     yocoCheckoutId:        b.yoco_checkout_id       ?? null,
     yocoLink:              b.yoco_link              ?? null,
     yocoFinalCheckoutId:   b.yoco_final_checkout_id ?? null,
@@ -200,7 +207,7 @@ export function useSupabaseBookings() {
           payshap_proof_url,
           payshap_claimed_at,
           client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
-          items:booking_items(service_name, price, duration_minutes, sort_order)
+          items:booking_items(id, service_name, price, duration_minutes, sort_order)
         `)
         .eq("tenant_id", tenantId)
         .order("booking_date", { ascending: true })
