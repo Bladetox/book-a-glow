@@ -1,41 +1,46 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Loader2, Scissors, CircleDollarSign, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { X, Plus, Loader2, Trash2 } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 
 interface Service {
-  id:               string;
-  name:             string;
-  price:            number;
+  id: string;
+  name: string;
+  price: number;
   duration_minutes: number;
-  deposit_type:     string | null;
-  deposit_value:    number | null;
+  deposit_type: string | null;
+  deposit_value: number | null;
 }
 
 interface BookingItem {
-  id:              string;
-  name:            string;
-  price:           number;
+  id: string;
+  name: string;
+  price: number;
   durationMinutes: number;
 }
 
 interface AddServiceModalProps {
-  bookingId:     string | null;
-  clientName:    string;
+  bookingId: string | null;
+  clientName: string;
   bookingItems?: BookingItem[];
-  onClose:       () => void;
-  onAdded:       () => void;
+  onClose: () => void;
+  onAdded: () => void;
 }
 
-const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, onAdded }: AddServiceModalProps) => {
+const AddServiceModal = ({
+  bookingId,
+  clientName,
+  bookingItems = [],
+  onClose,
+  onAdded,
+}: AddServiceModalProps) => {
   const { tenantId } = useTenant();
-  const [services,    setServices]    = useState<Service[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [selectedId,  setSelectedId]  = useState<string | null>(null);
-  const [submitting,  setSubmitting]  = useState(false);
-  const [removingId,  setRemovingId]  = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   // Local, optimistic copy of the booked items so removals reflect instantly
   // instead of waiting on the parent's refetch to flow back down as props.
@@ -60,8 +65,8 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "apikey": SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        apikey: SUPABASE_KEY,
       },
       body: JSON.stringify({ action: "list_services", tenant_id: tenantId }),
     })
@@ -96,18 +101,23 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "apikey": SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          apikey: SUPABASE_KEY,
         },
         body: JSON.stringify({
           booking_id: bookingId,
           service_id: selectedId,
-          tenant_id:  tenantId,
+          tenant_id: tenantId,
         }),
       });
       const data = await res.json();
-      if (!res.ok || data?.error) throw new Error(data?.error || "Failed to add service");
-      toast.success(`"${data.service_name}" added — new balance R${Number(data.new_balance).toFixed(2)}`);
+      if (!res.ok || data?.error) {
+        throw new Error(data?.error || "Failed to add service");
+      }
+
+      toast.success(
+        `"${data.service_name}" added — new balance R${Number(data.new_balance).toFixed(2)}`,
+      );
 
       // Optimistically reflect the new item locally too, so it shows up in
       // "Booked" immediately rather than waiting on the parent's refetch.
@@ -116,9 +126,9 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
         setLocalItems(prev => [
           ...prev,
           {
-            id:              `optimistic-${addedService.id}-${Date.now()}`,
-            name:            addedService.name,
-            price:           addedService.price,
+            id: `optimistic-${addedService.id}-${Date.now()}`,
+            name: addedService.name,
+            price: addedService.price,
             durationMinutes: addedService.duration_minutes,
           },
         ]);
@@ -151,19 +161,24 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "apikey": SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          apikey: SUPABASE_KEY,
         },
         body: JSON.stringify({
-          action:          "remove",
-          booking_id:      bookingId,
+          action: "remove",
+          booking_id: bookingId,
           booking_item_id: item.id,
-          tenant_id:       tenantId,
+          tenant_id: tenantId,
         }),
       });
       const data = await res.json();
-      if (!res.ok || data?.error) throw new Error(data?.error || "Failed to remove service");
-      toast.success(`"${data.service_name}" removed — new balance R${Number(data.new_balance).toFixed(2)}`);
+      if (!res.ok || data?.error) {
+        throw new Error(data?.error || "Failed to remove service");
+      }
+
+      toast.success(
+        `"${data.service_name}" removed — new balance R${Number(data.new_balance).toFixed(2)}`,
+      );
 
       // Drop it from the local list immediately — don't wait on the parent's
       // refetch to flow back down as props.
@@ -183,148 +198,197 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
         <>
           <motion.div
             key="as-backdrop"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
+
           <div
-            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4"
-            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            className="pointer-events-none fixed inset-x-0 top-[5.5rem] bottom-[6.25rem] z-[100] flex px-3 sm:inset-0 sm:items-center sm:justify-center sm:p-4"
+            onClick={event => {
+              if (event.target === event.currentTarget) onClose();
+            }}
           >
-              <motion.div
-                key="as-modal"
-                initial={{ scale: 0.96, opacity: 0, y: 24 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0, y: 24 }}
-                transition={{ type: "spring", stiffness: 340, damping: 30 }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] supports-[max-height:100dvh]:max-h-[90dvh]"
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 sm:px-5 pt-5 pb-3 shrink-0 gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] tracking-[0.14em] uppercase text-white/30">Manage Services</p>
-                    <p className="text-sm font-semibold text-white/85 break-words">{clientName}</p>
-                  </div>
-                  <button
-                    onClick={onClose}
-                    className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors shrink-0"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+            <motion.div
+              key="as-modal"
+              initial={{ scale: 0.96, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 24 }}
+              transition={{ type: "spring", stiffness: 340, damping: 30 }}
+              onClick={event => event.stopPropagation()}
+              className="pointer-events-auto flex h-full min-h-0 w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)]"
+            >
+              {/* Fixed header */}
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0f0f0f] px-4 pb-3 pt-5 sm:px-5">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-white/30">
+                    Manage Services
+                  </p>
+                  <p className="break-words text-sm font-semibold text-white/85">
+                    {clientName}
+                  </p>
                 </div>
-                <div className="mx-4 sm:mx-5 border-t border-white/[0.06]" />
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close add service modal"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/40 transition-colors hover:text-white/80"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
 
-                <div className="overflow-y-auto overscroll-contain flex-1 min-h-0">
-                  {/* Currently booked services */}
-                  {localItems.length > 0 && (
-                    <div className="px-4 sm:px-5 pt-4 flex flex-col gap-2">
-                      <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">
-                        Booked ({localItems.length})
-                      </p>
-                      {localItems.map(item => (
-                        <div
-                          key={item.id}
-                          className="w-full flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02]"
-                        >
-                          <Scissors className="w-3.5 h-3.5 shrink-0 text-white/25" />
-                          <div className="flex-1 min-w-[100px]">
-                            <p className="text-xs font-semibold text-white/75 break-words">{item.name}</p>
-                            <p className="text-[10px] text-white/30">{item.durationMinutes} min</p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0 ml-auto">
-                            <span className="text-xs font-semibold text-white/60 whitespace-nowrap">
-                              R{Number(item.price).toFixed(2)}
-                            </span>
-                            <button
-                              onClick={() => handleRemove(item)}
-                              disabled={removingId === item.id || localItems.length <= 1}
-                              title={localItems.length <= 1 ? "Booking must keep at least one service" : "Remove service"}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-25 disabled:cursor-not-allowed shrink-0"
-                            >
-                              {removingId === item.id
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : <Trash2 className="w-3.5 h-3.5" />
-                              }
-                            </button>
-                          </div>
+              {/* The only scrollable region in the dialog */}
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+                {/* Currently booked services */}
+                {localItems.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/25">
+                      Booked ({localItems.length})
+                    </p>
+                    {localItems.map(item => (
+                      <div
+                        key={item.id}
+                        className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5"
+                      >
+                        <div className="min-w-[100px] flex-1">
+                          <p className="break-words text-xs font-semibold text-white/75">
+                            {item.name}
+                          </p>
+                          <p className="text-[10px] text-white/30">
+                            {item.durationMinutes} min
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Add a service */}
-                  <div className="px-4 sm:px-5 pt-4 pb-1">
-                    <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25">Add a service</p>
-                  </div>
-                  <div className="px-4 sm:px-5 pb-4 flex flex-col gap-2 max-h-56 overflow-y-auto">
-                    {loading ? (
-                      <div className="flex justify-center py-8">
-                        <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+                        <div className="ml-auto flex shrink-0 items-center gap-2">
+                          <span className="whitespace-nowrap text-xs font-semibold text-white/60">
+                            R{Number(item.price).toFixed(2)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(item)}
+                            disabled={removingId === item.id || localItems.length <= 1}
+                            title={
+                              localItems.length <= 1
+                                ? "Booking must keep at least one service"
+                                : "Remove service"
+                            }
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-red-400/60 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-25"
+                          >
+                            {removingId === item.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    ) : services.length === 0 ? (
-                      <p className="text-xs text-white/30 text-center py-6">No active services found</p>
-                    ) : (
-                      services.map(s => (
-                        <button
-                          key={s.id}
-                          onClick={() => setSelectedId(s.id === selectedId ? null : s.id)}
-                          className={`w-full text-left px-3 py-3 rounded-xl border transition-all flex flex-wrap items-center gap-x-3 gap-y-1.5 ${
-                            selectedId === s.id
-                              ? "border-violet-500/40 bg-violet-500/10"
-                              : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
+                    ))}
+                  </div>
+                )}
+
+                {/* Add a service */}
+                <div className="pb-1 pt-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/25">
+                    Add a service
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-white/30" />
+                    </div>
+                  ) : services.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-white/30">
+                      No active services found
+                    </p>
+                  ) : (
+                    services.map(service => (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedId(service.id === selectedId ? null : service.id)
+                        }
+                        className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border px-3 py-3 text-left transition-all ${
+                          selectedId === service.id
+                            ? "border-violet-500/40 bg-violet-500/10"
+                            : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
+                        }`}
+                      >
+                        <div className="min-w-[100px] flex-1">
+                          <p
+                            className={`break-words text-xs font-semibold ${
+                              selectedId === service.id
+                                ? "text-violet-300"
+                                : "text-white/75"
+                            }`}
+                          >
+                            {service.name}
+                          </p>
+                          <p className="text-[10px] text-white/30">
+                            {service.duration_minutes} min
+                          </p>
+                        </div>
+                        <span
+                          className={`ml-auto shrink-0 whitespace-nowrap text-xs font-semibold ${
+                            selectedId === service.id
+                              ? "text-violet-300"
+                              : "text-white/60"
                           }`}
                         >
-                          <Scissors className={`w-3.5 h-3.5 shrink-0 ${selectedId === s.id ? "text-violet-400" : "text-white/25"}`} />
-                          <div className="flex-1 min-w-[100px]">
-                            <p className={`text-xs font-semibold break-words ${selectedId === s.id ? "text-violet-300" : "text-white/75"}`}>
-                              {s.name}
-                            </p>
-                            <p className="text-[10px] text-white/30">{s.duration_minutes} min</p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0 ml-auto">
-                            <CircleDollarSign className={`w-3 h-3 ${selectedId === s.id ? "text-violet-400" : "text-white/25"}`} />
-                            <span className={`text-xs font-semibold whitespace-nowrap ${selectedId === s.id ? "text-violet-300" : "text-white/60"}`}>
-                              R{Number(s.price).toFixed(2)}
-                            </span>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Summary */}
-                  {selectedService && (
-                    <div className="mx-4 sm:mx-5 mb-3 rounded-xl bg-violet-500/[0.07] border border-violet-500/20 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-violet-300/60">Adding</p>
-                        <p className="text-xs font-semibold text-violet-300 break-words">{selectedService.name}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-[10px] text-violet-300/60">+ to balance</p>
-                        <p className="text-xs font-bold text-violet-300">R{Number(selectedService.price).toFixed(2)}</p>
-                      </div>
-                    </div>
+                          R{Number(service.price).toFixed(2)}
+                        </span>
+                      </button>
+                    ))
                   )}
                 </div>
 
-                <div className="mx-4 sm:mx-5 border-t border-white/[0.06] shrink-0" />
-                <div className="px-4 sm:px-5 py-4 flex items-center justify-end gap-2 shrink-0">
-                  <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs text-white/40 hover:text-white/70 transition-colors">
-                    Done
-                  </button>
-                  <button
-                    disabled={!selectedId || submitting}
-                    onClick={handleAdd}
-                    className="px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30 text-xs font-semibold text-violet-400 hover:bg-violet-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
-                  >
-                    {submitting
-                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <Plus className="w-3 h-3" />
-                    }
-                    Add Service
-                  </button>
-                </div>
-              </motion.div>
+                {/* Summary */}
+                {selectedService && (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-violet-500/20 bg-violet-500/[0.07] px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-violet-300/60">Adding</p>
+                      <p className="break-words text-xs font-semibold text-violet-300">
+                        {selectedService.name}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[10px] text-violet-300/60">+ to balance</p>
+                      <p className="text-xs font-bold text-violet-300">
+                        R{Number(selectedService.price).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Fixed footer */}
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t border-white/[0.06] bg-[#0f0f0f] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-5 sm:pb-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg px-4 py-2 text-xs text-white/40 transition-colors hover:text-white/70"
+                >
+                  Done
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedId || submitting}
+                  onClick={handleAdd}
+                  className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/20 px-4 py-2 text-xs font-semibold text-violet-400 transition-colors hover:bg-violet-500/30 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {submitting ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Plus className="h-3 w-3" />
+                  )}
+                  Add Service
+                </button>
+              </div>
+            </motion.div>
           </div>
         </>
       )}
