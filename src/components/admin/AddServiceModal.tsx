@@ -188,17 +188,16 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
             onClick={onClose}
           />
           <div
-            className="fixed inset-0 z-50 overflow-y-auto py-6 px-3 sm:px-4"
+            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
           >
-            <div className="min-h-full flex items-center justify-center">
               <motion.div
                 key="as-modal"
-                initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+                initial={{ scale: 0.96, opacity: 0, y: 24 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0, y: 24 }}
                 transition={{ type: "spring", stiffness: 340, damping: 30 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-sm rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden flex flex-col my-auto"
-                style={{ maxHeight: "calc(100dvh - 3rem)" }}
+                className="w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] supports-[max-height:100dvh]:max-h-[90dvh]"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 sm:px-5 pt-5 pb-3 shrink-0 gap-3">
@@ -215,7 +214,7 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
                 </div>
                 <div className="mx-4 sm:mx-5 border-t border-white/[0.06]" />
 
-                <div className="overflow-y-auto flex-1">
+                <div className="overflow-y-auto overscroll-contain flex-1 min-h-0">
                   {/* Currently booked services */}
                   {localItems.length > 0 && (
                     <div className="px-4 sm:px-5 pt-4 flex flex-col gap-2">
@@ -326,7 +325,6 @@ const AddServiceModal = ({ bookingId, clientName, bookingItems = [], onClose, on
                   </button>
                 </div>
               </motion.div>
-            </div>
           </div>
         </>
       )}
