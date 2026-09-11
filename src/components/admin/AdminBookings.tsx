@@ -1262,8 +1262,24 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
                                   </div>
                                 )}
 
-                                <div className="text-[10px] text-white/20">Booked: {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "—"}</div>
-
+                                <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5">
+                                  <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-sky-400/70" />
+                                
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
+                                      Booking created
+                                    </p>
+                                    <p className="text-xs font-medium text-white/75">
+                                      {b.createdAt
+                                        ? new Date(b.createdAt).toLocaleDateString(undefined, {
+                                            day: "numeric",
+                                            month: "short",
+                                            year: "numeric",
+                                          })
+                                        : "Date unavailable"}
+                                    </p>
+                                  </div>
+                                </div>
                                 {/* Edit accordion */}
                                 <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
                                   <button
