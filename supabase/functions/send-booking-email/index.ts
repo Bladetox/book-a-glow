@@ -147,6 +147,291 @@ function calendarButton(href: string, label = "Add to Calendar"): string {
   return `<a href="${href}" target="_blank" style="display:inline-block;padding:14px 26px;border-radius:10px;background:#000;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">&#128197;&nbsp; ${label}</a>`;
 }
 
+// ======================================================================
+// CONSISTENCY PROGRAM HELPERS
+// ======================================================================
+
+type ConsistencyEmailContext = {
+  serviceName: string;
+  state: "progress" | "qualified" | "lapsed";
+  completedCount: number;
+  remainingBookings: number;
+  requiredBookings: number;
+  windowDays: number;
+  consistencyPrice: number;
+};
+
+function parseBookingServiceIds(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value !== "string" || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map(String);
+  } catch { /* fall through */ }
+  return value
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+// Canonical SA-focused phone normalizer.
+// Mirrors the normalization applied on the booking path so that
+// loyalty_tracker lookups do not silently miss.
+function normalizePhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+
+  // Strip all non-digits.
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+
+  // Already in E.164-like form starting with 27.
+  if (digits.startsWith("27")) {
+    return digits;
+  }
+
+  // Convert leading 0 to 27 (SA convention).
+  if (digits.startsWith("0")) {
+    return `27${digits.slice(1)}`;
+  }
+
+  // If it starts with another country code, keep as-is.
+  return digits;
+}
+
+async function getConsistencyEmailContext(
+  supabase: ReturnType<typeof createClient>,
+  booking: any,
+): Promise<ConsistencyEmailContext | null> {
+  const programResult = await supabase
+    .from("consistency_programs")
+    .select("id, required_bookings, cycle_days, grace_days")
+    .eq("tenant_id", booking.tenant_id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (programResult.error || !programResult.data) return null;
+
+  const program = programResult.data;
+  const bookingServiceIds = parseBookingServiceIds(booking.service_ids);
+  if (bookingServiceIds.length === 0) return null;
+
+  const mappedResult = await supabase
+    .from("consistency_program_services")
+    .select("service_id, consistency_price")
+    .eq("program_id", program.id)
+    .in("service_id", bookingServiceIds);
+
+  if (mappedResult.error || !mappedResult.data?.length) return null;
+
+  const firstMappedServiceId = bookingServiceIds.find((id) =>
+    mappedResult.data.some((r) => r.service_id === id),
+  );
+  if (!firstMappedServiceId) return null;
+
+  const mappedService = mappedResult.data.find(
+    (r) => r.service_id === firstMappedServiceId,
+  );
+  if (!mappedService) return null;
+
+  const serviceResult = await supabase
+    .from("services")
+    .select("name")
+    .eq("id", firstMappedServiceId)
+    .single();
+
+  if (serviceResult.error || !serviceResult.data) return null;
+
+  const guestEmail =
+    booking.guest_email || booking.client_email || booking.client?.email || null;
+
+  const guestPhoneRaw =
+    booking.guest_phone || booking.client_phone || booking.client?.phone || null;
+  const guestPhone = normalizePhone(guestPhoneRaw);
+
+  // Prefer the booking's existing canonical_client_id. Only fall back to
+  // email/phone discovery when it is missing.
+  let canonicalClientId: string | null =
+    booking.canonical_client_id ?? null;
+
+  if (!canonicalClientId && guestEmail) {
+    const emailResult = await supabase
+      .from("loyalty_tracker")
+      .select("id")
+      .eq("tenant_id", booking.tenant_id)
+      .eq("email", guestEmail)
+      .maybeSingle();
+    canonicalClientId = emailResult.data?.id ?? null;
+  }
+
+  if (!canonicalClientId && guestPhone) {
+    const phoneResult = await supabase
+      .from("loyalty_tracker")
+      .select("id")
+      .eq("tenant_id", booking.tenant_id)
+      .is("email", null)
+      .eq("phone", guestPhone)
+      .maybeSingle();
+    canonicalClientId = phoneResult.data?.id ?? null;
+  }
+
+  const requiredBookings = Number(program.required_bookings);
+  const windowDays = Number(program.cycle_days) + Number(program.grace_days);
+  const consistencyPrice = Number(mappedService.consistency_price);
+
+  // New qualifying guest (no canonical client on record): start-your-streak message.
+  if (!canonicalClientId) {
+    return {
+      serviceName: serviceResult.data.name,
+      state: "progress",
+      completedCount: 0,
+      remainingBookings: requiredBookings,
+      requiredBookings,
+      windowDays,
+      consistencyPrice,
+    };
+  }
+
+  const statusResult = await supabase
+    .from("consistency_guest_status")
+    .select("consecutive_count, streak_last_booking, is_active")
+    .eq("program_id", program.id)
+    .eq("canonical_client_id", canonicalClientId)
+    .maybeSingle();
+
+  // Existing canonical client but no status row yet — treat as fresh start.
+  if (statusResult.error || !statusResult.data) {
+    return {
+      serviceName: serviceResult.data.name,
+      state: "progress",
+      completedCount: 0,
+      remainingBookings: requiredBookings,
+      requiredBookings,
+      windowDays,
+      consistencyPrice,
+    };
+  }
+
+  const status = statusResult.data;
+  const completedCount = Number(status.consecutive_count ?? 0);
+
+  if (status.is_active) {
+    return {
+      serviceName: serviceResult.data.name,
+      state: "qualified",
+      completedCount,
+      remainingBookings: 0,
+      requiredBookings,
+      windowDays,
+      consistencyPrice,
+    };
+  }
+
+  // Lapse check is anchored to the booking date, not today's date, so the
+  // email describes the state as of this specific booking.
+  const bookingDateMs = new Date(
+    `${booking.booking_date}T00:00:00`,
+  ).getTime();
+
+  const streakLastBookingMs = status.streak_last_booking
+    ? new Date(`${status.streak_last_booking}T00:00:00`).getTime()
+    : null;
+
+  const hasLapsed =
+    streakLastBookingMs !== null &&
+    bookingDateMs - streakLastBookingMs > windowDays * 86400000;
+
+  if (hasLapsed) {
+    return {
+      serviceName: serviceResult.data.name,
+      state: "lapsed",
+      completedCount: 0,
+      remainingBookings: requiredBookings,
+      requiredBookings,
+      windowDays,
+      consistencyPrice,
+    };
+  }
+
+  const remainingBookings = Math.max(requiredBookings - completedCount, 0);
+
+  if (remainingBookings <= 0) {
+    return {
+      serviceName: serviceResult.data.name,
+      state: "qualified",
+      completedCount,
+      remainingBookings: 0,
+      requiredBookings,
+      windowDays,
+      consistencyPrice,
+    };
+  }
+
+  return {
+    serviceName: serviceResult.data.name,
+    state: "progress",
+    completedCount,
+    remainingBookings,
+    requiredBookings,
+    windowDays,
+    consistencyPrice,
+  };
+}
+
+function buildConsistencyEmailSection(context: ConsistencyEmailContext): string {
+  const serviceName = escapeHtml(context.serviceName);
+  const requiredBookings = String(context.requiredBookings);
+  const completedCount = String(context.completedCount);
+  const remainingBookings = String(context.remainingBookings);
+  const windowDays = String(context.windowDays);
+  const consistencyPrice = `R${context.consistencyPrice.toFixed(2)}`;
+
+  if (context.state === "qualified") {
+    return `
+      <tr><td style="padding:0 36px 26px;">
+        <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;">
+          <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">Your ${serviceName} consistency price is applied</p>
+          <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
+            Your ${serviceName} consistency price of <strong>${consistencyPrice}</strong> has been applied to this booking.
+            To keep this rate for future qualifying bookings, your next qualifying appointment must be booked and completed within ${windowDays} days of your last qualifying appointment.
+            If you reschedule beyond that window, your confirmed price remains unchanged, but the appointment will not continue your streak for the next booking.
+          </p>
+        </div>
+      </td></tr>
+    `;
+  }
+
+  if (context.state === "lapsed") {
+    return `
+      <tr><td style="padding:0 36px 26px;">
+        <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;">
+          <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">Your ${serviceName} streak starts again</p>
+          <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
+            It has been more than ${windowDays} days since your last qualifying appointment, so your previous streak has ended.
+            That is completely okay. This ${serviceName} booking starts a new streak.
+            Complete ${requiredBookings} qualifying appointments to receive your ${serviceName} consistency price of <strong>${consistencyPrice}</strong>.
+            For this booking to continue your streak, it must be completed within ${windowDays} days of your last qualifying appointment.
+            If you reschedule beyond that date, your confirmed price stays the same, but the appointment will not continue your streak.
+          </p>
+        </div>
+      </td></tr>
+    `;
+  }
+
+  return `
+    <tr><td style="padding:0 36px 26px;">
+      <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;">
+        <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">Your ${serviceName} consistency progress</p>
+        <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
+          You have completed ${completedCount} of ${requiredBookings} qualifying appointments.
+          You are ${remainingBookings} away from your ${serviceName} consistency price of <strong>${consistencyPrice}</strong>.
+          To keep your progress going, your next qualifying appointment must be booked and completed within ${windowDays} days of your last qualifying appointment.
+          If you reschedule beyond that window, the appointment will not continue your streak. Your confirmed price for this booking will not change.
+        </p>
+      </div>
+    </td></tr>
+  `;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -177,6 +462,7 @@ Deno.serve(async (req) => {
         is_call_out, call_out_address, call_out_fee, service_ids,
         guest_address,
         tenant_id,
+        canonical_client_id,
         client_name, client_email, client_phone,
         guest_name,  guest_email,  guest_phone,
         payshap_reference,
@@ -256,6 +542,17 @@ Deno.serve(async (req) => {
     const depositAmount = `R${rawDeposit.toFixed(2)}`;
     const balanceDue    = `R${rawBalance.toFixed(2)}`;
     const isFullPayment = rawDeposit >= rawTotal;
+
+    // Consistency program context (only resolved when an active program is
+    // configured for this tenant and the booked service qualifies).
+    const consistencyEmailContext =
+      booking.tenant_id && booking.service_ids
+        ? await getConsistencyEmailContext(supabase, booking)
+        : null;
+
+    const consistencyEmailSection = consistencyEmailContext
+      ? buildConsistencyEmailSection(consistencyEmailContext)
+      : "";
 
     // -------------------------------------------------------------------
     // ADDRESS LOGIC
@@ -636,6 +933,7 @@ Deno.serve(async (req) => {
             <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Payment</p>
             ${paymentRows}
           </td></tr>
+          ${consistencyEmailSection}
           <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
           </td></tr>
@@ -751,6 +1049,7 @@ Deno.serve(async (req) => {
             )}
             <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">Nothing more is due. See you on ${formattedDate}!</p>
           </td></tr>
+          ${consistencyEmailSection}
           <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
           </td></tr>
