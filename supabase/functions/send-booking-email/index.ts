@@ -392,10 +392,17 @@ function buildConsistencyEmailSection(context: ConsistencyEmailContext): string 
   const windowDays = String(context.windowDays);
   const consistencyPrice = `R${context.consistencyPrice.toFixed(2)}`;
 
+  // ------------------------------------------------------------------
+  // QUALIFIED STATE — bar at 100%, prompt to keep the streak alive
+  // ------------------------------------------------------------------
   if (context.state === "qualified") {
+    const bookedAppointmentNumber = context.requiredBookings;
+    const progressPercent = 100;
+
     return `
       <tr><td style="padding:0 36px 26px;">
-        <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;">
+
+        <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;margin-bottom:20px;">
           <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">Your ${serviceName} consistency price is applied</p>
           <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
             Your ${serviceName} consistency price of <strong>${consistencyPrice}</strong> has been applied to this booking.
@@ -403,14 +410,148 @@ function buildConsistencyEmailSection(context: ConsistencyEmailContext): string 
             If you reschedule beyond that window, your confirmed price remains unchanged, but the appointment will not continue your streak for the next booking.
           </p>
         </div>
+
+        <table
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          role="presentation"
+          style="background:#ffffff;border:1px solid #e3e3e3;border-radius:12px;overflow:hidden;"
+        >
+          <tr>
+            <td style="padding:20px 20px 16px;background:#f7f7f7;border-bottom:1px solid #e7e7e7;">
+
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td valign="top">
+                    <p style="margin:0 0 5px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Your consistency journey
+                    </p>
+
+                    <p class="tm" style="margin:0;font-size:20px;font-weight:700;line-height:1.25;color:#111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Consistency price unlocked
+                    </p>
+                  </td>
+
+                  <td align="right" valign="top" style="padding-left:12px;">
+                    <table cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #111;border-radius:999px;">
+                      <tr>
+                        <td style="padding:6px 10px;font-size:11px;font-weight:700;color:#111;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                          ${requiredBookings} / ${requiredBookings}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 20px 18px;">
+
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                role="presentation"
+                style="background:#e4e4e4;border-radius:999px;"
+              >
+                <tr>
+                  <td
+                    width="${progressPercent}%"
+                    style="height:10px;line-height:10px;background:#111;border-radius:999px;font-size:0;"
+                  >
+                    &nbsp;
+                  </td>
+                  <td style="font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="padding-top:9px;font-size:11px;line-height:1.45;color:#666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    <strong style="color:#111;">You've completed all ${requiredBookings} qualifying appointments.</strong><br />
+                    Keep your streak alive by booking your next qualifying appointment within ${windowDays} days.
+                  </td>
+
+                  <td align="right" valign="top" style="padding-top:9px;padding-left:12px;font-size:11px;line-height:1.45;color:#666;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    Streak active
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 20px 16px;">
+
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                role="presentation"
+                style="background:#111;border-radius:10px;"
+              >
+                <tr>
+                  <td style="padding:15px 17px;">
+
+                    <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#bcbcbc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Your reward
+                    </p>
+
+                    <p style="margin:0;font-size:18px;font-weight:700;line-height:1.3;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      ${serviceName} consistency price: ${consistencyPrice}
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 20px 20px;">
+
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td width="3" style="width:3px;background:#111;font-size:0;line-height:0;">&nbsp;</td>
+
+                  <td style="padding-left:12px;">
+                    <p class="tm" style="margin:0 0 4px;font-size:12px;font-weight:700;color:#111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Keep your streak alive
+                    </p>
+
+                    <p class="tl" style="margin:0;font-size:12px;line-height:1.6;color:#666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Book and complete your next qualifying appointment within ${windowDays} days of this appointment.
+                      If you reschedule beyond that window, this booking keeps its confirmed price, but it will not continue your streak.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+
       </td></tr>
     `;
   }
 
   if (context.state === "lapsed") {
+    // ------------------------------------------------------------------
+    // LAPSED STATE — show progress bar starting from 1
+    // ------------------------------------------------------------------
+    const bookedAppointmentNumber = 1;
+    const remainingAfterThisAppointment = context.requiredBookings - 1;
+    const progressPercent = Math.round((1 / context.requiredBookings) * 100);
+
     return `
       <tr><td style="padding:0 36px 26px;">
-        <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;">
+        <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;margin-bottom:20px;">
           <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">Your ${serviceName} streak starts again</p>
           <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
             It has been more than ${windowDays} days since your last qualifying appointment, so your previous streak has ended.
@@ -420,6 +561,112 @@ function buildConsistencyEmailSection(context: ConsistencyEmailContext): string 
             If you reschedule beyond that date, your confirmed price stays the same, but the appointment will not continue your streak.
           </p>
         </div>
+
+        <table
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          role="presentation"
+          style="background:#ffffff;border:1px solid #e3e3e3;border-radius:12px;overflow:hidden;"
+        >
+          <tr>
+            <td style="padding:20px 20px 16px;background:#f7f7f7;border-bottom:1px solid #e7e7e7;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td valign="top">
+                    <p style="margin:0 0 5px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Your consistency journey
+                    </p>
+                    <p class="tm" style="margin:0;font-size:20px;font-weight:700;line-height:1.25;color:#111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Appointment 1 of ${context.requiredBookings} booked
+                    </p>
+                  </td>
+                  <td align="right" valign="top" style="padding-left:12px;">
+                    <table cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #111;border-radius:999px;">
+                      <tr>
+                        <td style="padding:6px 10px;font-size:11px;font-weight:700;color:#111;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                          1 / ${context.requiredBookings}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 20px 18px;">
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                role="presentation"
+                style="background:#e4e4e4;border-radius:999px;"
+              >
+                <tr>
+                  <td
+                    width="${progressPercent}%"
+                    style="height:10px;line-height:10px;background:#111;border-radius:999px;font-size:0;"
+                  >
+                    &nbsp;
+                  </td>
+                  <td style="font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="padding-top:9px;font-size:11px;line-height:1.45;color:#666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    <strong style="color:#111;">This booking is your first step.</strong><br />
+                    Complete it to earn your first progress point.
+                  </td>
+                  <td align="right" valign="top" style="padding-top:9px;padding-left:12px;font-size:11px;line-height:1.45;color:#666;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    ${remainingAfterThisAppointment} remaining after this visit
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 20px 16px;">
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                role="presentation"
+                style="background:#111;border-radius:10px;"
+              >
+                <tr>
+                  <td style="padding:15px 17px;">
+                    <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#bcbcbc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Your reward
+                    </p>
+                    <p style="margin:0;font-size:18px;font-weight:700;line-height:1.3;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      ${serviceName} consistency price: ${consistencyPrice}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 20px 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td width="3" style="width:3px;background:#111;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="padding-left:12px;">
+                    <p class="tm" style="margin:0 0 4px;font-size:12px;font-weight:700;color:#111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Keep your progress going
+                    </p>
+                    <p class="tl" style="margin:0;font-size:12px;line-height:1.6;color:#666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Book and complete your next qualifying appointment within ${windowDays} days of this appointment.
+                      If you reschedule beyond that window, this booking keeps its confirmed price, but it will not continue your streak.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </td></tr>
     `;
   }
@@ -751,9 +998,12 @@ Deno.serve(async (req) => {
 
     // Consistency program context (only resolved when an active program is
     // configured for this tenant and at least one booked service qualifies).
-    // bookedServiceIds from booking_items takes priority over service_ids.
+    // bookedServiceIds from booking_items takes priority over service_ids,
+    // with the legacy service_ids as a fallback for rows predating
+    // booking_items.
     const consistencyEmailContext =
-      booking.tenant_id && (bookedServiceIds.length > 0 || booking.service_ids)
+      booking.tenant_id &&
+      (bookedServiceIds.length > 0 || booking.service_ids)
         ? await getConsistencyEmailContext(
             supabase,
             booking,
