@@ -40,6 +40,7 @@ export const FLAG_KEYS = [
   "blocked_clients",
   "client_alerts",
   "loyalty_module",
+  "consistency_pricing",
   // Inventory
   "stock_module",
   "stock_barcode_scan",

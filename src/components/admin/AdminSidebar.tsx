@@ -28,6 +28,7 @@ const iconMap: Record<string, React.ElementType> = {
   "Stock":              StockIcon,
   "Client Management":  ClientManagementIcon,
   "Loyalty":            Heart,
+  "Consistency Pricing": Heart,
   "Integrations":       IntegrationsIcon,
   "Settings":           SettingsIcon,
   "Terms & Conditions": TermsIcon,
@@ -43,7 +44,7 @@ const NAV: NavItem[] = [
   { kind: "direct", label: "Calendar",          view: "Calendar" },
   { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
   { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
-  { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty"] },
+  { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty", "Consistency Pricing"] },
   { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
 ];
 

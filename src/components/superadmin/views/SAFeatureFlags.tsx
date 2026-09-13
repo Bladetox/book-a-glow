@@ -33,6 +33,7 @@ const FLAG_DEFS: FlagDef[] = [
   { group: "Client Management",key: "blocked_clients",       label: "Blocked Clients",            desc: "Block clients with a reason; checked at booking time before confirming" },
   { group: "Client Management",key: "client_alerts",         label: "Client Alerts",              desc: "Popup flags for no-shows, block status and loyalty tier on bookings"   },
   { group: "Client Management",key: "loyalty_module",        label: "Loyalty Tracker",            desc: "Client retention, rebooking alerts and visit milestones"              },
+  { group: "Client Management",key: "consistency_pricing",   label: "Consistency Pricing",        desc: "Rewards a regular booking rhythm with a set rate per service. Off by default — enable per tenant." },
   // ── Inventory
   { group: "Inventory",        key: "stock_module",          label: "Stock Management",           desc: "Inventory tracking for products and supplies"                        },
   { group: "Inventory",        key: "stock_barcode_scan",    label: "Stock Barcode Scan",         desc: "Barcode and manual stock scan modal inside inventory"                  },

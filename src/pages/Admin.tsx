@@ -25,6 +25,7 @@ const AdminSettings         = lazy(() => import("@/components/admin/AdminSetting
 const AdminTerms            = lazy(() => import("@/components/admin/AdminTerms"));
 const AdminClientManagement = lazy(() => import("@/components/admin/AdminClientManagement"));
 const AdminLoyalty          = lazy(() => import("@/components/admin/AdminLoyalty"));
+const AdminConsistencyPricing = lazy(() => import("@/components/admin/AdminConsistencyPricing"));
 const AdminHelp             = lazy(() => import("@/components/admin/AdminHelp"));
 const AdminRecommendations  = lazy(() => import("@/components/admin/AdminRecommendations"));
 const AdminConsultations    = lazy(() => import("@/components/admin/AdminConsultations"));
@@ -87,6 +88,7 @@ const ALL_VIEWS = [
   "Special Occasions",
   "Client Management",
   "Loyalty",
+  "Consistency Pricing",
   "Integrations",
   "Settings",
   "Terms & Conditions",
@@ -158,6 +160,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
     if (view === "Consultations")     return flags.consultations;
     if (view === "Special Occasions") return flags.special_occasions;
     if (view === "Loyalty")           return flags.loyalty_module;
+    if (view === "Consistency Pricing") return flags.consistency_pricing;
     if (view === "Integrations")      return flags.integrations_tab;
     return false;
   });
@@ -268,6 +271,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
               {activeView === "Special Occasions"  && flags.special_occasions && <AdminSpecialOccasions />}
               {activeView === "Client Management" && <AdminClientManagement />}
               {activeView === "Loyalty"            && flags.loyalty_module    && <AdminLoyalty onNavigate={handleNavigate} />}
+              {activeView === "Consistency Pricing" && flags.consistency_pricing && <AdminConsistencyPricing />}
               {activeView === "Integrations"       && flags.integrations_tab  && <AdminIntegrations />}
               {activeView === "Settings"           && <AdminSettings />}
               {activeView === "Terms & Conditions" && <AdminTerms />}
