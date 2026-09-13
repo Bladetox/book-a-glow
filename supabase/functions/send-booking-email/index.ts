@@ -201,6 +201,7 @@ function normalizePhone(raw: string | null | undefined): string | null {
 async function getConsistencyEmailContext(
   supabase: ReturnType<typeof createClient>,
   booking: any,
+  overrideServiceIds: string[] = [],
 ): Promise<ConsistencyEmailContext | null> {
   const programResult = await supabase
     .from("consistency_programs")
@@ -212,7 +213,15 @@ async function getConsistencyEmailContext(
   if (programResult.error || !programResult.data) return null;
 
   const program = programResult.data;
-  const bookingServiceIds = parseBookingServiceIds(booking.service_ids);
+
+  // Prefer IDs passed in by the caller (sourced from booking_items).
+  // Fall back to the legacy bookings.service_ids field only when the
+  // caller had no booking_items to offer.
+  const bookingServiceIds =
+    overrideServiceIds.length > 0
+      ? overrideServiceIds
+      : parseBookingServiceIds(booking.service_ids);
+
   if (bookingServiceIds.length === 0) return null;
 
   const mappedResult = await supabase
@@ -380,8 +389,6 @@ async function getConsistencyEmailContext(
 function buildConsistencyEmailSection(context: ConsistencyEmailContext): string {
   const serviceName = escapeHtml(context.serviceName);
   const requiredBookings = String(context.requiredBookings);
-  const completedCount = String(context.completedCount);
-  const remainingBookings = String(context.remainingBookings);
   const windowDays = String(context.windowDays);
   const consistencyPrice = `R${context.consistencyPrice.toFixed(2)}`;
 
@@ -417,18 +424,191 @@ function buildConsistencyEmailSection(context: ConsistencyEmailContext): string 
     `;
   }
 
+  // ------------------------------------------------------------------
+  // PROGRESS STATE — horizontal milestone progress bar
+  //
+  // The booking currently being emailed about is treated as the next
+  // appointment in the streak: bookedAppointmentNumber = completedCount + 1.
+  // That is the position the bar reflects, since this email is sent on
+  // confirmation of that booking. The value is clamped to requiredBookings
+  // so a defensive over-count cannot push the bar past 100%.
+  // ------------------------------------------------------------------
+  const bookedAppointmentNumber = Math.min(
+    context.completedCount + 1,
+    context.requiredBookings,
+  );
+
+  const remainingAfterThisAppointment = Math.max(
+    context.requiredBookings - bookedAppointmentNumber,
+    0,
+  );
+
+  const progressPercent = Math.min(
+    100,
+    Math.round(
+      (bookedAppointmentNumber / context.requiredBookings) * 100,
+    ),
+  );
+
+  const isFinalAppointment =
+    bookedAppointmentNumber >= context.requiredBookings;
+
+  const heading = isFinalAppointment
+    ? "Final appointment booked"
+    : `Appointment ${bookedAppointmentNumber} of ${context.requiredBookings} booked`;
+
+  const counter = isFinalAppointment
+    ? `${context.requiredBookings} / ${context.requiredBookings}`
+    : `${bookedAppointmentNumber} / ${context.requiredBookings}`;
+
+  const supportingPrimary = isFinalAppointment
+    ? "This is your final qualifying visit."
+    : bookedAppointmentNumber === 1
+      ? "This booking is your first step."
+      : `This booking is progress step ${bookedAppointmentNumber}.`;
+
+  const supportingSecondary = isFinalAppointment
+    ? `Complete it to unlock your ${serviceName} consistency price.`
+    : bookedAppointmentNumber === 1
+      ? "Complete it to earn your first progress point."
+      : "Complete it to advance your streak.";
+
+  const supportingRight = isFinalAppointment
+    ? "Final visit"
+    : `${remainingAfterThisAppointment} remaining after this visit`;
+
   return `
-    <tr><td style="padding:0 36px 26px;">
-      <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:16px 18px;border-left:3px solid #000;">
-        <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">Your ${serviceName} consistency progress</p>
-        <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
-          You have completed ${completedCount} of ${requiredBookings} qualifying appointments.
-          You are ${remainingBookings} away from your ${serviceName} consistency price of <strong>${consistencyPrice}</strong>.
-          To keep your progress going, your next qualifying appointment must be booked and completed within ${windowDays} days of your last qualifying appointment.
-          If you reschedule beyond that window, the appointment will not continue your streak. Your confirmed price for this booking will not change.
-        </p>
-      </div>
-    </td></tr>
+    <tr>
+      <td style="padding:0 36px 26px;">
+
+        <table
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          role="presentation"
+          style="background:#ffffff;border:1px solid #e3e3e3;border-radius:12px;overflow:hidden;"
+        >
+          <tr>
+            <td style="padding:20px 20px 16px;background:#f7f7f7;border-bottom:1px solid #e7e7e7;">
+
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td valign="top">
+                    <p style="margin:0 0 5px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#777;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Your consistency journey
+                    </p>
+
+                    <p class="tm" style="margin:0;font-size:20px;font-weight:700;line-height:1.25;color:#111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      ${heading}
+                    </p>
+                  </td>
+
+                  <td align="right" valign="top" style="padding-left:12px;">
+                    <table cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #111;border-radius:999px;">
+                      <tr>
+                        <td style="padding:6px 10px;font-size:11px;font-weight:700;color:#111;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                          ${counter}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 20px 18px;">
+
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                role="presentation"
+                style="background:#e4e4e4;border-radius:999px;"
+              >
+                <tr>
+                  <td
+                    width="${progressPercent}%"
+                    style="height:10px;line-height:10px;background:#111;border-radius:999px;font-size:0;"
+                  >
+                    &nbsp;
+                  </td>
+                  <td style="font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="padding-top:9px;font-size:11px;line-height:1.45;color:#666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    <strong style="color:#111;">${supportingPrimary}</strong><br />
+                    ${supportingSecondary}
+                  </td>
+
+                  <td align="right" valign="top" style="padding-top:9px;padding-left:12px;font-size:11px;line-height:1.45;color:#666;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    ${supportingRight}
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 20px 16px;">
+
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                role="presentation"
+                style="background:#111;border-radius:10px;"
+              >
+                <tr>
+                  <td style="padding:15px 17px;">
+
+                    <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#bcbcbc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Your reward
+                    </p>
+
+                    <p style="margin:0;font-size:18px;font-weight:700;line-height:1.3;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      ${serviceName} consistency price: ${consistencyPrice}
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 20px 20px;">
+
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td width="3" style="width:3px;background:#111;font-size:0;line-height:0;">&nbsp;</td>
+
+                  <td style="padding-left:12px;">
+                    <p class="tm" style="margin:0 0 4px;font-size:12px;font-weight:700;color:#111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Keep your progress going
+                    </p>
+
+                    <p class="tl" style="margin:0;font-size:12px;line-height:1.6;color:#666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                      Book and complete your next qualifying appointment within ${windowDays} days of this appointment.
+                      If you reschedule beyond that window, this booking keeps its confirmed price, but it will not continue your streak.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
   `;
 }
 
@@ -478,6 +658,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    // -------------------------------------------------------------------
+    // BOOKING ITEMS — canonical source of truth for what was booked.
+    // The legacy bookings.service_ids column can drift out of sync with
+    // booking_items (e.g. multi-service bookings where only the first
+    // service lands in service_ids). Prefer booking_items and fall back
+    // to service_ids only when there are no item rows.
+    // -------------------------------------------------------------------
+    const { data: bookingItems } = await supabase
+      .from("booking_items")
+      .select("service_id, service_name, sort_order")
+      .eq("booking_id", booking_id)
+      .order("sort_order", { ascending: true });
+
+    const bookedServiceIds = (bookingItems ?? [])
+      .map((item: any) => item.service_id)
+      .filter(Boolean) as string[];
+
+    const bookedServiceNames = (bookingItems ?? [])
+      .map((item: any) => item.service_name)
+      .filter(Boolean) as string[];
+
     const { data: tenant } = await supabase
       .from("tenants")
       .select("name, email, phone, address, logo_url")
@@ -493,8 +694,13 @@ Deno.serve(async (req) => {
     const reviewLink = settings["google_review_link"] ?? "";
     const addToCalendar = settings["feature_flag_add_to_calendar"] === "true";
 
+    // Service names: booking_items is the source of truth. Fall back to
+    // the legacy bookings.service_ids lookup only when booking_items is
+    // empty (e.g. legacy rows predating the booking_items table).
     let serviceNames = "Beauty Service";
-    if (booking.service_ids) {
+    if (bookedServiceNames.length > 0) {
+      serviceNames = bookedServiceNames.join(", ");
+    } else if (booking.service_ids) {
       let ids: string[] = [];
       if (Array.isArray(booking.service_ids)) {
         ids = booking.service_ids;
@@ -544,10 +750,15 @@ Deno.serve(async (req) => {
     const isFullPayment = rawDeposit >= rawTotal;
 
     // Consistency program context (only resolved when an active program is
-    // configured for this tenant and the booked service qualifies).
+    // configured for this tenant and at least one booked service qualifies).
+    // bookedServiceIds from booking_items takes priority over service_ids.
     const consistencyEmailContext =
-      booking.tenant_id && booking.service_ids
-        ? await getConsistencyEmailContext(supabase, booking)
+      booking.tenant_id && (bookedServiceIds.length > 0 || booking.service_ids)
+        ? await getConsistencyEmailContext(
+            supabase,
+            booking,
+            bookedServiceIds,
+          )
         : null;
 
     const consistencyEmailSection = consistencyEmailContext
