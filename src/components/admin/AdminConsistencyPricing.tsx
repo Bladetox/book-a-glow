@@ -1,9 +1,9 @@
-// AdminConsistencyPricing — reward guests who keep a regular booking rhythm.
+// AdminConsistencyPricing - reward guests who keep a regular booking rhythm.
 //
 // Gated by the "consistency_pricing" feature flag (off platform-wide,
-// enabled per tenant via app_settings — currently PhenomeBeauty only).
-// Reuses AdminSharedUI primitives and existing amber/white-opacity styling —
-// no new design tokens.
+// enabled per tenant via app_settings - currently PhenomeBeauty only).
+// Reuses AdminSharedUI primitives and existing amber/white-opacity styling.
+// No new design tokens.
 
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -150,7 +150,9 @@ export default function AdminConsistencyPricing() {
     const nextChecked: Record<string, boolean> = {};
 
     for (const programService of programServices) {
-      nextPrices[programService.service_id] = String(programService.consistency_price);
+      nextPrices[programService.service_id] = String(
+        programService.consistency_price,
+      );
       nextChecked[programService.service_id] = true;
     }
 
@@ -161,6 +163,24 @@ export default function AdminConsistencyPricing() {
   const markDirty = () => {
     setDirty(true);
     setSaveError(null);
+  };
+
+  const toggleService = (service: ServiceRow) => {
+    const nextChecked = !checked[service.id];
+
+    setChecked((previous) => ({
+      ...previous,
+      [service.id]: nextChecked,
+    }));
+
+    if (nextChecked && !prices[service.id]) {
+      setPrices((previous) => ({
+        ...previous,
+        [service.id]: String(service.price),
+      }));
+    }
+
+    markDirty();
   };
 
   const handleSave = async () => {
@@ -197,7 +217,9 @@ export default function AdminConsistencyPricing() {
       });
 
       if (invalidPriceService) {
-        throw new Error("Enter a valid consistency price for every selected service.");
+        throw new Error(
+          "Enter a valid consistency price for every selected service.",
+        );
       }
 
       const { error: deleteError } = await supabase
@@ -270,11 +292,12 @@ export default function AdminConsistencyPricing() {
           saved.
         </p>
 
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-          <div className="flex flex-col gap-0.5">
+        <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+          <div className="min-w-0 flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-white/70">
               Turn on for this business
             </span>
+
             <span className="text-xs text-white/30">
               {enabled
                 ? "Eligible guests receive their set consistency rate."
@@ -303,115 +326,128 @@ export default function AdminConsistencyPricing() {
           </button>
         </div>
 
-        {!enabled && (
-          <p className="text-xs text-white/35 -mt-1">
-            You can prepare the rules and service prices below. They do not
-            apply to checkout until you turn this on and save.
-          </p>
-        )}
+        {enabled && (
+          <>
+            <SectionLabel label="Rules" />
 
-        <SectionLabel label="Rules" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <NumberField
+                label="Bookings required"
+                value={requiredBookings}
+                onChange={(value) => {
+                  setRequiredBookings(value);
+                  markDirty();
+                }}
+              />
 
-        <div className="grid grid-cols-3 gap-3">
-          <NumberField
-            label="Bookings required"
-            value={requiredBookings}
-            onChange={(value) => {
-              setRequiredBookings(value);
-              markDirty();
-            }}
-          />
+              <NumberField
+                label="Cycle (days)"
+                value={cycleDays}
+                onChange={(value) => {
+                  setCycleDays(value);
+                  markDirty();
+                }}
+              />
 
-          <NumberField
-            label="Cycle (days)"
-            value={cycleDays}
-            onChange={(value) => {
-              setCycleDays(value);
-              markDirty();
-            }}
-          />
-
-          <NumberField
-            label="Grace (days)"
-            value={graceDays}
-            onChange={(value) => {
-              setGraceDays(value);
-              markDirty();
-            }}
-          />
-        </div>
-
-        <p className="text-xs text-white/30 -mt-2">
-          A guest keeps their rate by rebooking within {cycleDays + graceDays}{" "}
-          days of their last visit.
-        </p>
-
-        <SectionLabel label="Services in this program" />
-
-        <div className="flex flex-col gap-4">
-          {Object.entries(byCategory).map(([category, categoryServices]) => (
-            <div key={category} className="flex flex-col gap-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/25 px-1">
-                {category}
-              </p>
-
-              <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-                {categoryServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className="flex items-center gap-3 px-4 py-2.5 border-b border-white/[0.04] last:border-b-0"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!checked[service.id]}
-                      onChange={(event) => {
-                        setChecked((previous) => ({
-                          ...previous,
-                          [service.id]: event.target.checked,
-                        }));
-
-                        if (event.target.checked && !prices[service.id]) {
-                          setPrices((previous) => ({
-                            ...previous,
-                            [service.id]: String(service.price),
-                          }));
-                        }
-
-                        markDirty();
-                      }}
-                      className="w-4 h-4 accent-green-500"
-                    />
-
-                    <span className="flex-1 text-sm text-white/70">
-                      {service.name}
-                    </span>
-
-                    <span className="text-xs text-white/30">
-                      R{service.price} →
-                    </span>
-
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputMode="decimal"
-                      disabled={!checked[service.id]}
-                      value={prices[service.id] ?? ""}
-                      onChange={(event) => {
-                        setPrices((previous) => ({
-                          ...previous,
-                          [service.id]: event.target.value,
-                        }));
-                        markDirty();
-                      }}
-                      className="w-16 text-right text-sm px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 disabled:opacity-30 focus:outline-none focus:border-green-400/50"
-                    />
-                  </div>
-                ))}
-              </div>
+              <NumberField
+                label="Grace (days)"
+                value={graceDays}
+                onChange={(value) => {
+                  setGraceDays(value);
+                  markDirty();
+                }}
+              />
             </div>
-          ))}
-        </div>
+
+            <p className="text-xs text-white/30 -mt-2">
+              A guest keeps their rate by rebooking within{" "}
+              {cycleDays + graceDays} days of their last visit.
+            </p>
+
+            <SectionLabel label="Services in this program" />
+
+            <div className="flex flex-col gap-4">
+              {Object.entries(byCategory).map(
+                ([category, categoryServices]) => (
+                  <div key={category} className="flex flex-col gap-1.5">
+                    <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-white/40">
+                      {category}
+                    </p>
+
+                    <div className="overflow-hidden rounded-xl border border-white/[0.08]">
+                      {categoryServices.map((service) => {
+                        const isSelected = !!checked[service.id];
+
+                        return (
+                          <div
+                            key={service.id}
+                            className={`flex min-h-[56px] items-center gap-2 border-b px-3 py-2.5 last:border-b-0 transition-colors ${
+                              isSelected
+                                ? "border-green-400/30 bg-green-500/[0.10]"
+                                : "border-white/[0.06] bg-transparent"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              role="checkbox"
+                              aria-checked={isSelected}
+                              aria-label={`Select ${service.name}`}
+                              onClick={() => toggleService(service)}
+                              className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-400/70"
+                            >
+                              <span
+                                aria-hidden="true"
+                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                                  isSelected
+                                    ? "border-green-400 bg-green-500"
+                                    : "border-white/30 bg-white/[0.03]"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <span className="block h-2.5 w-1.5 -translate-y-px rotate-45 border-b-2 border-r-2 border-white" />
+                                )}
+                              </span>
+
+                              <span
+                                className={`min-w-0 truncate text-sm font-medium transition-colors ${
+                                  isSelected ? "text-white" : "text-white/70"
+                                }`}
+                              >
+                                {service.name}
+                              </span>
+                            </button>
+
+                            <span className="hidden shrink-0 text-xs text-white/35 sm:inline">
+                              R{service.price} →
+                            </span>
+
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              inputMode="decimal"
+                              aria-label={`${service.name} consistency price`}
+                              disabled={!isSelected}
+                              value={prices[service.id] ?? ""}
+                              onChange={(event) => {
+                                setPrices((previous) => ({
+                                  ...previous,
+                                  [service.id]: event.target.value,
+                                }));
+                                markDirty();
+                              }}
+                              className="min-h-[44px] w-[76px] shrink-0 rounded-lg border border-white/[0.12] bg-black/20 px-2 py-2 text-right text-base text-white/90 outline-none transition-colors focus:border-green-400/70 disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.03] disabled:text-white/25"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </>
+        )}
 
         {saveError && (
           <p
@@ -434,7 +470,7 @@ export default function AdminConsistencyPricing() {
             type="button"
             onClick={handleSave}
             disabled={!dirty || saving}
-            className="inline-flex min-w-[116px] items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/15 px-4 py-2.5 text-sm font-bold text-green-300 transition-colors hover:bg-green-500/25 disabled:cursor-not-allowed disabled:border-white/[0.08] disabled:bg-white/[0.04] disabled:text-white/25"
+            className="inline-flex min-h-[44px] min-w-[116px] items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/15 px-4 py-2.5 text-sm font-bold text-green-300 transition-colors hover:bg-green-500/25 disabled:cursor-not-allowed disabled:border-white/[0.08] disabled:bg-white/[0.04] disabled:text-white/25"
           >
             {saving ? (
               <>
@@ -455,11 +491,11 @@ export default function AdminConsistencyPricing() {
               <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
             </div>
           ) : (guests?.length ?? 0) === 0 ? (
-            <p className="text-sm text-white/30 py-2">
+            <p className="py-2 text-sm text-white/30">
               No guests have booked a covered service yet.
             </p>
           ) : (
-            <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+            <div className="overflow-hidden rounded-xl border border-white/[0.06]">
               {guests!.map((guest) => {
                 const since = daysAgo(guest.streak_last_booking);
 
@@ -468,8 +504,8 @@ export default function AdminConsistencyPricing() {
                     key={guest.canonical_client_id}
                     className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04] last:border-b-0"
                   >
-                    <div>
-                      <p className="text-sm text-white/70">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-white/70">
                         {guest.client_name}
                       </p>
 
@@ -485,7 +521,7 @@ export default function AdminConsistencyPricing() {
                     </div>
 
                     <span
-                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                      className={`ml-3 shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                         guest.is_active
                           ? "bg-green-500/10 text-green-400"
                           : "bg-white/[0.04] text-white/30"
@@ -522,9 +558,10 @@ function NumberField({
       <input
         type="number"
         min="0"
+        inputMode="numeric"
         value={value}
         onChange={(event) => onChange(Number(event.target.value) || 0)}
-        className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 focus:outline-none focus:border-green-400/50 transition-colors"
+        className="min-h-[44px] rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-base text-white/80 transition-colors focus:border-green-400/50 focus:outline-none"
       />
     </div>
   );
