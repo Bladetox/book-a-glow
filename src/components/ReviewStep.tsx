@@ -4,6 +4,7 @@ import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { useSuggestedAddons } from "@/hooks/useSuggestedAddons";
+import { useConsistencyQuote } from "@/hooks/useConsistencyQuote";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -189,10 +190,28 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
   const isCallOut = !!booking.address && booking.addressVerified;
   const estimatedDistanceKm = Number(booking.distanceKm ?? (isCallOut ? config.defaultDistanceKm : 0)) || 0;
   const callOutFee = isCallOut ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
-  const total = servicesTotal + callOutFee;
+  const localTotal = servicesTotal + callOutFee;
 
   const depositPercent = config.depositPercent;
-  const deposit = Math.ceil(total * (depositPercent / 100));
+  const localDeposit = Math.ceil(localTotal * (depositPercent / 100));
+
+  const guestPhoneForQuote = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
+
+  // Display-only quote: re-requested whenever selection, guest identity, or
+  // call-out details change. create_booking_with_consultation remains the
+  // pricing authority — if this hasn't loaded (or fails), the local
+  // regular-price total above is used so checkout is never blocked.
+  const { quote } = useConsistencyQuote({
+    tenantId,
+    serviceIds: booking.selectedTreatments,
+    guestEmail: booking.email || null,
+    guestPhone: guestPhoneForQuote,
+    isCallout: isCallOut,
+    distanceKm: estimatedDistanceKm,
+  });
+
+  const total = quote ? quote.total_amount : localTotal;
+  const deposit = quote ? quote.deposit_amount : localDeposit;
   const balance = total - deposit;
 
   const cur = config.currency;
@@ -275,7 +294,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       return booking.isExistingClient ? "On File" : "None reported";
     };
 
-    const guestPhone = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
+    const guestPhone = guestPhoneForQuote;
 
     const { data, error } = await supabase.rpc("create_booking_with_consultation", {
       p_client_id: null,
@@ -484,6 +503,22 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
           </div>
         </div>
       </div>
+
+      {/* Consistency pricing line — only renders for a qualifying, mapped
+          service; silent no-op while the feature is off (quote.is_qualifying_booking
+          is always false then) or for any non-mapped booking. */}
+      {quote?.is_qualifying_booking && (
+        <div className="px-1 -mt-1">
+          <p className="text-xs font-medium text-primary leading-snug">
+            {quote.state === "qualified" &&
+              `Your ${quote.service_name} consistency price is applied. Check your email for details.`}
+            {quote.state === "progress" &&
+              `${quote.bookings_remaining} away from your ${quote.service_name} consistency price. Check your email for details.`}
+            {quote.state === "lapsed" &&
+              `Your ${quote.service_name} streak starts again. Check your email for details.`}
+          </p>
+        </div>
+      )}
 
       {/* Payment summary - Yoco / PayFast */}
       {!isPayshap && !isIkhokha && (
