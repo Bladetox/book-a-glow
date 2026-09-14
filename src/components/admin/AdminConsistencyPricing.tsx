@@ -8,7 +8,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, ChevronDown, Pencil } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { AdminCard, SectionLabel } from "./AdminSharedUI";
 
@@ -50,6 +50,12 @@ export default function AdminConsistencyPricing() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Config panel (Rules + Services) has its own open/closed state, separate
+  // from `enabled` — closing after a save is what keeps this from
+  // permanently eating vertical space once it's set up.
+  const [expanded, setExpanded] = useState(true);
+  const [guestsExpanded, setGuestsExpanded] = useState(false);
 
   const [enabled, setEnabled] = useState(false);
   const [requiredBookings, setRequiredBookings] = useState(6);
@@ -110,6 +116,10 @@ export default function AdminConsistencyPricing() {
   const { data: guests, isLoading: loadingGuests } = useQuery({
     queryKey: ["consistency_guest_status", program?.id],
     enabled: !!program?.id,
+    // No staleTime — this list is kept fresh by the Realtime subscription
+    // below, but we also don't want a stale cache served on remount.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("consistency_guest_status")
@@ -141,7 +151,41 @@ export default function AdminConsistencyPricing() {
     setGraceDays(program.grace_days);
     setDirty(false);
     setSaveError(null);
+    // A program that already exists is already configured — collapse the
+    // editor. A brand-new tenant (no row yet) lands here expanded so there's
+    // something to look at on first visit.
+    setExpanded(false);
   }, [program]);
+
+  // Guest streak rows are written server-side by a DB trigger the moment a
+  // booking is completed. Without this, the admin would need to reload the
+  // page to see a guest's count move — the query above would just keep
+  // serving what it fetched on mount.
+  useEffect(() => {
+    if (!program?.id) return;
+
+    const channel = supabase
+      .channel(`consistency-guest-status-${program.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "consistency_guest_status",
+          filter: `program_id=eq.${program.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: ["consistency_guest_status", program.id],
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [program?.id, queryClient]);
 
   useEffect(() => {
     if (!programServices) return;
@@ -256,6 +300,7 @@ export default function AdminConsistencyPricing() {
       ]);
 
       setDirty(false);
+      setExpanded(false);
     } catch (error) {
       console.error("Could not save consistency pricing settings:", error);
 
@@ -283,14 +328,18 @@ export default function AdminConsistencyPricing() {
     (byCategory[service.category] ??= []).push(service);
   }
 
+  const selectedServiceCount = Object.values(checked).filter(Boolean).length;
+
   return (
     <div className="flex flex-col gap-5 pb-24">
       <AdminCard title="Consistency pricing" icon={Sparkles}>
-        <p className="text-sm text-white/50 leading-relaxed">
-          Reward guests who keep a regular rhythm on specific services with a
-          set rate. These prices only apply after the feature is turned on and
-          saved.
-        </p>
+        {expanded && (
+          <p className="text-sm text-white/50 leading-relaxed">
+            Reward guests who keep a regular rhythm on specific services with
+            a set rate. These prices only apply after the feature is turned
+            on and saved.
+          </p>
+        )}
 
         <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
           <div className="min-w-0 flex flex-col gap-0.5">
@@ -299,34 +348,54 @@ export default function AdminConsistencyPricing() {
             </span>
 
             <span className="text-xs text-white/30">
-              {enabled
-                ? "Eligible guests receive their set consistency rate."
-                : "Regular service prices remain active until saved on."}
+              {expanded
+                ? enabled
+                  ? "Eligible guests receive their set consistency rate."
+                  : "Regular service prices remain active until saved on."
+                : `${requiredBookings} bookings / ${cycleDays}d cycle · ${selectedServiceCount} service${selectedServiceCount === 1 ? "" : "s"}`}
             </span>
           </div>
 
-          <button
-            type="button"
-            role="switch"
-            aria-checked={enabled}
-            aria-label="Turn on consistency pricing for this business"
-            onClick={() => {
-              setEnabled((value) => !value);
-              markDirty();
-            }}
-            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b] ${
-              enabled ? "bg-green-500" : "bg-white/15"
-            }`}
-          >
-            <span
-              className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                enabled ? "translate-x-5" : "translate-x-0"
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enabled}
+              aria-label="Turn on consistency pricing for this business"
+              onClick={() => {
+                setEnabled((value) => !value);
+                markDirty();
+              }}
+              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b] ${
+                enabled ? "bg-green-500" : "bg-white/15"
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                  enabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+
+            {program && (
+              <button
+                type="button"
+                onClick={() => setExpanded((value) => !value)}
+                aria-expanded={expanded}
+                aria-label={expanded ? "Collapse settings" : "Edit settings"}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/70"
+              >
+                {expanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <Pencil className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
-        {enabled && (
+        {expanded && (
           <>
             <SectionLabel label="Rules" />
 
@@ -458,30 +527,32 @@ export default function AdminConsistencyPricing() {
           </p>
         )}
 
-        <div className="mt-5 flex items-center justify-end gap-3 border-t border-white/[0.08] pt-4">
-          {dirty && (
-            <span className="mr-auto flex items-center gap-2 text-xs font-medium text-amber-300/80">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-              Unsaved changes
-            </span>
-          )}
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!dirty || saving}
-            className="inline-flex min-h-[44px] min-w-[116px] items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/15 px-4 py-2.5 text-sm font-bold text-green-300 transition-colors hover:bg-green-500/25 disabled:cursor-not-allowed disabled:border-white/[0.08] disabled:bg-white/[0.04] disabled:text-white/25"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving
-              </>
-            ) : (
-              "Save changes"
+        {(expanded || dirty) && (
+          <div className="mt-5 flex items-center justify-end gap-3 border-t border-white/[0.08] pt-4">
+            {dirty && (
+              <span className="mr-auto flex items-center gap-2 text-xs font-medium text-amber-300/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Unsaved changes
+              </span>
             )}
-          </button>
-        </div>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!dirty || saving}
+              className="inline-flex min-h-[44px] min-w-[116px] items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/15 px-4 py-2.5 text-sm font-bold text-green-300 transition-colors hover:bg-green-500/25 disabled:cursor-not-allowed disabled:border-white/[0.08] disabled:bg-white/[0.04] disabled:text-white/25"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving
+                </>
+              ) : (
+                "Save changes"
+              )}
+            </button>
+          </div>
+        )}
       </AdminCard>
 
       {enabled && (
@@ -495,44 +566,102 @@ export default function AdminConsistencyPricing() {
               No guests have booked a covered service yet.
             </p>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-white/[0.06]">
-              {guests!.map((guest) => {
-                const since = daysAgo(guest.streak_last_booking);
+            <>
+              {/* Always-visible scan line (Jakob's Law: counts + a status
+                  word is the pattern admins already know from every other
+                  dashboard). Tapping it is the only way in — Fitts's Law
+                  says make that target big, not a tiny chevron. */}
+              <button
+                type="button"
+                onClick={() => setGuestsExpanded((value) => !value)}
+                aria-expanded={guestsExpanded}
+                className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-left transition-colors hover:bg-white/[0.06]"
+              >
+                <span className="text-sm text-white/70">
+                  <span className="font-semibold text-green-400">
+                    {guests!.filter((g) => g.is_active).length}
+                  </span>{" "}
+                  active ·{" "}
+                  <span className="font-semibold text-white/50">
+                    {guests!.filter((g) => !g.is_active).length}
+                  </span>{" "}
+                  building a streak
+                </span>
 
-                return (
-                  <div
-                    key={guest.canonical_client_id}
-                    className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04] last:border-b-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-white/70">
-                        {guest.client_name}
-                      </p>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-white/30 transition-transform ${
+                    guestsExpanded ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-                      <p className="text-xs text-white/30">
-                        {guest.consecutive_count} of {requiredBookings} · last
-                        booking{" "}
-                        {since === null
-                          ? "unknown"
-                          : since === 0
-                            ? "today"
-                            : `${since}d ago`}
-                      </p>
-                    </div>
+              {guestsExpanded && (
+                <div className="mt-3 max-h-[420px] overflow-y-auto overflow-x-hidden rounded-xl border border-white/[0.06]">
+                  {guests!.map((guest) => {
+                    const since = daysAgo(guest.streak_last_booking);
+                    const progress = Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        (guest.consecutive_count / requiredBookings) * 100,
+                      ),
+                    );
 
-                    <span
-                      className={`ml-3 shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        guest.is_active
-                          ? "bg-green-500/10 text-green-400"
-                          : "bg-white/[0.04] text-white/30"
-                      }`}
-                    >
-                      {guest.is_active ? "Active" : "In progress"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                    return (
+                      <div
+                        key={guest.canonical_client_id}
+                        className="flex flex-col gap-2 border-b border-white/[0.04] px-4 py-3 last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="min-w-0 truncate text-sm text-white/70">
+                            {guest.client_name}
+                          </p>
+
+                          <span
+                            className={`ml-3 shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                              guest.is_active
+                                ? "bg-green-500/10 text-green-400"
+                                : "bg-white/[0.04] text-white/30"
+                            }`}
+                          >
+                            {guest.is_active ? "Active" : "In progress"}
+                          </span>
+                        </div>
+
+                        {/* Progress bar: a single glance ("mostly full" vs
+                            "just started") beats parsing "3 of 6" as text —
+                            the visual is the point of the redesign. */}
+                        <div
+                          role="progressbar"
+                          aria-valuenow={guest.consecutive_count}
+                          aria-valuemin={0}
+                          aria-valuemax={requiredBookings}
+                          aria-label={`${guest.client_name} consistency progress`}
+                          className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]"
+                        >
+                          <div
+                            className={`h-full rounded-full transition-[width] duration-300 ${
+                              guest.is_active ? "bg-green-500" : "bg-white/25"
+                            }`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+
+                        <p className="text-xs text-white/30">
+                          {guest.consecutive_count} of {requiredBookings} ·
+                          last booking{" "}
+                          {since === null
+                            ? "unknown"
+                            : since === 0
+                              ? "today"
+                              : `${since}d ago`}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </AdminCard>
       )}

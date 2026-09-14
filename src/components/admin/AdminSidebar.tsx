@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Heart, CalendarDays } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, Heart, CalendarDays } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -63,6 +63,8 @@ interface AdminSidebarProps {
   onClose?: () => void;
 }
 
+const DESKTOP_COLLAPSE_KEY = "ns_admin_sidebar_collapsed";
+
 const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSidebarProps) => {
   const { tenantId }            = useTenant();
   const { data: tenant }        = useTenantSettings();
@@ -70,6 +72,17 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   const stockAlerts             = useStockAlerts();
   const { data: bookings = [] } = useSupabaseBookings();
   const pendingCount = bookings.filter(b => b.status === "pending").length;
+
+  // Desktop-only icon-rail collapse. Mobile keeps its own full off-canvas
+  // open/close behaviour (isOpen/onClose) — this is a separate axis.
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(DESKTOP_COLLAPSE_KEY) === "1";
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(DESKTOP_COLLAPSE_KEY, collapsed ? "1" : "0");
+  }, [collapsed]);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const parent = parentGroupOf(activeView);
@@ -101,6 +114,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   const logoUrl      = tenant?.logo_url ?? null;
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
+  const railCollapsed = !isMobile && collapsed;
 
   // ── Child item ──────────────────────────────────────────────────────────────
   const renderChild = (view: string) => {
@@ -161,7 +175,11 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
       <button
         key={item.view}
         onClick={() => { handleSelect(item.view); onClose?.(); }}
-        className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
+        title={railCollapsed ? item.label : undefined}
+        aria-label={item.label}
+        className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
+          railCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"
+        } ${
           isActive
             ? "bg-white/[0.08] text-white"
             : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
@@ -177,7 +195,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
         <div className="relative z-10 w-4 h-4 shrink-0">
           <Icon className="w-4 h-4" />
         </div>
-        <span className="relative z-10 truncate">{item.label}</span>
+        {!railCollapsed && <span className="relative z-10 truncate">{item.label}</span>}
       </button>
     );
   };
@@ -189,6 +207,31 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     const isExpanded = openGroups.has(item.label);
     const hasActive  = visibleChildren.includes(activeView);
     const GroupIcon  = item.icon;
+
+    if (railCollapsed) {
+      // Icon-only rail: tapping a group expands the sidebar back out and
+      // opens that group, rather than trying to fit a flyout in a rail.
+      return (
+        <button
+          key={item.label}
+          onClick={() => {
+            setCollapsed(false);
+            setOpenGroups(prev => new Set([...prev, item.label]));
+          }}
+          title={item.label}
+          aria-label={item.label}
+          className={`flex items-center justify-center rounded-xl px-0 py-2.5 w-full transition-colors duration-200 ${
+            hasActive
+              ? "text-white/85 bg-white/[0.05]"
+              : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+          }`}
+        >
+          <div className="w-4 h-4 shrink-0">
+            <GroupIcon className="w-4 h-4" />
+          </div>
+        </button>
+      );
+    }
 
     return (
       <div key={item.label} className="flex flex-col">
@@ -238,49 +281,65 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
       )}
 
       <motion.aside
-        animate={{ x: xPos }}
+        animate={{ x: xPos, width: railCollapsed ? 76 : 256 }}
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
-        className="fixed lg:relative z-50 lg:z-auto flex flex-col w-64 h-dvh bg-black border-r border-white/[0.06] overflow-y-auto shrink-0"
+        className="fixed lg:relative z-50 lg:z-auto flex flex-col h-dvh bg-black border-r border-white/[0.06] overflow-y-auto overflow-x-hidden shrink-0"
       >
         {/* Brand header */}
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-white/[0.05]">
-          <div className="relative w-9 h-9 rounded-xl bg-white/[0.07] border border-white/[0.1] flex items-center justify-center overflow-hidden shrink-0">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={String(businessName)}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                  const fallback = (e.currentTarget.parentNode as HTMLElement).querySelector(".logo-fallback") as HTMLElement | null;
-                  if (fallback) fallback.style.display = "flex";
-                }}
-              />
-            ) : null}
-            <span
-              className="logo-fallback absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white/60"
-              style={{ display: logoUrl ? "none" : "flex" }}
-            >
-              {abbreviation}
-            </span>
-          </div>
+        <div className={`flex items-center gap-3 py-5 border-b border-white/[0.05] ${railCollapsed ? "justify-center px-2" : "px-4"}`}>
+          {!railCollapsed && (
+            <div className="relative w-9 h-9 rounded-xl bg-white/[0.07] border border-white/[0.1] flex items-center justify-center overflow-hidden shrink-0">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={String(businessName)}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                    const fallback = (e.currentTarget.parentNode as HTMLElement).querySelector(".logo-fallback") as HTMLElement | null;
+                    if (fallback) fallback.style.display = "flex";
+                  }}
+                />
+              ) : null}
+              <span
+                className="logo-fallback absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white/60"
+                style={{ display: logoUrl ? "none" : "flex" }}
+              >
+                {abbreviation}
+              </span>
+            </div>
+          )}
 
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-white/80 truncate">{businessName}</p>
-            <p className="text-[10px] text-white/30">Admin</p>
-          </div>
+          {!railCollapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-white/80 truncate">{businessName}</p>
+              <p className="text-[10px] text-white/30">Admin</p>
+            </div>
+          )}
 
-          {isMobile && (
-            <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">
+          {isMobile && !railCollapsed && (
+            <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors shrink-0" aria-label="Close navigation">
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
               </svg>
             </button>
           )}
+
+          {/* Desktop-only rail collapse toggle */}
+          {!isMobile && (
+            <button
+              onClick={() => setCollapsed((v) => !v)}
+              className="hidden lg:flex items-center justify-center text-white/30 hover:text-white/60 transition-colors shrink-0"
+              aria-label={railCollapsed ? "Expand navigation" : "Collapse navigation"}
+              title={railCollapsed ? "Expand" : "Collapse"}
+            >
+              {railCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+            </button>
+          )}
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
+        <nav className={`flex flex-col gap-0.5 py-3 flex-1 ${railCollapsed ? "px-2" : "px-2"}`}>
           {NAV.map((item) =>
             item.kind === "direct" ? renderDirect(item) : renderGroup(item)
           )}
