@@ -690,9 +690,7 @@ const AdminSettings = () => {
             </p>
             <div className="flex flex-col gap-4">
               {[
-                { key: "new_booking",           label: "New Booking",           desc: "A client submits a new booking" },
-                { key: "deposit_received",      label: "Deposit Received",      desc: "A deposit payment is confirmed via your Payment Gateway" },
-                { key: "balance_paid",          label: "Balance Paid",          desc: "A remaining balance is paid via your Payment Gateway" },
+                { key: "new_booking",           label: "New Booking",           desc: "A client submits a new booking (payment status shown inline)" },
                 { key: "full_payment_received", label: "Full Payment Received", desc: "Full upfront payment confirmed via your Payment Gateway" },
                 { key: "cancelled",             label: "Booking Cancelled",     desc: "A booking is cancelled" },
               ].map(({ key, label, desc }) => {

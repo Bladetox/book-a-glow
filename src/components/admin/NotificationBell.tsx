@@ -87,6 +87,46 @@ export function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  // For new_booking notifications, pull each booking's current payment
+  // state so the alert can say "Deposit paid (R120)" / "Paid in full"
+  // instead of a separate deposit_received / balance_paid notification
+  // stacking on top of it.
+  const newBookingIds = Array.from(
+    new Set(
+      notifications
+        .filter((n) => n.type === "new_booking" && n.booking_id)
+        .map((n) => n.booking_id as string)
+    )
+  );
+
+  const { data: bookingPaymentRows } = useQuery({
+    queryKey: ["notif-booking-payment-state", tenantId, newBookingIds.join(",")],
+    enabled: newBookingIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("id, total_amount, deposit_amount, deposit_paid, full_payment_received")
+        .in("id", newBookingIds);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const bookingPaymentMap = new Map(
+    (bookingPaymentRows ?? []).map((b) => [b.id, b])
+  );
+
+  const paymentStateFor = (bookingId: string | null): string | null => {
+    if (!bookingId) return null;
+    const b = bookingPaymentMap.get(bookingId);
+    if (!b) return null;
+
+    if (b.full_payment_received) return "Paid in full";
+    if (b.deposit_paid) return `Deposit paid (R${Number(b.deposit_amount).toFixed(2)})`;
+    if (Number(b.total_amount) > 0) return `Amount due: R${Number(b.total_amount).toFixed(2)}`;
+    return "No payment";
+  };
+
   const { data: alertData } = useClientAlerts();
   const overdueClients = alertData?.overdueLoyaltyClients ?? [];
   const inactiveClients = alertData?.inactiveClients ?? [];
@@ -307,6 +347,21 @@ export function NotificationBell() {
                                 {n.body}
                               </p>
                             )}
+                            {n.type === "new_booking" &&
+                              paymentStateFor(n.booking_id) && (
+                                <span
+                                  className={cn(
+                                    "inline-block mt-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                                    bookingPaymentMap.get(n.booking_id!)?.full_payment_received
+                                      ? "bg-green-500/15 text-green-400"
+                                      : bookingPaymentMap.get(n.booking_id!)?.deposit_paid
+                                        ? "bg-purple-500/15 text-purple-400"
+                                        : "bg-amber-500/15 text-amber-400"
+                                  )}
+                                >
+                                  {paymentStateFor(n.booking_id)}
+                                </span>
+                              )}
                             <p className="text-[11px] text-white/25 mt-1">
                               {formatDistanceToNow(new Date(n.created_at), {
                                 addSuffix: true,
@@ -362,6 +417,12 @@ export function NotificationBell() {
                               {n.body}
                             </p>
                           )}
+                          {n.type === "new_booking" &&
+                            paymentStateFor(n.booking_id) && (
+                              <span className="inline-block mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.05] text-white/35">
+                                {paymentStateFor(n.booking_id)}
+                              </span>
+                            )}
                           <p className="text-[11px] text-white/20 mt-1">
                             {formatDistanceToNow(new Date(n.created_at), {
                               addSuffix: true,

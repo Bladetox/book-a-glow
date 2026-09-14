@@ -250,11 +250,13 @@ emailRes.status,
 );
 }
 
-// Step 6: Insert admin notification with correct PayShap gateway label.
-const notifType = isFullPayment ? "full_payment_received" : "deposit_received";
-const notifTitle = isFullPayment ? "Full Payment Received" : "Deposit Received";
-const notifAmount = isFullPayment ? totalAmount : depositAmount;
-const notifBody = `Payment of R${notifAmount.toFixed(2)} confirmed via PayShap.`;
+// Step 6: Insert admin notification — only for a full payment. A deposit
+// via PayShap doesn't get its own alert; the booking already has its
+// new_booking notification, and the bell derives "Deposit paid (R…)"
+// straight from the booking row (deposit_paid, deposit_amount) when it
+// renders that notification.
+if (isFullPayment) {
+const notifBody = `Payment of R${totalAmount.toFixed(2)} confirmed via PayShap.`;
 
 const { data: tenantRow } = await supabase
 .from("tenants")
@@ -263,17 +265,18 @@ const { data: tenantRow } = await supabase
 .single();
 
 const prefs = (tenantRow as any)?.notification_preferences ?? {};
-if (prefs[notifType] !== false) {
+if (prefs["full_payment_received"] !== false) {
 const { error: notifError } = await supabase
 .from("notifications")
 .insert({
 tenant_id: tenantId,
-type: notifType,
-title: notifTitle,
+type: "full_payment_received",
+title: "Full Payment Received",
 body: notifBody,
 booking_id: bookingId,
 });
 if (notifError) console.warn("PayShap confirm: notification insert failed", notifError);
+}
 }
 },
 onSuccess: () => {

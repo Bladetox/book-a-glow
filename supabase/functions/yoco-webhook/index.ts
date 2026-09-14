@@ -1,635 +1,235 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// yoco-webhook  v6
+// Handles Yoco payment.succeeded / payment.failed for NextSlot platform invoices.
+//
+// NOTE: despite the name, this is NOT the per-tenant booking-payment webhook.
+// It only ever touches platform_invoices / platform_payments (NextSlot's own
+// SaaS billing against tenants). The function that handles a tenant's client
+// booking deposit/balance/full payments is booking-payment-webhook — see
+// supabase/functions/booking-payment-webhook/index.ts. The repo previously
+// had a different, never-deployed booking-payment implementation living
+// under this slug's folder, which caused real confusion — pulled the actual
+// deployed source here instead so the two stop diverging.
+//
+// FIX v6: Correct HMAC verification matching Yoco's actual webhook format:
+//   Headers: webhook-id, webhook-timestamp, webhook-signature
+//   Signed payload: "<webhook-id>.<webhook-timestamp>.<rawBody>"
+//   Secret: Base64-decode the part after "whsec_" prefix
+//   Signature: webhook-signature → split(" ")[0].split(",")[1] → base64
+//   Digest: base64 HMAC-SHA256
+// ─────────────────────────────────────────────────────────────────────────────
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 async function verifyYocoSignature(
-  payloadBytes: Uint8Array,
-  svixSignature: string,
-  svixTimestamp: string,
+  rawBody: string,
+  webhookId: string | null,
+  webhookTimestamp: string | null,
+  signatureHeader: string | null,
   secret: string
 ): Promise<boolean> {
-  try {
-    const base64Secret = secret.startsWith("whsec_")
-      ? secret.slice("whsec_".length)
-      : secret;
-    const keyBytes = Uint8Array.from(atob(base64Secret), (c) => c.charCodeAt(0));
-    const cryptoKey = await crypto.subtle.importKey(
-      "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
-    );
+  if (!webhookId || !webhookTimestamp || !signatureHeader) return false;
 
-    const bodyText = new TextDecoder().decode(payloadBytes);
-    const toSign = `${svixTimestamp}.${bodyText}`;
-    const toSignBytes = new TextEncoder().encode(toSign);
+  // Signed content: webhook-id.webhook-timestamp.rawBody
+  const signedContent = `${webhookId}.${webhookTimestamp}.${rawBody}`;
 
-    const signatureBytes = await crypto.subtle.sign("HMAC", cryptoKey, toSignBytes);
-    const computedSig = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
+  // Decode secret: Base64-decode after "whsec_"
+  const secretBase64 = secret.startsWith("whsec_") ? secret.split("_").slice(1).join("_") : secret;
+  const secretBytes = Uint8Array.from(atob(secretBase64), (c) => c.charCodeAt(0));
 
-    // svix-signature header = "v1,base64sig v1,base64sig2 ..."
-    const signatures = svixSignature.split(" ").map(s => s.replace(/^v1,/, ""));
-    return signatures.some(sig => sig === computedSig);
-  } catch (err) {
-    console.error("verifyYocoSignature error:", err);
-    return false;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    secretBytes,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, encoder.encode(signedContent));
+
+  // Base64 digest
+  const expectedSig = btoa(String.fromCharCode(...new Uint8Array(mac)));
+
+  // Extract signature from header
+  const rawSig = signatureHeader.split(" ")[0];
+  const signature = rawSig.includes(",") ? rawSig.split(",")[1] : rawSig;
+
+  if (!signature) return false;
+
+  if (expectedSig.length !== signature.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expectedSig.length; i++) {
+    diff |= expectedSig.charCodeAt(i) ^ signature.charCodeAt(i);
   }
+  return diff === 0;
 }
 
-async function refreshGcalToken(
-  supabase: ReturnType<typeof createClient>,
-  tenantId: string,
-  refreshToken: string,
-  clientId: string,
-  clientSecret: string
-): Promise<string | null> {
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type:    "refresh_token",
-      refresh_token: refreshToken,
-      client_id:     clientId,
-      client_secret: clientSecret,
-    }),
+function cents(amount: number): number {
+  return Math.round(amount) / 100;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  const rawBody = await req.text();
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE, {
+    auth: { persistSession: false },
   });
-  const data = await res.json();
-  if (!res.ok || !data.access_token) {
-    console.error("Token refresh failed:", data);
-    return null;
+
+  // ── Load webhook secret ─────────────────────────────────────────────────────
+  const { data: secretRow, error: secretErr } = await supabase
+    .from("tenant_secrets")
+    .select("value")
+    .eq("tenant_id", "platform")
+    .eq("key", "platform_yoco_webhook_secret")
+    .single();
+
+  if (secretErr || !secretRow?.value) {
+    console.error("[yoco-webhook] Could not load webhook secret:", secretErr?.message);
+    return new Response("Webhook secret not configured", { status: 500 });
   }
-  await supabase.from("app_settings").upsert(
-    { tenant_id: tenantId, key: "gcal_access_token", value: data.access_token },
-    { onConflict: "tenant_id,key" }
-  );
-  await supabase.from("app_settings").upsert(
-    { tenant_id: tenantId, key: "gcal_token_expiry", value: String(Date.now() + (data.expires_in ?? 3600) * 1000) },
-    { onConflict: "tenant_id,key" }
-  );
-  return data.access_token;
-}
 
-async function createCalendarEvent(
-  supabase: ReturnType<typeof createClient>,
-  tenantId: string,
-  booking: Record<string, any>
-) {
-  try {
-    const { data: rows } = await supabase
-      .from("app_settings")
-      .select("key, value")
-      .eq("tenant_id", tenantId)
-      .in("key", ["gcal_connected", "gcal_access_token", "gcal_refresh_token", "gcal_token_expiry"]);
+  // ── Verify signature (v6: correct format) ─────────────────────────────────
+  const webhookId        = req.headers.get("webhook-id");
+  const webhookTimestamp = req.headers.get("webhook-timestamp");
+  const signatureHeader  = req.headers.get("webhook-signature");
 
-    const settings: Record<string, string> = {};
-    for (const row of rows ?? []) settings[row.key] = row.value;
-
-    if (settings["gcal_connected"] !== "true") {
-      console.log("Google Calendar not connected for tenant:", tenantId);
-      return;
-    }
-
-    const clientId     = Deno.env.get("GOOGLE_CLIENT_ID")!;
-    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
-
-    let accessToken = settings["gcal_access_token"];
-    const expiry    = Number(settings["gcal_token_expiry"] ?? 0);
-    if (Date.now() > expiry - 60_000) {
-      const newToken = await refreshGcalToken(supabase, tenantId, settings["gcal_refresh_token"], clientId, clientSecret);
-      if (!newToken) { console.error("Could not refresh gcal token"); return; }
-      accessToken = newToken;
-    }
-
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const [year, month, day] = (booking.booking_date as string).split("-").map(Number);
-    const [hours, minutes]   = (booking.start_time as string ?? "00:00").split(":").map(Number);
-    const durationMins       = Number(booking.service_duration_minutes ?? 60);
-    const totalMins          = hours * 60 + minutes + durationMins;
-    const endH               = Math.floor(totalMins / 60) % 24;
-    const endM               = totalMins % 60;
-    const startLocal = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
-    const endLocal   = `${year}-${pad(month)}-${pad(day)}T${pad(endH)}:${pad(endM)}:00`;
-
-    const clientName  = booking.client_name  ?? booking.guest_name  ?? "Client";
-    const clientPhone = booking.client_phone ?? booking.guest_phone ?? "";
-    const clientEmail = booking.client_email ?? booking.guest_email ?? "";
-    const address     = booking.is_call_out ? (booking.call_out_address ?? "") : "";
-    const tot         = Number(booking.total_amount   ?? 0);
-    const dep         = Number(booking.deposit_amount ?? 0);
-    const bal         = Math.max(0, Number(booking.balance_due) > 0 ? Number(booking.balance_due) : tot - dep);
-
-    const { data: bsRows } = await supabase
-      .from("booking_services")
-      .select("price, duration_minutes, services ( name )")
-      .eq("booking_id", booking.id);
-
-    const serviceItems: string[] = (bsRows ?? []).map((bs: any) => {
-      const name  = bs.services?.name ?? "Service";
-      const price = Number(bs.price ?? 0);
-      const dur   = Number(bs.duration_minutes ?? 0);
-      return `- ${name} — R${price} (${dur} min)`;
-    });
-
-    const serviceLabel = (bsRows ?? []).length > 0
-      ? (bsRows ?? []).map((bs: any) => bs.services?.name).filter(Boolean).join(", ")
-      : "Appointment";
-
-    const descParts: string[] = [
-      `Guest: ${clientName}`,
-      clientPhone ? `Phone: ${clientPhone}` : "",
-      clientEmail ? `Email: ${clientEmail}`  : "",
-      address     ? `Address: ${address}`    : "",
-      booking.is_call_out && booking.call_out_distance_km
-        ? `Distance: ${Number(booking.call_out_distance_km).toFixed(1)} km` : "",
-    ].filter(Boolean);
-
-    if (serviceItems.length > 0) {
-      descParts.push("");
-      descParts.push("Services:");
-      descParts.push(...serviceItems);
-    }
-
-    descParts.push("");
-    descParts.push(`Total: R${tot.toFixed(2)} | Deposit paid: R${dep.toFixed(2)}`);
-    if (bal > 0) descParts.push(`Balance due: R${bal.toFixed(2)}`);
-    if (booking.client_notes) descParts.push(`Notes: ${booking.client_notes}`);
-    descParts.push(`Booking ID: ${booking.id}`);
-
-    const description = descParts.join("\n");
-    const attendees = clientEmail ? [{ email: clientEmail }] : [];
-    const summary = `${clientName} — ${serviceLabel}`;
-
-    const method   = booking.gcal_event_id ? "PUT" : "POST";
-    const endpoint = booking.gcal_event_id
-      ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${booking.gcal_event_id}`
-      : "https://www.googleapis.com/calendar/v3/calendars/primary/events";
-
-    const calRes = await fetch(endpoint, {
-      method,
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type":  "application/json",
-      },
-      body: JSON.stringify({
-        summary,
-        description,
-        location:  address || undefined,
-        attendees: attendees.length > 0 ? attendees : undefined,
-        start: { dateTime: startLocal, timeZone: "Africa/Johannesburg" },
-        end:   { dateTime: endLocal,   timeZone: "Africa/Johannesburg" },
-      }),
-    });
-
-    const calData = await calRes.json();
-    if (!calRes.ok) {
-      console.error("Google Calendar API error:", JSON.stringify(calData));
-    } else {
-      console.log("Calendar event upserted:", calData.id, calData.htmlLink);
-      if (!booking.gcal_event_id) {
-        await supabase.from("bookings").update({ gcal_event_id: calData.id }).eq("id", booking.id);
-      }
-    }
-  } catch (err) {
-    console.error("createCalendarEvent error:", err);
+  const valid = await verifyYocoSignature(rawBody, webhookId, webhookTimestamp, signatureHeader, secretRow.value);
+  if (!valid) {
+    console.warn("[yoco-webhook] Signature verification failed.", { webhookId, webhookTimestamp, sigPresent: signatureHeader !== null });
+    return new Response("Unauthorized", { status: 401 });
   }
-}
 
-// ── NEW: insert a notification row if the tenant has that preference enabled ──
-async function insertNotification(
-  supabase: ReturnType<typeof createClient>,
-  tenantId: string,
-  type: string,
-  title: string,
-  body: string,
-  bookingId: string
-): Promise<void> {
+  // ── Parse event ───────────────────────────────────────────────────────────────
+  let event: Record<string, unknown>;
   try {
-    const { data: tenantRow } = await supabase
-      .from("tenants")
-      .select("notification_preferences")
-      .eq("id", tenantId)
+    event = JSON.parse(rawBody);
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+
+  const eventType = event["type"] as string | undefined;
+  console.log(`[yoco-webhook v6] Received event: ${eventType}`);
+
+  // ── Handle payment.succeeded ─────────────────────────────────────────────────
+  if (eventType === "payment.succeeded") {
+    const payload = event["payload"] as Record<string, unknown> | undefined;
+    if (!payload) {
+      return new Response("Missing payload", { status: 400 });
+    }
+
+    const metadata   = payload["metadata"] as Record<string, unknown> | undefined;
+    const checkoutId = metadata?.["checkoutId"] as string | undefined;
+    const chargeId    = payload["id"] as string | undefined;
+    const amountCents = payload["amount"] as number | undefined;
+    const currency    = (payload["currency"] ?? "ZAR") as string;
+
+    let invoiceId: string | null = null;
+
+    if (checkoutId) {
+      const { data: invByCheckout } = await supabase
+        .from("platform_invoices")
+        .select("id, status, tenant_id, amount_rands")
+        .eq("yoco_checkout_id", checkoutId)
+        .maybeSingle();
+      if (invByCheckout) invoiceId = invByCheckout.id;
+    }
+
+    if (!invoiceId && metadata?.invoice_id) {
+      invoiceId = metadata.invoice_id as string;
+    }
+
+    if (!invoiceId) {
+      console.warn("[yoco-webhook] payment.succeeded: no matching invoice for checkoutId:", checkoutId, "| chargeId:", chargeId);
+      return new Response(JSON.stringify({ received: true, matched: false }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: invoice, error: invErr } = await supabase
+      .from("platform_invoices")
+      .select("id, status, tenant_id, amount_rands")
+      .eq("id", invoiceId)
       .single();
 
-    const prefs = tenantRow?.notification_preferences ?? {};
-    if (prefs[type] === false) {
-      console.log(`Notification type "${type}" disabled for tenant:`, tenantId);
-      return;
+    if (invErr || !invoice) {
+      console.error("[yoco-webhook] Invoice not found:", invoiceId, invErr?.message);
+      return new Response("Invoice not found", { status: 404 });
     }
 
-    const { error } = await supabase.from("notifications").insert({
-      tenant_id:  tenantId,
-      type,
-      title,
-      body,
-      booking_id: bookingId,
-    });
-
-    if (error) console.error("insertNotification error:", error);
-    else console.log(`Notification inserted: ${type} for booking:`, bookingId);
-  } catch (err) {
-    console.error("insertNotification unhandled error:", err);
-  }
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    console.log("Yoco webhook function started");
-    const allHeaders: Record<string, string> = {};
-    req.headers.forEach((value, key) => { allHeaders[key] = value; });
-    console.log("Incoming headers:", JSON.stringify(allHeaders));
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase    = createClient(supabaseUrl, serviceKey);
-
-    const rawBody      = await req.arrayBuffer();
-    const payloadBytes = new Uint8Array(rawBody);
-    const bodyText     = new TextDecoder().decode(payloadBytes);
-    const body         = JSON.parse(bodyText);
-
-    const { type, payload } = body;
-    console.log("Yoco webhook received:", type);
-
-    const checkoutId      = payload?.id ?? payload?.checkoutId ?? payload?.metadata?.checkoutId;
-    const metaBookingId   = payload?.metadata?.booking_id;
-    const metaPaymentType = payload?.metadata?.payment_type ?? "deposit";
-
-    let tenantId: string | null = null;
-    if (metaBookingId) {
-      const { data: bRow } = await supabase
-        .from("bookings")
-        .select("tenant_id")
-        .eq("id", metaBookingId)
-        .single();
-      tenantId = bRow?.tenant_id ?? null;
-    } else if (checkoutId) {
-      const { data: bRow } = await supabase
-        .from("bookings")
-        .select("tenant_id")
-        .or(`yoco_checkout_id.eq.${checkoutId},yoco_final_checkout_id.eq.${checkoutId}`)
-        .single();
-      tenantId = bRow?.tenant_id ?? null;
-    }
-
-    if (!tenantId) {
-      console.error("Rejecting webhook — could not resolve tenant_id from booking");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (invoice.status === "paid") {
+      console.log(`[yoco-webhook] Invoice ${invoiceId} already paid — skipping.`);
+      return new Response(JSON.stringify({ received: true, skipped: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       });
     }
 
-    console.log("Resolved tenant_id:", tenantId);
+    const now = new Date().toISOString();
+    const amountRands = amountCents !== undefined ? cents(amountCents) : invoice.amount_rands;
 
-    const svixSignature = req.headers.get("svix-signature");
-    const svixTimestamp = req.headers.get("svix-timestamp") ?? "";
-
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("yoco_webhook_secret")
-      .eq("id", tenantId)
-      .single();
-
-    if (tenant?.yoco_webhook_secret && svixSignature) {
-      const valid = await verifyYocoSignature(payloadBytes, svixSignature, svixTimestamp, tenant.yoco_webhook_secret);
-      if (!valid) {
-        console.error("Invalid Yoco webhook signature for tenant:", tenantId);
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      console.log("Signature verified for tenant:", tenantId);
-    } else {
-      console.warn("No signature header present — proceeding without verification:", tenantId);
-    }
-
-    if (type !== "payment.succeeded") {
-      console.log("Ignoring event type:", type);
-      return new Response(JSON.stringify({ received: true }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const paymentType   = metaPaymentType;
-    const bookingId     = metaBookingId;
-    const transactionId = payload?.id;
-
-    console.log("payment_type:", paymentType, "| bookingId:", bookingId, "| checkoutId:", checkoutId);
-
-    if (!bookingId && !checkoutId) {
-      console.error("No booking_id or checkoutId in webhook payload");
-      return new Response(JSON.stringify({ error: "Missing identifiers" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    let bookingQuery = supabase
-      .from("bookings")
-      .select(`
-        id, client_id, tenant_id,
-        deposit_amount, deposit_paid, total_amount, balance_due,
-        final_payment_paid,
-        booking_date, start_time, end_time, service_duration_minutes,
-        is_call_out, call_out_address, call_out_distance_km,
-        client_name, client_phone, client_email,
-        guest_name,  guest_phone,  guest_email,
-        client_notes, gcal_event_id
-      `);
-
-    if (bookingId) {
-      bookingQuery = bookingQuery.eq("id", bookingId);
-    } else {
-      bookingQuery = bookingQuery.or(
-        `yoco_checkout_id.eq.${checkoutId},yoco_final_checkout_id.eq.${checkoutId}`
-      );
-    }
-
-    const { data: booking, error: bookingErr } = await bookingQuery.single();
-
-    if (bookingErr || !booking) {
-      console.error("Booking not found:", bookingId || checkoutId, bookingErr);
-      return new Response(JSON.stringify({ error: "Booking not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const effectiveTenantId = booking.tenant_id;
-
-    // ══════════════════════════════════════════════════════════════════════
-    // FULL PAYMENT
-    // ══════════════════════════════════════════════════════════════════════
-    if (paymentType === "full") {
-      if (booking.final_payment_paid === true) {
-        console.log("Duplicate full-payment webhook — already processed:", booking.id);
-        return new Response(
-          JSON.stringify({ received: true, already_paid: true }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const { error: updateErr } = await supabase
-        .from("bookings")
-        .update({
-          deposit_paid:          true,
-          final_payment_paid:    true,
-          full_payment_received: true,
-          deposit_amount:        Number(booking.total_amount),
-          balance_due:           0,
-          status:                "completed",
-          confirmed_at:          new Date().toISOString(),
-          completed_at:          new Date().toISOString(),
-        })
-        .eq("id", booking.id);
-
-      if (updateErr) {
-        console.error("Failed to update booking for full payment:", updateErr);
-        return new Response(JSON.stringify({ error: "Update failed" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      await supabase.from("payments").insert({
-        booking_id:     booking.id,
-        client_id:      booking.client_id,
-        tenant_id:      effectiveTenantId,
-        amount:         Number(booking.total_amount),
-        payment_type:   "full",
-        payment_method: "card",
-        gateway:        "yoco",
-        status:         "completed",
-        transaction_id: transactionId,
-        completed_at:   new Date().toISOString(),
-      });
-
-      // ── Notification: Full Payment Received ──
-      await insertNotification(
-        supabase,
-        effectiveTenantId,
-        "full_payment_received",
-        "Full Payment Received",
-        `Full payment of R${Number(booking.total_amount).toFixed(2)} received.`,
-        booking.id
-      );
-
-      createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: 0 })
-        .catch((e) => console.error("gcal background error:", e));
-
-      try {
-        const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type":  "application/json",
-            "Authorization": `Bearer ${serviceKey}`,
-            "apikey":        serviceKey,
-          },
-          body: JSON.stringify({
-            booking_id: booking.id,
-            tenant_id:  effectiveTenantId,
-            email_type: "full_payment_confirmed",
-          }),
-        });
-        const emailJson = await emailRes.json();
-        console.log("send-booking-email (full) response:", emailRes.status, JSON.stringify(emailJson));
-      } catch (emailErr) {
-        console.error("Failed to call send-booking-email:", emailErr);
-      }
-
-      console.log("Full payment confirmed for booking:", booking.id);
-      return new Response(
-        JSON.stringify({ received: true, booking_id: booking.id, type: "full" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // BALANCE PAYMENT
-    // ══════════════════════════════════════════════════════════════════════
-    if (paymentType === "balance") {
-      if (booking.final_payment_paid === true) {
-        console.log("Duplicate balance webhook — already processed:", booking.id);
-        return new Response(
-          JSON.stringify({ received: true, already_paid: true }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const balanceAmount = Number(booking.balance_due) > 0
-        ? Number(booking.balance_due)
-        : Math.max(0, Number(booking.total_amount) - Number(booking.deposit_amount));
-
-      const { error: updateErr } = await supabase
-        .from("bookings")
-        .update({
-          final_payment_paid:    true,
-          full_payment_received: true,
-          balance_due:           0,
-          status:                "completed",
-          completed_at:          new Date().toISOString(),
-        })
-        .eq("id", booking.id);
-
-      if (updateErr) {
-        console.error("Failed to update booking for balance payment:", updateErr);
-        return new Response(JSON.stringify({ error: "Update failed" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      await supabase.from("payments").insert({
-        booking_id:     booking.id,
-        client_id:      booking.client_id,
-        tenant_id:      effectiveTenantId,
-        amount:         balanceAmount,
-        payment_type:   "balance",
-        payment_method: "card",
-        gateway:        "yoco",
-        status:         "completed",
-        transaction_id: transactionId,
-        completed_at:   new Date().toISOString(),
-      });
-
-      // ── Notification: Balance Paid ──
-      await insertNotification(
-        supabase,
-        effectiveTenantId,
-        "balance_paid",
-        "Balance Paid",
-        `Balance payment of R${balanceAmount.toFixed(2)} received.`,
-        booking.id
-      );
-
-      createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: 0 })
-        .catch((e) => console.error("gcal background error (balance):", e));
-
-      try {
-        const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type":  "application/json",
-            "Authorization": `Bearer ${serviceKey}`,
-            "apikey":        serviceKey,
-          },
-          body: JSON.stringify({
-            booking_id: booking.id,
-            tenant_id:  effectiveTenantId,
-            email_type: "balance_paid",
-          }),
-        });
-        const emailJson = await emailRes.json();
-        console.log("send-booking-email (balance_paid) response:", emailRes.status, JSON.stringify(emailJson));
-      } catch (emailErr) {
-        console.error("Failed to call send-booking-email (balance):", emailErr);
-      }
-
-      console.log("Balance payment confirmed for booking:", booking.id, "| amount:", balanceAmount);
-      return new Response(
-        JSON.stringify({ received: true, booking_id: booking.id, type: "balance" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // DEPOSIT PAYMENT
-    // ══════════════════════════════════════════════════════════════════════
-    const depositAmount    = Number(booking.deposit_amount ?? 0);
-    const totalAmount      = Number(booking.total_amount   ?? 0);
-    const remainingBalance = Math.max(0, totalAmount - depositAmount);
-
-    const { data: updatedRows, error: updateErr } = await supabase
-      .from("bookings")
-      .update({
-        deposit_paid: true,
-        balance_due:  remainingBalance,
-        status:       "confirmed",
-        confirmed_at: new Date().toISOString(),
-      })
-      .eq("id", booking.id)
-      .eq("deposit_paid", false)
-      .select("id");
+    const { error: updateErr } = await supabase
+      .from("platform_invoices")
+      .update({ status: "paid", paid_at: now, auto_paid: true, updated_at: now })
+      .eq("id", invoiceId);
 
     if (updateErr) {
-      console.error("Failed to update booking:", updateErr);
-      return new Response(JSON.stringify({ error: "Update failed" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error("[yoco-webhook] Failed to update invoice:", updateErr.message);
+      return new Response("DB update failed", { status: 500 });
+    }
+
+    const { error: payErr } = await supabase
+      .from("platform_payments")
+      .insert({
+        invoice_id:     invoiceId,
+        tenant_id:      invoice.tenant_id,
+        amount_rands:   amountRands,
+        payment_method: "yoco",
+        yoco_charge_id: chargeId ?? null,
+        paid_at:        now,
+        notes:          `Auto-paid via Yoco webhook. Event: ${eventType}. Currency: ${currency}.`,
       });
-    }
+    if (payErr) console.error("[yoco-webhook] Failed to insert payment record:", payErr.message);
 
-    if (!updatedRows || updatedRows.length === 0) {
-      console.log("Duplicate deposit webhook — already processed:", booking.id);
-      return new Response(
-        JSON.stringify({ received: true, already_paid: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    await supabase.from("payments").insert({
-      booking_id:     booking.id,
-      client_id:      booking.client_id,
-      tenant_id:      effectiveTenantId,
-      amount:         depositAmount,
-      payment_type:   "deposit",
-      payment_method: "card",
-      gateway:        "yoco",
-      status:         "completed",
-      transaction_id: transactionId,
-      completed_at:   new Date().toISOString(),
-    });
-
-    // ── Notification: Deposit Received ──
-    await insertNotification(
-      supabase,
-      effectiveTenantId,
-      "deposit_received",
-      "Deposit Received",
-      `Deposit of R${depositAmount.toFixed(2)} received.`,
-      booking.id
-    );
-
-    createCalendarEvent(supabase, effectiveTenantId, { ...booking, balance_due: remainingBalance })
-      .catch((e) => console.error("gcal background error:", e));
-
-    try {
-      const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${serviceKey}`,
-          "apikey":        serviceKey,
-        },
-        body: JSON.stringify({
-          booking_id: booking.id,
-          tenant_id:  effectiveTenantId,
-          email_type: "booking_confirmed",
-        }),
-      });
-      const emailJson = await emailRes.json();
-      console.log("send-booking-email (deposit) response:", emailRes.status, JSON.stringify(emailJson));
-    } catch (emailErr) {
-      console.error("Failed to call send-booking-email:", emailErr);
-    }
-
+    console.log(`[yoco-webhook v6] Invoice ${invoiceId} marked paid. ChargeId: ${chargeId}. Amount: R${amountRands}`);
     return new Response(
-      JSON.stringify({ received: true, booking_id: booking.id, type: "deposit" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
-  } catch (err) {
-    console.error("Webhook unhandled error:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ received: true, invoiceId, status: "paid" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   }
+
+  // ── Handle payment.failed ────────────────────────────────────────────────────
+  if (eventType === "payment.failed") {
+    const payload = event["payload"] as Record<string, unknown> | undefined;
+    const metadata   = payload ? (payload["metadata"] as Record<string, unknown> | undefined) : undefined;
+    const checkoutId = metadata?.["checkoutId"] as string | undefined;
+
+    if (checkoutId) {
+      await supabase
+        .from("platform_invoices")
+        .update({ status: "overdue", updated_at: new Date().toISOString() })
+        .eq("yoco_checkout_id", checkoutId)
+        .eq("status", "pending");
+    }
+
+    console.log(`[yoco-webhook v6] payment.failed recorded for checkoutId: ${checkoutId}`);
+    return new Response(JSON.stringify({ received: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // ── All other events ────────────────────────────────────────────────────────────
+  return new Response(JSON.stringify({ received: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 });
