@@ -146,15 +146,8 @@ Deno.serve(async (req) => {
       /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(\w+)-(\d+)$/i;
     const match = externalTransactionID.match(uuidRegex);
 
-    const bookingId   = match ? match[1] : externalTransactionID;
+    const bookingId   = match ? match[1] : null;
     const paymentType = (match ? match[2] : "deposit").toLowerCase();
-
-    if (!bookingId) {
-      console.error(
-        `[ikhokha-webhook] Cannot parse bookingId from txn=${externalTransactionID}`
-      );
-      return new Response("OK", { status: 200 });
-    }
 
     // ── 6. Update bookings (column names match live schema) ─────────────────
     if (status === "SUCCESS") {
@@ -176,24 +169,40 @@ Deno.serve(async (req) => {
         updateData.ikhokha_final_link        = paylinkID;
       }
 
-      const { error: updateErr } = await supabase
-        .from("bookings")
-        .update(updateData)
-        .eq("id", bookingId)
-        .eq("tenant_id", tenantId);
+      // Primary lookup: bookingId parsed out of externalTransactionID.
+      // Fallback: match by the paylinkID we already stored on the booking
+      // at checkout-creation time (ikhokha_checkout_id /
+      // ikhokha_final_checkout_id) — mirrors how yoco-webhook falls back to
+      // yoco_checkout_id when it can't resolve a booking id directly. This
+      // is what protects us if externalTransactionID ever comes back
+      // reformatted, truncated, or otherwise unparseable.
+      let query = supabase.from("bookings").update(updateData).eq("tenant_id", tenantId);
+      query = bookingId
+        ? query.eq("id", bookingId)
+        : query.or(`ikhokha_checkout_id.eq.${paylinkID},ikhokha_final_checkout_id.eq.${paylinkID}`);
+
+      const { data: updated, error: updateErr } = await query.select("id");
 
       if (updateErr) {
         console.error(`[ikhokha-webhook] booking update error:`, updateErr);
+      } else if (!updated || updated.length === 0) {
+        // Nothing matched either lookup — surface this loudly rather than
+        // silently returning 200 with no booking ever touched.
+        console.error(
+          `[ikhokha-webhook] NO BOOKING MATCHED — txn=${externalTransactionID} ` +
+          `parsedBookingId=${bookingId ?? "none"} paylinkID=${paylinkID} tenant=${tenantId}`
+        );
       } else {
+        const matchedId = updated[0].id;
         console.log(
-          `[ikhokha-webhook] booking=${bookingId} updated OK type=${paymentType}`
+          `[ikhokha-webhook] booking=${matchedId} updated OK type=${paymentType}`
         );
 
         // ── 7. Fire confirmation email (non-fatal) ─────────────────────────
         try {
           await supabase.functions.invoke("send-booking-email", {
             body: {
-              booking_id: bookingId,
+              booking_id: matchedId,
               email_type:
                 paymentType === "balance" || paymentType === "full"
                   ? "payment_confirmed"
