@@ -19,36 +19,15 @@ export interface AvailabilitySlot {
   updated_at: string | null;
 }
 
-const DAY_NAMES = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function useStaffAvailability(staffId: string | undefined) {
   const { tenantId } = useTenant();
-
   return useQuery({
     queryKey: ["availability", tenantId, staffId],
     enabled: !!staffId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("staff_availability")
-        .select(
-          "id, staff_id, day_of_week, day_enabled, " +
-          "slot_start_time, slot_end_time, is_available, " +
-          "requires_travel_buffer, buffer_minutes, " +
-          "specific_date, override_reason, " +
-          "tenant_id, created_at, updated_at"
-        )
-        .eq("tenant_id", tenantId)
-        .eq("staff_id", staffId!)
-        .order("day_of_week")
-        .order("slot_start_time");
+      const { data, error } = await supabase.from("staff_availability").select("id, staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, requires_travel_buffer, buffer_minutes, specific_date, override_reason, tenant_id, created_at, updated_at").eq("tenant_id", tenantId).eq("staff_id", staffId!).order("day_of_week").order("slot_start_time");
       if (error) throw error;
       return (data ?? []) as AvailabilitySlot[];
     },
@@ -99,28 +78,18 @@ export function resolveAvailabilityRows(rows: AvailabilitySlot[], dates: string[
 export function useSaveAvailability() {
   const qc = useQueryClient();
   const { tenantId } = useTenant();
-
   return useMutation({
     mutationFn: async ({ staffId, dayOfWeek, enabled, slots, allSlots }: { staffId: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[] }) => {
-      const rows = allSlots.map((slot) => {
-        const [h, m] = slot.split(":");
-        const startMin = parseInt(h) * 60 + parseInt(m);
-        const endMin = startMin + 30;
-        const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
-        const endM = String(endMin % 60).padStart(2, "0");
-        return { slot_start_time: `${slot}:00`, slot_end_time: `${endH}:${endM}:00`, is_available: slots.includes(slot), day_enabled: enabled };
-      });
-      // Delete+insert happen atomically inside the RPC so two overlapping
-      // saves for the same staff+day serialize instead of racing and
-      // hitting staff_availability_unique_slot (23505).
-      const { error } = await supabase.rpc("replace_staff_availability", {
-        p_staff_id: staffId,
+      const { data, error } = await supabase.rpc("save_staff_availability", {
         p_tenant_id: tenantId,
+        p_staff_id: staffId,
         p_day_of_week: dayOfWeek,
-        p_specific_date: null,
-        p_rows: rows,
+        p_day_enabled: enabled,
+        p_slots: slots,
+        p_all_slots: allSlots,
       });
       if (error) throw error;
+      return data ?? [];
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["availability", tenantId] }); },
     onError: (err) => { console.error("[useSaveAvailability] save failed:", err); },
@@ -130,35 +99,28 @@ export function useSaveAvailability() {
 export function useSaveDailyOverride() {
   const qc = useQueryClient();
   const { tenantId } = useTenant();
-
   return useMutation({
     mutationFn: async ({ staffId, date, dayOfWeek, enabled, slots, allSlots, deleteOnly = false }: { staffId: string; date: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[]; deleteOnly?: boolean }) => {
-      if (deleteOnly) {
-        const { error: delErr } = await supabase.from("staff_availability").delete().eq("staff_id", staffId).eq("tenant_id", tenantId).eq("specific_date", date);
-        if (delErr) throw delErr;
+      const { error: delErr } = await supabase.from("staff_availability").delete().eq("staff_id", staffId).eq("tenant_id", tenantId).eq("specific_date", date);
+      if (delErr) throw delErr;
+      if (deleteOnly) return;
+      if (!enabled) {
+        const { error: sentErr } = await supabase.from("staff_availability").insert({ staff_id: staffId, tenant_id: tenantId, day_of_week: dayOfWeek, specific_date: date, slot_start_time: "00:00:00", slot_end_time: "00:30:00", is_available: false, day_enabled: false });
+        if (sentErr) throw sentErr;
         return;
       }
-      const rows = !enabled
-        ? [{ slot_start_time: "00:00:00", slot_end_time: "00:30:00", is_available: false, day_enabled: false }]
-        : allSlots.map((slot) => {
-            const [h, m] = slot.split(":");
-            const startMin = parseInt(h) * 60 + parseInt(m);
-            const endMin = startMin + 30;
-            const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
-            const endM = String(endMin % 60).padStart(2, "0");
-            return { slot_start_time: `${slot}:00`, slot_end_time: `${endH}:${endM}:00`, is_available: slots.includes(slot), day_enabled: true };
-          });
-      // Delete+insert happen atomically inside the RPC so two overlapping
-      // saves for the same staff+date serialize instead of racing and
-      // hitting staff_availability_unique_slot (23505).
-      const { error } = await supabase.rpc("replace_staff_availability", {
-        p_staff_id: staffId,
-        p_tenant_id: tenantId,
-        p_day_of_week: dayOfWeek,
-        p_specific_date: date,
-        p_rows: rows,
+      const rows = allSlots.map((slot) => {
+        const [h, m] = slot.split(":");
+        const startMin = parseInt(h) * 60 + parseInt(m);
+        const endMin = startMin + 30;
+        const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
+        const endM = String(endMin % 60).padStart(2, "0");
+        return { staff_id: staffId, tenant_id: tenantId, day_of_week: dayOfWeek, slot_start_time: `${slot}:00`, slot_end_time: `${endH}:${endM}:00`, is_available: slots.includes(slot), day_enabled: true, specific_date: date };
       });
-      if (error) throw error;
+      if (rows.length > 0) {
+        const { error: insErr } = await supabase.from("staff_availability").insert(rows);
+        if (insErr) throw insErr;
+      }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["availability", tenantId] }); },
     onError: (err) => { console.error("[useSaveDailyOverride] failed:", err); },
