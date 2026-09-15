@@ -48,6 +48,54 @@ function buildHeatSlots(availRows: any[]): { label: string; hourStart: number }[
   return slots;
 }
 
+/**
+ * Expand raw staff_availability rows into a fully-resolved set for each
+ * day in [rangeStart, rangeEnd]: a `specific_date` override for a given
+ * (staff, date) wins wholesale over that day's recurring day_of_week row.
+ */
+function resolveAvailabilityForRange(
+  availabilityRows: any[],
+  staffIds: string[],
+  rangeStart: string,
+  rangeEnd: string,
+): any[] {
+  const rangeDays = eachDayOfInterval({
+    start: parseISO(rangeStart),
+    end:   parseISO(rangeEnd),
+  });
+
+  const resolved: any[] = [];
+
+  staffIds.forEach((staffId) => {
+    const staffRows = availabilityRows.filter(
+      (row: any) => row.staff_id === staffId,
+    );
+
+    rangeDays.forEach((day) => {
+      const date = format(day, "yyyy-MM-dd");
+      const dow  = getDay(day);
+
+      const dateOverrides = staffRows.filter(
+        (row: any) =>
+          row.specific_date === date && row.day_of_week === dow,
+      );
+
+      const rows =
+        dateOverrides.length > 0
+          ? dateOverrides
+          : staffRows.filter(
+              (row: any) =>
+                row.specific_date === null &&
+                row.day_of_week === dow,
+            );
+
+      resolved.push(...rows);
+    });
+  });
+
+  return resolved;
+}
+
 const STAFF_ROLES = ["owner", "admin", "staff"] as const;
 
 function buildTopServices(
@@ -416,9 +464,21 @@ export function useDashboardData() {
     }));
   }, [allPayments, trendBookings, trendStartDate, todayStr]);
 
+  // ─── resolved availability for heatmap ────────────────────────────────────
+  const heatmapAvailabilityRows = useMemo(
+    () =>
+      resolveAvailabilityForRange(
+        availabilityRows,
+        staffIds,
+        monthStart,
+        monthEnd,
+      ),
+    [availabilityRows, staffIds, monthStart, monthEnd],
+  );
+
   // ─── booking heatmap ──────────────────────────────────────────────────────
   const heatmap = useMemo(() => {
-    const heatSlots = buildHeatSlots(availabilityRows);
+    const heatSlots = buildHeatSlots(heatmapAvailabilityRows);
     const idx: Record<string, number> = {};
     active.forEach((b: any) => {
       const dow  = DOW_TO_IDX[new Date(b.booking_date + "T00:00:00").getDay()];
@@ -439,7 +499,7 @@ export function useDashboardData() {
         intensity: idx[`${di}__${si}`] || 0,
       })),
     }));
-  }, [active, availabilityRows]);
+  }, [active, heatmapAvailabilityRows]);
 
   // ─── client insights ──────────────────────────────────────────────────────
   const { clientKeySet, returningCount, retentionRate } = useMemo(() => {
@@ -493,19 +553,22 @@ export function useDashboardData() {
         staffIndex.set(row.staff_id, { recurring: new Map(), overrides: new Map() });
       }
       const entry = staffIndex.get(row.staff_id)!;
+      const isEnabled = row.day_enabled === true && row.is_available === true;
 
       if (row.specific_date) {
-        if (row.day_enabled && row.is_available) {
-          const prev = entry.overrides.get(row.specific_date) ?? 0;
-          entry.overrides.set(row.specific_date, prev + 1);
-        } else if (!entry.overrides.has(row.specific_date)) {
+        // Any specific_date row for a date masks that date's recurring entry.
+        if (!entry.overrides.has(row.specific_date)) {
           entry.overrides.set(row.specific_date, 0);
         }
-      } else {
-        if (row.day_enabled && row.is_available) {
-          const prev = entry.recurring.get(row.day_of_week) ?? 0;
-          entry.recurring.set(row.day_of_week, prev + 1);
+        if (isEnabled) {
+          entry.overrides.set(
+            row.specific_date,
+            entry.overrides.get(row.specific_date)! + 1,
+          );
         }
+      } else if (isEnabled) {
+        const prev = entry.recurring.get(row.day_of_week) ?? 0;
+        entry.recurring.set(row.day_of_week, prev + 1);
       }
     });
 
