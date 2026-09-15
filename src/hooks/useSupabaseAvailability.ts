@@ -27,7 +27,13 @@ export function useStaffAvailability(staffId: string | undefined) {
     queryKey: ["availability", tenantId, staffId],
     enabled: !!staffId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("staff_availability").select("id, staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, requires_travel_buffer, buffer_minutes, specific_date, override_reason, tenant_id, created_at, updated_at").eq("tenant_id", tenantId).eq("staff_id", staffId!).order("day_of_week").order("slot_start_time");
+      const { data, error } = await supabase
+        .from("staff_availability")
+        .select("id, staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, requires_travel_buffer, buffer_minutes, specific_date, override_reason, tenant_id, created_at, updated_at")
+        .eq("tenant_id", tenantId)
+        .eq("staff_id", staffId!)
+        .order("day_of_week")
+        .order("slot_start_time");
       if (error) throw error;
       return (data ?? []) as AvailabilitySlot[];
     },
@@ -78,27 +84,58 @@ export function resolveAvailabilityRows(rows: AvailabilitySlot[], dates: string[
 export function useSaveAvailability() {
   const qc = useQueryClient();
   const { tenantId } = useTenant();
+
   return useMutation({
     mutationFn: async ({ staffId, dayOfWeek, enabled, slots, allSlots }: { staffId: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[] }) => {
-      const { data, error } = await supabase.rpc("save_staff_availability", {
-        p_tenant_id: tenantId,
-        p_staff_id: staffId,
-        p_day_of_week: dayOfWeek,
-        p_day_enabled: enabled,
-        p_slots: slots,
-        p_all_slots: allSlots,
-      });
-      if (error) throw error;
-      return data ?? [];
+      const payload = { staffId, dayOfWeek, enabled, slots: [...slots], allSlots: [...allSlots], tenantId };
+      console.group("[availability] recurring save");
+      console.log("payload", payload);
+      try {
+        const { data, error } = await supabase.rpc("save_staff_availability", {
+          p_tenant_id: tenantId,
+          p_staff_id: staffId,
+          p_day_of_week: dayOfWeek,
+          p_day_enabled: enabled,
+          p_slots: slots,
+          p_all_slots: allSlots,
+        });
+        console.log("rpc data", data);
+        console.log("rpc error", error);
+        if (error) {
+          console.error("RPC error JSON", JSON.stringify(error, null, 2));
+          throw error;
+        }
+        return data ?? [];
+      } finally {
+        console.groupEnd();
+      }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["availability", tenantId] }); },
-    onError: (err) => { console.error("[useSaveAvailability] save failed:", err); },
+    onSuccess: (data, variables) => {
+      console.info("[availability] recurring save succeeded", {
+        dayOfWeek: variables.dayOfWeek,
+        selectedSlots: variables.slots,
+        returnedRows: data,
+      });
+      qc.invalidateQueries({ queryKey: ["availability", tenantId] });
+    },
+    onError: (error, variables) => {
+      console.error("[availability] recurring save failed", {
+        error,
+        errorJson: JSON.stringify(error, null, 2),
+        variables: {
+          ...variables,
+          slots: [...variables.slots],
+          allSlots: [...variables.allSlots],
+        },
+      });
+    },
   });
 }
 
 export function useSaveDailyOverride() {
   const qc = useQueryClient();
   const { tenantId } = useTenant();
+
   return useMutation({
     mutationFn: async ({ staffId, date, dayOfWeek, enabled, slots, allSlots, deleteOnly = false }: { staffId: string; date: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[]; deleteOnly?: boolean }) => {
       const { error: delErr } = await supabase.from("staff_availability").delete().eq("staff_id", staffId).eq("tenant_id", tenantId).eq("specific_date", date);
