@@ -55,28 +55,15 @@ export function useStaffAvailability(staffId: string | undefined) {
   });
 }
 
-export type WeekAvailability = Record<
-  string,
-  { enabled: boolean; slots: string[] }
->;
-
-export type DailyOverrides = Record<
-  string,
-  { enabled: boolean; slots: string[] }
->;
+export type WeekAvailability = Record<string, { enabled: boolean; slots: string[] }>;
+export type DailyOverrides = Record<string, { enabled: boolean; slots: string[] }>;
 
 export function toWeekAvailability(rows: AvailabilitySlot[]): WeekAvailability {
   const week: WeekAvailability = {};
   DAY_NAMES.forEach((name, i) => {
-    const daySlots = rows.filter(
-      (r) => r.day_of_week === i && !r.specific_date
-    );
-    const enabled =
-      daySlots.length > 0 ? daySlots[0].day_enabled ?? true : false;
-    const slots = daySlots
-      .filter((s) => s.is_available)
-      .map((s) => s.slot_start_time.slice(0, 5))
-      .sort();
+    const daySlots = rows.filter((r) => r.day_of_week === i && !r.specific_date);
+    const enabled = daySlots.length > 0 ? daySlots[0].day_enabled ?? true : false;
+    const slots = daySlots.filter((s) => s.is_available).map((s) => s.slot_start_time.slice(0, 5)).sort();
     week[name] = { enabled, slots };
   });
   return week;
@@ -84,25 +71,29 @@ export function toWeekAvailability(rows: AvailabilitySlot[]): WeekAvailability {
 
 export function toDailyOverrides(rows: AvailabilitySlot[]): DailyOverrides {
   const overrides: DailyOverrides = {};
-  const dateRows = rows.filter((r) => !!r.specific_date);
-
   const grouped: Record<string, AvailabilitySlot[]> = {};
-  for (const row of dateRows) {
+  for (const row of rows.filter((r) => !!r.specific_date)) {
     const d = row.specific_date!;
     if (!grouped[d]) grouped[d] = [];
     grouped[d].push(row);
   }
-
   for (const [date, dateSlots] of Object.entries(grouped)) {
     const enabled = dateSlots.length > 0 ? dateSlots[0].day_enabled ?? true : false;
-    const slots = dateSlots
-      .filter((s) => s.is_available)
-      .map((s) => s.slot_start_time.slice(0, 5))
-      .sort();
+    const slots = dateSlots.filter((s) => s.is_available).map((s) => s.slot_start_time.slice(0, 5)).sort();
     overrides[date] = { enabled, slots };
   }
-
   return overrides;
+}
+
+export function resolveAvailabilityForDate(rows: AvailabilitySlot[], date: string): AvailabilitySlot[] {
+  const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
+  const dateRows = rows.filter((row) => row.specific_date === date && row.day_of_week === dayOfWeek);
+  if (dateRows.length > 0) return dateRows;
+  return rows.filter((row) => row.specific_date === null && row.day_of_week === dayOfWeek);
+}
+
+export function resolveAvailabilityRows(rows: AvailabilitySlot[], dates: string[]): AvailabilitySlot[] {
+  return dates.flatMap((date) => resolveAvailabilityForDate(rows, date));
 }
 
 export function useSaveAvailability() {
@@ -110,58 +101,24 @@ export function useSaveAvailability() {
   const { tenantId } = useTenant();
 
   return useMutation({
-    mutationFn: async ({
-      staffId,
-      dayOfWeek,
-      enabled,
-      slots,
-      allSlots,
-    }: {
-      staffId: string;
-      dayOfWeek: number;
-      enabled: boolean;
-      slots: string[];
-      allSlots: string[];
-    }) => {
-      const { error: delErr } = await supabase
-        .from("staff_availability")
-        .delete()
-        .eq("staff_id", staffId)
-        .eq("tenant_id", tenantId)
-        .eq("day_of_week", dayOfWeek)
-        .is("specific_date", null);
+    mutationFn: async ({ staffId, dayOfWeek, enabled, slots, allSlots }: { staffId: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[] }) => {
+      const { error: delErr } = await supabase.from("staff_availability").delete().eq("staff_id", staffId).eq("tenant_id", tenantId).eq("day_of_week", dayOfWeek).is("specific_date", null);
       if (delErr) throw delErr;
-
       const rows = allSlots.map((slot) => {
         const [h, m] = slot.split(":");
         const startMin = parseInt(h) * 60 + parseInt(m);
         const endMin = startMin + 30;
         const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
         const endM = String(endMin % 60).padStart(2, "0");
-        return {
-          staff_id: staffId,
-          tenant_id: tenantId,
-          day_of_week: dayOfWeek,
-          slot_start_time: `${slot}:00`,
-          slot_end_time: `${endH}:${endM}:00`,
-          is_available: slots.includes(slot),
-          day_enabled: enabled,
-        };
+        return { staff_id: staffId, tenant_id: tenantId, day_of_week: dayOfWeek, slot_start_time: `${slot}:00`, slot_end_time: `${endH}:${endM}:00`, is_available: slots.includes(slot), day_enabled: enabled };
       });
-
       if (rows.length > 0) {
-        const { error: insErr } = await supabase
-          .from("staff_availability")
-          .insert(rows);
+        const { error: insErr } = await supabase.from("staff_availability").insert(rows);
         if (insErr) throw insErr;
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["availability", tenantId] });
-    },
-    onError: (err) => {
-      console.error("[useSaveAvailability] insert failed:", err);
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["availability", tenantId] }); },
+    onError: (err) => { console.error("[useSaveAvailability] insert failed:", err); },
   });
 }
 
@@ -170,84 +127,30 @@ export function useSaveDailyOverride() {
   const { tenantId } = useTenant();
 
   return useMutation({
-    mutationFn: async ({
-      staffId,
-      date,
-      dayOfWeek,
-      enabled,
-      slots,
-      allSlots,
-      deleteOnly = false,
-    }: {
-      staffId: string;
-      date: string;
-      dayOfWeek: number;
-      enabled: boolean;
-      slots: string[];
-      allSlots: string[];
-      deleteOnly?: boolean;
-    }) => {
-      // Always delete existing override rows for this date first
-      const { error: delErr } = await supabase
-        .from("staff_availability")
-        .delete()
-        .eq("staff_id", staffId)
-        .eq("tenant_id", tenantId)
-        .eq("specific_date", date);
+    mutationFn: async ({ staffId, date, dayOfWeek, enabled, slots, allSlots, deleteOnly = false }: { staffId: string; date: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[]; deleteOnly?: boolean }) => {
+      const { error: delErr } = await supabase.from("staff_availability").delete().eq("staff_id", staffId).eq("tenant_id", tenantId).eq("specific_date", date);
       if (delErr) throw delErr;
-
       if (deleteOnly) return;
-
-      // Closing the day — write ONE unambiguous sentinel row
       if (!enabled) {
-        const { error: sentErr } = await supabase
-          .from("staff_availability")
-          .insert({
-            staff_id: staffId,
-            tenant_id: tenantId,
-            day_of_week: dayOfWeek,
-            specific_date: date,
-            slot_start_time: "00:00:00",
-            slot_end_time: "00:30:00",
-            is_available: false,
-            day_enabled: false,
-          });
+        const { error: sentErr } = await supabase.from("staff_availability").insert({ staff_id: staffId, tenant_id: tenantId, day_of_week: dayOfWeek, specific_date: date, slot_start_time: "00:00:00", slot_end_time: "00:30:00", is_available: false, day_enabled: false });
         if (sentErr) throw sentErr;
         return;
       }
-
-      // Day is open — insert full slot rows
       const rows = allSlots.map((slot) => {
         const [h, m] = slot.split(":");
         const startMin = parseInt(h) * 60 + parseInt(m);
         const endMin = startMin + 30;
         const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
         const endM = String(endMin % 60).padStart(2, "0");
-        return {
-          staff_id: staffId,
-          tenant_id: tenantId,
-          day_of_week: dayOfWeek,
-          specific_date: date,
-          slot_start_time: `${slot}:00`,
-          slot_end_time: `${endH}:${endM}:00`,
-          is_available: slots.includes(slot),
-          day_enabled: true,
-        };
+        return { staff_id: staffId, tenant_id: tenantId, day_of_week: dayOfWeek, slot_start_time: `${slot}:00`, slot_end_time: `${endH}:${endM}:00`, is_available: slots.includes(slot), day_enabled: true, specific_date: date };
       });
-
       if (rows.length > 0) {
-        const { error: insErr } = await supabase
-          .from("staff_availability")
-          .insert(rows);
+        const { error: insErr } = await supabase.from("staff_availability").insert(rows);
         if (insErr) throw insErr;
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["availability", tenantId] });
-    },
-    onError: (err) => {
-      console.error("[useSaveDailyOverride] failed:", err);
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["availability", tenantId] }); },
+    onError: (err) => { console.error("[useSaveDailyOverride] failed:", err); },
   });
 }
 
