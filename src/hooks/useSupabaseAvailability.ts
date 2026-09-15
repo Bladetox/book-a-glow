@@ -21,6 +21,9 @@ export interface AvailabilitySlot {
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+const normaliseSlot = (slot: string) => slot.slice(0, 5);
+const normaliseSlotList = (slots: string[]) => [...new Set(slots.map(normaliseSlot))].sort();
+
 export function useStaffAvailability(staffId: string | undefined) {
   const { tenantId } = useTenant();
   return useQuery({
@@ -87,47 +90,33 @@ export function useSaveAvailability() {
 
   return useMutation({
     mutationFn: async ({ staffId, dayOfWeek, enabled, slots, allSlots }: { staffId: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[] }) => {
-      const payload = { staffId, dayOfWeek, enabled, slots: [...slots], allSlots: [...allSlots], tenantId };
+      const safeSlots = normaliseSlotList(slots);
+      const safeAllSlots = normaliseSlotList(allSlots);
       console.group("[availability] recurring save");
-      console.log("payload", payload);
+      console.log("payload", { staffId, dayOfWeek, enabled, slots: safeSlots, allSlots: safeAllSlots, tenantId });
       try {
         const { data, error } = await supabase.rpc("save_staff_availability", {
           p_tenant_id: tenantId,
           p_staff_id: staffId,
           p_day_of_week: dayOfWeek,
           p_day_enabled: enabled,
-          p_slots: slots,
-          p_all_slots: allSlots,
+          p_slots: safeSlots,
+          p_all_slots: safeAllSlots,
         });
-        console.log("rpc data", data);
-        console.log("rpc error", error);
-        if (error) {
-          console.error("RPC error JSON", JSON.stringify(error, null, 2));
-          throw error;
-        }
-        return data ?? [];
+        if (error) throw error;
+        return (data ?? []) as AvailabilitySlot[];
       } finally {
         console.groupEnd();
       }
     },
-    onSuccess: (data, variables) => {
-      console.info("[availability] recurring save succeeded", {
-        dayOfWeek: variables.dayOfWeek,
-        selectedSlots: variables.slots,
-        returnedRows: data,
+    onSuccess: (savedRows, variables) => {
+      qc.setQueryData<AvailabilitySlot[]>(["availability", tenantId, variables.staffId], (current = []) => {
+        const retained = current.filter((row) => !(row.staff_id === variables.staffId && row.day_of_week === variables.dayOfWeek && row.specific_date === null));
+        return [...retained, ...savedRows];
       });
-      qc.invalidateQueries({ queryKey: ["availability", tenantId] });
     },
-    onError: (error, variables) => {
-      console.error("[availability] recurring save failed", {
-        error,
-        errorJson: JSON.stringify(error, null, 2),
-        variables: {
-          ...variables,
-          slots: [...variables.slots],
-          allSlots: [...variables.allSlots],
-        },
-      });
+    onError: (error) => {
+      console.error("[availability] recurring save failed", { error, errorJson: JSON.stringify(error, null, 2) });
     },
   });
 }
@@ -138,29 +127,36 @@ export function useSaveDailyOverride() {
 
   return useMutation({
     mutationFn: async ({ staffId, date, dayOfWeek, enabled, slots, allSlots, deleteOnly = false }: { staffId: string; date: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[]; deleteOnly?: boolean }) => {
-      const { error: delErr } = await supabase.from("staff_availability").delete().eq("staff_id", staffId).eq("tenant_id", tenantId).eq("specific_date", date);
-      if (delErr) throw delErr;
-      if (deleteOnly) return;
-      if (!enabled) {
-        const { error: sentErr } = await supabase.from("staff_availability").insert({ staff_id: staffId, tenant_id: tenantId, day_of_week: dayOfWeek, specific_date: date, slot_start_time: "00:00:00", slot_end_time: "00:30:00", is_available: false, day_enabled: false });
-        if (sentErr) throw sentErr;
-        return;
-      }
-      const rows = allSlots.map((slot) => {
-        const [h, m] = slot.split(":");
-        const startMin = parseInt(h) * 60 + parseInt(m);
-        const endMin = startMin + 30;
-        const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
-        const endM = String(endMin % 60).padStart(2, "0");
-        return { staff_id: staffId, tenant_id: tenantId, day_of_week: dayOfWeek, slot_start_time: `${slot}:00`, slot_end_time: `${endH}:${endM}:00`, is_available: slots.includes(slot), day_enabled: true, specific_date: date };
-      });
-      if (rows.length > 0) {
-        const { error: insErr } = await supabase.from("staff_availability").insert(rows);
-        if (insErr) throw insErr;
+      const safeSlots = normaliseSlotList(slots);
+      const safeAllSlots = normaliseSlotList(allSlots);
+      console.group("[availability] daily override save");
+      console.log("payload", { staffId, date, dayOfWeek, enabled, deleteOnly, slots: safeSlots, allSlots: safeAllSlots, tenantId });
+      try {
+        const { data, error } = await supabase.rpc("save_staff_daily_override", {
+          p_tenant_id: tenantId,
+          p_staff_id: staffId,
+          p_specific_date: date,
+          p_day_of_week: dayOfWeek,
+          p_day_enabled: enabled,
+          p_slots: safeSlots,
+          p_all_slots: safeAllSlots,
+          p_delete_only: deleteOnly,
+        });
+        if (error) throw error;
+        return (data ?? []) as AvailabilitySlot[];
+      } finally {
+        console.groupEnd();
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["availability", tenantId] }); },
-    onError: (err) => { console.error("[useSaveDailyOverride] failed:", err); },
+    onSuccess: (savedRows, variables) => {
+      qc.setQueryData<AvailabilitySlot[]>(["availability", tenantId, variables.staffId], (current = []) => {
+        const retained = current.filter((row) => !(row.staff_id === variables.staffId && row.specific_date === variables.date));
+        return [...retained, ...savedRows];
+      });
+    },
+    onError: (error) => {
+      console.error("[useSaveDailyOverride] failed", { error, errorJson: JSON.stringify(error, null, 2) });
+    },
   });
 }
 
