@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ToggleLeft, ToggleRight, Loader2, Calendar, Clock } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from "date-fns";
@@ -61,16 +61,25 @@ const AdminAvailability = () => {
   }, [rawSlots, saveMutation.isPending, saveDailyMutation.isPending]);
 
   // ─── Weekly handlers ───
+  // Debounced per-day: rapid successive toggles on the same day (e.g.
+  // checking several slot boxes back to back) collapse into a single
+  // save of the final state, instead of each click firing its own
+  // overlapping delete+insert that could race and hit the unique
+  // constraint (23505).
+  const persistDayTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const persistDay = useCallback(
     (dayName: string, config: { enabled: boolean; slots: string[] }) => {
       const dayIndex = DAY_NAMES.indexOf(dayName);
-      saveMutation.mutate({
-        staffId: userId,
-        dayOfWeek: dayIndex,
-        enabled: config.enabled,
-        slots: config.slots,
-        allSlots: ALL_SLOTS,
-      });
+      if (persistDayTimers.current[dayName]) clearTimeout(persistDayTimers.current[dayName]);
+      persistDayTimers.current[dayName] = setTimeout(() => {
+        saveMutation.mutate({
+          staffId: userId,
+          dayOfWeek: dayIndex,
+          enabled: config.enabled,
+          slots: config.slots,
+          allSlots: ALL_SLOTS,
+        });
+      }, 500);
     },
     [userId, saveMutation]
   );
@@ -114,18 +123,22 @@ const AdminAvailability = () => {
     return { ...weekly, isOverride: false };
   };
 
+  const persistDailyOverrideTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const persistDailyOverride = useCallback(
     (date: Date, config: { enabled: boolean; slots: string[] }) => {
       const iso = format(date, "yyyy-MM-dd");
       const dayOfWeek = getDay(date);
-      saveDailyMutation.mutate({
-        staffId: userId,
-        date: iso,
-        dayOfWeek,
-        enabled: config.enabled,
-        slots: config.slots,
-        allSlots: ALL_SLOTS,
-      });
+      if (persistDailyOverrideTimers.current[iso]) clearTimeout(persistDailyOverrideTimers.current[iso]);
+      persistDailyOverrideTimers.current[iso] = setTimeout(() => {
+        saveDailyMutation.mutate({
+          staffId: userId,
+          date: iso,
+          dayOfWeek,
+          enabled: config.enabled,
+          slots: config.slots,
+          allSlots: ALL_SLOTS,
+        });
+      }, 500);
     },
     [userId, saveDailyMutation]
   );
@@ -151,6 +164,10 @@ const AdminAvailability = () => {
 
   const clearDailyOverride = (date: Date) => {
     const iso = format(date, "yyyy-MM-dd");
+    if (persistDailyOverrideTimers.current[iso]) {
+      clearTimeout(persistDailyOverrideTimers.current[iso]);
+      delete persistDailyOverrideTimers.current[iso];
+    }
     setDailyOverrides((prev) => {
       const next = { ...prev };
       delete next[iso];
