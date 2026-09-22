@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CreditCard, KeyRound, Webhook, Eye, EyeOff,
   Save, CheckCircle2, Loader2, RefreshCw, Trash2,
-  ExternalLink, AlertCircle, Copy, Check,
+  ExternalLink, AlertCircle, Copy, Check, ArrowLeftRight,
 } from "lucide-react";
 
 // ─── Shared UI primitives (matches SASettings / SARevenue style) ─────────────
@@ -45,16 +45,19 @@ const StatusMsg = ({ status, errMsg }: { status: string; errMsg: string }) => {
   return null;
 };
 
-// ─── Platform tenant id used for all platform-level secrets ─────────────────
+// ─── Platform tenant id used for all platform-level secrets ─────────────
 const PLATFORM_TENANT_ID = "platform";
 
-// ─── Secret key names stored in tenant_secrets ───────────────────────────────
+// ─── Secret key names stored in tenant_secrets ─────────────────────────
 const KEY_SECRET     = "platform_yoco_secret_key";
 const KEY_PUBLIC     = "platform_yoco_public_key";
 const KEY_WEBHOOK_ID = "platform_yoco_webhook_id";
 const KEY_WEBHOOK_SECRET = "platform_yoco_webhook_secret";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Billing provider (tenant → NextSlot subscription payments) ─────────
+type BillingProvider = "ikhokha" | "yoco";
+
+// ─── Types ───────────────────────────────────────────────────────────────────────
 interface YocoWebhook {
   id: string;
   name: string;
@@ -63,7 +66,7 @@ interface YocoWebhook {
   secret: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────────
 async function upsertSecret(key: string, value: string) {
   const { error } = await supabase
     .from("tenant_secrets")
@@ -94,9 +97,34 @@ async function deleteSecret(key: string) {
   if (error) throw error;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+async function fetchBillingConfig(): Promise<{ provider: BillingProvider; enabled: boolean } | null> {
+  const { data, error } = await supabase
+    .from("platform_billing_config")
+    .select("provider, enabled")
+    .eq("id", true)
+    .maybeSingle();
+  if (error) throw error;
+  return data as { provider: BillingProvider; enabled: boolean } | null;
+}
+
+async function updateBillingProvider(provider: BillingProvider) {
+  const { error } = await supabase
+    .from("platform_billing_config")
+    .update({ provider })
+    .eq("id", true);
+  if (error) throw error;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────────
 export default function SAPaymentConfig() {
-  // ── API Keys state ─────────────────────────────────────────────────────────
+  // ── Billing provider state (tenant → NextSlot) ────────────────────────
+  const [billingProvider, setBillingProvider] = useState<BillingProvider>("yoco");
+  const [billingEnabled,  setBillingEnabled]  = useState(true);
+  const [providerLoading, setProviderLoading] = useState(true);
+  const [providerStatus,  setProviderStatus]  = useState<"idle"|"loading"|"done"|"error">("idle");
+  const [providerErr,     setProviderErr]     = useState("");
+
+  // ── API Keys state ────────────────────────────────────────────────────────
   const [secretKey,     setSecretKey]     = useState("");
   const [publicKey,     setPublicKey]     = useState("");
   const [showSecret,    setShowSecret]    = useState(false);
@@ -116,7 +144,39 @@ export default function SAPaymentConfig() {
 
   const WEBHOOK_URL = `https://kjibbbuceipnialfgflt.supabase.co/functions/v1/yoco-webhook`;
 
-  // ── Load saved values on mount ─────────────────────────────────────────────
+  // ── Load billing provider on mount ────────────────────────────────
+  const loadBillingConfig = useCallback(async () => {
+    setProviderLoading(true);
+    try {
+      const cfg = await fetchBillingConfig();
+      if (cfg) {
+        setBillingProvider(cfg.provider);
+        setBillingEnabled(cfg.enabled);
+      }
+    } catch {
+      // non-fatal — user can retry via Refresh
+    } finally {
+      setProviderLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadBillingConfig(); }, [loadBillingConfig]);
+
+  // ── Switch billing provider ────────────────────────────────────────
+  const switchProvider = async (next: BillingProvider) => {
+    if (next === billingProvider || providerStatus === "loading") return;
+    setProviderStatus("loading"); setProviderErr("");
+    try {
+      await updateBillingProvider(next);
+      setBillingProvider(next);
+      setProviderStatus("done");
+    } catch (e: any) {
+      setProviderStatus("error");
+      setProviderErr(e.message ?? "Failed to switch provider.");
+    }
+  };
+
+  // ── Load saved values on mount ────────────────────────────────────
   const loadSaved = useCallback(async () => {
     setKeysLoading(true);
     try {
@@ -139,7 +199,7 @@ export default function SAPaymentConfig() {
 
   useEffect(() => { loadSaved(); }, [loadSaved]);
 
-  // ── Save API keys ──────────────────────────────────────────────────────────
+  // ── Save API keys ────────────────────────────────────────────────────────
   const saveKeys = async () => {
     if (!secretKey.trim() || !publicKey.trim()) {
       setKeysStatus("error");
@@ -169,7 +229,7 @@ export default function SAPaymentConfig() {
     }
   };
 
-  // ── Register webhook via Yoco API ──────────────────────────────────────────
+  // ── Register webhook via Yoco API ─────────────────────────────────
   const registerWebhook = async () => {
     if (!secretKey.trim()) {
       setWebhookStatus("error");
@@ -212,7 +272,7 @@ export default function SAPaymentConfig() {
     }
   };
 
-  // ── Delete / deregister webhook ────────────────────────────────────────────
+  // ── Delete / deregister webhook ────────────────────────────────────
   const removeWebhook = async () => {
     if (!webhookId) return;
     setDeleteStatus("loading"); setDeleteErr("");
@@ -241,7 +301,7 @@ export default function SAPaymentConfig() {
     }
   };
 
-  // ── Copy to clipboard helper ───────────────────────────────────────────────
+  // ── Copy to clipboard helper ────────────────────────────────────────
   const copyWebhookSecret = async () => {
     try {
       await navigator.clipboard.writeText(webhookSecret);
@@ -252,11 +312,11 @@ export default function SAPaymentConfig() {
     }
   };
 
-  // ── Masked display ─────────────────────────────────────────────────────────
+  // ── Masked display ────────────────────────────────────────────────────────
   const maskKey = (k: string) =>
     k.length > 8 ? `${k.slice(0, 7)}${"..".padEnd(k.length - 12, ".")}.${k.slice(-4)}` : k;
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -266,13 +326,68 @@ export default function SAPaymentConfig() {
         </p>
       </div>
 
+      {/* ── 0. Billing Provider Switch ──────────────────────────────── */}
+      <GlassCard>
+        <SectionHeader
+          icon={ArrowLeftRight}
+          title="Billing Provider"
+          desc="Which gateway platform-monthly-billing and the self-serve upgrade checkout use to charge tenants for their NextSlot subscription."
+        />
+        <div className="p-5 space-y-4">
+          {providerLoading ? (
+            <div className="flex items-center gap-2 text-white/25 text-[12px] py-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading current provider…
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 p-1 rounded-xl w-fit" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                {(["ikhokha", "yoco"] as BillingProvider[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => switchProvider(p)}
+                    disabled={providerStatus === "loading"}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+                    style={
+                      billingProvider === p
+                        ? { background: "rgba(0,200,83,0.14)", border: "1px solid rgba(0,200,83,0.28)", color: "#00c853" }
+                        : { background: "transparent", border: "1px solid transparent", color: "rgba(255,255,255,0.35)" }
+                    }
+                  >
+                    {p === "ikhokha" ? "iKhokha" : "Yoco"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 text-[11px] text-white/30">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: billingEnabled ? "#00c853" : "rgba(255,255,255,0.2)" }} />
+                Monthly billing is currently {billingEnabled ? "enabled" : "disabled"}. Active provider:{" "}
+                <span className="font-mono text-white/50">{billingProvider}</span>
+              </div>
+
+              <StatusMsg status={providerStatus} errMsg={providerErr} />
+
+              <div
+                className="flex items-start gap-2 p-3 rounded-xl text-[11px] text-white/30"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}
+              >
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-white/20" />
+                <span>
+                  Switching here changes <span className="font-mono text-white/45">platform_billing_config.provider</span> immediately.
+                  New invoices created after the switch will use the selected gateway. Invoices already sent keep their original checkout link.
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </GlassCard>
+
       {keysLoading ? (
         <div className="flex items-center gap-2 text-white/25 text-[12px] py-6">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading saved configuration…
         </div>
       ) : (
         <>
-          {/* ── 1. API Keys ─────────────────────────────────────────────── */}
+          {/* ── 1. API Keys ─────────────────────────────────── */}
           <GlassCard>
             <SectionHeader
               icon={KeyRound}
@@ -377,7 +492,7 @@ export default function SAPaymentConfig() {
             </div>
           </GlassCard>
 
-          {/* ── 2. Webhook Registration ──────────────────────────────────── */}
+          {/* ── 2. Webhook Registration ──────────────────────────────── */}
           <GlassCard>
             <SectionHeader
               icon={Webhook}
@@ -522,7 +637,7 @@ export default function SAPaymentConfig() {
             </div>
           </GlassCard>
 
-          {/* ── 3. Payment link quick reference ─────────────────────────── */}
+          {/* ── 3. Payment link quick reference ────────────────────── */}
           <GlassCard>
             <SectionHeader
               icon={CreditCard}
@@ -532,10 +647,10 @@ export default function SAPaymentConfig() {
             <div className="p-5">
               <div className="space-y-2">
                 {[
-                  { plan: "Starter",      amount: "R299/mo" },
-                  { plan: "Professional", amount: "R499/mo" },
-                  { plan: "Studio",       amount: "R799/mo" },
-                  { plan: "Enterprise",   amount: "Custom"  },
+                  { plan: "Starter",      amount: "R99/mo" },
+                  { plan: "Flow",         amount: "R399/mo" },
+                  { plan: "Professional", amount: "R699/mo" },
+                  { plan: "Studio",       amount: "R1299/mo" },
                 ].map(({ plan, amount }) => (
                   <div
                     key={plan}
@@ -553,7 +668,8 @@ export default function SAPaymentConfig() {
                 ))}
               </div>
               <p className="text-[10px] text-white/20 mt-4">
-                Create a separate payment link per plan in{" "}
+                Pricing is applied dynamically per tenant plan by platform-monthly-billing — this is a reference only,
+                not a source of truth. Create a separate payment link per plan in{" "}
                 <a
                   href="https://dashboard.yoco.com"
                   target="_blank"
