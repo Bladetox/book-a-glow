@@ -18,12 +18,7 @@ export default function PlatformBillingTestCard() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("id,name,email,plan,subscription_status")
-        .eq("is_active", true)
-        .in("subscription_status", ["active", "trial", "lifetime_free"])
-        .order("name");
+      const { data, error } = await supabase.from("tenants").select("id,name,email,plan,subscription_status").eq("is_active", true).in("subscription_status", ["active", "trial", "lifetime_free"]).order("name");
       if (!mounted) return;
       if (error) { setStatus("error"); setMessage(error.message); }
       setTenants((data ?? []) as Tenant[]);
@@ -34,11 +29,8 @@ export default function PlatformBillingTestCard() {
   }, []);
 
   const selected = tenants.find((t) => t.id === tenantId);
-
   const sendTest = async () => {
-    if (!selected?.email || !/^\\d{4}-\\d{2}$/.test(month)) {
-      setStatus("error"); setMessage("Select a tenant with an email address and a valid billing month."); return;
-    }
+    if (!selected?.email || !/^\d{4}-\d{2}$/.test(month)) { setStatus("error"); setMessage("Select a tenant with an email address and a valid billing month."); return; }
     setSending(true); setStatus("loading"); setMessage("");
     try {
       const { data, error } = await supabase.functions.invoke("platform-monthly-billing", { body: { month, tenant_ids: [tenantId], manual_test: true } });
