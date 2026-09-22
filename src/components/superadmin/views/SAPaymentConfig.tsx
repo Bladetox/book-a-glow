@@ -5,10 +5,6 @@ import IkhokhaKeysCard from "./payment-config/IkhokhaKeysCard";
 import PlanPaymentLinksCard from "./payment-config/PlanPaymentLinksCard";
 
 // ─── Payment Configuration ───────────────────────────────────────────────────
-// Orchestrates the platform-level payment setup cards. Each card is a small,
-// independent component under ./payment-config/ so this file stays easy to
-// scan and edit — see that folder for BillingProviderCard, YocoKeysCard,
-// YocoWebhookCard, IkhokhaKeysCard and PlanPaymentLinksCard.
 export default function SAPaymentConfig() {
   return (
     <div className="space-y-6 max-w-2xl">
