@@ -28,6 +28,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // The email is structured as: evidence → bill → action. The tenant sees what
 // their business did on NextSlot before they see what NextSlot costs.
 //
+// Visual language: near-black header, warm off-white surfaces, gold accent.
+// This mirrors the app's palette. The glass/blur effects from the app are
+// deliberately NOT reproduced here — email clients can't render them
+// consistently. They are translated into subtle borders, warm surface
+// backgrounds, and a restrained card shadow.
+//
 // Revenue semantics: bookings.booking_date is the scheduled service date
 // (confirmed against production data — bookings can have booking_date well
 // after created_at). Month totals therefore describe services scheduled to
@@ -57,25 +63,36 @@ const IK_API_ENDPOINT = "https://api.ikhokha.com/public-api/v1/api/payment";
 const IK_API_PATH = "/public-api/v1/api/payment";
 const FAVICON_URL = "https://nextslot.co.za/favicon-96x96.png";
 
-// ── NextSlot brand tokens ────────────────────────────────────────────────────
-// Single source of truth for the email palette. Swap for your design token
-// values if they ever move.
+// ── NextSlot email tokens ────────────────────────────────────────────────────
+// Email-safe translation of the application's near-black / warm-champagne
+// visual language. No backdrop-filter, no blur, no CSS gradients — those
+// either don't render or render inconsistently across email clients.
+//   - glass, translated      → warm surface background + subtle warm border
+//   - gold glow, translated  → gold accent strip, gold section labels
+//   - dark glass, translated → near-black header with gold divider
 const BRAND = {
-  page:        "#f4f5f7",
-  card:        "#ffffff",
-  surface:     "#f8fafc",
-  ink:         "#0f172a",
-  body:        "#374151",
-  muted:       "#94a3b8",
-  line:        "#e8eaed",
-  track:       "#e6eaf2",
-  primary:     "#6366f1",
-  primaryDeep: "#4f46e5",
-  primarySoft: "#eef0fe",
-  up:          "#0f7b4f",
-  upSoft:      "#e6f4ed",
-  down:        "#b3261e",
-  downSoft:    "#fdecea",
+  page:    "#f7f7f5",
+  card:    "#ffffff",
+  surface: "#faf9f6",
+
+  ink:   "#121212",
+  body:  "#353535",
+  muted: "#777777",
+
+  line:   "#e5e3df",  // internal dividers
+  border: "#d8d5cf",  // outer card border
+
+  gold:     "#cdb58a",  // accent strip, CTA background
+  goldDeep: "#b99b68",  // current-month chart bar
+  goldSoft: "#f4eee4",  // positive delta background
+  goldText: "#6f5731",  // section labels, "up" delta text
+
+  success:     "#287a52",
+  successSoft: "#e9f4ee",
+  danger:      "#a9342b",
+  dangerSoft:  "#faecea",
+
+  track: "#e4e1db",  // historical chart bars
 };
 
 const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -170,19 +187,24 @@ const fmtHour = (h: number) => `${h % 12 || 12}${h < 12 ? "am" : "pm"}`;
 const isEarning = (b: { status: string }) =>
   b.status !== "cancelled" && b.status !== "no_show";
 
+const SYSTEM_FONT =
+  "-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif";
+
 // ── email building blocks ────────────────────────────────────────────────────
 
-// Honest delta badge — shows a real decline in red rather than hiding it.
+// Honest delta badge. Positive uses the brand gold (not a generic green);
+// negative uses a muted red so real declines are never hidden.
 function deltaPill(pct: number | null): string {
   if (pct === null || !Number.isFinite(pct)) {
     return `<span style="display:inline-block;padding:4px 11px;border-radius:999px;background:${BRAND.surface};color:${BRAND.muted};font-size:12px;font-weight:700;">First month tracked</span>`;
   }
   const up = pct >= 0;
-  return `<span style="display:inline-block;padding:4px 11px;border-radius:999px;background:${up ? BRAND.upSoft : BRAND.downSoft};color:${up ? BRAND.up : BRAND.down};font-size:12px;font-weight:700;">${up ? "↑" : "↓"} ${Math.abs(pct).toFixed(0)}% vs last month</span>`;
+  return `<span style="display:inline-block;padding:4px 11px;border-radius:999px;background:${up ? BRAND.goldSoft : BRAND.dangerSoft};color:${up ? BRAND.goldText : BRAND.danger};font-size:12px;font-weight:700;">${up ? "↑" : "↓"} ${Math.abs(pct).toFixed(0)}% vs last month</span>`;
 }
 
 // Table-based bar chart: a spacer row + a filled row per column. No flexbox,
-// no images, no JS — renders everywhere including Outlook desktop.
+// no images, no SVG, no CSS gradients — renders everywhere, Outlook desktop
+// included.
 function trendChart(
   trend: Array<{ month: string; revenue: number }>,
   currentMonth: string,
@@ -199,7 +221,7 @@ function trendChart(
       const h = t.revenue > 0 ? Math.max(4, Math.round((t.revenue / max) * H)) : 2;
       const gap = H - h;
       const isNow = t.month === currentMonth;
-      const fill = isNow ? BRAND.primaryDeep : BRAND.track;
+      const fill = isNow ? BRAND.goldDeep : BRAND.track;
       return `<td width="${colW}%" style="padding:0 4px;vertical-align:bottom;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr><td height="${gap}" style="height:${gap}px;line-height:0;font-size:0;">&nbsp;</td></tr>
@@ -271,6 +293,79 @@ async function sendEmail(
   const showEvidence =
     revenue > 0 || hasTrend || uniqueCustomers !== "—" || repeatRate !== "—";
 
+  // ── plain-text fallback ────────────────────────────────────────────────────
+  // Sent alongside the HTML. Some clients and some users prefer it; it also
+  // meaningfully reduces spam-classification risk when the HTML is heavy.
+  const deltaText =
+    deltaPct == null
+      ? "First month tracked"
+      : `${deltaPct >= 0 ? "+" : "-"}${Math.abs(deltaPct).toFixed(0)}% vs last month`;
+
+  const textLines: string[] = [
+    `NextSlot · ${period}`,
+    `Your monthly invoice`,
+    ``,
+    `Hi ${tenantName},`,
+    ``,
+    `Here's a quick look at your business last month — and your NextSlot invoice.`,
+    ``,
+    `Invoice number: ${invoice.invoice_number}`,
+    `Billing period: ${fmtDate(invoice.period_start)} – ${fmtDate(invoice.period_end)}`,
+    `Due date: ${fmtDate(invoice.due_date)}`,
+  ];
+
+  if (showEvidence) {
+    textLines.push(
+      ``,
+      `YOUR NEXTSLOT MONTH`,
+      ``,
+      `${money0(revenue)} — Booking revenue (${deltaText})`,
+      `${money0(revenue)} in booking revenue was recorded through NextSlot this month.`,
+      `Your NextSlot subscription was ${money(amount)}.`,
+      ``,
+      `Bookings: ${s.bookings_total ?? 0}`,
+      `Customers: ${uniqueCustomers}`,
+      `Returning: ${repeatRate}`,
+    );
+
+    if (hasObservation) {
+      textLines.push(``);
+      if (s.busiest_day) {
+        textLines.push(
+          `Your busiest period: ${s.busiest_day}${s.busiest_window ? ` · ${s.busiest_window}` : ""}`,
+        );
+      }
+      if (s.growth_hint) textLines.push(String(s.growth_hint));
+    }
+  }
+
+  textLines.push(
+    ``,
+    `YOUR INVOICE`,
+    ``,
+    `NextSlot ${planLabel} plan — ${period}: ${money(amount)}`,
+    `Amount due: ${money(amount)}`,
+  );
+
+  if (link) {
+    textLines.push(``, `Pay ${money(amount)} now: ${link}`);
+  } else {
+    textLines.push(
+      ``,
+      `Your payment link is being prepared and will arrive in a separate email shortly.`,
+      `If you'd rather not wait, reply to this email and we'll send it straight away.`,
+    );
+  }
+
+  textLines.push(
+    ``,
+    `Questions about this invoice? Reply to this email or WhatsApp us: https://wa.me/27686806115`,
+    ``,
+    `NextSlot — booking platform for service-based businesses`,
+  );
+
+  const text = textLines.join("\n");
+
   const html = `<!doctype html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -286,13 +381,16 @@ async function sendEmail(
   table { border-collapse:collapse !important; }
   img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
   a { text-decoration:none; }
-  /* Lock the palette so the invoice renders identically in light and dark. */
+  /* Pin the light palette inside Outlook.com's dark mode, so the invoice
+     renders identically regardless of the recipient's client theme. */
   [data-ogsc] .ns-page  { background-color:${BRAND.page} !important; }
   [data-ogsc] .ns-card  { background-color:${BRAND.card} !important; }
   [data-ogsc] .ns-surf  { background-color:${BRAND.surface} !important; }
   [data-ogsc] .ns-ink   { color:${BRAND.ink} !important; }
   [data-ogsc] .ns-body  { color:${BRAND.body} !important; }
   [data-ogsc] .ns-muted { color:${BRAND.muted} !important; }
+  [data-ogsc] .ns-gold-cta { background-color:${BRAND.gold} !important; }
+  [data-ogsc] .ns-gold-cta a { color:${BRAND.ink} !important; }
   @media (max-width:620px) {
     .ns-pad    { padding-left:24px !important; padding-right:24px !important; }
     .ns-hero   { font-size:34px !important; letter-spacing:-0.8px !important; }
@@ -308,17 +406,17 @@ async function sendEmail(
   <tr>
     <td align="center" style="padding:32px 12px;">
 
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="ns-card" style="width:100%;max-width:600px;background-color:${BRAND.card};border:1px solid ${BRAND.line};border-radius:16px;overflow:hidden;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="ns-card" style="width:100%;max-width:600px;background-color:${BRAND.card};border:1px solid ${BRAND.border};border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.05);">
 
-        <!-- ── header ─────────────────────────────────────────────────── -->
+        <!-- ── header · near-black ground, gold eyebrow, white title ─── -->
         <tr>
-          <td class="ns-pad" bgcolor="${BRAND.ink}" style="background-color:${BRAND.ink};padding:30px 40px 26px;text-align:center;">
-            <img src="${FAVICON_URL}" width="40" height="40" alt="NextSlot" style="display:block;margin:0 auto 12px;border-radius:10px;" />
-            <p style="margin:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:600;">NextSlot · ${escHtml(period)}</p>
-            <h1 style="margin:8px 0 0;font-size:24px;line-height:1.2;font-weight:700;color:#ffffff;letter-spacing:-0.4px;">Your monthly invoice</h1>
+          <td class="ns-pad" bgcolor="${BRAND.ink}" style="background-color:${BRAND.ink};padding:32px 40px 28px;text-align:center;">
+            <img src="${FAVICON_URL}" width="40" height="40" alt="NextSlot" style="display:block;margin:0 auto 14px;border-radius:10px;" />
+            <p style="margin:0;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:${BRAND.gold};font-weight:600;">NextSlot · ${escHtml(period)}</p>
+            <h1 style="margin:9px 0 0;font-size:25px;line-height:1.2;font-weight:700;color:#ffffff;letter-spacing:-0.4px;">Your monthly invoice</h1>
           </td>
         </tr>
-        <tr><td bgcolor="${BRAND.primaryDeep}" style="height:4px;line-height:4px;font-size:0;background-color:${BRAND.primaryDeep};">&nbsp;</td></tr>
+        <tr><td bgcolor="${BRAND.gold}" style="height:3px;line-height:3px;font-size:0;background-color:${BRAND.gold};">&nbsp;</td></tr>
 
         <!-- ── greeting + invoice meta ────────────────────────────────── -->
         <tr>
@@ -343,7 +441,7 @@ async function sendEmail(
           </td>
         </tr>
 
-        <!-- ── YOUR NEXTSLOT MONTH ────────────────────────────────────── -->
+        <!-- ── YOUR NEXTSLOT MONTH · warm surface panel ───────────────── -->
         ${
           showEvidence
             ? `<tr>
@@ -352,20 +450,16 @@ async function sendEmail(
               <tr>
                 <td style="padding:24px 24px 22px;">
 
-                  <p class="ns-label" style="margin:0 0 16px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:${BRAND.primaryDeep};">Your NextSlot Month</p>
+                  <p class="ns-label" style="margin:0 0 16px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:${BRAND.goldText};">Your NextSlot Month</p>
 
-                  <!-- hero -->
                   <p class="ns-ink ns-hero" style="margin:0;font-size:40px;line-height:1.05;font-weight:800;letter-spacing:-1.2px;color:${BRAND.ink};">${money0(revenue)}</p>
                   <p class="ns-body" style="margin:4px 0 12px;font-size:13px;color:${BRAND.body};">Booking revenue</p>
                   ${deltaPill(deltaPct)}
 
-                  <!-- neutral pairing: two numbers, no interpretation -->
                   <p class="ns-muted" style="margin:14px 0 0;font-size:12px;line-height:1.7;color:${BRAND.muted};">${money0(revenue)} in booking revenue was recorded through NextSlot this month.<br />Your NextSlot subscription was ${money(amount)}.</p>
 
-                  <!-- trend -->
                   ${chart ? `<div style="margin:22px 0 0;padding-top:20px;border-top:1px solid ${BRAND.line};">${chart}</div>` : ""}
 
-                  <!-- three supporting metrics -->
                   <div style="margin:22px 0 0;padding-top:20px;border-top:1px solid ${BRAND.line};">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
@@ -376,7 +470,6 @@ async function sendEmail(
                     </table>
                   </div>
 
-                  <!-- ── insight ───────────────────────────────────────── -->
                   ${
                     hasObservation
                       ? `<div style="margin:22px 0 0;padding-top:20px;border-top:1px solid ${BRAND.line};">
@@ -406,7 +499,7 @@ async function sendEmail(
         <!-- ── YOUR INVOICE ───────────────────────────────────────────── -->
         <tr>
           <td class="ns-pad" style="padding:30px 40px 0;">
-            <p class="ns-label" style="margin:0 0 14px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:${BRAND.primaryDeep};">Your Invoice</p>
+            <p class="ns-label" style="margin:0 0 14px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:${BRAND.goldText};">Your Invoice</p>
 
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${BRAND.line};">
               <tr>
@@ -424,15 +517,15 @@ async function sendEmail(
           </td>
         </tr>
 
-        <!-- ── CTA ────────────────────────────────────────────────────── -->
+        <!-- ── CTA · gold ground, near-black text ─────────────────────── -->
         ${
           link
             ? `<tr>
           <td class="ns-pad" align="center" style="padding:26px 40px 0;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td align="center" bgcolor="${BRAND.primaryDeep}" style="background-color:${BRAND.primaryDeep};border-radius:10px;">
-                  <a href="${escHtml(link)}" style="display:block;padding:17px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:.01em;">Pay ${money(amount)} now &nbsp;→</a>
+                <td align="center" bgcolor="${BRAND.gold}" class="ns-gold-cta" style="background-color:${BRAND.gold};border-radius:10px;">
+                  <a href="${escHtml(link)}" style="display:block;padding:17px 24px;font-family:${SYSTEM_FONT};font-size:16px;font-weight:700;color:${BRAND.ink};text-decoration:none;letter-spacing:.01em;">Pay ${money(amount)} now &nbsp;→</a>
                 </td>
               </tr>
             </table>
@@ -449,7 +542,7 @@ async function sendEmail(
         <!-- ── footer ─────────────────────────────────────────────────── -->
         <tr>
           <td class="ns-pad" style="padding:28px 40px 34px;">
-            <p class="ns-muted" style="margin:0 0 20px;font-size:12px;line-height:1.6;color:${BRAND.muted};">Questions about this invoice? Reply to this email or <a href="https://wa.me/27686806115" style="color:${BRAND.primaryDeep};font-weight:600;text-decoration:none;">chat with us on WhatsApp</a>.</p>
+            <p class="ns-muted" style="margin:0 0 20px;font-size:12px;line-height:1.6;color:${BRAND.muted};">Questions about this invoice? Reply to this email or <a href="https://wa.me/27686806115" style="color:${BRAND.goldText};font-weight:600;text-decoration:none;">chat with us on WhatsApp</a>.</p>
             <div style="border-top:1px solid ${BRAND.line};padding-top:18px;text-align:center;">
               <p class="ns-muted" style="margin:0;font-size:12px;color:${BRAND.muted};">NextSlot — booking platform for service-based businesses</p>
             </div>
@@ -466,7 +559,7 @@ async function sendEmail(
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], reply_to: replyTo, subject, html }),
+    body: JSON.stringify({ from, to: [to], reply_to: replyTo, subject, html, text }),
   });
   if (!r.ok) throw new Error(`Resend returned ${r.status}`);
 }
@@ -518,7 +611,6 @@ Deno.serve(async (req) => {
       return json({ error: `Unsupported billing provider: ${provider}` }, 503);
     }
 
-    // ── provider credentials ─────────────────────────────────────────────
     let yocoSecretKey = "";
     let ikAppId = "";
     let ikAppKey = "";
@@ -558,7 +650,6 @@ Deno.serve(async (req) => {
       Array.isArray(body.tenant_ids) && body.tenant_ids.length ? body.tenant_ids : null;
     if (manual && !tenantIds) return json({ error: "Manual tests require tenant_ids" }, 400);
 
-    // ── period boundaries ────────────────────────────────────────────────
     const { start, end } = bounds(month);
     const periodStart = start.toISOString().slice(0, 10);
     const periodEnd = new Date(end.getTime() - 86400000).toISOString().slice(0, 10);
@@ -566,7 +657,6 @@ Deno.serve(async (req) => {
     const due = new Date(end);
     due.setUTCDate(due.getUTCDate() + 7);
 
-    // ── tenant query ─────────────────────────────────────────────────────
     let tenantQuery = db
       .from("tenants")
       .select("id,name,email,plan,is_active,subscription_status")
@@ -585,7 +675,6 @@ Deno.serve(async (req) => {
     const callbackUrl = `${url}/functions/v1/platform-billing-webhook`;
 
     for (const t of tenants || []) {
-      // ── skip if this month's invoice already exists ────────────────────
       const { data: old } = await db
         .from("platform_invoices")
         .select("id,status")
@@ -597,7 +686,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // ── current month's bookings ───────────────────────────────────────
       const { data: bs, error: be } = await db
         .from("bookings")
         .select("id,status,total_amount")
@@ -619,7 +707,6 @@ Deno.serve(async (req) => {
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", t.id);
 
-      // ── 6-month revenue trend ──────────────────────────────────────────
       const trendStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 5, 1));
       const trendStartISO = trendStart.toISOString().slice(0, 10);
 
@@ -651,16 +738,13 @@ Deno.serve(async (req) => {
         ? previousTrendEntry.revenue
         : null;
 
-      // ── optional depth metrics ─────────────────────────────────────────
       // Identity resolution prefers canonical_client_id, then client_id, then
       // normalized guest_email, so a customer who books as a guest once and
       // then registers is counted as the same person across months.
       //
       // Cancelled and no-show bookings are excluded from the busiest-period
-      // calculation (so a cancelled Saturday doesn't get reported as "your
-      // busiest day") but they are NOT excluded from the customer count —
-      // engagement with the business counts even when the booking didn't
-      // complete.
+      // calculation but NOT from the customer count — engagement counts even
+      // when the booking didn't complete.
       let unique_customers: number | null = null;
       let repeat_rate_pct: number | null = null;
       let busiest_day: string | null = null;
@@ -758,7 +842,6 @@ Deno.serve(async (req) => {
         growth_hint,
       };
 
-      // ── create the invoice row ─────────────────────────────────────────
       const amount = PLAN_PRICES[t.plan];
       const externalTransactionID = `NSINV-${t.id}-${month.replace("-", "")}-${Date.now()}`;
 
@@ -787,7 +870,6 @@ Deno.serve(async (req) => {
         .single();
       if (ie) throw ie;
 
-      // ── checkout link ──────────────────────────────────────────────────
       let link = "";
       let yocoCheckoutId = "";
 
@@ -875,10 +957,6 @@ Deno.serve(async (req) => {
         await db.from("platform_invoices").update(update).eq("id", created.id);
       }
 
-      // ── email ──────────────────────────────────────────────────────────
-      // Sent whether or not a checkout link was created. If the link is
-      // missing, the template falls back to a "we'll send it separately"
-      // message so the tenant still has a record of what they owe.
       let emailStatus = invoice.email_delivery_status;
       if (resend && t.email) {
         try {
