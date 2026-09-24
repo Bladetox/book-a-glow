@@ -88,6 +88,15 @@ const toWhatsAppSupportHref = (phone: string, clientName: string, serviceNames: 
   return `https://wa.me/${digits}?text=${text}`;
 };
 
+// PayShap / banking apps reject +27 format; use local format (0844297240).
+const toLocalSaPhone = (raw: string): string => {
+  let digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.startsWith("0027")) digits = digits.slice(4);
+  else if (digits.startsWith("27") && digits.length >= 11) digits = digits.slice(2);
+  else if (digits.startsWith("0")) return digits;
+  return digits ? `0${digits}` : "";
+};
+
 // ── Build WhatsApp balance request message ───────────────────────────────────
 const toWhatsAppBalanceHref = (
   phone: string,
@@ -98,7 +107,7 @@ const toWhatsAppBalanceHref = (
   tenantPhone: string,
 ) => {
   const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
-  const text = `Hi ${clientName} 👋\n\nThank you for choosing ${tenantName} — it was a pleasure having you!\n\nYour remaining balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${tenantPhone}\n2️⃣ Open your banking app → PayShap or Instant EFT\n3️⃣ Send *R${balanceDue.toFixed(2)}* to the number above\n4️⃣ Use your full name as the payment reference\n\nAny questions? Reply here 😊`;
+  const text = `Hi ${clientName} 👋\n\nThank you for choosing ${tenantName} — it was a pleasure having you!\n\nYour remaining balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${toLocalSaPhone(tenantPhone)}\n2️⃣ Open your banking app → PayShap or Instant EFT\n3️⃣ Send *R${balanceDue.toFixed(2)}* to the number above\n4️⃣ Use your full name as the payment reference\n\nAny questions? Reply here 😊`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 };
 

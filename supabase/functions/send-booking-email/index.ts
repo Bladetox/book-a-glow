@@ -198,6 +198,17 @@ function normalizePhone(raw: string | null | undefined): string | null {
   return digits;
 }
 
+// Formats a SA phone number in local format (e.g. 0844297240) for
+// PayShap / banking apps, which reject the +27 international format.
+function toLocalSaPhone(raw: string | null | undefined): string {
+  if (!raw) return "";
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.startsWith("0027")) digits = digits.slice(4);
+  else if (digits.startsWith("27") && digits.length >= 11) digits = digits.slice(2);
+  else if (digits.startsWith("0")) return digits;
+  return digits ? `0${digits}` : "";
+}
+
 async function getConsistencyEmailContext(
   supabase: ReturnType<typeof createClient>,
   booking: any,
@@ -971,6 +982,7 @@ Deno.serve(async (req) => {
     const tenantName    = escapeHtml(tenant?.name ?? "Beauty Studio");
     const tenantAddress = escapeHtml(tenant?.address ?? "");
     const tenantPhone   = escapeHtml(tenant?.phone ?? "");
+    const tenantPayshapNumber = escapeHtml(toLocalSaPhone(tenant?.phone));
 
     const tenantEmail: string | null =
       (tenant?.email && tenant.email.trim() !== "")
@@ -1105,7 +1117,7 @@ Deno.serve(async (req) => {
 
               <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 1 &mdash; Copy this number</p>
               <div style="background:#fff;border-radius:8px;border:2px solid #000;padding:14px 18px;margin:0 0 18px;text-align:center;">
-                <p class="tm" style="margin:0;font-size:26px;font-weight:700;letter-spacing:.06em;color:#000;font-family:monospace,monospace;">${tenantPhone}</p>
+                <p class="tm" style="margin:0;font-size:26px;font-weight:700;letter-spacing:.06em;color:#000;font-family:monospace,monospace;">${tenantPayshapNumber}</p>
                 <p class="tl" style="margin:4px 0 0;font-size:11px;color:#888;">PayShap number for ${tenantName}</p>
               </div>
 
@@ -1665,7 +1677,7 @@ Deno.serve(async (req) => {
 
                 <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 1 &mdash; Copy this number</p>
                 <div style="background:#fff;border-radius:8px;border:2px solid #000;padding:14px 18px;margin:0 0 18px;text-align:center;">
-                  <p class="tm" style="margin:0;font-size:26px;font-weight:700;letter-spacing:.06em;color:#000;font-family:monospace,monospace;">${tenantPhone}</p>
+                  <p class="tm" style="margin:0;font-size:26px;font-weight:700;letter-spacing:.06em;color:#000;font-family:monospace,monospace;">${tenantPayshapNumber}</p>
                   <p class="tl" style="margin:4px 0 0;font-size:11px;color:#888;">PayShap number for ${tenantName}</p>
                 </div>
 
