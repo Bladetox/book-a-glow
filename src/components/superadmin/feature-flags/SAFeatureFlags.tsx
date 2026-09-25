@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ALL_FLAGS, PLATFORM_TENANT_ID, flagKeys, flagSettingKey, parseFlagRows,
-} from "./planFeatureMap";
+} from "@/lib/featureFlags/registry";
 import {
   LifetimeBanner, LoadingBlock, PlanSections, RefreshButton, SavedButton, TenantPicker,
   type SaveStatus,

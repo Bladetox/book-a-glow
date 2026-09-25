@@ -1,27 +1,20 @@
 import { AlertTriangle, Building2, ChevronDown, Flag, Loader2, RefreshCw, Save } from "lucide-react";
-import { PLAN_GROUPS, type PlanFeature, type PlanGroup } from "./planFeatureMap";
+import { FEATURE_REGISTRY, PLAN_META, PLAN_ORDER, type FeatureEntry, type FlagKey, type PlanId } from "@/lib/featureFlags/registry";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-// ── FeatureToggleRow ─────────────────────────────────────────────────────────
 export function FeatureToggleRow({
   feature, enabled, onToggle, dimmed,
 }: {
-  feature: PlanFeature;
+  feature: FeatureEntry;
   enabled: boolean;
   onToggle: () => void;
   dimmed?: boolean;
 }) {
   const badge =
-    feature.status === "partial"  ? "partial wiring"  :
-    feature.status === "unwired"  ? "not yet wired"   :
-    feature.status === "internal" ? "internal only"   :
-    feature.status === "orphan"   ? "orphan row"      : null;
-
-  const badgeTone =
-    feature.status === "orphan"
-      ? "text-red-300/70 bg-red-400/[0.06] border-red-400/[0.14]"
-      : "text-amber-300/60 bg-amber-400/[0.06] border-amber-400/[0.12]";
+    feature.status === "partial"  ? "partial wiring" :
+    feature.status === "unwired"  ? "not yet wired"  :
+    feature.status === "internal" ? "internal only"  : null;
 
   return (
     <div className={`flex items-center justify-between px-5 py-4 transition-opacity ${dimmed ? "opacity-40" : ""}`}>
@@ -31,13 +24,18 @@ export function FeatureToggleRow({
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm text-white/80">{feature.label}</p>
             {badge && (
-              <span className={`text-[9px] uppercase tracking-wider rounded px-1.5 py-px border ${badgeTone}`}>
+              <span className="text-[9px] uppercase tracking-wider text-amber-300/60 bg-amber-400/[0.06] border border-amber-400/[0.12] rounded px-1.5 py-px">
                 {badge}
               </span>
             )}
           </div>
           <p className="text-[11px] text-white/35 mt-0.5">{feature.desc}</p>
-          <p className="text-[10px] text-white/20 font-mono mt-0.5">{feature.key}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-[10px] text-white/20 font-mono">{feature.key}</p>
+            {feature.wired === "none" && (
+              <span className="text-[10px] text-white/25 italic">This switch is not wired</span>
+            )}
+          </div>
         </div>
       </div>
       <button
@@ -57,58 +55,52 @@ export function FeatureToggleRow({
   );
 }
 
-// ── PlanSection ──────────────────────────────────────────────────────────────
-export function PlanSection({
-  group, flags, onToggle, isLifetime,
-}: {
-  group: PlanGroup;
-  flags: Record<string, boolean>;
-  onToggle: (key: string) => void;
-  isLifetime?: boolean;
-}) {
-  const enabledCount = group.features.filter(f => flags[f.key]).length;
-  return (
-    <div>
-      <div className="flex items-baseline justify-between px-1 mb-1.5">
-        <div>
-          <p className="text-[11px] uppercase tracking-widest text-white/40 font-semibold">{group.label}</p>
-          <p className="text-[10px] text-white/25">{group.subtitle}</p>
-        </div>
-        <p className="text-[10px] text-white/25 tabular-nums">
-          {enabledCount}/{group.features.length}
-        </p>
-      </div>
-      <div className="bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05]">
-        {group.features.map(f => (
-          <FeatureToggleRow
-            key={f.key}
-            feature={f}
-            enabled={isLifetime ? true : (flags[f.key] ?? false)}
-            onToggle={() => onToggle(f.key)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function PlanSections({
   flags, onToggle, isLifetime,
 }: {
   flags: Record<string, boolean>;
-  onToggle: (key: string) => void;
+  onToggle: (key: FlagKey) => void;
   isLifetime?: boolean;
 }) {
   return (
     <div className="space-y-6">
-      {PLAN_GROUPS.map(group => (
-        <PlanSection key={group.id} group={group} flags={flags} onToggle={onToggle} isLifetime={isLifetime} />
-      ))}
+      <p className="text-[10px] text-white/25 italic px-1">
+        Plan inheritance is a pricing rule. Toggles here set per-tenant availability; they do not
+        currently enforce the cascade on their own.
+      </p>
+      {PLAN_ORDER.map((planId: PlanId) => {
+        const features = FEATURE_REGISTRY.filter(f => f.plan === planId);
+        if (!features.length) return null;
+        const meta = PLAN_META[planId];
+        const enabledCount = features.filter(f => flags[f.key]).length;
+        return (
+          <div key={planId}>
+            <div className="flex items-baseline justify-between px-1 mb-1.5">
+              <div>
+                <p className="text-[11px] uppercase tracking-widest text-white/40 font-semibold">{meta.label}</p>
+                <p className="text-[10px] text-white/25">{meta.subtitle}</p>
+              </div>
+              <p className="text-[10px] text-white/25 tabular-nums">
+                {enabledCount}/{features.length}
+              </p>
+            </div>
+            <div className="bg-[hsl(220,13%,7%)] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.05]">
+              {features.map(f => (
+                <FeatureToggleRow
+                  key={f.key}
+                  feature={f}
+                  enabled={isLifetime ? true : (flags[f.key] ?? false)}
+                  onToggle={() => onToggle(f.key)}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// ── TenantPicker ─────────────────────────────────────────────────────────────
 interface TenantOption { id: string; name: string; is_lifetime_free: boolean; }
 
 export function TenantPicker({
@@ -141,7 +133,6 @@ export function TenantPicker({
   );
 }
 
-// ── Buttons — now status-aware with error surface ────────────────────────────
 export function SavedButton({
   status, errorMsg, onClick, label = "Save", disabled,
 }: {
@@ -155,7 +146,6 @@ export function SavedButton({
     status === "saved" ? "bg-[rgba(0,200,83,0.08)] border-[rgba(0,200,83,0.20)] text-[#00c853]" :
     status === "error" ? "bg-[rgba(248,113,113,0.08)] border-[rgba(248,113,113,0.22)] text-red-300" :
                          "bg-[rgba(0,200,83,0.12)] border-[rgba(0,200,83,0.25)] text-[#00c853] hover:bg-[rgba(0,200,83,0.20)]";
-
   return (
     <div className="flex items-center gap-2">
       {status === "error" && errorMsg && (
