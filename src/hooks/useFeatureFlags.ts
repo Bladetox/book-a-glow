@@ -7,53 +7,14 @@
  *   3. accountState === "arrears" → only ARREARS_ALLOWED flags are true regardless of DB.
  *   4. accountState === "active"  → global defaults → tenant overrides.
  *
- * FLAG_KEYS must stay in sync with SAFeatureFlags.tsx FLAG_DEFS.
+ * Keys and plan metadata come from src/lib/featureFlags/registry.ts.
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { FLAG_KEYS, flagSettingKey, type FlagKey, type FeatureFlags } from "@/lib/featureFlags/registry";
 
-export const FLAG_KEYS = [
-  // Core booking
-  "slot_hold",
-  "call_out",
-  "multi_staff",
-  "suggested_addons",
-  "consultations",
-  "special_occasions",
-  // Notifications & comms
-  "email_confirmations",
-  "whatsapp_reminders",
-  "whatsapp_balance",
-  "broadcast_email",
-  // Payments
-  "payshap_payments",
-  "yoco_payments",
-  "payfast_payments",
-  "deposit_payments",
-  // Calendar
-  "google_calendar_sync",
-  "add_to_calendar",
-  // Reviews & reputation
-  "review_generation",
-  "gmb_integration",
-  // Client management
-  "blocked_clients",
-  "client_alerts",
-  "loyalty_module",
-  "consistency_pricing",
-  // Inventory
-  "stock_module",
-  "stock_barcode_scan",
-  // AI & insights
-  "ai_insights",
-  // Integrations & platform
-  "integrations_tab",
-  "custom_domain",
-  "pwa_prompt",
-] as const;
-
-export type FlagKey = (typeof FLAG_KEYS)[number];
-export type FeatureFlags = Record<FlagKey, boolean>;
+export { FLAG_KEYS };
+export type { FlagKey, FeatureFlags };
 
 /**
  * Features kept ON when a tenant is in arrears.
@@ -69,7 +30,7 @@ const ARREARS_ALLOWED: ReadonlySet<FlagKey> = new Set<FlagKey>([
 const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 const GRACE_PERIOD_MS    = 7 * 24 * 60 * 60 * 1000;
 
-const appSettingsKeys = FLAG_KEYS.map((k) => `feature_flag_${k}`);
+const appSettingsKeys = FLAG_KEYS.map(flagSettingKey);
 
 export type AccountState = "active" | "trial" | "arrears" | "blocked";
 
