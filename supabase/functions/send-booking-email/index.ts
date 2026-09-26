@@ -31,8 +31,8 @@ function formatTime(timeStr: string): string {
 
 function row(label: string, value: string, bold = false): string {
   return `<tr>
-    <td style="padding:11px 0;font-size:14px;line-height:1.5;border-bottom:1px solid #e8e8e8;color:#999999;width:40%;font-family:-apple-system,sans-serif;">${label}</td>
-    <td style="padding:11px 0;font-size:14px;line-height:1.5;border-bottom:1px solid #e8e8e8;color:#111111;font-weight:${bold ? "700" : "600"};font-family:-apple-system,sans-serif;">${value}</td>
+    <td class="ol od" style="padding:11px 0;font-size:14px;line-height:1.5;border-bottom:1px solid #e8e8e8;color:#999999;width:40%;font-family:-apple-system,sans-serif;">${label}</td>
+    <td class="ov od" style="padding:11px 0;font-size:14px;line-height:1.5;border-bottom:1px solid #e8e8e8;color:#111111;font-weight:${bold ? "700" : "600"};font-family:-apple-system,sans-serif;">${value}</td>
   </tr>`;
 }
 
@@ -92,16 +92,27 @@ function buildGcalLink(params: {
 
 const EMAIL_STYLES = `
   @media (prefers-color-scheme:dark){
-    .eb{background-color:#0d0d0d!important}.ec{background-color:#161616!important;border-color:#2a2a2a!important}
-    .eh{background-color:#161616!important;border-bottom:1px solid #2a2a2a!important}.es{background-color:#1e1e1e!important}
-    .tm{color:#f0f0f0!important}.tl{color:#999!important}.tv{color:#f0f0f0!important}.tf{color:#666!important}.dv{border-bottom-color:#2a2a2a!important}
+    .eb{background-color:#0d0d0d!important}
+    .ec{background-color:#161616!important;border-color:#2a2a2a!important}
+    .eh{background-color:#161616!important;border-bottom:1px solid #2a2a2a!important}
+    .es{background-color:#1e1e1e!important}
+    .tm{color:#f0f0f0!important}
+    .tl{color:#b8b8b8!important}
+    .tv{color:#f0f0f0!important}
+    .tf{color:#888!important}
+    .tlink{color:#f0f0f0!important;text-decoration-color:#f0f0f0!important}
+    .dv{border-bottom-color:#2a2a2a!important}
   }
 `;
 
 const OWNER_STYLES = `
   @media (prefers-color-scheme:dark){
-    .ob{background-color:#0d0d0d!important}.ow{background-color:#161616!important;border-color:#2a2a2a!important}
-    .ot{color:#f0f0f0!important}.ol{color:#aaa!important}.ov{color:#f0f0f0!important}.od{border-bottom-color:#2a2a2a!important}
+    .ob{background-color:#0d0d0d!important}
+    .ow{background-color:#161616!important;border-color:#2a2a2a!important}
+    .ot{color:#f0f0f0!important}
+    .ol{color:#b8b8b8!important}
+    .ov{color:#f0f0f0!important}
+    .od{border-bottom-color:#2a2a2a!important}
   }
 `;
 
@@ -111,6 +122,10 @@ const OWNER_STYLES = `
  * The optional 6th param `preheader` is inserted as a hidden div at the top
  * of <body> so email clients surface it as the inbox preview line. Defaults
  * to "" so existing call sites are unaffected.
+ *
+ * Meta tags `color-scheme` and `supported-color-schemes` tell aggressive
+ * dark-mode clients (Gmail Android especially) to respect our
+ * prefers-color-scheme CSS instead of force-inverting the entire email.
  */
 function emailWrapper(
   logoHtml: string,
@@ -129,6 +144,8 @@ function emailWrapper(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${EMAIL_STYLES}</style>
 </head>
@@ -902,8 +919,8 @@ Deno.serve(async (req) => {
     const supabase    = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json();
-    const { booking_id, tenant_id, email_type, payment_url } = body;
-    console.log("send-booking-email called:", { booking_id, tenant_id, email_type });
+    const { booking_id, tenant_id, email_type, payment_url, balance_settled } = body;
+    console.log("send-booking-email called:", { booking_id, tenant_id, email_type, balance_settled });
 
     if (!booking_id || !email_type) {
       return new Response(JSON.stringify({ error: "booking_id and email_type are required" }), {
@@ -1171,7 +1188,7 @@ Deno.serve(async (req) => {
           </td></tr>
 
           <tr><td style="padding:0 36px 26px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
 
@@ -1209,6 +1226,8 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
@@ -1339,6 +1358,8 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
@@ -1415,7 +1436,7 @@ Deno.serve(async (req) => {
         }) : null;
 
         const locationDetailRow = clientMapsLink
-          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
+          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" class="tlink" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
           : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
 
         const paymentRows = isFullPayment
@@ -1448,7 +1469,7 @@ Deno.serve(async (req) => {
             ${calendarButton(gcalBookingLink)}
           </td></tr>
           <tr><td style="padding:0 36px 26px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
 
@@ -1481,6 +1502,8 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
@@ -1537,7 +1560,7 @@ Deno.serve(async (req) => {
         }) : null;
 
         const locationDetailRow = clientMapsLink
-          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
+          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" class="tlink" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
           : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
 
         const clientBody = `
@@ -1564,7 +1587,7 @@ Deno.serve(async (req) => {
             ${calendarButton(gcalBookingLink)}
           </td></tr>
           <tr><td style="padding:0 36px 26px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
 
@@ -1597,6 +1620,8 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
@@ -1669,7 +1694,7 @@ Deno.serve(async (req) => {
               <a href="${payment_url}" target="_blank" style="display:inline-block;padding:14px 32px;border-radius:10px;background:#000;color:#fff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:.04em;">Pay Balance Now</a>
             </td></tr>
             <tr><td style="padding:0 36px 26px;">
-              <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+              <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
             </td></tr>
           `;
 
@@ -1728,7 +1753,7 @@ Deno.serve(async (req) => {
             </td></tr>
 
             <tr><td style="padding:14px 36px 26px;">
-              <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+              <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
             </td></tr>
           `;
 
@@ -1774,7 +1799,7 @@ Deno.serve(async (req) => {
             <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Thank you for choosing <strong>${tenantName}</strong> — we hope to see you again soon!</p>
           </td></tr>
           <tr><td style="padding:0 36px 26px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
           </td></tr>
         `;
 
@@ -1795,6 +1820,8 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <link rel="icon" href="https://nextslot.co.za/favicon.ico">
   <style>${OWNER_STYLES}</style>
 </head>
@@ -1833,7 +1860,9 @@ Deno.serve(async (req) => {
     // SERVICE THANK YOU (+ review ask + private WhatsApp channel)
     // Triggered when the tenant clicks "Mark as Serviced" on a fully-paid
     // booking, regardless of payment method (PayShap, Yoco, PayFast,
-    // iKhokha).
+    // iKhokha). Also triggered by the compound "Mark Paid & Serviced"
+    // action, which passes balance_settled: true to render a compact
+    // "Your balance is now settled." line in the support sentence.
     //
     // Hierarchy:
     //   1. Personalised headline (emotional hook)
@@ -1978,7 +2007,7 @@ Deno.serve(async (req) => {
 
           <tr><td style="padding:0 36px 26px;">
             <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">
-              Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a>
+              Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a>
             </p>
           </td></tr>
         `;
