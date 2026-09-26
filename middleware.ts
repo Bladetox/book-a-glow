@@ -10,8 +10,14 @@ const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 // 'favicon' removed so tenant favicon requests reach this middleware.
 // NOTE: we must intercept ALL requests on tenant subdomains — not just
 // text/html — because crawlers (WhatsApp, iMessage, Slack) omit Accept.
+//
+// runtime: "nodejs" — Vercel deprecated the edge runtime for middleware.
+// This code uses only standard fetch / Request / Response / URL APIs, all
+// available on both runtimes. Migrating to nodejs removes the deprecation
+// warning and future-proofs against edge runtime removal.
 export const config = {
   matcher: "/((?!_vercel|_next/static|_next/image|assets|robots|sitemap|placeholder).*)",
+  runtime: "nodejs",
 };
 
 /** Resolve tenant slug from hostname, or null for marketing domains. */
@@ -60,7 +66,12 @@ export default async function middleware(request: Request): Promise<Response> {
   if (!tenantSlug) return fetch(request);
 
   // ── Static assets — pass through (JS/CSS bundles, images etc.) ──────────
-  const isAsset = /\.(?:js|css|woff2?|ttf|otf|eot|map|json|webp|avif|gif|mp4|webm|ico)$/.test(path);
+  // Extended to cover png/jpg/jpeg/svg/xml/txt/webmanifest, which were
+  // previously falling through to the HTML branch. Tenants without a logo
+  // request /pwa-192.png and /pwa-512.png as manifest icon fallbacks; if
+  // those requests returned HTML instead of the image, PWA installation
+  // would fail on those tenants.
+  const isAsset = /\.(?:js|css|woff2?|ttf|otf|eot|map|json|webp|avif|gif|mp4|webm|ico|png|jpe?g|svg|xml|txt|webmanifest)$/.test(path);
   if (isAsset) return fetch(request);
 
   // ── Favicon / apple-touch-icon → redirect to tenant logo ────────────
