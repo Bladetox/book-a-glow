@@ -38,8 +38,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   // Google Maps
   "google_maps_api_key",
   // Google Reviews
-  "google_place_id",
-  "google_review_link",
+  "google_review_url",
   // Google Calendar
   "google_calendar_id",
   "gcal_connected",
@@ -92,6 +91,7 @@ const SAFE_TENANT_FIELDS = [
   "max_advance_days",
   "travel_buffer_minutes",
   "notification_preferences",
+  "google_review_url",
   "created_at",
   "updated_at",
 ].join(", ");
