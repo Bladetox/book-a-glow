@@ -15,13 +15,25 @@
 --   * Anonymous callers rejected (grant revocation + explicit check)
 --   * Booking row locked; tenant_id read from the row, never caller-supplied
 --   * Authorization via is_tenant_admin / is_super_admin / is_platform_owner
---   * Seven-transition state machine enforced
+--   * Twelve-transition state machine enforced (every pair the live UI
+--     can produce — nothing more)
 --   * Same-value writes rejected
 --   * EXECUTE retained for authenticated; revoked from PUBLIC and anon
 --
 -- Signature and return shape are preserved:
 --   update_booking_status(uuid, text) → TABLE(success boolean, message text)
 -- Callers require no code change.
+--
+-- Caller inventory (verified against repo):
+--   * AdminBookings.tsx Confirm dialog       → pending         → confirmed
+--   * AdminBookings.tsx Cancel dialog        → {pending, pending_payment,
+--                                                payment_claimed, confirmed}
+--                                                → cancelled
+--   * AdminBookings.tsx Mark Serviced        → {pending, pending_payment,
+--                                                payment_claimed, confirmed,
+--                                                in_progress} → completed
+--   * usePayshapPayments.ts confirm          → payment_claimed → confirmed
+--   * usePayshapPayments.ts reject           → payment_claimed → pending
 -- =====================================================================
 
 CREATE OR REPLACE FUNCTION public.update_booking_status(
@@ -75,15 +87,29 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  -- Transition state machine (D2, frozen spec).
+  -- Transition state machine.
+  -- Twelve rows — every source→target pair the live UI can produce.
   v_transition_ok := CASE
+    -- Confirmations
     WHEN v_current_status = 'pending'         AND p_new_status = 'confirmed' THEN true
+    WHEN v_current_status = 'payment_claimed' AND p_new_status = 'confirmed' THEN true
+
+    -- PayShap reject
+    WHEN v_current_status = 'payment_claimed' AND p_new_status = 'pending'   THEN true
+
+    -- Cancellations
     WHEN v_current_status = 'pending'         AND p_new_status = 'cancelled' THEN true
     WHEN v_current_status = 'pending_payment' AND p_new_status = 'cancelled' THEN true
-    WHEN v_current_status = 'payment_claimed' AND p_new_status = 'confirmed' THEN true
-    WHEN v_current_status = 'payment_claimed' AND p_new_status = 'pending'   THEN true
     WHEN v_current_status = 'payment_claimed' AND p_new_status = 'cancelled' THEN true
     WHEN v_current_status = 'confirmed'       AND p_new_status = 'cancelled' THEN true
+
+    -- Mark as Serviced
+    WHEN v_current_status = 'pending'         AND p_new_status = 'completed' THEN true
+    WHEN v_current_status = 'pending_payment' AND p_new_status = 'completed' THEN true
+    WHEN v_current_status = 'payment_claimed' AND p_new_status = 'completed' THEN true
+    WHEN v_current_status = 'confirmed'       AND p_new_status = 'completed' THEN true
+    WHEN v_current_status = 'in_progress'     AND p_new_status = 'completed' THEN true
+
     ELSE false
   END;
 
