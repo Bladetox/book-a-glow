@@ -111,6 +111,7 @@ const SAFE_UPDATE_KEYS = new Set([
   "travel_buffer_minutes",
   "custom_domain",
   "notification_preferences",
+  "google_review_url",
 ]);
 
 export function useTenantSettings() {
