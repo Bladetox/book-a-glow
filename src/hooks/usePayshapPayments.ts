@@ -163,11 +163,19 @@ const balanceDue = Number(bookingData?.balance_due ?? 0);
 // after deposit, the client paid in full via Payshap.
 const intentField = (bookingData as any)?.payshap_payment_intent as string | null;
 const referenceField = (bookingData as any)?.payshap_reference as string | null;
+const depositAlreadyPaid = (bookingData as any)?.deposit_paid === true;
+// NOTE: depositAlreadyPaid covers the final/balance claim for a deposit
+// booking — if the deposit was already marked paid before this claim,
+// this confirmation must be for the remaining balance, so it completes
+// full payment (previously this case fell through to `deposit_paid: true`
+// only, leaving balance_due > 0 and full_payment_received false forever,
+// which hid the "Mark as Serviced" button for PayShap deposit bookings).
 const isFullPayment =
 intentField === "full" ||
 depositAmount === 0 ||
 balanceDue === 0 ||
-totalAmount === depositAmount;
+totalAmount === depositAmount ||
+depositAlreadyPaid;
 const bookingFlags = isFullPayment
 ? { deposit_paid: true, full_payment_received: true, balance_due: 0 }
 : { deposit_paid: true };

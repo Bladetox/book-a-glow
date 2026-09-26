@@ -1792,6 +1792,63 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ======================================================================
+    // SERVICE THANK YOU (+ gentle review ask)
+    // Triggered when the tenant clicks "Mark as Serviced" on a fully-paid
+    // booking, regardless of payment method (PayShap, Yoco, PayFast,
+    // iKhokha). Thanks the client and — only if the tenant has configured
+    // one in their admin settings — nudges for a Google review.
+    // ======================================================================
+    if (email_type === "service_thank_you") {
+      if (clientEmail) {
+        const reviewSection = reviewLink
+          ? `
+            <tr><td style="padding:0 36px 26px;">
+              <div style="background:#f7f7f7;border-radius:10px;border:1px solid #e0e0e0;padding:20px 22px;text-align:center;">
+                <p class="tl" style="margin:0 0 14px;font-size:13px;color:#555;line-height:1.6;">If you enjoyed your visit, a quick review would mean the world to ${tenantName} — it only takes a minute.</p>
+                <a href="${reviewLink}" target="_blank" style="display:inline-block;padding:12px 28px;border-radius:10px;background:#000;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">Leave a Review</a>
+              </div>
+            </td></tr>
+          `
+          : "";
+
+        const clientBody = `
+          <tr><td style="padding:28px 36px 10px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
+            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">
+              Thank you for choosing <strong>${tenantName}</strong> — it was a pleasure having you. We hope you loved the results!
+            </p>
+          </td></tr>
+          <tr><td style="padding:18px 36px 26px;">
+            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Visit Details</p>
+            ${detailTable(
+              detailRow("Service", serviceNames) +
+              detailRow("Date", formattedDate) +
+              detailRow("Time", formattedTime, true)
+            )}
+          </td></tr>
+          ${reviewSection}
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+          </td></tr>
+        `;
+
+        await send({
+          from:     `${tenantName} <bookings@nextslot.co.za>`,
+          reply_to: tenantEmail ?? undefined,
+          to:       [clientEmail],
+          subject:  `Thank you for choosing ${tenantName} 💛`,
+          html:     emailWrapper(
+            logoHtml,
+            tenantName,
+            "Thank You",
+            clientBody,
+            `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`
+          ),
+        });
+      }
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

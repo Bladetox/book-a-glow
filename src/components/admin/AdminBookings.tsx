@@ -616,11 +616,13 @@ const buildPayshapBalanceUrl = (b: BookingRow) =>
       if (!clientEmail) throw new Error("No client email on record for this booking");
       if (!balance || balance <= 0) throw new Error("No outstanding balance");
 
-      // ── PayShap path: skip Yoco, use the /pay/:bookingId page ─────────────
+      // ── PayShap path: no checkout link — send the step-by-step PayShap
+      //    instructions email (omit payment_url so the backend doesn't
+      //    mistake this for a Yoco "Pay Balance Now" link, which previously
+      //    pointed at a non-existent /pay/:bookingId page and 404'd) ───────
     if (isPayshap) {
-      const paymentUrl = buildPayshapBalanceUrl(b);
       const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
-        body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
+        body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request" },
       });
       if (emailErr) console.warn("Email send warning:", emailErr.message);
       toast.success(`Balance request sent to ${clientEmail}`);
@@ -776,6 +778,19 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
       });
       await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
       toast.success(`${b.client}'s appointment marked as serviced`);
+
+      // ── Fire the thank-you + review-ask email now that service is complete.
+      //    Applies to every payment method (PayShap, Yoco, PayFast, iKhokha) —
+      //    this button only becomes available once the balance is settled.
+      if (b.email) {
+        try {
+          await supabase.functions.invoke("send-booking-email", {
+            body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "service_thank_you" },
+          });
+        } catch (emailErr: any) {
+          console.warn("service_thank_you email dispatch failed:", emailErr?.message);
+        }
+      }
     } catch (e: any) {
       toast.error(e.message || "Failed to mark as serviced");
     } finally {
