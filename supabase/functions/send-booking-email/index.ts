@@ -105,7 +105,25 @@ const OWNER_STYLES = `
   }
 `;
 
-function emailWrapper(logoHtml: string, tenantName: string, subtitle: string, body: string, footer: string): string {
+/**
+ * Wraps email body content in the shared client-facing template.
+ *
+ * The optional 6th param `preheader` is inserted as a hidden div at the top
+ * of <body> so email clients surface it as the inbox preview line. Defaults
+ * to "" so existing call sites are unaffected.
+ */
+function emailWrapper(
+  logoHtml: string,
+  tenantName: string,
+  subtitle: string,
+  body: string,
+  footer: string,
+  preheader = "",
+): string {
+  const preheaderHtml = preheader
+    ? `<div style="display:none;font-size:1px;color:#f2f2f2;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheader}</div>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,6 +133,7 @@ function emailWrapper(logoHtml: string, tenantName: string, subtitle: string, bo
   <style>${EMAIL_STYLES}</style>
 </head>
 <body class="eb" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+${preheaderHtml}
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table class="ec" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:12px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td class="eh" style="padding:28px 36px;text-align:center;background:#fff;border-bottom:1px solid #e0e0e0;">
@@ -937,9 +956,11 @@ Deno.serve(async (req) => {
       .map((item: any) => item.service_name)
       .filter(Boolean) as string[];
 
+    // google_review_url is the tenant-level column written by
+    // AdminSettings → "Google Review Link".
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("name, email, phone, address, logo_url")
+      .select("name, email, phone, address, logo_url, google_review_url")
       .eq("id", booking.tenant_id)
       .single();
 
@@ -949,8 +970,17 @@ Deno.serve(async (req) => {
       .eq("tenant_id", booking.tenant_id);
     const settings: Record<string, string> = {};
     settingsRows?.forEach((r: any) => { if (r.value) settings[r.key] = r.value; });
-    const reviewLink = settings["google_review_link"] ?? "";
     const addToCalendar = settings["feature_flag_add_to_calendar"] === "true";
+
+    // Review link resolution — primary source is the tenant column
+    // (tenants.google_review_url). Fallback keeps older tenants working
+    // who still have it stored in app_settings as google_review_link.
+    // A URL sanity check prevents an invalid href from rendering.
+    const rawReviewLink =
+      ((tenant as any)?.google_review_url ?? "").trim() ||
+      (settings["google_review_link"] ?? "").trim();
+
+    const reviewLink = /^https?:\/\//i.test(rawReviewLink) ? rawReviewLink : "";
 
     // Service names: booking_items is the source of truth. Fall back to
     // the legacy bookings.service_ids lookup only when booking_items is
@@ -983,6 +1013,13 @@ Deno.serve(async (req) => {
     const tenantAddress = escapeHtml(tenant?.address ?? "");
     const tenantPhone   = escapeHtml(tenant?.phone ?? "");
     const tenantPayshapNumber = escapeHtml(toLocalSaPhone(tenant?.phone));
+
+    // wa.me expects digits only, no '+', in E.164 form (e.g. 27844297240).
+    // normalizePhone() converts SA local (084…) → 27-prefixed.
+    const tenantWhatsAppDigits = normalizePhone(tenant?.phone ?? null) ?? "";
+    const tenantWhatsAppLink = tenantWhatsAppDigits
+      ? `https://wa.me/${tenantWhatsAppDigits}`
+      : "";
 
     const tenantEmail: string | null =
       (tenant?.email && tenant.email.trim() !== "")
@@ -1793,43 +1830,156 @@ Deno.serve(async (req) => {
     }
 
     // ======================================================================
-    // SERVICE THANK YOU (+ gentle review ask)
+    // SERVICE THANK YOU (+ review ask + private WhatsApp channel)
     // Triggered when the tenant clicks "Mark as Serviced" on a fully-paid
     // booking, regardless of payment method (PayShap, Yoco, PayFast,
-    // iKhokha). Thanks the client and — only if the tenant has configured
-    // one in their admin settings — nudges for a Google review.
+    // iKhokha).
+    //
+    // Hierarchy:
+    //   1. Personalised headline (emotional hook)
+    //   2. One-line support sentence
+    //   3. Receipt as a caption, not a table
+    //   4. Dark card — the only dark block in the body
+    //      • tappable star row (5× → same review URL)
+    //      • white inverted primary button (Leave a review)
+    //      • hairline divider
+    //      • private WhatsApp path
+    //
+    // The dark card is intentionally a fixed dark block regardless of the
+    // recipient's prefers-color-scheme — its contrast with the surrounding
+    // white body is the hierarchy mechanism that draws the eye.
     // ======================================================================
     if (email_type === "service_thank_you") {
       if (clientEmail) {
-        const reviewSection = reviewLink
+        const firstName = clientName.split(" ")[0];
+
+        // Compact receipt caption — replaces the previous 4-row table.
+        const visitCaption = `${serviceNames} &nbsp;·&nbsp; ${formattedDate} &nbsp;·&nbsp; ${formattedTime}`;
+
+        // Private-feedback branch — only rendered when a WhatsApp link exists.
+        // Rendered as inline block-level elements inside the card's <td>
+        // (NOT as <tr> rows) so the markup is valid HTML and email clients
+        // don't silently repair or drop the block.
+        const twoPathHtml = tenantWhatsAppLink
           ? `
-            <tr><td style="padding:0 36px 26px;">
-              <div style="background:#f7f7f7;border-radius:10px;border:1px solid #e0e0e0;padding:20px 22px;text-align:center;">
-                <p class="tl" style="margin:0 0 14px;font-size:13px;color:#555;line-height:1.6;">If you enjoyed your visit, a quick review would mean the world to ${tenantName} — it only takes a minute.</p>
-                <a href="${reviewLink}" target="_blank" style="display:inline-block;padding:12px 28px;border-radius:10px;background:#000;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">Leave a Review</a>
-              </div>
-            </td></tr>
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:20px;">
+              <tr><td style="border-top:1px solid #2a2a2a;font-size:0;line-height:0;">&nbsp;</td></tr>
+            </table>
+
+            <p style="margin:14px 0 6px;font-size:12px;font-weight:600;color:#e8e8e8;line-height:1.5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+              Prefer to tell us privately?
+            </p>
+
+            <a href="${tenantWhatsAppLink}" target="_blank" style="display:inline-block;font-size:12px;font-weight:700;color:#25D366;text-decoration:none;letter-spacing:.02em;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+              Send us a WhatsApp &nbsp;&rarr;
+            </a>
           `
           : "";
 
+        const reviewHero = reviewLink
+          ? `
+            <tr><td style="padding:0 36px 26px;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+                     style="background:#111;border-radius:14px;overflow:hidden;">
+                <tr><td style="padding:28px 24px 24px;text-align:center;">
+
+                  <p style="margin:0 0 8px;font-size:10px;font-weight:700;letter-spacing:.14em;
+                            text-transform:uppercase;color:#8a8a8a;
+                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    A small favour
+                  </p>
+
+                  <p style="margin:0 0 18px;font-size:20px;font-weight:700;line-height:1.3;
+                            color:#fff;
+                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    How did we do?
+                  </p>
+
+                  <!-- Tappable star row — all five link to the same review URL -->
+                  <table cellpadding="0" cellspacing="0" role="presentation"
+                         style="margin:0 auto 20px;">
+                    <tr>
+                      <td style="padding:0 4px;"><a href="${reviewLink}" target="_blank"
+                        style="text-decoration:none;font-size:28px;line-height:1;color:#fff;
+                               display:inline-block;padding:6px 2px;">&#9733;</a></td>
+                      <td style="padding:0 4px;"><a href="${reviewLink}" target="_blank"
+                        style="text-decoration:none;font-size:28px;line-height:1;color:#fff;
+                               display:inline-block;padding:6px 2px;">&#9733;</a></td>
+                      <td style="padding:0 4px;"><a href="${reviewLink}" target="_blank"
+                        style="text-decoration:none;font-size:28px;line-height:1;color:#fff;
+                               display:inline-block;padding:6px 2px;">&#9733;</a></td>
+                      <td style="padding:0 4px;"><a href="${reviewLink}" target="_blank"
+                        style="text-decoration:none;font-size:28px;line-height:1;color:#fff;
+                               display:inline-block;padding:6px 2px;">&#9733;</a></td>
+                      <td style="padding:0 4px;"><a href="${reviewLink}" target="_blank"
+                        style="text-decoration:none;font-size:28px;line-height:1;color:#fff;
+                               display:inline-block;padding:6px 2px;">&#9733;</a></td>
+                    </tr>
+                  </table>
+
+                  <p style="margin:0 0 22px;font-size:12px;line-height:1.7;color:#bcbcbc;
+                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                    Your words help other clients find us —<br />
+                    and they mean the world to a small business.
+                  </p>
+
+                  <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;">
+                    <tr><td style="background:#fff;border-radius:10px;">
+                      <a href="${reviewLink}" target="_blank"
+                         style="display:inline-block;padding:14px 34px;font-size:14px;font-weight:700;
+                                color:#000;text-decoration:none;letter-spacing:.02em;
+                                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+                        Leave a review &nbsp;&rarr;
+                      </a>
+                    </td></tr>
+                  </table>
+
+                  ${twoPathHtml}
+
+                </td></tr>
+              </table>
+            </td></tr>
+          `
+          : `
+            <tr><td style="padding:0 36px 26px;">
+              <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.6;">
+                We hope to welcome you back soon.
+              </p>
+            </td></tr>
+          `;
+
         const clientBody = `
-          <tr><td style="padding:28px 36px 10px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
-            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">
-              Thank you for choosing <strong>${tenantName}</strong> — it was a pleasure having you. We hope you loved the results!
+          <tr><td style="padding:28px 36px 8px;">
+            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">
+              Hi <strong>${firstName}</strong>,
+            </p>
+            <p class="tm" style="margin:14px 0 0;font-size:20px;font-weight:700;color:#000;line-height:1.35;">
+              Thank you for visiting ${tenantName}.
+            </p>
+            <p class="tl" style="margin:12px 0 0;font-size:14px;color:#555;line-height:1.7;">
+              We hope you enjoyed the experience and love your results.
             </p>
           </td></tr>
-          <tr><td style="padding:18px 36px 26px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Visit Details</p>
-            ${detailTable(
-              detailRow("Service", serviceNames) +
-              detailRow("Date", formattedDate) +
-              detailRow("Time", formattedTime, true)
-            )}
+
+          <tr><td style="padding:0 36px 24px;">
+            <p class="tl" style="margin:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#aaa;line-height:1.6;">
+              ${visitCaption}
+            </p>
           </td></tr>
-          ${reviewSection}
+
+          ${reviewHero}
+
           <tr><td style="padding:0 36px 26px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.6;">
+              With gratitude,<br />
+              <span style="font-style:italic;color:#111;font-weight:600;">The ${tenantName} team</span>
+            </p>
+          </td></tr>
+
+          <tr><td style="padding:0 36px 26px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">
+              Questions? <a href="tel:${tenantPhone}" style="color:#111111;font-weight:600;">${tenantPhone}</a>
+            </p>
           </td></tr>
         `;
 
@@ -1837,13 +1987,14 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Thank you for choosing ${tenantName} 💛`,
+          subject:  `Thank you for choosing us, ${firstName}`,
           html:     emailWrapper(
             logoHtml,
             tenantName,
             "Thank You",
             clientBody,
-            `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`
+            `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`,
+            `We hope you enjoyed the experience — a quick review would mean the world to us.`
           ),
         });
       }
