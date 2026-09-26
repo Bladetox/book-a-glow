@@ -114,12 +114,12 @@ const toWhatsAppBalanceHref = (
 // ── OverflowMenu ─────────────────────────────────────────────────────────────
 interface OverflowMenuProps {
   isClientBlocked: boolean;
-  isCancelled: boolean;
+  canCancel: boolean;
   onBlock: () => void;
   onCancel: () => void;
   onDelete: () => void;
 }
-const OverflowMenu = ({ isClientBlocked, isCancelled, onBlock, onCancel, onDelete }: OverflowMenuProps) => {
+const OverflowMenu = ({ isClientBlocked, canCancel, onBlock, onCancel, onDelete }: OverflowMenuProps) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -168,7 +168,7 @@ const OverflowMenu = ({ isClientBlocked, isCancelled, onBlock, onCancel, onDelet
               }
             </button>
 
-            {!isCancelled && (
+            {canCancel && (
               <button
                 onClick={() => { setOpen(false); onCancel(); }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
@@ -590,9 +590,6 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         ),
       };
       await updateFields.mutateAsync({ bookingId: editingInlineId, updates });
-      if (editDraft.status) {
-        await updateStatus.mutateAsync({ bookingId: editingInlineId, status: editDraft.status });
-      }
       toast.success("Booking updated");
       setEditingInlineId(null);
       setEditDraft({});
@@ -1084,7 +1081,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
                   const isCancelledStatus = b.status === "cancelled" || b.status === "no_show";
 
                   const primaryCTA = (() => {
-                    if (b.status === "pending" || b.status === "pending_payment") {
+                    if (b.status === "pending") {
                       return (
                         <button
                           onClick={e => { e.stopPropagation(); setConfirmConfirm(b); }}
@@ -1400,7 +1397,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
 
                                   <OverflowMenu
                                     isClientBlocked={isClientBlocked}
-                                    isCancelled={b.status === "cancelled" || b.status === "no_show"}
+                                    canCancel={["pending", "pending_payment", "payment_claimed", "confirmed"].includes(b.status)}
                                     onBlock={() => setBlockModalBooking(b)}
                                     onCancel={() => setConfirmCancel(b)}
                                     onDelete={() => setConfirmDelete(b)}
