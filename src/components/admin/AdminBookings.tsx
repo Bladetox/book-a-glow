@@ -599,10 +599,10 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   };
 
   const cancelInlineEdit = () => { setEditingInlineId(null); setEditDraft({}); };
-  
+
   // ── Build the PayShap balance URL for a given booking ─────────────────────
-const buildPayshapBalanceUrl = (b: BookingRow) =>
-  `${window.location.origin}/pay/${b.id}?intent=balance`;
+  const buildPayshapBalanceUrl = (b: BookingRow) =>
+    `${window.location.origin}/pay/${b.id}?intent=balance`;
 
   const handleRequestBalance = async (b: BookingRow) => {
     if (requestingBalanceId === b.id) return;
@@ -617,137 +617,143 @@ const buildPayshapBalanceUrl = (b: BookingRow) =>
       //    instructions email (omit payment_url so the backend doesn't
       //    mistake this for a Yoco "Pay Balance Now" link, which previously
       //    pointed at a non-existent /pay/:bookingId page and 404'd) ───────
-    if (isPayshap) {
+      if (isPayshap) {
+        const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
+          body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request" },
+        });
+        if (emailErr) console.warn("Email send warning:", emailErr.message);
+        toast.success(`Balance request sent to ${clientEmail}`);
+        return;
+      }
+
+      // ── Yoco path (default) ───────────────────────────────────────────────
+      const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
+        body: {
+          amount: Math.round(balance * 100),
+          currency: "ZAR",
+          tenant_id: b.tenantId,
+          booking_id: b.id,
+          payment_type: "balance",
+          success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
+          cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
+        },
+      });
+      if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
+      if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
+        throw new Error(checkoutData?.error || "Failed to create payment link");
+      }
+      const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
+      await supabase
+        .from("bookings")
+        .update({
+          yoco_final_checkout_id: checkoutData.checkoutId ?? null,
+          yoco_final_link: paymentUrl,
+        })
+        .eq("id", b.id);
       const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
-        body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request" },
+        body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
       });
       if (emailErr) console.warn("Email send warning:", emailErr.message);
       toast.success(`Balance request sent to ${clientEmail}`);
-      return;
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send balance request");
+    } finally {
+      setRequestingBalanceId(null);
     }
-
-      // ── Yoco path (default) ───────────────────────────────────────────────
-    const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-      body: {
-        amount: Math.round(balance * 100),
-        currency: "ZAR",
-        tenant_id: b.tenantId,
-        booking_id: b.id,
-        payment_type: "balance",
-        success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
-        cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
-      },
-    });
-    if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
-    if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
-      throw new Error(checkoutData?.error || "Failed to create payment link");
-    }
-    const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
-    await supabase
-      .from("bookings")
-      .update({
-        yoco_final_checkout_id: checkoutData.checkoutId ?? null,
-        yoco_final_link: paymentUrl,
-      })
-      .eq("id", b.id);
-    const { error: emailErr } = await supabase.functions.invoke("send-booking-email", {
-      body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "balance_request", payment_url: paymentUrl },
-    });
-    if (emailErr) console.warn("Email send warning:", emailErr.message);
-    toast.success(`Balance request sent to ${clientEmail}`);
-  } catch (e: any) {
-    toast.error(e.message || "Failed to send balance request");
-  } finally {
-    setRequestingBalanceId(null);
-  }
   };
 
   // ── Generate (or reuse) a payment link and open it in WhatsApp.
-const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
-  e.stopPropagation();
-  if (sendingWhatsAppBalanceId === b.id) return;
-  if (!b.phone) return;
-  if (!b.balance || b.balance <= 0) return;
+  const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sendingWhatsAppBalanceId === b.id) return;
+    if (!b.phone) return;
+    if (!b.balance || b.balance <= 0) return;
 
-  // ── PayShap path: send step-by-step PayShap instructions via WhatsApp ──
-  if (isPayshap) {
-    const tenantName  = appSettings["business_name"] ?? appSettings["name"] ?? "";
-    const tenantPhone = tenantSettings?.phone ?? "";
-    window.open(
-      toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, tenantName, tenantPhone),
-      "_blank",
-      "noopener,noreferrer",
-    );
-    return;
-  }
-
-  // ── Helper: phenomebeauty-branded message, called once we HAVE a link ──
-  const sendPhenomeMessage = (paymentUrl: string) => {
-    const digits = b.phone.replace(/\D/g, "").replace(/^0/, "27");
-    const text = `Hi ${b.client} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${b.balance.toFixed(2)}* for ${b.service} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`;
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-  };
-
-  // ── Yoco path: reuse existing link or generate a new one ─────────────────
-  if (b.yocoFinalLink) {
-    if (tenantId === "phenomebeauty") {
-      sendPhenomeMessage(b.yocoFinalLink);
-    } else {
+    // ── PayShap path: send step-by-step PayShap instructions via WhatsApp ──
+    if (isPayshap) {
+      const tenantName  = appSettings["business_name"] ?? appSettings["name"] ?? "";
+      const tenantPhone = tenantSettings?.phone ?? "";
       window.open(
-        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
+        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, tenantName, tenantPhone),
         "_blank",
         "noopener,noreferrer",
       );
+      return;
     }
-    return;
-  }
 
-  setSendingWhatsAppBalanceId(b.id);
-  try {
-    const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
-      body: {
-        amount: Math.round(b.balance * 100),
-        currency: "ZAR",
-        tenant_id: b.tenantId,
-        booking_id: b.id,
-        payment_type: "balance",
-        success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
-        cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
-      },
-    });
-    if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
-    if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
-      throw new Error(checkoutData?.error || "Failed to create payment link");
+    // ── Helper: phenomebeauty-branded message, called once we HAVE a link ──
+    const sendPhenomeMessage = (paymentUrl: string) => {
+      const digits = b.phone.replace(/\D/g, "").replace(/^0/, "27");
+      const text = `Hi ${b.client} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${b.balance.toFixed(2)}* for ${b.service} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`;
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+    };
+
+    // ── Yoco path: reuse existing link or generate a new one ─────────────────
+    if (b.yocoFinalLink) {
+      if (tenantId === "phenomebeauty") {
+        sendPhenomeMessage(b.yocoFinalLink);
+      } else {
+        window.open(
+          toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
+          "_blank",
+          "noopener,noreferrer",
+        );
+      }
+      return;
     }
-    const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
-    await supabase
-      .from("bookings")
-      .update({
-        yoco_final_checkout_id: checkoutData.checkoutId ?? null,
-        yoco_final_link: paymentUrl,
-      })
-      .eq("id", b.id);
-    queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
-    if (tenantId === "phenomebeauty") {
-      sendPhenomeMessage(paymentUrl);
-    } else {
-      window.open(
-        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
-        "_blank",
-        "noopener,noreferrer",
-      );
+
+    setSendingWhatsAppBalanceId(b.id);
+    try {
+      const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke("yoco-checkout", {
+        body: {
+          amount: Math.round(b.balance * 100),
+          currency: "ZAR",
+          tenant_id: b.tenantId,
+          booking_id: b.id,
+          payment_type: "balance",
+          success_url: `${window.location.origin}/payment?payment=success&booking_id=${b.id}&tenant=${b.tenantId}&type=final`,
+          cancel_url: `${window.location.origin}/payment?payment=cancelled&tenant=${b.tenantId}`,
+        },
+      });
+      if (checkoutErr) throw new Error(checkoutErr.message || "Failed to create payment link");
+      if (!checkoutData?.url && !checkoutData?.redirectUrl && !checkoutData?.redirect_url) {
+        throw new Error(checkoutData?.error || "Failed to create payment link");
+      }
+      const paymentUrl = checkoutData.redirect_url ?? checkoutData.url ?? checkoutData.redirectUrl;
+      await supabase
+        .from("bookings")
+        .update({
+          yoco_final_checkout_id: checkoutData.checkoutId ?? null,
+          yoco_final_link: paymentUrl,
+        })
+        .eq("id", b.id);
+      queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
+      if (tenantId === "phenomebeauty") {
+        sendPhenomeMessage(paymentUrl);
+      } else {
+        window.open(
+          toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
+          "_blank",
+          "noopener,noreferrer",
+        );
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate payment link");
+    } finally {
+      setSendingWhatsAppBalanceId(null);
     }
-  } catch (err: any) {
-    toast.error(err.message || "Failed to generate payment link");
-  } finally {
-    setSendingWhatsAppBalanceId(null);
-  }
   };
 
+  // ── Compound action — clears balance, marks serviced, sends thank-you email.
+  //    Previously this only wrote payment flags. Now it also transitions the
+  //    booking to `completed` and dispatches `service_thank_you` with the
+  //    balance_settled flag so the email body reads "Your balance is now settled."
+  //    Replaces the previous balance_paid receipt email.
   const handleMarkFullyPaid = async (b: BookingRow) => {
     if (markingPaidId === b.id) return;
     setMarkingPaidId(b.id);
     try {
+      // Step 1 — clear balance + set payment flags
       await updateFields.mutateAsync({
         bookingId: b.id,
         updates: {
@@ -757,7 +763,31 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
           final_payment_paid: true,
         },
       });
-      toast.success(`${b.client}'s booking marked as fully paid`);
+
+      // Step 2 — mark serviced
+      await updateFields.mutateAsync({
+        bookingId: b.id,
+        updates: { completed_at: new Date().toISOString() },
+      });
+      await updateStatus.mutateAsync({ bookingId: b.id, status: "completed" });
+
+      // Step 3 — thank-you + review email (with balance-settled note)
+      if (b.email) {
+        try {
+          await supabase.functions.invoke("send-booking-email", {
+            body: {
+              booking_id:      b.id,
+              tenant_id:       b.tenantId,
+              email_type:      "service_thank_you",
+              balance_settled: true,
+            },
+          });
+        } catch (emailErr: any) {
+          console.warn("service_thank_you email dispatch failed:", emailErr?.message);
+        }
+      }
+
+      toast.success(`${b.client}'s booking marked as paid and serviced`);
     } catch (e: any) {
       toast.error(e.message || "Failed to mark as paid");
     } finally {
@@ -865,11 +895,12 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
         onConfirm={() => { if (confirmConfirm) handleStatusChange(confirmConfirm.id, "confirmed"); setConfirmConfirm(null); }}
         onCancel={() => setConfirmConfirm(null)}
       />
+      {/* ── Mark Paid dialog — compound action ────────────────────────────── */}
       <ConfirmDialog
         open={!!confirmMarkPaid}
-        title="Mark as fully paid?"
-        description={confirmMarkPaid ? `This will clear the outstanding balance of R${confirmMarkPaid.balance} for ${confirmMarkPaid.client}. The appointment status is unchanged.` : ""}
-        confirmLabel="Mark Paid"
+        title="Mark as paid and serviced?"
+        description={confirmMarkPaid ? `This will clear the outstanding balance of R${confirmMarkPaid.balance} for ${confirmMarkPaid.client}, change the appointment status to serviced, and send a thank-you email with your Google review link.` : ""}
+        confirmLabel="Mark Paid & Serviced"
         confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
         onConfirm={() => { if (confirmMarkPaid) handleMarkFullyPaid(confirmMarkPaid); setConfirmMarkPaid(null); }}
         onCancel={() => setConfirmMarkPaid(null)}
@@ -1271,7 +1302,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
 
                                 <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5">
                                 <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-sky-400/70" />
-                              
+
                                 <div className="min-w-0">
                                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
                                     Booking created
@@ -1361,12 +1392,20 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
                                     </button>
                                   )}
 
-                                  {b.status !== "cancelled" && b.status !== "no_show" && !b.fullPaymentReceived && b.balance > 0 && (
+                                  {/* Mark Paid: for PayShap bookings, only on `confirmed`
+                                      (the RPC transition table permits completed from any
+                                      active status; the gate below just keeps the button off
+                                      bookings still waiting on queue confirmation). */}
+                                  {b.status !== "cancelled" &&
+                                   b.status !== "no_show" &&
+                                   !b.fullPaymentReceived &&
+                                   b.balance > 0 &&
+                                   (!isPayshap || b.status === "confirmed") && (
                                     <button
                                       disabled={isMarkingPaid}
                                       onClick={e => { e.stopPropagation(); setConfirmMarkPaid(b); }}
-                                      aria-label="Mark fully paid"
-                                      title="Mark fully paid"
+                                      aria-label="Mark paid and serviced"
+                                      title="Mark paid and serviced"
                                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                       {isMarkingPaid ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CircleDollarSign className="w-3.5 h-3.5" />}
