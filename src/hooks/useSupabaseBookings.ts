@@ -336,21 +336,26 @@ export function useUpdateBookingFields() {
       if (error) throw error;
 
       // ── Only write a payments row when the admin explicitly marks the booking
-      //    as fully paid (Mark Paid button). This covers PayShap, cash/EFT and
-      //    Yoco bookings where the admin is settling the outstanding balance.
+      //    as fully paid (Mark Paid button). This covers every gateway.
       //
-      //    Yoco webhooks write their own payments rows automatically, so we must
-      //    never double-count. The logic is:
+      //    Gateway webhooks write their own payments rows automatically, so we
+      //    must never double-count. The logic is:
       //
-      //    1. Check how many payments rows already exist for this booking.
-      //    2. No existing rows  => PayShap / cash / EFT: insert total_amount as
-      //       a single full_payment row.
-      //    3. Existing rows     => Yoco already wrote a deposit row; only insert
-      //       the remaining balance_due (if any) as a "balance" row.
-      //    4. balance_due = 0 and rows already exist => Yoco paid in full online;
-      //       nothing to insert.
+      //    1. Look at the earliest existing payments row for this booking.
+      //    2. No prior row  => cash / EFT / unknown source. Insert the full
+      //       booking total as one completed payment, labelled "other"/"manual".
+      //    3. Prior row     => mirror its gateway and payment_method so the
+      //       balance row is labelled consistently (PayShap stays payshap,
+      //       Yoco stays yoco, iKhokha stays ikhokha).
+      //    4. balance_due = 0 with rows already present => nothing to insert.
+      //
+      //    NOTE: no email is dispatched from this hook. The compound Mark Paid
+      //    handler in AdminBookings.tsx owns the single post-settlement email
+      //    (service_thank_you with balance_settled flag). Previously this hook
+      //    fired balance_paid for the no-prior-row path, which duplicated the
+      //    thank-you email for cash/EFT tenants.
       if (updates.full_payment_received === true) {
-        const [{ data: bk }, { data: existingPayments }] = await Promise.all([
+        const [{ data: bk }, { data: priorRows }] = await Promise.all([
           supabase
             .from("bookings")
             .select("total_amount, balance_due")
@@ -358,15 +363,18 @@ export function useUpdateBookingFields() {
             .single(),
           supabase
             .from("payments")
-            .select("id")
-            .eq("booking_id", bookingId),
+            .select("id, gateway, payment_method")
+            .eq("booking_id", bookingId)
+            .order("created_at", { ascending: true })
+            .limit(1),
         ]);
 
-        const hasExistingPayments = (existingPayments ?? []).length > 0;
+        const priorPayment = priorRows?.[0];
+        const hasExistingPayments = !!priorPayment;
 
         if (!hasExistingPayments) {
-          // PayShap / cash / EFT — no prior payment row at all.
-          // Insert the full booking total as one completed payment.
+          // No prior payment row — cash / EFT / unknown.
+          // Insert the full booking total as one completed manual payment.
           const amount = Number(bk?.total_amount ?? 0);
           if (amount > 0) {
             const { error: payErr } = await supabase
@@ -384,38 +392,14 @@ export function useUpdateBookingFields() {
               });
             if (payErr) console.warn("Payment record insert failed:", payErr.message);
           }
-
-          // ── Fire balance_paid receipt email for PayShap / cash / EFT only.
-          //    Yoco and PayFast fire this email from their own webhooks, so we
-          //    only send here when there were no prior payment rows (i.e. no
-          //    gateway wrote a row before the admin tapped Mark Paid).
-          //    Fire-and-forget: a failed email must never block the admin action.
-          try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token ?? supabaseKey;
-            await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization:  `Bearer ${token}`,
-                apikey:         supabaseKey,
-              },
-              body: JSON.stringify({
-                booking_id: bookingId,
-                email_type: "balance_paid",
-              }),
-            });
-          } catch (emailErr) {
-            console.warn("balance_paid email dispatch failed:", emailErr);
-          }
         } else {
-          // Yoco already wrote at least one row (the deposit).
-          // Only insert the outstanding balance — avoid double-counting.
-          // Email is handled by the yoco-webhook function.
+          // Prior payment row exists — mirror its gateway and payment_method.
+          // A PayShap deposit produces a payshap balance row, not a yoco one.
           const amount = Number(bk?.balance_due ?? 0);
           if (amount > 0) {
+            const priorGateway = priorPayment.gateway ?? "yoco";
+            const priorMethod  = priorPayment.payment_method ?? "card";
+
             const { error: payErr } = await supabase
               .from("payments")
               .insert({
@@ -424,14 +408,14 @@ export function useUpdateBookingFields() {
                 amount,
                 status:         "completed",
                 payment_type:   "balance",
-                payment_method: "card",
-                gateway:        "yoco",
+                payment_method: priorMethod,
+                gateway:        priorGateway,
                 completed_at:   new Date().toISOString(),
                 created_at:     new Date().toISOString(),
               });
             if (payErr) console.warn("Balance payment record insert failed:", payErr.message);
           }
-          // If balance_due is already 0 the Yoco webhook settled everything
+          // If balance_due is already 0 a gateway webhook settled everything
           // online — nothing to insert here.
         }
       }
