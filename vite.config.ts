@@ -33,7 +33,10 @@ export default defineConfig(({ mode }) => ({
         // Precache only static assets bundled with the app.
         // Explicitly exclude anything that could resolve to a cross-origin URL.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        globIgnores: ["**/supabase/**", "**/*.map"],
+        // web-app-manifest-*.png: template leftovers that redirect to
+        // Supabase Storage on this deploy. Excluding them lets the SW
+        // install complete without hitting Workbox's cross-origin guard.
+        globIgnores: ["**/supabase/**", "**/*.map", "**/web-app-manifest-*.png"],
         // Hard cap so large cross-origin opaque responses never enter the cache.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
