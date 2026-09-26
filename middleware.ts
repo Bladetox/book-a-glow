@@ -11,13 +11,16 @@ const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 // NOTE: we must intercept ALL requests on tenant subdomains — not just
 // text/html — because crawlers (WhatsApp, iMessage, Slack) omit Accept.
 //
-// runtime: "nodejs" — Vercel deprecated the edge runtime for middleware.
-// This code uses only standard fetch / Request / Response / URL APIs, all
-// available on both runtimes. Migrating to nodejs removes the deprecation
-// warning and future-proofs against edge runtime removal.
+// NOTE ON RUNTIME: This middleware fetches its own origin at "/" to obtain
+// index.html for patching. Same-origin fetch() from Edge middleware
+// bypasses the middleware layer. From Node.js middleware, the same fetch
+// re-enters the middleware and creates an infinite loop (508
+// INFINITE_LOOP_DETECTED). Vercel has deprecated the Edge runtime and emits
+// a build warning; migrating to Node would require replacing the self-fetch
+// with a build-time HTML template or a module-scope cache. That is a
+// separate engineering task, not a one-line runtime flag.
 export const config = {
   matcher: "/((?!_vercel|_next/static|_next/image|assets|robots|sitemap|placeholder).*)",
-  runtime: "nodejs",
 };
 
 /** Resolve tenant slug from hostname, or null for marketing domains. */
