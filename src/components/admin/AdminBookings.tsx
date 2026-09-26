@@ -877,7 +877,7 @@ const handleWhatsAppBalance = async (b: BookingRow, e: React.MouseEvent) => {
       <ConfirmDialog
         open={!!confirmMarkServiced}
         title="Mark as serviced?"
-        description={confirmMarkServiced ? `This records that ${confirmMarkServiced.client}'s appointment was attended and the service was delivered.` : ""}
+        description={confirmMarkServiced ? `This records that ${confirmMarkServiced.client}'s appointment was attended and the service was delivered. A thank-you email will be sent with your Google review link.` : ""}
         confirmLabel="Mark Serviced"
         confirmClass="bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/30"
         onConfirm={() => { if (confirmMarkServiced) handleMarkServiced(confirmMarkServiced); setConfirmMarkServiced(null); }}
