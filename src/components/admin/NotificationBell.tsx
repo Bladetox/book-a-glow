@@ -131,7 +131,11 @@ export function NotificationBell() {
     const b = bookingPaymentMap.get(bookingId);
     if (!b) return null;
 
-    if (b.full_payment_received) return "Paid in full";
+    // NOTE: use total_amount for "Paid in full" — deposit_amount is not a
+    // reliable stand-in here (it's 0 for bookings with no deposit configured,
+    // and some gateways rewrite it to match total_amount while others don't).
+    if (b.full_payment_received)
+      return `Paid in full (R${Number(b.total_amount).toFixed(2)})`;
     if (b.deposit_paid)
       return `Deposit paid (R${Number(b.deposit_amount).toFixed(2)})`;
     if (Number(b.total_amount) > 0)
