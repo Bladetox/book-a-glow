@@ -223,7 +223,9 @@ const ConfirmDialog = ({ open, title, description, confirmLabel, confirmClass, o
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                 <p className="text-sm font-semibold text-white/90">{title}</p>
               </div>
-              <p className="text-[13px] text-white/50 leading-relaxed">{description}</p>
+              {/* whitespace-pre-line lets descriptions with \n render as line breaks.
+                  Other dialogs pass single-line strings, so nothing else changes. */}
+              <p className="text-[13px] text-white/50 leading-relaxed whitespace-pre-line">{description}</p>
             </div>
             <div className="mx-5 border-t border-white/[0.06]" />
             <div className="px-5 py-4 flex items-center justify-end gap-2">
@@ -895,11 +897,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onConfirm={() => { if (confirmConfirm) handleStatusChange(confirmConfirm.id, "confirmed"); setConfirmConfirm(null); }}
         onCancel={() => setConfirmConfirm(null)}
       />
-      {/* ── Mark Paid dialog — compound action ────────────────────────────── */}
+      {/* ── Mark Paid dialog — 3-line scannable format.
+             Line 1: client · service (confirms the right booking)
+             Line 2: sends thank-you email with review link (sets expectation)
+             The balance is already visible on the card behind the dialog. */}
       <ConfirmDialog
         open={!!confirmMarkPaid}
         title="Mark as paid and serviced?"
-        description={confirmMarkPaid ? `This will clear the outstanding balance of R${confirmMarkPaid.balance} for ${confirmMarkPaid.client}, change the appointment status to serviced, and send a thank-you email with your Google review link.` : ""}
+        description={confirmMarkPaid ? `${confirmMarkPaid.client} · ${confirmMarkPaid.service}\nSends thank-you email with your Google review link.` : ""}
         confirmLabel="Mark Paid & Serviced"
         confirmClass="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
         onConfirm={() => { if (confirmMarkPaid) handleMarkFullyPaid(confirmMarkPaid); setConfirmMarkPaid(null); }}
