@@ -3070,6 +3070,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      service_booking_reference_map: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
       set_tenant_context: { Args: { tenant: string }; Returns: undefined }
       tenant_secret_exists: {
         Args: { p_key: string; p_tenant_id: string }
