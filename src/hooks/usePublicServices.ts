@@ -37,6 +37,7 @@ export function usePublicServices() {
         .select("id, name, description, price, duration_minutes, category, is_call_out_available, is_addon, display_order")
         .eq("tenant_id", tenantId)
         .eq("is_active", true)
+        .eq("is_archived", false)
         .order("display_order", { ascending: true, nullsFirst: false })
         .order("name", { ascending: true });
       if (error) throw error;
@@ -69,6 +70,7 @@ export function usePublicCategories() {
           .select("category")
           .eq("tenant_id", tenantId)
           .eq("is_active", true)
+          .eq("is_archived", false)
           .eq("is_addon", false)
           .order("category")
           .order("name" as never, { ascending: true }),
