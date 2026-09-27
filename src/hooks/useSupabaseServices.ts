@@ -141,7 +141,7 @@ export function useDeleteService() {
       if (!tenantId) throw new Error("Tenant not loaded — please try again.");
       const { error } = await supabase
         .from("services")
-        .update({ is_active: false })
+        .delete()
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -149,10 +149,10 @@ export function useDeleteService() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services", tenantId] });
       qc.invalidateQueries({ queryKey: ["service-categories", tenantId] });
-      toast.success("Service deactivated");
+      toast.success("Service deleted");
     },
     onError: (err: Error) => {
-      toast.error(`Failed to deactivate service: ${err.message}`);
+      toast.error(`Failed to delete service: ${err.message}`);
     },
   });
 }

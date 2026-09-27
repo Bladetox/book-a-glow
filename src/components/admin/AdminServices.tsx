@@ -236,7 +236,7 @@ const ServiceReorderRow = ({
       <div className="flex items-center gap-1 border-l border-white/[0.06] pl-2">
         {confirmDelete ? (
           <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
-            <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Deactivate?</span>
+            <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Delete?</span>
             <button
               onClick={() => { onDelete(service.id); setConfirmDelete(false); }}
               className="px-2.5 py-1 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
@@ -316,7 +316,7 @@ const SortableServiceRow = ({
       <div className="flex items-center gap-1">
         {confirmDelete ? (
           <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
-            <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Deactivate?</span>
+            <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Delete?</span>
             <button
               onClick={() => { onDelete(service.id); setConfirmDelete(false); }}
               className="px-2.5 py-1 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
@@ -939,18 +939,33 @@ const AdminServices = () => {
           </div>
         </div>
 
-        {/* Inline edit / create form */}
+        {/* Inline edit / create form — full-screen modal, matching BusinessHealthSection's expand overlay */}
         <AnimatePresence>
           {editing && (
-            <motion.div
-              key="edit-service-panel"
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              transition={SPRING}
-              style={{ willChange: "transform" }}
-              className="p-5 rounded-3xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.1] flex flex-col gap-4"
-            >
+            <>
+              {/* Backdrop */}
+              <motion.div
+                key="edit-service-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.22 }}
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                onClick={cancelEdit}
+                aria-hidden="true"
+              />
+
+              {/* Panel */}
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
+                <motion.div
+                  key="edit-service-panel"
+                  initial={{ opacity: 0, scale: 0.94, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.94, y: 10 }}
+                  transition={SPRING}
+                  style={{ willChange: "transform" }}
+                  className="pointer-events-auto w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-gradient-to-br from-[#161616] to-[#0f0f0f] border border-white/[0.1] shadow-2xl p-5 flex flex-col gap-4"
+                >
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/30">
                 {isNew ? "New Service" : "Edit Service"}
@@ -1049,7 +1064,9 @@ const AdminServices = () => {
                 />
               </div>
             </div>
-          </motion.div>
+                </motion.div>
+              </div>
+            </>
           )}
         </AnimatePresence>
 
