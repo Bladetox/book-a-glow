@@ -11,7 +11,9 @@
 --
 -- Applied to the live project as migration 20260927184044. Post-apply ACL:
 -- no PUBLIC grant, anon denied, authenticated allowed. Do not reapply — the
--- revoke below was executed alongside the create in the tool's transaction.
+-- function and ACL are already live. Whether the tool ran the create and
+-- revoke in one transaction was not verified; the ACL check confirms the
+-- resulting state, not the execution boundary.
 
 create function public.service_booking_reference_map(p_tenant_id text)
 returns jsonb
