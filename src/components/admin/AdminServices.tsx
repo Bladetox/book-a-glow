@@ -999,13 +999,22 @@ const AdminServices = () => {
               onChange={(e) => setEditing({ ...editing, description: e.target.value })}
             />
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={editing.is_active}
-                  onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })}
-                  className="w-4 h-4 rounded border-white/10 bg-white/5 text-emerald-500 focus:ring-0 focus:ring-offset-0 transition-colors"
-                />
+              <label className="flex items-center gap-2 cursor-pointer group select-none">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editing.is_active}
+                  onClick={() => setEditing({ ...editing, is_active: !editing.is_active })}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none ${
+                    editing.is_active ? "bg-emerald-500" : "bg-white/15"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                      editing.is_active ? "translate-x-[18px]" : "translate-x-1"
+                    }`}
+                  />
+                </button>
                 <span className="text-xs text-white/40 group-hover:text-white/60 transition-colors">Active (visible to clients)</span>
               </label>
               <div className="flex items-center gap-2">
