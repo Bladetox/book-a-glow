@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase    = createClient(supabaseUrl, serviceKey);
 
-    // Guard against empty body
     const rawText = await req.text();
     if (!rawText || rawText.trim() === "") {
       return new Response(JSON.stringify({ error: "Empty request body" }), {
@@ -34,7 +33,6 @@ Deno.serve(async (req) => {
 
     const { action, tenant_id } = body;
 
-    // ── ACTION: list_services ──────────────────────────────────────────
     if (action === "list_services") {
       if (!tenant_id) {
         return new Response(JSON.stringify({ error: "Missing tenant_id" }), {
@@ -46,6 +44,7 @@ Deno.serve(async (req) => {
         .select("id, name, price, duration_minutes")
         .eq("tenant_id", tenant_id)
         .eq("is_active", true)
+        .eq("is_archived", false)
         .order("name");
 
       if (error) {
@@ -58,7 +57,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── ACTION: remove ──────────────────────────────────────────────────
     if (action === "remove") {
       const { booking_id, booking_item_id } = body;
 
@@ -68,10 +66,9 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 1. Fetch the booking
       const { data: booking, error: bookingErr } = await supabase
         .from("bookings")
-        .select("id, tenant_id, total_amount, balance_due, deposit_amount, deposit_paid, service_duration_minutes, start_time, gcal_event_id, status")
+        .select("id, tenant_id, total_amount, balance_due, deposit_amount, deposit_paid, service_duration_minutes, start_time, gcal_event_id, status, yoco_final_link, yoco_final_checkout_id")
         .eq("id", booking_id)
         .eq("tenant_id", tenant_id)
         .single();
@@ -88,7 +85,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 2. Fetch the booking item being removed
       const { data: item, error: itemErr } = await supabase
         .from("booking_items")
         .select("id, price, duration_minutes, service_name")
@@ -103,7 +99,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 3. Refuse to remove the last remaining service on a booking
       const { count: itemCount, error: countErr } = await supabase
         .from("booking_items")
         .select("id", { count: "exact", head: true })
@@ -121,7 +116,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 4. Recalculate totals (reverse of the add logic)
       const oldTotal     = Number(booking.total_amount   ?? 0);
       const oldBalance   = Number(booking.balance_due    ?? 0);
       const oldDeposit   = Number(booking.deposit_amount ?? 0);
@@ -134,10 +128,8 @@ Deno.serve(async (req) => {
       let newDeposit = oldDeposit;
       let newBalance: number;
       if (booking.deposit_paid) {
-        // Deposit already collected — only the outstanding balance shrinks
         newBalance = Math.max(0, oldBalance - servicePrice);
       } else {
-        // Deposit not yet paid — the 50% deposit expectation shrinks too
         const removedDeposit = (servicePrice * 50) / 100;
         newDeposit = Math.max(0, oldDeposit - removedDeposit);
         newBalance = Math.max(0, newTotal - newDeposit);
@@ -145,7 +137,6 @@ Deno.serve(async (req) => {
 
       const newDuration = Math.max(0, oldDuration - serviceDurMin);
 
-      // Recalculate end_time
       const [sh, sm] = (booking.start_time ?? "00:00").split(":").map(Number);
       const startMs  = sh * 60 * 60 * 1000 + sm * 60 * 1000;
       const endMs    = startMs + newDuration * 60 * 1000;
@@ -153,7 +144,6 @@ Deno.serve(async (req) => {
       const endM     = Math.floor((endMs % 3600000) / 60000);
       const newEndTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`;
 
-      // 5. Delete the booking_items row
       const { error: deleteErr } = await supabase
         .from("booking_items")
         .delete()
@@ -165,16 +155,24 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 6. Update the booking row
+      const hadStaleLink = !!(booking.yoco_final_link || booking.yoco_final_checkout_id);
+
+      const updatePayload: Record<string, any> = {
+        total_amount:             newTotal,
+        deposit_amount:           newDeposit,
+        balance_due:              newBalance,
+        service_duration_minutes: newDuration,
+        end_time:                 newEndTime,
+      };
+
+      if (hadStaleLink) {
+        updatePayload.yoco_final_link        = null;
+        updatePayload.yoco_final_checkout_id = null;
+      }
+
       const { error: updateErr } = await supabase
         .from("bookings")
-        .update({
-          total_amount:             newTotal,
-          deposit_amount:           newDeposit,
-          balance_due:              newBalance,
-          service_duration_minutes: newDuration,
-          end_time:                 newEndTime,
-        })
+        .update(updatePayload)
         .eq("id", booking_id);
 
       if (updateErr) {
@@ -183,7 +181,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 7. Update Google Calendar if connected
       if (booking.gcal_event_id) {
         try {
           await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
@@ -200,22 +197,25 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`Service "${item.service_name}" removed from booking ${booking_id} | new total: R${newTotal} | new balance: R${newBalance}`);
+      console.log(
+        `Service "${item.service_name}" removed from booking ${booking_id} | new total: R${newTotal} | new balance: R${newBalance}` +
+        (hadStaleLink ? " | stale yoco_final_link cleared" : "")
+      );
 
       return new Response(
         JSON.stringify({
-          success:      true,
+          success:            true,
           booking_id,
-          service_name: item.service_name,
-          new_total:    newTotal,
-          new_balance:  newBalance,
-          new_duration: newDuration,
+          service_name:       item.service_name,
+          new_total:          newTotal,
+          new_balance:        newBalance,
+          new_duration:       newDuration,
+          stale_link_cleared: hadStaleLink,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // ── ACTION: add (default) ──────────────────────────────────────────
     const { booking_id, service_id } = body;
 
     if (!booking_id || !service_id || !tenant_id) {
@@ -224,10 +224,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Fetch the booking
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
-      .select("id, tenant_id, total_amount, balance_due, deposit_amount, deposit_paid, service_duration_minutes, start_time, booking_date, gcal_event_id, status, client_name, client_phone, client_email, guest_name, guest_phone, guest_email, is_call_out, call_out_address, call_out_distance_km, client_notes")
+      .select("id, tenant_id, total_amount, balance_due, deposit_amount, deposit_paid, service_duration_minutes, start_time, booking_date, gcal_event_id, status, client_name, client_phone, client_email, guest_name, guest_phone, guest_email, is_call_out, call_out_address, call_out_distance_km, client_notes, yoco_final_link, yoco_final_checkout_id")
       .eq("id", booking_id)
       .eq("tenant_id", tenant_id)
       .single();
@@ -244,10 +243,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Fetch the service
     const { data: service, error: serviceErr } = await supabase
       .from("services")
-      .select("id, name, price, duration_minutes")
+      .select("id, name, price, duration_minutes, is_archived")
       .eq("id", service_id)
       .eq("tenant_id", tenant_id)
       .single();
@@ -258,7 +256,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Recalculate totals
+    if (service.is_archived) {
+      return new Response(
+        JSON.stringify({ error: "Service is archived and cannot be added to a booking" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const oldTotal      = Number(booking.total_amount   ?? 0);
     const oldBalance    = Number(booking.balance_due    ?? 0);
     const oldDeposit    = Number(booking.deposit_amount ?? 0);
@@ -266,7 +270,6 @@ Deno.serve(async (req) => {
     const servicePrice  = Number(service.price ?? 0);
     const serviceDurMin = Number(service.duration_minutes ?? 0);
 
-    // Default to 50% deposit if deposit not yet paid
     let additionalDeposit = 0;
     if (!booking.deposit_paid) {
       additionalDeposit = (servicePrice * 50) / 100;
@@ -279,7 +282,6 @@ Deno.serve(async (req) => {
       : newTotal - newDeposit;
     const newDuration = oldDuration + serviceDurMin;
 
-    // Recalculate end_time
     const [sh, sm] = (booking.start_time ?? "00:00").split(":").map(Number);
     const startMs  = sh * 60 * 60 * 1000 + sm * 60 * 1000;
     const endMs    = startMs + newDuration * 60 * 1000;
@@ -287,7 +289,6 @@ Deno.serve(async (req) => {
     const endM     = Math.floor((endMs % 3600000) / 60000);
     const newEndTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`;
 
-    // 4. Get current max sort_order for this booking
     const { data: existingItems } = await supabase
       .from("booking_items")
       .select("sort_order")
@@ -299,7 +300,6 @@ Deno.serve(async (req) => {
       ? (existingItems[0].sort_order ?? 0) + 1
       : 0;
 
-    // 5. Insert into booking_items
     const { error: insertErr } = await supabase
       .from("booking_items")
       .insert({
@@ -319,16 +319,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 6. Update the booking row
+    const hadStaleLink = !!(booking.yoco_final_link || booking.yoco_final_checkout_id);
+
+    const updatePayload: Record<string, any> = {
+      total_amount:             newTotal,
+      deposit_amount:           newDeposit,
+      balance_due:              newBalance,
+      service_duration_minutes: newDuration,
+      end_time:                 newEndTime,
+    };
+
+    if (hadStaleLink) {
+      updatePayload.yoco_final_link        = null;
+      updatePayload.yoco_final_checkout_id = null;
+    }
+
     const { error: updateErr } = await supabase
       .from("bookings")
-      .update({
-        total_amount:             newTotal,
-        deposit_amount:           newDeposit,
-        balance_due:              newBalance,
-        service_duration_minutes: newDuration,
-        end_time:                 newEndTime,
-      })
+      .update(updatePayload)
       .eq("id", booking_id);
 
     if (updateErr) {
@@ -337,7 +345,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 7. Update Google Calendar if connected
     if (booking.gcal_event_id) {
       try {
         await fetch(`${supabaseUrl}/functions/v1/update-gcal-event`, {
@@ -354,16 +361,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Service "${service.name}" added to booking ${booking_id} | new total: R${newTotal} | new balance: R${newBalance}`);
+    console.log(
+      `Service "${service.name}" added to booking ${booking_id} | new total: R${newTotal} | new balance: R${newBalance}` +
+      (hadStaleLink ? " | stale yoco_final_link cleared" : "")
+    );
 
     return new Response(
       JSON.stringify({
-        success:      true,
+        success:            true,
         booking_id,
-        service_name: service.name,
-        new_total:    newTotal,
-        new_balance:  newBalance,
-        new_duration: newDuration,
+        service_name:       service.name,
+        new_total:          newTotal,
+        new_balance:        newBalance,
+        new_duration:       newDuration,
+        stale_link_cleared: hadStaleLink,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
