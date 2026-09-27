@@ -1,4 +1,12 @@
 // C8 — Category Order rows now have inline confirm-delete; per-category service reorder manual save
+// C9 — Trash only when the reference map reports zero references; Archive otherwise.
+//      Archived filter, Restore action, and fail-closed reference gating.
+//
+// Archived services are excluded from the picker views below (category reorder,
+// the all-services drag list) and appear only under the Archived filter option.
+// This is intentional: archived services aren't offered for new bookings, and
+// the reorder views exist to control booking-flow ordering. The category count
+// and category list therefore reflect active, non-archived services only.
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,7 +18,7 @@ import {
 import {
   Plus, Pencil, Trash2, Check, Search,
   ChevronDown, ChevronUp, GripVertical, X, Sparkles,
-  ArrowUp, ArrowDown,
+  ArrowUp, ArrowDown, Archive, ArchiveRestore,
 } from "lucide-react";
 import {
   DndContext, closestCenter, PointerSensor,
@@ -23,7 +31,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   useSupabaseServices, useServiceCategories,
-  useUpsertService, useDeleteService, type Service,
+  useUpsertService, useDeleteService, useServiceReferences, useArchiveService,
+  type Service,
 } from "@/hooks/useSupabaseServices";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -53,14 +62,143 @@ const emptyService = (): EditingService => ({
 });
 
 const NEW_CATEGORY_SENTINEL = "__new__";
+const ARCHIVED_FILTER = "__archived__";
 
-// Spring transition — matches BusinessHealthSection's metric-card expand/collapse feel
 const SPRING = {
   type: "spring" as const,
   stiffness: 400,
   damping: 32,
   restSpeed: 0.5,
   restDelta: 0.5,
+};
+
+// ── Shared row actions (Edit / Delete / Archive / Restore) ────────────────────
+interface ServiceRowActionsProps {
+  service: Service;
+  canDelete: boolean;
+  referencesReady: boolean;
+  onEdit: (s: Service) => void;
+  onDelete: (id: string) => void;
+  onArchive: (id: string, archived: boolean) => void;
+}
+
+const ServiceRowActions = ({
+  service, canDelete, referencesReady, onEdit, onDelete, onArchive,
+}: ServiceRowActionsProps) => {
+  const [confirm, setConfirm] = useState<null | "delete" | "archive" | "restore">(null);
+
+  // Archived → Restore only. No edit, delete, or archive churn on archived rows.
+  if (service.is_archived) {
+    if (confirm === "restore") {
+      return (
+        <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
+          <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-tight mr-1">Restore?</span>
+          <button
+            onClick={() => { onArchive(service.id, false); setConfirm(null); }}
+            className="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-[11px] font-semibold transition-colors"
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => setConfirm(null)}
+            className="p-1.5 rounded-xl hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
+            aria-label="Cancel restore"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      );
+    }
+    return (
+      <button
+        onClick={() => setConfirm("restore")}
+        className="p-2 rounded-xl hover:bg-emerald-500/10 text-white/40 hover:text-emerald-400 transition-colors"
+        aria-label={`Restore ${service.name}`}
+        title="Restore"
+      >
+        <ArchiveRestore className="w-3.5 h-3.5" />
+      </button>
+    );
+  }
+
+  if (confirm === "delete") {
+    return (
+      <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
+        <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Delete forever?</span>
+        <button
+          onClick={() => { onDelete(service.id); setConfirm(null); }}
+          className="px-2.5 py-1 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => setConfirm(null)}
+          className="p-1.5 rounded-xl hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
+          aria-label="Cancel delete"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  if (confirm === "archive") {
+    return (
+      <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
+        <span className="text-[10px] font-bold text-amber-400/80 uppercase tracking-tight mr-1">Archive?</span>
+        <button
+          onClick={() => { onArchive(service.id, true); setConfirm(null); }}
+          className="px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 text-[11px] font-semibold transition-colors"
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => setConfirm(null)}
+          className="p-1.5 rounded-xl hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
+          aria-label="Cancel archive"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  // Non-archived: Trash when the reference map has confirmed zero references
+  // AND the map query has succeeded; Archive otherwise. Fail-closed: while the
+  // map is loading or errored, Archive is shown instead of Trash, so the UI
+  // never offers an action the guarded delete would refuse.
+  const showTrash = canDelete && referencesReady;
+
+  return (
+    <>
+      <button
+        onClick={() => onEdit(service)}
+        className="p-2 rounded-xl hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
+        aria-label={`Edit ${service.name}`}
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
+      {showTrash ? (
+        <button
+          onClick={() => setConfirm("delete")}
+          className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
+          aria-label={`Permanently delete ${service.name}`}
+          title="Permanently delete"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setConfirm("archive")}
+          className="p-2 rounded-xl hover:bg-amber-500/10 text-white/40 hover:text-amber-400 transition-colors"
+          aria-label={`Archive ${service.name}`}
+          title="Archive"
+        >
+          <Archive className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </>
+  );
 };
 
 // ── Rule Editor ───────────────────────────────────────────────────────────────
@@ -183,17 +321,19 @@ interface ServiceReorderRowProps {
   service: Service;
   index: number;
   total: number;
+  canDelete: boolean;
+  referencesReady: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onEdit: (s: Service) => void;
   onDelete: (id: string) => void;
+  onArchive: (id: string, archived: boolean) => void;
 }
 
 const ServiceReorderRow = ({
-  service, index, total, onMoveUp, onMoveDown, onEdit, onDelete,
+  service, index, total, canDelete, referencesReady,
+  onMoveUp, onMoveDown, onEdit, onDelete, onArchive,
 }: ServiceReorderRowProps) => {
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
   return (
     <div className="group flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all">
       <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{index + 1}</span>
@@ -201,7 +341,7 @@ const ServiceReorderRow = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-white/90 truncate">{service.name}</span>
-          {!service.is_active && (
+          {!service.is_active && !service.is_archived && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400/80 font-medium">
               Inactive
             </span>
@@ -234,38 +374,14 @@ const ServiceReorderRow = ({
       </div>
 
       <div className="flex items-center gap-1 border-l border-white/[0.06] pl-2">
-        {confirmDelete ? (
-          <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
-            <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Delete?</span>
-            <button
-              onClick={() => { onDelete(service.id); setConfirmDelete(false); }}
-              className="px-2.5 py-1 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
-            >
-              Yes
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="p-1.5 rounded-xl hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <>
-            <button
-              onClick={() => onEdit(service)}
-              className="p-2 rounded-xl hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </>
-        )}
+        <ServiceRowActions
+          service={service}
+          canDelete={canDelete}
+          referencesReady={referencesReady}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onArchive={onArchive}
+        />
       </div>
     </div>
   );
@@ -273,10 +389,16 @@ const ServiceReorderRow = ({
 
 // ── Sortable service row (used in the all-services drag list) ─────────────────
 const SortableServiceRow = ({
-  service, onEdit, onDelete,
-}: { service: Service; onEdit: (s: Service) => void; onDelete: (id: string) => void; }) => {
+  service, canDelete, referencesReady, onEdit, onDelete, onArchive,
+}: {
+  service: Service;
+  canDelete: boolean;
+  referencesReady: boolean;
+  onEdit: (s: Service) => void;
+  onDelete: (id: string) => void;
+  onArchive: (id: string, archived: boolean) => void;
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: service.id });
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -298,9 +420,14 @@ const SortableServiceRow = ({
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-white/40 font-medium">
             {service.category.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
           </span>
-          {!service.is_active && (
+          {!service.is_active && !service.is_archived && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400/80 font-medium">
               Inactive
+            </span>
+          )}
+          {service.is_archived && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400/80 font-medium">
+              Archived
             </span>
           )}
         </div>
@@ -314,38 +441,14 @@ const SortableServiceRow = ({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        {confirmDelete ? (
-          <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
-            <span className="text-[10px] font-bold text-red-400/80 uppercase tracking-tight mr-1">Delete?</span>
-            <button
-              onClick={() => { onDelete(service.id); setConfirmDelete(false); }}
-              className="px-2.5 py-1 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[11px] font-semibold transition-colors"
-            >
-              Deactivate
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="p-1.5 rounded-xl hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <>
-            <button
-              onClick={() => onEdit(service)}
-              className="p-2 rounded-xl hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="p-2 rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </>
-        )}
+        <ServiceRowActions
+          service={service}
+          canDelete={canDelete}
+          referencesReady={referencesReady}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onArchive={onArchive}
+        />
       </div>
     </div>
   );
@@ -355,10 +458,33 @@ const SortableServiceRow = ({
 const AdminServices = () => {
   const { data: services = [], isLoading } = useSupabaseServices();
   const { data: appSettings = {}, isSuccess: appSettingsReady } = useAppSettings();
+  const {
+    data: references,
+    isSuccess: referencesReady,
+    isError: referencesError,
+  } = useServiceReferences();
   const upsertSetting = useUpsertAppSetting();
   const { tenantId } = useTenant();
   const upsertMutation = useUpsertService();
   const deleteMutation = useDeleteService();
+  const archiveMutation = useArchiveService();
+
+  const handleDelete = useCallback(
+    (id: string) => deleteMutation.mutate(id),
+    [deleteMutation]
+  );
+  const handleArchive = useCallback(
+    (id: string, archived: boolean) => archiveMutation.mutate({ id, archived }),
+    [archiveMutation]
+  );
+  // Fail-closed: Trash only when the map has succeeded AND reported zero
+  // references. While loading or errored, callers get false and render
+  // Archive instead. The referencesReady prop gates the same decision in
+  // the row so a stale canDelete during load can't show Trash.
+  const canDelete = useCallback(
+    (s: Service) => !s.is_archived && (references?.get(s.id) ?? 0) === 0,
+    [references]
+  );
 
   // ── Saved category order ──────────────────────────────────────────────────
   const savedCategoryOrder = useMemo<string[]>(() => {
@@ -379,7 +505,6 @@ const AdminServices = () => {
   // ── Local category order (unsaved UI state) ───────────────────────────────
   const [localCatOrder, setLocalCatOrder] = useState<string[] | null>(null);
   const [catOrderSaved, setCatOrderSaved] = useState(false);
-  // confirmDeleteCatId: which category row is showing the inline confirm prompt
   const [confirmDeleteCatId, setConfirmDeleteCatId] = useState<string | null>(null);
   const seededRef = useRef(false);
 
@@ -440,11 +565,8 @@ const AdminServices = () => {
     );
   };
 
-  // Delete a category: deactivates all its services and removes it from the
-  // saved category_order setting. Services stay in the DB (just inactive).
   const deleteCategory = useCallback(async (catId: string) => {
     if (!tenantId) return;
-    // 1. Deactivate all services in this category
     const { error } = await supabase
       .from("services")
       .update({ is_active: false })
@@ -454,16 +576,13 @@ const AdminServices = () => {
       toast.error("Could not deactivate services — try again");
       return;
     }
-    // 2. Remove from local order
     setLocalCatOrder((prev) => {
       const ids = prev ?? orderedCategories.map((c) => c.id);
       return ids.filter((id) => id !== catId);
     });
-    // 3. Persist the updated category_order immediately
     const newIds = (localCatOrder ?? orderedCategories.map((c) => c.id)).filter((id) => id !== catId);
     upsertSetting.mutate({ category_order: JSON.stringify(newIds) });
     setConfirmDeleteCatId(null);
-    // Close the reorder panel if it was open on this category
     setReorderCatId((prev) => (prev === catId ? null : prev));
     toast.success("Category deleted and its services deactivated");
   }, [tenantId, localCatOrder, orderedCategories, upsertSetting]);
@@ -479,8 +598,12 @@ const AdminServices = () => {
     if (!catId) return;
     setLocalSvcOrder((prev) => {
       if (prev.has(catId)) return prev;
+      // Archived services are intentionally excluded from this reorder view.
+      // They aren't offered in the booking flow, and this panel exists to
+      // control booking-flow ordering. Archived services are surfaced only
+      // under the Archived filter in the section below.
       const sorted = services
-        .filter((s) => s.category === catId)
+        .filter((s) => s.category === catId && !s.is_archived)
         .sort((a, b) => {
           const ao = a.display_order ?? 999999;
           const bo = b.display_order ?? 999999;
@@ -597,16 +720,32 @@ const AdminServices = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
+  // Non-archived services form the drag-order universe.
+  const activeServices = useMemo(
+    () => services.filter((s) => !s.is_archived),
+    [services]
+  );
+
   const baseList = useMemo(() => {
-    if (!orderedIds) return services;
-    const map = new Map(services.map((s) => [s.id, s]));
+    if (!orderedIds) return activeServices;
+    const map = new Map(activeServices.map((s) => [s.id, s]));
     const ordered = orderedIds.map((id) => map.get(id)).filter(Boolean) as Service[];
     const inOrder = new Set(orderedIds);
-    const extras = services.filter((s) => !inOrder.has(s.id));
+    const extras = activeServices.filter((s) => !inOrder.has(s.id));
     return [...ordered, ...extras];
-  }, [services, orderedIds]);
+  }, [activeServices, orderedIds]);
 
   const filtered = useMemo(() => {
+    if (filterCategory === ARCHIVED_FILTER) {
+      let archived = services.filter((s) => s.is_archived);
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        archived = archived.filter(
+          (t) => t.name.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q)
+        );
+      }
+      return archived;
+    }
     let list = baseList;
     if (filterCategory !== "all") list = list.filter((t) => t.category === filterCategory);
     if (search.trim()) {
@@ -616,30 +755,29 @@ const AdminServices = () => {
       );
     }
     return list;
-  }, [baseList, filterCategory, search]);
+  }, [baseList, services, filterCategory, search]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const currentIds = orderedIds ?? services.map((s) => s.id);
+    const currentIds = orderedIds ?? activeServices.map((s) => s.id);
     const oldIndex = currentIds.indexOf(active.id as string);
     const newIndex = currentIds.indexOf(over.id as string);
     if (oldIndex === -1 || newIndex === -1) return;
     const newOrder = arrayMove(currentIds, oldIndex, newIndex);
     setOrderedIds(newOrder);
     try {
-      const updates = newOrder.map((id, idx) => ({ id, display_order: idx }));
-      for (const u of updates) {
+      for (const [idx, id] of newOrder.entries()) {
         await supabase
           .from("services")
-          .update({ display_order: u.display_order })
-          .eq("id", u.id)
+          .update({ display_order: idx })
+          .eq("id", id)
           .eq("tenant_id", tenantId);
       }
     } catch {
       toast.error("Could not save order — try again");
     }
-  }, [orderedIds, services, tenantId]);
+  }, [orderedIds, activeServices, tenantId]);
 
   const saveSuggestedAddons = () => {
     const validRules = addonRules.filter((r) => r.triggerId !== "" && r.suggestIds.length > 0);
@@ -666,7 +804,10 @@ const AdminServices = () => {
   const startNew = () => {
     setEditing({
       ...emptyService(),
-      category: filterCategory === "all" ? (categories[0]?.id || "") : filterCategory,
+      category:
+        filterCategory === "all" || filterCategory === ARCHIVED_FILTER
+          ? (categories[0]?.id || "")
+          : filterCategory,
     });
     setIsNew(true);
   };
@@ -698,13 +839,11 @@ const AdminServices = () => {
         duration_minutes: duration,
         category: resolvedCategory,
         is_active: editing.is_active,
-        display_order: isNew ? services.length : undefined,
+        display_order: isNew ? activeServices.length : undefined,
       },
       { onSuccess: cancelEdit }
     );
   };
-
-  const handleDelete = (id: string) => deleteMutation.mutate(id);
 
   const inputClass =
     "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors";
@@ -720,8 +859,9 @@ const AdminServices = () => {
   }
 
   const isDraggable = !search.trim() && filterCategory === "all";
-  const serviceOptions = services.map((s) => ({ id: s.id, name: s.name }));
+  const serviceOptions = activeServices.map((s) => ({ id: s.id, name: s.name }));
   const usedTriggerIds = addonRules.map((r) => r.triggerId).filter(Boolean);
+  const hasArchived = services.some((s) => s.is_archived);
 
   return (
     <div className="flex flex-col gap-8 pb-12">
@@ -753,7 +893,7 @@ const AdminServices = () => {
           <div className="flex flex-col gap-1.5">
             {orderedCategories.map((cat, idx) => {
               const isConfirming = confirmDeleteCatId === cat.id;
-              const svcCount = services.filter((s) => s.category === cat.id).length;
+              const svcCount = activeServices.filter((s) => s.category === cat.id).length;
               return (
                 <div
                   key={cat.id}
@@ -765,7 +905,6 @@ const AdminServices = () => {
                     {svcCount} service{svcCount !== 1 ? "s" : ""}
                   </span>
 
-                  {/* Arrow buttons — hidden while confirm prompt is open */}
                   {!isConfirming && (
                     <div className="flex items-center gap-0.5">
                       <button
@@ -787,7 +926,6 @@ const AdminServices = () => {
                     </div>
                   )}
 
-                  {/* Delete button / confirm prompt */}
                   <div className="flex items-center gap-1 border-l border-white/[0.06] pl-2">
                     {isConfirming ? (
                       <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
@@ -843,7 +981,6 @@ const AdminServices = () => {
           Select a category, use ↑ ↓ to reorder its services, then click Save Order.
         </p>
 
-        {/* Category selector tabs */}
         <div className="flex flex-wrap gap-2">
           {orderedCategories.map((cat) => {
             const isActive = reorderCatId === cat.id;
@@ -863,7 +1000,6 @@ const AdminServices = () => {
           })}
         </div>
 
-        {/* Service list for selected category */}
         <AnimatePresence mode="wait">
           {reorderCatId && (
             <motion.div
@@ -883,10 +1019,13 @@ const AdminServices = () => {
                     service={svc}
                     index={idx}
                     total={reorderCatServices.length}
+                    canDelete={canDelete(svc)}
+                    referencesReady={referencesReady}
                     onMoveUp={() => moveServiceUp(idx)}
                     onMoveDown={() => moveServiceDown(idx)}
                     onEdit={startEdit}
                     onDelete={handleDelete}
+                    onArchive={handleArchive}
                   />
                 ))
               )}
@@ -899,8 +1038,8 @@ const AdminServices = () => {
       <section className="flex flex-col gap-4 border-t border-white/[0.06] pt-6">
         <div className="flex items-center justify-between">
           <SectionLabel
-            label={`All Services · ${services.length} service${
-              services.length !== 1 ? "s" : ""
+            label={`All Services · ${activeServices.length} service${
+              activeServices.length !== 1 ? "s" : ""
             } across ${categories.length} ${
               categories.length !== 1 ? "categories" : "category"
             }${isDraggable ? " · drag to reorder" : ""}`}
@@ -912,6 +1051,12 @@ const AdminServices = () => {
             <Plus className="w-3.5 h-3.5" /> Add Service
           </button>
         </div>
+
+        {referencesError && (
+          <p role="alert" className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-xs text-amber-200">
+            Reference counts are unavailable. Trash is hidden until this reloads; Archive is offered instead.
+          </p>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -934,16 +1079,17 @@ const AdminServices = () => {
               {orderedCategories.map((c) => (
                 <option key={c.id} value={c.id}>{c.label}</option>
               ))}
+              {hasArchived && (
+                <option value={ARCHIVED_FILTER}>Archived</option>
+              )}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 pointer-events-none" />
           </div>
         </div>
 
-        {/* Inline edit / create form — full-screen modal, matching BusinessHealthSection's expand overlay */}
         <AnimatePresence>
           {editing && (
             <>
-              {/* Backdrop */}
               <motion.div
                 key="edit-service-backdrop"
                 initial={{ opacity: 0 }}
@@ -955,7 +1101,6 @@ const AdminServices = () => {
                 aria-hidden="true"
               />
 
-              {/* Panel */}
               <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
                 <motion.div
                   key="edit-service-panel"
@@ -1073,10 +1218,22 @@ const AdminServices = () => {
         {filtered.length === 0 ? (
           <EmptyState
             icon={Search}
-            title={search.trim() ? `No services match "${search}"` : "No services yet"}
-            description={!search.trim() ? "Add your first service to get started." : "Try a different search term."}
+            title={
+              search.trim()
+                ? `No services match "${search}"`
+                : filterCategory === ARCHIVED_FILTER
+                  ? "No archived services"
+                  : "No services yet"
+            }
+            description={
+              search.trim()
+                ? "Try a different search term."
+                : filterCategory === ARCHIVED_FILTER
+                  ? "Services with references appear here when archived."
+                  : "Add your first service to get started."
+            }
             action={
-              !search.trim() ? (
+              !search.trim() && filterCategory !== ARCHIVED_FILTER ? (
                 <button
                   onClick={startNew}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-colors"
@@ -1092,13 +1249,29 @@ const AdminServices = () => {
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={filtered.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                   {filtered.map((s) => (
-                    <SortableServiceRow key={s.id} service={s} onEdit={startEdit} onDelete={handleDelete} />
+                    <SortableServiceRow
+                      key={s.id}
+                      service={s}
+                      canDelete={canDelete(s)}
+                      referencesReady={referencesReady}
+                      onEdit={startEdit}
+                      onDelete={handleDelete}
+                      onArchive={handleArchive}
+                    />
                   ))}
                 </SortableContext>
               </DndContext>
             ) : (
               filtered.map((s) => (
-                <SortableServiceRow key={s.id} service={s} onEdit={startEdit} onDelete={handleDelete} />
+                <SortableServiceRow
+                  key={s.id}
+                  service={s}
+                  canDelete={canDelete(s)}
+                  referencesReady={referencesReady}
+                  onEdit={startEdit}
+                  onDelete={handleDelete}
+                  onArchive={handleArchive}
+                />
               ))
             )}
           </div>
