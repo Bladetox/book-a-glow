@@ -54,6 +54,15 @@ const emptyService = (): EditingService => ({
 
 const NEW_CATEGORY_SENTINEL = "__new__";
 
+// Spring transition — matches BusinessHealthSection's metric-card expand/collapse feel
+const SPRING = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 32,
+  restSpeed: 0.5,
+  restDelta: 0.5,
+};
+
 // ── Rule Editor ───────────────────────────────────────────────────────────────
 interface ServiceOption { id: string; name: string; }
 
@@ -931,15 +940,29 @@ const AdminServices = () => {
         </div>
 
         {/* Inline edit / create form */}
-        {editing && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-5 rounded-3xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.1] flex flex-col gap-4"
-          >
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/30">
-              {isNew ? "New Service" : "Edit Service"}
-            </p>
+        <AnimatePresence>
+          {editing && (
+            <motion.div
+              key="edit-service-panel"
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={SPRING}
+              style={{ willChange: "transform" }}
+              className="p-5 rounded-3xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] border border-white/[0.1] flex flex-col gap-4"
+            >
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/30">
+                {isNew ? "New Service" : "Edit Service"}
+              </p>
+              <button
+                onClick={cancelEdit}
+                className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors shrink-0"
+                aria-label="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input
                 className={inputClass}
@@ -1027,7 +1050,8 @@ const AdminServices = () => {
               </div>
             </div>
           </motion.div>
-        )}
+          )}
+        </AnimatePresence>
 
         {filtered.length === 0 ? (
           <EmptyState
