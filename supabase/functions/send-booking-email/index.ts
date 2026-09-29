@@ -1983,7 +1983,7 @@ Deno.serve(async (req) => {
               Hi <strong>${firstName}</strong>,
             </p>
             <p class="tm" style="margin:14px 0 0;font-size:20px;font-weight:700;color:#000;line-height:1.35;">
-              Thank you for visiting ${tenantName}.
+              Thank you for choosing ${tenantName}.
             </p>
             <p class="tl" style="margin:12px 0 0;font-size:14px;color:#555;line-height:1.7;">
               ${balance_settled ? "Your balance is now settled. " : ""}We hope you enjoyed the experience and love your results.
