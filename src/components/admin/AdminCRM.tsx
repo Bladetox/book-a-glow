@@ -28,15 +28,13 @@ import {
   TEMPLATE_SETTING_KEYS,
   getTemplateValue,
   type MessageTemplateType,
+  type MessageTemplateValues,
 } from "@/lib/messaging/whatsapp";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import { orphanIdentityGroupKey, resolveOrphanIdentity, type OrphanBooking } from "@/lib/crm/orphanIdentity";
-import PromosView from "@/components/admin/messaging/PromosView";
-import type { ClientRowForPromo } from "@/components/admin/messaging/types";
 import { toast } from "sonner";
 
 type Area = "clients" | "retention" | "messaging";
-type MessagingView = "messages" | "promos";
 type ClientView = "directory" | "attention" | "consultations" | "blocked" | "identity_review";
 type RetentionView = "loyalty" | "consistency";
 type AttentionQueue = "due" | "overdue" | "inactive" | "special_dates";
@@ -60,16 +58,16 @@ const primaryAreas: { id: Area; label: string; description: string }[] = [
 
 const clientViews: { id: ClientView; label: string }[] = [
   { id: "directory", label: "All clients" },
-  { id: "identity_review", label: "Identity review" },
   { id: "attention", label: "Needs attention" },
+  { id: "identity_review", label: "Identity review" },
   { id: "consultations", label: "Consultations" },
   { id: "blocked", label: "Blocked" },
 ];
 
 const attentionQueues: { id: AttentionQueue; label: string }[] = [
-  { id: "due", label: "Due soon" },
+  { id: "due", label: "Due to Book" },
   { id: "overdue", label: "Overdue" },
-  { id: "inactive", label: "Inactive" },
+  { id: "inactive", label: "Not seen in a while" },
   { id: "special_dates", label: "Special dates" },
 ];
 
@@ -113,11 +111,51 @@ function resolveCanonicalId(
 function whatsApp(
   phone: string | null,
   template: string,
-  values: { name: string; business: string; service?: string; bookingUrl?: string },
+  values: MessageTemplateValues,
 ) {
   if (!template || !phone) return "";
   const message = resolveMessageTemplate(template, values);
   return buildWhatsAppUrl(phone, message);
+}
+
+function buildClientMessageContext(
+  bookings: any[],
+  canonicalClientId: string | null | undefined,
+  base: {
+    businessName: string;
+    serviceLabel: string;
+    bookingUrl: string;
+    googleReviewLink: string;
+  },
+  mergeTargets: Map<string, string>,
+): MessageTemplateValues {
+  const completed = bookings
+    .filter(
+      (booking) =>
+        booking.status === "completed" &&
+        resolveCanonicalId(booking, mergeTargets) === canonicalClientId,
+    )
+    .sort((a, b) => String(b.booking_date).localeCompare(String(a.booking_date)));
+
+  const lastBooking = completed[0];
+  const lastService = (lastBooking?.booking_items ?? [])
+    .map((item: any) => item.service_name)
+    .filter(Boolean)
+    .join(", ");
+
+  const lastVisit = lastBooking?.booking_date
+    ? format(new Date(lastBooking.booking_date + "T00:00:00"), "d MMM yyyy")
+    : "";
+
+  return {
+    name: "",
+    business: base.businessName,
+    service: lastService || base.serviceLabel,
+    bookingUrl: base.bookingUrl,
+    lastService: lastService || base.serviceLabel,
+    lastVisit,
+    googleReviewLink: base.googleReviewLink,
+  };
 }
 
 export default function AdminCRM({
@@ -132,7 +170,7 @@ export default function AdminCRM({
   canLoyalty?: boolean;
   canConsistency?: boolean;
 }) {
-  const { tenantId } = useTenant();
+  const { tenantId, tenant } = useTenant();
   const [area, setArea] = useState<Area>("clients");
   const [clientView, setClientView] = useState<ClientView>("directory");
   const [retentionView, setRetentionView] = useState<RetentionView>(
@@ -142,7 +180,6 @@ export default function AdminCRM({
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ClientRow | null>(null);
   const [templateFocus, setTemplateFocus] = useState<MessageTemplateType | undefined>();
-  const [messagingView, setMessagingView] = useState<MessagingView>("messages");
   const [resolvingBookingId, setResolvingBookingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -191,13 +228,15 @@ export default function AdminCRM({
     queryKey: ["crm-message-settings", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const keys = Array.from(new Set([
-        ...Object.values(TEMPLATE_SETTING_KEYS),
-        ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter((key): key is string => Boolean(key)),
-        "business_name",
-        "loyalty_business_name",
-        "loyalty_service_label",
-      ]));
+      const keys = Array.from(
+        new Set([
+          ...Object.values(TEMPLATE_SETTING_KEYS),
+          ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter(
+            (key): key is string => Boolean(key),
+          ),
+          "loyalty_service_label",
+        ]),
+      );
 
       const { data, error } = await supabase
         .from("app_settings")
@@ -209,20 +248,39 @@ export default function AdminCRM({
     },
   });
 
+  const { data: tenantMessageSettings = null } = useQuery({
+    queryKey: ["crm-tenant-message-settings", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("name,google_review_url")
+        .eq("id", tenantId)
+        .single();
+      if (error) throw error;
+      return data ?? null;
+    },
+  });
+
   const getTemplate = (type: MessageTemplateType) =>
     getTemplateValue(messageSettings as any[], type);
 
   const messageContext = useMemo(() => {
-    const map = new Map((messageSettings as any[]).map((row) => [row.key, row.value ?? ""]));
+    const map = new Map(
+      (messageSettings as any[]).map((row) => [row.key, row.value ?? ""]),
+    );
+
     return {
       businessName:
-        map.get("business_name") ||
-        map.get("loyalty_business_name") ||
-        "",
+        tenantMessageSettings?.name ||
+        tenant?.name ||
+        "Your business",
       serviceLabel: map.get("loyalty_service_label") || "appointment",
-      bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
+      bookingUrl:
+        typeof window !== "undefined" ? `${window.location.origin}/book` : "",
+      googleReviewLink: tenantMessageSettings?.google_review_url || "",
     };
-  }, [messageSettings]);
+  }, [messageSettings, tenant, tenantMessageSettings]);
 
   const canonicalClients = useMemo(() => {
     const map = new Map<string, any>();
@@ -570,12 +628,19 @@ export default function AdminCRM({
                   name={client.name}
                   phone={client.phone}
                   detail={`Due ${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}`}
-                  href={whatsApp(client.phone, getTemplate("time_to_book"), {
-                    name: client.name,
-                    business: messageContext.businessName,
-                    service: messageContext.serviceLabel,
-                    bookingUrl: messageContext.bookingUrl,
-                  })}
+                  href={whatsApp(
+                    client.phone,
+                    getTemplate("time_to_book"),
+                    {
+                      ...buildClientMessageContext(
+                        bookings,
+                        String(client.key).replace("loyalty:", ""),
+                        messageContext,
+                        mergedClientTargets,
+                      ),
+                      name: client.name,
+                    },
+                  )}
                 />
               ))}
 
@@ -586,12 +651,19 @@ export default function AdminCRM({
                   name={client.client_name}
                   phone={client.phone}
                   detail={`${client.days_overdue} days overdue`}
-                  href={whatsApp(client.phone, getTemplate("overdue"), {
-                    name: client.client_name,
-                    business: messageContext.businessName,
-                    service: messageContext.serviceLabel,
-                    bookingUrl: messageContext.bookingUrl,
-                  })}
+                  href={whatsApp(
+                    client.phone,
+                    getTemplate("overdue"),
+                    {
+                      ...buildClientMessageContext(
+                        bookings,
+                        String(client.id),
+                        messageContext,
+                        mergedClientTargets,
+                      ),
+                      name: client.client_name,
+                    },
+                  )}
                 />
               ))}
 
@@ -602,12 +674,19 @@ export default function AdminCRM({
                   name={client.client_name}
                   phone={client.client_phone}
                   detail={`${client.days_since_booking} days since last booking`}
-                  href={whatsApp(client.client_phone, getTemplate("long_overdue"), {
-                    name: client.client_name,
-                    business: messageContext.businessName,
-                    service: messageContext.serviceLabel,
-                    bookingUrl: messageContext.bookingUrl,
-                  })}
+                  href={whatsApp(
+                    client.client_phone,
+                    getTemplate("long_overdue"),
+                    {
+                      ...buildClientMessageContext(
+                        bookings,
+                        String(client.client_id),
+                        messageContext,
+                        mergedClientTargets,
+                      ),
+                      name: client.client_name,
+                    },
+                  )}
                 />
               ))}
 
@@ -708,46 +787,7 @@ export default function AdminCRM({
       )}
 
       {area === "messaging" && (
-        <>
-          <SubNavigation
-            items={[
-              { id: "messages", label: "Messages" },
-              { id: "promos", label: "Promos" },
-            ]}
-            active={messagingView}
-            onSelect={(value) => setMessagingView(value as MessagingView)}
-          />
-          {messagingView === "messages" ? (
-            <MessageTemplatesView focusType={templateFocus} />
-          ) : (
-            <PromosView
-              clients={clients as ClientRowForPromo[]}
-              dueClients={dueClients as ClientRowForPromo[]}
-              overdueClients={(alerts?.overdueLoyaltyClients ?? []).map((client) => ({
-                key: String(client.id),
-                name: client.client_name,
-                phone: client.phone,
-                email: null,
-                lastBooking: null,
-                bookingCount: 0,
-                spend: 0,
-                bookings: [],
-              }))}
-              inactiveClients={(alerts?.inactiveClients ?? []).map((client) => ({
-                key: String(client.client_id),
-                name: client.client_name,
-                phone: client.client_phone,
-                email: client.client_email ?? null,
-                lastBooking: client.last_booking_date ?? null,
-                bookingCount: client.booking_count ?? 0,
-                spend: 0,
-                bookings: [],
-              }))}
-              businessName={messageContext.businessName}
-              bookingUrl={messageContext.bookingUrl}
-            />
-          )}
-        </>
+        <MessageTemplatesView focusType={templateFocus} />
       )}
 
       {selected && (
