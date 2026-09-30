@@ -504,24 +504,6 @@ export const LoyaltyClientCard = ({
             className="hidden md:flex items-center gap-2 shrink-0"
             onClick={e => e.stopPropagation()}
           >
-            <InlineStatusEditor
-              rowId={row.id}
-              current={row.status}
-              effectiveNorm={effStatus}
-              tenantId={tenantId}
-              onOptimisticUpdate={onOptimisticUpdate}
-              onUpdated={onUpdated}
-            />
-            <WaButton
-              name={row.client_name ?? ""}
-              status={effStatus}
-              phone={row.phone ?? ""}
-              businessName={businessName}
-              serviceLabel={serviceLabel}
-              lastVisit={lastVisit ? isoToDisplay(lastVisit) : ""}
-              templates={waTemplates}
-              isMessageTemplateConfigured={isMessageTemplateConfigured}
-            />
             <button
               onClick={e => { e.stopPropagation(); onToggleExpand(); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
@@ -540,26 +522,7 @@ export const LoyaltyClientCard = ({
           className="flex md:hidden items-center justify-between gap-2 mt-2.5 pt-2 border-t border-white/[0.05]"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-center gap-2 flex-wrap">
-            <InlineStatusEditor
-              rowId={row.id}
-              current={row.status}
-              effectiveNorm={effStatus}
-              tenantId={tenantId}
-              onOptimisticUpdate={onOptimisticUpdate}
-              onUpdated={onUpdated}
-            />
-            <WaButton
-              name={row.client_name ?? ""}
-              status={effStatus}
-              phone={row.phone ?? ""}
-              businessName={businessName}
-              serviceLabel={serviceLabel}
-              lastVisit={lastVisit ? isoToDisplay(lastVisit) : ""}
-              templates={waTemplates}
-              isMessageTemplateConfigured={isMessageTemplateConfigured}
-            />
-          </div>
+          <div className="flex items-center gap-2 flex-wrap" />
           <button
             onClick={e => { e.stopPropagation(); onToggleExpand(); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
