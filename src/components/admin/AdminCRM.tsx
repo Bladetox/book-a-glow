@@ -18,7 +18,6 @@ import { useTenant } from "@/contexts/TenantContext";
 import { AdminPageHeader, EmptyState } from "@/components/admin/AdminSharedUI";
 import AdminBlockedClients from "@/components/admin/AdminBlockedClients";
 import AdminConsultations from "@/components/admin/AdminConsultations";
-import AdminSpecialOccasions from "@/components/admin/AdminSpecialOccasions";
 import AdminLoyalty from "@/components/admin/AdminLoyalty";
 import AdminConsistencyPricing from "@/components/admin/AdminConsistencyPricing";
 import MessageTemplatesView from "@/components/admin/messaging/MessageTemplatesView";
@@ -411,7 +410,7 @@ export default function AdminCRM({
       await queryClient.invalidateQueries({ queryKey: ["crm-client-bookings", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["crm-loyalty-due", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["crm-birthdays", tenantId] });
-      await queryClient.invalidateQueries({ queryKey: ["crm-alerts", tenantId] });
+      await queryClient.invalidateQueries({ queryKey: ["client-alerts", tenantId] });
       toast.success(keepSeparate ? "Booking kept as a separate client" : "Booking linked to client");
     } catch (error: any) {
       toast.error("Could not resolve this booking", { description: error?.message || "Please try again." });
@@ -718,7 +717,7 @@ export default function AdminCRM({
                 key: String(client.id),
                 name: client.client_name,
                 phone: client.phone,
-                email: client.email ?? null,
+                email: null,
                 lastBooking: client.last_booking_date ?? null,
                 bookingCount: client.booking_count ?? 0,
                 spend: 0,
