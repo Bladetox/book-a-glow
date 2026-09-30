@@ -728,8 +728,8 @@ export default function AdminCRM({
                 name: client.client_name,
                 phone: client.phone,
                 email: null,
-                lastBooking: client.last_booking_date ?? null,
-                bookingCount: client.booking_count ?? 0,
+                lastBooking: null,
+                bookingCount: 0,
                 spend: 0,
                 bookings: [],
               }))}
