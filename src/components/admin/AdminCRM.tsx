@@ -1,8 +1,14 @@
 import { useMemo, useState } from "react";
-import { addDays, differenceInCalendarDays, format, isBefore, startOfDay } from "date-fns";
+import { addDays, format, startOfDay } from "date-fns";
 import {
-  ArrowLeft, ArrowRight, Cake, CheckCircle2, ChevronRight, Clock3, History,
-  MessageCircle, Search, Settings2, UserRound, Users, X,
+  ChevronRight,
+  History,
+  MessageCircle,
+  Search,
+  Settings2,
+  UserRound,
+  Users,
+  X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,30 +28,10 @@ import {
 } from "@/lib/messaging/whatsapp";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 
-type Section = "all" | "engagement" | "special_dates" | "consultations" | "blocked" | "loyalty" | "consistency" | "templates";
-type EngagementQueue = "due" | "overdue" | "inactive" | "birthdays";
-
-const sections: { id: Section; label: string }[] = [
-  { id: "all", label: "All Clients" },
-  { id: "engagement", label: "Engagement" },
-  { id: "special_dates", label: "Special Dates" },
-  { id: "consultations", label: "Consultations" },
-  { id: "blocked", label: "Blocked" },
-];
-
-const engagementQueues: { id: EngagementQueue; label: string }[] = [
-  { id: "due", label: "Due to Book" },
-  { id: "overdue", label: "Overdue" },
-  { id: "inactive", label: "Inactive" },
-  { id: "birthdays", label: "Birthdays" },
-];
-
-const retentionSections: { id: Section; label: string }[] = [
-  { id: "loyalty", label: "Loyalty" },
-  { id: "consistency", label: "Consistency" },
-];
-
-const messageSections: { id: Section; label: string }[] = [{ id: "templates", label: "Templates" }];
+type Area = "clients" | "retention" | "messaging";
+type ClientView = "directory" | "attention" | "special_dates" | "consultations" | "blocked";
+type RetentionView = "loyalty" | "consistency";
+type AttentionQueue = "due" | "overdue" | "inactive" | "birthdays";
 
 type ClientRow = {
   key: string;
@@ -58,27 +44,67 @@ type ClientRow = {
   bookings: any[];
 };
 
+const primaryAreas: { id: Area; label: string; description: string }[] = [
+  { id: "clients", label: "Clients", description: "People, history and client activity" },
+  { id: "retention", label: "Retention", description: "Bring clients back and reward consistency" },
+  { id: "messaging", label: "Messaging", description: "Set up the messages you send" },
+];
+
+const clientViews: { id: ClientView; label: string }[] = [
+  { id: "directory", label: "All clients" },
+  { id: "attention", label: "Needs attention" },
+  { id: "special_dates", label: "Special dates" },
+  { id: "consultations", label: "Consultations" },
+  { id: "blocked", label: "Blocked" },
+];
+
+const attentionQueues: { id: AttentionQueue; label: string }[] = [
+  { id: "due", label: "Due soon" },
+  { id: "overdue", label: "Overdue" },
+  { id: "inactive", label: "Inactive" },
+  { id: "birthdays", label: "Birthdays" },
+];
+
 function identityKey(b: any) {
-  if (b.client_id) return `id:${b.client_id}`;
+  if (b.client_id) return \`id:\${b.client_id}\`;
   const email = b.client_email || b.guest_email;
-  if (email) return `email:${String(email).trim().toLowerCase()}`;
+  if (email) return \`email:\${String(email).trim().toLowerCase()}\`;
   const phone = b.client_phone || b.guest_phone;
-  if (phone) return `phone:${String(phone).replace(/\D/g, "").slice(-9)}`;
-  return `booking:${b.id}`;
+  if (phone) return \`phone:\${String(phone).replace(/\D/g, "").slice(-9)}\`;
+  return \`booking:\${b.id}\`;
 }
 
-function whatsApp(phone: string | null, template: string, values: { name: string; business: string; service?: string }) {
+function whatsApp(
+  phone: string | null,
+  template: string,
+  values: { name: string; business: string; service?: string },
+) {
   const message = resolveMessageTemplate(template, {
     ...values,
-    bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
+    bookingUrl: typeof window !== "undefined" ? \`\${window.location.origin}/book\` : "",
   });
   return buildWhatsAppUrl(phone, message);
 }
 
-export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) => void }) {
+export default function AdminCRM({
+  canConsultations = true,
+  canSpecialOccasions = true,
+  canLoyalty = true,
+  canConsistency = true,
+}: {
+  onNavigate?: (view: string) => void;
+  canConsultations?: boolean;
+  canSpecialOccasions?: boolean;
+  canLoyalty?: boolean;
+  canConsistency?: boolean;
+}) {
   const { tenantId } = useTenant();
-  const [section, setSection] = useState<Section>("all");
-  const [queue, setQueue] = useState<EngagementQueue>("due");
+  const [area, setArea] = useState<Area>("clients");
+  const [clientView, setClientView] = useState<ClientView>("directory");
+  const [retentionView, setRetentionView] = useState<RetentionView>(
+    canLoyalty ? "loyalty" : "consistency",
+  );
+  const [attentionQueue, setAttentionQueue] = useState<AttentionQueue>("due");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ClientRow | null>(null);
   const [templateFocus, setTemplateFocus] = useState<MessageTemplateType | undefined>();
@@ -139,8 +165,12 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
     },
   });
 
-  const templateMap = useMemo(() => Object.fromEntries(templateSettings.map((r: any) => [r.key, r.value || ""])), [templateSettings]);
-  const getTemplate = (type: MessageTemplateType) => templateMap[TEMPLATE_SETTING_KEYS[type]] || "";
+  const templateMap = useMemo(
+    () => Object.fromEntries(templateSettings.map((r: any) => [r.key, r.value || ""])),
+    [templateSettings],
+  );
+  const getTemplate = (type: MessageTemplateType) =>
+    templateMap[TEMPLATE_SETTING_KEYS[type]] || "";
 
   const clients = useMemo<ClientRow[]>(() => {
     const map = new Map<string, ClientRow>();
@@ -150,13 +180,17 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
       const phone = booking.client_phone || booking.guest_phone || null;
       const email = booking.client_email || booking.guest_email || null;
       const row = map.get(key);
+
       if (row) {
         row.bookingCount += 1;
         row.spend += Number(booking.total_amount || 0);
         row.bookings.push(booking);
       } else {
         map.set(key, {
-          key, name, phone, email,
+          key,
+          name,
+          phone,
+          email,
           lastBooking: booking.booking_date,
           bookingCount: 1,
           spend: Number(booking.total_amount || 0),
@@ -170,7 +204,11 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return clients;
-    return clients.filter(c => [c.name, c.phone, c.email].some(v => String(v ?? "").toLowerCase().includes(q)));
+    return clients.filter((client) =>
+      [client.name, client.phone, client.email].some((value) =>
+        String(value ?? "").toLowerCase().includes(q),
+      ),
+    );
   }, [clients, search]);
 
   const { data: alerts } = useClientAlerts(tenantId ?? undefined);
@@ -178,16 +216,17 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
   const dueClients = useMemo(() => {
     const today = startOfDay(new Date());
     const cutoff = addDays(today, 7);
+
     return (loyaltyRows as any[])
-      .filter(row => row.next_due_date)
-      .map(row => ({
-        key: `loyalty:${row.id}`,
+      .filter((row) => row.next_due_date)
+      .map((row) => ({
+        key: \`loyalty:\${row.id}\`,
         name: row.client_name,
         phone: row.phone,
         email: row.email,
         nextDueDate: row.next_due_date,
       }))
-      .filter(row => {
+      .filter((row) => {
         const due = new Date(row.nextDueDate + "T00:00:00");
         return due >= today && due <= cutoff;
       });
@@ -196,72 +235,88 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
   const birthdayClients = useMemo(() => {
     const today = startOfDay(new Date());
     const cutoff = addDays(today, 7);
-    return (occasions as any[]).filter(r => {
-      const d = new Date(r.occasion_date + "T00:00:00");
-      const next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
+
+    return (occasions as any[]).filter((row) => {
+      const date = new Date(row.occasion_date + "T00:00:00");
+      const next = new Date(today.getFullYear(), date.getMonth(), date.getDate());
       if (next < today) next.setFullYear(today.getFullYear() + 1);
       return next <= cutoff;
     });
   }, [occasions]);
 
-  const nav = (next: Section) => {
-    setSection(next);
+  const attentionCounts = {
+    due: dueClients.length,
+    overdue: alerts?.overdueLoyaltyClients.length ?? 0,
+    inactive: alerts?.inactiveClients.length ?? 0,
+    birthdays: birthdayClients.length,
+  };
+
+  const goToArea = (nextArea: Area) => {
+    setArea(nextArea);
     setSelected(null);
-    if (next !== "engagement") setQueue("due");
   };
 
   const openBirthdayMessaging = () => {
-    const configured = !!getTemplate("birthday");
-    if (!configured) {
+    if (!getTemplate("birthday")) {
       setTemplateFocus("birthday");
-      setSection("templates");
+      setArea("messaging");
       return;
     }
-    setSection("engagement");
-    setQueue("birthdays");
+    setArea("clients");
+    setClientView("attention");
+    setAttentionQueue("birthdays");
   };
 
-  const clientHistory = selected?.bookings ?? [];
-
-  return (
-    <div className="flex flex-col gap-5 pb-12">
-      <AdminPageHeader
-        title="CRM"
-        subtitle="Clients, engagement, retention and messaging in one place."
-      />
-
-      <div className="flex flex-wrap gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-        <button onClick={() => nav("all")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "all" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Clients</button>
-        <button onClick={() => nav("engagement")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "engagement" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Engagement</button>
-        <button onClick={() => nav("special_dates")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "special_dates" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Special Dates</button>
-        <button onClick={() => nav("consultations")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "consultations" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Consultations</button>
-        <button onClick={() => nav("blocked")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "blocked" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Blocked</button>
-        <button onClick={() => nav("loyalty")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "loyalty" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Retention · Loyalty</button>
-        <button onClick={() => nav("consistency")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "consistency" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Retention · Consistency</button>
-        <button onClick={() => nav("templates")} className={`px-3 py-2 rounded-xl text-xs font-semibold ${section === "templates" ? "bg-white/[0.1] text-white" : "text-white/35"}`}>Messaging · Templates</button>
-      </div>
-
-      {section === "all" && (
+  const renderClients = () => {
+    if (clientView === "directory") {
+      return (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search clients…" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.07] pl-10 pr-3 py-3 text-sm text-white/80 focus:outline-none focus:border-white/20" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search clients by name, phone or email"
+                className="w-full rounded-xl bg-white/[0.03] border border-white/[0.07] pl-10 pr-3 py-3 text-sm text-white/80 focus:outline-none focus:border-white/20"
+              />
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-xs text-white/25"><Users className="w-4 h-4" /> {filteredClients.length}</div>
+            <div className="hidden sm:flex items-center gap-2 text-xs text-white/25">
+              <Users className="w-4 h-4" />
+              {filteredClients.length}
+            </div>
           </div>
-          {bookingsLoading ? <div className="py-12 text-sm text-white/25">Loading clients…</div> : filteredClients.length === 0 ? <EmptyState title="No clients found" description="Clients will appear here after a booking is recorded." icon={Users} /> : (
+
+          {bookingsLoading ? (
+            <div className="py-12 text-sm text-white/25">Loading clients...</div>
+          ) : filteredClients.length === 0 ? (
+            <EmptyState
+              title="No clients found"
+              description="Clients will appear here after a booking is recorded."
+              icon={Users}
+            />
+          ) : (
             <div className="grid gap-2">
-              {filteredClients.map(client => (
-                <button key={client.key} onClick={() => setSelected(client)} className="text-left rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] px-4 py-4 transition-colors">
+              {filteredClients.map((client) => (
+                <button
+                  key={client.key}
+                  onClick={() => setSelected(client)}
+                  className="text-left rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] px-4 py-4 transition-colors"
+                >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0"><UserRound className="w-4 h-4 text-white/35" /></div>
+                    <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
+                      <UserRound className="w-4 h-4 text-white/35" />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-white/85 truncate">{client.name}</p>
-                      <p className="text-[11px] text-white/30 truncate">{client.phone || client.email || "No contact details"}</p>
+                      <p className="text-[11px] text-white/30 truncate">
+                        {client.phone || client.email || "No contact details"}
+                      </p>
                     </div>
                     <div className="hidden sm:block text-right">
-                      <p className="text-xs text-white/55">{client.bookingCount} booking{client.bookingCount === 1 ? "" : "s"}</p>
+                      <p className="text-xs text-white/55">
+                        {client.bookingCount} booking{client.bookingCount === 1 ? "" : "s"}
+                      </p>
                       <p className="text-[11px] text-white/25">R{client.spend.toFixed(2)}</p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-white/20" />
@@ -271,81 +326,353 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
             </div>
           )}
         </div>
-      )}
+      );
+    }
 
-      {section === "engagement" && (
+    if (clientView === "attention") {
+      return (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {engagementQueues.map(q => {
-              const count = q.id === "due" ? dueClients.length : q.id === "overdue" ? (alerts?.overdueLoyaltyClients.length ?? 0) : q.id === "inactive" ? (alerts?.inactiveClients.length ?? 0) : birthdayClients.length;
-              return <button key={q.id} onClick={() => setQueue(q.id)} className={`text-left rounded-2xl border px-4 py-3 ${queue === q.id ? "border-white/15 bg-white/[0.06]" : "border-white/[0.06] bg-white/[0.02]"}`}>
-                <p className="text-[10px] uppercase tracking-wider text-white/30">{q.label}</p>
-                <p className="text-xl font-semibold text-white/80 mt-1">{count}</p>
-              </button>;
-            })}
+          <div className="flex gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-x-auto">
+            {attentionQueues.map((queue) => (
+              <button
+                key={queue.id}
+                onClick={() => setAttentionQueue(queue.id)}
+                className={\`flex-1 min-w-[112px] px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors \${
+                  attentionQueue === queue.id
+                    ? "bg-white/[0.09] text-white"
+                    : "text-white/35 hover:text-white/65"
+                }\`}
+              >
+                {queue.label}
+                <span className="ml-1.5 text-white/30">{attentionCounts[queue.id]}</span>
+              </button>
+            ))}
           </div>
-          {queue === "birthdays" && (
+
+          {attentionQueue === "birthdays" && (
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-white/50">Upcoming birthdays</p>
-              <button onClick={openBirthdayMessaging} className="text-xs text-white/55 hover:text-white flex items-center gap-1">Configure message <Settings2 className="w-3 h-3" /></button>
+              <div>
+                <p className="text-sm font-medium text-white/75">Upcoming birthdays</p>
+                <p className="text-xs text-white/30 mt-0.5">Next 7 days</p>
+              </div>
+              <button
+                onClick={openBirthdayMessaging}
+                className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-white"
+              >
+                <Settings2 className="w-3 h-3" />
+                Birthday message
+              </button>
             </div>
           )}
+
           <div className="grid gap-2">
-            {queue === "due" && dueClients.map((client: any) => <QueueRow key={client.key} name={client.name} phone={client.phone} detail={`Due ${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}`} href={whatsApp(client.phone, getTemplate("time_to_book"), { name: client.name, business: "your business" })} />)}
-            {queue === "overdue" && (alerts?.overdueLoyaltyClients ?? []).map(client => <QueueRow key={client.id} name={client.client_name} phone={client.phone} detail={`${client.days_overdue} days overdue`} href={whatsApp(client.phone, getTemplate("overdue"), { name: client.client_name, business: "your business" })} />)}
-            {queue === "inactive" && (alerts?.inactiveClients ?? []).map(client => <QueueRow key={String(client.client_id)} name={client.client_name} phone={client.client_phone} detail={`${client.days_since_booking} days since last booking`} href={whatsApp(client.client_phone, getTemplate("long_overdue"), { name: client.client_name, business: "your business" })} />)}
-            {queue === "birthdays" && birthdayClients.map((client: any) => <QueueRow key={client.id} name={client.client_name} phone={client.phone} detail={format(new Date(client.occasion_date + "T00:00:00"), "d MMM")} href={whatsApp(client.phone, getTemplate("birthday"), { name: client.client_name, business: "your business" })} />)}
+            {attentionQueue === "due" &&
+              dueClients.map((client: any) => (
+                <QueueRow
+                  key={client.key}
+                  name={client.name}
+                  phone={client.phone}
+                  detail={\`Due \${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}\`}
+                  href={whatsApp(client.phone, getTemplate("time_to_book"), {
+                    name: client.name,
+                    business: "your business",
+                  })}
+                />
+              ))}
+
+            {attentionQueue === "overdue" &&
+              (alerts?.overdueLoyaltyClients ?? []).map((client) => (
+                <QueueRow
+                  key={client.id}
+                  name={client.client_name}
+                  phone={client.phone}
+                  detail={\`\${client.days_overdue} days overdue\`}
+                  href={whatsApp(client.phone, getTemplate("overdue"), {
+                    name: client.client_name,
+                    business: "your business",
+                  })}
+                />
+              ))}
+
+            {attentionQueue === "inactive" &&
+              (alerts?.inactiveClients ?? []).map((client) => (
+                <QueueRow
+                  key={String(client.client_id)}
+                  name={client.client_name}
+                  phone={client.client_phone}
+                  detail={\`\${client.days_since_booking} days since last booking\`}
+                  href={whatsApp(client.client_phone, getTemplate("long_overdue"), {
+                    name: client.client_name,
+                    business: "your business",
+                  })}
+                />
+              ))}
+
+            {attentionQueue === "birthdays" &&
+              birthdayClients.map((client: any) => (
+                <QueueRow
+                  key={client.id}
+                  name={client.client_name}
+                  phone={client.phone}
+                  detail={format(new Date(client.occasion_date + "T00:00:00"), "d MMM")}
+                  href={whatsApp(client.phone, getTemplate("birthday"), {
+                    name: client.client_name,
+                    business: "your business",
+                  })}
+                />
+              ))}
           </div>
+
+          {attentionCounts[attentionQueue] === 0 && (
+            <EmptyState
+              title="Nothing needs attention"
+              description="This queue is clear for now."
+              icon={Users}
+            />
+          )}
         </div>
+      );
+    }
+
+    if (clientView === "special_dates") {
+      return canSpecialOccasions ? <AdminSpecialOccasions /> : <FeatureUnavailable />;
+    }
+
+    if (clientView === "consultations") {
+      return canConsultations ? <AdminConsultations /> : <FeatureUnavailable />;
+    }
+
+    return <AdminBlockedClients />;
+  };
+
+  const renderRetention = () => {
+    if (retentionView === "loyalty") {
+      return canLoyalty ? (
+        <AdminLoyalty
+          onNavigate={(view) => {
+            if (view === "Client Management") {
+              setArea("clients");
+              setClientView("directory");
+            }
+          }}
+        />
+      ) : (
+        <FeatureUnavailable />
+      );
+    }
+
+    return canConsistency ? <AdminConsistencyPricing /> : <FeatureUnavailable />;
+  };
+
+  return (
+    <div className="flex flex-col gap-5 pb-12">
+      <AdminPageHeader
+        title="CRM"
+        subtitle="One place to know your clients, act on opportunities and bring people back."
+      />
+
+      <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+        {primaryAreas.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => goToArea(item.id)}
+            className={\`rounded-xl px-3 py-3 text-left transition-colors \${
+              area === item.id
+                ? "bg-white/[0.09] text-white"
+                : "text-white/35 hover:text-white/65"
+            }\`}
+          >
+            <span className="block text-xs font-semibold">{item.label}</span>
+            <span className="hidden sm:block text-[10px] mt-0.5 text-white/25">{item.description}</span>
+          </button>
+        ))}
+      </div>
+
+      {area === "clients" && (
+        <>
+          <SubNavigation
+            items={clientViews.filter((item) =>
+              item.id === "consultations" ? canConsultations :
+              item.id === "special_dates" ? canSpecialOccasions :
+              true
+            )}
+            active={clientView}
+            onSelect={(value) => setClientView(value as ClientView)}
+          />
+          {renderClients()}
+        </>
       )}
 
-      {section === "special_dates" && <AdminSpecialOccasions />}
-      {section === "consultations" && <AdminConsultations />}
-      {section === "blocked" && <AdminBlockedClients />}
+      {area === "retention" && (
+        <>
+          <SubNavigation
+            items={[
+              ...(canLoyalty ? [{ id: "loyalty", label: "Loyalty" }] : []),
+              ...(canConsistency ? [{ id: "consistency", label: "Consistency" }] : []),
+            ]}
+            active={retentionView}
+            onSelect={(value) => setRetentionView(value as RetentionView)}
+          />
+          {renderRetention()}
+        </>
+      )}
 
-      {section === "loyalty" && <AdminLoyalty onNavigate={view => { if (view === "Client Management") nav("all"); }} />}
-      {section === "consistency" && <AdminConsistencyPricing />}
-
-      {section === "templates" && <MessageTemplatesView focusType={templateFocus} />}
+      {area === "messaging" && (
+        <>
+          <SubNavigation
+            items={[{ id: "templates", label: "Templates" }]}
+            active="templates"
+            onSelect={() => undefined}
+          />
+          <MessageTemplatesView focusType={templateFocus} />
+        </>
+      )}
 
       {selected && (
-        <ClientHistoryModal client={selected} history={clientHistory} onClose={() => setSelected(null)} />
+        <ClientHistoryModal
+          client={selected}
+          history={selected.bookings}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
 }
 
-function QueueRow({ name, phone, detail, href }: { name: string; phone: string | null; detail: string; href?: string }) {
+function SubNavigation({
+  items,
+  active,
+  onSelect,
+}: {
+  items: { id: string; label: string }[];
+  active: string;
+  onSelect: (value: string) => void;
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-      <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0"><UserRound className="w-4 h-4 text-white/35" /></div>
-      <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-white/80 truncate">{name}</p><p className="text-[11px] text-white/30 truncate">{phone || "No phone number"} · {detail}</p></div>
-      {href && <a href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.07] text-xs font-semibold text-white/70 hover:bg-white/[0.11]"><MessageCircle className="w-3.5 h-3.5" /> WhatsApp</a>}
+    <div className="flex gap-1 overflow-x-auto pb-0.5">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onSelect(item.id)}
+          className={\`shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors \${
+            active === item.id
+              ? "bg-white/[0.07] text-white"
+              : "text-white/30 hover:text-white/60"
+          }\`}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-function ClientHistoryModal({ client, history, onClose }: { client: ClientRow; history: any[]; onClose: () => void }) {
+function QueueRow({
+  name,
+  phone,
+  detail,
+  href,
+}: {
+  name: string;
+  phone: string | null;
+  detail: string;
+  href?: string;
+}) {
   return (
-    <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-zinc-950 border border-white/[0.08]" onClick={e => e.stopPropagation()}>
+    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+      <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
+        <UserRound className="w-4 h-4 text-white/35" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white/80 truncate">{name}</p>
+        <p className="text-[11px] text-white/30 truncate">
+          {phone || "No phone number"} · {detail}
+        </p>
+      </div>
+      {href && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.07] text-xs font-semibold text-white/70 hover:bg-white/[0.11]"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          WhatsApp
+        </a>
+      )}
+    </div>
+  );
+}
+
+function ClientHistoryModal({
+  client,
+  history,
+  onClose,
+}: {
+  client: ClientRow;
+  history: any[];
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-zinc-950 border border-white/[0.08]"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="sticky top-0 bg-zinc-950/95 backdrop-blur px-5 py-4 border-b border-white/[0.06] flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center"><UserRound className="w-5 h-5 text-white/40" /></div>
-          <div className="flex-1 min-w-0"><h3 className="font-semibold text-white/90 truncate">{client.name}</h3><p className="text-xs text-white/30">{client.phone || client.email || "No contact details"}</p></div>
-          <button onClick={onClose} className="p-2 text-white/30 hover:text-white"><X className="w-4 h-4" /></button>
+          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center">
+            <UserRound className="w-5 h-5 text-white/40" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-white/90 truncate">{client.name}</h3>
+            <p className="text-xs text-white/30">
+              {client.phone || client.email || "No contact details"}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 text-white/30 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
         </div>
+
         <div className="p-5 grid sm:grid-cols-3 gap-2">
           <Stat label="Bookings" value={String(client.bookingCount)} />
-          <Stat label="Spend" value={`R${client.spend.toFixed(2)}`} />
-          <Stat label="Last booking" value={client.lastBooking ? format(new Date(client.lastBooking + "T00:00:00"), "d MMM yyyy") : "—"} />
+          <Stat label="Spend" value={\`R\${client.spend.toFixed(2)}\`} />
+          <Stat
+            label="Last booking"
+            value={
+              client.lastBooking
+                ? format(new Date(client.lastBooking + "T00:00:00"), "d MMM yyyy")
+                : "Not yet"
+            }
+          />
         </div>
+
         <div className="px-5 pb-5">
-          <div className="flex items-center gap-2 mb-3"><History className="w-4 h-4 text-white/30" /><p className="text-xs font-semibold uppercase tracking-wider text-white/30">Booking history</p></div>
+          <div className="flex items-center gap-2 mb-3">
+            <History className="w-4 h-4 text-white/30" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/30">
+              Booking history
+            </p>
+          </div>
+
           <div className="grid gap-2">
             {history.map((booking: any) => (
-              <div key={booking.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 flex items-center gap-3">
-                <div className="flex-1 min-w-0"><p className="text-sm text-white/75">{format(new Date(booking.booking_date + "T00:00:00"), "d MMM yyyy")}</p><p className="text-[11px] text-white/30">{booking.status}</p></div>
-                <span className="text-xs text-white/45">R{Number(booking.total_amount || 0).toFixed(2)}</span>
+              <div
+                key={booking.id}
+                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 flex items-center gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white/75">
+                    {format(new Date(booking.booking_date + "T00:00:00"), "d MMM yyyy")}
+                  </p>
+                  <p className="text-[11px] text-white/30">{booking.status}</p>
+                </div>
+                <span className="text-xs text-white/45">
+                  R{Number(booking.total_amount || 0).toFixed(2)}
+                </span>
               </div>
             ))}
           </div>
@@ -356,5 +683,20 @@ function ClientHistoryModal({ client, history, onClose }: { client: ClientRow; h
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3"><p className="text-[10px] uppercase tracking-wider text-white/25">{label}</p><p className="text-sm font-semibold text-white/75 mt-1">{value}</p></div>;
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+      <p className="text-[10px] uppercase tracking-wider text-white/25">{label}</p>
+      <p className="text-sm font-semibold text-white/75 mt-1">{value}</p>
+    </div>
+  );
+}
+
+function FeatureUnavailable() {
+  return (
+    <EmptyState
+      title="Not available for this business"
+      description="This feature is not enabled for the current account."
+      icon={Users}
+    />
+  );
 }
