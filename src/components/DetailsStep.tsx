@@ -214,6 +214,14 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const [consultationQuestions, setConsultationQuestions] = useState<ConsultationQuestionDefinition[]>([]);
   const [consultationLoading, setConsultationLoading] = useState(true);
 
+  // Publish the questions being shown so ReviewStep can save each answer with its label.
+  useEffect(() => {
+    onUpdate({
+      consultationQuestions: consultationQuestions.map(({ key, label, type }) => ({ key, label, type })),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consultationQuestions]);
+
   useEffect(() => {
     const el = document.querySelector("[data-booking-scroll]") as HTMLElement | null;
     scrollContainerRef.current = el;

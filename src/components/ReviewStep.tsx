@@ -296,7 +296,23 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
 
     const guestPhone = guestPhoneForQuote;
 
-    const { data, error } = await supabase.rpc("create_booking_with_consultation", {
+    // Dynamic consultation answers (new guests only), saved with the question label
+    // because answer keys are derived from label + sort order and can change.
+    const consultationItems = booking.isExistingClient
+      ? []
+      : booking.consultationQuestions.map((q) => {
+          const answer = booking.consultationAnswers[q.key];
+          const detail = booking.consultationAnswerDetails[q.key]?.trim();
+          return {
+            key: q.key,
+            label: q.label,
+            type: q.type,
+            answer: answer === undefined ? null : answer,
+            detail: detail ? detail : null,
+          };
+        });
+
+    const bookingParams = {
       p_client_id: null,
       p_staff_id: staffId,
       p_booking_date: bookingDate,
@@ -322,7 +338,24 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       p_guest_phone: guestPhone,
       p_total_amount: total,
       p_deposit_amount: (paymentChoice === "payshap_full" || paymentChoice === "full" || paymentChoice === "ikhokha_full") ? total : deposit,
+    };
+
+    const consultationParams = {
+      p_consultation_answers: consultationItems.length > 0 ? consultationItems : null,
+      // "Anything changed since your last visit?" - saved to the guest's consultation
+      p_existing_client_changes: booking.isExistingClient ? (booking.existingClientNotes.trim() || null) : null,
+    };
+
+    let { data, error } = await supabase.rpc("create_booking_with_consultation", {
+      ...bookingParams,
+      ...consultationParams,
     });
+
+    // Deploy-order safety: if the database has not been upgraded to accept the new
+    // consultation parameters yet (PostgREST PGRST202), retry with the original call.
+    if (error && (error as { code?: string }).code === "PGRST202") {
+      ({ data, error } = await supabase.rpc("create_booking_with_consultation", bookingParams));
+    }
 
     if (error) throw error;
     const bookingId: string = data?.[0]?.booking_id;

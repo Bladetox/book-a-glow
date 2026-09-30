@@ -862,6 +862,129 @@ export type Database = {
           },
         ]
       }
+      guest_consultations: {
+        Row: {
+          additional_notes: string | null
+          allergies: string | null
+          answers: Json
+          canonical_client_id: string | null
+          change_log: Json
+          contact_key: string
+          created_at: string
+          environmental_exposure: string | null
+          first_booking_id: string | null
+          guest_name: string | null
+          hair_length_ok: string | null
+          has_form: boolean
+          health_conditions: string | null
+          id: string
+          last_booking_id: string | null
+          medications: string | null
+          person_key: string
+          physical_factors: string | null
+          pregnancy: string | null
+          skin_conditions: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          allergies?: string | null
+          answers?: Json
+          canonical_client_id?: string | null
+          change_log?: Json
+          contact_key: string
+          created_at?: string
+          environmental_exposure?: string | null
+          first_booking_id?: string | null
+          guest_name?: string | null
+          hair_length_ok?: string | null
+          has_form?: boolean
+          health_conditions?: string | null
+          id?: string
+          last_booking_id?: string | null
+          medications?: string | null
+          person_key: string
+          physical_factors?: string | null
+          pregnancy?: string | null
+          skin_conditions?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          allergies?: string | null
+          answers?: Json
+          canonical_client_id?: string | null
+          change_log?: Json
+          contact_key?: string
+          created_at?: string
+          environmental_exposure?: string | null
+          first_booking_id?: string | null
+          guest_name?: string | null
+          hair_length_ok?: string | null
+          has_form?: boolean
+          health_conditions?: string | null
+          id?: string
+          last_booking_id?: string | null
+          medications?: string | null
+          person_key?: string
+          physical_factors?: string | null
+          pregnancy?: string | null
+          skin_conditions?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_consultations_first_booking_id_fkey"
+            columns: ["first_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_consultations_last_booking_id_fkey"
+            columns: ["last_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_consultations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_name_aliases: {
+        Row: {
+          alias: string
+          person_key: string
+          tenant_id: string
+        }
+        Insert: {
+          alias: string
+          person_key: string
+          tenant_id: string
+        }
+        Update: {
+          alias?: string
+          person_key?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_name_aliases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_tracker: {
         Row: {
           birthday: string | null
@@ -2475,8 +2598,10 @@ export type Database = {
           p_client_id: string
           p_client_notes: string
           p_client_type: string
+          p_consultation_answers?: Json
           p_deposit_amount?: number
           p_environmental_exposure: string
+          p_existing_client_changes?: string
           p_guest_email: string
           p_guest_name: string
           p_guest_phone: string

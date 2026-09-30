@@ -16,6 +16,14 @@ export type Category = {
 // Value is string (text/textarea), boolean (yes_no), or string[] (checkbox).
 export type ConsultationAnswerValue = string | boolean | string[];
 
+// Snapshot of the questions the guest was shown (key/label/type). Answers are keyed by
+// a key derived from label + sort order, so the labels must travel with the answers.
+export type ConsultationQuestionSnapshot = {
+  key: string;
+  label: string;
+  type: string;
+};
+
 export type BookingState = {
   selectedTreatments: string[];
   selectedDate: Date | null;
@@ -38,6 +46,7 @@ export type BookingState = {
   // Keyed by ConsultationQuestionDefinition.key
   consultationAnswers: Record<string, ConsultationAnswerValue>;
   consultationAnswerDetails: Record<string, string>; // extra detail for yes_no "Yes" answers
+  consultationQuestions: ConsultationQuestionSnapshot[]; // questions shown, set by DetailsStep
 };
 
 export const initialBookingState: BookingState = {
@@ -59,6 +68,7 @@ export const initialBookingState: BookingState = {
   existingClientNotes: "",
   consultationAnswers: {},
   consultationAnswerDetails: {},
+  consultationQuestions: [],
 };
 
 export const safetyQuestions = [

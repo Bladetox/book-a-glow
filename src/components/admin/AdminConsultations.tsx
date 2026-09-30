@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const filters = ["All", "New", "Existing"];
+const filters = ["All", "Form on file", "No form yet"];
 
 // ─── lead source display config ─────────────────────────────────────────────
 
@@ -90,12 +90,32 @@ function fmtTime(t?: string | null) {
   return `${hour % 12 || 12}:${m} ${ampm}`;
 }
 
+function formatAnswer(item: any): string {
+  const a = item?.answer;
+  let text = "";
+  if (a === true) text = "Yes";
+  else if (a === false) text = "No";
+  else if (Array.isArray(a)) text = a.join(", ");
+  else if (a !== null && a !== undefined) text = String(a);
+  if (item?.detail) text = text ? `${text} - ${item.detail}` : String(item.detail);
+  return text;
+}
+
+function answeredItems(c: any): any[] {
+  const items = c?.answers?.items;
+  return Array.isArray(items) ? items.filter((i: any) => formatAnswer(i) !== "") : [];
+}
+
+function changeEntries(c: any): any[] {
+  return Array.isArray(c?.change_log) ? c.change_log : [];
+}
+
 function exportCSV(rows: any[]) {
   const headers = [
-    "Name", "Email", "Phone", "Date", "Time", "Type", "Acquisition Channel", "Services",
+    "Name", "Email", "Phone", "Last Visit", "Time", "Form", "Acquisition Channel", "Services",
     "Skin Conditions", "Medications", "Allergies", "Health Conditions",
     "Pregnancy", "Environmental Exposure", "Physical Factors",
-    "Hair Length OK", "Additional Notes", "Form Submitted",
+    "Hair Length OK", "Additional Notes", "Consultation Answers", "Change Notes", "Last Updated",
   ];
   const escape = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [
@@ -103,7 +123,7 @@ function exportCSV(rows: any[]) {
     ...rows.map((c: any) => {
       const booking = c.booking;
       const client  = booking?.client;
-      const name    = client?.full_name  || booking?.guest_name  || "";
+      const name    = c.guest_name || client?.full_name || booking?.guest_name || "";
       const email   = client?.email       || booking?.guest_email || "";
       const phone   = client?.phone       || booking?.guest_phone || "";
       const services = (booking?.items ?? [])
@@ -114,14 +134,16 @@ function exportCSV(rows: any[]) {
         name, email, phone,
         booking?.booking_date ?? "",
         fmtTime(booking?.start_time) ?? "",
-        c.client_type ?? "",
+        c.has_form ? "Form on file" : "No form yet",
         booking?.lead_source ?? "",   // ← from bookings
         services,
         c.skin_conditions ?? "", c.medications ?? "", c.allergies ?? "",
         c.health_conditions ?? "", c.pregnancy ?? "",
         c.environmental_exposure ?? "", c.physical_factors ?? "",
         c.hair_length_ok ?? "", c.additional_notes ?? "",
-        c.created_at ? new Date(c.created_at).toLocaleDateString() : "",
+        answeredItems(c).map((i: any) => `${i.label}: ${formatAnswer(i)}`).join("; "),
+        changeEntries(c).map((e: any) => `${e.date ?? ""}: ${e.note ?? ""}`).join("; "),
+        c.updated_at ? new Date(c.updated_at).toLocaleDateString() : "",
       ].map(escape).join(",");
     }),
   ].join("\n");
@@ -147,10 +169,10 @@ const AdminConsultations = () => {
     queryKey: ["consultations", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("consultations")
+        .from("guest_consultations")
         .select(`
           *,
-          booking:bookings!consultations_booking_id_fkey(
+          booking:bookings!guest_consultations_last_booking_id_fkey(
             booking_date, start_time, lead_source,
             guest_name, guest_email, guest_phone,
             client:profiles!bookings_client_id_fkey(full_name, email, phone),
@@ -158,7 +180,7 @@ const AdminConsultations = () => {
           )
         `)
         .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
+        .order("updated_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -166,7 +188,7 @@ const AdminConsultations = () => {
 
   const filterCount = (f: string) =>
     consultations.filter((c: any) =>
-      f === "All" ? true : f === "New" ? c.client_type === "new" : c.client_type === "existing"
+      f === "All" ? true : f === "Form on file" ? c.has_form : !c.has_form
     ).length;
 
   const filtered = useMemo(() => {
@@ -174,11 +196,11 @@ const AdminConsultations = () => {
     return consultations.filter((c: any) => {
       const booking = c.booking;
       const client  = booking?.client;
-      const name    = (client?.full_name || booking?.guest_name || "").toLowerCase();
+      const name    = (c.guest_name || client?.full_name || booking?.guest_name || "").toLowerCase();
       const matchesFilter =
         activeFilter === "All" ||
-        (activeFilter === "New"      && c.client_type === "new") ||
-        (activeFilter === "Existing" && c.client_type === "existing");
+        (activeFilter === "Form on file" && c.has_form) ||
+        (activeFilter === "No form yet"  && !c.has_form);
       const matchesSearch = !q || name.includes(q);
       return matchesFilter && matchesSearch;
     });
@@ -258,16 +280,19 @@ const AdminConsultations = () => {
             const isExpanded   = expandedId === c.id;
             const booking      = c.booking;
             const client       = booking?.client;
-            const displayName  = client?.full_name  || booking?.guest_name  || "Unknown";
-            const displayEmail = client?.email       || booking?.guest_email || null;
-            const displayPhone = client?.phone       || booking?.guest_phone || null;
+            const displayName  = c.guest_name || client?.full_name || booking?.guest_name || "Unknown";
+            const contactIsPhone = typeof c.contact_key === "string" && c.contact_key.startsWith("ph:");
+            const displayEmail = client?.email       || booking?.guest_email || (!contactIsPhone ? c.contact_key : null) || null;
+            const displayPhone = client?.phone       || booking?.guest_phone || (contactIsPhone ? c.contact_key.slice(3) : null) || null;
+            const answerItems  = answeredItems(c);
+            const changes      = changeEntries(c);
 
             const services: { service_name: string; price: number; sort_order: number }[] =
               (booking?.items ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order);
 
             const timeLabel    = fmtTime(booking?.start_time);
-            const submittedAgo = c.created_at
-              ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true })
+            const submittedAgo = c.updated_at
+              ? formatDistanceToNow(new Date(c.updated_at), { addSuffix: true })
               : null;
 
             // lead_source lives on the booking, not the consultation
@@ -292,6 +317,7 @@ const AdminConsultations = () => {
             const hasConsultationData =
               healthFields.length > 0 ||
               lifestyleFields.length > 0 ||
+              answerItems.length > 0 ||
               c.additional_notes;
 
             return (
@@ -309,10 +335,10 @@ const AdminConsultations = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white/85 truncate">{displayName}</p>
                     <p className="text-[11px] text-white/40">
-                      {booking?.booking_date}
+                      {booking?.booking_date && <>Last visit {booking.booking_date}</>}
                       {timeLabel && <> · {timeLabel}</>}
                       {" · "}
-                      {c.client_type === "new" ? "New Client" : "Existing"}
+                      {c.has_form ? "Consultation on file" : "No consultation form yet"}
                     </p>
                   </div>
 
@@ -320,12 +346,12 @@ const AdminConsultations = () => {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        c.client_type === "new"
-                          ? "bg-amber-500/10 text-amber-400"
-                          : "bg-emerald-500/10 text-emerald-400"
+                        c.has_form
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : "bg-amber-500/10 text-amber-400"
                       }`}
                     >
-                      {c.client_type}
+                      {c.has_form ? "form on file" : "no form"}
                     </span>
 
                     {/* channel pill — only shown when data exists, hidden on mobile */}
@@ -351,7 +377,7 @@ const AdminConsultations = () => {
                   <div className="px-3 sm:px-4 pb-5 pt-1 border-t border-white/[0.06] flex flex-col gap-5">
 
                     {submittedAgo && (
-                      <p className="text-[10px] text-white/25 mt-2">Form submitted {submittedAgo}</p>
+                      <p className="text-[10px] text-white/25 mt-2">Record updated {submittedAgo}</p>
                     )}
 
                     {/* Contact + Acquisition Channel */}
@@ -434,6 +460,20 @@ const AdminConsultations = () => {
                           </div>
                         )}
 
+                        {answerItems.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Consultation Answers</p>
+                            <div className="flex flex-col gap-2">
+                              {answerItems.map((i: any) => (
+                                <div key={i.key}>
+                                  <p className="text-[10px] text-white/30 mb-0.5">{i.label}</p>
+                                  <p className="text-xs text-white/70 whitespace-pre-line">{formatAnswer(i)}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {c.additional_notes && (
                           <div>
                             <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-1">Additional Notes</p>
@@ -444,7 +484,21 @@ const AdminConsultations = () => {
                     )}
 
                     {!hasConsultationData && (
-                      <p className="text-xs text-white/25 italic">No health or lifestyle information provided.</p>
+                      <p className="text-xs text-white/25 italic">No consultation form on file yet.</p>
+                    )}
+
+                    {changes.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Changes Reported at Later Visits</p>
+                        <div className="flex flex-col gap-2">
+                          {changes.map((e: any, idx: number) => (
+                            <div key={`${e.booking_id ?? idx}-${idx}`}>
+                              <p className="text-[10px] text-white/30 mb-0.5">{e.date ?? ""}</p>
+                              <p className="text-xs text-white/70 whitespace-pre-line">{e.note}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
 
                   </div>
