@@ -653,7 +653,7 @@ Each section is checked off only after implementation and verification.
 - [x] Branch baseline verified before the simplification pass.
 - [ ] Final branch verification complete.
 
-- [ ] Clients owns All clients, Needs attention, Identity review, Consultations and Blocked.
+- [x] Clients owns All clients, Needs attention, Identity review, Consultations and Blocked.
 - [ ] Clients owns All clients, Needs attention, Identity review, Consultations and Blocked.
 - [ ] Needs attention owns Due to Book, Overdue, Not seen in a while and Special dates.
 - [ ] Retention owns Loyalty and Consistency.
@@ -662,60 +662,60 @@ Each section is checked off only after implementation and verification.
 
 ## Clients
 
-- [ ] All clients uses canonical client identity.
-- [ ] Booking history is derived from bookings and booking_items.
-- [ ] Booking value is not labelled as paid spend.
-- [ ] Identity Review continues to group and resolve orphan bookings safely.
-- [ ] Consultations remain available.
-- [ ] Blocked clients remain available.
+- [x] All clients uses canonical client identity.
+- [x] Booking history is derived from bookings and booking_items.
+- [x] Booking value is not labelled as paid spend.
+- [x] Identity Review continues to group and resolve orphan bookings safely.
+- [x] Consultations remain available.
+- [x] Blocked clients remain available.
 
 ## Needs attention
 
-- [ ] Due to Book uses the existing loyalty due date.
-- [ ] Overdue uses the existing loyalty overdue state.
-- [ ] Not seen in a while uses the existing inactive logic.
-- [ ] Special dates are inside Needs attention.
-- [ ] Birthday actions use the central Birthday template.
-- [ ] No duplicate Special Dates navigation remains.
+- [x] Due to Book uses the existing loyalty due date.
+- [x] Overdue uses the existing loyalty overdue state.
+- [x] Not seen in a while uses the existing inactive logic.
+- [x] Special dates are inside Needs attention.
+- [x] Birthday actions use the central Birthday template.
+- [x] No duplicate Special Dates navigation remains.
 
 ## Retention
 
-- [ ] Loyalty behaviour is unchanged.
-- [ ] Loyalty no longer owns visible messaging configuration.
-- [ ] Consistency behaviour is unchanged.
-- [ ] Consistency pricing RPCs and migrations are untouched.
+- [x] Loyalty behaviour is unchanged.
+- [x] Loyalty no longer owns visible messaging configuration.
+- [x] Consistency behaviour is unchanged.
+- [x] Consistency pricing RPCs and migrations are untouched.
 
 ## Messaging
 
-- [ ] Promos is removed as a separate CRM tab.
-- [ ] Promo exists as a selectable template type.
-- [ ] Review ask exists as a selectable template type.
-- [ ] Birthday exists as a selectable template type.
-- [ ] Due to Book exists as a selectable template type.
-- [ ] Overdue exists as a selectable template type.
-- [ ] Not seen in a while exists as a selectable template type.
-- [ ] Token list changes by message type.
-- [ ] Templates overwrite their canonical `app_settings` value.
-- [ ] No new template row is created for a rewrite.
-- [ ] Google review link comes from Admin Settings.
-- [ ] One shared WhatsApp resolver is used by CRM messaging actions.
-- [ ] No bulk WhatsApp window opening exists.
-- [ ] No fake messaging history exists.
+- [x] Promos is removed as a separate CRM tab.
+- [x] Promo exists as a selectable template type.
+- [x] Review ask exists as a selectable template type.
+- [x] Birthday exists as a selectable template type.
+- [x] Due to Book exists as a selectable template type.
+- [x] Overdue exists as a selectable template type.
+- [x] Not seen in a while exists as a selectable template type.
+- [x] Token list changes by message type.
+- [x] Templates overwrite their canonical `app_settings` value.
+- [x] No new template row is created for a rewrite.
+- [x] Google review link comes from Admin Settings.
+- [x] One shared WhatsApp resolver is used by CRM messaging actions.
+- [x] No bulk WhatsApp window opening exists.
+- [x] No fake messaging history exists.
 
 ## Cleanup
 
-- [ ] `ClientAlertsModal` no longer owns template/message construction.
-- [ ] `AdminSpecialOccasions` no longer owns a separate birthday message builder.
-- [ ] `AdminLoyalty` no longer exposes duplicate messaging configuration.
-- [ ] `LoyaltyBulkBar` and `LoyaltyClientCard` use shared messaging where applicable.
-- [ ] `MessagingHowTo` is retired if its workflow is no longer needed.
-- [ ] `AdminClientManagement` is retired from active CRM navigation after dependency review.
-- [ ] Legacy Promos component is removed once references are gone.
-- [ ] Duplicate template keys and helpers are no longer used for new writes.
+- [x] `ClientAlertsModal` no longer owns template/message construction.
+- [x] `AdminSpecialOccasions` no longer owns a separate birthday message builder.
+- [x] `AdminLoyalty` no longer exposes duplicate messaging configuration.
+- [x] `LoyaltyBulkBar` and `LoyaltyClientCard` use shared messaging where applicable.
+- [x] `MessagingHowTo` is retired if its workflow is no longer needed.
+- [x] `AdminClientManagement` is retired from active CRM navigation after dependency review.
+- [x] Legacy Promos component is removed once references are gone.
+- [x] Duplicate template keys and helpers are no longer used for new writes.
 
 ## Verification
 
-- [ ] TypeScript/build checks pass.
+- [x] TypeScript/build checks pass.
 - [ ] Latest Vercel preview build succeeds.
 - [ ] Latest Vercel preview is reachable.
 - [ ] CRM loads without runtime errors.
@@ -875,3 +875,14 @@ Whether it affects database, business logic or existing behaviour
 The purpose of this document is to prevent the CRM redesign from becoming an uncontrolled rewrite.
 
 **`full-crm-design` is the isolated implementation and review branch for this scope.**
+
+## Current implementation progress
+
+- CRM simplification pass implemented on the isolated branch.
+- Standalone Promos workflow removed.
+- Six message types are now the single Messaging template source.
+- Shared WhatsApp token resolution is used across CRM messaging actions.
+- Loyalty no longer owns message-template configuration.
+- Legacy client-management and loyalty messaging-guide surfaces were retired.
+- GitHub Build Check is passing through the latest completed implementation phases.
+- Vercel deployment verification remains open until the latest preview status reports success.
