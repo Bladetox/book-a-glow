@@ -23,7 +23,7 @@ const AdminStock            = lazy(() => import("@/components/admin/AdminStock")
 const AdminIntegrations     = lazy(() => import("@/components/admin/AdminIntegrations"));
 const AdminSettings         = lazy(() => import("@/components/admin/AdminSettings"));
 const AdminTerms            = lazy(() => import("@/components/admin/AdminTerms"));
-const AdminClientManagement = lazy(() => import("@/components/admin/AdminClientManagement"));
+const AdminCRM = lazy(() => import("@/components/admin/AdminCRM"));
 const AdminLoyalty          = lazy(() => import("@/components/admin/AdminLoyalty"));
 const AdminConsistencyPricing = lazy(() => import("@/components/admin/AdminConsistencyPricing"));
 const AdminHelp             = lazy(() => import("@/components/admin/AdminHelp"));
@@ -70,7 +70,7 @@ const CORE_VIEWS = [
   "Bookings",
   "Services",
   "Availability",
-  "Client Management",
+  "CRM",
   "Settings",
   "Terms & Conditions",
   "Help",
@@ -86,7 +86,7 @@ const ALL_VIEWS = [
   "Stock",
   "Consultations",
   "Special Occasions",
-  "Client Management",
+  "CRM",
   "Loyalty",
   "Consistency Pricing",
   "Integrations",
@@ -269,7 +269,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
               {activeView === "Stock"              && flags.stock_module      && <AdminStock />}
               {activeView === "Consultations"      && flags.consultations     && <AdminConsultations />}
               {activeView === "Special Occasions"  && flags.special_occasions && <AdminSpecialOccasions />}
-              {activeView === "Client Management" && <AdminClientManagement />}
+              {activeView === "CRM" && <AdminCRM onNavigate={handleNavigate} />}
               {activeView === "Loyalty"            && flags.loyalty_module    && <AdminLoyalty onNavigate={handleNavigate} />}
               {activeView === "Consistency Pricing" && flags.consistency_pricing && <AdminConsistencyPricing />}
               {activeView === "Integrations"       && flags.integrations_tab  && <AdminIntegrations />}
