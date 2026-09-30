@@ -11,7 +11,7 @@ import {
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
-import ClientAlertsModal from "@/components/admin/ClientAlertsModal";
+import ClientAlertsModal, { alertCardLayoutId } from "@/components/admin/ClientAlertsModal";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useNextyInsights } from "@/hooks/useNextyInsights";
@@ -883,7 +883,10 @@ const AdminDashboard = ({
               </div>
             ) : (
               <>
-                <button
+                <motion.button
+                  layoutId={alertCardLayoutId("overdue_loyalty")}
+                  transition={{ type: "spring", stiffness: 400, damping: 32, restSpeed: 0.5, restDelta: 0.5 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => { setAlertModalType("overdue_loyalty"); setAlertModalOpen(true); }}
                   className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.10] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
@@ -897,8 +900,11 @@ const AdminDashboard = ({
                     </div>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-white/20 shrink-0" />
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  layoutId={alertCardLayoutId("inactive_90_days")}
+                  transition={{ type: "spring", stiffness: 400, damping: 32, restSpeed: 0.5, restDelta: 0.5 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => { setAlertModalType("inactive_90_days"); setAlertModalOpen(true); }}
                   className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.10] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
@@ -912,7 +918,7 @@ const AdminDashboard = ({
                     </div>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-white/20 shrink-0" />
-                </button>
+                </motion.button>
               </>
             )}
           </div>

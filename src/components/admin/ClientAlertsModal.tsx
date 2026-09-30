@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CalendarCheck, AlertTriangle, MessageCircle, Cake, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
@@ -18,6 +19,19 @@ export interface BirthdayClient {
   type: string;
   label: string | null;
 }
+
+// Same spring as the Business Health metric cards (BusinessHealthSection.SPRING):
+// capped so it settles in <400 ms.
+const SPRING = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 32,
+  restSpeed: 0.5,
+  restDelta: 0.5,
+};
+
+/** layoutId shared between the card that opens the modal and the modal panel. */
+export const alertCardLayoutId = (type: string) => `client-alert-${type}`;
 
 // ─── WA helpers ───
 const DEFAULT_TPL_OVERDUE  = "Hi {name}! ✨ We miss you at {business}. You're overdue for your {service} — let's get you booked in! Reply to grab a slot.";
@@ -110,30 +124,6 @@ export default function ClientAlertsModal({
   const { tenantId } = useTenant();
   const navigate = useNavigate();
 
-  // ─── Swipe-to-close state ───
-  const dragStartY   = useRef<number>(0);
-  const [dragY, setDragY] = useState(0);
-  const isDragging   = useRef(false);
-
-  const handleDragStart = (e: React.TouchEvent) => {
-    dragStartY.current = e.touches[0].clientY;
-    isDragging.current = true;
-  };
-
-  const handleDragMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const delta = e.touches[0].clientY - dragStartY.current;
-    if (delta > 0) setDragY(delta);
-  };
-
-  const handleDragEnd = () => {
-    isDragging.current = false;
-    if (dragY > 80) {
-      onClose();
-    }
-    setDragY(0);
-  };
-
   const { data: settingsRows = [] } = useQuery({
     queryKey: ["loyalty-settings", tenantId],
     queryFn: async () => {
@@ -215,35 +205,41 @@ export default function ClientAlertsModal({
     if (ctaRoute) navigate(ctaRoute);
   };
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  // Portalled to <body>: the admin content area is its own stacking layer, so
+  // rendering inline let the header and bottom nav paint over the panel.
+  return createPortal(
     <AnimatePresence>
       {isOpen && alertType && (
-        <motion.div
-          key="alerts-modal-backdrop"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
-          onClick={onClose}
-        >
+        <>
+          {/* Backdrop */}
           <motion.div
-            key="alerts-modal-panel"
-            initial={{ y: "100%", opacity: 0 }}
-            animate={{ y: dragY, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
-            transition={{ type: "spring", stiffness: 340, damping: 32 }}
-            style={{ translateY: dragY > 0 ? dragY : undefined }}
-            className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-white/[0.1] bg-[#0f0f0f] flex flex-col max-h-[85vh] shadow-2xl"
-            onClick={e => e.stopPropagation()}
-            onTouchStart={handleDragStart}
-            onTouchMove={handleDragMove}
-            onTouchEnd={handleDragEnd}
-          >
-            {/* ─── Drag handle (mobile only) ─── */}
-            <div className="flex justify-center pt-3 pb-1 sm:hidden cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1 rounded-full bg-white/[0.15]" />
-            </div>
+            key="alerts-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+            aria-hidden="true"
+          />
 
+          {/* Panel — morphs out of the card that opened it (shared layoutId) */}
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-6 pointer-events-none">
+            <motion.div
+              key={alertType}
+              layoutId={alertCardLayoutId(alertType)}
+              layout
+              transition={SPRING}
+              role="dialog"
+              aria-modal="true"
+              aria-label={active?.title}
+              className="pointer-events-auto relative w-full max-w-sm sm:max-w-lg rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+              style={{ willChange: "transform", maxHeight: "80dvh" }}
+            >
             {/* ─── Header ─── */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-4 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
               <div className="flex items-center gap-2.5">
                 <Icon className={`w-4 h-4 shrink-0 ${iconColor}`} />
                 <p className="text-sm font-semibold text-white/85">{active?.title}</p>
@@ -258,7 +254,7 @@ export default function ClientAlertsModal({
             </div>
 
             {/* ─── WA tip ─── */}
-            <div className="mx-5 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 flex items-start gap-2">
+            <div className="mx-5 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 flex items-start gap-2 shrink-0">
               <MessageCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "#25D366" }} />
               <p className="text-[11px] text-white/40 leading-relaxed">
                 Tap <span className="font-semibold" style={{ color: "#25D366" }}>WA</span> on any client to open a pre-filled WhatsApp message. Edit templates in{" "}
@@ -267,7 +263,7 @@ export default function ClientAlertsModal({
             </div>
 
             {/* ─── List ─── */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 flex flex-col gap-2">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 flex flex-col gap-2">
               {count === 0 ? (
                 <EmptyState
                   icon={Icon}
@@ -349,7 +345,7 @@ export default function ClientAlertsModal({
             </div>
 
             {/* ─── Footer ─── */}
-            <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between gap-3">
+            <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between gap-3 shrink-0">
               <p className="text-[10px] tracking-[0.12em] uppercase text-white/25">
                 {count} client{count !== 1 ? "s" : ""}
               </p>
@@ -364,9 +360,11 @@ export default function ClientAlertsModal({
               )}
             </div>
 
-          </motion.div>
-        </motion.div>
+            </motion.div>
+          </div>
+        </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

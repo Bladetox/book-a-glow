@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from "react";
 import { Loader2, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { AdminPageHeader } from "@/components/admin/AdminSharedUI";
-import ClientAlertsModal, { type BirthdayClient } from "@/components/admin/ClientAlertsModal";
+import ClientAlertsModal, { alertCardLayoutId, type BirthdayClient } from "@/components/admin/ClientAlertsModal";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import { addDays } from "date-fns";
 
@@ -80,15 +81,18 @@ const ProactiveAlertBanner = ({
 
       <div className="flex flex-wrap gap-2">
         {chips.map(chip => (
-          <button
+          <motion.button
             key={String(chip.key)}
+            layoutId={alertCardLayoutId(String(chip.key))}
+            transition={{ type: "spring", stiffness: 400, damping: 32, restSpeed: 0.5, restDelta: 0.5 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => onOpen(chip.key)}
             className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${chip.border} ${chip.bg} transition-colors`}
           >
             <span className="text-sm leading-none">{chip.icon}</span>
             <span className={`text-[11px] font-semibold ${chip.color}`}>{chip.label}</span>
             <ChevronRight className={`w-3 h-3 ${chip.color} opacity-60`} />
-          </button>
+          </motion.button>
         ))}
       </div>
     </div>
