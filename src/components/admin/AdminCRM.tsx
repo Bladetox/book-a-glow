@@ -66,12 +66,12 @@ const attentionQueues: { id: AttentionQueue; label: string }[] = [
 ];
 
 function identityKey(b: any) {
-  if (b.client_id) return \`id:\${b.client_id}\`;
+  if (b.client_id) return `id:${b.client_id}`;
   const email = b.client_email || b.guest_email;
-  if (email) return \`email:\${String(email).trim().toLowerCase()}\`;
+  if (email) return `email:${String(email).trim().toLowerCase()}`;
   const phone = b.client_phone || b.guest_phone;
-  if (phone) return \`phone:\${String(phone).replace(/\D/g, "").slice(-9)}\`;
-  return \`booking:\${b.id}\`;
+  if (phone) return `phone:${String(phone).replace(/\D/g, "").slice(-9)}`;
+  return `booking:${b.id}`;
 }
 
 function whatsApp(
@@ -81,7 +81,7 @@ function whatsApp(
 ) {
   const message = resolveMessageTemplate(template, {
     ...values,
-    bookingUrl: typeof window !== "undefined" ? \`\${window.location.origin}/book\` : "",
+    bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
   });
   return buildWhatsAppUrl(phone, message);
 }
@@ -220,7 +220,7 @@ export default function AdminCRM({
     return (loyaltyRows as any[])
       .filter((row) => row.next_due_date)
       .map((row) => ({
-        key: \`loyalty:\${row.id}\`,
+        key: `loyalty:${row.id}`,
         name: row.client_name,
         phone: row.phone,
         email: row.email,
@@ -337,11 +337,11 @@ export default function AdminCRM({
               <button
                 key={queue.id}
                 onClick={() => setAttentionQueue(queue.id)}
-                className={\`flex-1 min-w-[112px] px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors \${
+                className={`flex-1 min-w-[112px] px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
                   attentionQueue === queue.id
                     ? "bg-white/[0.09] text-white"
                     : "text-white/35 hover:text-white/65"
-                }\`}
+                }`}
               >
                 {queue.label}
                 <span className="ml-1.5 text-white/30">{attentionCounts[queue.id]}</span>
@@ -372,7 +372,7 @@ export default function AdminCRM({
                   key={client.key}
                   name={client.name}
                   phone={client.phone}
-                  detail={\`Due \${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}\`}
+                  detail={`Due ${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}`}
                   href={whatsApp(client.phone, getTemplate("time_to_book"), {
                     name: client.name,
                     business: "your business",
@@ -386,7 +386,7 @@ export default function AdminCRM({
                   key={client.id}
                   name={client.client_name}
                   phone={client.phone}
-                  detail={\`\${client.days_overdue} days overdue\`}
+                  detail={`${client.days_overdue} days overdue`}
                   href={whatsApp(client.phone, getTemplate("overdue"), {
                     name: client.client_name,
                     business: "your business",
@@ -400,7 +400,7 @@ export default function AdminCRM({
                   key={String(client.client_id)}
                   name={client.client_name}
                   phone={client.client_phone}
-                  detail={\`\${client.days_since_booking} days since last booking\`}
+                  detail={`${client.days_since_booking} days since last booking`}
                   href={whatsApp(client.client_phone, getTemplate("long_overdue"), {
                     name: client.client_name,
                     business: "your business",
@@ -476,11 +476,11 @@ export default function AdminCRM({
           <button
             key={item.id}
             onClick={() => goToArea(item.id)}
-            className={\`rounded-xl px-3 py-3 text-left transition-colors \${
+            className={`rounded-xl px-3 py-3 text-left transition-colors ${
               area === item.id
                 ? "bg-white/[0.09] text-white"
                 : "text-white/35 hover:text-white/65"
-            }\`}
+            }`}
           >
             <span className="block text-xs font-semibold">{item.label}</span>
             <span className="hidden sm:block text-[10px] mt-0.5 text-white/25">{item.description}</span>
@@ -554,11 +554,11 @@ function SubNavigation({
         <button
           key={item.id}
           onClick={() => onSelect(item.id)}
-          className={\`shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors \${
+          className={`shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
             active === item.id
               ? "bg-white/[0.07] text-white"
               : "text-white/30 hover:text-white/60"
-          }\`}
+          }`}
         >
           {item.label}
         </button>
@@ -639,7 +639,7 @@ function ClientHistoryModal({
 
         <div className="p-5 grid sm:grid-cols-3 gap-2">
           <Stat label="Bookings" value={String(client.bookingCount)} />
-          <Stat label="Spend" value={\`R\${client.spend.toFixed(2)}\`} />
+          <Stat label="Spend" value={`R${client.spend.toFixed(2)}`} />
           <Stat
             label="Last booking"
             value={
