@@ -450,6 +450,7 @@ export default function AdminCRM({
                     name: client.name,
                     business: messageContext.businessName,
                     service: messageContext.serviceLabel,
+                    bookingUrl: messageContext.bookingUrl,
                   })}
                 />
               ))}
