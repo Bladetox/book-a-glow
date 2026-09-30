@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, MessageSquare, Save } from "lucide-react";
+import { CheckCircle2, MessageSquare, Save } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCrmMessageTemplates } from "@/hooks/useCrmMessageTemplates";
@@ -23,55 +23,11 @@ const TYPES: MessageTemplateType[] = [
   "review_ask",
 ];
 
-const PERSONALISATION: Record<MessageTemplateType, Array<{ label: string; token: string }>> = {
-  birthday: [
-    { label: "Client name", token: "[Client name]" },
-    { label: "Business name", token: "[Business name]" },
-  ],
-  time_to_book: [
-    { label: "Client name", token: "[Client name]" },
-    { label: "Business name", token: "[Business name]" },
-    { label: "Service", token: "[Service]" },
-    { label: "Booking link", token: "[Booking link]" },
-    { label: "Last service", token: "[Last service]" },
-    { label: "Last visit", token: "[Last visit]" },
-  ],
-  overdue: [
-    { label: "Client name", token: "[Client name]" },
-    { label: "Business name", token: "[Business name]" },
-    { label: "Service", token: "[Service]" },
-    { label: "Booking link", token: "[Booking link]" },
-    { label: "Last service", token: "[Last service]" },
-    { label: "Last visit", token: "[Last visit]" },
-  ],
-  long_overdue: [
-    { label: "Client name", token: "[Client name]" },
-    { label: "Business name", token: "[Business name]" },
-    { label: "Service", token: "[Service]" },
-    { label: "Booking link", token: "[Booking link]" },
-    { label: "Last service", token: "[Last service]" },
-    { label: "Last visit", token: "[Last visit]" },
-  ],
-  promo: [
-    { label: "Client name", token: "[Client name]" },
-    { label: "Business name", token: "[Business name]" },
-    { label: "Service", token: "[Service]" },
-    { label: "Booking link", token: "[Booking link]" },
-  ],
-  review_ask: [
-    { label: "Client name", token: "[Client name]" },
-    { label: "Business name", token: "[Business name]" },
-    { label: "Booking link", token: "[Booking link]" },
-    { label: "Google review link", token: "[Google review link]" },
-  ],
-};
-
 export default function MessageTemplatesView({ focusType }: { focusType?: MessageTemplateType }) {
   const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
   const [active, setActive] = useState<MessageTemplateType>(focusType ?? "birthday");
   const [draft, setDraft] = useState("");
-  const [personaliseOpen, setPersonaliseOpen] = useState(false);
 
   const { templates, configured, isLoading } = useCrmMessageTemplates();
 
@@ -113,8 +69,8 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
       .join(", ");
 
     return {
-      name: previewBooking?.guest_name || previewBooking?.client_name || "Sarah",
-      business: tenantMessageSettings?.name || tenant?.name || "Your business",
+      name: previewBooking?.guest_name || previewBooking?.client_name || "Client",
+      business: tenantMessageSettings?.name || tenant?.name || "",
       service: services || "Hollywood",
       bookingUrl: buildTenantBookingUrl(tenantId, tenant?.custom_domain),
       lastService: services || "Hollywood",
@@ -225,37 +181,6 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
             />
           </div>
 
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setPersonaliseOpen((open) => !open)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/55 hover:text-white/80"
-            >
-              Add personalisation
-              <ChevronDown
-                className={"w-3.5 h-3.5 transition-transform " + (personaliseOpen ? "rotate-180" : "")}
-              />
-            </button>
-
-            {personaliseOpen && (
-              <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-xl border border-white/[0.08] bg-zinc-950 p-1.5 shadow-2xl">
-                {PERSONALISATION[active].map(({ label, token }) => (
-                  <button
-                    key={token}
-                    type="button"
-                    onClick={() => {
-                      setDraft((current) => (current ? current + " " + token : token));
-                      setPersonaliseOpen(false);
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-xs text-white/60 hover:bg-white/[0.06] hover:text-white"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30 mb-2">
               Preview
@@ -264,7 +189,7 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
               {preview || "Your message preview will appear here."}
             </p>
             <p className="text-[11px] text-white/25 mt-3">
-              Preview uses a recent client example from this business.
+              Preview shows the message using a real client example from this business.
             </p>
           </div>
 
