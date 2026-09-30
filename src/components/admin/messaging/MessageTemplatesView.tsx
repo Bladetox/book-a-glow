@@ -39,7 +39,7 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
         .eq("tenant_id", tenantId)
         .in("key", Array.from(new Set([
           ...TYPES.map(t => TEMPLATE_SETTING_KEYS[t]),
-          ...TYPES.map(t => LEGACY_TEMPLATE_SETTING_KEYS[t]).filter(Boolean),
+          ...TYPES.map(t => LEGACY_TEMPLATE_SETTING_KEYS[t]).filter((key): key is string => Boolean(key)),
         ])));
       if (error) throw error;
       return data ?? [];
