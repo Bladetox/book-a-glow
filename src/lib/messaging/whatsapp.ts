@@ -16,7 +16,28 @@ export const TEMPLATE_LABELS: Record<MessageTemplateType, string> = {
   on_track: "On Track",
 };
 
-export const TEMPLATE_TOKENS = ["{name}", "{business}", "{service}", "{bookingUrl}"] as const;
+export const FRIENDLY_TEMPLATE_LABELS = {
+  "{name}": "Client name",
+  "{business}": "Business name",
+  "{service}": "Service",
+  "{bookingUrl}": "Booking link",
+} as const;
+
+export function toFriendlyTemplate(template: string) {
+  return template
+    .replaceAll("{name}", "[Client name]")
+    .replaceAll("{business}", "[Business name]")
+    .replaceAll("{service}", "[Service]")
+    .replaceAll("{bookingUrl}", "[Booking link]");
+}
+
+export function toStoredTemplate(template: string) {
+  return template
+    .replaceAll("[Client name]", "{name}")
+    .replaceAll("[Business name]", "{business}")
+    .replaceAll("[Service]", "{service}")
+    .replaceAll("[Booking link]", "{bookingUrl}");
+}
 
 export function resolveMessageTemplate(
   template: string,
