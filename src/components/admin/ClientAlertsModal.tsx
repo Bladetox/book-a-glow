@@ -41,10 +41,6 @@ const SPRING = {
 export const alertCardLayoutId = (type: string) => `client-alert-${type}`;
 
 // ─── WA helpers ───
-const DEFAULT_TPL_OVERDUE  = "Hi {name}! ✨ We miss you at {business}. You're overdue for your {service} — let's get you booked in! Reply to grab a slot.";
-const DEFAULT_TPL_INACTIVE = "Hi {name}! 👋 It's been a while since we've seen you at {business}. We'd love to welcome you back — reply to book your next {service}!";
-const DEFAULT_TPL_BIRTHDAY = "Hi {name}! 🎂 Wishing you a wonderful birthday from everyone at {business}! We'd love to treat you to your next {service} — reply to claim your birthday treat! 💖";
-
 const SETTING_KEYS = Array.from(new Set([
   ...Object.values(TEMPLATE_SETTING_KEYS),
   ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter((key): key is string => Boolean(key)),
