@@ -379,113 +379,6 @@ export const InlineNotesEditor = ({
   );
 };
 
-// ─ InlineBirthdayEditor ─────────────────────────────────────────────
-export const InlineBirthdayEditor = ({
-  rowId, current, tenantId, onUpdated,
-}: {
-  rowId: string;
-  current: string | null;
-  tenantId: string;
-  onUpdated: () => void;
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue]     = useState(current ?? "");
-  const [saving, setSaving]   = useState(false);
-
-  function formatBirthday(iso: string | null): string {
-    if (!iso) return "";
-    try {
-      const d = new Date(iso + "T00:00:00");
-      return d.toLocaleDateString("en-ZA", {
-        day: "numeric",
-        month: "short",
-        year: iso.length > 7 ? "numeric" : undefined,
-      });
-    } catch {
-      return iso;
-    }
-  }
-
-  const save = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from("loyalty_tracker")
-      .update({ birthday: (value || null) as any, updated_at: new Date().toISOString() })
-      .eq("id", rowId)
-      .eq("tenant_id", tenantId);
-    setSaving(false);
-    if (error) {
-      if (error.message?.includes("birthday") || error.code === "42703") {
-        toast.error("Birthday column missing — run DB migration first", {
-          description: "Add `birthday text` column to loyalty_tracker",
-        });
-      } else {
-        toast.error("Failed to save birthday");
-      }
-    } else {
-      toast.success(value ? "🎂 Birthday saved!" : "Birthday cleared");
-      setEditing(false);
-      onUpdated();
-    }
-  };
-
-  if (!editing) return (
-    <button
-      onClick={e => { e.stopPropagation(); setValue(current ?? ""); setEditing(true); }}
-      className="flex items-center gap-2 w-full group text-left rounded-xl px-3 py-2
-        bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04]
-        hover:border-pink-500/20 transition-all"
-      title="Set birthday"
-    >
-      <Cake className="w-3.5 h-3.5 shrink-0 text-pink-400/40 group-hover:text-pink-400/80 transition-colors" />
-      <span
-        className="text-xs leading-snug group-hover:text-white/60 transition-colors"
-        style={{ color: current ? "rgba(249,168,212,0.75)" : undefined }}
-      >
-        {current
-          ? formatBirthday(current)
-          : <span className="italic text-white/20">Add birthday…</span>
-        }
-      </span>
-      {current && (
-        <Pencil className="w-2.5 h-2.5 text-white/20 ml-auto opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
-      )}
-    </button>
-  );
-
-  return (
-    <div className="flex items-center gap-2 w-full" onClick={e => e.stopPropagation()}>
-      <input
-        autoFocus
-        type="date"
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === "Enter") save();
-          if (e.key === "Escape") setEditing(false);
-        }}
-        className="flex-1 min-w-0 text-xs bg-white/[0.06] border border-white/[0.12] rounded-xl
-          px-3 py-2 text-white/80 focus:outline-none focus:border-pink-400/40 [color-scheme:dark]"
-      />
-      <button
-        onClick={save}
-        disabled={saving}
-        className="w-8 h-8 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center
-          justify-center text-pink-400 hover:bg-pink-500/20 transition-all shrink-0"
-      >
-        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-      </button>
-      <button
-        onClick={() => setEditing(false)}
-        className="w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center
-          text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-all shrink-0"
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-  );
-};
-
 // ─ LoyaltyClientCard ────────────────────────────────────────────────
 export interface LoyaltyClientCardProps {
   row: {
@@ -494,7 +387,6 @@ export interface LoyaltyClientCardProps {
     client_name: string;
     phone: string | null;
     email?: string | null;
-    birthday?: string | null;
     status: string | null;
     last_wax_date: string | number | null;
     next_due_date: string | number | null;
@@ -511,7 +403,6 @@ export interface LoyaltyClientCardProps {
     bookingCount: number;
     lastVisitDate: string | null;
     nextDueDate: string | null;
-    birthday: string | null;
   };
   effStatus: string;
   /** Tenant reminder interval in weeks — used to compute Next Due live */
@@ -542,8 +433,6 @@ export const LoyaltyClientCard = ({
   onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
-  const resolvedBirthday = (row as any).birthday ?? enrich.birthday ?? null;
-
   // ── Derive Last Visit from enrichment (bookings table source of truth) ──
   const lastVisit = enrich.lastVisitDate ?? row.last_visit_date ?? null;
 
@@ -721,12 +610,6 @@ export const LoyaltyClientCard = ({
                 </div>
               </div>
 
-              <InlineBirthdayEditor
-                rowId={row.id}
-                current={resolvedBirthday}
-                tenantId={tenantId}
-                onUpdated={onUpdated}
-              />
 
               <InlineNotesEditor
                 rowId={row.id}
