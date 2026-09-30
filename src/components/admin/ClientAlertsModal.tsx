@@ -8,7 +8,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import type { OverdueLoyaltyClient, InactiveClient } from "@/hooks/useClientAlerts";
-import { waLink } from "@/components/admin/loyalty/loyaltyHelpers";
+import {
+  LEGACY_TEMPLATE_SETTING_KEYS,
+  TEMPLATE_SETTING_KEYS,
+  getTemplateValue,
+  resolveMessageTemplate,
+  buildWhatsAppUrl,
+  type MessageTemplateType,
+} from "@/lib/messaging/whatsapp";
 
 // ─── Types ───
 export interface BirthdayClient {
@@ -38,20 +45,28 @@ const DEFAULT_TPL_OVERDUE  = "Hi {name}! ✨ We miss you at {business}. You're o
 const DEFAULT_TPL_INACTIVE = "Hi {name}! 👋 It's been a while since we've seen you at {business}. We'd love to welcome you back — reply to book your next {service}!";
 const DEFAULT_TPL_BIRTHDAY = "Hi {name}! 🎂 Wishing you a wonderful birthday from everyone at {business}! We'd love to treat you to your next {service} — reply to claim your birthday treat! 💖";
 
-const SETTING_KEYS = [
-  "loyalty_tpl_overdue",
-  "loyalty_tpl_timebook",
-  "loyalty_tpl_ontrack",
-  "loyalty_tpl_birthday",
+const SETTING_KEYS = Array.from(new Set([
+  ...Object.values(TEMPLATE_SETTING_KEYS),
+  ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter(Boolean),
+  "business_name",
   "loyalty_service_label",
   "loyalty_business_name",
-] as const;
+]));
 
-function buildMsg(name: string, template: string, businessName: string, serviceLabel: string): string {
-  return template
-    .replace(/\{name\}/g, name)
-    .replace(/\{business\}/g, businessName || "us")
-    .replace(/\{service\}/g, serviceLabel || "appointment");
+function buildMsg(
+  name: string,
+  templateType: MessageTemplateType,
+  settingsRows: any[],
+  businessName: string,
+  serviceLabel: string,
+): string {
+  const template = getTemplateValue(settingsRows, templateType);
+  return resolveMessageTemplate(template, {
+    name,
+    business: businessName || "us",
+    service: serviceLabel || "appointment",
+    bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
+  });
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -76,9 +91,13 @@ function daysUntilOccasion(dateStr: string): number {
 }
 
 // ─── WaButton ───
-const WaButton = ({ phone, msg }: { phone: string; msg: string }) => (
+const WaButton = ({ phone, msg }: { phone: string; msg: string }) => {
+  const href = buildWhatsAppUrl(phone, msg);
+  if (!href) return null;
+
+  return (
   <a
-    href={waLink(phone, msg)}
+    href={href}
     target="_blank"
     rel="noopener noreferrer"
     onClick={e => e.stopPropagation()}
@@ -87,7 +106,8 @@ const WaButton = ({ phone, msg }: { phone: string; msg: string }) => (
   >
     <MessageCircle className="w-3 h-3" /> WA
   </a>
-);
+  );
+};
 
 // ─── EmptyState ───
 const EmptyState = ({ icon: Icon, iconColor, message }: {
@@ -143,11 +163,8 @@ export default function ClientAlertsModal({
     const map: Record<string, string> = {};
     settingsRows.forEach((r: any) => { map[r.key] = r.value; });
     return {
-      overdueTemplate:  map.loyalty_tpl_overdue  || DEFAULT_TPL_OVERDUE,
-      inactiveTemplate: map.loyalty_tpl_timebook || DEFAULT_TPL_INACTIVE,
-      birthdayTemplate: map.loyalty_tpl_birthday || DEFAULT_TPL_BIRTHDAY,
-      serviceLabel:     map.loyalty_service_label || "appointment",
-      businessName:     map.loyalty_business_name || "",
+      serviceLabel: map.loyalty_service_label || "appointment",
+      businessName: map.business_name || map.loyalty_business_name || "",
     };
   }, [settingsRows]);
 
@@ -160,7 +177,7 @@ export default function ClientAlertsModal({
       accentBorder: "border-red-500/25",
       accentBg:     "bg-red-500/[0.04]",
       badgeColor:   "bg-red-500/10 text-red-400 border border-red-500/20",
-      tipNote:      "Loyalty → Settings → WhatsApp Message Templates",
+      tipNote:      "Messaging → Messages",
       count:        overdueClients.length,
       ctaLabel:     "Go to Loyalty",
       ctaRoute:     null as string | null,
@@ -172,7 +189,7 @@ export default function ClientAlertsModal({
       accentBorder: "border-amber-500/25",
       accentBg:     "bg-amber-500/[0.04]",
       badgeColor:   "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-      tipNote:      "Loyalty → Settings → WhatsApp Message Templates",
+      tipNote:      "Messaging → Messages",
       count:        inactiveClients.length,
       ctaLabel:     null as string | null,
       ctaRoute:     null as string | null,
@@ -184,7 +201,7 @@ export default function ClientAlertsModal({
       accentBorder: "border-pink-500/25",
       accentBg:     "bg-pink-500/[0.04]",
       badgeColor:   "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-      tipNote:      "Loyalty → Settings → WhatsApp Message Templates",
+      tipNote:      "Messaging → Messages",
       count:        birthdayClients.length,
       ctaLabel:     "View All Special Dates",
       ctaRoute:     null as string | null,
@@ -277,7 +294,7 @@ export default function ClientAlertsModal({
               ) : alertType === "overdue_loyalty" ? (
                 overdueClients.map(client => {
                   const phone = client.phone ?? "";
-                  const msg   = buildMsg(client.client_name, settings.overdueTemplate, settings.businessName, settings.serviceLabel);
+                  const msg   = buildMsg(client.client_name, "overdue", settingsRows as any[], settings.businessName, settings.serviceLabel);
                   return (
                     <div key={client.id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -297,7 +314,7 @@ export default function ClientAlertsModal({
               ) : alertType === "inactive_90_days" ? (
                 inactiveClients.map(client => {
                   const phone = client.client_phone ?? "";
-                  const msg   = buildMsg(client.client_name, settings.inactiveTemplate, settings.businessName, settings.serviceLabel);
+                  const msg   = buildMsg(client.client_name, "long_overdue", settingsRows as any[], settings.businessName, settings.serviceLabel);
                   return (
                     <div key={client.client_id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -317,7 +334,7 @@ export default function ClientAlertsModal({
               ) : alertType === "birthday" ? (
                 birthdayClients.map(client => {
                   const phone    = client.phone ?? "";
-                  const msg      = buildMsg(client.client_name, settings.birthdayTemplate, settings.businessName, settings.serviceLabel);
+                  const msg      = buildMsg(client.client_name, "birthday", settingsRows as any[], settings.businessName, settings.serviceLabel);
                   const daysLeft = daysUntilOccasion(client.occasion_date);
                   const isToday  = daysLeft === 0;
                   return (
