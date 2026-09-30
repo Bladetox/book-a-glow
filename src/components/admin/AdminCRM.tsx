@@ -844,7 +844,7 @@ export default function AdminCRM({
                   ),
                 }]
               : []),
-            ...(configured("review_ask")
+            ...(configured("review_ask") && messageContext.googleReviewLink && selected.bookings.some((booking: any) => booking.status === "completed")
               ? [{
                   label: "Review ask",
                   href: whatsApp(
