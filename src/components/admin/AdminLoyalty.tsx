@@ -87,7 +87,6 @@ import {
   normPhone, recipientPhone, recipientName,
   effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
-import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
 import { LoyaltyClientCard }     from "./loyalty/LoyaltyClientCard";
 import {
   EnrollModal, EnrollSuccessCelebration,
@@ -568,7 +567,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [search, setSearch]                     = useState("");
   // FIX-D: default to "enrolled" so the full enrolled list is visible on load
   const [filterStatus, setFilterStatus]         = useState<string | null>("enrolled");
-  const [selectedIds, setSelectedIds]           = useState<string[]>([]);
   const [enrollCandidate, setEnrollCandidate]   = useState<EnrollCandidate | null>(null);
   const [enrolledName, setEnrolledName]         = useState<string | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, string>>({});
@@ -870,18 +868,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     return counts;
   }, [dedupedLoyaltyRows, reminderWeeks, enrichment]);
 
-  const effectiveStatusMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const row of dedupedLoyaltyRows) {
-      const phone  = normPhone(row.phone);
-      const enrich = enrichment[phone] ?? null;
-      m[row.id]    = optimisticStatus[row.id] ?? effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks);
-    }
-    return m;
-  }, [dedupedLoyaltyRows, optimisticStatus, reminderWeeks, enrichment]);
 
-  const toggleSelect = (id: string) =>
-    setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
 
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
@@ -1185,17 +1172,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           onEnroll={c => setEnrollCandidate(c)}
         />
 
-        {/* ── Bulk action bar ── */}
-        <LoyaltyBulkBar
-          selected={selectedIds}
-          rows={loyaltyRows}
-          effectiveStatusMap={effectiveStatusMap}
-          businessName={businessName}
-          serviceLabel={serviceLabel}
-          templates={waTemplates}
-          onClear={() => setSelectedIds([])}
-        />
-
         {/* ── Nexty loyalty insights panel ── */}
         <NextyLoyaltyPanel onNavigate={onNavigate} />
 
@@ -1227,13 +1203,11 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   enrich={enrich}
                   effStatus={effStatus}
                   reminderWeeks={reminderWeeks}
-                  isSelected={selectedIds.includes(row.id)}
                   isExpanded={expandedCard === row.id}
                   tenantId={tenantId ?? ""}
                   businessName={businessName}
                   serviceLabel={serviceLabel}
                   waTemplates={waTemplates}
-                  onToggleSelect={() => toggleSelect(row.id)}
                   onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
                   onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
                   onUpdated={invalidateLoyalty}
