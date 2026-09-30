@@ -68,7 +68,7 @@ const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
 
 // ─── OccasionCard ───
 const OccasionCard = ({
-  row, i, onDelete, businessName, birthdayTemplate, onConfigureBirthday,
+  row, i, onDelete, businessName, birthdayTemplate, birthdayConfigured, onConfigureBirthday,
 }: {
   row: OccasionRow; i: number;
   onDelete: (id: string) => void;
@@ -134,7 +134,7 @@ const OccasionCard = ({
         </span>
 
         <div className="flex items-center gap-1">
-          {type === "birthday" && !birthdayTemplate && onConfigureBirthday ? (
+          {type === "birthday" && !birthdayConfigured && onConfigureBirthday ? (
             <button
               type="button"
               onClick={(event) => {
@@ -324,7 +324,8 @@ const AdminSpecialOccasions = ({ onConfigureBirthday }: AdminSpecialOccasionsPro
 
   const birthdayTemplate = templates.birthday;
   const birthdayConfigured = configured("birthday");
-  const businessName = tenant?.name || "";  const birthdayTemplate = getTemplateValue(settingsRows as any[], "birthday");
+  const businessName = tenant?.name || "";
+  const birthdayTemplate = templates.birthday;
   const businessName = tenant?.name || "";
 
   const { data: rows = [], isLoading } = useQuery({
