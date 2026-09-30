@@ -11,11 +11,9 @@ import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import {
   buildWhatsAppUrl,
-  getTemplateValue,
   resolveMessageTemplate,
-  TEMPLATE_SETTING_KEYS,
-  LEGACY_TEMPLATE_SETTING_KEYS,
 } from "@/lib/messaging/whatsapp";
+import { useCrmMessageTemplates } from "@/hooks/useCrmMessageTemplates";
 
 // ─── Types ───
 export interface OccasionRow {
@@ -52,10 +50,6 @@ function formatOccasionShort(dateStr: string): string {
   catch { return dateStr; }
 }
 
-function buildAnniversaryMsg(name: string, businessName: string): string {
-  return `Hi ${name}! 💖 Wishing you a wonderful anniversary! Thank you for being a valued client at ${businessName || "us"}. We'd love to celebrate with you — pop in soon! 🌸`;
-}
-
 // ─── TYPE_META ───
 const TYPE_META: Record<OccasionType, { label: string; Icon: React.ElementType; color: string; badgeCls: string }> = {
   birthday:    { label: "Birthday",    Icon: Cake,         color: "text-pink-400",   badgeCls: "bg-pink-500/10 text-pink-400 border border-pink-500/20" },
@@ -80,6 +74,7 @@ const OccasionCard = ({
   onDelete: (id: string) => void;
   businessName: string;
   birthdayTemplate: string;
+  birthdayConfigured: boolean;
   onConfigureBirthday?: () => void;
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -95,11 +90,12 @@ const OccasionCard = ({
         name: row.client_name,
         business: businessName,
       })
-    : buildAnniversaryMsg(row.client_name, businessName);
-
-  const waHref = row.phone && (type !== "birthday" || birthdayTemplate)
-    ? buildWhatsAppUrl(row.phone, msg)
     : "";
+
+  const waHref =
+    type === "birthday" && birthdayConfigured && row.phone
+      ? buildWhatsAppUrl(row.phone, msg)
+      : "";
 
   const urgencyBorder = isToday
     ? "border-pink-500/40 border-l-2 border-l-pink-500"
@@ -324,28 +320,11 @@ const AdminSpecialOccasions = ({ onConfigureBirthday }: AdminSpecialOccasionsPro
   const [activeFilter, setActiveFilter] = useState<FilterChip>("all");
   const [showAddForm, setShowAddForm]   = useState(false);
 
-  const { data: settingsRows = [] } = useQuery({
-    queryKey: ["crm-birthday-template", tenantId],
-    queryFn: async () => {
-      const keys = Array.from(
-        new Set([
-          TEMPLATE_SETTING_KEYS.birthday,
-          LEGACY_TEMPLATE_SETTING_KEYS.birthday,
-        ].filter(Boolean)),
-      );
+  const { templates, configured } = useCrmMessageTemplates();
 
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .eq("tenant_id", tenantId)
-        .in("key", keys);
-      if (error) throw error;
-      return data ?? [];
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const birthdayTemplate = getTemplateValue(settingsRows as any[], "birthday");
+  const birthdayTemplate = templates.birthday;
+  const birthdayConfigured = configured("birthday");
+  const businessName = tenant?.name || "";  const birthdayTemplate = getTemplateValue(settingsRows as any[], "birthday");
   const businessName = tenant?.name || "";
 
   const { data: rows = [], isLoading } = useQuery({
