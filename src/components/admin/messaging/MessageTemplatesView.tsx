@@ -56,6 +56,22 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
     if (focusType) setActive(focusType);
   }, [focusType]);
 
+  const clear = useMutation({
+    mutationFn: async () => {
+      const key = TEMPLATE_SETTING_KEYS[active];
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert({
+          tenant_id: tenantId,
+          key,
+          value: "",
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "tenant_id,key" });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["crm-message-templates", tenantId] }),
+  });
+
   const save = useMutation({
     mutationFn: async () => {
       const key = TEMPLATE_SETTING_KEYS[active];
@@ -118,14 +134,23 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
           </div>
           <div className="flex items-center justify-between gap-3 pt-2">
             <p className="text-xs text-white/25">One template source is used throughout CRM messaging.</p>
-            <button
-              onClick={() => save.mutate()}
-              disabled={save.isPending}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black text-xs font-bold disabled:opacity-50"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {save.isPending ? "Saving…" : "Save template"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => clear.mutate()}
+                disabled={clear.isPending || !configured(active)}
+                className="px-3 py-2.5 rounded-xl border border-white/[0.08] text-xs font-semibold text-white/45 hover:text-white/75 disabled:opacity-30"
+              >
+                {clear.isPending ? "Clearing…" : "Clear"}
+              </button>
+              <button
+                onClick={() => save.mutate()}
+                disabled={save.isPending}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black text-xs font-bold disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {save.isPending ? "Saving…" : "Save template"}
+              </button>
+            </div>
           </div>
           {save.isSuccess && <p className="text-xs text-emerald-400">Template saved.</p>}
         </div>
