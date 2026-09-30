@@ -693,6 +693,34 @@ export default function AdminCRM({
   );
 }
 
+function SubNavigation({
+  items,
+  active,
+  onSelect,
+}: {
+  items: Array<{ id: string; label: string }>;
+  active: string;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <div className="flex gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-x-auto">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onSelect(item.id)}
+          className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
+            active === item.id
+              ? "bg-white/[0.09] text-white"
+              : "text-white/35 hover:text-white/65"
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 function IdentityReviewQueue({
   items,
   canonicalClients,
