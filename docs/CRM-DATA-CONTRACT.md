@@ -113,3 +113,46 @@ Messages owns client communication configuration.
 The redesign should use the existing canonical relationships and history tables.
 
 No new CRM history table or duplicate client table should be introduced unless a concrete database requirement is identified and documented first.
+
+
+## 13. Orphan booking identity policy
+
+Bookings without a usable `canonical_client_id` are handled deterministically. No name-based merge is permitted.
+
+1. If both email and phone are present and both uniquely identify the same active canonical client, link the booking to that client.
+2. If only email is present and it uniquely identifies one active canonical client, link the booking.
+3. If only phone is present and it uniquely identifies one active canonical client, link the booking.
+4. If email and phone identify different clients, do not link automatically. Flag the booking for review.
+5. If either contact value matches multiple clients, do not link automatically. Flag the booking for review.
+6. If both contact values are present but only one matches an existing client, do not link automatically. Flag the booking for review because the unmatched contact may identify someone else.
+7. If no contact value matches an existing client, keep the booking separate. It may be grouped with other unresolved bookings only when their normalised contact identity is identical.
+8. If no email or phone is available, keep the booking separate and flag it for review.
+9. Names are display information only. Similar or exact names never establish identity.
+10. Review records must expose the booking contact details and the reason for review. The system must not silently choose between competing clients.
+
+### Orphan review fields
+
+The derived review queue should expose:
+
+- booking ID
+- booking date
+- booking name
+- booking email
+- booking phone
+- review reason
+- possible email matches
+- possible phone matches
+
+A future manual resolution may write the selected canonical relationship back to `bookings.canonical_client_id`. Until that happens, the original booking data remains unchanged.
+
+### Acceptance criteria
+
+- A unique email + phone pair linking to the same client auto-links.
+- A unique email alone auto-links.
+- A unique phone alone auto-links.
+- Conflicting email and phone matches are never auto-linked.
+- Duplicate email or phone matches are never auto-linked.
+- A partial match when both email and phone are supplied is never auto-linked.
+- Unmatched contact details remain separate.
+- Missing contact details are never merged from name similarity.
+- Existing canonical relationships always take precedence over fallback matching.
