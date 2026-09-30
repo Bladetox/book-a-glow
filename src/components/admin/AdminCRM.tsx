@@ -690,7 +690,17 @@ export default function AdminCRM({
                 />
               ))}
 
-            {attentionQueue === "special_dates" && (canSpecialOccasions ? <AdminSpecialOccasions /> : <FeatureUnavailable />)}
+            {attentionQueue === "special_dates" &&
+              (canSpecialOccasions ? (
+                <AdminSpecialOccasions
+                  onConfigureBirthday={() => {
+                    setArea("messaging");
+                    setTemplateFocus("birthday");
+                  }}
+                />
+              ) : (
+                <FeatureUnavailable />
+              ))}
           </div>
 
           {attentionCounts[attentionQueue] === 0 && (
