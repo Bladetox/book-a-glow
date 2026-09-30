@@ -175,14 +175,13 @@ export default function AdminCRM({
   });
 
   const { data: occasions = [] } = useQuery({
-    queryKey: ["crm-birthdays", tenantId],
+    queryKey: ["crm-special-dates", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("client_occasions")
         .select("id,client_name,phone,type,label,occasion_date")
-        .eq("tenant_id", tenantId)
-        .eq("type", "birthday");
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data ?? [];
     },
@@ -442,7 +441,7 @@ export default function AdminCRM({
 
       await queryClient.invalidateQueries({ queryKey: ["crm-client-bookings", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["crm-loyalty-due", tenantId] });
-      await queryClient.invalidateQueries({ queryKey: ["crm-birthdays", tenantId] });
+      await queryClient.invalidateQueries({ queryKey: ["crm-special-dates", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["client-alerts", tenantId] });
 
       toast.success(
