@@ -177,3 +177,21 @@ Promos are a messaging action, not a retention program.
 - No new client or campaign table is required for the initial WhatsApp workflow.
 - NextSlot prepares personalised WhatsApp messages and opens them for the owner to send.
 - The owner remains responsible for sending the messages.
+
+
+## 16. Identity review resolution
+
+Identity Review groups orphan bookings that share the same normalized contact identity.
+
+The owner can:
+
+- link the group to a suggested or selected existing canonical client
+- create one new canonical client and link the whole group when no existing client matches
+
+The review action writes bookings.canonical_client_id for every still-unlinked booking in the group.
+
+If a matching guest_consultations record references one of those bookings as its first or last booking, its canonical_client_id is updated to the same canonical client.
+
+The owner is linking booking history to the correct canonical client. This is not a silent merge of two existing canonical client records.
+
+The CRM must never create one new canonical client per orphan booking when the bookings share the same normalized contact identity.
