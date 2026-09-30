@@ -23,7 +23,9 @@ import MessageTemplatesView from "@/components/admin/messaging/MessageTemplatesV
 import {
   buildWhatsAppUrl,
   resolveMessageTemplate,
+  LEGACY_TEMPLATE_SETTING_KEYS,
   TEMPLATE_SETTING_KEYS,
+  getTemplateValue,
   type MessageTemplateType,
 } from "@/lib/messaging/whatsapp";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
@@ -65,26 +67,53 @@ const attentionQueues: { id: AttentionQueue; label: string }[] = [
   { id: "birthdays", label: "Birthdays" },
 ];
 
+function normaliseEmail(value: string | null | undefined) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function normalisePhone(value: string | null | undefined) {
+  return String(value ?? "").replace(/\D/g, "").replace(/^27/, "").replace(/^0/, "");
+}
+
 function identityKey(b: any, canonical?: any) {
   if (canonical?.id) return `canonical:${canonical.id}`;
-  if (b.canonical_client_id) return `canonical:${b.canonical_client_id}`;
-  if (b.client_id) return `id:${b.client_id}`;
-  const email = b.guest_email || b.client_email;
-  if (email) return `email:${String(email).trim().toLowerCase()}`;
-  const phone = b.guest_phone || b.client_phone;
-  if (phone) return `phone:${String(phone).replace(/\D/g, "").slice(-9)}`;
+
+  // Only bookings without a canonical relationship use fallback identity.
+  // We deliberately do not use bookings.client_id because it is not the CRM
+  // identity and may represent an older or different account relationship.
+  const email = normaliseEmail(b.guest_email || b.client_email);
+  const phone = normalisePhone(b.guest_phone || b.client_phone);
+
+  if (email && phone) return `contact:${email}|${phone}`;
+  if (email) return `email:${email}`;
+  if (phone) return `phone:${phone}`;
   return `booking:${b.id}`;
+}
+
+function resolveCanonicalId(
+  booking: any,
+  mergeTargets: Map<string, string>,
+) {
+  let id = booking.canonical_client_id || null;
+  const seen = new Set<string>();
+
+  while (id && mergeTargets.has(id) && !seen.has(id)) {
+    seen.add(id);
+    const next = mergeTargets.get(id);
+    if (!next || next === id) break;
+    id = next;
+  }
+
+  return id;
 }
 
 function whatsApp(
   phone: string | null,
   template: string,
-  values: { name: string; business: string; service?: string },
+  values: { name: string; business: string; service?: string; bookingUrl?: string },
 ) {
-  const message = resolveMessageTemplate(template, {
-    ...values,
-    bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
-  });
+  if (!template || !phone) return "";
+  const message = resolveMessageTemplate(template, values);
   return buildWhatsAppUrl(phone, message);
 }
 
@@ -153,26 +182,42 @@ export default function AdminCRM({
     },
   });
 
-  const { data: templateSettings = [] } = useQuery({
-    queryKey: ["crm-template-settings-preview", tenantId],
+  const { data: messageSettings = [] } = useQuery({
+    queryKey: ["crm-message-settings", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
+      const keys = Array.from(new Set([
+        ...Object.values(TEMPLATE_SETTING_KEYS),
+        ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter(Boolean),
+        "business_name",
+        "loyalty_business_name",
+        "loyalty_service_label",
+      ]));
+
       const { data, error } = await supabase
         .from("app_settings")
         .select("key,value")
         .eq("tenant_id", tenantId)
-        .in("key", Object.values(TEMPLATE_SETTING_KEYS));
+        .in("key", keys);
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const templateMap = useMemo(
-    () => Object.fromEntries(templateSettings.map((r: any) => [r.key, r.value || ""])),
-    [templateSettings],
-  );
   const getTemplate = (type: MessageTemplateType) =>
-    templateMap[TEMPLATE_SETTING_KEYS[type]] || "";
+    getTemplateValue(messageSettings as any[], type);
+
+  const messageContext = useMemo(() => {
+    const map = new Map((messageSettings as any[]).map((row) => [row.key, row.value ?? ""]));
+    return {
+      businessName:
+        map.get("business_name") ||
+        map.get("loyalty_business_name") ||
+        "your business",
+      serviceLabel: map.get("loyalty_service_label") || "appointment",
+      bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
+    };
+  }, [messageSettings]);
 
   const canonicalClients = useMemo(() => {
     const map = new Map<string, any>();
@@ -195,13 +240,7 @@ export default function AdminCRM({
     const map = new Map<string, ClientRow>();
 
     for (const booking of bookings as any[]) {
-      let canonicalId = booking.canonical_client_id || null;
-      while (canonicalId && mergedClientTargets.has(canonicalId)) {
-        const next = mergedClientTargets.get(canonicalId);
-        if (!next || next === canonicalId) break;
-        canonicalId = next;
-      }
-
+      const canonicalId = resolveCanonicalId(booking, mergedClientTargets);
       const canonical = canonicalId ? canonicalClients.get(canonicalId) : null;
       const key = identityKey(booking, canonical);
       const name = canonical?.client_name || booking.guest_name || booking.client_name || "Unknown client";
@@ -409,7 +448,8 @@ export default function AdminCRM({
                   detail={`Due ${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}`}
                   href={whatsApp(client.phone, getTemplate("time_to_book"), {
                     name: client.name,
-                    business: "your business",
+                    business: messageContext.businessName,
+                    service: messageContext.serviceLabel,
                   })}
                 />
               ))}
@@ -423,7 +463,8 @@ export default function AdminCRM({
                   detail={`${client.days_overdue} days overdue`}
                   href={whatsApp(client.phone, getTemplate("overdue"), {
                     name: client.client_name,
-                    business: "your business",
+                    business: messageContext.businessName,
+                    service: messageContext.serviceLabel,
                   })}
                 />
               ))}
@@ -437,7 +478,8 @@ export default function AdminCRM({
                   detail={`${client.days_since_booking} days since last booking`}
                   href={whatsApp(client.client_phone, getTemplate("long_overdue"), {
                     name: client.client_name,
-                    business: "your business",
+                    business: messageContext.businessName,
+                    service: messageContext.serviceLabel,
                   })}
                 />
               ))}
@@ -451,7 +493,8 @@ export default function AdminCRM({
                   detail={format(new Date(client.occasion_date + "T00:00:00"), "d MMM")}
                   href={whatsApp(client.phone, getTemplate("birthday"), {
                     name: client.client_name,
-                    business: "your business",
+                    business: messageContext.businessName,
+                    service: messageContext.serviceLabel,
                   })}
                 />
               ))}
