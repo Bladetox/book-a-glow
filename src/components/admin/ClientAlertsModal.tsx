@@ -1,21 +1,11 @@
 import { useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CalendarCheck, AlertTriangle, MessageCircle, Cake, ArrowRight } from "lucide-react";
+import { X, CalendarCheck, AlertTriangle, Cake, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useTenant } from "@/contexts/TenantContext";
 import type { OverdueLoyaltyClient, InactiveClient } from "@/hooks/useClientAlerts";
-import {
-  LEGACY_TEMPLATE_SETTING_KEYS,
-  TEMPLATE_SETTING_KEYS,
-  getTemplateValue,
-  resolveMessageTemplate,
-  buildWhatsAppUrl,
-  type MessageTemplateType,
-} from "@/lib/messaging/whatsapp";
 
 // ─── Types ───
 export interface BirthdayClient {
@@ -39,71 +29,6 @@ const SPRING = {
 
 /** layoutId shared between the card that opens the modal and the modal panel. */
 export const alertCardLayoutId = (type: string) => `client-alert-${type}`;
-
-// ─── WA helpers ───
-const SETTING_KEYS = Array.from(new Set([
-  ...Object.values(TEMPLATE_SETTING_KEYS),
-  ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter((key): key is string => Boolean(key)),
-  "business_name",
-  "loyalty_service_label",
-  "loyalty_business_name",
-]));
-
-function buildMsg(
-  name: string,
-  templateType: MessageTemplateType,
-  settingsRows: any[],
-  businessName: string,
-  serviceLabel: string,
-): string {
-  const template = getTemplateValue(settingsRows, templateType);
-  return resolveMessageTemplate(template, {
-    name,
-    business: businessName || "us",
-    service: serviceLabel || "appointment",
-    bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
-  });
-}
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try { return format(new Date(dateStr), "dd MMM yyyy"); }
-  catch { return dateStr; }
-}
-
-function formatOccasionDate(dateStr: string): string {
-  try { return format(new Date(dateStr + "T00:00:00"), "dd MMM"); }
-  catch { return dateStr; }
-}
-
-function daysUntilOccasion(dateStr: string): number {
-  try {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const d = new Date(dateStr + "T00:00:00");
-    const thisYear = new Date(today.getFullYear(), d.getMonth(), d.getDate());
-    if (thisYear < today) thisYear.setFullYear(today.getFullYear() + 1);
-    return Math.round((thisYear.getTime() - today.getTime()) / 86400000);
-  } catch { return 0; }
-}
-
-// ─── WaButton ───
-const WaButton = ({ phone, msg }: { phone: string; msg: string }) => {
-  const href = buildWhatsAppUrl(phone, msg);
-  if (!href) return null;
-
-  return (
-  <a
-    href={href}
-    target="_blank"
-    rel="noopener noreferrer"
-    onClick={e => e.stopPropagation()}
-    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold shrink-0 transition-opacity hover:opacity-80"
-    style={{ background: "rgba(37,211,102,0.13)", color: "#25D366" }}
-  >
-    <MessageCircle className="w-3 h-3" /> WA
-  </a>
-  );
-};
 
 // ─── EmptyState ───
 const EmptyState = ({ icon: Icon, iconColor, message }: {
@@ -140,31 +65,8 @@ export default function ClientAlertsModal({
   const { tenantId } = useTenant();
   const navigate = useNavigate();
 
-  const { data: settingsRows = [] } = useQuery({
-    queryKey: ["loyalty-settings", tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .eq("tenant_id", tenantId)
-        .in("key", SETTING_KEYS);
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!tenantId,
-    staleTime: 1000 * 60 * 5,
-  });
+  const navigate = useNavigate();
 
-  const settings = useMemo(() => {
-    const map: Record<string, string> = {};
-    settingsRows.forEach((r: any) => { map[r.key] = r.value; });
-    return {
-      serviceLabel: map.loyalty_service_label || "appointment",
-      businessName: map.business_name || map.loyalty_business_name || "",
-    };
-  }, [settingsRows]);
-
-  // ─── Per-type config ───
   const config = {
     overdue_loyalty: {
       title:        "Overdue Loyalty Clients",
@@ -173,10 +75,9 @@ export default function ClientAlertsModal({
       accentBorder: "border-red-500/25",
       accentBg:     "bg-red-500/[0.04]",
       badgeColor:   "bg-red-500/10 text-red-400 border border-red-500/20",
-      tipNote:      "Messaging → Messages",
       count:        overdueClients.length,
-      ctaLabel:     "Go to Loyalty",
-      ctaRoute:     null as string | null,
+      ctaLabel:     "Open CRM",
+      ctaRoute:     "/admin?view=CRM" as string | null,
     },
     inactive_90_days: {
       title:        "Inactive 90+ days",
@@ -185,10 +86,9 @@ export default function ClientAlertsModal({
       accentBorder: "border-amber-500/25",
       accentBg:     "bg-amber-500/[0.04]",
       badgeColor:   "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-      tipNote:      "Messaging → Messages",
       count:        inactiveClients.length,
-      ctaLabel:     null as string | null,
-      ctaRoute:     null as string | null,
+      ctaLabel:     "Open CRM",
+      ctaRoute:     "/admin?view=CRM" as string | null,
     },
     birthday: {
       title:        "Upcoming Birthdays & Occasions",
@@ -197,17 +97,16 @@ export default function ClientAlertsModal({
       accentBorder: "border-pink-500/25",
       accentBg:     "bg-pink-500/[0.04]",
       badgeColor:   "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-      tipNote:      "Messaging → Messages",
       count:        birthdayClients.length,
-      ctaLabel:     "View All Special Dates",
-      ctaRoute:     null as string | null,
+      ctaLabel:     "Open CRM",
+      ctaRoute:     "/admin?view=CRM" as string | null,
     },
   };
 
   const active = alertType ? config[alertType] : null;
   const {
     Icon, iconColor, accentBorder, accentBg, badgeColor,
-    tipNote, count, ctaLabel, ctaRoute,
+    count, ctaLabel, ctaRoute,
   } = active ?? {
     Icon: CalendarCheck, iconColor: "", accentBorder: "", accentBg: "",
     badgeColor: "", tipNote: "", count: 0, ctaLabel: null, ctaRoute: null,
@@ -266,16 +165,7 @@ export default function ClientAlertsModal({
               </button>
             </div>
 
-            {/* ─── WA tip ─── */}
-            <div className="mx-5 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 flex items-start gap-2 shrink-0">
-              <MessageCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "#25D366" }} />
-              <p className="text-[11px] text-white/40 leading-relaxed">
-                Tap <span className="font-semibold" style={{ color: "#25D366" }}>WA</span> on any client to open a pre-filled WhatsApp message. Edit templates in{" "}
-                <span className="text-white/55 font-medium">{tipNote}</span>.
-              </p>
-            </div>
-
-            {/* ─── List ─── */}
+            {/* List */}
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 flex flex-col gap-2">
               {count === 0 ? (
                 <EmptyState
@@ -289,8 +179,6 @@ export default function ClientAlertsModal({
                 />
               ) : alertType === "overdue_loyalty" ? (
                 overdueClients.map(client => {
-                  const phone = client.phone ?? "";
-                  const msg   = buildMsg(client.client_name, "overdue", settingsRows as any[], settings.businessName, settings.serviceLabel);
                   return (
                     <div key={client.id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -302,15 +190,12 @@ export default function ClientAlertsModal({
                           {client.days_overdue}d overdue
                         </span>
                         <span className="text-[10px] text-white/30">Due {formatDate(client.next_due_date)}</span>
-                        {phone && <WaButton phone={phone} msg={msg} />}
                       </div>
                     </div>
                   );
                 })
               ) : alertType === "inactive_90_days" ? (
                 inactiveClients.map(client => {
-                  const phone = client.client_phone ?? "";
-                  const msg   = buildMsg(client.client_name, "long_overdue", settingsRows as any[], settings.businessName, settings.serviceLabel);
                   return (
                     <div key={client.client_id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -322,15 +207,12 @@ export default function ClientAlertsModal({
                           {client.days_since_booking}d ago
                         </span>
                         <span className="text-[10px] text-white/30">Last {formatDate(client.last_booking_date)}</span>
-                        {phone && <WaButton phone={phone} msg={msg} />}
                       </div>
                     </div>
                   );
                 })
               ) : alertType === "birthday" ? (
                 birthdayClients.map(client => {
-                  const phone    = client.phone ?? "";
-                  const msg      = buildMsg(client.client_name, "birthday", settingsRows as any[], settings.businessName, settings.serviceLabel);
                   const daysLeft = daysUntilOccasion(client.occasion_date);
                   const isToday  = daysLeft === 0;
                   return (
@@ -349,7 +231,6 @@ export default function ClientAlertsModal({
                         <span className="text-[10px] text-white/30">
                           {formatOccasionDate(client.occasion_date)}
                         </span>
-                        {phone && <WaButton phone={phone} msg={msg} />}
                       </div>
                     </div>
                   );
