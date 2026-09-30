@@ -8,6 +8,31 @@ export const TEMPLATE_SETTING_KEYS: Record<MessageTemplateType, string> = {
   on_track: "loyalty.wa_template_on_track",
 };
 
+/**
+ * Legacy settings are read only as a compatibility fallback.
+ * New saves always use TEMPLATE_SETTING_KEYS, so there is one authoritative
+ * template system going forward.
+ */
+export const LEGACY_TEMPLATE_SETTING_KEYS: Partial<Record<MessageTemplateType, string>> = {
+  birthday: "loyalty_tpl_birthday",
+  time_to_book: "loyalty_tpl_timebook",
+  overdue: "loyalty_tpl_overdue",
+  on_track: "loyalty_tpl_ontrack",
+};
+
+export function getTemplateValue(
+  settings: Array<{ key: string; value?: string | null }>,
+  type: MessageTemplateType,
+) {
+  const map = new Map(settings.map((row) => [row.key, row.value ?? ""]));
+  const current = map.get(TEMPLATE_SETTING_KEYS[type])?.trim();
+  if (current) return current;
+
+  const legacyKey = LEGACY_TEMPLATE_SETTING_KEYS[type];
+  const legacy = legacyKey ? map.get(legacyKey)?.trim() : "";
+  return legacy || "";
+}
+
 export const TEMPLATE_LABELS: Record<MessageTemplateType, string> = {
   birthday: "Birthday",
   time_to_book: "Due to Book",
