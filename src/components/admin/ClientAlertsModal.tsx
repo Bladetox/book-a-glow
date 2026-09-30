@@ -62,9 +62,6 @@ export default function ClientAlertsModal({
   isOpen, onClose, alertType,
   overdueClients, inactiveClients, birthdayClients = [],
 }: ClientAlertsModalProps) {
-  const { tenantId } = useTenant();
-  const navigate = useNavigate();
-
   const navigate = useNavigate();
 
   const config = {
@@ -109,7 +106,7 @@ export default function ClientAlertsModal({
     count, ctaLabel, ctaRoute,
   } = active ?? {
     Icon: CalendarCheck, iconColor: "", accentBorder: "", accentBg: "",
-    badgeColor: "", tipNote: "", count: 0, ctaLabel: null, ctaRoute: null,
+    badgeColor: "", count: 0, ctaLabel: null, ctaRoute: null,
   };
 
   const handleCta = () => {
@@ -183,7 +180,7 @@ export default function ClientAlertsModal({
                     <div key={client.id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <p className="text-sm font-semibold text-white/85 truncate">{client.client_name}</p>
-                        <p className="text-[11px] text-white/35 truncate">{phone || "—"}</p>
+                        <p className="text-[11px] text-white/35 truncate">{client.phone || "—"}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>
@@ -200,7 +197,7 @@ export default function ClientAlertsModal({
                     <div key={client.client_id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <p className="text-sm font-semibold text-white/85 truncate">{client.client_name}</p>
-                        <p className="text-[11px] text-white/35 truncate">{phone || "—"}</p>
+                        <p className="text-[11px] text-white/35 truncate">{client.client_phone || "—"}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>
