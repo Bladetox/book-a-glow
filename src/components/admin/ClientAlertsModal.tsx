@@ -216,7 +216,7 @@ export default function ClientAlertsModal({
                     <div key={client.id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <p className="text-sm font-semibold text-white/85 truncate">{client.client_name}</p>
-                        <p className="text-[11px] text-white/35 truncate">{phone || "—"}</p>
+                        <p className="text-[11px] text-white/35 truncate">{client.client_phone || "—"}</p>
                         {client.label && (
                           <p className="text-[10px] text-white/25 italic">{client.label}</p>
                         )}
