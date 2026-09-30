@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveOrphanIdentity } from "./orphanIdentity";
+import { orphanIdentityGroupKey, resolveOrphanIdentity } from "./orphanIdentity";
 
 const clients = [
   { id: "a", email: "a@example.com", phone: "082 111 1111" },
@@ -80,5 +80,30 @@ describe("resolveOrphanIdentity", () => {
         [{ id: "a", email: "a@example.com", phone: "0821111111" }],
       ),
     ).toMatchObject({ status: "needs_review", reason: "missing_contact_details" });
+  });
+});
+
+
+describe("orphanIdentityGroupKey", () => {
+  it("groups bookings with the same normalized email and phone", () => {
+    expect(
+      orphanIdentityGroupKey({
+        id: "booking-10",
+        guest_email: "A@EXAMPLE.COM",
+        guest_phone: "+27 82 111 1111",
+      }),
+    ).toBe("contact:a@example.com|27821111111");
+
+    expect(
+      orphanIdentityGroupKey({
+        id: "booking-11",
+        guest_email: "a@example.com",
+        guest_phone: "0821111111",
+      }),
+    ).toBe("contact:a@example.com|27821111111");
+  });
+
+  it("keeps bookings without contact details separate", () => {
+    expect(orphanIdentityGroupKey({ id: "booking-12" })).toBe("booking:booking-12");
   });
 });
