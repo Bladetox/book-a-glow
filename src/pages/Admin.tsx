@@ -277,8 +277,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
                 <AdminCRM
                   onNavigate={handleNavigate}
                   canConsultations={flags.consultations}
-                  canSpecialOccasions={flags.special_occasion
-s}
+                  canSpecialOccasions={flags.special_occasions}
                   canLoyalty={flags.loyalty_module}
                   canConsistency={flags.consistency_pricing}
                 />
