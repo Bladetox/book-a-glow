@@ -339,17 +339,6 @@ export default function AdminCRM({
       });
   }, [loyaltyRows]);
 
-  const birthdayClients = useMemo(() => {
-    const today = startOfDay(new Date());
-    const cutoff = addDays(today, 7);
-
-    return (occasions as any[]).filter((row) => {
-      const date = new Date(row.occasion_date + "T00:00:00");
-      const next = new Date(today.getFullYear(), date.getMonth(), date.getDate());
-      if (next < today) next.setFullYear(today.getFullYear() + 1);
-      return next <= cutoff;
-    });
-  }, [occasions]);
 
   const attentionCounts = {
     due: dueClients.length,
@@ -554,7 +543,7 @@ export default function AdminCRM({
                 />
               ))}
 
-            {attentionQueue === "special_dates" && <AdminSpecialOccasions />}
+            {attentionQueue === "special_dates" && (canSpecialOccasions ? <AdminSpecialOccasions /> : <FeatureUnavailable />)}
           </div>
 
           {attentionCounts[attentionQueue] === 0 && (
