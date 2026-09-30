@@ -78,9 +78,8 @@ import { EmptyState, AdminPageHeader } from "./AdminSharedUI";
 // ─── Sub-modules ───
 import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings } from "./loyalty/loyaltyTypes";
 import {
-  STATUS_ORDER,
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
-  DEFAULT_TENANT_CRITERIA, PILL_LABEL,
+  DEFAULT_TENANT_CRITERIA,
 } from "./loyalty/loyaltyConstants";
 import {
   isoToDisplay,
@@ -566,7 +565,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   // ── UI state ──
   const [search, setSearch]                     = useState("");
   // FIX-D: default to "enrolled" so the full enrolled list is visible on load
-  const [filterStatus, setFilterStatus]         = useState<string | null>("enrolled");
   const [enrollCandidate, setEnrollCandidate]   = useState<EnrollCandidate | null>(null);
   const [enrolledName, setEnrolledName]         = useState<string | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, string>>({});
@@ -831,44 +829,17 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // ── Filtered rows (uses dedupedLoyaltyRows) ──
-  // FIX-C: "enrolled" pill bypasses effectiveStatus and shows all loyalty_tracker rows.
-  // FIX-F: We use dedupedLoyaltyRows so each phone appears at most once.
+  // Loyalty owns enrolled programme members. Re-engagement states such as due,
+  // overdue and inactive are handled centrally by CRM > Needs attention.
   const filteredRows = useMemo(() => {
-    let rows = [...dedupedLoyaltyRows];
-    if (filterStatus && filterStatus !== "enrolled") {
-      rows = rows.filter(r => {
-        const phone  = normPhone(r.phone);
-        const enrich = enrichment[phone] ?? null;
-        const eff    = effectiveStatus(r, enrich?.lastVisitDate ?? null, reminderWeeks)
-          .toLowerCase().replace(/ /g, "_");
-        return eff === filterStatus;
-      });
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      rows = rows.filter(r =>
-        (r.client_name ?? "").toLowerCase().includes(q) ||
-        (r.phone ?? "").includes(q) ||
-        (r.source ?? "").toLowerCase().includes(q),
-      );
-    }
-    return rows;
-  }, [dedupedLoyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
-
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const row of dedupedLoyaltyRows) {
-      const phone  = normPhone(row.phone);
-      const enrich = enrichment[phone] ?? null;
-      const eff    = effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks)
-        .toLowerCase().replace(/ /g, "_");
-      counts[eff] = (counts[eff] ?? 0) + 1;
-    }
-    return counts;
-  }, [dedupedLoyaltyRows, reminderWeeks, enrichment]);
-
-
+    if (!search.trim()) return [...dedupedLoyaltyRows];
+    const q = search.toLowerCase();
+    return dedupedLoyaltyRows.filter(r =>
+      (r.client_name ?? "").toLowerCase().includes(q) ||
+      (r.phone ?? "").includes(q) ||
+      (r.source ?? "").toLowerCase().includes(q),
+    );
+  }, [dedupedLoyaltyRows, search]);
 
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
@@ -1096,56 +1067,10 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           )}
         </AnimatePresence>
 
-        {/* ── Status filter pills ── */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {/* FIX-C: "Enrolled" pill — shows all loyalty_tracker rows */}
-          <button
-            onClick={() => setFilterStatus(s => s === "enrolled" ? null : "enrolled")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-xs font-semibold border transition-colors ${
-              filterStatus === "enrolled"
-                ? "bg-white/[0.12] border-white/[0.20] text-white/90"
-                : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
-            }`}
-          >
-            Enrolled
-            <span className={`text-[10px] tabular-nums ${
-              filterStatus === "enrolled" ? "text-white/60" : "text-white/25"
-            }`}>
-              ({dedupedLoyaltyRows.length})
-            </span>
-          </button>
-
-          {STATUS_ORDER.map(status => {
-            const count    = statusCounts[status] ?? 0;
-            const isActive = filterStatus === status;
-            const label    = PILL_LABEL[status] ?? status.replace(/_/g, " ");
-            return (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(s => s === status ? null : status)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-xs font-semibold border transition-colors ${
-                  isActive
-                    ? "bg-white/[0.12] border-white/[0.20] text-white/90"
-                    : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
-                }`}
-              >
-                {label}
-                {count > 0 && (
-                  <span className={`text-[10px] tabular-nums ${isActive ? "text-white/60" : "text-white/25"}`}>
-                    ({count})
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          {filterStatus && (
-            <button
-              onClick={() => setFilterStatus(null)}
-              className="px-3 py-1.5 shrink-0 rounded-full text-xs border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
-            >
-              Clear filter
-            </button>
-          )}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <p className="text-xs text-white/40">
+            These are clients enrolled in your loyalty programme. Client follow-up and re-engagement actions live under CRM &gt; Needs attention.
+          </p>
         </div>
 
         {/* ── Search bar ── */}
@@ -1183,9 +1108,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         ) : filteredRows.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={filterStatus || search ? "No clients match your filter" : "No clients enrolled yet"}
+            title={search ? "No clients match your search" : "No clients enrolled yet"}
             description={
-              !filterStatus && !search
+              !search
                 ? "Eligible clients will appear above when they meet your booking criteria."
                 : undefined
             }
