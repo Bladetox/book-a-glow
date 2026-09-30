@@ -66,7 +66,7 @@ function initials(name: string) {
 
 // ─ WaButton ───────────────────────────────────────────────────────────────
 export const WaButton = ({
-  name, status, phone, businessName, serviceLabel, lastVisit, templates,
+  name, status, phone, businessName, serviceLabel, lastVisit, templates, isMessageTemplateConfigured,
 }: {
   name: string;
   status: string;
@@ -83,7 +83,7 @@ export const WaButton = ({
     "TIME TO BOOK": "time_to_book",
   };
   const type = typeByStatus[status];
-  if (!type || !templates[type]) return null;
+  if (!type || !templates[type] || !isMessageTemplateConfigured(type)) return null;
 
   const message = resolveMessageTemplate(templates[type], {
     name,
@@ -430,6 +430,7 @@ export interface LoyaltyClientCardProps {
   businessName: string;
   serviceLabel: string;
   waTemplates: Record<MessageTemplateType, string>;
+  isMessageTemplateConfigured: (type: MessageTemplateType) => boolean;
   onToggleExpand: () => void;
   onOptimisticUpdate: (newStatus: string) => void;
   onUpdated: () => void;
@@ -439,7 +440,7 @@ export interface LoyaltyClientCardProps {
 export const LoyaltyClientCard = ({
   row, enrich, effStatus, reminderWeeks,
   isExpanded,
-  tenantId, businessName, serviceLabel, waTemplates,
+  tenantId, businessName, serviceLabel, waTemplates, isMessageTemplateConfigured,
   onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
