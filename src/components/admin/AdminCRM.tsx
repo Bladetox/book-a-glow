@@ -65,11 +65,13 @@ const attentionQueues: { id: AttentionQueue; label: string }[] = [
   { id: "birthdays", label: "Birthdays" },
 ];
 
-function identityKey(b: any) {
+function identityKey(b: any, canonical?: any) {
+  if (canonical?.id) return `canonical:${canonical.id}`;
+  if (b.canonical_client_id) return `canonical:${b.canonical_client_id}`;
   if (b.client_id) return `id:${b.client_id}`;
-  const email = b.client_email || b.guest_email;
+  const email = b.guest_email || b.client_email;
   if (email) return `email:${String(email).trim().toLowerCase()}`;
-  const phone = b.client_phone || b.guest_phone;
+  const phone = b.guest_phone || b.client_phone;
   if (phone) return `phone:${String(phone).replace(/\D/g, "").slice(-9)}`;
   return `booking:${b.id}`;
 }
@@ -115,7 +117,7 @@ export default function AdminCRM({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_date,status,total_amount,client_id,client_name,client_email,client_phone,guest_name,guest_email,guest_phone")
+        .select("id,booking_date,status,total_amount,client_id,client_name,client_email,client_phone,guest_name,guest_email,guest_phone,canonical_client_id,booking_items(id,service_id,service_name,price,duration_minutes,sort_order)")
         .eq("tenant_id", tenantId)
         .neq("status", "cancelled")
         .order("booking_date", { ascending: false });
@@ -130,7 +132,7 @@ export default function AdminCRM({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("loyalty_tracker")
-        .select("id,client_name,phone,email,next_due_date,last_wax_date,status")
+        .select("id,client_name,phone,email,next_due_date,last_wax_date,status,merged_into_id")
         .eq("tenant_id", tenantId);
       if (error) throw error;
       return data ?? [];
@@ -172,19 +174,46 @@ export default function AdminCRM({
   const getTemplate = (type: MessageTemplateType) =>
     templateMap[TEMPLATE_SETTING_KEYS[type]] || "";
 
+  const canonicalClients = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const row of loyaltyRows as any[]) {
+      if (!row.id || row.merged_into_id) continue;
+      map.set(row.id, row);
+    }
+    return map;
+  }, [loyaltyRows]);
+
+  const mergedClientTargets = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of loyaltyRows as any[]) {
+      if (row.id && row.merged_into_id) map.set(row.id, row.merged_into_id);
+    }
+    return map;
+  }, [loyaltyRows]);
+
   const clients = useMemo<ClientRow[]>(() => {
     const map = new Map<string, ClientRow>();
+
     for (const booking of bookings as any[]) {
-      const key = identityKey(booking);
-      const name = booking.client_name || booking.guest_name || "Unknown client";
-      const phone = booking.client_phone || booking.guest_phone || null;
-      const email = booking.client_email || booking.guest_email || null;
+      let canonicalId = booking.canonical_client_id || null;
+      while (canonicalId && mergedClientTargets.has(canonicalId)) {
+        const next = mergedClientTargets.get(canonicalId);
+        if (!next || next === canonicalId) break;
+        canonicalId = next;
+      }
+
+      const canonical = canonicalId ? canonicalClients.get(canonicalId) : null;
+      const key = identityKey(booking, canonical);
+      const name = canonical?.client_name || booking.guest_name || booking.client_name || "Unknown client";
+      const phone = canonical?.phone || booking.guest_phone || booking.client_phone || null;
+      const email = canonical?.email || booking.guest_email || booking.client_email || null;
       const row = map.get(key);
 
       if (row) {
         row.bookingCount += 1;
         row.spend += Number(booking.total_amount || 0);
         row.bookings.push(booking);
+        if (booking.booking_date > (row.lastBooking || "")) row.lastBooking = booking.booking_date;
       } else {
         map.set(key, {
           key,
@@ -198,8 +227,9 @@ export default function AdminCRM({
         });
       }
     }
-    return Array.from(map.values());
-  }, [bookings]);
+
+    return Array.from(map.values()).sort((a, b) => (b.lastBooking || "").localeCompare(a.lastBooking || ""));
+  }, [bookings, canonicalClients, mergedClientTargets]);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -218,7 +248,7 @@ export default function AdminCRM({
     const cutoff = addDays(today, 7);
 
     return (loyaltyRows as any[])
-      .filter((row) => row.next_due_date)
+      .filter((row) => row.next_due_date && !row.merged_into_id)
       .map((row) => ({
         key: `loyalty:${row.id}`,
         name: row.client_name,
@@ -639,7 +669,7 @@ function ClientHistoryModal({
 
         <div className="p-5 grid sm:grid-cols-3 gap-2">
           <Stat label="Bookings" value={String(client.bookingCount)} />
-          <Stat label="Spend" value={`R${client.spend.toFixed(2)}`} />
+          <Stat label="Booking value" value={`R${client.spend.toFixed(2)}`} />
           <Stat
             label="Last booking"
             value={
@@ -668,7 +698,14 @@ function ClientHistoryModal({
                   <p className="text-sm text-white/75">
                     {format(new Date(booking.booking_date + "T00:00:00"), "d MMM yyyy")}
                   </p>
-                  <p className="text-[11px] text-white/30">{booking.status}</p>
+                  <p className="text-[11px] text-white/40">
+                    {(booking.booking_items ?? [])
+                      .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+                      .map((item: any) => item.service_name)
+                      .filter(Boolean)
+                      .join(" · ") || "Booking"}
+                  </p>
+                  <p className="text-[10px] text-white/25 capitalize">{booking.status}</p>
                 </div>
                 <span className="text-xs text-white/45">
                   R{Number(booking.total_amount || 0).toFixed(2)}
