@@ -162,6 +162,16 @@ export function resolveMessageTemplate(
   );
 }
 
+export function buildTenantBookingUrl(
+  tenantId: string | null | undefined,
+  customDomain?: string | null,
+) {
+  const domain = String(customDomain ?? "").trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  if (domain) return `https://${domain}`;
+  if (!tenantId) return "";
+  return `https://${tenantId}.nextslot.co.za`;
+}
+
 export function normaliseWhatsAppPhone(phone: string | null | undefined) {
   const digits = String(phone ?? "").replace(/\D/g, "");
   if (!digits) return "";
