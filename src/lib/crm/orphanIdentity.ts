@@ -55,6 +55,16 @@ function unique(values: string[]) {
  * Deterministic policy for bookings without canonical_client_id.
  * Names never establish identity. Contact evidence must be unambiguous.
  */
+export function orphanIdentityGroupKey(booking: OrphanBooking) {
+  const email = normaliseIdentityEmail(booking.guest_email || booking.client_email);
+  const phone = normaliseIdentityPhone(booking.guest_phone || booking.client_phone);
+
+  if (email && phone) return `contact:${email}|${phone}`;
+  if (email) return `email:${email}`;
+  if (phone) return `phone:${phone}`;
+  return `booking:${booking.id}`;
+}
+
 export function resolveOrphanIdentity(
   booking: OrphanBooking,
   clients: ContactIdentity[],
