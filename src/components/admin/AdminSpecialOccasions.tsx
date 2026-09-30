@@ -326,7 +326,6 @@ const AdminSpecialOccasions = ({ onConfigureBirthday }: AdminSpecialOccasionsPro
   const birthdayConfigured = configured("birthday");
   const businessName = tenant?.name || "";
   const birthdayTemplate = templates.birthday;
-  const businessName = tenant?.name || "";
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["client-occasions", tenantId],
@@ -470,6 +469,7 @@ const AdminSpecialOccasions = ({ onConfigureBirthday }: AdminSpecialOccasionsPro
               onDelete={id => deleteOccasion(id)}
               businessName={businessName}
               birthdayTemplate={birthdayTemplate}
+              birthdayConfigured={birthdayConfigured}
               onConfigureBirthday={onConfigureBirthday}
             />
           ))}
