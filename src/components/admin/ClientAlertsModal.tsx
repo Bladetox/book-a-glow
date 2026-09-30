@@ -47,7 +47,7 @@ const DEFAULT_TPL_BIRTHDAY = "Hi {name}! 🎂 Wishing you a wonderful birthday f
 
 const SETTING_KEYS = Array.from(new Set([
   ...Object.values(TEMPLATE_SETTING_KEYS),
-  ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter(Boolean),
+  ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter((key): key is string => Boolean(key)),
   "business_name",
   "loyalty_service_label",
   "loyalty_business_name",
@@ -123,7 +123,7 @@ const EmptyState = ({ icon: Icon, iconColor, message }: {
       <Icon className={`w-5 h-5 ${iconColor} opacity-30`} />
     </div>
     <p className="text-sm font-medium text-white/40">{message}</p>
-    <p className="text-xs text-white/20">All clear here — nothing to action right now.</p>
+    <p className="text-xs text-white/20">All clear here. Nothing to action right now.</p>
   </motion.div>
 );
 
@@ -183,7 +183,7 @@ export default function ClientAlertsModal({
       ctaRoute:     null as string | null,
     },
     inactive_90_days: {
-      title:        "Inactive 90+ Days",
+      title:        "Inactive 90+ days",
       Icon:         AlertTriangle,
       iconColor:    "text-amber-400",
       accentBorder: "border-amber-500/25",
