@@ -11,7 +11,7 @@
  */
 
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
-const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com"];
+const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com"];\nconst PREVIEW_DOMAINS = ["vercel.app"];
 
 // UUID pattern for Lovable preview subdomains
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
