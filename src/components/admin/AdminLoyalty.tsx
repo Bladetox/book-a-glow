@@ -1126,7 +1126,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   onMarkDirty={markDirty}
                 />
               </SettingCard>
-
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* ── Status filter pills ── */}
