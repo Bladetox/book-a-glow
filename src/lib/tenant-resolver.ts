@@ -113,7 +113,8 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 /**
  * Builds the admin URL for a given tenant ID.
- * Uses subdomain routing on production, query-param on localhost.
+ * Uses query-param routing on localhost and preview environments.
+ * Uses subdomain routing on production NextSlot domains.
  */
 export function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -121,9 +122,12 @@ export function buildAdminUrl(tenantId: string): string {
     hostname === "localhost" ||
     hostname === "127.0.0.1" ||
     hostname.endsWith(".localhost");
+  const isPreview =
+    PREVIEW_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`)) ||
+    LOVABLE_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
 
-  if (isLocalhost) {
-    return `${window.location.origin}/admin?tenant=${tenantId}`;
+  if (isLocalhost || isPreview) {
+    return `${window.location.origin}/admin?tenant=${encodeURIComponent(tenantId)}`;
   }
 
   const parts = hostname.split(".");
