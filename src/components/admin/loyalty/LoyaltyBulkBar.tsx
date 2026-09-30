@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, X, Loader2, MessageCircle, Users } from "lucide-react";
 import { buildWaMessage, waLink } from "./loyaltyHelpers";
 import type { LoyaltyRow } from "./loyaltyTypes";
+import type { MessageTemplateType } from "@/lib/messaging/whatsapp";
 
 interface BulkBarProps {
   selected: string[];
@@ -10,7 +11,7 @@ interface BulkBarProps {
   effectiveStatusMap: Record<string, string>;
   businessName: string;
   serviceLabel: string;
-  templates: { overdue: string; timeToBook: string; onTrack: string; birthday: string };
+  templates: Record<MessageTemplateType, string>;
   onClear: () => void;
 }
 
