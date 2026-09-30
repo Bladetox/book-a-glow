@@ -9,6 +9,13 @@ import {
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
+import {
+  buildWhatsAppUrl,
+  getTemplateValue,
+  resolveMessageTemplate,
+  TEMPLATE_SETTING_KEYS,
+  LEGACY_TEMPLATE_SETTING_KEYS,
+} from "@/lib/messaging/whatsapp";
 
 // ─── Types ───
 export interface OccasionRow {
@@ -45,16 +52,6 @@ function formatOccasionShort(dateStr: string): string {
   catch { return dateStr; }
 }
 
-function waLink(phone: string, msg: string): string {
-  const c = phone.replace(/\D/g, "");
-  const num = c.startsWith("27") && c.length >= 11 ? c : "27" + c.replace(/^0/, "");
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-}
-
-function buildBirthdayMsg(name: string, businessName: string, serviceLabel: string): string {
-  return `Hi ${name}! 🎂 Wishing you a wonderful birthday from everyone at ${businessName || "us"}! We'd love to treat you to your next ${serviceLabel || "appointment"} — reply to claim your birthday treat! 💖`;
-}
-
 function buildAnniversaryMsg(name: string, businessName: string): string {
   return `Hi ${name}! 💖 Wishing you a wonderful anniversary! Thank you for being a valued client at ${businessName || "us"}. We'd love to celebrate with you — pop in soon! 🌸`;
 }
@@ -77,11 +74,13 @@ const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
 
 // ─── OccasionCard ───
 const OccasionCard = ({
-  row, i, onDelete, businessName, serviceLabel,
+  row, i, onDelete, businessName, birthdayTemplate, onConfigureBirthday,
 }: {
   row: OccasionRow; i: number;
   onDelete: (id: string) => void;
-  businessName: string; serviceLabel: string;
+  businessName: string;
+  birthdayTemplate: string;
+  onConfigureBirthday?: () => void;
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const type = (row.type as OccasionType) in TYPE_META ? (row.type as OccasionType) : "other";
@@ -92,8 +91,15 @@ const OccasionCard = ({
   const isThisWeek = days <= 7;
 
   const msg = type === "birthday"
-    ? buildBirthdayMsg(row.client_name, businessName, serviceLabel)
+    ? resolveMessageTemplate(birthdayTemplate, {
+        name: row.client_name,
+        business: businessName,
+      })
     : buildAnniversaryMsg(row.client_name, businessName);
+
+  const waHref = row.phone && (type !== "birthday" || birthdayTemplate)
+    ? buildWhatsAppUrl(row.phone, msg)
+    : "";
 
   const urgencyBorder = isToday
     ? "border-pink-500/40 border-l-2 border-l-pink-500"
@@ -132,14 +138,25 @@ const OccasionCard = ({
         </span>
 
         <div className="flex items-center gap-1">
-          {row.phone && (
-            <a href={waLink(row.phone, msg)} target="_blank" rel="noopener noreferrer"
+          {type === "birthday" && !birthdayTemplate && onConfigureBirthday ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onConfigureBirthday();
+              }}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-white/[0.06] text-white/55 hover:text-white/80"
+            >
+              Set up message
+            </button>
+          ) : waHref ? (
+            <a href={waHref} target="_blank" rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
               className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-opacity hover:opacity-80"
               style={{ background: "rgba(37,211,102,0.13)", color: "#25D366" }}>
               <MessageCircle className="w-3 h-3" /> WA
             </a>
-          )}
+          ) : null}
           {confirmDelete ? (
             <div className="flex items-center gap-1">
               <button
@@ -297,38 +314,39 @@ const AddOccasionForm = ({
 // ─── AdminSpecialOccasions ───
 // ══════════════════════════════════════════════════
 interface AdminSpecialOccasionsProps {
-  onSendBirthdayWA?: (client: OccasionRow) => void;
+  onConfigureBirthday?: () => void;
 }
 
-const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps) => {
-  const { tenantId } = useTenant();
+const AdminSpecialOccasions = ({ onConfigureBirthday }: AdminSpecialOccasionsProps) => {
+  const { tenantId, tenant } = useTenant();
   const qc = useQueryClient();
 
   const [activeFilter, setActiveFilter] = useState<FilterChip>("all");
   const [showAddForm, setShowAddForm]   = useState(false);
 
   const { data: settingsRows = [] } = useQuery({
-    queryKey: ["loyalty-settings", tenantId],
+    queryKey: ["crm-birthday-template", tenantId],
     queryFn: async () => {
+      const keys = Array.from(
+        new Set([
+          TEMPLATE_SETTING_KEYS.birthday,
+          LEGACY_TEMPLATE_SETTING_KEYS.birthday,
+        ].filter(Boolean)),
+      );
+
       const { data, error } = await supabase
         .from("app_settings")
         .select("key, value")
         .eq("tenant_id", tenantId)
-        .in("key", ["loyalty_business_name", "loyalty_service_label"]);
+        .in("key", keys);
       if (error) throw error;
       return data ?? [];
     },
     staleTime: 1000 * 60 * 5,
   });
 
-  const { businessName, serviceLabel } = useMemo(() => {
-    const map: Record<string, string> = {};
-    settingsRows.forEach((r: any) => { map[r.key] = r.value; });
-    return {
-      businessName: map.loyalty_business_name || "",
-      serviceLabel: map.loyalty_service_label || "wax",
-    };
-  }, [settingsRows]);
+  const birthdayTemplate = getTemplateValue(settingsRows as any[], "birthday");
+  const businessName = tenant?.name || "";
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["client-occasions", tenantId],
@@ -471,7 +489,8 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
               i={i}
               onDelete={id => deleteOccasion(id)}
               businessName={businessName}
-              serviceLabel={serviceLabel}
+              birthdayTemplate={birthdayTemplate}
+              onConfigureBirthday={onConfigureBirthday}
             />
           ))}
         </div>
