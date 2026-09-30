@@ -89,7 +89,7 @@ export function useClientAlerts(tenantIdProp?: string) {
       ] = await Promise.all([
         supabase
           .from("loyalty_tracker")
-          .select("id,client_name,phone,next_due_date,merged_into_id")
+          .select("id,client_name,phone,email,next_due_date,merged_into_id")
           .eq("tenant_id", tenantId),
         supabase
           .from("bookings")
@@ -106,7 +106,10 @@ export function useClientAlerts(tenantIdProp?: string) {
       if (bookingsError) throw bookingsError;
 
       const mergeTargets = new Map<string, string>();
+      const loyaltyById = new Map<string, any>();
+
       for (const row of loyaltyRows ?? []) {
+        if (row.id) loyaltyById.set(row.id, row);
         if (row.id && row.merged_into_id) {
           mergeTargets.set(row.id, row.merged_into_id);
         }
@@ -147,19 +150,19 @@ export function useClientAlerts(tenantIdProp?: string) {
         clientLastBooking.set(key, {
           clientId: canonicalId,
           name: canonicalId
-            ? (loyaltyRows ?? []).find((row) => row.id === canonicalId)?.client_name ??
+            ? loyaltyById.get(canonicalId)?.client_name ??
               booking.guest_name ??
               booking.client_name ??
               "Unknown"
             : booking.guest_name || booking.client_name || "Unknown",
           phone: canonicalId
-            ? (loyaltyRows ?? []).find((row) => row.id === canonicalId)?.phone ??
+            ? loyaltyById.get(canonicalId)?.phone ??
               booking.guest_phone ??
               booking.client_phone ??
               null
             : booking.guest_phone || booking.client_phone || null,
           email: canonicalId
-            ? (loyaltyRows ?? []).find((row) => row.id === canonicalId)?.email ?? null
+            ? loyaltyById.get(canonicalId)?.email ?? null
             : booking.guest_email || booking.client_email || null,
           date: booking.booking_date,
         });
