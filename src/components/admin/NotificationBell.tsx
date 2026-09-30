@@ -205,17 +205,17 @@ export function NotificationBell() {
 
   const goToBirthdays = () => {
     setOpen(false);
-    navigate("/admin?view=Special+Occasions");
+    navigate("/admin?view=CRM");
   };
 
   const goToOverdueLoyalty = () => {
     setOpen(false);
-    navigate("/admin?view=Loyalty&filter=overdue");
+    navigate("/admin?view=CRM");
   };
 
   const goToInactiveClients = () => {
     setOpen(false);
-    navigate("/admin?view=Client+Management&filter=inactive");
+    navigate("/admin?view=CRM");
   };
 
   const goToBooking = (bookingId: string | null, notifId: string) => {
