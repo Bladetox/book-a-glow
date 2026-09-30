@@ -7,7 +7,6 @@ import {
   Search,
   Check,
   UserPlus,
-  Settings2,
   UserRound,
   Users,
   X,
@@ -17,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { AdminPageHeader, EmptyState } from "@/components/admin/AdminSharedUI";
 import AdminBlockedClients from "@/components/admin/AdminBlockedClients";
+import AdminSpecialOccasions from "@/components/admin/AdminSpecialOccasions";
 import AdminConsultations from "@/components/admin/AdminConsultations";
 import AdminLoyalty from "@/components/admin/AdminLoyalty";
 import AdminConsistencyPricing from "@/components/admin/AdminConsistencyPricing";
@@ -37,9 +37,9 @@ import { toast } from "sonner";
 
 type Area = "clients" | "retention" | "messaging";
 type MessagingView = "messages" | "promos";
-type ClientView = "directory" | "attention" | "special_dates" | "consultations" | "blocked" | "identity_review";
+type ClientView = "directory" | "attention" | "consultations" | "blocked" | "identity_review";
 type RetentionView = "loyalty" | "consistency";
-type AttentionQueue = "due" | "overdue" | "inactive" | "birthdays";
+type AttentionQueue = "due" | "overdue" | "inactive" | "special_dates";
 
 type ClientRow = {
   key: string;
@@ -62,7 +62,6 @@ const clientViews: { id: ClientView; label: string }[] = [
   { id: "directory", label: "All clients" },
   { id: "identity_review", label: "Identity review" },
   { id: "attention", label: "Needs attention" },
-  { id: "special_dates", label: "Special dates" },
   { id: "consultations", label: "Consultations" },
   { id: "blocked", label: "Blocked" },
 ];
@@ -71,7 +70,7 @@ const attentionQueues: { id: AttentionQueue; label: string }[] = [
   { id: "due", label: "Due soon" },
   { id: "overdue", label: "Overdue" },
   { id: "inactive", label: "Inactive" },
-  { id: "birthdays", label: "Birthdays" },
+  { id: "special_dates", label: "Special dates" },
 ];
 
 function identityKey(b: any, canonical?: any, orphanDecision?: ReturnType<typeof resolveOrphanIdentity>) {
@@ -356,7 +355,7 @@ export default function AdminCRM({
     due: dueClients.length,
     overdue: alerts?.overdueLoyaltyClients.length ?? 0,
     inactive: alerts?.inactiveClients.length ?? 0,
-    birthdays: birthdayClients.length,
+    special_dates: (occasions as any[]).length,
   };
 
   const resolveIdentity = async (booking: any, targetClientId: string | null, keepSeparate: boolean) => {
@@ -422,17 +421,6 @@ export default function AdminCRM({
   const goToArea = (nextArea: Area) => {
     setArea(nextArea);
     setSelected(null);
-  };
-
-  const openBirthdayMessaging = () => {
-    if (!getTemplate("birthday")) {
-      setTemplateFocus("birthday");
-      setArea("messaging");
-      return;
-    }
-    setArea("clients");
-    setClientView("attention");
-    setAttentionQueue("birthdays");
   };
 
   const renderClients = () => {
@@ -517,22 +505,6 @@ export default function AdminCRM({
             ))}
           </div>
 
-          {attentionQueue === "birthdays" && (
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-white/75">Upcoming birthdays</p>
-                <p className="text-xs text-white/30 mt-0.5">Next 7 days</p>
-              </div>
-              <button
-                onClick={openBirthdayMessaging}
-                className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-white"
-              >
-                <Settings2 className="w-3 h-3" />
-                Birthday message
-              </button>
-            </div>
-          )}
-
           <div className="grid gap-2">
             {attentionQueue === "due" &&
               dueClients.map((client: any) => (
@@ -582,21 +554,7 @@ export default function AdminCRM({
                 />
               ))}
 
-            {attentionQueue === "birthdays" &&
-              birthdayClients.map((client: any) => (
-                <QueueRow
-                  key={client.id}
-                  name={client.client_name}
-                  phone={client.phone}
-                  detail={format(new Date(client.occasion_date + "T00:00:00"), "d MMM")}
-                  href={whatsApp(client.phone, getTemplate("birthday"), {
-                    name: client.client_name,
-                    business: messageContext.businessName,
-                    service: messageContext.serviceLabel,
-                    bookingUrl: messageContext.bookingUrl,
-                  })}
-                />
-              ))}
+            {attentionQueue === "special_dates" && <AdminSpecialOccasions />}
           </div>
 
           {attentionCounts[attentionQueue] === 0 && (
@@ -608,10 +566,6 @@ export default function AdminCRM({
           )}
         </div>
       );
-    }
-
-    if (clientView === "special_dates") {
-      return canSpecialOccasions ? <SpecialDatesActionQueue occasions={occasions as any[]} getTemplate={getTemplate} messageContext={messageContext} /> : <FeatureUnavailable />;
     }
 
     if (clientView === "consultations") {
@@ -673,7 +627,6 @@ export default function AdminCRM({
           <SubNavigation
             items={clientViews.filter((item) =>
               item.id === "consultations" ? canConsultations :
-              item.id === "special_dates" ? canSpecialOccasions :
               true
             )}
             active={clientView}
@@ -858,54 +811,4 @@ function IdentityReviewQueue({
   );
 }
 
-function SpecialDatesActionQueue({
-  occasions,
-  getTemplate,
-  messageContext,
-}: {
-  occasions: any[];
-  getTemplate: (type: MessageTemplateType) => string;
-  messageContext: { businessName: string; serviceLabel: string; bookingUrl: string };
-}) {
-  const today = startOfDay(new Date());
-  const upcoming = occasions
-    .map((row) => {
-      const date = new Date(row.occasion_date + "T00:00:00");
-      const next = new Date(today.getFullYear(), date.getMonth(), date.getDate());
-      if (next < today) next.setFullYear(today.getFullYear() + 1);
-      return { ...row, nextDate: next };
-    })
-    .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
-
-  return (
-    <div className="grid gap-2">
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-        <p className="text-sm font-medium text-white/75">Special dates</p>
-        <p className="text-xs text-white/30 mt-1">
-          Dates worth acting on. Birthday messages use your saved birthday message.
-        </p>
-      </div>
-      {upcoming.length === 0 ? (
-        <EmptyState title="No special dates" description="Special dates saved for clients will appear here." icon={Users} />
-      ) : (
-        upcoming.map((row) => (
-          <QueueRow
-            key={row.id}
-            name={row.client_name}
-            phone={row.phone}
-            detail={row.label || row.type || format(row.nextDate, "d MMM")}
-            href={row.type === "birthday"
-              ? buildWhatsAppUrl(row.phone, resolveMessageTemplate(getTemplate("birthday"), {
-                  name: row.client_name,
-                  business: messageContext.businessName,
-                  service: messageContext.serviceLabel,
-                  bookingUrl: messageContext.bookingUrl,
-                }))
-              : undefined}
-          />
-        ))
-      )}
-    </div>
-  );
-}
 
