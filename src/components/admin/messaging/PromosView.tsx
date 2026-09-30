@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { MessageCircle, Send, Users, Copy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { MessageCircle, Send, Users, Copy, ChevronRight } from "lucide-react";
 import { buildWhatsAppUrl } from "@/lib/messaging/whatsapp";
 import type { ClientRowForPromo } from "./types";
 
@@ -28,6 +28,7 @@ export default function PromosView({
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [audience, setAudience] = useState<PromoAudience>("all");
+  const [queueIndex, setQueueIndex] = useState(0);
 
   const audienceClients = useMemo(() => {
     const source =
@@ -50,6 +51,16 @@ export default function PromosView({
     });
   }, [audience, clients, dueClients, overdueClients, inactiveClients]);
 
+  useEffect(() => {
+    setQueueIndex(0);
+  }, [audience]);
+
+  useEffect(() => {
+    setQueueIndex((current) => Math.min(current, Math.max(audienceClients.length - 1, 0)));
+  }, [audienceClients.length]);
+
+  const currentClient = audienceClients[queueIndex] ?? null;
+
   const personalisedMessage = (client: ClientRowForPromo) => {
     const opening = title.trim() ? title.trim() + "\n\n" : "";
     return (opening + message.trim() + "\n\nBook here: " + bookingUrl).replace(
@@ -58,24 +69,32 @@ export default function PromosView({
     );
   };
 
-  const openWhatsApp = () => {
-    if (!message.trim() || audienceClients.length === 0) return;
+  const openCurrentWhatsApp = () => {
+    if (!message.trim() || !currentClient?.phone) return;
 
-    audienceClients.forEach((client, index) => {
-      window.setTimeout(() => {
-        window.open(
-          buildWhatsAppUrl(client.phone, personalisedMessage(client)),
-          "_blank",
-          "noopener,noreferrer",
-        );
-      }, index * 450);
-    });
+    const url = buildWhatsAppUrl(
+      currentClient.phone,
+      personalisedMessage(currentClient),
+    );
+
+    if (!url) return;
+
+    // This must remain a direct user action. Opening 119 windows on timers
+    // will be blocked by browsers and is not a valid WhatsApp bulk-send flow.
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const nextClient = () => {
+    if (queueIndex < audienceClients.length - 1) {
+      setQueueIndex((current) => current + 1);
+    }
   };
 
   const copyMessage = async () => {
     if (!message.trim()) return;
-    await navigator.clipboard.writeText(
-      personalisedMessage({
+
+    const previewClient =
+      currentClient ?? {
         name: "[Client name]",
         key: "preview",
         phone: null,
@@ -84,8 +103,9 @@ export default function PromosView({
         bookingCount: 0,
         spend: 0,
         bookings: [],
-      }),
-    );
+      };
+
+    await navigator.clipboard.writeText(personalisedMessage(previewClient));
   };
 
   const audienceLabel: Record<PromoAudience, string> = {
@@ -95,6 +115,9 @@ export default function PromosView({
     overdue: "Overdue clients",
     inactive: "Inactive clients",
   };
+
+  const queueComplete =
+    audienceClients.length > 0 && queueIndex >= audienceClients.length - 1;
 
   return (
     <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-4">
@@ -106,7 +129,7 @@ export default function PromosView({
           <div>
             <p className="text-sm font-semibold text-white/80">Create a promo</p>
             <p className="text-xs text-white/30 mt-1">
-              Write once, personalise it automatically and open the messages in WhatsApp.
+              Write once, personalise it automatically and work through the WhatsApp queue one client at a time.
             </p>
           </div>
         </div>
@@ -161,15 +184,27 @@ export default function PromosView({
               <Copy className="w-3.5 h-3.5" />
               Copy message
             </button>
-            <button
-              type="button"
-              onClick={openWhatsApp}
-              disabled={!message.trim() || audienceClients.length === 0}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.08] text-xs font-semibold text-white/75 hover:bg-white/[0.12] disabled:opacity-30"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              Open WhatsApp for {audienceClients.length}
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={nextClient}
+                disabled={!currentClient || queueComplete}
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs text-white/45 hover:text-white/70 disabled:opacity-30"
+              >
+                Skip
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={openCurrentWhatsApp}
+                disabled={!message.trim() || !currentClient}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.08] text-xs font-semibold text-white/75 hover:bg-white/[0.12] disabled:opacity-30"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                Open WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -178,13 +213,42 @@ export default function PromosView({
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-4 h-4 text-white/30" />
           <div>
-            <p className="text-sm font-semibold text-white/75">Audience</p>
+            <p className="text-sm font-semibold text-white/75">WhatsApp queue</p>
             <p className="text-[11px] text-white/30">{audienceLabel[audience]}</p>
           </div>
         </div>
 
-        <div className="text-3xl font-semibold text-white/80">{audienceClients.length}</div>
-        <p className="text-xs text-white/30 mt-1">clients with a WhatsApp number</p>
+        <div className="text-3xl font-semibold text-white/80">
+          {audienceClients.length}
+        </div>
+        <p className="text-xs text-white/30 mt-1">
+          clients with a WhatsApp number
+        </p>
+
+        {currentClient ? (
+          <div className="mt-5 rounded-xl bg-white/[0.03] border border-white/[0.05] px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-white/25">
+                  Current client
+                </p>
+                <p className="text-sm text-white/70 mt-1 truncate">
+                  {currentClient.name}
+                </p>
+                <p className="text-[11px] text-white/30 mt-0.5">
+                  {currentClient.phone}
+                </p>
+              </div>
+              <span className="text-[11px] text-white/30 shrink-0">
+                {queueIndex + 1} of {audienceClients.length}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-xl bg-white/[0.03] border border-white/[0.05] px-3 py-3">
+            <p className="text-sm text-white/50">No clients in this audience.</p>
+          </div>
+        )}
 
         <div className="mt-5 rounded-xl bg-white/[0.03] border border-white/[0.05] px-3 py-3">
           <p className="text-[10px] uppercase tracking-wider text-white/25">From</p>
@@ -192,7 +256,8 @@ export default function PromosView({
         </div>
 
         <p className="text-[10px] text-white/20 mt-4 leading-relaxed">
-          NextSlot opens the messages in WhatsApp. You remain in control of who receives the promo and when it is sent.
+          NextSlot opens one personalised message at a time. You send it in WhatsApp.
+          NextSlot cannot tell whether a message was sent, delivered or read.
         </p>
       </div>
     </div>
