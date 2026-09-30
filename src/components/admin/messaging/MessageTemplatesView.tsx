@@ -6,7 +6,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import {
   TEMPLATE_LABELS,
   TEMPLATE_SETTING_KEYS,
-  TEMPLATE_TOKENS,
+  toFriendlyTemplate,
+  toStoredTemplate,
   type MessageTemplateType,
 } from "@/lib/messaging/whatsapp";
 
@@ -49,7 +50,7 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
   }, [settings]);
 
   useEffect(() => {
-    setDraft(values[active] ?? DEFAULTS[active]);
+    setDraft(toFriendlyTemplate(values[active] ?? DEFAULTS[active]));
   }, [active, values]);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
         .upsert({
           tenant_id: tenantId,
           key,
-          value: draft,
+          value: toStoredTemplate(draft),
           updated_at: new Date().toISOString(),
         }, { onConflict: "tenant_id,key" });
       if (error) throw error;
@@ -124,13 +125,11 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
               className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-3 text-sm text-white/80 leading-relaxed focus:outline-none focus:border-white/20 resize-y"
             />
           </div>
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30 mb-2">Available tokens</p>
-            <div className="flex flex-wrap gap-2">
-              {TEMPLATE_TOKENS.map(token => (
-                <code key={token} className="text-[11px] px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] text-white/50">{token}</code>
-              ))}
-            </div>
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+            <p className="text-xs text-white/50 leading-relaxed">
+              Write your message naturally. NextSlot automatically adds the client's name, your business name,
+              the service and the booking link where needed.
+            </p>
           </div>
           <div className="flex items-center justify-between gap-3 pt-2">
             <p className="text-xs text-white/25">One template source is used throughout CRM messaging.</p>
