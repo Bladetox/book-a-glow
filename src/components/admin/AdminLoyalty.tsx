@@ -78,7 +78,7 @@ import { EmptyState, AdminPageHeader } from "./AdminSharedUI";
 // ─── Sub-modules ───
 import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings } from "./loyalty/loyaltyTypes";
 import {
-  STATUS_ORDER, DEFAULT_WA_TEMPLATES,
+  STATUS_ORDER,
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
   DEFAULT_TENANT_CRITERIA, PILL_LABEL,
 } from "./loyalty/loyaltyConstants";
@@ -94,6 +94,7 @@ import {
 } from "./loyalty/LoyaltyEnrollModal";
 import { LoyaltyTenantCriteria } from "./loyalty/LoyaltyTenantCriteria";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
+import { useCrmMessageTemplates } from "@/hooks/useCrmMessageTemplates";
 
 // ──────────────────────────────────────────────────────────────────
 // Loyalty-relevant insight IDs
@@ -407,17 +408,6 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
 }
 
 // ──────────────────────────────────────────────────────────────────
-// WA template key metadata
-// ──────────────────────────────────────────────────────────────────
-const WA_TEMPLATE_META: { key: keyof typeof DEFAULT_WA_TEMPLATES; label: string; hint: string; accent: string }[] = [
-  { key: "overdue",     label: "Overdue",            hint: "Sent when a client is past their reminder date",          accent: "text-red-400/70"     },
-  { key: "longOverdue", label: "Not Seen in a While", hint: "Sent to clients you haven't seen in a long time",        accent: "text-orange-400/70"  },
-  { key: "timeToBook",  label: "Time to Book",        hint: "Sent when it's nearly time for their next appointment",  accent: "text-amber-400/70"   },
-  { key: "onTrack",     label: "On Track",            hint: "Friendly check-in for clients who are keeping up",       accent: "text-emerald-400/70" },
-  { key: "birthday",    label: "Birthday 🎂",         hint: "Sent on or around the client's birthday",               accent: "text-pink-400/70"    },
-];
-
-// ──────────────────────────────────────────────────────────────────
 // Floating save bar (Von Restorff + Zeigarnik)
 // ──────────────────────────────────────────────────────────────────
 function FloatingSaveBar({
@@ -553,13 +543,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [serviceLabel, setServiceLabel]   = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
   const [minBookings, setMinBookings]     = useState(DEFAULT_LOYALTY_SETTINGS.min_bookings);
   const [lookbackDays, setLookbackDays]   = useState(DEFAULT_LOYALTY_SETTINGS.lookback_days);
-  const [waTemplates, setWaTemplates]     = useState(DEFAULT_WA_TEMPLATES);
   const [showSettings, setShowSettings]   = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
+  const { templates: waTemplates } = useCrmMessageTemplates();
 
   const [snapshot, setSnapshot] = useState<{
     reminderWeeks: number; serviceLabel: string; minBookings: number;
-    lookbackDays: number; waTemplates: typeof DEFAULT_WA_TEMPLATES;
+    lookbackDays: number;
     tenantCriteria: TenantCriteriaSettings;
   } | null>(null);
 
@@ -624,11 +614,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     if (map["loyalty.service_label"])            setServiceLabel(map["loyalty.service_label"]);
     if (map["loyalty.min_bookings"])             setMinBookings(Number(map["loyalty.min_bookings"]));
     if (map["loyalty.lookback_days"])            setLookbackDays(Number(map["loyalty.lookback_days"]));
-    if (map["loyalty.wa_template_overdue"])      setWaTemplates(t => ({ ...t, overdue:     map["loyalty.wa_template_overdue"] }));
-    if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook:  map["loyalty.wa_template_time_to_book"] }));
-    if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:     map["loyalty.wa_template_on_track"] }));
-    if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:    map["loyalty.wa_template_birthday"] }));
-    if (map["loyalty.wa_template_long_overdue"]) setWaTemplates(t => ({ ...t, longOverdue: map["loyalty.wa_template_long_overdue"] }));
     if (map["loyalty.criteria_enabled"])
       setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
     if (map["loyalty.criteria_service_ids"])
@@ -642,7 +627,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   const markDirty = () => {
     if (!settingsDirty) {
-      setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, waTemplates, tenantCriteria });
+      setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, tenantCriteria });
     }
     setSettingsDirty(true);
   };
@@ -653,7 +638,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     setServiceLabel(snapshot.serviceLabel);
     setMinBookings(snapshot.minBookings);
     setLookbackDays(snapshot.lookbackDays);
-    setWaTemplates(snapshot.waTemplates);
     setTenantCriteria(snapshot.tenantCriteria);
     setSettingsDirty(false);
     setSnapshot(null);
@@ -666,11 +650,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                                description: "Service label used in WA templates" },
         { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                         description: "Min bookings for Nexty suggestions" },
         { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                                        description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                         description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                                      description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                         description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                        description: "WA template: birthday" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue,  description: "WA template: not seen in a while" },
         { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                              description: "Tenant criteria: enabled" },
         { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),                  description: "Tenant criteria: service IDs" },
         { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                          description: "Tenant criteria: min bookings" },
