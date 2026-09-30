@@ -425,13 +425,11 @@ export interface LoyaltyClientCardProps {
   effStatus: string;
   /** Tenant reminder interval in weeks — used to compute Next Due live */
   reminderWeeks: number;
-  isSelected: boolean;
   isExpanded: boolean;
   tenantId: string;
   businessName: string;
   serviceLabel: string;
   waTemplates: Record<MessageTemplateType, string>;
-  onToggleSelect: () => void;
   onToggleExpand: () => void;
   onOptimisticUpdate: (newStatus: string) => void;
   onUpdated: () => void;
@@ -440,7 +438,7 @@ export interface LoyaltyClientCardProps {
 
 export const LoyaltyClientCard = ({
   row, enrich, effStatus, reminderWeeks,
-  isSelected, isExpanded,
+  isExpanded,
   tenantId, businessName, serviceLabel, waTemplates,
   onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
@@ -470,11 +468,7 @@ export const LoyaltyClientCard = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-      className={`relative rounded-2xl border transition-all
-        ${isSelected
-          ? "border-emerald-500/30 bg-emerald-500/[0.04] shadow-[0_0_0_1px_rgba(52,211,153,0.15)]"
-          : "border-white/[0.07] bg-white/[0.025] hover:bg-white/[0.04] hover:border-white/[0.10]"
-        }`}
+      className="relative rounded-2xl border border-white/[0.07] bg-white/[0.025] hover:bg-white/[0.04] hover:border-white/[0.10] transition-all"
     >
       {/* ===== COLLAPSED ROW ===== */}
       <div
@@ -483,19 +477,6 @@ export const LoyaltyClientCard = ({
       >
         {/* ── Row A: identity ── */}
         <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
-          {/* Checkbox */}
-          <button
-            onClick={e => { e.stopPropagation(); onToggleSelect(); }}
-            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all
-              ${isSelected
-                ? "bg-emerald-500/20 border-emerald-500/40"
-                : "border-white/[0.14] bg-white/[0.03] hover:border-white/[0.28]"
-              }`}
-            aria-label={isSelected ? "Deselect" : "Select"}
-          >
-            {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
-          </button>
-
           {/* Avatar */}
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center
