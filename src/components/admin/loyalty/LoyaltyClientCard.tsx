@@ -557,6 +557,7 @@ export const LoyaltyClientCard = ({
               serviceLabel={serviceLabel}
               lastVisit={lastVisit ? isoToDisplay(lastVisit) : ""}
               templates={waTemplates}
+              isMessageTemplateConfigured={isMessageTemplateConfigured}
             />
           </div>
           <button
