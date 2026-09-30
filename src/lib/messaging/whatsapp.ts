@@ -46,6 +46,21 @@ export const TEMPLATE_LABELS: Record<MessageTemplateType, string> = {
   review_ask: "Review ask",
 };
 
+export const DEFAULT_MESSAGE_TEMPLATES: Record<MessageTemplateType, string> = {
+  birthday:
+    "Happy Birthday [Client name]! 🎂 Wishing you a beautiful day from [Business name]!",
+  time_to_book:
+    "Hi [Client name]! It’s almost time for your next [Service] at [Business name]. Your last visit was [Last visit] for [Last service]. Ready to book? [Booking link]",
+  overdue:
+    "Hi [Client name], we’ve missed you at [Business name]. It’s been a while since your [Last service] on [Last visit]. Ready to come back for your next [Service]? [Booking link]",
+  long_overdue:
+    "Hi [Client name]! It’s been a little while since we’ve seen you at [Business name]. Your last [Last service] was on [Last visit]. We’d love to have you back. [Booking link]",
+  promo:
+    "Hi [Client name]! We have something special at [Business name]. Book your [Service] here: [Booking link]",
+  review_ask:
+    "Hi [Client name]! Thank you for choosing [Business name]. If you enjoyed your experience, we’d really appreciate your review: [Google review link]",
+};
+
 export const TEMPLATE_TOKENS: Record<MessageTemplateType, string[]> = {
   birthday: ["[Client name]", "[Business name]"],
   time_to_book: [
