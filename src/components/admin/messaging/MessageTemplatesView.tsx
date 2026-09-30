@@ -51,15 +51,9 @@ export default function MessageTemplatesView({
       const key = TEMPLATE_SETTING_KEYS[active];
       const { error } = await supabase
         .from("app_settings")
-        .upsert(
-          {
-            tenant_id: tenantId,
-            key,
-            value: "",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "tenant_id,key" },
-        );
+        .delete()
+        .eq("tenant_id", tenantId)
+        .eq("key", key);
       if (error) throw error;
     },
     onSuccess: () =>
