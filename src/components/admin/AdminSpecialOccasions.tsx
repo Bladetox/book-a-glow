@@ -7,7 +7,7 @@ import {
   Cake, Heart, Plus, X, Loader2, MessageCircle,
   Trash2, Check, CalendarDays,
 } from "lucide-react";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   buildWhatsAppUrl,
