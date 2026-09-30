@@ -58,10 +58,9 @@ export function useClientAlerts(tenantIdProp?: string) {
       // 1. Fetch overdue loyalty clients
       const { data: overdueData, error: overdueError } = await supabase
         .from("loyalty_tracker")
-        .select("id, client_name, phone, next_due_date, merged_into_id")
+        .select("id, client_name, phone, next_due_date")
         .eq("tenant_id", tenantId)
         .not("next_due_date", "is", null)
-        .is("merged_into_id", null)
         .lt("next_due_date", format(today, "yyyy-MM-dd"));
 
       if (overdueError) throw overdueError;
@@ -69,16 +68,16 @@ export function useClientAlerts(tenantIdProp?: string) {
       const overdueClients: OverdueLoyaltyClient[] = (overdueData || []).map((client) => {
         const nextDue     = new Date(client.next_due_date!);
         const daysOverdue = Math.floor((today.getTime() - nextDue.getTime()) / (1000 * 60 * 60 * 24));
-        return {      // 2. Resolve inactivity from completed booking history using the
-      // canonical client relationship. Raw booking contact fields are only
-      // fallback data when a booking has no canonical relationship.
+        return { ...client, days_overdue: daysOverdue };
+      });
+
+      // 2. Fetch all non-cancelled bookings with full identity columns.
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
           id,
           booking_date,
-          status,
-          canonical_client_id,
+          client_id,
           client_name,
           client_email,
           client_phone,
@@ -92,96 +91,39 @@ export function useClientAlerts(tenantIdProp?: string) {
 
       if (bookingsError) throw bookingsError;
 
-      const { data: loyaltyData, error: loyaltyError } = await supabase
-        .from("loyalty_tracker")
-        .select("id, client_name, phone, email, merged_into_id")
-        .eq("tenant_id", tenantId);
-
-      if (loyaltyError) throw loyaltyError;
-
-      const canonical = new Map<string, any>();
-      const mergedInto = new Map<string, string>();
-      (loyaltyData ?? []).forEach((row: any) => {
-        if (row.id && !row.merged_into_id) canonical.set(row.id, row);
-        if (row.id && row.merged_into_id) mergedInto.set(row.id, row.merged_into_id);
-      });
-
-      const resolveCanonicalId = (id: string | null | undefined) => {
-        let current = id ?? null;
-        const seen = new Set<string>();
-        while (current && mergedInto.has(current) && !seen.has(current)) {
-          seen.add(current);
-          current = mergedInto.get(current) ?? null;
-        }
-        return current;
-      };
-
-      const clients = new Map<string, {
-        key: string;
-        name: string;
+      // Group by resolved key — first entry wins (most recent booking date).
+      const clientLastBooking = new Map<string, {
+        name:  string;
         phone: string | null;
         email: string | null;
-        lastCompletedDate: string | null;
-        hasUpcomingBooking: boolean;
+        date:  string;
       }>();
 
-      (bookingsData || []).forEach((b: any) => {
-        const canonicalId = resolveCanonicalId(b.canonical_client_id);
-        const canonicalClient = canonicalId ? canonical.get(canonicalId) : null;
-        const key = canonicalClient
-          ? `canonical:${canonicalClient.id}`
-          : b.canonical_client_id
-            ? `canonical:${b.canonical_client_id}`
-            : b.client_id
-              ? `id:${b.client_id}`
-              : (b.guest_email || b.client_email)
-                ? `email:${String(b.guest_email || b.client_email).trim().toLowerCase()}`
-                : (b.guest_phone || b.client_phone)
-                  ? `phone:${normPhone(String(b.guest_phone || b.client_phone))}`
-                  : `booking:${b.id}`;
+      (bookingsData || []).forEach((b) => {
+        const key = resolveBookingKey(b);
+        if (clientLastBooking.has(key)) return;
 
-        const existing = clients.get(key);
-        const row = existing ?? {
-          key,
-          name: canonicalClient?.client_name || b.guest_name || b.client_name || "Unknown",
-          phone: canonicalClient?.phone || b.guest_phone || b.client_phone || null,
-          email: canonicalClient?.email || b.guest_email || b.client_email || null,
-          lastCompletedDate: null,
-          hasUpcomingBooking: false,
-        };
+        const name  = b.client_name  || b.guest_name  || "Unknown";
+        const phone = b.client_phone || b.guest_phone || null;
+        const email = b.client_email || b.guest_email || null;
 
-        if (b.booking_date >= format(today, "yyyy-MM-dd") && b.status !== "completed") {
-          row.hasUpcomingBooking = true;
-        }
-
-        if (b.status === "completed" && (!row.lastCompletedDate || b.booking_date > row.lastCompletedDate)) {
-          row.lastCompletedDate = b.booking_date;
-        }
-
-        clients.set(key, row);
+        clientLastBooking.set(key, { name, phone, email, date: b.booking_date });
       });
 
-      // A client is inactive only when their latest completed visit is 90+
-      // days old and they do not already have a future booking.
+      // Filter clients who haven't booked in 90+ days.
       const inactiveClients: InactiveClient[] = [];
-      clients.forEach((value) => {
-        if (!value.lastCompletedDate || value.hasUpcomingBooking) return;
-        if (value.lastCompletedDate < ninetyDaysAgo) {
+      clientLastBooking.forEach((value, key) => {
+        if (value.date < ninetyDaysAgo) {
           const daysSince = Math.floor(
-            (today.getTime() - new Date(value.lastCompletedDate).getTime()) / (1000 * 60 * 60 * 24)
+            (today.getTime() - new Date(value.date).getTime()) / (1000 * 60 * 60 * 24)
           );
           inactiveClients.push({
-            client_id: value.key,
-            client_name: value.name,
-            client_phone: value.phone,
-            client_email: value.email,
-            last_booking_date: value.lastCompletedDate,
+            client_id:          key,
+            client_name:        value.name,
+            client_phone:       value.phone,
+            client_email:       value.email,
+            last_booking_date:  value.date,
             days_since_booking: daysSince,
-          });
-        }
-      });
-
-king: daysSince,
           });
         }
       });
