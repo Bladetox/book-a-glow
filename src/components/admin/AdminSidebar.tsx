@@ -126,11 +126,11 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
       <button
         key={view}
         onClick={() => { handleSelect(view); onClose?.(); }}
-        className={\`relative flex items-center gap-3 pl-10 pr-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden \${
+        className={`relative flex items-center gap-3 pl-10 pr-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
           isActive
             ? "bg-white/[0.08] text-white"
             : "text-white/35 hover:text-white/65 hover:bg-white/[0.03]"
-        }\`}
+        }`}
       >
         {isActive && (
           <motion.div
@@ -151,9 +151,9 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
           </span>
         )}
         {isStock && stockAlerts.total > 0 && (
-          <span className={\`relative z-10 ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold \${
+          <span className={`relative z-10 ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
             stockAlerts.out > 0 ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"
-          }\`}>
+          }`}>
             {stockAlerts.total}
           </span>
         )}
@@ -172,13 +172,13 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
         onClick={() => { handleSelect(item.view); onClose?.(); }}
         title={railCollapsed ? item.label : undefined}
         aria-label={item.label}
-        className={\`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden \${
+        className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
           railCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"
-        } \${
+        } ${
           isActive
             ? "bg-white/[0.08] text-white"
             : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
-        }\`}
+        }`}
       >
         {isActive && (
           <motion.div
@@ -213,11 +213,11 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
           }}
           title={item.label}
           aria-label={item.label}
-          className={\`flex items-center justify-center rounded-xl px-0 py-2.5 w-full transition-colors duration-200 \${
+          className={`flex items-center justify-center rounded-xl px-0 py-2.5 w-full transition-colors duration-200 ${
             hasActive
               ? "text-white/85 bg-white/[0.05]"
               : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
-          }\`}
+          }`}
         >
           <div className="w-4 h-4 shrink-0">
             <GroupIcon className="w-4 h-4" />
@@ -230,11 +230,11 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
       <div key={item.label} className="flex flex-col">
         <button
           onClick={() => toggleGroup(item.label)}
-          className={\`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full \${
+          className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full ${
             hasActive
               ? "text-white/85"
               : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
-          }\`}
+          }`}
         >
           <div className="w-4 h-4 shrink-0">
             <GroupIcon className="w-4 h-4" />
@@ -245,7 +245,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="shrink-0"
           >
-            <ChevronRight className={\`w-3.5 h-3.5 \${hasActive ? "text-white/40" : "text-white/20"}\`} />
+            <ChevronRight className={`w-3.5 h-3.5 ${hasActive ? "text-white/40" : "text-white/20"}`} />
           </motion.div>
         </button>
 
@@ -278,9 +278,9 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
         className="fixed lg:relative z-50 lg:z-auto flex flex-col h-dvh bg-black border-r border-white/[0.06] overflow-y-auto overflow-x-hidden shrink-0"
       >
-        <div className={\`flex items-center gap-3 py-5 border-b border-white/[0.05] \${
+        <div className={`flex items-center gap-3 py-5 border-b border-white/[0.05] ${
           railCollapsed ? "justify-center px-2" : "px-4"
-        }\`}>
+        }`}>
           {!railCollapsed && (
             <div className="relative w-9 h-9 rounded-xl bg-white/[0.07] border border-white/[0.1] flex items-center justify-center overflow-hidden shrink-0">
               {logoUrl ? (
