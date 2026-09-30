@@ -466,6 +466,7 @@ export default function AdminCRM({
                     name: client.client_name,
                     business: messageContext.businessName,
                     service: messageContext.serviceLabel,
+                    bookingUrl: messageContext.bookingUrl,
                   })}
                 />
               ))}
@@ -481,6 +482,7 @@ export default function AdminCRM({
                     name: client.client_name,
                     business: messageContext.businessName,
                     service: messageContext.serviceLabel,
+                    bookingUrl: messageContext.bookingUrl,
                   })}
                 />
               ))}
@@ -496,6 +498,7 @@ export default function AdminCRM({
                     name: client.client_name,
                     business: messageContext.businessName,
                     service: messageContext.serviceLabel,
+                    bookingUrl: messageContext.bookingUrl,
                   })}
                 />
               ))}
