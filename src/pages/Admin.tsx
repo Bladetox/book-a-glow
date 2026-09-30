@@ -15,21 +15,17 @@ import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useLocation } from "react-router-dom";
 
-const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
-const AdminCalendar         = lazy(() => import("@/components/admin/AdminCalendar"));
-const AdminServices         = lazy(() => import("@/components/admin/AdminServices"));
-const AdminAvailability     = lazy(() => import("@/components/admin/AdminAvailability"));
-const AdminStock            = lazy(() => import("@/components/admin/AdminStock"));
-const AdminIntegrations     = lazy(() => import("@/components/admin/AdminIntegrations"));
-const AdminSettings         = lazy(() => import("@/components/admin/AdminSettings"));
-const AdminTerms            = lazy(() => import("@/components/admin/AdminTerms"));
-const AdminClientManagement = lazy(() => import("@/components/admin/AdminClientManagement"));
-const AdminLoyalty          = lazy(() => import("@/components/admin/AdminLoyalty"));
-const AdminConsistencyPricing = lazy(() => import("@/components/admin/AdminConsistencyPricing"));
-const AdminHelp             = lazy(() => import("@/components/admin/AdminHelp"));
-const AdminRecommendations  = lazy(() => import("@/components/admin/AdminRecommendations"));
-const AdminConsultations    = lazy(() => import("@/components/admin/AdminConsultations"));
-const AdminSpecialOccasions = lazy(() => import("@/components/admin/AdminSpecialOccasions"));
+const AdminBookings = lazy(() => import("@/components/admin/AdminBookings"));
+const AdminCalendar = lazy(() => import("@/components/admin/AdminCalendar"));
+const AdminServices = lazy(() => import("@/components/admin/AdminServices"));
+const AdminAvailability = lazy(() => import("@/components/admin/AdminAvailability"));
+const AdminStock = lazy(() => import("@/components/admin/AdminStock"));
+const AdminIntegrations = lazy(() => import("@/components/admin/AdminIntegrations"));
+const AdminSettings = lazy(() => import("@/components/admin/AdminSettings"));
+const AdminTerms = lazy(() => import("@/components/admin/AdminTerms"));
+const AdminCRM = lazy(() => import("@/components/admin/AdminCRM"));
+const AdminHelp = lazy(() => import("@/components/admin/AdminHelp"));
+const AdminRecommendations = lazy(() => import("@/components/admin/AdminRecommendations"));
 
 class AdminErrorBoundary extends Component<
   { children: ReactNode },
@@ -39,9 +35,11 @@ class AdminErrorBoundary extends Component<
     super(props);
     this.state = { hasError: false, message: "" };
   }
+
   static getDerivedStateFromError(error: any) {
     return { hasError: true, message: error?.message || "Unknown error" };
   }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -60,6 +58,7 @@ class AdminErrorBoundary extends Component<
         </div>
       );
     }
+
     return this.props.children;
   }
 }
@@ -70,7 +69,7 @@ const CORE_VIEWS = [
   "Bookings",
   "Services",
   "Availability",
-  "Client Management",
+  "CRM",
   "Settings",
   "Terms & Conditions",
   "Help",
@@ -84,11 +83,7 @@ const ALL_VIEWS = [
   "Services",
   "Availability",
   "Stock",
-  "Consultations",
-  "Special Occasions",
-  "Client Management",
-  "Loyalty",
-  "Consistency Pricing",
+  "CRM",
   "Integrations",
   "Settings",
   "Terms & Conditions",
@@ -97,19 +92,25 @@ const ALL_VIEWS = [
 
 type ViewName = (typeof ALL_VIEWS)[number];
 
+const LEGACY_CRM_VIEWS = new Set([
+  "Loyalty",
+  "Consistency Pricing",
+  "Consultations",
+  "Special Occasions",
+]);
+
 interface AdminShellProps {
   tenant: Tenant | null;
   subscription: TenantSubscription | null;
 }
 
-// ── Tenant avatar shown in the mobile header ──────────────────────────────────
 const TenantAvatar = ({ tenant }: { tenant: Tenant | null }) => {
   const [imgError, setImgError] = useState(false);
 
   if (!tenant) return null;
 
-  const name   = tenant.name ?? "";
-  const words  = name.trim().split(/\s+/).filter(Boolean);
+  const name = tenant.name ?? "";
+  const words = name.trim().split(/\s+/).filter(Boolean);
   const initials =
     words.length >= 2
       ? (words[0][0] + words[1][0]).toUpperCase()
@@ -148,20 +149,14 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
     subscription?.trial_ends_at,
   );
 
-  // "blocked" = full lockout (cancelled/disabled by admin).
-  // "arrears" = degraded access, bookings/payments only, banner shown.
   const isBlocked = accountState === "blocked";
   const isArrears = accountState === "arrears";
 
   const allowedViews = ALL_VIEWS.filter((view) => {
     if ((CORE_VIEWS as readonly string[]).includes(view)) return true;
-    if (view === "Recommendations")   return flags.ai_insights;
-    if (view === "Stock")             return flags.stock_module;
-    if (view === "Consultations")     return flags.consultations;
-    if (view === "Special Occasions") return flags.special_occasions;
-    if (view === "Loyalty")           return flags.loyalty_module;
-    if (view === "Consistency Pricing") return flags.consistency_pricing;
-    if (view === "Integrations")      return flags.integrations_tab;
+    if (view === "Recommendations") return flags.ai_insights;
+    if (view === "Stock") return flags.stock_module;
+    if (view === "Integrations") return flags.integrations_tab;
     return false;
   });
 
@@ -172,6 +167,13 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const viewParam = params.get("view");
+
+    if (viewParam && LEGACY_CRM_VIEWS.has(viewParam)) {
+      setActiveView("CRM");
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+
     if (viewParam && (ALL_VIEWS as readonly string[]).includes(viewParam)) {
       setActiveView(viewParam as ViewName);
       window.history.replaceState({}, "", window.location.pathname);
@@ -185,13 +187,14 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   }, [flagsLoading, allowedViews, activeView]);
 
   const { data: bookings } = useSupabaseBookings();
-  const pendingCount = bookings?.filter((b) => b.status === "pending").length ?? 0;
+  const pendingCount = bookings?.filter((booking) => booking.status === "pending").length ?? 0;
 
   const handleNavigate = (view: string) => {
-    if ((ALL_VIEWS as readonly string[]).includes(view)) setActiveView(view as ViewName);
+    if ((ALL_VIEWS as readonly string[]).includes(view)) {
+      setActiveView(view as ViewName);
+    }
   };
 
-  // Hard lockout — admin explicitly cancelled/disabled this tenant.
   if (isBlocked) {
     return <TrialExpiredPaywall tenantId={tenant?.id ?? ""} />;
   }
@@ -209,17 +212,18 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
       <AdminSidebar
         views={allowedViews as unknown as string[]}
         activeView={activeView}
-        onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
+        onSelect={(view) => {
+          setActiveView(view as ViewName);
+          setSidebarOpen(false);
+        }}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative h-dvh overflow-hidden">
-        {/* Arrears banner — shown below the top header, above content */}
         {isArrears && <ArrearsBanner />}
 
         <header className="h-16 border-b border-black bg-black flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
-          {/* Left: hamburger (mobile only) + view title */}
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -228,12 +232,12 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-sm font-semibold tracking-tight text-white/90 truncate">{activeView}</h1>
+            <h1 className="text-sm font-semibold tracking-tight text-white/90 truncate">
+              {activeView}
+            </h1>
           </div>
 
-          {/* Right: tenant brand (mobile only) + bell + divider + tenant name (desktop only) */}
           <div className="flex items-center gap-3">
-            {/* Tenant logo + name — visible on mobile only, hidden on lg+ (sidebar already shows it) */}
             <div className="lg:hidden">
               <TenantAvatar tenant={tenant} />
             </div>
@@ -242,15 +246,15 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
             <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
 
-            {/* Tenant name text block — desktop only */}
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-xs font-medium text-white/80 truncate max-w-[160px]">{tenant?.name}</span>
+              <span className="text-xs font-medium text-white/80 truncate max-w-[160px]">
+                {tenant?.name}
+              </span>
               <span className="text-[10px] text-white/30 uppercase tracking-wider">Admin</span>
             </div>
           </div>
         </header>
 
-        {/* Content region */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth relative z-10 scrollbar-hide">
           <AdminErrorBoundary>
             <Suspense
@@ -260,30 +264,35 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
                 </div>
               }
             >
-              {activeView === "Dashboard"         && <AdminDashboard onNavigate={handleNavigate} />}
-              {activeView === "Calendar"           && <AdminCalendar />}
-              {activeView === "Recommendations"   && flags.ai_insights       && <AdminRecommendations onNavigate={handleNavigate} />}
-              {activeView === "Bookings"           && <AdminBookings />}
-              {activeView === "Services"           && <AdminServices />}
-              {activeView === "Availability"       && <AdminAvailability />}
-              {activeView === "Stock"              && flags.stock_module      && <AdminStock />}
-              {activeView === "Consultations"      && flags.consultations     && <AdminConsultations />}
-              {activeView === "Special Occasions"  && flags.special_occasions && <AdminSpecialOccasions />}
-              {activeView === "Client Management" && <AdminClientManagement />}
-              {activeView === "Loyalty"            && flags.loyalty_module    && <AdminLoyalty onNavigate={handleNavigate} />}
-              {activeView === "Consistency Pricing" && flags.consistency_pricing && <AdminConsistencyPricing />}
-              {activeView === "Integrations"       && flags.integrations_tab  && <AdminIntegrations />}
-              {activeView === "Settings"           && <AdminSettings />}
+              {activeView === "Dashboard" && <AdminDashboard onNavigate={handleNavigate} />}
+              {activeView === "Calendar" && <AdminCalendar />}
+              {activeView === "Recommendations" && flags.ai_insights && (
+                <AdminRecommendations onNavigate={handleNavigate} />
+              )}
+              {activeView === "Bookings" && <AdminBookings />}
+              {activeView === "Services" && <AdminServices />}
+              {activeView === "Availability" && <AdminAvailability />}
+              {activeView === "Stock" && flags.stock_module && <AdminStock />}
+              {activeView === "CRM" && (
+                <AdminCRM
+                  onNavigate={handleNavigate}
+                  canConsultations={flags.consultations}
+                  canSpecialOccasions={flags.special_occasions}
+                  canLoyalty={flags.loyalty_module}
+                  canConsistency={flags.consistency_pricing}
+                />
+              )}
+              {activeView === "Integrations" && flags.integrations_tab && <AdminIntegrations />}
+              {activeView === "Settings" && <AdminSettings />}
               {activeView === "Terms & Conditions" && <AdminTerms />}
-              {activeView === "Help"               && <AdminHelp />}
+              {activeView === "Help" && <AdminHelp />}
             </Suspense>
           </AdminErrorBoundary>
         </div>
 
-        {/* AdminMobileNav is a flex sibling — pinned to bottom by the flex column, no position:fixed needed */}
         <AdminMobileNav
           activeView={activeView}
-          onSelect={(v) => setActiveView(v as ViewName)}
+          onSelect={(view) => setActiveView(view as ViewName)}
           pendingCount={pendingCount}
         />
       </main>
@@ -301,9 +310,10 @@ const Admin = () => {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => setSession(session),
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -329,6 +339,7 @@ const Admin = () => {
             </div>
           );
         }
+
         return <AdminShell tenant={tenant} subscription={subscription} />;
       }}
     </TenantProvider>

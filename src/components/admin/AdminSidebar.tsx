@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronsLeft, ChevronsRight, Heart, CalendarDays } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, CalendarDays } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -20,32 +20,30 @@ import { useStockAlerts } from "@/hooks/useStockAlerts";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
 const iconMap: Record<string, React.ElementType> = {
-  "Dashboard":          DashboardIcon,
-  "Calendar":           CalendarDays,
-  "Bookings":           BookingsIcon,
-  "Services":           ServicesIcon,
-  "Availability":       AvailabilityIcon,
-  "Stock":              StockIcon,
-  "Client Management":  ClientManagementIcon,
-  "Loyalty":            Heart,
-  "Consistency Pricing": Heart,
-  "Integrations":       IntegrationsIcon,
-  "Settings":           SettingsIcon,
+  Dashboard: DashboardIcon,
+  Calendar: CalendarDays,
+  Bookings: BookingsIcon,
+  Services: ServicesIcon,
+  Availability: AvailabilityIcon,
+  Stock: StockIcon,
+  CRM: ClientManagementIcon,
+  Integrations: IntegrationsIcon,
+  Settings: SettingsIcon,
   "Terms & Conditions": TermsIcon,
-  "Help":               HelpCircle,
+  Help: HelpCircle,
 };
 
 type NavItem =
   | { kind: "direct"; label: string; view: string }
-  | { kind: "group";  label: string; icon: React.ElementType; children: string[] };
+  | { kind: "group"; label: string; icon: React.ElementType; children: string[] };
 
 const NAV: NavItem[] = [
-  { kind: "direct", label: "Dashboard",        view: "Dashboard" },
-  { kind: "direct", label: "Calendar",          view: "Calendar" },
-  { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
-  { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
-  { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty", "Consistency Pricing"] },
-  { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
+  { kind: "direct", label: "Dashboard", view: "Dashboard" },
+  { kind: "direct", label: "Calendar", view: "Calendar" },
+  { kind: "group", label: "Schedule", icon: BookingsIcon, children: ["Bookings", "Availability"] },
+  { kind: "group", label: "Catalogue", icon: ServicesIcon, children: ["Services", "Stock"] },
+  { kind: "direct", label: "CRM", view: "CRM" },
+  { kind: "group", label: "Business", icon: SettingsIcon, children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
 ];
 
 const parentGroupOf = (view: string): string | null => {
@@ -66,15 +64,13 @@ interface AdminSidebarProps {
 const DESKTOP_COLLAPSE_KEY = "ns_admin_sidebar_collapsed";
 
 const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSidebarProps) => {
-  const { tenantId }            = useTenant();
-  const { data: tenant }        = useTenantSettings();
-  const isMobile                = useIsMobile();
-  const stockAlerts             = useStockAlerts();
+  const { tenantId } = useTenant();
+  const { data: tenant } = useTenantSettings();
+  const isMobile = useIsMobile();
+  const stockAlerts = useStockAlerts();
   const { data: bookings = [] } = useSupabaseBookings();
-  const pendingCount = bookings.filter(b => b.status === "pending").length;
+  const pendingCount = bookings.filter((booking) => booking.status === "pending").length;
 
-  // Desktop-only icon-rail collapse. Mobile keeps its own full off-canvas
-  // open/close behaviour (isOpen/onClose) — this is a separate axis.
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(DESKTOP_COLLAPSE_KEY) === "1";
@@ -90,7 +86,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
   });
 
   const toggleGroup = (label: string) => {
-    setOpenGroups(prev => {
+    setOpenGroups((prev) => {
       const next = new Set(prev);
       next.has(label) ? next.delete(label) : next.add(label);
       return next;
@@ -99,32 +95,32 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
 
   const handleSelect = (view: string) => {
     const parent = parentGroupOf(view);
-    if (parent) setOpenGroups(prev => new Set([...prev, parent]));
+    if (parent) setOpenGroups((prev) => new Set([...prev, parent]));
     onSelect(view);
   };
 
   const getAbbreviation = (name: string) => {
     if (!name) return "NS";
     const words = name.split(" ").filter(Boolean);
-    if (words.length >= 2) return words.slice(0, 2).map(w => w[0]?.toUpperCase()).join("");
+    if (words.length >= 2) return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("");
     return name.slice(0, 2).toUpperCase();
   };
 
   const businessName = tenant?.name || tenantId;
-  const logoUrl      = tenant?.logo_url ?? null;
+  const logoUrl = tenant?.logo_url ?? null;
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
   const railCollapsed = !isMobile && collapsed;
 
-  // ── Child item ──────────────────────────────────────────────────────────────
   const renderChild = (view: string) => {
     if (!views.includes(view)) return null;
-    const Icon       = iconMap[view] || DashboardIcon;
-    const isActive   = activeView === view;
-    const isStock    = view === "Stock";
+
+    const Icon = iconMap[view] || DashboardIcon;
+    const isActive = activeView === view;
+    const isStock = view === "Stock";
     const isBookings = view === "Bookings";
-    const hasOutage  = isStock && stockAlerts.out > 0;
-    const hasLow     = isStock && stockAlerts.low > 0 && stockAlerts.out === 0;
+    const hasOutage = isStock && stockAlerts.out > 0;
+    const hasLow = isStock && stockAlerts.low > 0 && stockAlerts.out === 0;
 
     return (
       <button
@@ -145,7 +141,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
         )}
         <div className="relative z-10 w-4 h-4 shrink-0">
           {hasOutage && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500" />}
-          {hasLow    && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />}
+          {hasLow && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />}
           <Icon className="w-4 h-4" />
         </div>
         <span className="relative z-10 truncate">{view}</span>
@@ -165,10 +161,9 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     );
   };
 
-  // ── Direct nav item ──────────────────────────────────────────────────
   const renderDirect = (item: Extract<NavItem, { kind: "direct" }>) => {
     if (!views.includes(item.view)) return null;
-    const Icon     = iconMap[item.view] || DashboardIcon;
+    const Icon = iconMap[item.view] || DashboardIcon;
     const isActive = activeView === item.view;
 
     return (
@@ -200,23 +195,21 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     );
   };
 
-  // ── Group header + collapsible children ─────────────────────────────────────
   const renderGroup = (item: Extract<NavItem, { kind: "group" }>) => {
-    const visibleChildren = item.children.filter(v => views.includes(v));
+    const visibleChildren = item.children.filter((view) => views.includes(view));
     if (visibleChildren.length === 0) return null;
+
     const isExpanded = openGroups.has(item.label);
-    const hasActive  = visibleChildren.includes(activeView);
-    const GroupIcon  = item.icon;
+    const hasActive = visibleChildren.includes(activeView);
+    const GroupIcon = item.icon;
 
     if (railCollapsed) {
-      // Icon-only rail: tapping a group expands the sidebar back out and
-      // opens that group, rather than trying to fit a flyout in a rail.
       return (
         <button
           key={item.label}
           onClick={() => {
             setCollapsed(false);
-            setOpenGroups(prev => new Set([...prev, item.label]));
+            setOpenGroups((prev) => new Set([...prev, item.label]));
           }}
           title={item.label}
           aria-label={item.label}
@@ -252,7 +245,7 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="shrink-0"
           >
-            <ChevronRight className={`w-3.5 h-3.5 ${ hasActive ? "text-white/40" : "text-white/20" }`} />
+            <ChevronRight className={`w-3.5 h-3.5 ${hasActive ? "text-white/40" : "text-white/20"}`} />
           </motion.div>
         </button>
 
@@ -285,8 +278,9 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
         className="fixed lg:relative z-50 lg:z-auto flex flex-col h-dvh bg-black border-r border-white/[0.06] overflow-y-auto overflow-x-hidden shrink-0"
       >
-        {/* Brand header */}
-        <div className={`flex items-center gap-3 py-5 border-b border-white/[0.05] ${railCollapsed ? "justify-center px-2" : "px-4"}`}>
+        <div className={`flex items-center gap-3 py-5 border-b border-white/[0.05] ${
+          railCollapsed ? "justify-center px-2" : "px-4"
+        }`}>
           {!railCollapsed && (
             <div className="relative w-9 h-9 rounded-xl bg-white/[0.07] border border-white/[0.1] flex items-center justify-center overflow-hidden shrink-0">
               {logoUrl ? (
@@ -294,9 +288,9 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
                   src={logoUrl}
                   alt={String(businessName)}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                    const fallback = (e.currentTarget.parentNode as HTMLElement).querySelector(".logo-fallback") as HTMLElement | null;
+                  onError={(event) => {
+                    (event.currentTarget as HTMLImageElement).style.display = "none";
+                    const fallback = (event.currentTarget.parentNode as HTMLElement).querySelector(".logo-fallback") as HTMLElement | null;
                     if (fallback) fallback.style.display = "flex";
                   }}
                 />
@@ -325,10 +319,9 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
             </button>
           )}
 
-          {/* Desktop-only rail collapse toggle */}
           {!isMobile && (
             <button
-              onClick={() => setCollapsed((v) => !v)}
+              onClick={() => setCollapsed((value) => !value)}
               className="hidden lg:flex items-center justify-center text-white/30 hover:text-white/60 transition-colors shrink-0"
               aria-label={railCollapsed ? "Expand navigation" : "Collapse navigation"}
               title={railCollapsed ? "Expand" : "Collapse"}
@@ -338,10 +331,9 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
           )}
         </div>
 
-        {/* Nav */}
-        <nav className={`flex flex-col gap-0.5 py-3 flex-1 ${railCollapsed ? "px-2" : "px-2"}`}>
+        <nav className="flex flex-col gap-0.5 py-3 px-2 flex-1">
           {NAV.map((item) =>
-            item.kind === "direct" ? renderDirect(item) : renderGroup(item)
+            item.kind === "direct" ? renderDirect(item) : renderGroup(item),
           )}
         </nav>
       </motion.aside>

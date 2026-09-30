@@ -4,7 +4,7 @@
  * Resolution order:
  *   1. ?tenant=xxx query param (dev/preview ONLY — blocked on production domains)
  *   2. Bare localhost → marketing site
- *   3. Lovable preview environment → marketing site
+ *   3. Lovable/Vercel preview environment → marketing site
  *   4. Custom domain lookup (e.g. bookings.phenomebeauty.co.za → looked up in tenants.custom_domain)
  *   5. Subdomain of known NextSlot domains (phenomebeauty.nextslot.co.za → "phenomebeauty")
  *   6. null → show marketing site
@@ -12,6 +12,7 @@
 
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com"];
+const PREVIEW_DOMAINS = ["vercel.app"];
 
 // UUID pattern for Lovable preview subdomains
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,7 +41,7 @@ export function resolveTenantSync(): TenantResolution {
     const params = new URLSearchParams(window.location.search);
     const tenantParam = params.get("tenant");
     if (tenantParam) {
-      return { slug: tenantParam, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
+      return { slug: tenantParam, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
     }
   }
 
@@ -60,7 +61,14 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 4. Check against known NextSlot domains
+  // 4. Vercel preview environments → show marketing site unless ?tenant=xxx is supplied
+  for (const domain of PREVIEW_DOMAINS) {
+    if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+      return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+    }
+  }
+
+  // 5. Check against known NextSlot domains
   for (const domain of MAIN_DOMAINS) {
     if (hostname === domain || hostname === `www.${domain}`) {
       return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
@@ -76,13 +84,13 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 5. Dev: "<slug>.localhost"
+  // 6. Dev: "<slug>.localhost"
   if (hostname.endsWith(".localhost")) {
     const subdomain = hostname.slice(0, -".localhost".length);
     if (subdomain) return { slug: subdomain, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
   }
 
-  // 6. Unknown hostname → could be a custom domain, flag for async lookup
+  // 7. Unknown hostname → could be a custom domain, flag for async lookup
   return { slug: null, isCustomDomain: true, customDomainHost: hostname, isPreviewEnvironment: false };
 }
 
@@ -105,7 +113,8 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 /**
  * Builds the admin URL for a given tenant ID.
- * Uses subdomain routing on production, query-param on localhost.
+ * Uses query-param routing on localhost and preview environments.
+ * Uses subdomain routing on production NextSlot domains.
  */
 export function buildAdminUrl(tenantId: string): string {
   const hostname = window.location.hostname;
@@ -113,9 +122,12 @@ export function buildAdminUrl(tenantId: string): string {
     hostname === "localhost" ||
     hostname === "127.0.0.1" ||
     hostname.endsWith(".localhost");
+  const isPreview =
+    PREVIEW_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`)) ||
+    LOVABLE_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
 
-  if (isLocalhost) {
-    return `${window.location.origin}/admin?tenant=${tenantId}`;
+  if (isLocalhost || isPreview) {
+    return `${window.location.origin}/admin?tenant=${encodeURIComponent(tenantId)}`;
   }
 
   const parts = hostname.split(".");

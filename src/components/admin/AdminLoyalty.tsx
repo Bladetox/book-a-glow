@@ -78,23 +78,21 @@ import { EmptyState, AdminPageHeader } from "./AdminSharedUI";
 // ─── Sub-modules ───
 import type { LoyaltyRow, EnrichmentMap, EnrollCandidate, TenantCriteriaSettings } from "./loyalty/loyaltyTypes";
 import {
-  STATUS_ORDER, DEFAULT_WA_TEMPLATES,
   DEFAULT_LOYALTY_SETTINGS, LOYALTY_SETTING_KEYS,
-  DEFAULT_TENANT_CRITERIA, PILL_LABEL,
+  DEFAULT_TENANT_CRITERIA,
 } from "./loyalty/loyaltyConstants";
 import {
   isoToDisplay,
   normPhone, recipientPhone, recipientName,
   effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
-import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
-import { MessagingHowTo }        from "./loyalty/MessagingHowTo";
 import { LoyaltyClientCard }     from "./loyalty/LoyaltyClientCard";
 import {
   EnrollModal, EnrollSuccessCelebration,
 } from "./loyalty/LoyaltyEnrollModal";
 import { LoyaltyTenantCriteria } from "./loyalty/LoyaltyTenantCriteria";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
+import { useCrmMessageTemplates } from "@/hooks/useCrmMessageTemplates";
 
 // ──────────────────────────────────────────────────────────────────
 // Loyalty-relevant insight IDs
@@ -408,17 +406,6 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
 }
 
 // ──────────────────────────────────────────────────────────────────
-// WA template key metadata
-// ──────────────────────────────────────────────────────────────────
-const WA_TEMPLATE_META: { key: keyof typeof DEFAULT_WA_TEMPLATES; label: string; hint: string; accent: string }[] = [
-  { key: "overdue",     label: "Overdue",            hint: "Sent when a client is past their reminder date",          accent: "text-red-400/70"     },
-  { key: "longOverdue", label: "Not Seen in a While", hint: "Sent to clients you haven't seen in a long time",        accent: "text-orange-400/70"  },
-  { key: "timeToBook",  label: "Time to Book",        hint: "Sent when it's nearly time for their next appointment",  accent: "text-amber-400/70"   },
-  { key: "onTrack",     label: "On Track",            hint: "Friendly check-in for clients who are keeping up",       accent: "text-emerald-400/70" },
-  { key: "birthday",    label: "Birthday 🎂",         hint: "Sent on or around the client's birthday",               accent: "text-pink-400/70"    },
-];
-
-// ──────────────────────────────────────────────────────────────────
 // Floating save bar (Von Restorff + Zeigarnik)
 // ──────────────────────────────────────────────────────────────────
 function FloatingSaveBar({
@@ -554,13 +541,13 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [serviceLabel, setServiceLabel]   = useState(DEFAULT_LOYALTY_SETTINGS.service_label);
   const [minBookings, setMinBookings]     = useState(DEFAULT_LOYALTY_SETTINGS.min_bookings);
   const [lookbackDays, setLookbackDays]   = useState(DEFAULT_LOYALTY_SETTINGS.lookback_days);
-  const [waTemplates, setWaTemplates]     = useState(DEFAULT_WA_TEMPLATES);
   const [showSettings, setShowSettings]   = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
+  const { templates: waTemplates, configured: isMessageTemplateConfigured } = useCrmMessageTemplates();
 
   const [snapshot, setSnapshot] = useState<{
     reminderWeeks: number; serviceLabel: string; minBookings: number;
-    lookbackDays: number; waTemplates: typeof DEFAULT_WA_TEMPLATES;
+    lookbackDays: number;
     tenantCriteria: TenantCriteriaSettings;
   } | null>(null);
 
@@ -578,8 +565,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   // ── UI state ──
   const [search, setSearch]                     = useState("");
   // FIX-D: default to "enrolled" so the full enrolled list is visible on load
-  const [filterStatus, setFilterStatus]         = useState<string | null>("enrolled");
-  const [selectedIds, setSelectedIds]           = useState<string[]>([]);
   const [enrollCandidate, setEnrollCandidate]   = useState<EnrollCandidate | null>(null);
   const [enrolledName, setEnrolledName]         = useState<string | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, string>>({});
@@ -625,11 +610,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     if (map["loyalty.service_label"])            setServiceLabel(map["loyalty.service_label"]);
     if (map["loyalty.min_bookings"])             setMinBookings(Number(map["loyalty.min_bookings"]));
     if (map["loyalty.lookback_days"])            setLookbackDays(Number(map["loyalty.lookback_days"]));
-    if (map["loyalty.wa_template_overdue"])      setWaTemplates(t => ({ ...t, overdue:     map["loyalty.wa_template_overdue"] }));
-    if (map["loyalty.wa_template_time_to_book"]) setWaTemplates(t => ({ ...t, timeToBook:  map["loyalty.wa_template_time_to_book"] }));
-    if (map["loyalty.wa_template_on_track"])     setWaTemplates(t => ({ ...t, onTrack:     map["loyalty.wa_template_on_track"] }));
-    if (map["loyalty.wa_template_birthday"])     setWaTemplates(t => ({ ...t, birthday:    map["loyalty.wa_template_birthday"] }));
-    if (map["loyalty.wa_template_long_overdue"]) setWaTemplates(t => ({ ...t, longOverdue: map["loyalty.wa_template_long_overdue"] }));
     if (map["loyalty.criteria_enabled"])
       setTenantCriteria(c => ({ ...c, enabled: map["loyalty.criteria_enabled"] === "true" }));
     if (map["loyalty.criteria_service_ids"])
@@ -643,7 +623,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   const markDirty = () => {
     if (!settingsDirty) {
-      setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, waTemplates, tenantCriteria });
+      setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, tenantCriteria });
     }
     setSettingsDirty(true);
   };
@@ -654,7 +634,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     setServiceLabel(snapshot.serviceLabel);
     setMinBookings(snapshot.minBookings);
     setLookbackDays(snapshot.lookbackDays);
-    setWaTemplates(snapshot.waTemplates);
     setTenantCriteria(snapshot.tenantCriteria);
     setSettingsDirty(false);
     setSnapshot(null);
@@ -667,11 +646,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         { tenant_id: tenantId, key: "loyalty.service_label",            value: serviceLabel,                                                description: "Service label used in WA templates" },
         { tenant_id: tenantId, key: "loyalty.min_bookings",             value: String(minBookings),                                         description: "Min bookings for Nexty suggestions" },
         { tenant_id: tenantId, key: "loyalty.lookback_days",            value: String(lookbackDays),                                        description: "Lookback window (days) for Nexty suggestions" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_overdue",      value: waTemplates.overdue,                                         description: "WA template: overdue" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_time_to_book", value: waTemplates.timeToBook,                                      description: "WA template: time to book" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_on_track",     value: waTemplates.onTrack,                                         description: "WA template: on track" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_birthday",     value: waTemplates.birthday,                                        description: "WA template: birthday" },
-        { tenant_id: tenantId, key: "loyalty.wa_template_long_overdue", value: waTemplates.longOverdue ?? DEFAULT_WA_TEMPLATES.longOverdue,  description: "WA template: not seen in a while" },
         { tenant_id: tenantId, key: "loyalty.criteria_enabled",         value: String(tenantCriteria.enabled),                              description: "Tenant criteria: enabled" },
         { tenant_id: tenantId, key: "loyalty.criteria_service_ids",     value: (tenantCriteria.serviceIds ?? []).join(","),                  description: "Tenant criteria: service IDs" },
         { tenant_id: tenantId, key: "loyalty.criteria_min_bookings",    value: String(tenantCriteria.minBookings),                          description: "Tenant criteria: min bookings" },
@@ -855,55 +829,17 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     },
   });
 
-  // ── Filtered rows (uses dedupedLoyaltyRows) ──
-  // FIX-C: "enrolled" pill bypasses effectiveStatus and shows all loyalty_tracker rows.
-  // FIX-F: We use dedupedLoyaltyRows so each phone appears at most once.
+  // Loyalty owns enrolled programme members. Re-engagement states such as due,
+  // overdue and inactive are handled centrally by CRM > Needs attention.
   const filteredRows = useMemo(() => {
-    let rows = [...dedupedLoyaltyRows];
-    if (filterStatus && filterStatus !== "enrolled") {
-      rows = rows.filter(r => {
-        const phone  = normPhone(r.phone);
-        const enrich = enrichment[phone] ?? null;
-        const eff    = effectiveStatus(r, enrich?.lastVisitDate ?? null, reminderWeeks)
-          .toLowerCase().replace(/ /g, "_");
-        return eff === filterStatus;
-      });
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      rows = rows.filter(r =>
-        (r.client_name ?? "").toLowerCase().includes(q) ||
-        (r.phone ?? "").includes(q) ||
-        (r.source ?? "").toLowerCase().includes(q),
-      );
-    }
-    return rows;
-  }, [dedupedLoyaltyRows, filterStatus, search, reminderWeeks, enrichment]);
-
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const row of dedupedLoyaltyRows) {
-      const phone  = normPhone(row.phone);
-      const enrich = enrichment[phone] ?? null;
-      const eff    = effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks)
-        .toLowerCase().replace(/ /g, "_");
-      counts[eff] = (counts[eff] ?? 0) + 1;
-    }
-    return counts;
-  }, [dedupedLoyaltyRows, reminderWeeks, enrichment]);
-
-  const effectiveStatusMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const row of dedupedLoyaltyRows) {
-      const phone  = normPhone(row.phone);
-      const enrich = enrichment[phone] ?? null;
-      m[row.id]    = optimisticStatus[row.id] ?? effectiveStatus(row, enrich?.lastVisitDate ?? null, reminderWeeks);
-    }
-    return m;
-  }, [dedupedLoyaltyRows, optimisticStatus, reminderWeeks, enrichment]);
-
-  const toggleSelect = (id: string) =>
-    setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+    if (!search.trim()) return [...dedupedLoyaltyRows];
+    const q = search.toLowerCase();
+    return dedupedLoyaltyRows.filter(r =>
+      (r.client_name ?? "").toLowerCase().includes(q) ||
+      (r.phone ?? "").includes(q) ||
+      (r.source ?? "").toLowerCase().includes(q),
+    );
+  }, [dedupedLoyaltyRows, search]);
 
   const enrollMutation = useMutation({
     mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
@@ -1056,9 +992,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 accent="sky"
               >
                 <p className="text-xs text-white/30 leading-relaxed">
-                  The <strong className="text-white/50">service label</strong> fills the{" "}
-                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
-                  placeholder in your WhatsApp message templates.
+                  This is the name NextSlot uses when it refers to a client's next appointment in reminders.
+                  Keep it natural, for example “wax appointment” or “lash fill”.
                 </p>
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Service label</label>
@@ -1128,105 +1063,14 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   onMarkDirty={markDirty}
                 />
               </SettingCard>
-
-              {/* 4. WhatsApp Templates */}
-              <SettingCard
-                icon={<MessageSquare className="w-4 h-4" />}
-                title="WhatsApp Templates"
-                subtitle="Customise the message sent for each status"
-                accent="amber"
-                badge={WA_TEMPLATE_META.length}
-              >
-                <p className="text-xs text-white/30 leading-relaxed">
-                  Use{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'name\\'}"}</code>,{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'business\\'}"}</code> and{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
-                  as placeholders. WhatsApp links are generated automatically when you tap{" "}
-                  <span className="text-green-400/70">WA</span> on a client card.
-                </p>
-                <div className="space-y-4">
-                  {WA_TEMPLATE_META.map(({ key, label, hint, accent: accentText }) => (
-                    <div key={key} className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${accentText}`}>{label}</span>
-                        <span className="text-[10px] text-white/25 truncate">{hint}</span>
-                      </div>
-                      <textarea
-                        rows={3}
-                        value={waTemplates[key] ?? ""}
-                        onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); markDirty(); }}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-amber-400/30 transition-colors resize-none font-mono leading-relaxed"
-                        placeholder={`Template for "${label}" status…`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </SettingCard>
-
-              {/* 5. How Messaging Works */}
-              <SettingCard
-                icon={<SlidersHorizontal className="w-4 h-4" />}
-                title="How Messaging Works"
-                subtitle="WhatsApp deep-links — no API account needed"
-                accent="pink"
-              >
-                <MessagingHowTo />
-              </SettingCard>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Status filter pills ── */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {/* FIX-C: "Enrolled" pill — shows all loyalty_tracker rows */}
-          <button
-            onClick={() => setFilterStatus(s => s === "enrolled" ? null : "enrolled")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-xs font-semibold border transition-colors ${
-              filterStatus === "enrolled"
-                ? "bg-white/[0.12] border-white/[0.20] text-white/90"
-                : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
-            }`}
-          >
-            Enrolled
-            <span className={`text-[10px] tabular-nums ${
-              filterStatus === "enrolled" ? "text-white/60" : "text-white/25"
-            }`}>
-              ({dedupedLoyaltyRows.length})
-            </span>
-          </button>
-
-          {STATUS_ORDER.map(status => {
-            const count    = statusCounts[status] ?? 0;
-            const isActive = filterStatus === status;
-            const label    = PILL_LABEL[status] ?? status.replace(/_/g, " ");
-            return (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(s => s === status ? null : status)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 shrink-0 rounded-full text-xs font-semibold border transition-colors ${
-                  isActive
-                    ? "bg-white/[0.12] border-white/[0.20] text-white/90"
-                    : "border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
-                }`}
-              >
-                {label}
-                {count > 0 && (
-                  <span className={`text-[10px] tabular-nums ${isActive ? "text-white/60" : "text-white/25"}`}>
-                    ({count})
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          {filterStatus && (
-            <button
-              onClick={() => setFilterStatus(null)}
-              className="px-3 py-1.5 shrink-0 rounded-full text-xs border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
-            >
-              Clear filter
-            </button>
-          )}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <p className="text-xs text-white/40">
+            These are clients enrolled in your loyalty programme. Client follow-up and re-engagement actions live under CRM &gt; Needs attention.
+          </p>
         </div>
 
         {/* ── Search bar ── */}
@@ -1253,17 +1097,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           onEnroll={c => setEnrollCandidate(c)}
         />
 
-        {/* ── Bulk action bar ── */}
-        <LoyaltyBulkBar
-          selected={selectedIds}
-          rows={loyaltyRows}
-          effectiveStatusMap={effectiveStatusMap}
-          businessName={businessName}
-          serviceLabel={serviceLabel}
-          templates={waTemplates}
-          onClear={() => setSelectedIds([])}
-        />
-
         {/* ── Nexty loyalty insights panel ── */}
         <NextyLoyaltyPanel onNavigate={onNavigate} />
 
@@ -1275,9 +1108,9 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
         ) : filteredRows.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={filterStatus || search ? "No clients match your filter" : "No clients enrolled yet"}
+            title={search ? "No clients match your search" : "No clients enrolled yet"}
             description={
-              !filterStatus && !search
+              !search
                 ? "Eligible clients will appear above when they meet your booking criteria."
                 : undefined
             }
@@ -1295,13 +1128,12 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   enrich={enrich}
                   effStatus={effStatus}
                   reminderWeeks={reminderWeeks}
-                  isSelected={selectedIds.includes(row.id)}
                   isExpanded={expandedCard === row.id}
                   tenantId={tenantId ?? ""}
                   businessName={businessName}
                   serviceLabel={serviceLabel}
                   waTemplates={waTemplates}
-                  onToggleSelect={() => toggleSelect(row.id)}
+                  isMessageTemplateConfigured={isMessageTemplateConfigured}
                   onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
                   onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
                   onUpdated={invalidateLoyalty}

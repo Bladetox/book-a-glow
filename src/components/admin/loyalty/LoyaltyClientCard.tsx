@@ -24,7 +24,12 @@ import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
-import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
+import { normaliseStatus } from "./loyaltyHelpers";
+import {
+  buildWhatsAppUrl,
+  resolveMessageTemplate,
+  type MessageTemplateType,
+} from "@/lib/messaging/whatsapp";
 
 // ─ Status config: icon + pulse for urgent states ────────────────────────────────
 const STATUS_META: Record<string, { icon?: React.ReactNode; pulse?: boolean }> = {
@@ -61,25 +66,39 @@ function initials(name: string) {
 
 // ─ WaButton ───────────────────────────────────────────────────────────────
 export const WaButton = ({
-  name, status, phone, businessName, serviceLabel, templates,
+  name, status, phone, businessName, serviceLabel, lastVisit, templates, isMessageTemplateConfigured,
 }: {
   name: string;
   status: string;
   phone: string;
   businessName: string;
   serviceLabel: string;
-  templates: {
-    overdue: string;
-    timeToBook: string;
-    onTrack: string;
-    birthday: string;
-    longOverdue?: string;
-  };
+  lastVisit?: string;
+  templates: Record<MessageTemplateType, string>;
+  isMessageTemplateConfigured: (type: MessageTemplateType) => boolean;
 }) => {
-  const msg = buildWaMessage(name, status, businessName, serviceLabel, templates);
+  const typeByStatus: Partial<Record<string, MessageTemplateType>> = {
+    BIRTHDAY: "birthday",
+    LONG_OVERDUE: "long_overdue",
+    OVERDUE: "overdue",
+    "TIME TO BOOK": "time_to_book",
+  };
+  const type = typeByStatus[status];
+  if (!type || !templates[type] || !isMessageTemplateConfigured(type)) return null;
+
+  const message = resolveMessageTemplate(templates[type], {
+    name,
+    business: businessName,
+    service: serviceLabel,
+    lastService: serviceLabel,
+    lastVisit,
+  });
+  const href = buildWhatsAppUrl(phone, message);
+  if (!href) return null;
+
   return (
     <a
-      href={waLink(phone, msg)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       onClick={e => e.stopPropagation()}
@@ -379,113 +398,6 @@ export const InlineNotesEditor = ({
   );
 };
 
-// ─ InlineBirthdayEditor ─────────────────────────────────────────────
-export const InlineBirthdayEditor = ({
-  rowId, current, tenantId, onUpdated,
-}: {
-  rowId: string;
-  current: string | null;
-  tenantId: string;
-  onUpdated: () => void;
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue]     = useState(current ?? "");
-  const [saving, setSaving]   = useState(false);
-
-  function formatBirthday(iso: string | null): string {
-    if (!iso) return "";
-    try {
-      const d = new Date(iso + "T00:00:00");
-      return d.toLocaleDateString("en-ZA", {
-        day: "numeric",
-        month: "short",
-        year: iso.length > 7 ? "numeric" : undefined,
-      });
-    } catch {
-      return iso;
-    }
-  }
-
-  const save = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from("loyalty_tracker")
-      .update({ birthday: (value || null) as any, updated_at: new Date().toISOString() })
-      .eq("id", rowId)
-      .eq("tenant_id", tenantId);
-    setSaving(false);
-    if (error) {
-      if (error.message?.includes("birthday") || error.code === "42703") {
-        toast.error("Birthday column missing — run DB migration first", {
-          description: "Add `birthday text` column to loyalty_tracker",
-        });
-      } else {
-        toast.error("Failed to save birthday");
-      }
-    } else {
-      toast.success(value ? "🎂 Birthday saved!" : "Birthday cleared");
-      setEditing(false);
-      onUpdated();
-    }
-  };
-
-  if (!editing) return (
-    <button
-      onClick={e => { e.stopPropagation(); setValue(current ?? ""); setEditing(true); }}
-      className="flex items-center gap-2 w-full group text-left rounded-xl px-3 py-2
-        bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04]
-        hover:border-pink-500/20 transition-all"
-      title="Set birthday"
-    >
-      <Cake className="w-3.5 h-3.5 shrink-0 text-pink-400/40 group-hover:text-pink-400/80 transition-colors" />
-      <span
-        className="text-xs leading-snug group-hover:text-white/60 transition-colors"
-        style={{ color: current ? "rgba(249,168,212,0.75)" : undefined }}
-      >
-        {current
-          ? formatBirthday(current)
-          : <span className="italic text-white/20">Add birthday…</span>
-        }
-      </span>
-      {current && (
-        <Pencil className="w-2.5 h-2.5 text-white/20 ml-auto opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
-      )}
-    </button>
-  );
-
-  return (
-    <div className="flex items-center gap-2 w-full" onClick={e => e.stopPropagation()}>
-      <input
-        autoFocus
-        type="date"
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === "Enter") save();
-          if (e.key === "Escape") setEditing(false);
-        }}
-        className="flex-1 min-w-0 text-xs bg-white/[0.06] border border-white/[0.12] rounded-xl
-          px-3 py-2 text-white/80 focus:outline-none focus:border-pink-400/40 [color-scheme:dark]"
-      />
-      <button
-        onClick={save}
-        disabled={saving}
-        className="w-8 h-8 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center
-          justify-center text-pink-400 hover:bg-pink-500/20 transition-all shrink-0"
-      >
-        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-      </button>
-      <button
-        onClick={() => setEditing(false)}
-        className="w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center
-          text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-all shrink-0"
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-  );
-};
-
 // ─ LoyaltyClientCard ────────────────────────────────────────────────
 export interface LoyaltyClientCardProps {
   row: {
@@ -494,7 +406,6 @@ export interface LoyaltyClientCardProps {
     client_name: string;
     phone: string | null;
     email?: string | null;
-    birthday?: string | null;
     status: string | null;
     last_wax_date: string | number | null;
     next_due_date: string | number | null;
@@ -511,24 +422,16 @@ export interface LoyaltyClientCardProps {
     bookingCount: number;
     lastVisitDate: string | null;
     nextDueDate: string | null;
-    birthday: string | null;
   };
   effStatus: string;
   /** Tenant reminder interval in weeks — used to compute Next Due live */
   reminderWeeks: number;
-  isSelected: boolean;
   isExpanded: boolean;
   tenantId: string;
   businessName: string;
   serviceLabel: string;
-  waTemplates: {
-    overdue: string;
-    timeToBook: string;
-    onTrack: string;
-    birthday: string;
-    longOverdue?: string;
-  };
-  onToggleSelect: () => void;
+  waTemplates: Record<MessageTemplateType, string>;
+  isMessageTemplateConfigured: (type: MessageTemplateType) => boolean;
   onToggleExpand: () => void;
   onOptimisticUpdate: (newStatus: string) => void;
   onUpdated: () => void;
@@ -537,13 +440,11 @@ export interface LoyaltyClientCardProps {
 
 export const LoyaltyClientCard = ({
   row, enrich, effStatus, reminderWeeks,
-  isSelected, isExpanded,
-  tenantId, businessName, serviceLabel, waTemplates,
-  onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
+  isExpanded,
+  tenantId, businessName, serviceLabel, waTemplates, isMessageTemplateConfigured,
+  onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
-  const resolvedBirthday = (row as any).birthday ?? enrich.birthday ?? null;
-
   // ── Derive Last Visit from enrichment (bookings table source of truth) ──
   const lastVisit = enrich.lastVisitDate ?? row.last_visit_date ?? null;
 
@@ -569,11 +470,7 @@ export const LoyaltyClientCard = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-      className={`relative rounded-2xl border transition-all
-        ${isSelected
-          ? "border-emerald-500/30 bg-emerald-500/[0.04] shadow-[0_0_0_1px_rgba(52,211,153,0.15)]"
-          : "border-white/[0.07] bg-white/[0.025] hover:bg-white/[0.04] hover:border-white/[0.10]"
-        }`}
+      className="relative rounded-2xl border border-white/[0.07] bg-white/[0.025] hover:bg-white/[0.04] hover:border-white/[0.10] transition-all"
     >
       {/* ===== COLLAPSED ROW ===== */}
       <div
@@ -582,19 +479,6 @@ export const LoyaltyClientCard = ({
       >
         {/* ── Row A: identity ── */}
         <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
-          {/* Checkbox */}
-          <button
-            onClick={e => { e.stopPropagation(); onToggleSelect(); }}
-            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all
-              ${isSelected
-                ? "bg-emerald-500/20 border-emerald-500/40"
-                : "border-white/[0.14] bg-white/[0.03] hover:border-white/[0.28]"
-              }`}
-            aria-label={isSelected ? "Deselect" : "Select"}
-          >
-            {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
-          </button>
-
           {/* Avatar */}
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center
@@ -620,22 +504,6 @@ export const LoyaltyClientCard = ({
             className="hidden md:flex items-center gap-2 shrink-0"
             onClick={e => e.stopPropagation()}
           >
-            <InlineStatusEditor
-              rowId={row.id}
-              current={row.status}
-              effectiveNorm={effStatus}
-              tenantId={tenantId}
-              onOptimisticUpdate={onOptimisticUpdate}
-              onUpdated={onUpdated}
-            />
-            <WaButton
-              name={row.client_name ?? ""}
-              status={effStatus}
-              phone={row.phone ?? ""}
-              businessName={businessName}
-              serviceLabel={serviceLabel}
-              templates={waTemplates}
-            />
             <button
               onClick={e => { e.stopPropagation(); onToggleExpand(); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
@@ -654,24 +522,7 @@ export const LoyaltyClientCard = ({
           className="flex md:hidden items-center justify-between gap-2 mt-2.5 pt-2 border-t border-white/[0.05]"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-center gap-2 flex-wrap">
-            <InlineStatusEditor
-              rowId={row.id}
-              current={row.status}
-              effectiveNorm={effStatus}
-              tenantId={tenantId}
-              onOptimisticUpdate={onOptimisticUpdate}
-              onUpdated={onUpdated}
-            />
-            <WaButton
-              name={row.client_name ?? ""}
-              status={effStatus}
-              phone={row.phone ?? ""}
-              businessName={businessName}
-              serviceLabel={serviceLabel}
-              templates={waTemplates}
-            />
-          </div>
+          <div className="flex items-center gap-2 flex-wrap" />
           <button
             onClick={e => { e.stopPropagation(); onToggleExpand(); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
@@ -721,12 +572,6 @@ export const LoyaltyClientCard = ({
                 </div>
               </div>
 
-              <InlineBirthdayEditor
-                rowId={row.id}
-                current={resolvedBirthday}
-                tenantId={tenantId}
-                onUpdated={onUpdated}
-              />
 
               <InlineNotesEditor
                 rowId={row.id}

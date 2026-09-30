@@ -1,5 +1,10 @@
 import { format, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import type { LoyaltyRow, EnrichmentMap } from "./loyaltyTypes";
+import {
+  buildWhatsAppUrl,
+  resolveMessageTemplate,
+  type MessageTemplateType,
+} from "@/lib/messaging/whatsapp";
 
 // ─── Date helpers ───
 export function excelToISO(serial: number | string | null | undefined): string | null {
@@ -293,33 +298,33 @@ export function exportCSV(
   URL.revokeObjectURL(a.href);
 }
 
-// ─── WA helpers ───
+// ─── WhatsApp helpers ───
 export function buildWaMessage(
   name: string,
   status: string,
   businessName: string,
   serviceLabel: string,
-  templates: { overdue: string; timeToBook: string; onTrack: string; birthday: string; longOverdue?: string }
+  templates: Record<MessageTemplateType, string>,
+  lastVisit = "",
 ): string {
-  const biz = businessName || "us";
-  const svc = serviceLabel || "appointment";
-  const sub = (tpl: string) =>
-    tpl.replace(/\{name\}/g, name).replace(/\{business\}/g, biz).replace(/\{service\}/g, svc);
-  if (status === "LONG_OVERDUE") return sub(templates.longOverdue ?? templates.overdue);
-  if (status === "OVERDUE")      return sub(templates.overdue);
-  if (status === "TIME TO BOOK") return sub(templates.timeToBook);
-  if (status === "BIRTHDAY")     return sub(templates.birthday);
-  return sub(templates.onTrack);
+  const typeByStatus: Partial<Record<string, MessageTemplateType>> = {
+    LONG_OVERDUE: "long_overdue",
+    OVERDUE: "overdue",
+    TIME_TO_BOOK: "time_to_book",
+    BIRTHDAY: "birthday",
+  };
+  const type = typeByStatus[status];
+  if (!type) return "";
+
+  return resolveMessageTemplate(templates[type], {
+    name,
+    business: businessName || "us",
+    service: serviceLabel || "appointment",
+    lastService: serviceLabel || "appointment",
+    lastVisit,
+  });
 }
 
 export function waLink(phone: string, msg: string): string {
-  // Phones are now stored in clean E.164 (+27XXXXXXXXX).
-  // Strip the leading + and pass the digits directly to wa.me.
-  const digits = phone.replace(/\D/g, "");
-  // Fallback for any legacy non-E.164 values still in the DB:
-  // if it looks like a local ZA number, prepend 27.
-  const num = (digits.startsWith("27") && digits.length >= 11)
-    ? digits
-    : "27" + digits.replace(/^0/, "");
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  return buildWhatsAppUrl(phone, msg);
 }
