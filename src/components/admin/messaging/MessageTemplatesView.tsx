@@ -28,7 +28,7 @@ export default function MessageTemplatesView({
 }: {
   focusType?: MessageTemplateType;
 }) {
-  const { tenantId } = useTenant();
+  const { tenantId, tenant } = useTenant();
   const queryClient = useQueryClient();
   const [active, setActive] = useState<MessageTemplateType>(
     focusType ?? "birthday",
@@ -38,9 +38,43 @@ export default function MessageTemplatesView({
   const { templates, configured, isLoading } = useCrmMessageTemplates();
   const values = templates;
 
+  const { data: tenantMessageSettings = null } = useQuery({
+    queryKey: ["crm-template-tenant-settings", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("name,google_review_url")
+        .eq("id", tenantId)
+        .single();
+      if (error) throw error;
+      return data ?? null;
+    },
+  });
+
   useEffect(() => {
     setDraft(toFriendlyTemplate(values[active] ?? ""));
   }, [active, values]);
+
+  const personalised = [
+    { label: "Client name", token: "[Client name]" },
+    { label: "Business name", token: "[Business name]" },
+    { label: "Service", token: "[Service]" },
+    { label: "Booking link", token: "[Booking link]" },
+    { label: "Last service", token: "[Last service]" },
+    { label: "Last visit", token: "[Last visit]" },
+    { label: "Google review link", token: "[Google review link]" },
+  ].filter(({ token }) => {
+    const allowed: Record<MessageTemplateType, string[]> = {
+      birthday: ["[Client name]", "[Business name]"],
+      time_to_book: ["[Client name]", "[Business name]", "[Service]", "[Booking link]", "[Last service]", "[Last visit]"],
+      overdue: ["[Client name]", "[Business name]", "[Service]", "[Booking link]", "[Last service]", "[Last visit]"],
+      long_overdue: ["[Client name]", "[Business name]", "[Service]", "[Booking link]", "[Last service]", "[Last visit]"],
+      promo: ["[Client name]", "[Business name]", "[Service]", "[Booking link]"],
+      review_ask: ["[Client name]", "[Business name]", "[Booking link]", "[Google review link]"],
+    };
+    return allowed[active].includes(token);
+  });
 
   useEffect(() => {
     if (focusType) setActive(focusType);
@@ -136,44 +170,63 @@ export default function MessageTemplatesView({
             />
           </div>
 
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30 mb-2">
-              Available tokens
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {TEMPLATE_TOKENS[active].map((token) => (
-                <button
-                  key={token}
-                  type="button"
-                  onClick={() =>
-                    setDraft((current) =>
-                      current.includes(token) ? current : `${current} ${token}`,
-                    )
-                  }
-                  className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/55 hover:text-white/80 hover:bg-white/[0.06]"
-                >
-                  {token}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-white/25 mt-3">
-              Select a token to add it to your message. NextSlot fills it in when the message is opened.
-            </p>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setPersonaliseOpen((open) => !open)}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/55 hover:text-white/80"
+            >
+              Add personalisation
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${personaliseOpen ? "rotate-180" : ""}`} />
+            </button>
+            {personaliseOpen && (
+              <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-xl border border-white/[0.08] bg-zinc-950 p-1.5 shadow-2xl">
+                {personalised.map(({ label, token }) => (
+                  <button
+                    key={token}
+                    type="button"
+                    onClick={() => {
+                      setDraft((current) => current ? current + " " + token : token);
+                      setPersonaliseOpen(false);
+                    }}
+                    className="w-full rounded-lg px-3 py-2 text-left text-xs text-white/60 hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           </div>
 
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30 mb-2">
               Preview
             </p>
-            <p className="text-sm text-white/60 whitespace-pre-wrap leading-relaxed">
-              {draft
-                .replaceAll("[Client name]", "A client")
-                .replaceAll("[Business name]", "Your business")
-                .replaceAll("[Service]", "your service")
-                .replaceAll("[Booking link]", "https://nextslot.co.za/book")
-                .replaceAll("[Last service]", "your last service")
-                .replaceAll("[Last visit]", "15 Sep 2026")
-                .replaceAll("[Google review link]", "your Google review link")}
+            <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
+              {resolveMessageTemplate(toStoredTemplate(draft), {
+                name: previewBooking?.guest_name || previewBooking?.client_name || "Sarah",
+                business: tenantMessageSettings?.name || tenant?.name || "Your business",
+                service:
+                  previewBooking?.booking_items?.map((item: any) => item.service_name).filter(Boolean).join(", ") ||
+                  "Hollywood",
+                bookingUrl: buildTenantBookingUrl(tenantId, tenant?.custom_domain),
+                lastService:
+                  previewBooking?.booking_items?.map((item: any) => item.service_name).filter(Boolean).join(", ") ||
+                  "Hollywood",
+                lastVisit: previewBooking?.booking_date
+                  ? new Date(previewBooking.booking_date + "T00:00:00").toLocaleDateString("en-ZA", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "18 Sep 2026",
+                googleReviewLink: tenantMessageSettings?.google_review_url || "Google review link not configured",
+              })}
+            </p>
+            <p className="text-[11px] text-white/25 mt-3">
+              Preview uses a recent client example from this business.
             </p>
           </div>
 
