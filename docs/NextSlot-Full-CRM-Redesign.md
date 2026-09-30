@@ -648,7 +648,12 @@ Each section is checked off only after implementation and verification.
 
 ## Foundation
 
-- [ ] CRM primary navigation has only Clients, Retention and Messaging.
+- [x] CRM primary navigation has only Clients, Retention and Messaging.
+- [x] Existing CRM shell, Identity Review and retention areas remain on the isolated branch.
+- [x] Branch baseline verified before the simplification pass.
+- [ ] Final branch verification complete.
+
+- [ ] Clients owns All clients, Needs attention, Identity review, Consultations and Blocked.
 - [ ] Clients owns All clients, Needs attention, Identity review, Consultations and Blocked.
 - [ ] Needs attention owns Due to Book, Overdue, Not seen in a while and Special dates.
 - [ ] Retention owns Loyalty and Consistency.
