@@ -245,19 +245,6 @@ export default function AdminCRM({
     },
   });
 
-  const { data: occasions = [] } = useQuery({
-    queryKey: ["crm-special-dates", tenantId],
-    enabled: !!tenantId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("client_occasions")
-        .select("id,client_name,phone,type,label,occasion_date")
-        .eq("tenant_id", tenantId);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   const { data: messageSettings = [] } = useQuery({
     queryKey: ["crm-message-context", tenantId],
     enabled: !!tenantId,
