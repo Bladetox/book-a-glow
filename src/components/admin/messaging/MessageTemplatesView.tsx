@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
+  DEFAULT_MESSAGE_TEMPLATES,
   LEGACY_TEMPLATE_SETTING_KEYS,
   TEMPLATE_LABELS,
   TEMPLATE_SETTING_KEYS,
@@ -14,20 +15,6 @@ import {
   type MessageTemplateType,
 } from "@/lib/messaging/whatsapp";
 
-const DEFAULTS: Record<MessageTemplateType, string> = {
-  birthday:
-    "Happy Birthday [Client name]! 🎂 Wishing you a beautiful day from [Business name]!",
-  time_to_book:
-    "Hi [Client name]! It’s almost time for your next [Service] at [Business name]. Your last visit was [Last visit] for [Last service]. Ready to book? [Booking link]",
-  overdue:
-    "Hi [Client name], we’ve missed you at [Business name]. It’s been a while since your [Last service] on [Last visit]. Ready to come back for your next [Service]? [Booking link]",
-  long_overdue:
-    "Hi [Client name]! It’s been a little while since we’ve seen you at [Business name]. Your last [Last service] was on [Last visit]. We’d love to have you back. [Booking link]",
-  promo:
-    "Hi [Client name]! We have something special at [Business name]. Book your [Service] here: [Booking link]",
-  review_ask:
-    "Hi [Client name]! Thank you for choosing [Business name]. If you enjoyed your experience, we’d really appreciate your review: [Google review link]",
-};
 
 const TYPES: MessageTemplateType[] = [
   "birthday",
@@ -79,14 +66,14 @@ export default function MessageTemplatesView({
       Object.fromEntries(
         TYPES.map((type) => [
           type,
-          getTemplateValue(settings as any[], type) || DEFAULTS[type],
+          getTemplateValue(settings as any[], type) || DEFAULT_MESSAGE_TEMPLATES[type],
         ]),
       ) as Record<MessageTemplateType, string>,
     [settings],
   );
 
   useEffect(() => {
-    setDraft(toFriendlyTemplate(values[active] ?? DEFAULTS[active]));
+    setDraft(toFriendlyTemplate(values[active] ?? DEFAULT_MESSAGE_TEMPLATES[active]));
   }, [active, values]);
 
   useEffect(() => {
