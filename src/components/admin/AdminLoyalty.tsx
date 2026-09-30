@@ -88,7 +88,6 @@ import {
   effectiveStatus, exportCSV, toDbStatus,
 } from "./loyalty/loyaltyHelpers";
 import { LoyaltyBulkBar }       from "./loyalty/LoyaltyBulkBar";
-import { MessagingHowTo }        from "./loyalty/MessagingHowTo";
 import { LoyaltyClientCard }     from "./loyalty/LoyaltyClientCard";
 import {
   EnrollModal, EnrollSuccessCelebration,
@@ -1056,9 +1055,8 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 accent="sky"
               >
                 <p className="text-xs text-white/30 leading-relaxed">
-                  The <strong className="text-white/50">service label</strong> fills the{" "}
-                  <code className="text-sky-400/70 bg-sky-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
-                  placeholder in your WhatsApp message templates.
+                  This is the name NextSlot uses when it refers to a client's next appointment in reminders.
+                  Keep it natural, for example “wax appointment” or “lash fill”.
                 </p>
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/30">Service label</label>
@@ -1129,52 +1127,6 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                 />
               </SettingCard>
 
-              {/* 4. WhatsApp Templates */}
-              <SettingCard
-                icon={<MessageSquare className="w-4 h-4" />}
-                title="WhatsApp Templates"
-                subtitle="Customise the message sent for each status"
-                accent="amber"
-                badge={WA_TEMPLATE_META.length}
-              >
-                <p className="text-xs text-white/30 leading-relaxed">
-                  Use{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'name\\'}"}</code>,{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'business\\'}"}</code> and{" "}
-                  <code className="text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded text-[10px]">{"{\\'service\\'}"}</code>{" "}
-                  as placeholders. WhatsApp links are generated automatically when you tap{" "}
-                  <span className="text-green-400/70">WA</span> on a client card.
-                </p>
-                <div className="space-y-4">
-                  {WA_TEMPLATE_META.map(({ key, label, hint, accent: accentText }) => (
-                    <div key={key} className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${accentText}`}>{label}</span>
-                        <span className="text-[10px] text-white/25 truncate">{hint}</span>
-                      </div>
-                      <textarea
-                        rows={3}
-                        value={waTemplates[key] ?? ""}
-                        onChange={e => { setWaTemplates(t => ({ ...t, [key]: e.target.value })); markDirty(); }}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-amber-400/30 transition-colors resize-none font-mono leading-relaxed"
-                        placeholder={`Template for "${label}" status…`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </SettingCard>
-
-              {/* 5. How Messaging Works */}
-              <SettingCard
-                icon={<SlidersHorizontal className="w-4 h-4" />}
-                title="How Messaging Works"
-                subtitle="WhatsApp deep-links — no API account needed"
-                accent="pink"
-              >
-                <MessagingHowTo />
-              </SettingCard>
-            </motion.div>
-          )}
         </AnimatePresence>
 
         {/* ── Status filter pills ── */}
