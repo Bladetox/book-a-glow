@@ -12,7 +12,7 @@ import {
 
 const DEFAULTS: Record<MessageTemplateType, string> = {
   birthday: "Happy Birthday {name}! 🎂 Wishing you a beautiful day. As a thank-you from {business}, enjoy a little extra love at your next visit!",
-  time_to_book: "Hi {name}! Just a friendly reminder from {business} — it's almost time for your next {service}. Ready to book? 😊 {bookingUrl}",
+  time_to_book: "Hi {name}! Just a friendly reminder from {business} it's almost time for your next {service}. Ready to book? 😊 {bookingUrl}",
   overdue: "Hi {name}, we've missed you at {business}! It's been a while since your last {service}. We'd love to have you back. 💛 Book here: {bookingUrl}",
   long_overdue: "Hey {name}! 💕 It's been a little while since we've seen you at {business}. We'd love to have you back for your {service}, whenever you're ready. {bookingUrl}",
   on_track: "Hi {name}! Thanks for being a loyal {business} client. We're so glad to have you. See you at your next {service}! 🌸",
