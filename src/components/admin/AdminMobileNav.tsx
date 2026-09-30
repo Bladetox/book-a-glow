@@ -39,8 +39,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label:      "Clients",
     icon:       ClientManagementIcon,
-    targetView: "Client Management",
-    views:      ["Client Management"],
+    targetView: "CRM",
+    views:      ["CRM"],
   },
   {
     label:      "Business",
