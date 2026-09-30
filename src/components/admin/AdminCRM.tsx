@@ -209,18 +209,22 @@ export default function AdminCRM({
       const email = canonical?.email || booking.guest_email || booking.client_email || null;
       const row = map.get(key);
 
+      const completed = booking.status === "completed";
+
       if (row) {
         row.bookingCount += 1;
         row.spend += Number(booking.total_amount || 0);
         row.bookings.push(booking);
-        if (booking.booking_date > (row.lastBooking || "")) row.lastBooking = booking.booking_date;
+        if (completed && booking.booking_date > (row.lastBooking || "")) {
+          row.lastBooking = booking.booking_date;
+        }
       } else {
         map.set(key, {
           key,
           name,
           phone,
           email,
-          lastBooking: booking.booking_date,
+          lastBooking: completed ? booking.booking_date : null,
           bookingCount: 1,
           spend: Number(booking.total_amount || 0),
           bookings: [booking],
