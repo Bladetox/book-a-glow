@@ -5,12 +5,14 @@ import {
   History,
   MessageCircle,
   Search,
+  Check,
+  UserPlus,
   Settings2,
   UserRound,
   Users,
   X,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { AdminPageHeader, EmptyState } from "@/components/admin/AdminSharedUI";
@@ -30,8 +32,12 @@ import {
 } from "@/lib/messaging/whatsapp";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
 import { resolveOrphanIdentity, type OrphanBooking } from "@/lib/crm/orphanIdentity";
+import PromosView from "@/components/admin/messaging/PromosView";
+import type { ClientRowForPromo } from "@/components/admin/messaging/types";
+import { toast } from "sonner";
 
 type Area = "clients" | "retention" | "messaging";
+type MessagingView = "messages" | "promos";
 type ClientView = "directory" | "attention" | "special_dates" | "consultations" | "blocked" | "identity_review";
 type RetentionView = "loyalty" | "consistency";
 type AttentionQueue = "due" | "overdue" | "inactive" | "birthdays";
@@ -138,6 +144,9 @@ export default function AdminCRM({
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ClientRow | null>(null);
   const [templateFocus, setTemplateFocus] = useState<MessageTemplateType | undefined>();
+  const [messagingView, setMessagingView] = useState<MessagingView>("messages");
+  const [resolvingBookingId, setResolvingBookingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ["crm-client-bookings", tenantId],
@@ -351,6 +360,66 @@ export default function AdminCRM({
     birthdays: birthdayClients.length,
   };
 
+  const resolveIdentity = async (booking: any, targetClientId: string | null, keepSeparate: boolean) => {
+    if (!tenantId || resolvingBookingId) return;
+    setResolvingBookingId(booking.id);
+    try {
+      let resolvedId = targetClientId;
+
+      if (keepSeparate) {
+        const name = booking.guest_name || booking.client_name || "Client";
+        const phone = booking.guest_phone || booking.client_phone || null;
+        const email = booking.guest_email || booking.client_email || null;
+        const completed = booking.status === "completed";
+
+        const { data: created, error: createError } = await supabase
+          .from("loyalty_tracker")
+          .insert({
+            tenant_id: tenantId,
+            client_name: name,
+            phone,
+            email,
+            source: "manual",
+            status: "ON TRACK",
+            last_wax_date: completed ? booking.booking_date : null,
+            notes: `Created during CRM identity review for booking ${booking.id}`,
+          })
+          .select("id")
+          .single();
+
+        if (createError) throw createError;
+        resolvedId = created.id;
+      }
+
+      if (!resolvedId) throw new Error("No client selected");
+
+      const { error: bookingError } = await supabase
+        .from("bookings")
+        .update({ canonical_client_id: resolvedId })
+        .eq("tenant_id", tenantId)
+        .eq("id", booking.id)
+        .is("canonical_client_id", null);
+
+      if (bookingError) throw bookingError;
+
+      await supabase
+        .from("guest_consultations")
+        .update({ canonical_client_id: resolvedId })
+        .eq("tenant_id", tenantId)
+        .or(`first_booking_id.eq.${booking.id},last_booking_id.eq.${booking.id}`);
+
+      await queryClient.invalidateQueries({ queryKey: ["crm-client-bookings", tenantId] });
+      await queryClient.invalidateQueries({ queryKey: ["crm-loyalty-due", tenantId] });
+      await queryClient.invalidateQueries({ queryKey: ["crm-birthdays", tenantId] });
+      await queryClient.invalidateQueries({ queryKey: ["crm-alerts", tenantId] });
+      toast.success(keepSeparate ? "Booking kept as a separate client" : "Booking linked to client");
+    } catch (error: any) {
+      toast.error("Could not resolve this booking", { description: error?.message || "Please try again." });
+    } finally {
+      setResolvingBookingId(null);
+    }
+  };
+
   const goToArea = (nextArea: Area) => {
     setArea(nextArea);
     setSelected(null);
@@ -543,7 +612,7 @@ export default function AdminCRM({
     }
 
     if (clientView === "special_dates") {
-      return canSpecialOccasions ? <AdminSpecialOccasions /> : <FeatureUnavailable />;
+      return canSpecialOccasions ? <SpecialDatesActionQueue occasions={occasions as any[]} getTemplate={getTemplate} messageContext={messageContext} /> : <FeatureUnavailable />;
     }
 
     if (clientView === "consultations") {
@@ -551,7 +620,7 @@ export default function AdminCRM({
     }
 
     if (clientView === "identity_review") {
-      return <IdentityReviewQueue items={orphanReview} />;
+      return <IdentityReviewQueue items={orphanReview} canonicalClients={canonicalClients} tenantId={tenantId} resolvingBookingId={resolvingBookingId} onResolve={resolveIdentity} />;
     }
 
     return <AdminBlockedClients />;
@@ -632,11 +701,43 @@ export default function AdminCRM({
       {area === "messaging" && (
         <>
           <SubNavigation
-            items={[{ id: "templates", label: "Messages" }]}
-            active="templates"
-            onSelect={() => undefined}
+            items={[
+              { id: "messages", label: "Messages" },
+              { id: "promos", label: "Promos" },
+            ]}
+            active={messagingView}
+            onSelect={(value) => setMessagingView(value as MessagingView)}
           />
-          <MessageTemplatesView focusType={templateFocus} />
+          {messagingView === "messages" ? (
+            <MessageTemplatesView focusType={templateFocus} />
+          ) : (
+            <PromosView
+              clients={clients as ClientRowForPromo[]}
+              dueClients={dueClients as ClientRowForPromo[]}
+              overdueClients={(alerts?.overdueLoyaltyClients ?? []).map((client) => ({
+                key: String(client.id),
+                name: client.client_name,
+                phone: client.phone,
+                email: client.email ?? null,
+                lastBooking: client.last_booking_date ?? null,
+                bookingCount: client.booking_count ?? 0,
+                spend: 0,
+                bookings: [],
+              }))}
+              inactiveClients={(alerts?.inactiveClients ?? []).map((client) => ({
+                key: String(client.client_id),
+                name: client.client_name,
+                phone: client.client_phone,
+                email: client.client_email ?? null,
+                lastBooking: client.last_booking_date ?? null,
+                bookingCount: client.booking_count ?? 0,
+                spend: 0,
+                bookings: [],
+              }))}
+              businessName={messageContext.businessName}
+              bookingUrl={messageContext.bookingUrl}
+            />
+          )}
         </>
       )}
 
@@ -653,11 +754,19 @@ export default function AdminCRM({
 
 function IdentityReviewQueue({
   items,
+  canonicalClients,
+  tenantId,
+  resolvingBookingId,
+  onResolve,
 }: {
   items: Array<{
     booking: any;
     decision: ReturnType<typeof resolveOrphanIdentity>;
   }>;
+  canonicalClients: Map<string, any>;
+  tenantId: string | null;
+  resolvingBookingId: string | null;
+  onResolve: (booking: any, targetClientId: string | null, keepSeparate: boolean) => Promise<void>;
 }) {
   if (items.length === 0) {
     return (
@@ -682,205 +791,122 @@ function IdentityReviewQueue({
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
         <p className="text-sm font-medium text-white/75">These bookings need a human decision</p>
         <p className="text-xs text-white/30 mt-1">
-          NextSlot will not merge them automatically because the available contact information is ambiguous.
+          Link the booking to an existing client, or keep it as a separate client.
         </p>
       </div>
 
-      {items.map(({ booking, decision }) => (
-        <div
-          key={booking.id}
-          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-4"
-        >
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
-              <UserRound className="w-4 h-4 text-white/35" />
+      {items.map(({ booking, decision }) => {
+        const possibleIds = Array.from(new Set([...decision.emailMatches, ...decision.phoneMatches]));
+        return (
+          <div key={booking.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
+                <UserRound className="w-4 h-4 text-white/35" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white/80">
+                  {booking.guest_name || booking.client_name || "Unknown client"}
+                </p>
+                <p className="text-[11px] text-white/30 mt-0.5">
+                  {booking.guest_email || booking.client_email || "No email"} · {booking.guest_phone || booking.client_phone || "No phone"}
+                </p>
+                <p className="text-[11px] text-white/45 mt-2">
+                  {reasonLabel[decision.reason] || "Identity needs review"}
+                </p>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider text-white/25 shrink-0">Review</span>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white/80">
-                {booking.guest_name || booking.client_name || "Unknown client"}
-              </p>
-              <p className="text-[11px] text-white/30 mt-0.5">
-                {booking.guest_email || booking.client_email || "No email"} · {booking.guest_phone || booking.client_phone || "No phone"}
-              </p>
-              <p className="text-[11px] text-white/45 mt-2">
-                {reasonLabel[decision.reason] || "Identity needs review"}
-              </p>
-            </div>
-            <span className="text-[10px] uppercase tracking-wider text-white/25 shrink-0">
-              Review
-            </span>
+
+            {possibleIds.length > 0 && (
+              <div className="mt-4 grid gap-2">
+                <p className="text-[10px] uppercase tracking-wider text-white/25">Possible clients</p>
+                {possibleIds.map((id) => {
+                  const client = canonicalClients.get(id);
+                  if (!client) return null;
+                  return (
+                    <button
+                      key={id}
+                      disabled={resolvingBookingId === booking.id}
+                      onClick={() => onResolve(booking, id, false)}
+                      className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-left hover:bg-white/[0.06] disabled:opacity-40"
+                    >
+                      <UserRound className="w-3.5 h-3.5 text-white/30" />
+                      <span className="flex-1 text-xs text-white/65">
+                        {client.client_name}
+                        <span className="block text-[10px] text-white/25">
+                          {client.email || client.phone || "No contact details"}
+                        </span>
+                      </span>
+                      <Check className="w-3.5 h-3.5 text-white/25" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              disabled={resolvingBookingId === booking.id}
+              onClick={() => onResolve(booking, null, true)}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/35 hover:text-white/65 disabled:opacity-40"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Keep as a separate client
+            </button>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function SubNavigation({
-  items,
-  active,
-  onSelect,
+function SpecialDatesActionQueue({
+  occasions,
+  getTemplate,
+  messageContext,
 }: {
-  items: { id: string; label: string }[];
-  active: string;
-  onSelect: (value: string) => void;
+  occasions: any[];
+  getTemplate: (type: MessageTemplateType) => string;
+  messageContext: { businessName: string; serviceLabel: string; bookingUrl: string };
 }) {
-  return (
-    <div className="flex gap-1 overflow-x-auto pb-0.5">
-      {items.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onSelect(item.id)}
-          className={`shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
-            active === item.id
-              ? "bg-white/[0.07] text-white"
-              : "text-white/30 hover:text-white/60"
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+  const today = startOfDay(new Date());
+  const upcoming = occasions
+    .map((row) => {
+      const date = new Date(row.occasion_date + "T00:00:00");
+      const next = new Date(today.getFullYear(), date.getMonth(), date.getDate());
+      if (next < today) next.setFullYear(today.getFullYear() + 1);
+      return { ...row, nextDate: next };
+    })
+    .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
 
-function QueueRow({
-  name,
-  phone,
-  detail,
-  href,
-}: {
-  name: string;
-  phone: string | null;
-  detail: string;
-  href?: string;
-}) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-      <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
-        <UserRound className="w-4 h-4 text-white/35" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-white/80 truncate">{name}</p>
-        <p className="text-[11px] text-white/30 truncate">
-          {phone || "No phone number"} · {detail}
+    <div className="grid gap-2">
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+        <p className="text-sm font-medium text-white/75">Special dates</p>
+        <p className="text-xs text-white/30 mt-1">
+          Dates worth acting on. Birthday messages use your saved birthday message.
         </p>
       </div>
-      {href && (
-        <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.07] text-xs font-semibold text-white/70 hover:bg-white/[0.11]"
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          WhatsApp
-        </a>
+      {upcoming.length === 0 ? (
+        <EmptyState title="No special dates" description="Special dates saved for clients will appear here." icon={Users} />
+      ) : (
+        upcoming.map((row) => (
+          <QueueRow
+            key={row.id}
+            name={row.client_name}
+            phone={row.phone}
+            detail={row.label || row.type || format(row.nextDate, "d MMM")}
+            href={row.type === "birthday"
+              ? buildWhatsAppUrl(row.phone, resolveMessageTemplate(getTemplate("birthday"), {
+                  name: row.client_name,
+                  business: messageContext.businessName,
+                  service: messageContext.serviceLabel,
+                  bookingUrl: messageContext.bookingUrl,
+                }))
+              : undefined}
+          />
+        ))
       )}
     </div>
   );
 }
 
-function ClientHistoryModal({
-  client,
-  history,
-  onClose,
-}: {
-  client: ClientRow;
-  history: any[];
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-zinc-950 border border-white/[0.08]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur px-5 py-4 border-b border-white/[0.06] flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center">
-            <UserRound className="w-5 h-5 text-white/40" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-white/90 truncate">{client.name}</h3>
-            <p className="text-xs text-white/30">
-              {client.phone || client.email || "No contact details"}
-            </p>
-          </div>
-          <button onClick={onClose} className="p-2 text-white/30 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="p-5 grid sm:grid-cols-3 gap-2">
-          <Stat label="Bookings" value={String(client.bookingCount)} />
-          <Stat label="Booking value" value={`R${client.spend.toFixed(2)}`} />
-          <Stat
-            label="Last booking"
-            value={
-              client.lastBooking
-                ? format(new Date(client.lastBooking + "T00:00:00"), "d MMM yyyy")
-                : "Not yet"
-            }
-          />
-        </div>
-
-        <div className="px-5 pb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <History className="w-4 h-4 text-white/30" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/30">
-              Booking history
-            </p>
-          </div>
-
-          <div className="grid gap-2">
-            {history.map((booking: any) => (
-              <div
-                key={booking.id}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 flex items-center gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white/75">
-                    {format(new Date(booking.booking_date + "T00:00:00"), "d MMM yyyy")}
-                  </p>
-                  <p className="text-[11px] text-white/40">
-                    {(booking.booking_items ?? [])
-                      .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
-                      .map((item: any) => item.service_name)
-                      .filter(Boolean)
-                      .join(" · ") || "Booking"}
-                  </p>
-                  <p className="text-[10px] text-white/25 capitalize">{booking.status}</p>
-                </div>
-                <span className="text-xs text-white/45">
-                  R{Number(booking.total_amount || 0).toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-      <p className="text-[10px] uppercase tracking-wider text-white/25">{label}</p>
-      <p className="text-sm font-semibold text-white/75 mt-1">{value}</p>
-    </div>
-  );
-}
-
-function FeatureUnavailable() {
-  return (
-    <EmptyState
-      title="Not available for this business"
-      description="This feature is not enabled for the current account."
-      icon={Users}
-    />
-  );
-}
