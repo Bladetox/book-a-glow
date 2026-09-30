@@ -324,7 +324,7 @@ const AdminSpecialOccasions = ({ onConfigureBirthday }: AdminSpecialOccasionsPro
 
   const birthdayTemplate = templates.birthday;
   const birthdayConfigured = configured("birthday");
-  const businessName = tenant?.name || "";
+  const businessName = tenant?.name ?? "";
   const birthdayTemplate = templates.birthday;
 
   const { data: rows = [], isLoading } = useQuery({
