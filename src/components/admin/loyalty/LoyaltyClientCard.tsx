@@ -440,7 +440,7 @@ export const LoyaltyClientCard = ({
   row, enrich, effStatus, reminderWeeks,
   isExpanded,
   tenantId, businessName, serviceLabel, waTemplates,
-  onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
+  onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
   // ── Derive Last Visit from enrichment (bookings table source of truth) ──
