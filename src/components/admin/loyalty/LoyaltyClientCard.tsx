@@ -24,7 +24,12 @@ import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
-import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
+import { normaliseStatus } from "./loyaltyHelpers";
+import {
+  buildWhatsAppUrl,
+  resolveMessageTemplate,
+  type MessageTemplateType,
+} from "@/lib/messaging/whatsapp";
 
 // ─ Status config: icon + pulse for urgent states ────────────────────────────────
 const STATUS_META: Record<string, { icon?: React.ReactNode; pulse?: boolean }> = {
@@ -61,25 +66,38 @@ function initials(name: string) {
 
 // ─ WaButton ───────────────────────────────────────────────────────────────
 export const WaButton = ({
-  name, status, phone, businessName, serviceLabel, templates,
+  name, status, phone, businessName, serviceLabel, lastVisit, templates,
 }: {
   name: string;
   status: string;
   phone: string;
   businessName: string;
   serviceLabel: string;
-  templates: {
-    overdue: string;
-    timeToBook: string;
-    onTrack: string;
-    birthday: string;
-    longOverdue?: string;
-  };
+  lastVisit?: string;
+  templates: Record<MessageTemplateType, string>;
 }) => {
-  const msg = buildWaMessage(name, status, businessName, serviceLabel, templates);
+  const typeByStatus: Partial<Record<string, MessageTemplateType>> = {
+    BIRTHDAY: "birthday",
+    LONG_OVERDUE: "long_overdue",
+    OVERDUE: "overdue",
+    "TIME TO BOOK": "time_to_book",
+  };
+  const type = typeByStatus[status];
+  if (!type || !templates[type]) return null;
+
+  const message = resolveMessageTemplate(templates[type], {
+    name,
+    business: businessName,
+    service: serviceLabel,
+    lastService: serviceLabel,
+    lastVisit,
+  });
+  const href = buildWhatsAppUrl(phone, message);
+  if (!href) return null;
+
   return (
     <a
-      href={waLink(phone, msg)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       onClick={e => e.stopPropagation()}
@@ -412,13 +430,7 @@ export interface LoyaltyClientCardProps {
   tenantId: string;
   businessName: string;
   serviceLabel: string;
-  waTemplates: {
-    overdue: string;
-    timeToBook: string;
-    onTrack: string;
-    birthday: string;
-    longOverdue?: string;
-  };
+  waTemplates: Record<MessageTemplateType, string>;
   onToggleSelect: () => void;
   onToggleExpand: () => void;
   onOptimisticUpdate: (newStatus: string) => void;
@@ -523,6 +535,7 @@ export const LoyaltyClientCard = ({
               phone={row.phone ?? ""}
               businessName={businessName}
               serviceLabel={serviceLabel}
+              lastVisit={lastVisit ? isoToDisplay(lastVisit) : ""}
               templates={waTemplates}
             />
             <button
@@ -558,6 +571,7 @@ export const LoyaltyClientCard = ({
               phone={row.phone ?? ""}
               businessName={businessName}
               serviceLabel={serviceLabel}
+              lastVisit={lastVisit ? isoToDisplay(lastVisit) : ""}
               templates={waTemplates}
             />
           </div>
