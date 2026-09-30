@@ -156,3 +156,24 @@ A future manual resolution may write the selected canonical relationship back to
 - Unmatched contact details remain separate.
 - Missing contact details are never merged from name similarity.
 - Existing canonical relationships always take precedence over fallback matching.
+
+
+## 14. CRM navigation ownership
+
+Special dates are an action queue, not a passive client-information section.
+
+- Source: `client_occasions`
+- Home: Clients → Needs attention → Special dates
+- Birthday and anniversary actions remain on the existing special-date component.
+- The separate Clients → Special dates navigation item is intentionally removed to avoid duplicate views.
+- Birthday data must not be maintained separately inside Loyalty. `client_occasions` is the CRM source for special dates.
+
+## 15. Promos
+
+Promos are a messaging action, not a retention program.
+
+- Home: Messaging → Promos
+- Audience selection is derived from existing CRM data.
+- No new client or campaign table is required for the initial WhatsApp workflow.
+- NextSlot prepares personalised WhatsApp messages and opens them for the owner to send.
+- The owner remains responsible for sending the messages.
