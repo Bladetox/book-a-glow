@@ -30,7 +30,7 @@ import {
   type MessageTemplateType,
 } from "@/lib/messaging/whatsapp";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
-import { resolveOrphanIdentity, type OrphanBooking } from "@/lib/crm/orphanIdentity";
+import { orphanIdentityGroupKey, resolveOrphanIdentity, type OrphanBooking } from "@/lib/crm/orphanIdentity";
 import PromosView from "@/components/admin/messaging/PromosView";
 import type { ClientRowForPromo } from "@/components/admin/messaging/types";
 import { toast } from "sonner";
@@ -258,21 +258,7 @@ export default function AdminCRM({
       if (resolveCanonicalId(booking, mergedClientTargets)) continue;
 
       const decision = resolveOrphanIdentity(booking as OrphanBooking, contacts);
-      const email = String(booking.guest_email || booking.client_email || "").trim().toLowerCase();
-      const phone = String(booking.guest_phone || booking.client_phone || "")
-        .replace(/\D/g, "");
-      const normalisedPhone = phone.startsWith("27")
-        ? phone
-        : phone.startsWith("0")
-          ? "27" + phone.slice(1)
-          : phone;
-      const groupKey = email && normalisedPhone
-        ? "contact:" + email + "|" + normalisedPhone
-        : email
-          ? "email:" + email
-          : normalisedPhone
-            ? "phone:" + normalisedPhone
-            : "booking:" + booking.id;
+      const groupKey = orphanIdentityGroupKey(booking as OrphanBooking);
 
       const existing = groups.get(groupKey);
       if (existing) {
@@ -384,6 +370,9 @@ export default function AdminCRM({
     const bookingIds = bookingsToResolve.map((booking) => booking.id);
     setResolvingBookingId(bookingIds[0]);
 
+    let createdClientId: string | null = null;
+    let linkedBookingIds: string[] = [];
+
     try {
       const firstBooking = bookingsToResolve[0];
       let resolvedId = targetClientId;
@@ -414,19 +403,26 @@ export default function AdminCRM({
           .single();
 
         if (createError) throw createError;
+        createdClientId = created.id;
         resolvedId = created.id;
       }
 
       if (!resolvedId) throw new Error("No client selected");
 
-      const { error: bookingError } = await supabase
+      const { data: linkedBookings, error: bookingError } = await supabase
         .from("bookings")
         .update({ canonical_client_id: resolvedId })
         .eq("tenant_id", tenantId)
         .in("id", bookingIds)
-        .is("canonical_client_id", null);
+        .is("canonical_client_id", null)
+        .select("id,canonical_client_id");
 
       if (bookingError) throw bookingError;
+
+      linkedBookingIds = (linkedBookings ?? []).map((booking) => booking.id);
+      if (linkedBookingIds.length !== bookingIds.length) {
+        throw new Error("One or more bookings could not be linked. No partial match was saved.");
+      }
 
       const { error: firstConsultationError } = await supabase
         .from("guest_consultations")
@@ -455,6 +451,23 @@ export default function AdminCRM({
           : "Linked " + bookingIds.length + " booking" + (bookingIds.length === 1 ? "" : "s") + " to the client",
       );
     } catch (error: any) {
+      if (linkedBookingIds.length > 0) {
+        await supabase
+          .from("bookings")
+          .update({ canonical_client_id: null })
+          .eq("tenant_id", tenantId)
+          .eq("canonical_client_id", createdClientId ?? targetClientId)
+          .in("id", linkedBookingIds);
+      }
+
+      if (createdClientId) {
+        await supabase
+          .from("loyalty_tracker")
+          .delete()
+          .eq("tenant_id", tenantId)
+          .eq("id", createdClientId);
+      }
+
       toast.error("Could not resolve this booking", {
         description: error?.message || "Please try again.",
       });
