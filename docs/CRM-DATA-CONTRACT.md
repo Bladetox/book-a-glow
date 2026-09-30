@@ -143,7 +143,7 @@ The derived review queue should expose:
 - possible email matches
 - possible phone matches
 
-A future manual resolution may write the selected canonical relationship back to `bookings.canonical_client_id`. Until that happens, the original booking data remains unchanged.
+Manual resolution writes the selected canonical relationship back to `bookings.canonical_client_id`. Linking an existing client updates the booking only when its canonical relationship is still empty. Choosing "Keep as a separate client" creates a new manual `loyalty_tracker` identity from that booking's contact details and then links the booking to it. The original booking contact fields remain unchanged.
 
 ### Acceptance criteria
 
