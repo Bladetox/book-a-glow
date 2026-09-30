@@ -30,7 +30,7 @@ CLIENTS
 │   ├── Due to Book
 │   ├── Overdue
 │   ├── Not seen in a while
-│   └── Special dates
+├── Special dates
 ├── Identity review
 ├── Consultations
 └── Blocked
@@ -51,7 +51,7 @@ MESSAGING
 
 ### Simplification rules
 
-1. **Special Dates is not a second Clients section.** It is an actionable queue inside Needs attention.
+1. **Special Dates is a Clients workflow, not a re-engagement queue.** It has its own submenu so it does not compete with Needs attention.
 2. **Promos is not a separate workflow or tab.** Promo is a message template type.
 3. **Messages and Promos are not separate messaging areas.** Messaging has one home: Templates.
 4. **Loyalty does not own messaging configuration.** Messaging owns templates.
@@ -186,25 +186,15 @@ The queue must not become a second implementation of loyalty or retention logic.
 
 Special dates are sourced from `client_occasions`.
 
-They live inside Needs attention because the useful business action is time-sensitive.
-
-The existing Special Dates component may be reused, but its CRM ownership is:
-
-```text
-Clients → Needs attention → Special dates
-```
-
-There is no competing:
+They remain under Clients as a dedicated workflow:
 
 ```text
 Clients → Special dates
 ```
 
-navigation item.
-
 Birthday and anniversary data remain in `client_occasions`.
 
----
+Special dates may expose a birthday message action, but the Birthday template itself is configured centrally under Messaging → Templates.
 
 # 5. IDENTITY REVIEW
 
@@ -324,7 +314,7 @@ There is no separate Messages tab.
 
 There is no messaging configuration hidden inside Loyalty.
 
-The owner chooses a message type, edits its template, sees the supported tokens, previews it, and saves it.
+The owner chooses a message type, edits the message, sees a real rendered preview, and saves it. Personalisation is handled automatically by the system. The UI does not expose internal token mechanics.
 
 ---
 
@@ -349,7 +339,7 @@ Review ask is a template type, not a delivery or automation system.
 
 # 11. MESSAGE TOKENS
 
-The editor exposes only the tokens that are valid for the selected message type.
+The system supports the following friendly placeholders internally. They are resolved automatically when a client action opens WhatsApp. The editor does not expose a developer-oriented token list or storage placeholders.
 
 ## Birthday
 
@@ -420,6 +410,8 @@ Templates are stored once and rendered when a client action is taken.
 The rendered message is never stored as template data.
 
 ### Context rules
+
+The preview uses a real recent client example from the active business so the owner can see the rendered message rather than a generic placeholder example.
 
 **Client name**
 
@@ -534,6 +526,15 @@ The CRM redesign must remove overlapping client-engagement workflows.
 ### Dashboard
 
 Dashboard may surface client-alert signals, but those signals should route the owner toward the CRM operational queue rather than maintain a second message workflow.
+
+### Needs attention vs Loyalty
+
+This distinction is locked:
+
+* **Needs attention** answers: who needs action now?
+* **Loyalty** answers: who is enrolled in the loyalty programme and how is that programme configured?
+
+Loyalty does not present a second Due to Book, Overdue or Not seen in a while queue. Re-engagement actions belong to Needs attention.
 
 ### Notification Bell
 
