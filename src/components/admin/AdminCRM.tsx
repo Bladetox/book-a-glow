@@ -188,7 +188,7 @@ export default function AdminCRM({
     queryFn: async () => {
       const keys = Array.from(new Set([
         ...Object.values(TEMPLATE_SETTING_KEYS),
-        ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter(Boolean),
+        ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter((key): key is string => Boolean(key)),
         "business_name",
         "loyalty_business_name",
         "loyalty_service_label",
@@ -213,7 +213,7 @@ export default function AdminCRM({
       businessName:
         map.get("business_name") ||
         map.get("loyalty_business_name") ||
-        "your business",
+        "",
       serviceLabel: map.get("loyalty_service_label") || "appointment",
       bookingUrl: typeof window !== "undefined" ? `${window.location.origin}/book` : "",
     };
