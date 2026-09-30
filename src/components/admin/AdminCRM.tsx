@@ -157,6 +157,40 @@ function buildClientMessageContext(
   };
 }
 
+function buildClientMessageContextFromHistory(
+  history: any[],
+  base: {
+    businessName: string;
+    serviceLabel: string;
+    bookingUrl: string;
+    googleReviewLink: string;
+  },
+): MessageTemplateValues {
+  const completed = history
+    .filter((booking: any) => booking.status === "completed")
+    .sort((a: any, b: any) => String(b.booking_date).localeCompare(String(a.booking_date)));
+
+  const lastBooking = completed[0];
+  const lastService = (lastBooking?.booking_items ?? [])
+    .map((item: any) => item.service_name)
+    .filter(Boolean)
+    .join(", ");
+
+  const lastVisit = lastBooking?.booking_date
+    ? format(new Date(lastBooking.booking_date + "T00:00:00"), "d MMM yyyy")
+    : "";
+
+  return {
+    name: "",
+    business: base.businessName,
+    service: lastService || base.serviceLabel,
+    bookingUrl: base.bookingUrl,
+    lastService: lastService || base.serviceLabel,
+    lastVisit,
+    googleReviewLink: base.googleReviewLink,
+  };
+}
+
 export default function AdminCRM({
   canConsultations = true,
   canSpecialOccasions = true,
@@ -801,11 +835,9 @@ export default function AdminCRM({
                     selected.phone,
                     getTemplate("promo"),
                     {
-                      ...buildClientMessageContext(
-                        bookings,
-                        selected.key.startsWith("canonical:") ? selected.key.slice(9) : null,
+                      ...buildClientMessageContextFromHistory(
+                        selected.bookings,
                         messageContext,
-                        mergedClientTargets,
                       ),
                       name: selected.name,
                     },
@@ -819,11 +851,9 @@ export default function AdminCRM({
                     selected.phone,
                     getTemplate("review_ask"),
                     {
-                      ...buildClientMessageContext(
-                        bookings,
-                        selected.key.startsWith("canonical:") ? selected.key.slice(9) : null,
+                      ...buildClientMessageContextFromHistory(
+                        selected.bookings,
                         messageContext,
-                        mergedClientTargets,
                       ),
                       name: selected.name,
                     },
@@ -831,11 +861,6 @@ export default function AdminCRM({
                 }]
               : []),
           ].filter((option) => option.href)}
-          onConfigureMessage={(type) => {
-            setSelected(null);
-            setArea("messaging");
-            setTemplateFocus(type);
-          }}
           onClose={() => setSelected(null)}
         />
       )}
@@ -912,13 +937,11 @@ function ClientHistoryModal({
   client,
   history,
   messageOptions,
-  onConfigureMessage,
   onClose,
 }: {
   client: ClientRow;
   history: any[];
   messageOptions: Array<{ label: string; href: string }>;
-  onConfigureMessage: (type: MessageTemplateType) => void;
   onClose: () => void;
 }) {
   return (
