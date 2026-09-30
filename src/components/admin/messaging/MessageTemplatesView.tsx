@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { MessageSquare, Save, CheckCircle2 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCrmMessageTemplates } from "@/hooks/useCrmMessageTemplates";
 import { useTenant } from "@/contexts/TenantContext";
 import {
-  DEFAULT_MESSAGE_TEMPLATES,
-  LEGACY_TEMPLATE_SETTING_KEYS,
   TEMPLATE_LABELS,
   TEMPLATE_SETTING_KEYS,
   TEMPLATE_TOKENS,
-  getTemplateValue,
   toFriendlyTemplate,
   toStoredTemplate,
   type MessageTemplateType,
@@ -37,43 +35,11 @@ export default function MessageTemplatesView({
   );
   const [draft, setDraft] = useState("");
 
-  const { data: settings = [], isLoading } = useQuery({
-    queryKey: ["crm-message-templates", tenantId],
-    enabled: !!tenantId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("id,key,value")
-        .eq("tenant_id", tenantId)
-        .in(
-          "key",
-          Array.from(
-            new Set([
-              ...TYPES.map((type) => TEMPLATE_SETTING_KEYS[type]),
-              ...TYPES
-                .map((type) => LEGACY_TEMPLATE_SETTING_KEYS[type])
-                .filter((key): key is string => Boolean(key)),
-            ]),
-          ),
-        );
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const values = useMemo(
-    () =>
-      Object.fromEntries(
-        TYPES.map((type) => [
-          type,
-          getTemplateValue(settings as any[], type) || DEFAULT_MESSAGE_TEMPLATES[type],
-        ]),
-      ) as Record<MessageTemplateType, string>,
-    [settings],
-  );
+  const { templates, configured, isLoading } = useCrmMessageTemplates();
+  const values = templates;
 
   useEffect(() => {
-    setDraft(toFriendlyTemplate(values[active] ?? DEFAULT_MESSAGE_TEMPLATES[active]));
+    setDraft(toFriendlyTemplate(values[active] ?? ""));
   }, [active, values]);
 
   useEffect(() => {
@@ -123,9 +89,6 @@ export default function MessageTemplatesView({
         queryKey: ["crm-message-templates", tenantId],
       }),
   });
-
-  const configured = (type: MessageTemplateType) =>
-    !!getTemplateValue(settings as any[], type);
 
   if (isLoading) {
     return <div className="py-12 text-sm text-white/30">Loading templates…</div>;
