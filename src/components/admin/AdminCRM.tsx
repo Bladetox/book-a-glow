@@ -98,6 +98,19 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
     },
   });
 
+  const { data: loyaltyRows = [] } = useQuery({
+    queryKey: ["crm-loyalty-due", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("loyalty_tracker")
+        .select("id,client_name,phone,email,next_due_date,last_wax_date,status")
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const { data: occasions = [] } = useQuery({
     queryKey: ["crm-birthdays", tenantId],
     enabled: !!tenantId,
@@ -163,25 +176,22 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
   const { data: alerts } = useClientAlerts(tenantId ?? undefined);
 
   const dueClients = useMemo(() => {
-    const now = startOfDay(new Date());
-    const due = (bookings as any[]).reduce((map, b) => {
-      const key = identityKey(b);
-      const row = map.get(key) ?? {
-        key,
-        name: b.client_name || b.guest_name || "Unknown client",
-        phone: b.client_phone || b.guest_phone || null,
-        email: b.client_email || b.guest_email || null,
-        lastBooking: b.booking_date,
-      };
-      map.set(key, row);
-      return map;
-    }, new Map<string, any>());
-    return Array.from(due.values()).filter((c: any) => {
-      const last = new Date(c.lastBooking + "T00:00:00");
-      const dueDate = addDays(last, 28);
-      return differenceInCalendarDays(dueDate, now) >= 0 && differenceInCalendarDays(dueDate, now) <= 7;
-    });
-  }, [bookings]);
+    const today = startOfDay(new Date());
+    const cutoff = addDays(today, 7);
+    return (loyaltyRows as any[])
+      .filter(row => row.next_due_date)
+      .map(row => ({
+        key: `loyalty:${row.id}`,
+        name: row.client_name,
+        phone: row.phone,
+        email: row.email,
+        nextDueDate: row.next_due_date,
+      }))
+      .filter(row => {
+        const due = new Date(row.nextDueDate + "T00:00:00");
+        return due >= today && due <= cutoff;
+      });
+  }, [loyaltyRows]);
 
   const birthdayClients = useMemo(() => {
     const today = startOfDay(new Date());
@@ -281,7 +291,7 @@ export default function AdminCRM({ onNavigate }: { onNavigate?: (view: string) =
             </div>
           )}
           <div className="grid gap-2">
-            {queue === "due" && dueClients.map((client: any) => <QueueRow key={client.key} name={client.name} phone={client.phone} detail={`Last booking ${format(new Date(client.lastBooking + "T00:00:00"), "d MMM yyyy")}`} href={whatsApp(client.phone, getTemplate("time_to_book"), { name: client.name, business: "your business" })} />)}
+            {queue === "due" && dueClients.map((client: any) => <QueueRow key={client.key} name={client.name} phone={client.phone} detail={`Due ${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}`} href={whatsApp(client.phone, getTemplate("time_to_book"), { name: client.name, business: "your business" })} />)}
             {queue === "overdue" && (alerts?.overdueLoyaltyClients ?? []).map(client => <QueueRow key={client.id} name={client.client_name} phone={client.phone} detail={`${client.days_overdue} days overdue`} href={whatsApp(client.phone, getTemplate("overdue"), { name: client.client_name, business: "your business" })} />)}
             {queue === "inactive" && (alerts?.inactiveClients ?? []).map(client => <QueueRow key={String(client.client_id)} name={client.client_name} phone={client.client_phone} detail={`${client.days_since_booking} days since last booking`} href={whatsApp(client.client_phone, getTemplate("long_overdue"), { name: client.client_name, business: "your business" })} />)}
             {queue === "birthdays" && birthdayClients.map((client: any) => <QueueRow key={client.id} name={client.client_name} phone={client.phone} detail={format(new Date(client.occasion_date + "T00:00:00"), "d MMM")} href={whatsApp(client.phone, getTemplate("birthday"), { name: client.client_name, business: "your business" })} />)}
