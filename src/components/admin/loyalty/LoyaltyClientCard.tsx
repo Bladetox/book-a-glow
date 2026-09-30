@@ -75,6 +75,7 @@ export const WaButton = ({
   serviceLabel: string;
   lastVisit?: string;
   templates: Record<MessageTemplateType, string>;
+  isMessageTemplateConfigured: (type: MessageTemplateType) => boolean;
 }) => {
   const typeByStatus: Partial<Record<string, MessageTemplateType>> = {
     BIRTHDAY: "birthday",
@@ -519,6 +520,7 @@ export const LoyaltyClientCard = ({
               serviceLabel={serviceLabel}
               lastVisit={lastVisit ? isoToDisplay(lastVisit) : ""}
               templates={waTemplates}
+              isMessageTemplateConfigured={isMessageTemplateConfigured}
             />
             <button
               onClick={e => { e.stopPropagation(); onToggleExpand(); }}
