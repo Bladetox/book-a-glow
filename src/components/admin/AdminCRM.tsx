@@ -520,7 +520,7 @@ export default function AdminCRM({
       {area === "messaging" && (
         <>
           <SubNavigation
-            items={[{ id: "templates", label: "Templates" }]}
+            items={[{ id: "templates", label: "Messages" }]}
             active="templates"
             onSelect={() => undefined}
           />
