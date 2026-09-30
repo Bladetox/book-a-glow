@@ -544,7 +544,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
   const [lookbackDays, setLookbackDays]   = useState(DEFAULT_LOYALTY_SETTINGS.lookback_days);
   const [showSettings, setShowSettings]   = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
-  const { templates: waTemplates } = useCrmMessageTemplates();
+  const { templates: waTemplates, configured: isMessageTemplateConfigured } = useCrmMessageTemplates();
 
   const [snapshot, setSnapshot] = useState<{
     reminderWeeks: number; serviceLabel: string; minBookings: number;
@@ -1208,6 +1208,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   businessName={businessName}
                   serviceLabel={serviceLabel}
                   waTemplates={waTemplates}
+                  isMessageTemplateConfigured={isMessageTemplateConfigured}
                   onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
                   onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
                   onUpdated={invalidateLoyalty}
