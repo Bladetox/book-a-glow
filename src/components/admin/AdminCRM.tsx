@@ -34,9 +34,9 @@ import { orphanIdentityGroupKey, resolveOrphanIdentity, type OrphanBooking } fro
 import { toast } from "sonner";
 
 type Area = "clients" | "retention" | "messaging";
-type ClientView = "directory" | "attention" | "consultations" | "blocked" | "identity_review";
+type ClientView = "directory" | "attention" | "special_dates" | "consultations" | "blocked" | "identity_review";
 type RetentionView = "loyalty" | "consistency";
-type AttentionQueue = "due" | "overdue" | "inactive" | "special_dates";
+type AttentionQueue = "due" | "overdue" | "inactive";
 
 type ClientRow = {
   key: string;
@@ -50,7 +50,7 @@ type ClientRow = {
 };
 
 const primaryAreas: { id: Area; label: string; description: string }[] = [
-  { id: "clients", label: "Clients", description: "People, history and client activity" },
+  { id: "clients", label: "CRM", description: "Clients, retention and business relationships" },
   { id: "retention", label: "Retention", description: "Bring clients back and reward consistency" },
   { id: "messaging", label: "Messaging", description: "Set up the messages you send" },
 ];
@@ -59,6 +59,7 @@ const clientViews: { id: ClientView; label: string }[] = [
   { id: "directory", label: "All clients" },
   { id: "attention", label: "Needs attention" },
   { id: "identity_review", label: "Identity review" },
+  { id: "special_dates", label: "Special dates" },
   { id: "consultations", label: "Consultations" },
   { id: "blocked", label: "Blocked" },
 ];
@@ -437,7 +438,6 @@ export default function AdminCRM({
     due: dueClients.length,
     overdue: alerts?.overdueLoyaltyClients.length ?? 0,
     inactive: alerts?.inactiveClients.length ?? 0,
-    special_dates: (occasions as any[]).length,
   };
 
   const resolveIdentity = async (
@@ -713,17 +713,6 @@ export default function AdminCRM({
                 />
               ))}
 
-            {attentionQueue === "special_dates" &&
-              (canSpecialOccasions ? (
-                <AdminSpecialOccasions
-                  onConfigureBirthday={() => {
-                    setArea("messaging");
-                    setTemplateFocus("birthday");
-                  }}
-                />
-              ) : (
-                <FeatureUnavailable />
-              ))}
           </div>
 
           {attentionCounts[attentionQueue] === 0 && (
@@ -734,6 +723,19 @@ export default function AdminCRM({
             />
           )}
         </div>
+      );
+    }
+
+    if (clientView === "special_dates") {
+      return canSpecialOccasions ? (
+        <AdminSpecialOccasions
+          onConfigureBirthday={() => {
+            setArea("messaging");
+            setTemplateFocus("birthday");
+          }}
+        />
+      ) : (
+        <FeatureUnavailable />
       );
     }
 
