@@ -22,15 +22,14 @@ import AdminLoyalty from "@/components/admin/AdminLoyalty";
 import AdminConsistencyPricing from "@/components/admin/AdminConsistencyPricing";
 import MessageTemplatesView from "@/components/admin/messaging/MessageTemplatesView";
 import {
+  buildTenantBookingUrl,
   buildWhatsAppUrl,
   resolveMessageTemplate,
-  LEGACY_TEMPLATE_SETTING_KEYS,
-  TEMPLATE_SETTING_KEYS,
-  getTemplateValue,
   type MessageTemplateType,
   type MessageTemplateValues,
 } from "@/lib/messaging/whatsapp";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
+import { useCrmMessageTemplates } from "@/hooks/useCrmMessageTemplates";
 import { orphanIdentityGroupKey, resolveOrphanIdentity, type OrphanBooking } from "@/lib/crm/orphanIdentity";
 import { toast } from "sonner";
 
@@ -225,28 +224,20 @@ export default function AdminCRM({
   });
 
   const { data: messageSettings = [] } = useQuery({
-    queryKey: ["crm-message-settings", tenantId],
+    queryKey: ["crm-message-context", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const keys = Array.from(
-        new Set([
-          ...Object.values(TEMPLATE_SETTING_KEYS),
-          ...Object.values(LEGACY_TEMPLATE_SETTING_KEYS).filter(
-            (key): key is string => Boolean(key),
-          ),
-          "loyalty_service_label",
-        ]),
-      );
-
       const { data, error } = await supabase
         .from("app_settings")
         .select("key,value")
         .eq("tenant_id", tenantId)
-        .in("key", keys);
+        .eq("key", "loyalty_service_label");
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const { templates, configured } = useCrmMessageTemplates();
 
   const { data: tenantMessageSettings = null } = useQuery({
     queryKey: ["crm-tenant-message-settings", tenantId],
@@ -262,8 +253,7 @@ export default function AdminCRM({
     },
   });
 
-  const getTemplate = (type: MessageTemplateType) =>
-    getTemplateValue(messageSettings as any[], type);
+  const getTemplate = (type: MessageTemplateType) => templates[type];
 
   const messageContext = useMemo(() => {
     const map = new Map(
@@ -276,11 +266,10 @@ export default function AdminCRM({
         tenant?.name ||
         "Your business",
       serviceLabel: map.get("loyalty_service_label") || "appointment",
-      bookingUrl:
-        typeof window !== "undefined" ? `${window.location.origin}/book` : "",
+      bookingUrl: buildTenantBookingUrl(tenantId, tenant?.custom_domain),
       googleReviewLink: tenantMessageSettings?.google_review_url || "",
     };
-  }, [messageSettings, tenant, tenantMessageSettings]);
+  }, [messageSettings, tenant, tenantMessageSettings, tenantId]);
 
   const canonicalClients = useMemo(() => {
     const map = new Map<string, any>();
@@ -630,7 +619,7 @@ export default function AdminCRM({
                   detail={`Due ${format(new Date(client.nextDueDate + "T00:00:00"), "d MMM yyyy")}`}
                   href={whatsApp(
                     client.phone,
-                    getTemplate("time_to_book"),
+                    configured("time_to_book") ? getTemplate("time_to_book") : "",
                     {
                       ...buildClientMessageContext(
                         bookings,
@@ -653,7 +642,7 @@ export default function AdminCRM({
                   detail={`${client.days_overdue} days overdue`}
                   href={whatsApp(
                     client.phone,
-                    getTemplate("overdue"),
+                    configured("overdue") ? getTemplate("overdue") : "",
                     {
                       ...buildClientMessageContext(
                         bookings,
@@ -676,7 +665,7 @@ export default function AdminCRM({
                   detail={`${client.days_since_booking} days since last booking`}
                   href={whatsApp(
                     client.client_phone,
-                    getTemplate("long_overdue"),
+                    configured("long_overdue") ? getTemplate("long_overdue") : "",
                     {
                       ...buildClientMessageContext(
                         bookings,
@@ -804,6 +793,49 @@ export default function AdminCRM({
         <ClientHistoryModal
           client={selected}
           history={selected.bookings}
+          messageOptions={[
+            ...(configured("promo")
+              ? [{
+                  label: "Promo",
+                  href: whatsApp(
+                    selected.phone,
+                    getTemplate("promo"),
+                    {
+                      ...buildClientMessageContext(
+                        bookings,
+                        selected.key.startsWith("canonical:") ? selected.key.slice(9) : null,
+                        messageContext,
+                        mergedClientTargets,
+                      ),
+                      name: selected.name,
+                    },
+                  ),
+                }]
+              : []),
+            ...(configured("review_ask")
+              ? [{
+                  label: "Review ask",
+                  href: whatsApp(
+                    selected.phone,
+                    getTemplate("review_ask"),
+                    {
+                      ...buildClientMessageContext(
+                        bookings,
+                        selected.key.startsWith("canonical:") ? selected.key.slice(9) : null,
+                        messageContext,
+                        mergedClientTargets,
+                      ),
+                      name: selected.name,
+                    },
+                  ),
+                }]
+              : []),
+          ].filter((option) => option.href)}
+          onConfigureMessage={(type) => {
+            setSelected(null);
+            setArea("messaging");
+            setTemplateFocus(type);
+          }}
           onClose={() => setSelected(null)}
         />
       )}
@@ -879,10 +911,14 @@ function QueueRow({
 function ClientHistoryModal({
   client,
   history,
+  messageOptions,
+  onConfigureMessage,
   onClose,
 }: {
   client: ClientRow;
   history: any[];
+  messageOptions: Array<{ label: string; href: string }>;
+  onConfigureMessage: (type: MessageTemplateType) => void;
   onClose: () => void;
 }) {
   return (
@@ -904,9 +940,27 @@ function ClientHistoryModal({
               {client.phone || client.email || "No contact details"}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-white/30 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {messageOptions.length > 0 && (
+              <div className="flex items-center gap-2">
+                {messageOptions.map((option) => (
+                  <a
+                    key={option.label}
+                    href={option.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.07] px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.11]"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    {option.label}
+                  </a>
+                ))}
+              </div>
+            )}
+            <button onClick={onClose} className="p-2 text-white/30 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="p-5 grid sm:grid-cols-3 gap-2">
