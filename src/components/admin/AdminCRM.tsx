@@ -785,6 +785,7 @@ export default function AdminCRM({
           <SubNavigation
             items={clientViews.filter((item) =>
               item.id === "consultations" ? canConsultations :
+              item.id === "special_dates" ? canSpecialOccasions :
               true
             )}
             active={clientView}
