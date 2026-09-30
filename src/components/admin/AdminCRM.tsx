@@ -849,7 +849,7 @@ function ClientHistoryModal({
 
         <div className="p-5 grid sm:grid-cols-3 gap-2">
           <Stat label="Bookings" value={String(client.bookingCount)} />
-          <Stat label="Booking value" value={\`R\${client.spend.toFixed(2)}\`} />
+          <Stat label="Booking value" value={`R${client.spend.toFixed(2)}`} />
           <Stat
             label="Last visit"
             value={
