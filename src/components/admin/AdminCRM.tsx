@@ -29,9 +29,10 @@ import {
   type MessageTemplateType,
 } from "@/lib/messaging/whatsapp";
 import { useClientAlerts } from "@/hooks/useClientAlerts";
+import { resolveOrphanIdentity, type OrphanBooking } from "@/lib/crm/orphanIdentity";
 
 type Area = "clients" | "retention" | "messaging";
-type ClientView = "directory" | "attention" | "special_dates" | "consultations" | "blocked";
+type ClientView = "directory" | "attention" | "special_dates" | "consultations" | "blocked" | "identity_review";
 type RetentionView = "loyalty" | "consistency";
 type AttentionQueue = "due" | "overdue" | "inactive" | "birthdays";
 
@@ -54,6 +55,7 @@ const primaryAreas: { id: Area; label: string; description: string }[] = [
 
 const clientViews: { id: ClientView; label: string }[] = [
   { id: "directory", label: "All clients" },
+  { id: "identity_review", label: "Identity review" },
   { id: "attention", label: "Needs attention" },
   { id: "special_dates", label: "Special dates" },
   { id: "consultations", label: "Consultations" },
@@ -67,22 +69,19 @@ const attentionQueues: { id: AttentionQueue; label: string }[] = [
   { id: "birthdays", label: "Birthdays" },
 ];
 
-function normaliseEmail(value: string | null | undefined) {
-  return String(value ?? "").trim().toLowerCase();
-}
-
-function normalisePhone(value: string | null | undefined) {
-  return String(value ?? "").replace(/\D/g, "").replace(/^27/, "").replace(/^0/, "");
-}
-
-function identityKey(b: any, canonical?: any) {
+function identityKey(b: any, canonical?: any, orphanDecision?: ReturnType<typeof resolveOrphanIdentity>) {
   if (canonical?.id) return `canonical:${canonical.id}`;
+  if (orphanDecision?.status === "auto_link" && orphanDecision.matchedClientId) {
+    return `canonical:${orphanDecision.matchedClientId}`;
+  }
 
-  // Only bookings without a canonical relationship use fallback identity.
-  // We deliberately do not use bookings.client_id because it is not the CRM
-  // identity and may represent an older or different account relationship.
-  const email = normaliseEmail(b.guest_email || b.client_email);
-  const phone = normalisePhone(b.guest_phone || b.client_phone);
+  const email = String(b.guest_email || b.client_email || "").trim().toLowerCase();
+  const phoneDigits = String(b.guest_phone || b.client_phone || "").replace(/\D/g, "");
+  const phone = phoneDigits.startsWith("27")
+    ? phoneDigits
+    : phoneDigits.startsWith("0")
+      ? `27${phoneDigits.slice(1)}`
+      : phoneDigits;
 
   if (email && phone) return `contact:${email}|${phone}`;
   if (email) return `email:${email}`;
@@ -236,16 +235,44 @@ export default function AdminCRM({
     return map;
   }, [loyaltyRows]);
 
+  const orphanReview = useMemo(() => {
+    const contacts = Array.from(canonicalClients.values()).map((client: any) => ({
+      id: client.id,
+      email: client.email,
+      phone: client.phone,
+    }));
+
+    return (bookings as any[])
+      .filter((booking) => !resolveCanonicalId(booking, mergedClientTargets))
+      .map((booking) => ({
+        booking,
+        decision: resolveOrphanIdentity(booking as OrphanBooking, contacts),
+      }))
+      .filter(({ decision }) => decision.status === "needs_review");
+  }, [bookings, canonicalClients, mergedClientTargets]);
+
   const clients = useMemo<ClientRow[]>(() => {
     const map = new Map<string, ClientRow>();
+    const contacts = Array.from(canonicalClients.values()).map((client: any) => ({
+      id: client.id,
+      email: client.email,
+      phone: client.phone,
+    }));
 
     for (const booking of bookings as any[]) {
       const canonicalId = resolveCanonicalId(booking, mergedClientTargets);
       const canonical = canonicalId ? canonicalClients.get(canonicalId) : null;
-      const key = identityKey(booking, canonical);
-      const name = canonical?.client_name || booking.guest_name || booking.client_name || "Unknown client";
-      const phone = canonical?.phone || booking.guest_phone || booking.client_phone || null;
-      const email = canonical?.email || booking.guest_email || booking.client_email || null;
+      const orphanDecision = canonicalId
+        ? null
+        : resolveOrphanIdentity(booking as OrphanBooking, contacts);
+      const resolvedCanonicalId = canonicalId || orphanDecision?.matchedClientId || null;
+      const resolvedCanonical = resolvedCanonicalId
+        ? canonicalClients.get(resolvedCanonicalId)
+        : null;
+      const key = identityKey(booking, resolvedCanonical, orphanDecision);
+      const name = resolvedCanonical?.client_name || booking.guest_name || booking.client_name || "Unknown client";
+      const phone = resolvedCanonical?.phone || booking.guest_phone || booking.client_phone || null;
+      const email = resolvedCanonical?.email || booking.guest_email || booking.client_email || null;
       const row = map.get(key);
 
       const completed = booking.status === "completed";
@@ -523,6 +550,10 @@ export default function AdminCRM({
       return canConsultations ? <AdminConsultations /> : <FeatureUnavailable />;
     }
 
+    if (clientView === "identity_review") {
+      return <IdentityReviewQueue items={orphanReview} />;
+    }
+
     return <AdminBlockedClients />;
   };
 
@@ -616,6 +647,71 @@ export default function AdminCRM({
           onClose={() => setSelected(null)}
         />
       )}
+    </div>
+  );
+}
+
+function IdentityReviewQueue({
+  items,
+}: {
+  items: Array<{
+    booking: any;
+    decision: ReturnType<typeof resolveOrphanIdentity>;
+  }>;
+}) {
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        title="No unresolved clients"
+        description="Bookings without a clear client match will appear here for review."
+        icon={Users}
+      />
+    );
+  }
+
+  const reasonLabel: Record<string, string> = {
+    conflicting_contact_matches: "Email and phone point to different clients",
+    multiple_email_matches: "Email matches more than one client",
+    multiple_phone_matches: "Phone number matches more than one client",
+    partial_contact_match: "Only part of the contact information matches",
+    missing_contact_details: "No contact details available",
+  };
+
+  return (
+    <div className="grid gap-2">
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+        <p className="text-sm font-medium text-white/75">These bookings need a human decision</p>
+        <p className="text-xs text-white/30 mt-1">
+          NextSlot will not merge them automatically because the available contact information is ambiguous.
+        </p>
+      </div>
+
+      {items.map(({ booking, decision }) => (
+        <div
+          key={booking.id}
+          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-4"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
+              <UserRound className="w-4 h-4 text-white/35" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white/80">
+                {booking.guest_name || booking.client_name || "Unknown client"}
+              </p>
+              <p className="text-[11px] text-white/30 mt-0.5">
+                {booking.guest_email || booking.client_email || "No email"} · {booking.guest_phone || booking.client_phone || "No phone"}
+              </p>
+              <p className="text-[11px] text-white/45 mt-2">
+                {reasonLabel[decision.reason] || "Identity needs review"}
+              </p>
+            </div>
+            <span className="text-[10px] uppercase tracking-wider text-white/25 shrink-0">
+              Review
+            </span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
