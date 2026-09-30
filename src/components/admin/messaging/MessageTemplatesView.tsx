@@ -4,8 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import {
+  LEGACY_TEMPLATE_SETTING_KEYS,
   TEMPLATE_LABELS,
   TEMPLATE_SETTING_KEYS,
+  getTemplateValue,
   toFriendlyTemplate,
   toStoredTemplate,
   type MessageTemplateType,
@@ -35,17 +37,19 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
         .from("app_settings")
         .select("id,key,value")
         .eq("tenant_id", tenantId)
-        .in("key", TYPES.map(t => TEMPLATE_SETTING_KEYS[t]));
+        .in("key", Array.from(new Set([
+          ...TYPES.map(t => TEMPLATE_SETTING_KEYS[t]),
+          ...TYPES.map(t => LEGACY_TEMPLATE_SETTING_KEYS[t]).filter(Boolean),
+        ])));
       if (error) throw error;
       return data ?? [];
     },
   });
 
   const values = useMemo(() => {
-    const map = new Map((settings as any[]).map(row => [row.key, row.value ?? ""]));
     return Object.fromEntries(TYPES.map(type => [
       type,
-      map.get(TEMPLATE_SETTING_KEYS[type]) || DEFAULTS[type],
+      getTemplateValue(settings as any[], type) || DEFAULTS[type],
     ])) as Record<MessageTemplateType, string>;
   }, [settings]);
 
@@ -90,7 +94,7 @@ export default function MessageTemplatesView({ focusType }: { focusType?: Messag
   });
 
   const configured = (type: MessageTemplateType) =>
-    !!settings.find((row: any) => row.key === TEMPLATE_SETTING_KEYS[type] && row.value);
+    !!getTemplateValue(settings as any[], type);
 
   if (isLoading) return <div className="py-12 text-sm text-white/30">Loading templates…</div>;
 
