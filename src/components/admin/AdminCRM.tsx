@@ -249,13 +249,40 @@ export default function AdminCRM({
       phone: client.phone,
     }));
 
-    return (bookings as any[])
-      .filter((booking) => !resolveCanonicalId(booking, mergedClientTargets))
-      .map((booking) => ({
-        booking,
-        decision: resolveOrphanIdentity(booking as OrphanBooking, contacts),
-      }))
-      .filter(({ decision }) => decision.status === "needs_review");
+    const groups = new Map<string, {
+      bookings: any[];
+      decision: ReturnType<typeof resolveOrphanIdentity>;
+    }>();
+
+    for (const booking of bookings as any[]) {
+      if (resolveCanonicalId(booking, mergedClientTargets)) continue;
+
+      const decision = resolveOrphanIdentity(booking as OrphanBooking, contacts);
+      const email = String(booking.guest_email || booking.client_email || "").trim().toLowerCase();
+      const phone = String(booking.guest_phone || booking.client_phone || "")
+        .replace(/\D/g, "");
+      const normalisedPhone = phone.startsWith("27")
+        ? phone
+        : phone.startsWith("0")
+          ? "27" + phone.slice(1)
+          : phone;
+      const groupKey = email && normalisedPhone
+        ? "contact:" + email + "|" + normalisedPhone
+        : email
+          ? "email:" + email
+          : normalisedPhone
+            ? "phone:" + normalisedPhone
+            : "booking:" + booking.id;
+
+      const existing = groups.get(groupKey);
+      if (existing) {
+        existing.bookings.push(booking);
+      } else {
+        groups.set(groupKey, { bookings: [booking], decision });
+      }
+    }
+
+    return Array.from(groups.values());
   }, [bookings, canonicalClients, mergedClientTargets]);
 
   const clients = useMemo<ClientRow[]>(() => {
@@ -347,17 +374,29 @@ export default function AdminCRM({
     special_dates: (occasions as any[]).length,
   };
 
-  const resolveIdentity = async (booking: any, targetClientId: string | null, keepSeparate: boolean) => {
-    if (!tenantId || resolvingBookingId) return;
-    setResolvingBookingId(booking.id);
+  const resolveIdentity = async (
+    bookingsToResolve: any[],
+    targetClientId: string | null,
+    keepSeparate: boolean,
+  ) => {
+    if (!tenantId || resolvingBookingId || bookingsToResolve.length === 0) return;
+
+    const bookingIds = bookingsToResolve.map((booking) => booking.id);
+    setResolvingBookingId(bookingIds[0]);
+
     try {
+      const firstBooking = bookingsToResolve[0];
       let resolvedId = targetClientId;
 
-      if (keepSeparate) {
-        const name = booking.guest_name || booking.client_name || "Client";
-        const phone = booking.guest_phone || booking.client_phone || null;
-        const email = booking.guest_email || booking.client_email || null;
-        const completed = booking.status === "completed";
+      if (!resolvedId && keepSeparate) {
+        const name = firstBooking.guest_name || firstBooking.client_name || "Client";
+        const phone = firstBooking.guest_phone || firstBooking.client_phone || null;
+        const email = firstBooking.guest_email || firstBooking.client_email || null;
+        const completedDates = bookingsToResolve
+          .filter((booking) => booking.status === "completed")
+          .map((booking) => booking.booking_date)
+          .filter(Boolean)
+          .sort();
 
         const { data: created, error: createError } = await supabase
           .from("loyalty_tracker")
@@ -368,8 +407,8 @@ export default function AdminCRM({
             email,
             source: "manual",
             status: "ON TRACK",
-            last_wax_date: completed ? booking.booking_date : null,
-            notes: `Created during CRM identity review for booking ${booking.id}`,
+            last_wax_date: completedDates.at(-1) ?? null,
+            notes: "Created during CRM identity review for " + bookingIds.length + " booking" + (bookingIds.length === 1 ? "" : "s") + ".",
           })
           .select("id")
           .single();
@@ -384,24 +423,41 @@ export default function AdminCRM({
         .from("bookings")
         .update({ canonical_client_id: resolvedId })
         .eq("tenant_id", tenantId)
-        .eq("id", booking.id)
+        .in("id", bookingIds)
         .is("canonical_client_id", null);
 
       if (bookingError) throw bookingError;
 
-      await supabase
+      const { error: firstConsultationError } = await supabase
         .from("guest_consultations")
         .update({ canonical_client_id: resolvedId })
         .eq("tenant_id", tenantId)
-        .or(`first_booking_id.eq.${booking.id},last_booking_id.eq.${booking.id}`);
+        .in("first_booking_id", bookingIds);
+
+      if (firstConsultationError) throw firstConsultationError;
+
+      const { error: lastConsultationError } = await supabase
+        .from("guest_consultations")
+        .update({ canonical_client_id: resolvedId })
+        .eq("tenant_id", tenantId)
+        .in("last_booking_id", bookingIds);
+
+      if (lastConsultationError) throw lastConsultationError;
 
       await queryClient.invalidateQueries({ queryKey: ["crm-client-bookings", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["crm-loyalty-due", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["crm-birthdays", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["client-alerts", tenantId] });
-      toast.success(keepSeparate ? "Booking kept as a separate client" : "Booking linked to client");
+
+      toast.success(
+        keepSeparate
+          ? "Created a client and linked " + bookingIds.length + " booking" + (bookingIds.length === 1 ? "" : "s")
+          : "Linked " + bookingIds.length + " booking" + (bookingIds.length === 1 ? "" : "s") + " to the client",
+      );
     } catch (error: any) {
-      toast.error("Could not resolve this booking", { description: error?.message || "Please try again." });
+      toast.error("Could not resolve this booking", {
+        description: error?.message || "Please try again.",
+      });
     } finally {
       setResolvingBookingId(null);
     }
@@ -562,7 +618,7 @@ export default function AdminCRM({
     }
 
     if (clientView === "identity_review") {
-      return <IdentityReviewQueue items={orphanReview} canonicalClients={canonicalClients} tenantId={tenantId} resolvingBookingId={resolvingBookingId} onResolve={resolveIdentity} />;
+      return <IdentityReviewQueue items={orphanReview} canonicalClients={canonicalClients} resolvingBookingId={resolvingBookingId} onResolve={resolveIdentity} />;
     }
 
     return <AdminBlockedClients />;
@@ -721,27 +777,170 @@ function SubNavigation({
     </div>
   );
 }
+function QueueRow({
+  name,
+  phone,
+  detail,
+  href,
+}: {
+  name: string;
+  phone: string | null;
+  detail: string;
+  href?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+      <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
+        <UserRound className="w-4 h-4 text-white/35" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white/80 truncate">{name}</p>
+        <p className="text-[11px] text-white/30 truncate">
+          {phone || "No phone number"} · {detail}
+        </p>
+      </div>
+      {href && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.07] text-xs font-semibold text-white/70 hover:bg-white/[0.11]"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          WhatsApp
+        </a>
+      )}
+    </div>
+  );
+}
+
+function ClientHistoryModal({
+  client,
+  history,
+  onClose,
+}: {
+  client: ClientRow;
+  history: any[];
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-zinc-950 border border-white/[0.08]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur px-5 py-4 border-b border-white/[0.06] flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center">
+            <UserRound className="w-5 h-5 text-white/40" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-white/90 truncate">{client.name}</h3>
+            <p className="text-xs text-white/30">
+              {client.phone || client.email || "No contact details"}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 text-white/30 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 grid sm:grid-cols-3 gap-2">
+          <Stat label="Bookings" value={String(client.bookingCount)} />
+          <Stat label="Booking value" value={\`R\${client.spend.toFixed(2)}\`} />
+          <Stat
+            label="Last visit"
+            value={
+              client.lastBooking
+                ? format(new Date(client.lastBooking + "T00:00:00"), "d MMM yyyy")
+                : "Not yet"
+            }
+          />
+        </div>
+
+        <div className="px-5 pb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <History className="w-4 h-4 text-white/30" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/30">
+              Booking history
+            </p>
+          </div>
+
+          <div className="grid gap-2">
+            {history.map((booking: any) => {
+              const services = (booking.booking_items ?? [])
+                .map((item: any) => item.service_name)
+                .filter(Boolean);
+              return (
+                <div
+                  key={booking.id}
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 flex items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/75">
+                      {format(new Date(booking.booking_date + "T00:00:00"), "d MMM yyyy")}
+                    </p>
+                    <p className="text-[11px] text-white/30 truncate">
+                      {services.length ? services.join(" · ") : booking.status}
+                    </p>
+                  </div>
+                  <span className="text-xs text-white/45">
+                    R{Number(booking.total_amount || 0).toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+      <p className="text-[10px] uppercase tracking-wider text-white/25">{label}</p>
+      <p className="text-sm font-semibold text-white/75 mt-1">{value}</p>
+    </div>
+  );
+}
+
+function FeatureUnavailable() {
+  return (
+    <EmptyState
+      title="Not available for this business"
+      description="This feature is not enabled for the current account."
+      icon={Users}
+    />
+  );
+}
+
 function IdentityReviewQueue({
   items,
   canonicalClients,
-  tenantId,
   resolvingBookingId,
   onResolve,
 }: {
   items: Array<{
-    booking: any;
+    bookings: any[];
     decision: ReturnType<typeof resolveOrphanIdentity>;
   }>;
   canonicalClients: Map<string, any>;
-  tenantId: string | null;
   resolvingBookingId: string | null;
-  onResolve: (booking: any, targetClientId: string | null, keepSeparate: boolean) => Promise<void>;
+  onResolve: (
+    bookings: any[],
+    targetClientId: string | null,
+    keepSeparate: boolean,
+  ) => Promise<void>;
 }) {
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No unresolved clients"
-        description="Bookings without a clear client match will appear here for review."
+        title="No identity issues"
+        description="Bookings with a missing or uncertain client match will appear here."
         icon={Users}
       />
     );
@@ -753,37 +952,54 @@ function IdentityReviewQueue({
     multiple_phone_matches: "Phone number matches more than one client",
     partial_contact_match: "Only part of the contact information matches",
     missing_contact_details: "No contact details available",
+    no_match: "No existing client matches these contact details",
   };
 
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-3">
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-        <p className="text-sm font-medium text-white/75">These bookings need a human decision</p>
+        <p className="text-sm font-medium text-white/75">Check these client matches</p>
         <p className="text-xs text-white/30 mt-1">
-          Link the booking to an existing client, or keep it as a separate client.
+          NextSlot never uses a name alone to decide who a booking belongs to. Choose an existing client, or create a new one.
         </p>
       </div>
 
-      {items.map(({ booking, decision }) => {
-        const possibleIds = Array.from(new Set([...decision.emailMatches, ...decision.phoneMatches]));
+      {items.map(({ bookings, decision }) => {
+        const firstBooking = bookings[0];
+        const possibleIds = Array.from(
+          new Set([...decision.emailMatches, ...decision.phoneMatches]),
+        );
+        const isSuggested = decision.status === "auto_link";
+        const isNewClient = decision.status === "keep_separate";
+        const countLabel = bookings.length + " booking" + (bookings.length === 1 ? "" : "s");
+
         return (
-          <div key={booking.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-4">
+          <div
+            key={bookings.map((booking) => booking.id).join("|")}
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-4"
+          >
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
                 <UserRound className="w-4 h-4 text-white/35" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-white/80">
-                  {booking.guest_name || booking.client_name || "Unknown client"}
+                  {firstBooking.guest_name || firstBooking.client_name || "Unknown client"}
                 </p>
                 <p className="text-[11px] text-white/30 mt-0.5">
-                  {booking.guest_email || booking.client_email || "No email"} · {booking.guest_phone || booking.client_phone || "No phone"}
+                  {firstBooking.guest_email || firstBooking.client_email || "No email"} · {firstBooking.guest_phone || firstBooking.client_phone || "No phone"}
                 </p>
                 <p className="text-[11px] text-white/45 mt-2">
-                  {reasonLabel[decision.reason] || "Identity needs review"}
+                  {isSuggested
+                    ? "Suggested match · " + countLabel
+                    : isNewClient
+                      ? "No match found · " + countLabel
+                      : (reasonLabel[decision.reason] || "Identity needs review") + " · " + countLabel}
                 </p>
               </div>
-              <span className="text-[10px] uppercase tracking-wider text-white/25 shrink-0">Review</span>
+              <span className="text-[10px] uppercase tracking-wider text-white/25 shrink-0">
+                {isSuggested ? "Suggested" : "Review"}
+              </span>
             </div>
 
             {possibleIds.length > 0 && (
@@ -792,16 +1008,24 @@ function IdentityReviewQueue({
                 {possibleIds.map((id) => {
                   const client = canonicalClients.get(id);
                   if (!client) return null;
+                  const buttonLabel = isSuggested
+                    ? "Link " + countLabel + " to " + client.client_name
+                    : "Link to " + client.client_name;
                   return (
                     <button
                       key={id}
-                      disabled={resolvingBookingId === booking.id}
-                      onClick={() => onResolve(booking, id, false)}
+                      type="button"
+                      disabled={resolvingBookingId === firstBooking.id}
+                      onClick={() => {
+                        if (window.confirm("Link " + countLabel + " to " + client.client_name + "?")) {
+                          void onResolve(bookings, id, false);
+                        }
+                      }}
                       className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-left hover:bg-white/[0.06] disabled:opacity-40"
                     >
                       <UserRound className="w-3.5 h-3.5 text-white/30" />
                       <span className="flex-1 text-xs text-white/65">
-                        {client.client_name}
+                        {buttonLabel}
                         <span className="block text-[10px] text-white/25">
                           {client.email || client.phone || "No contact details"}
                         </span>
@@ -813,19 +1037,24 @@ function IdentityReviewQueue({
               </div>
             )}
 
-            <button
-              disabled={resolvingBookingId === booking.id}
-              onClick={() => onResolve(booking, null, true)}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/35 hover:text-white/65 disabled:opacity-40"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              Keep as a separate client
-            </button>
+            {isNewClient && (
+              <button
+                type="button"
+                disabled={resolvingBookingId === firstBooking.id}
+                onClick={() => {
+                  if (window.confirm("Create a new client and link " + countLabel + "?")) {
+                    void onResolve(bookings, null, true);
+                  }
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/35 hover:text-white/65 disabled:opacity-40"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Create new client
+              </button>
+            )}
           </div>
         );
       })}
     </div>
   );
 }
-
-
