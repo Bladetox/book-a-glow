@@ -7,6 +7,7 @@
  *   - Upgrade flow: calls platform-billing-checkout → redirects to iKhokha hosted payment page
  *   - Downgrade flow: sets subscription_status = 'pending_downgrade'
  *   - Downgrade cancellation
+ *   - Cancel subscription (guest-data export prompt + erasure warning, see CancelSubscriptionFlow)
  *
  * Payment method: iKhokha hosted payment page (auto-confirmed via webhook).
  * Plans activate automatically once iKhokha fires the success webhook.
@@ -26,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { getAccountState } from "@/hooks/useFeatureFlags";
 import { toast } from "sonner";
+import { CancelSubscriptionFlow } from "./CancelSubscriptionFlow";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -506,6 +508,11 @@ export function AdminBilling() {
             chat with us on WhatsApp
           </a>.
         </p>
+      )}
+
+      {/* ── Cancel subscription ── */}
+      {tenantId && (subscriptionStatus === "active" || subscriptionStatus === "pending_downgrade") && (
+        <CancelSubscriptionFlow tenantId={tenantId} />
       )}
     </div>
   );
