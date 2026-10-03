@@ -1,0 +1,266 @@
+/*
+ * Liquid Glass booking layer
+ *
+ * Visual reference: Apple iOS 26 Liquid Glass UI kit in Figma.
+ * This adapts the material language to the existing tenant-aware booking UI
+ * without changing booking logic, data, pricing, or payment behaviour.
+ */
+
+@layer components {
+  /* Ambient surface behind the booking flow. The tenant background remains
+     the source of truth, while these soft fields give translucent controls
+     something to refract against. */
+  body:has([data-booking-scroll]) {
+    background:
+      radial-gradient(circle at 12% 8%, hsl(var(--primary) / 0.08), transparent 32%),
+      radial-gradient(circle at 88% 22%, hsl(var(--accent) / 0.08), transparent 30%),
+      hsl(var(--background));
+  }
+
+  /* Header and progress chrome become floating translucent surfaces instead
+     of opaque bars. */
+  body:has([data-booking-scroll]) .flex-shrink-0.flex.items-center.justify-between,
+  body:has([data-booking-scroll]) .flex-shrink-0.px-2.py-3 {
+    position: relative;
+    z-index: 20;
+    background: hsl(var(--background) / 0.68);
+    backdrop-filter: blur(28px) saturate(1.65);
+    -webkit-backdrop-filter: blur(28px) saturate(1.65);
+    border-color: hsl(var(--glass-highlight) / 0.16);
+    box-shadow:
+      0 1px 0 hsl(var(--glass-highlight) / 0.28) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.04) inset,
+      0 8px 28px hsl(0 0% 0% / 0.04);
+  }
+
+  /* Main Liquid Glass material. The layered inner shadows mimic the curved
+     rim and reflected light visible in the Figma reference. */
+  .glass-card,
+  .glass-card-service {
+    border-color: hsl(var(--glass-highlight) / 0.18);
+    background:
+      linear-gradient(145deg,
+        hsl(var(--glass-highlight) / 0.16),
+        hsl(var(--glass-bg) / 0.08) 48%,
+        hsl(var(--glass-bg) / 0.14));
+    backdrop-filter: blur(30px) saturate(1.8) brightness(1.04);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8) brightness(1.04);
+    box-shadow:
+      0 10px 30px hsl(0 0% 0% / 0.08),
+      0 2px 8px hsl(0 0% 0% / 0.06),
+      0 1px 0 hsl(0 0% 100% / 0.38) inset,
+      1px 0 0 hsl(0 0% 100% / 0.18) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.10) inset,
+      -1px 0 0 hsl(0 0% 0% / 0.06) inset;
+  }
+
+  .glass-card::before,
+  .glass-card-service::before {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 4%,
+      hsl(var(--glass-shimmer) / 0.28) 32%,
+      hsl(0 0% 100% / 0.72) 50%,
+      hsl(var(--glass-shimmer) / 0.28) 68%,
+      transparent 96%
+    );
+  }
+
+  .glass-card::after,
+  .glass-card-service::after {
+    background:
+      radial-gradient(ellipse at 24% 8%, hsl(0 0% 100% / 0.10), transparent 42%),
+      radial-gradient(ellipse at 82% 90%, hsl(var(--primary) / 0.05), transparent 48%);
+  }
+
+  .glass-card-service {
+    border-radius: 1.35rem;
+    transition:
+      transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 220ms cubic-bezier(0.32, 0.72, 0, 1),
+      border-color 220ms ease,
+      background 220ms ease;
+  }
+
+  .glass-card-service:hover {
+    transform: translateY(-1px);
+    border-color: hsl(var(--glass-highlight) / 0.30);
+    box-shadow:
+      0 14px 34px hsl(0 0% 0% / 0.10),
+      0 1px 0 hsl(0 0% 100% / 0.46) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.10) inset;
+  }
+
+  .glass-card-service.selected {
+    border-color: hsl(var(--primary) / 0.36);
+    background:
+      linear-gradient(145deg,
+        hsl(var(--primary) / 0.15),
+        hsl(var(--glass-bg) / 0.10) 55%,
+        hsl(var(--primary) / 0.07));
+    box-shadow:
+      0 12px 30px hsl(var(--primary) / 0.10),
+      0 1px 0 hsl(0 0% 100% / 0.30) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.10) inset,
+      0 0 0 0.5px hsl(var(--primary) / 0.16) inset;
+  }
+
+  /* Pills become compact glass controls rather than flat outlined tags. */
+  .category-pill {
+    border: 1px solid hsl(var(--glass-highlight) / 0.22);
+    background: hsl(var(--glass-bg) / 0.12);
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.22) inset,
+      0 3px 10px hsl(0 0% 0% / 0.04);
+  }
+
+  .category-pill:hover {
+    border-color: hsl(var(--glass-highlight) / 0.38);
+    background: hsl(var(--glass-highlight) / 0.10);
+  }
+
+  .category-pill.active {
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.82));
+    border-color: hsl(var(--primary) / 0.50);
+    box-shadow:
+      0 7px 18px hsl(var(--primary) / 0.16),
+      0 1px 0 hsl(0 0% 100% / 0.22) inset;
+  }
+
+  /* Circular progress controls borrow the Figma kit's 1x1 control language. */
+  .step-indicator {
+    position: relative;
+    border: 1px solid hsl(var(--glass-highlight) / 0.22);
+    background:
+      linear-gradient(145deg,
+        hsl(var(--glass-highlight) / 0.18),
+        hsl(var(--glass-bg) / 0.08));
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.32) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.08) inset,
+      0 4px 12px hsl(0 0% 0% / 0.06);
+  }
+
+  .step-indicator.active,
+  .step-indicator.completed {
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.78));
+    border-color: hsl(var(--primary) / 0.42);
+    box-shadow:
+      0 8px 20px hsl(var(--primary) / 0.18),
+      0 1px 0 hsl(0 0% 100% / 0.28) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.10) inset;
+  }
+
+  /* Inputs use the same material but remain readable and touch-friendly. */
+  .glass-input {
+    border-radius: 1.15rem;
+    background:
+      linear-gradient(145deg,
+        hsl(var(--glass-highlight) / 0.13),
+        hsl(var(--glass-bg) / 0.08));
+    border-color: hsl(var(--glass-highlight) / 0.18);
+    backdrop-filter: blur(22px) saturate(1.5);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.26) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.07) inset,
+      0 4px 14px hsl(0 0% 0% / 0.04);
+  }
+
+  .glass-input:focus,
+  .glass-input:focus-within {
+    border-color: hsl(var(--primary) / 0.40);
+    background: hsl(var(--glass-highlight) / 0.16);
+    box-shadow:
+      0 0 0 3px hsl(var(--primary) / 0.08),
+      0 8px 22px hsl(0 0% 0% / 0.08),
+      0 1px 0 hsl(0 0% 100% / 0.30) inset;
+  }
+
+  /* Primary and secondary actions get the same curved, reflective treatment. */
+  .btn-next {
+    border: 1px solid hsl(var(--primary) / 0.35);
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.78));
+    box-shadow:
+      0 10px 26px hsl(var(--primary) / 0.16),
+      0 1px 0 hsl(0 0% 100% / 0.24) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.10) inset;
+  }
+
+  .btn-next:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow:
+      0 14px 32px hsl(var(--primary) / 0.22),
+      0 1px 0 hsl(0 0% 100% / 0.30) inset;
+  }
+
+  .btn-back {
+    border-color: hsl(var(--glass-highlight) / 0.20);
+    background: linear-gradient(145deg, hsl(var(--glass-highlight) / 0.15), hsl(var(--glass-bg) / 0.08));
+    backdrop-filter: blur(22px) saturate(1.5);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.24) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.07) inset,
+      0 6px 18px hsl(0 0% 0% / 0.05);
+  }
+
+  /* Floating bottom action surface, inspired by the compact iOS control groups. */
+  .sticky-bottom-bar {
+    left: 10px;
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    padding-bottom: 0;
+    border: 1px solid hsl(var(--glass-highlight) / 0.18);
+    border-radius: 1.65rem;
+    overflow: hidden;
+    background: hsl(var(--background) / 0.68);
+    backdrop-filter: blur(30px) saturate(1.7);
+    -webkit-backdrop-filter: blur(30px) saturate(1.7);
+    box-shadow:
+      0 18px 44px hsl(0 0% 0% / 0.14),
+      0 2px 8px hsl(0 0% 0% / 0.08),
+      0 1px 0 hsl(0 0% 100% / 0.36) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.08) inset;
+  }
+
+  .sticky-bottom-bar::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.65), transparent);
+    pointer-events: none;
+  }
+
+  /* Keep the app comfortable on narrow screens while retaining the material. */
+  @media (max-width: 639px) {
+    body:has([data-booking-scroll]) .flex-shrink-0.flex.items-center.justify-between {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    body:has([data-booking-scroll]) .sticky-bottom-bar {
+      left: 8px;
+      right: 8px;
+      bottom: max(8px, env(safe-area-inset-bottom));
+      border-radius: 1.45rem;
+    }
+  }
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  .glass-card-service,
+  .btn-next,
+  .btn-back,
+  .category-pill,
+  .step-indicator {
+    transition: none !important;
+  }
+}
