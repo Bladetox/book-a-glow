@@ -1,0 +1,660 @@
+{
+  "/online-booking-software": {
+    "sections": [
+      [
+        "A booking page your clients can use without the back and forth.",
+        "Set up services, prices and availability, then give clients a link to book online. The booking flow captures the information needed for the appointment instead of making you collect it manually in a conversation.",
+        [
+          "Branded online booking page",
+          "Service and pricing management",
+          "Availability calendar and real-time slots",
+          "Guest booking without a client login",
+          "Booking confirmations and reminders"
+        ]
+      ],
+      [
+        "Take deposits as part of the booking.",
+        "If your business requires a deposit, NextSlot can make payment part of the booking flow. Deposits and balances remain connected to the appointment so you can see what has been paid and what is still outstanding.",
+        [
+          "Deposit and balance tracking",
+          "Supported South African payment providers",
+          "Payment status connected to bookings",
+          "Payment confirmation through the booking flow"
+        ]
+      ],
+      [
+        "The booking becomes useful business data.",
+        "A booking should not disappear after the appointment is confirmed. NextSlot keeps the activity that comes from bookings available to the rest of the system, including client history, revenue reporting, demand patterns and Nexty insights.",
+        [
+          "Client history grows with each booking",
+          "Revenue and booking activity feed the dashboard",
+          "Demand patterns become visible over time",
+          "Nexty can use the activity to surface opportunities"
+        ]
+      ]
+    ],
+    "fit": [
+      "You currently manage bookings through WhatsApp or DMs.",
+      "You want clients to see available times without asking you first.",
+      "You need deposits or payment status tied to appointments.",
+      "You want booking activity to become useful business information."
+    ],
+    "related": [
+      [
+        "Business management software",
+        "/business-management-software"
+      ],
+      [
+        "Payments & deposits",
+        "/payments"
+      ],
+      [
+        "Business analytics",
+        "/business-analytics"
+      ]
+    ]
+  },
+  "/business-management-software": {
+    "sections": [
+      [
+        "Bookings are only the starting point.",
+        "NextSlot connects the front of the business, where clients book, to the work that happens behind the booking. Your calendar, payments, client history and operational information stay connected instead of becoming separate admin tasks.",
+        [
+          "Online bookings and availability",
+          "Payments and deposits",
+          "Client profiles and booking history",
+          "Business dashboard and performance views"
+        ]
+      ],
+      [
+        "Manage the client relationship around the appointment.",
+        "The system keeps useful client context with the business. You can see previous visits, use consultation information where configured, manage loyalty and retention activity, and flag clients that need attention.",
+        [
+          "Client list and search",
+          "Booking history per client",
+          "Consultation records",
+          "Loyalty and retention tools",
+          "Client alerts and blocking where enabled"
+        ]
+      ],
+      [
+        "Keep the operational work visible too.",
+        "Service businesses have more moving parts than the booking page shows. NextSlot supports availability, inventory and mobile service details so the owner can see more of the business from the same system.",
+        [
+          "Availability and calendar management",
+          "Stock and inventory tracking",
+          "Travel and call-out information for mobile work",
+          "Operational insights and recommendations"
+        ]
+      ]
+    ],
+    "fit": [
+      "Your booking system does not cover the admin around each appointment.",
+      "You are moving between a booking page, payment tools and spreadsheets.",
+      "You want client history and operational information connected to bookings.",
+      "You want one dashboard to understand how the business is performing."
+    ],
+    "related": [
+      [
+        "Online booking software",
+        "/online-booking-software"
+      ],
+      [
+        "Client management",
+        "/client-management"
+      ],
+      [
+        "Business growth",
+        "/business-growth"
+      ]
+    ]
+  },
+  "/booking-software-south-africa": {
+    "sections": [
+      [
+        "Built for the way independent service businesses work here.",
+        "NextSlot is a South African product built around appointment-based service businesses. The goal is not to copy a generic global booking app. It is to give local independent operators practical tools for bookings, payments, clients and business performance.",
+        [
+          "South African business focus",
+          "ZAR pricing and local payment workflows",
+          "POPIA-ready positioning",
+          "Online booking for independent service businesses"
+        ]
+      ],
+      [
+        "Local payment options are part of the product.",
+        "Payment needs vary by business and plan. NextSlot supports PayShap for instant bank-to-bank payment flows and online card checkout through supported providers including Yoco, iKhokha and PayFast.",
+        [
+          "PayShap",
+          "Yoco",
+          "iKhokha",
+          "PayFast",
+          "Deposits and outstanding balances"
+        ]
+      ],
+      [
+        "Mobile service businesses are supported too.",
+        "Many independent operators do not work from one permanent location. NextSlot can support mobile appointments with call-out and travel information, while keeping the same booking and client records in the system.",
+        [
+          "Mobile appointments",
+          "Travel and call-out pricing",
+          "Google Maps support",
+          "Mobile and fixed-location workflows"
+        ]
+      ]
+    ],
+    "fit": [
+      "You run an independent service business in South Africa.",
+      "You need online bookings and local payment options.",
+      "You work from a location, travel to clients, or combine both.",
+      "You want business insights without moving to an enterprise system."
+    ],
+    "related": [
+      [
+        "Payments & deposits",
+        "/payments"
+      ],
+      [
+        "Mobile service businesses",
+        "/mobile-service-businesses"
+      ],
+      [
+        "Online booking software",
+        "/online-booking-software"
+      ]
+    ]
+  },
+  "/client-management": {
+    "sections": [
+      [
+        "Build a client record from real appointments.",
+        "Every booking gives the business more context. NextSlot keeps booking history with the client so you can understand previous visits without searching through old messages.",
+        [
+          "Client list with search and filtering",
+          "Booking history per client",
+          "Visit and booking context",
+          "Client acquisition source information"
+        ]
+      ],
+      [
+        "Keep useful details where the business can use them.",
+        "For businesses that need more context around a service, NextSlot supports consultation records and client alerts. The next appointment can start with the information you already have.",
+        [
+          "Consultation forms",
+          "Client notes and alerts",
+          "Special occasion information",
+          "Blocked clients and reasons where enabled"
+        ]
+      ],
+      [
+        "Retention becomes part of the workflow.",
+        "Client management is not only about storing names. NextSlot supports loyalty and retention activity, including identifying inactive clients and using Nexty suggestions where available.",
+        [
+          "Loyalty tools",
+          "VIP and client classification",
+          "Inactive client visibility",
+          "Retention insights from Nexty"
+        ]
+      ]
+    ],
+    "fit": [
+      "You need to remember more than a client's name and phone number.",
+      "Important client information is currently buried in WhatsApp or notebooks.",
+      "You want booking history available at the next appointment.",
+      "You want to build retention and loyalty into normal business operations."
+    ],
+    "related": [
+      [
+        "Business analytics",
+        "/business-analytics"
+      ],
+      [
+        "Business management software",
+        "/business-management-software"
+      ],
+      [
+        "Business growth",
+        "/business-growth"
+      ]
+    ]
+  },
+  "/business-analytics": {
+    "sections": [
+      [
+        "See the business behind the bookings.",
+        "The dashboard brings revenue and booking activity into view so the owner can see what is happening without building reports manually.",
+        [
+          "Revenue tracking",
+          "Booking activity",
+          "Revenue progress and performance views",
+          "Acquisition channel visibility",
+          "Service performance"
+        ]
+      ],
+      [
+        "Understand demand, not just totals.",
+        "A monthly revenue number tells you what happened. Booking patterns help explain why. NextSlot uses booking activity to show demand across days and time windows so you can see where the business is filling and where gaps remain.",
+        [
+          "Booking heatmap",
+          "Busy and quiet windows",
+          "Fill-rate visibility",
+          "Demand patterns over time"
+        ]
+      ],
+      [
+        "Nexty turns patterns into questions worth answering.",
+        "Nexty is the intelligence layer on top of the operational data. It looks across bookings, payments, client activity and other business signals to surface practical growth, retention and operations insights.",
+        [
+          "Growth opportunities",
+          "Retention signals",
+          "Operational issues",
+          "Revenue and service performance patterns"
+        ]
+      ]
+    ],
+    "fit": [
+      "You know your revenue but not what is driving it.",
+      "You are unsure which services, time slots or channels deserve more attention.",
+      "You want to see demand patterns instead of relying on intuition.",
+      "You want insights based on your own business activity."
+    ],
+    "related": [
+      [
+        "Business growth",
+        "/business-growth"
+      ],
+      [
+        "Client management",
+        "/client-management"
+      ],
+      [
+        "Business management software",
+        "/business-management-software"
+      ]
+    ]
+  },
+  "/mobile-service-businesses": {
+    "sections": [
+      [
+        "Your business can move without your admin falling apart.",
+        "NextSlot supports service businesses that travel to clients. The booking flow can capture the information needed for mobile appointments while the business keeps one client and booking record.",
+        [
+          "Mobile appointment workflow",
+          "Travel and call-out fee support",
+          "Client address information",
+          "Google Maps support"
+        ]
+      ],
+      [
+        "Make travel part of the economics.",
+        "Travel takes time and costs money. NextSlot can calculate travel-related charges and keep that information connected to the appointment, helping the owner account for the work involved in getting to the client.",
+        [
+          "Kilometre-based travel information",
+          "Call-out pricing",
+          "Travel fee calculation",
+          "Appointment-level travel details"
+        ]
+      ],
+      [
+        "Mobile does not have to mean mobile-only.",
+        "A business can operate from a fixed location, travel to clients, or do both. NextSlot adapts to the operating model instead of forcing every service business into the same setup.",
+        [
+          "Fixed-location services",
+          "Mobile services",
+          "Mixed operating models",
+          "Shared client and booking records"
+        ]
+      ]
+    ],
+    "fit": [
+      "You travel to clients for appointments.",
+      "Travel time and distance affect what an appointment is worth.",
+      "You want call-out fees handled as part of booking.",
+      "You operate both mobile and fixed-location services."
+    ],
+    "related": [
+      [
+        "Booking software South Africa",
+        "/booking-software-south-africa"
+      ],
+      [
+        "Online booking software",
+        "/online-booking-software"
+      ],
+      [
+        "Payments & deposits",
+        "/payments"
+      ]
+    ]
+  },
+  "/payments": {
+    "sections": [
+      [
+        "A booking is not complete until you know how it is being paid.",
+        "NextSlot keeps payment activity connected to the appointment. Depending on the business and plan, clients can pay a deposit or full amount, with outstanding balances tracked against the booking.",
+        [
+          "Deposit collection",
+          "Full payment flows",
+          "Outstanding balance tracking",
+          "Payment status on bookings"
+        ]
+      ],
+      [
+        "Use payment methods that fit the business.",
+        "NextSlot supports South African payment workflows across different plans, giving businesses options for bank-to-bank and online card payments.",
+        [
+          "PayShap",
+          "Yoco card checkout",
+          "iKhokha card checkout",
+          "PayFast checkout where configured"
+        ]
+      ],
+      [
+        "Less payment chasing after the appointment.",
+        "When payment information is part of the booking workflow, the business can see what has been paid and what remains. That reduces the need to reconstruct payment status from messages and separate records.",
+        [
+          "Payment confirmation",
+          "Deposit and balance visibility",
+          "Payment webhooks",
+          "Booking and payment status connected"
+        ]
+      ]
+    ],
+    "fit": [
+      "You chase deposits or balances manually.",
+      "Payment status lives somewhere separate from your booking calendar.",
+      "You need a deposit before confirming an appointment.",
+      "You want local payment options connected to the booking experience."
+    ],
+    "related": [
+      [
+        "Online booking software",
+        "/online-booking-software"
+      ],
+      [
+        "Booking software South Africa",
+        "/booking-software-south-africa"
+      ],
+      [
+        "Business management software",
+        "/business-management-software"
+      ]
+    ]
+  },
+  "/business-growth": {
+    "sections": [
+      [
+        "Growth starts with seeing what is already happening.",
+        "NextSlot collects the operational data created by running the business. That gives the owner a clearer view of revenue, bookings, clients, services and demand before asking what should change.",
+        [
+          "Revenue and booking trends",
+          "Service performance",
+          "Client activity and retention",
+          "Demand and availability patterns"
+        ]
+      ],
+      [
+        "Nexty looks for opportunities in the gaps.",
+        "Nexty is designed to be proactive rather than another report you have to remember to check. It looks across the data already in NextSlot and surfaces signals worth paying attention to.",
+        [
+          "Growth insights",
+          "Retention insights",
+          "Operations insights",
+          "Potential revenue opportunities",
+          "Patterns that need attention"
+        ]
+      ],
+      [
+        "The goal is an action, not another dashboard.",
+        "A useful insight should help the owner decide what to investigate, change or test. Nexty connects the pattern to a practical next step where the available data supports one.",
+        [
+          "Identify underused availability",
+          "Spot retention opportunities",
+          "Understand service performance",
+          "Review operational problems",
+          "Prioritise where attention may have the most value"
+        ]
+      ]
+    ],
+    "fit": [
+      "You have data but still make most decisions by feel.",
+      "You can see revenue but struggle to see what is behind it.",
+      "You want practical signals instead of generic business advice.",
+      "You want your booking system to help you understand where to focus next."
+    ],
+    "related": [
+      [
+        "Business analytics",
+        "/business-analytics"
+      ],
+      [
+        "Client management",
+        "/client-management"
+      ],
+      [
+        "Pricing",
+        "/pricing"
+      ]
+    ]
+  },
+  "/about": {
+    "sections": [
+      [
+        "NextSlot is built around the real work of running a service business.",
+        "The product brings bookings, payments, clients, availability and business activity into the same operating picture. It is designed for independent businesses that need useful tools without enterprise complexity.",
+        [
+          "Bookings and calendar",
+          "Payments and deposits",
+          "Client management",
+          "Operations and inventory",
+          "Business analytics and Nexty"
+        ]
+      ],
+      [
+        "PhenomeBeauty is a real example.",
+        "PhenomeBeauty had been running on WhatsApp bookings, EFT deposits and manual tracking. NextSlot brought booking activity and business performance into view. Over 90 days, NextSlot facilitated bookings and business growth resulting in R63,851.",
+        [
+          "R63,851 over 90 days",
+          "+68% vs previous period",
+          "Mobile beauty business in Cape Town",
+          "Real booking and business data"
+        ]
+      ],
+      [
+        "The product keeps getting built from operator problems.",
+        "NextSlot is not positioned as a generic technology platform. It is built around the practical problems independent service businesses face when the owner is also the person doing the work.",
+        [
+          "Reduce booking admin",
+          "Make payment status visible",
+          "Keep client history useful",
+          "Understand demand",
+          "Turn business activity into decisions"
+        ]
+      ]
+    ],
+    "fit": [
+      "You run an independent service business.",
+      "You have outgrown manual booking administration.",
+      "You want more than a booking link.",
+      "You want a clearer view of the business behind your appointments."
+    ],
+    "related": [
+      [
+        "See the demo",
+        "/demo"
+      ],
+      [
+        "Business growth",
+        "/business-growth"
+      ],
+      [
+        "Pricing",
+        "/pricing"
+      ]
+    ]
+  },
+  "/pricing": {
+    "sections": [
+      [
+        "Start by getting the booking process under control.",
+        "Starter is for businesses moving from manual booking into a proper online booking workflow. It focuses on the core job of getting clients booked and the business organised around those appointments.",
+        [
+          "Online booking page",
+          "Services and availability",
+          "Client capture and booking history",
+          "Core booking management"
+        ]
+      ],
+      [
+        "Add the systems that remove more manual work.",
+        "As booking volume grows, Flow adds more of the operational layer, including payment integrations, Google Calendar sync and additional client and business tools.",
+        [
+          "Online payment integrations",
+          "Google Calendar sync",
+          "More operational tools",
+          "Expanded client management"
+        ]
+      ],
+      [
+        "Professional is where the data becomes a bigger part of the product.",
+        "Professional is designed for businesses that want more visibility into performance and more capability around the way the business is run.",
+        [
+          "Advanced business insights",
+          "Expanded client tools",
+          "Operational visibility",
+          "Nexty business intelligence"
+        ]
+      ]
+    ],
+    "fit": [
+      "You are starting to take bookings online.",
+      "Your booking volume is creating more admin.",
+      "You need payments and client management around your bookings.",
+      "You want business insights as the operation grows."
+    ],
+    "related": [
+      [
+        "Online booking software",
+        "/online-booking-software"
+      ],
+      [
+        "Business management software",
+        "/business-management-software"
+      ],
+      [
+        "See the demo",
+        "/demo"
+      ]
+    ]
+  },
+  "/resources": {
+    "sections": [
+      [
+        "Learn the parts of the business that sit behind the booking.",
+        "Running a service business involves more than filling a calendar. Useful resources should help you understand bookings, clients, payments, operations and the numbers connecting them.",
+        [
+          "Online booking",
+          "Client management",
+          "Payments",
+          "Business analytics",
+          "Growth and retention"
+        ]
+      ],
+      [
+        "Practical over generic.",
+        "NextSlot content is intended to be grounded in the realities of independent service businesses. The aim is to explain useful ideas in a way an owner can apply to the business they are actually running.",
+        [
+          "Clear explanations",
+          "Real product context",
+          "South African business context",
+          "Practical operating ideas"
+        ]
+      ],
+      [
+        "Start with the product areas you need most.",
+        "Use the product pages to understand how NextSlot handles specific parts of the business, then explore the wider resources as your needs change.",
+        [
+          "Understand online booking",
+          "Explore client management",
+          "See payment workflows",
+          "Learn how analytics and Nexty fit together"
+        ]
+      ]
+    ],
+    "fit": [
+      "You are building or improving an independent service business.",
+      "You want practical guidance, not generic SaaS content.",
+      "You are comparing booking and business management options.",
+      "You want to understand how the different parts of NextSlot fit together."
+    ],
+    "related": [
+      [
+        "Online booking software",
+        "/online-booking-software"
+      ],
+      [
+        "Business analytics",
+        "/business-analytics"
+      ],
+      [
+        "Business growth",
+        "/business-growth"
+      ]
+    ]
+  },
+  "/demo": {
+    "sections": [
+      [
+        "See the client side.",
+        "The booking experience is designed around the client completing the booking without needing an account. Services, availability, appointment details and payment steps are brought into one flow.",
+        [
+          "Service selection",
+          "Availability",
+          "Appointment details",
+          "Payment and deposit flow"
+        ]
+      ],
+      [
+        "Then see the business side.",
+        "The admin dashboard brings the information created by bookings into view. Explore revenue, booking activity, clients, operational information and the areas that need attention.",
+        [
+          "Business dashboard",
+          "Revenue views",
+          "Booking activity",
+          "Client management",
+          "Operational tools"
+        ]
+      ],
+      [
+        "The two sides are connected.",
+        "The point of the system is not to create a prettier booking page. The booking creates operational data that the business can use, and that data can feed the dashboard and Nexty insights.",
+        [
+          "Bookings create client history",
+          "Payments update booking status",
+          "Activity feeds business reporting",
+          "Nexty looks for useful patterns"
+        ]
+      ]
+    ],
+    "fit": [
+      "You want to see the product before starting a trial.",
+      "You want to understand both the client and owner experience.",
+      "You are replacing manual booking administration.",
+      "You want more than a booking link."
+    ],
+    "related": [
+      [
+        "Start for free",
+        "/onboarding"
+      ],
+      [
+        "Pricing",
+        "/pricing"
+      ],
+      [
+        "Business management software",
+        "/business-management-software"
+      ]
+    ]
+  }
+}
