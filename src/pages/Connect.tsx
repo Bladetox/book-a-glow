@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   Check,
   SlidersHorizontal,
-  MoreHorizontal,
   ExternalLink,
 } from "lucide-react";
 
