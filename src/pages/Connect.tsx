@@ -481,7 +481,7 @@ function TechView() {
   );
 }
 
-function SalonView {
+function SalonView() {
   const [posted, setPosted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showPostForm, setShowPostForm] = useState(false);
