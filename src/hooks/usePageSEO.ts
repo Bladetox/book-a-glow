@@ -12,7 +12,6 @@ export function usePageSEO(path:string) {
       const el = document.querySelector(selector) as HTMLMetaElement | null;
       if (el) el.setAttribute(attr,value);
     };
-    const previousTitle = document.title;
     document.title = data.title;
     setMeta('meta[name="description"]',"content",data.description);
     setMeta('meta[name="robots"]',"content",data.indexable ? "index, follow" : "noindex, nofollow");
@@ -29,6 +28,5 @@ export function usePageSEO(path:string) {
       document.head.appendChild(link);
     }
     link.href = canonical;
-    return () => { document.title = previousTitle; };
   },[path]);
 }
