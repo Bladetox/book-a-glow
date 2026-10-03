@@ -37,18 +37,17 @@ export const HeatmapSection = () => {
       }}>
         {/* Left: copy */}
         <div>
-          <Eyebrow text="Booking Heatmap" />
+          <Eyebrow text="Understand your demand" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? 30 : 44,
             fontWeight: 800, lineHeight: 1.1,
             color: C.text, marginBottom: 20,
           }}>
-            You already know Saturday is busy.<br />
-            <span style={{ color: C.gold }}>Now you know why Friday is not.</span>
+            See where your business<br /><span style={{ color: C.gold }}>is actually filling up.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginBottom: 24 }}>
-            Some weeks feel full, others feel thin, and you cannot always explain why. The heatmap makes the pattern visible.
+            The heatmap turns your booking history into a pattern you can act on. See when demand is strongest, where gaps keep appearing, and where your availability or promotion could change the result.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, fontFamily: FONT_BODY }}>
             {[
