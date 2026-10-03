@@ -114,7 +114,7 @@ export const HeroSection = () => {
         {/* ── COPY COLUMN ── */}
         <div>
 
-          {/* 1. LABEL — plain, no pulse dot */}
+          {/* 1. LABEL - plain, no pulse dot */}
           <p style={{
             fontSize: 11,
             fontWeight: 600,
@@ -128,7 +128,7 @@ export const HeroSection = () => {
             For independent service businesses
           </p>
 
-          {/* 2. HEADLINE — clear, growth-focused */}
+          {/* 2. HEADLINE - clear, growth-focused */}
           <h1 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? "clamp(30px,8vw,44px)" : "clamp(34px,3.8vw,52px)",
@@ -142,7 +142,7 @@ export const HeroSection = () => {
             bookings. <span style={{ color: C.gold }}>Built for growth.</span>
           </h1>
           
-          {/* 3. DIFFERENTIATOR — growth-focused */}
+          {/* 3. DIFFERENTIATOR - growth-focused */}
           <p style={{
             fontSize: isMobile ? 15 : "clamp(15px,1.3vw,17px)",
             color: C.muted,
@@ -156,7 +156,7 @@ export const HeroSection = () => {
             NextSlot helps independent service businesses manage bookings, payments, clients and the day-to-day work behind them, then turns that activity into practical opportunities for growth.
           </p>
 
-          {/* 4. TESTIMONIAL — real name, no icon avatar */}
+          {/* 4. TESTIMONIAL - real name, no icon avatar */}
           <div style={{
             marginBottom: 40,
             animation: "fadeUp 0.5s 0.24s ease both",
@@ -183,7 +183,7 @@ export const HeroSection = () => {
             </p>
           </div>
 
-          {/* 5. CTA — solid gold, no gradient, low-stakes framing */}
+          {/* 5. CTA - solid gold, no gradient, low-stakes framing */}
           <div style={{
             animation: "fadeUp 0.5s 0.32s ease both",
             display: "flex",
