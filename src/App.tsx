@@ -27,6 +27,7 @@ const TenantNotFound   = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess   = lazy(() => import("./pages/PaymentSuccess"));
 const BillingSuccess   = lazy(() => import("./pages/BillingSuccess"));
 const Demo             = lazy(() => import("./pages/Demo"));
+const Connect          = lazy(() => import("./pages/Connect"));
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ const MarketingRoutes = () => (
         <Route path="/admin" element={<Navigate to="/login" replace />} />
         <Route path="/superadmin" element={<SuperAdmin />} />
         <Route path="/demo" element={<Demo />} />
+        <Route path="/connect" element={<Connect />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
         <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
