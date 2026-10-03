@@ -11,12 +11,12 @@ const steps = [
 
 const StepIndicator = ({ currentStep }: StepIndicatorProps) => {
   return (
-    <div className="flex items-center justify-between w-full px-4">
+    <div className="booking-progress flex items-center justify-between w-full px-4">
       {steps.map((s, i) => {
         const status =
           i < currentStep ? "completed" : i === currentStep ? "active" : "upcoming";
         return (
-          <div key={s.number} className="flex flex-col items-center gap-1.5 flex-1">
+          <div key={s.number} className="booking-progress-item flex flex-col items-center gap-1.5 flex-1">
             {/* Progress line */}
             <div className="w-full flex items-center">
               <div
