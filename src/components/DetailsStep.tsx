@@ -43,6 +43,8 @@ interface SuggestionRect {
   top: number;
   left: number;
   width: number;
+  placement: "above" | "below";
+  maxHeight: number;
 }
 
 interface ConsultationQRendererProps {
@@ -232,11 +234,32 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const updateSuggestionRect = useCallback(() => {
     const input = addressInputRef.current;
     if (!input) return;
+
+    // getBoundingClientRect() is already viewport-relative. Because the
+    // suggestions are position: fixed, adding page scroll offsets would
+    // misplace the dropdown, especially when the booking form itself scrolls.
     const rect = input.getBoundingClientRect();
+    const gap = 8;
+    const viewportPadding = 12;
+    const maxSuggestionHeight = 220;
+
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const spaceAbove = rect.top - viewportPadding;
+
+    // Keep the input visible while editing. Prefer below the field, but flip
+    // above it when the keyboard or viewport leaves insufficient room.
+    const placement =
+      spaceBelow >= 140 || spaceBelow >= spaceAbove ? "below" : "above";
+
+    const availableSpace =
+      placement === "below" ? spaceBelow - gap : spaceAbove - gap;
+
     setSuggestionRect({
-      top: rect.top + window.scrollY,
-      left: rect.left + window.scrollX,
+      top: placement === "below" ? rect.bottom + gap : rect.top - gap,
+      left: rect.left,
       width: rect.width,
+      placement,
+      maxHeight: Math.max(120, Math.min(maxSuggestionHeight, availableSpace)),
     });
   }, []);
 
@@ -576,14 +599,19 @@ useEffect(() => {
               transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
               style={{
                 position: "fixed",
-                top: suggestionRect.top - 4,
+                top: suggestionRect.top,
                 left: suggestionRect.left,
                 width: suggestionRect.width,
-                transform: "translateY(-100%)",
                 zIndex: 9999,
               }}
             >
-              <div className="rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl max-h-[220px] overflow-y-auto">
+              <div
+                className="rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl overflow-y-auto"
+                style={{
+                  maxHeight: suggestionRect.maxHeight,
+                  transformOrigin: suggestionRect.placement === "above" ? "bottom center" : "top center",
+                }}
+              >
                 {addressSuggestions.map((s, idx) => (
                   <button
                     key={s.place_id}
