@@ -4,10 +4,10 @@ import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 
 const FEATURES = [
-  { name: "Smart Calendar" },
+  { name: "Bookings & Calendar" },
   { name: "Payments" },
   { name: "Client Management" },
-  { name: "Dashboard" },
+  { name: "Business Dashboard" },
   { name: "Nexty" },
   { name: "Availability" },
   { name: "Loyalty Program" },
@@ -313,18 +313,17 @@ export const FeaturesSection = () => {
 
       <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 52, padding: isMobile ? "0 24px" : 0 }}>
-          <Eyebrow text="Your dashboard" />
+          <Eyebrow text="How NextSlot works" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? 30 : 44,
             fontWeight: 800, lineHeight: 1.1,
             color: C.text, marginBottom: 14,
           }}>
-            All the tools to help<br />
-            <span style={{ color: C.gold }}>your business grow.</span>
+            From the booking to<br /><span style={{ color: C.gold }}>everything around it.</span>
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
-            Bookings, insights, payments, inventory. Built for South African service businesses.
+            A client books. Payment confirms it. Their history stays with you. Your availability stays up to date. The activity builds your dashboard, and Nexty helps you see what to do with it.
           </p>
         </div>
 
