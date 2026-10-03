@@ -1,0 +1,177 @@
+{
+  "/": {
+    "title": "NextSlot | Online Booking & Business Management Software",
+    "description": "Online booking and business management software for independent service businesses. Manage bookings, payments, clients and operations, then use your data to grow.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Online booking + business management software",
+    "h1": "More than bookings. Built for growth.",
+    "intro": "NextSlot gives independent service businesses one system for bookings, payments, clients, availability and the work behind every appointment. Then it turns that activity into practical insights about what to do next.",
+    "schema": "home"
+  },
+  "/about": {
+    "title": "About NextSlot | Booking & Business Management Software",
+    "description": "Learn how NextSlot helps independent service businesses manage bookings, payments, clients and operations, with PhenomeBeauty as a real-world example.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "About NextSlot",
+    "h1": "Built around the business behind the booking.",
+    "intro": "NextSlot was built for independent service businesses that had outgrown WhatsApp, spreadsheets, scattered calendars and manual payment chasing, but did not need an enterprise system.",
+    "schema": "page"
+  },
+  "/pricing": {
+    "title": "NextSlot Pricing | Booking & Business Management Software",
+    "description": "See NextSlot plans for independent service businesses. Start with online bookings and grow into payments, client management, analytics and business insights.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Pricing",
+    "h1": "Start with what your business needs now.",
+    "intro": "NextSlot grows with the way an independent service business operates. Start with the booking basics, then add the tools that remove manual work and make the business easier to understand.",
+    "schema": "page"
+  },
+  "/resources": {
+    "title": "NextSlot Resources | Booking, Clients, Payments & Growth",
+    "description": "Practical resources for independent service businesses covering online bookings, client management, payments, operations and business growth.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Resources",
+    "h1": "Useful ideas for running the business behind the booking.",
+    "intro": "Explore practical guidance for independent service businesses that want to spend less time managing admin and more time understanding what is actually happening in the business.",
+    "schema": "page"
+  },
+  "/demo": {
+    "title": "See NextSlot in Action | Online Booking & Business Management",
+    "description": "Explore a working NextSlot demo, including the business dashboard, booking experience, calendar, client management and the tools around every appointment.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "See NextSlot in action",
+    "h1": "See the system behind the booking.",
+    "intro": "Explore the client booking experience and the business dashboard side by side. The demo uses fictional data, but the workflows show how NextSlot fits together.",
+    "schema": "page"
+  },
+  "/online-booking-software": {
+    "title": "Online Booking Software for Service Businesses | NextSlot",
+    "description": "Online booking software for independent service businesses. Let clients book available services, collect deposits and manage appointments without relying on messages.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Online booking software",
+    "h1": "Let clients book when you are busy doing the work.",
+    "intro": "NextSlot gives your business a branded online booking page where clients can see your services, choose available times and complete the booking flow without waiting for a WhatsApp reply.",
+    "schema": "page"
+  },
+  "/business-management-software": {
+    "title": "Business Management Software for Service Businesses | NextSlot",
+    "description": "Business management software for independent service businesses. Run bookings, payments, clients, availability, inventory and business performance from one system.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Business management software",
+    "h1": "Run the business behind the booking.",
+    "intro": "A booking page only solves the front door. NextSlot brings the work around each appointment into the same system, from payment and client history to availability, inventory and business performance.",
+    "schema": "page"
+  },
+  "/booking-software-south-africa": {
+    "title": "Booking Software South Africa | NextSlot",
+    "description": "South African online booking software for independent service businesses, with local payment options, mobile service support and business insights.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Built in South Africa",
+    "h1": "Booking software that understands how local service businesses operate.",
+    "intro": "NextSlot is built in South Africa for independent service businesses that need more than a booking link. Manage appointments, collect payments, support mobile services and understand the numbers behind the work.",
+    "schema": "page"
+  },
+  "/client-management": {
+    "title": "Client Management Software for Service Businesses | NextSlot",
+    "description": "Manage client profiles, booking history, consultation records, loyalty, alerts and retention activity alongside your service bookings.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Client management",
+    "h1": "Remember the client, not the conversation.",
+    "intro": "NextSlot keeps client information and booking history with the business instead of leaving important context buried in chats, notebooks or separate spreadsheets.",
+    "schema": "page"
+  },
+  "/business-analytics": {
+    "title": "Business Analytics for Service Businesses | NextSlot",
+    "description": "Understand revenue, bookings, demand, acquisition, retention and service performance with business analytics built around your actual service activity.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Business analytics",
+    "h1": "See what your bookings are telling you.",
+    "intro": "NextSlot turns booking and payment activity into a clearer view of revenue, demand, client behaviour and service performance, so decisions are based on what is actually happening.",
+    "schema": "page"
+  },
+  "/mobile-service-businesses": {
+    "title": "Booking Software for Mobile Service Businesses | NextSlot",
+    "description": "Manage bookings, travel fees, availability and client information for a mobile service business, or run mobile and fixed-location services together.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Mobile service businesses",
+    "h1": "Work from your location, travel to clients, or do both.",
+    "intro": "NextSlot adapts to the way your service business works. Support mobile appointments with travel information and call-out pricing while keeping bookings, clients and business activity together.",
+    "schema": "page"
+  },
+  "/payments": {
+    "title": "Payment & Deposit Software for Service Businesses | NextSlot",
+    "description": "Collect booking deposits and payments with NextSlot using supported South African payment options, while keeping payment status connected to each appointment.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Payments & deposits",
+    "h1": "Get the booking and the payment into the same flow.",
+    "intro": "NextSlot connects payment activity to the booking it belongs to, helping independent service businesses collect deposits, track balances and reduce the admin around getting paid.",
+    "schema": "page"
+  },
+  "/business-growth": {
+    "title": "Business Growth Software for Service Businesses | NextSlot",
+    "description": "Turn bookings, payments, client activity and operations into practical growth opportunities with Nexty and NextSlot business insights.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "Business growth",
+    "h1": "Stop guessing where the next opportunity is.",
+    "intro": "NextSlot does more than record what happened. Nexty looks across the activity your business is already creating and surfaces practical opportunities in growth, retention and operations.",
+    "schema": "page"
+  },
+  "/login": {
+    "title": "Login | NextSlot",
+    "description": "Log in to your NextSlot account.",
+    "indexable": false
+  },
+  "/onboarding": {
+    "title": "Get Started with NextSlot",
+    "description": "Set up your NextSlot booking page.",
+    "indexable": false
+  },
+  "/reset-password": {
+    "title": "Reset Password | NextSlot",
+    "description": "Reset your NextSlot account password.",
+    "indexable": false
+  },
+  "/payment": {
+    "title": "Payment | NextSlot",
+    "description": "Payment processing.",
+    "indexable": false
+  },
+  "/payment-success": {
+    "title": "Payment Complete | NextSlot",
+    "description": "Your payment has been processed.",
+    "indexable": false
+  },
+  "/billing-success": {
+    "title": "Billing Complete | NextSlot",
+    "description": "Your billing update has been processed.",
+    "indexable": false
+  },
+  "/admin": {
+    "title": "Admin | NextSlot",
+    "description": "NextSlot business administration.",
+    "indexable": false
+  },
+  "/superadmin": {
+    "title": "Administration | NextSlot",
+    "description": "NextSlot administration.",
+    "indexable": false
+  },
+  "/book": {
+    "title": "Book Online | NextSlot",
+    "description": "Online booking powered by NextSlot.",
+    "indexable": false
+  }
+}
