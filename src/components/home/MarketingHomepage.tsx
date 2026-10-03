@@ -155,13 +155,13 @@ export const MarketingHomepage = () => {
         </div>
       </Section>
 
-      <Section dark eyebrow="Made for South Africa" title={<>The software should fit the way <span style={{ color: C.gold }}>you actually do business.</>} body="NextSlot is built in South Africa for independent service businesses here, with local payment options, familiar communication channels and POPIA-conscious data handling.">
+      <Section dark eyebrow="Made for South Africa" title={<>The software should fit the way <span style={{ color: C.gold }}>you actually do business.</span></>} body="NextSlot is built in South Africa for independent service businesses here, with local payment options, familiar communication channels and POPIA-conscious data handling.">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           {["Yoco", "PayShap", "PayFast", "iKhokha", "WhatsApp", "Google Calendar", "ZAR", "POPIA"].map(x => <span key={x} style={{ padding: "11px 15px", borderRadius: 10, background: C.s2, border: `1px solid ${C.border}`, color: C.text, fontSize: 12, fontWeight: 600 }}>{x}</span>)}
         </div>
       </Section>
 
-      <Section eyebrow="Proof, not promises" title={<>What happens when a real business <span style={{ color: C.gold }}>starts using the system?</>} body="PhenomeBeauty is a Cape Town mobile beauty business run by Shu-meez Sylvester. After years of WhatsApp bookings, EFT deposits and manual tracking, NextSlot brought the booking and business information into one place.">
+      <Section eyebrow="Proof, not promises" title={<>What happens when a real business <span style={{ color: C.gold }}>starts using the system?</span></>} body="PhenomeBeauty is a Cape Town mobile beauty business run by Shu-meez Sylvester. After years of WhatsApp bookings, EFT deposits and manual tracking, NextSlot brought the booking and business information into one place.">
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1.1fr .9fr", gap: 18 }}>
           <Card accent>
             <div style={{ fontSize: 10, color: C.gold, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase" }}>PhenomeBeauty · Cape Town</div>
