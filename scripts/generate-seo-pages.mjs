@@ -110,7 +110,7 @@ function patch(html, route, page) {
 const indexable = Object.entries(pages).filter(([,page]) => page.indexable);
 for (const [route,page] of indexable) {
   if (route === "/") continue;
-  const dir = path.join(dist, route.replace(/^\\//,""));
+  const dir = path.join(dist, route.replace(/^\//,""));
   fs.mkdirSync(dir,{recursive:true});
   fs.writeFileSync(path.join(dir,"index.html"),patch(baseHtml,route,page));
 }
@@ -123,7 +123,7 @@ const sitemap = [
     "    <loc>" + siteUrl + (route === "/" ? "/" : route) + "</loc>",
     "    <lastmod>" + page.lastmod + "</lastmod>",
     "  </url>"
-  ].join("\\n")),
+  ].join("\n")),
   "</urlset>",
   ""
 ].join("\\n");
