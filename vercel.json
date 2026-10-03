@@ -198,7 +198,7 @@
     },
     {
       "source": "/case-study/phenomebeauty",
-      "destination": "/about#case-study",
+      "destination": "/about",
       "permanent": true
     }
   ]
