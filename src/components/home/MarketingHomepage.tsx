@@ -131,7 +131,7 @@ export const MarketingHomepage = () => {
         </div>
       </Section>
 
-      <Section dark eyebrow="Nexty · Business Growth Advisor" title={<>Your numbers already know <span style={{ color: C.gold }}>what to do next.</>} body="Nexty is the intelligence layer inside NextSlot. It looks at the activity already happening in your business and turns patterns into useful prompts, not generic advice.">
+      <Section dark eyebrow="Nexty · Business Growth Advisor" title={<>Your numbers already know <span style={{ color: C.gold }}>what to do next.</span></>} body="Nexty is the intelligence layer inside NextSlot. It looks at the activity already happening in your business and turns patterns into useful prompts, not generic advice.">
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "280px 1fr", gap: mobile ? 28 : 56, alignItems: "center" }}>
           <div style={{ minHeight: mobile ? 180 : 280, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ width: mobile ? 88 : 118, height: mobile ? 88 : 118, borderRadius: "50%", background: "radial-gradient(circle at 30% 25%,#fff2c5 0%,#e2bd8b 24%,#c69257 55%,#7d4d12 100%)", boxShadow: "0 18px 55px rgba(212,165,116,.30), inset -8px -10px 18px rgba(0,0,0,.24), inset 5px 5px 12px rgba(255,240,190,.25)" }} />
