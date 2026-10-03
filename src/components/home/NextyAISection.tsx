@@ -27,7 +27,7 @@ export const NextyAISection = () => {
             Your numbers already know<br /><span style={{ color: C.gold }}>what to do next.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
-            Nexty watches every booking, gap, and trend, and flags what costs you money before you have to look for it.
+            Once your bookings, payments and client activity are in NextSlot, Nexty looks across that activity for patterns worth your attention. It turns the data your business is already creating into practical growth, retention and operations insights.
           </p>
         </div>
 
