@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 
 const navLinks = [
   { to: "/demo", label: "How it works" },
@@ -32,7 +33,7 @@ const SiteHeader = () => {
 
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login" className="text-sm font-medium px-3 py-2 rounded-lg" style={{ color: "hsl(var(--muted-foreground))" }}>Login</Link>
-            <Link to="/onboarding" className="inline-flex items-center justify-center text-sm font-semibold px-5 py-2.5 rounded-[10px]" style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))", boxShadow: "0 0 0 1px hsl(var(--accent) / .35), 0 4px 14px -2px hsl(var(--accent) / .30)" }}>Try NextSlot free</Link>
+            <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
           </div>
 
           <button className="md:hidden p-2 rounded-lg" style={{ color: "hsl(var(--muted-foreground))" }} onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label={isMenuOpen ? "Close menu" : "Open menu"}>{isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
@@ -44,7 +45,7 @@ const SiteHeader = () => {
               {navLinks.map(({ to, label }) => <Link key={to} to={to} className="px-3 py-2.5 rounded-lg text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }} onClick={() => setIsMenuOpen(false)}>{label}</Link>)}
               <Link to="/login" className="px-3 py-2.5 rounded-lg text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }} onClick={() => setIsMenuOpen(false)}>Login</Link>
             </nav>
-            <div className="px-3"><Link to="/onboarding" className="flex items-center justify-center text-sm font-semibold px-5 py-3 rounded-[10px] w-full" style={{ background: "hsl(var(--foreground))", color: "hsl(var(--background))" }} onClick={() => setIsMenuOpen(false)}>Try NextSlot free</Link></div>
+            <div className="px-3"><div onClick={() => setIsMenuOpen(false)}><PrimaryCTA to="/onboarding">Start for free</PrimaryCTA></div></div>
           </div>
         )}
       </div>
