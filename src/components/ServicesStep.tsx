@@ -46,9 +46,9 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
     selectedTreatments.filter((selectedId) => selectedId === id).length;
 
   return (
-    <div className="booking-step booking-services flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {/* Title row */}
-      <div className="booking-step-heading flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
           {servicesHeading}
         </h3>
@@ -61,7 +61,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
 
       {/* Category filter pills */}
       {categories.length > 0 && (
-        <div className="booking-category-scroll flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
           {categories.map((cat) => {
             const isActive = activeCat === cat.id;
             return (
@@ -88,7 +88,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.18 }}
-          className="booking-service-list flex flex-col gap-2"
+          className="flex flex-col gap-2"
         >
           {visibleTreatments.length === 0 ? (
             <p className="text-xs text-muted-foreground py-4 text-center">
@@ -102,11 +102,11 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                 <motion.div
                   key={t.id}
                   layout
-                  className={`booking-service-row glass-card-service rounded-xl px-4 py-3.5 flex items-center gap-3 w-full transition-all duration-150 ${
+                  className={`glass-card-service rounded-xl px-4 py-3.5 flex items-center gap-3 w-full transition-all duration-150 ${
                     isSelected ? "selected" : ""
                   }`}
                 >
-                  <div className="booking-service-copy flex-1 min-w-0">
+                  <div className="flex-1 min-w-0">
                     <span className="block text-sm font-semibold text-foreground leading-snug">
                       {t.name}
                     </span>
@@ -126,7 +126,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                     R{t.price}
                   </span>
 
-                  <div className="booking-quantity-control flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     {qty > 0 && (
                       <>
                         <motion.button
