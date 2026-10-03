@@ -310,6 +310,7 @@ export const CaseStudySection = () => {
 
           {/* Quote and attribution */}
           <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, color: C.text, lineHeight: 1.7, margin: "0 0 16px", fontFamily: FONT_BODY }}>NextSlot facilitated bookings and business growth resulting in R63,851 over 90 days.</p>
             <p
               style={{
                 fontSize: isMobile ? 14 : 16,
