@@ -17,15 +17,20 @@ const SiteFooter = () => (
           </div>
         </Link>
         <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2">
-          {[
-            { to: "/about", label: "About" },
-            { to: "/pricing", label: "Pricing" },
-            { to: "/resources", label: "Resources" },
-            { to: "/privacy", label: "Privacy" },
-            { to: "/terms", label: "Terms" },
-          ].map(({ to, label }) => (
-            <Link key={to} to={to} style={{ fontSize: 12, color: C.muted, textDecoration: "none", fontFamily: FONT_BODY }}>{label}</Link>
-          ))}
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 14 }}>
+            {[
+              { to: "/online-booking-software", label: "Online booking" },
+              { to: "/business-management-software", label: "Business management" },
+              { to: "/client-management", label: "Client management" },
+              { to: "/business-analytics", label: "Business analytics" },
+              { to: "/business-growth", label: "Business growth" },
+              { to: "/pricing", label: "Pricing" },
+              { to: "/resources", label: "Resources" },
+              { to: "/about", label: "About" },
+            ].map(({ to, label }) => (
+              <Link key={to} to={to} style={{ fontSize: 12, color: C.muted, textDecoration: "none", fontFamily: FONT_BODY }}>{label}</Link>
+            ))}
+          </div>
         </nav>
         <p style={{ fontSize: 11, color: C.muted, fontFamily: FONT_BODY, textAlign: "center" }}>
           © {new Date().getFullYear()} NextSlot. Proudly made in South Africa.
