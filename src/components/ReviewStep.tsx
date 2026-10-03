@@ -474,14 +474,14 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
   };
 
   return (
-    <div className="booking-step booking-review flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-[17px] font-bold text-foreground leading-tight">Review your booking</h2>
         <p className="text-xs text-muted-foreground mt-0.5">Check everything looks right before confirming.</p>
       </div>
 
       {/* Services */}
-      <div className="booking-review-card rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+      <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border/30">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Services</p>
         </div>
@@ -511,7 +511,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       </div>
 
       {/* Appointment */}
-      <div className="booking-review-card rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+      <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border/30">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Appointment</p>
         </div>
@@ -555,7 +555,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
 
       {/* Payment summary - Yoco / PayFast */}
       {!isPayshap && !isIkhokha && (
-        <div className="booking-review-card rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+        <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
           </div>
@@ -593,7 +593,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
 
             {/* Payment summary - iKhokha */}
       {isIkhokha && (
-        <div className="booking-review-card rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+        <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
           </div>
@@ -626,7 +626,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
 
       {/* iKhokha deposit / full toggle */}
       {isIkhokha && config.depositPercent < 100 && (
-        <div className="booking-payment-toggle flex rounded-xl border border-border/50 overflow-hidden text-sm">
+        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("ikhokha_deposit")}
             className={`flex-1 py-2.5 font-medium transition-colors ${
@@ -652,7 +652,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       
       {/* Payment summary - PayShap */}
       {isPayshap && (
-        <div className="booking-review-card rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+        <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
           </div>
@@ -690,7 +690,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
 
       {/* Payment method toggle - Yoco / PayFast */}
       {!isPayshap && !isIkhokha && depositPercent < 100 && (
-        <div className="booking-payment-toggle flex rounded-xl border border-border/50 overflow-hidden text-sm">
+        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("deposit")}
             className={`flex-1 py-2.5 font-medium transition-colors ${
@@ -716,7 +716,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
 
       {/* Payment method toggle - PayShap */}
       {isPayshap && config.depositPercent < 100 && (
-        <div className="booking-payment-toggle flex rounded-xl border border-border/50 overflow-hidden text-sm">
+        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("payshap_deposit")}
             className={`flex-1 py-2.5 font-medium transition-colors ${
