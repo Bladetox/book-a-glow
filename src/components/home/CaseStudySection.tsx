@@ -8,17 +8,17 @@ import { RevenueChart } from "./RevenueChart";
 /*
   Laws of UX applied
   ─────────────────────────────────────────────────────────────
-  Serial Position Effect   : Before first, Result last — the outcome
+  Serial Position Effect   : Before first, Result last - the outcome
                              is the most memorable item.
   Von Restorff Effect      : The Result card is gold-bordered and
-                             visually distinct — it will be remembered.
+                             visually distinct - it will be remembered.
   Aesthetic-Usability      : Clean card surfaces, consistent radius,
                              generous whitespace reduce perceived effort.
   Miller's Law             : Two steps only (Before / Shift)
-                             — well within the 7+2 chunk limit.
+                             - well within the 7+2 chunk limit.
   Goal-Gradient Effect     : Step numbers + visible progression cue
                              the reader toward the outcome.
-  Zeigarnik Effect         : Step 01 is intentionally unresolved —
+  Zeigarnik Effect         : Step 01 is intentionally unresolved -
                              tension draws the eye to 02.
   Jakobs Law               : Timeline cards follow a familiar
                              before/after narrative pattern.
