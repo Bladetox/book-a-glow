@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { HOME_STYLES } from "@/components/home/homeStyles";
@@ -11,7 +12,13 @@ import { HeatmapSection } from "@/components/home/HeatmapSection";
 import { CTASection } from "@/components/home/CTASection";
 import { C, FONT_BODY } from "@/components/home/tokens";
 
-const Index = () => (
+const Index = () => {
+  useEffect(() => {
+    document.documentElement.classList.add("marketing-page");
+    return () => document.documentElement.classList.remove("marketing-page");
+  }, []);
+
+  return (
   <div
     className="nextslot-theme dark-brand marketing-site"
     style={{
