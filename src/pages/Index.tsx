@@ -19,7 +19,7 @@ const Index = () => {
   }, []);
 
   return (
-  <div
+    <div
     className="nextslot-theme dark-brand marketing-site"
     style={{
       minHeight: "100dvh",
@@ -46,7 +46,8 @@ const Index = () => {
       <CTASection />
     </main>
     <SiteFooter />
-  </div>
-);
+    </div>
+  );
+};
 
 export default Index;
