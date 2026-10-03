@@ -6,13 +6,13 @@ const navLinks = [
   { to: "/demo", label: "How it works" },
   { to: "/pricing", label: "Pricing" },
   { to: "/resources", label: "Resources" },
-  { to: "/about", label: "Proof" },
+  { to: "/about#case-study", label: "Results" },
 ];
 
 const SiteHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { pathname } = useLocation();
-  const isActive = (to: string) => pathname === to || pathname.startsWith(to + "/");
+  const isActive = (to: string) => { const path = to.split("#")[0]; return pathname === path || pathname.startsWith(path + "/"); };
 
   return (
     <header className="fixed top-0 z-50 w-full backdrop-blur-lg" style={{ background: "rgba(0,0,0,.92)", borderBottom: "1px solid hsl(var(--accent) / .12)", boxShadow: "0 1px 0 0 hsl(var(--accent) / .06), 0 4px 16px -4px rgba(0,0,0,.8)" }}>
