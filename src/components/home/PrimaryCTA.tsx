@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import type { ReactNode } from "react";
 import { C, FONT_BODY } from "./tokens";
 
 export const PrimaryCTA = ({
@@ -6,7 +7,7 @@ export const PrimaryCTA = ({
   children,
 }: {
   to: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) => (
   <Link
     to={to}
