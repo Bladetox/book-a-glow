@@ -77,7 +77,7 @@ const StickyBottomBar = ({
   return (
     <div
       ref={barRef}
-      className="sticky-bottom-bar"
+      className="booking-actions sticky-bottom-bar"
       style={{
         transform: `translateY(calc(-1 * var(--keyboard-height, 0px)))`,
       }}
