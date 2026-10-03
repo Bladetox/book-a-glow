@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { PrimaryCTA } from "./PrimaryCTA";
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
