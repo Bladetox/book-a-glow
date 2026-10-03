@@ -12,6 +12,7 @@
 
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com"];
+const VERCEL_DOMAINS = ["vercel.app", "vercel.sh"];
 
 // UUID pattern for Lovable preview subdomains
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,7 +61,15 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 4. Check against known NextSlot domains
+  // 4. Vercel preview deployments are app previews, not tenant custom domains.
+  // This keeps routes such as /connect reachable on preview URLs.
+  for (const domain of VERCEL_DOMAINS) {
+    if (hostname === domain || hostname.endsWith(\`.${domain}\`)) {
+      return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+    }
+  }
+
+  // 5. Check against known NextSlot domains
   for (const domain of MAIN_DOMAINS) {
     if (hostname === domain || hostname === `www.${domain}`) {
       return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
@@ -76,13 +85,13 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 5. Dev: "<slug>.localhost"
+  // 6. Dev: "<slug>.localhost"
   if (hostname.endsWith(".localhost")) {
     const subdomain = hostname.slice(0, -".localhost".length);
     if (subdomain) return { slug: subdomain, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
   }
 
-  // 6. Unknown hostname → could be a custom domain, flag for async lookup
+  // 7. Unknown hostname → could be a custom domain, flag for async lookup
   return { slug: null, isCustomDomain: true, customDomainHost: hostname, isPreviewEnvironment: false };
 }
 
