@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import SiteHeader from "@/components/site/SiteHeader";
+import { C, FONT_BODY } from "@/components/home/tokens";
 import {
   Bell,
   CalendarDays,
@@ -98,12 +100,10 @@ const bookings = [
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111] text-white shadow-sm">
-        <Sparkles size={17} />
-      </div>
+      <img src="/web-app-manifest-192x192.png" alt="NextSlot" className="h-9 w-9 rounded-lg object-contain" />
       <div>
-        <div className="text-sm font-semibold tracking-[0.18em] text-neutral-950">NEXTSLOT</div>
-        <div className="-mt-0.5 text-[9px] font-medium tracking-[0.28em] text-neutral-400">CONNECT</div>
+        <div className="text-sm font-bold tracking-tight">Next<span className="text-[color:#D4A574]">Slot</span></div>
+        <div className="text-[9px] font-medium tracking-[0.28em] text-neutral-400">CONNECT</div>
       </div>
     </div>
   );
@@ -203,8 +203,8 @@ function OpportunityDetail({
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-neutral-950">
-      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-black text-neutral-950">
+      <header className="sticky top-16 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-2xl items-center px-4">
           <button
             onClick={onBack}
@@ -313,8 +313,8 @@ function TechView() {
     );
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-neutral-950">
-      <header className="sticky top-0 z-30 border-b border-neutral-200/80 bg-[#fafafa]/90 backdrop-blur-xl">
+    <div className="min-h-screen bg-black text-neutral-950">
+      <header className="sticky top-16 z-30 border-b border-neutral-200/80 bg-black/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo />
           <nav className="hidden items-center gap-7 text-sm text-neutral-500 md:flex">
@@ -361,7 +361,7 @@ function TechView() {
                 Find open chair opportunities that fit your availability and specializations.
               </p>
             </div>
-            <div id="reliability" className="rounded-2xl border border-neutral-200 bg-[#fafafa] p-5 md:min-w-[250px]">
+            <div id="reliability" className="rounded-2xl border border-neutral-200 bg-black p-5 md:min-w-[250px]">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-[0.15em] text-neutral-500">Reliability score</span>
                 <Star size={17} className="fill-current" />
@@ -438,7 +438,7 @@ function TechView() {
               </div>
             </div>
 
-            <div id="profile" className="rounded-2xl border border-neutral-200 bg-[#fafafa] p-6">
+            <div id="profile" className="rounded-2xl border border-neutral-200 bg-black p-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-sm font-semibold text-white">TM</div>
                 <div>
@@ -489,7 +489,7 @@ function SalonView() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f6] text-neutral-950">
-      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/90 backdrop-blur-xl">
+      <header className="sticky top-16 z-30 border-b border-neutral-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo />
           <nav className="hidden items-center gap-7 text-sm text-neutral-500 md:flex">
@@ -747,7 +747,38 @@ export default function Connect() {
   const [role, setRole] = useState<Role>("tech");
 
   return (
-    <div>
+    <div
+      className="connect-shell min-h-screen"
+      style={{
+        background: C.bg,
+        color: C.text,
+        fontFamily: FONT_BODY,
+        WebkitFontSmoothing: "antialiased",
+      }}
+    >
+      <SiteHeader />
+      <style>{`
+        .connect-shell .text-neutral-950,
+        .connect-shell .text-neutral-900 { color: #e8e8e6; }
+        .connect-shell .text-neutral-800,
+        .connect-shell .text-neutral-700,
+        .connect-shell .text-neutral-600,
+        .connect-shell .text-neutral-500 { color: rgba(232,232,230,0.52); }
+        .connect-shell .text-neutral-400 { color: rgba(232,232,230,0.28); }
+        .connect-shell .text-white { color: #000; }
+        .connect-shell .bg-white { background: #111110; }
+        .connect-shell .bg-neutral-50,
+        .connect-shell .bg-neutral-100 { background: #181816; }
+        .connect-shell .bg-neutral-950 { background: #e8e8e6; }
+        .connect-shell .border-neutral-100 { border-color: rgba(255,255,255,0.06); }
+        .connect-shell .border-neutral-200,
+        .connect-shell .border-neutral-300 { border-color: rgba(255,255,255,0.10); }
+        .connect-shell .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255,255,255,0.06); }
+        .connect-shell .hover\\:bg-neutral-50:hover,
+        .connect-shell .hover\\:bg-neutral-100:hover { background: #181816; }
+        .connect-shell .hover\\:bg-neutral-800:hover { background: #181816; }
+        .connect-shell .hover\\:border-neutral-300:hover { border-color: rgba(255,255,255,0.10); }
+      `}</style>
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-1 rounded-2xl border border-neutral-200 bg-white p-1 shadow-lg">
         <span className="hidden px-2 text-[10px] font-medium uppercase tracking-wider text-neutral-400 sm:block">Preview</span>
         <button
