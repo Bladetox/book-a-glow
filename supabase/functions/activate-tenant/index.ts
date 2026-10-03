@@ -367,8 +367,14 @@ function buildAdminUrl(tenantId: string, req: Request): string {
     return `${appBaseUrl}/admin?tenant=${tenantId}`;
   }
 
-  if (isLocalhost) {
-    return `${url.protocol}//${url.host}/admin?tenant=${tenantId}`;
+  if (
+    isLocalhost ||
+    hostname === "vercel.app" ||
+    hostname.endsWith(".vercel.app") ||
+    hostname === "vercel.sh" ||
+    hostname.endsWith(".vercel.sh")
+  ) {
+    return `${url.origin}/admin?tenant=${encodeURIComponent(tenantId)}`;
   }
 
   const parts = hostname.split(".");
