@@ -29,17 +29,17 @@ import { RevenueChart } from "./RevenueChart";
 const STEPS = [
   {
     step: "01",
-    tag: "The before",
-    headline: "Working hard at everything.",
-    body: "Busy every day, with no clear picture of what actually moved the business forward.",
+    tag: "Before NextSlot",
+    headline: "Bookings, payments and the diary lived in different places.",
+    body: "WhatsApp bookings. EFT deposits. Manual tracking. A diary and spreadsheets trying to keep up with the business.",
     stat: null,
     isFinal: false,
   },
   {
     step: "02",
-    tag: "The shift",
-    headline: "Clarity is a competitive advantage.",
-    body: "The data was already there. NextSlot just made it readable.",
+    tag: "With NextSlot",
+    headline: "The work became easier to run. The business became easier to understand.",
+    body: "Bookings, payments and business activity came into view together, making it easier to see what was happening and where to focus.",
     stat: "R63,851 over 90 days · +68% vs previous period",
     isFinal: true,
   },
