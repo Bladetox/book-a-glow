@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { PrimaryCTA } from "./PrimaryCTA";
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Orb } from "./Orb";
@@ -153,7 +153,7 @@ export const HeroSection = () => {
             fontWeight: 400,
             animation: "fadeUp 0.5s 0.16s ease both",
           } as React.CSSProperties}>
-            NextSlot helps independent service businesses manage bookings, payments, clients and the day-to-day work behind them, then turns that activity into practical opportunities for growth.
+            Take bookings online. Collect deposits and payments. Keep client history, availability and the work behind each appointment in one place. Then use what your business is telling you to decide what to do next.
           </p>
 
           {/* 4. TESTIMONIAL - real name, no icon avatar */}
@@ -190,26 +190,7 @@ export const HeroSection = () => {
             flexDirection: "column",
             alignItems: isMobile ? "stretch" : "flex-start",
           } as React.CSSProperties}>
-            <Link
-              to="/onboarding"
-              style={{
-                background: C.gold,
-                color: "#080808",
-                fontFamily: FONT_BODY,
-                fontSize: 15,
-                fontWeight: 700,
-                padding: "15px 32px",
-                borderRadius: 8,
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 52,
-                letterSpacing: "0.01em",
-              }}
-            >
-              Start for free
-            </Link>
+            <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
             <p style={{
               marginTop: 10,
               fontSize: 11,
