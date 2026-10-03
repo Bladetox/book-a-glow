@@ -125,7 +125,7 @@ export const HeroSection = () => {
             marginBottom: 28,
             animation: "fadeUp 0.5s ease both",
           } as React.CSSProperties}>
-            For solo service businesses
+            For independent service businesses
           </p>
 
           {/* 2. HEADLINE — clear, growth-focused */}
@@ -153,7 +153,7 @@ export const HeroSection = () => {
             fontWeight: 400,
             animation: "fadeUp 0.5s 0.16s ease both",
           } as React.CSSProperties}>
-            Manage your bookings, understand your business, and discover opportunities to grow.
+            NextSlot helps independent service businesses manage bookings, payments, clients and the day-to-day work behind them, then turns that activity into practical opportunities for growth.
           </p>
 
           {/* 4. TESTIMONIAL — real name, no icon avatar */}
@@ -191,7 +191,7 @@ export const HeroSection = () => {
             alignItems: isMobile ? "stretch" : "flex-start",
           } as React.CSSProperties}>
             <Link
-              to="/pricing"
+              to="/onboarding"
               style={{
                 background: C.gold,
                 color: "#080808",
@@ -218,7 +218,7 @@ export const HeroSection = () => {
               fontWeight: 400,
               textAlign: isMobile ? "center" : "left",
             } as React.CSSProperties}>
-              No payment required · Live in under 10 minutes
+              No payment required · Free trial · Built in South Africa
             </p>
           </div>
 
