@@ -36,12 +36,31 @@ export function resolveTenantSync(): TenantResolution {
     (d) => hostname === d || hostname === `www.${d}`
   );
 
-  // 1. Query param override — dev/preview ONLY, never honoured on production domains
-  if (!isProductionDomain) {
+  const isLocalhost =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".localhost");
+
+  const isVercelPreview = VERCEL_DOMAINS.some(
+    (d) => hostname === d || hostname.endsWith("." + d)
+  );
+
+  const isLovablePreview = LOVABLE_DOMAINS.some(
+    (d) => hostname === d || hostname.endsWith("." + d)
+  );
+
+  // 1. Query param override — preview/development hosts only.
+  // Never allow arbitrary custom production domains to select another tenant.
+  if (!isProductionDomain && (isLocalhost || isVercelPreview || isLovablePreview)) {
     const params = new URLSearchParams(window.location.search);
     const tenantParam = params.get("tenant");
     if (tenantParam) {
-      return { slug: tenantParam, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
+      return {
+        slug: tenantParam,
+        isCustomDomain: false,
+        customDomainHost: null,
+        isPreviewEnvironment: true,
+      };
     }
   }
 
@@ -61,23 +80,16 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 4. Vercel preview hosts:
-  //    - 3 labels: <deployment>.vercel.app → marketing preview
-  //    - 4+ labels: <tenant>.<deployment>.vercel.app → tenant preview
-  // The latter is the preview/tenant form used by the admin shell and must
-  // agree with TenantContext/AdminLogin, which both resolve the first label.
+  // 4. Vercel preview hosts are single deployment hosts. Tenant selection
+  // is carried by ?tenant=... rather than a nested tenant subdomain.
   for (const domain of VERCEL_DOMAINS) {
     if (hostname === domain || hostname.endsWith("." + domain)) {
-      const labels = hostname.split(".");
-      if (labels.length >= 4 && labels[0] && labels[0] !== "www") {
-        return {
-          slug: labels[0],
-          isCustomDomain: false,
-          customDomainHost: null,
-          isPreviewEnvironment: true,
-        };
-      }
-      return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+      return {
+        slug: null,
+        isCustomDomain: false,
+        customDomainHost: null,
+        isPreviewEnvironment: true,
+      };
     }
   }
 
@@ -135,14 +147,18 @@ export function buildAdminUrl(tenantId: string): string {
     hostname === "127.0.0.1" ||
     hostname.endsWith(".localhost");
 
-  if (isLocalhost) {
-    return `${window.location.origin}/admin?tenant=${tenantId}`;
+  const isVercelPreview = VERCEL_DOMAINS.some(
+    (d) => hostname === d || hostname.endsWith("." + d)
+  );
+
+  if (isLocalhost || isVercelPreview) {
+    return window.location.origin + "/admin?tenant=" + encodeURIComponent(tenantId);
   }
 
   const parts = hostname.split(".");
   const rootDomain =
     parts.length >= 3 ? parts.slice(-3).join(".") : parts.slice(-2).join(".");
-  return `${window.location.protocol}//${tenantId}.${rootDomain}/admin`;
+  return window.location.protocol + "//" + tenantId + "." + rootDomain + "/admin";
 }
 
 /** Returns the full URL for a named Supabase Edge Function. */
