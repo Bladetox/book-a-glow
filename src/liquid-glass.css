@@ -6,7 +6,7 @@
  * without changing booking logic, data, pricing, or payment behaviour.
  */
 
-@layer components {
+@layer liquid-glass {
   /* Ambient surface behind the booking flow. The tenant background remains
      the source of truth, while these soft fields give translucent controls
      something to refract against. */
@@ -262,6 +262,8 @@
   .step-indicator {
     transition: none !important;
   }
+}
+
 }
 
 /* Build-safe standalone stylesheet. */
