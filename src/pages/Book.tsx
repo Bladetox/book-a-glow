@@ -179,14 +179,14 @@ const Index = () => {
         region scrolls. This eliminates page-level scroll, fixes the iOS
         keyboard jump, and makes every step feel like a native app screen.
       */}
-      <div className="h-dvh flex flex-col overflow-hidden bg-background">
+      <div className="booking-shell h-dvh flex flex-col overflow-hidden bg-background">
 
         {!showSplash && ownerId && (
           <PrefetchAvailability durationMinutes={durationForSlots} staffId={ownerId} />
         )}
 
         {/* ── COMPACT STICKY HEADER ──────────────────────────────────────── */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top,0px),12px)] pb-3 border-b border-border/40 bg-background backdrop-blur-xl">
+        <div className="booking-header flex-shrink-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top,0px),12px)] pb-3 border-b border-border/40 bg-background backdrop-blur-xl">
           <div className="flex items-center gap-3 min-w-0">
             {/* Logo / abbreviation */}
             <div
@@ -229,7 +229,7 @@ const Index = () => {
         </div>
 
         {/* ── STEP INDICATOR ─────────────────────────────────────────────── */}
-        <div className="flex-shrink-0 px-2 py-3 bg-background backdrop-blur-xl border-b border-border/20">
+        <div className="booking-stepbar flex-shrink-0 px-2 py-3 bg-background backdrop-blur-xl border-b border-border/20">
           <StepIndicator currentStep={step} />
         </div>
 
@@ -239,8 +239,8 @@ const Index = () => {
           The header, step indicator, and bottom bar are all fixed chrome.
           AnimatePresence and stepVariants are completely unchanged.
         */}
-        <div data-booking-scroll className="flex-1 overflow-y-auto scrollbar-hide">
-          <div className="w-full max-w-md mx-auto px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}>
+        <div data-booking-scroll className="booking-scroll flex-1 overflow-y-auto scrollbar-hide">
+          <div className="booking-content w-full max-w-md mx-auto px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}>
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}
