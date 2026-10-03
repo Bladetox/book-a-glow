@@ -30,18 +30,17 @@ export const RevenueSection = () => {
 
       <div style={{ maxWidth: 1120, margin: "0 auto", position: "relative", zIndex: 2 }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <Eyebrow text="Revenue Intelligence" />
+          <Eyebrow text="See the business behind the bookings" />
           <h2 style={{
             fontFamily: FONT_DISPLAY,
             fontSize: isMobile ? "clamp(26px,7vw,36px)" : "clamp(28px,3.5vw,46px)",
             fontWeight: 700, color: C.text,
             lineHeight: 1.08, marginBottom: 16,
           }}>
-            Not a report card.<br /><span style={{ color: C.gold }}>A running coach.</span>
+            Your bookings tell you<br /><span style={{ color: C.gold }}>more than who is coming next.</span>
           </h2>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 560, margin: "0 auto", lineHeight: 1.7, fontFamily: FONT_BODY }}>
-            NextSlot does not just show you the number. It tells you where the month is heading,
-            exactly how far you are from beating last month, and which gaps to fill today.
+            Every booking and payment adds to a clearer picture of the business. Your dashboard brings revenue, booking activity and what needs attention into view, so you can make decisions from what is actually happening.
           </p>
         </div>
 
