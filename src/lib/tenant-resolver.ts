@@ -61,10 +61,22 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 4. Vercel preview deployments are app previews, not tenant custom domains.
-  // This keeps routes such as /connect reachable on preview URLs.
+  // 4. Vercel preview hosts:
+  //    - 3 labels: <deployment>.vercel.app → marketing preview
+  //    - 4+ labels: <tenant>.<deployment>.vercel.app → tenant preview
+  // The latter is the preview/tenant form used by the admin shell and must
+  // agree with TenantContext/AdminLogin, which both resolve the first label.
   for (const domain of VERCEL_DOMAINS) {
     if (hostname === domain || hostname.endsWith("." + domain)) {
+      const labels = hostname.split(".");
+      if (labels.length >= 4 && labels[0] && labels[0] !== "www") {
+        return {
+          slug: labels[0],
+          isCustomDomain: false,
+          customDomainHost: null,
+          isPreviewEnvironment: true,
+        };
+      }
       return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
     }
   }
