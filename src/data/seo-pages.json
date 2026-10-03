@@ -173,5 +173,15 @@
     "title": "Book Online | NextSlot",
     "description": "Online booking powered by NextSlot.",
     "indexable": false
+  },
+  "/privacy": {
+    "title": "Privacy Policy | NextSlot",
+    "description": "NextSlot privacy policy and information about how personal information is handled.",
+    "indexable": false
+  },
+  "/terms": {
+    "title": "Terms of Service | NextSlot",
+    "description": "NextSlot terms of service.",
+    "indexable": false
   }
 }
