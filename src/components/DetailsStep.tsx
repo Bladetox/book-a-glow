@@ -610,7 +610,7 @@ useEffect(() => {
       : null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="booking-step booking-details flex flex-col gap-5">
       <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
         Your details
       </h3>
@@ -817,7 +817,7 @@ useEffect(() => {
             ref={nameInputRef}
             id="booking-full-name"
             name="full-name"
-            className={`${inputClass} pl-10 ${getValidationClass("fullName", booking.fullName)}`}
+            className={`booking-field ${inputClass} pl-10 ${getValidationClass("fullName", booking.fullName)}`}
             placeholder="Full Name *"
             value={booking.fullName}
             autoComplete="name"
@@ -848,7 +848,7 @@ useEffect(() => {
           <input
             id="booking-phone"
             name="phone"
-            className={`${inputClass} pl-[7.5rem] ${getValidationClass("phone", booking.phone)}`}
+            className={`booking-field ${inputClass} pl-[7.5rem] ${getValidationClass("phone", booking.phone)}`}
             placeholder="e.g. 82 123 4567 *"
             type="tel"
             inputMode="tel"
@@ -868,7 +868,7 @@ useEffect(() => {
           <input
             id="booking-email"
             name="email"
-            className={`${inputClass} pl-10 ${getValidationClass("email", booking.email)}`}
+            className={`booking-field ${inputClass} pl-10 ${getValidationClass("email", booking.email)}`}
             type="email"
             inputMode="email"
             autoComplete="email"
@@ -923,7 +923,7 @@ useEffect(() => {
                   ref={addressInputRef}
                   id="booking-address"
                   name="address"
-                  className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
+                  className={`booking-field ${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
                   placeholder="Home Address *"
                   value={booking.address}
                   inputMode="search"
