@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mail, KeyRound, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveTenantSync } from "@/lib/tenant-resolver";
 
 interface AdminLoginProps {
   onLogin: () => void;
@@ -14,19 +15,7 @@ type View = "login" | "forgot";
 // phenomebeauty.nextslot.co.za = 4 parts → slug = "phenomebeauty"
 // localhost?tenant=demo  → slug = "demo"
 function getTenantSlugFromUrl(): string {
-  const host = window.location.hostname;
-  const isLocal =
-    host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
-
-  if (isLocal) {
-    return new URLSearchParams(window.location.search).get("tenant") ?? "";
-  }
-
-  const parts = host.split(".");
-  // Require 4+ parts: subdomain.nextslot.co.za
-  if (parts.length >= 4) return parts[0];
-
-  return "";
+  return resolveTenantSync().slug ?? "";
 }
 
 const AdminLogin = ({ onLogin }: AdminLoginProps) => {
