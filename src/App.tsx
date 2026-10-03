@@ -94,8 +94,8 @@ const MarketingRoutes = () => (
         <Route path="/login" element={<><SEO path="/login" /><Login /></>} />
         <Route path="/onboarding" element={<><SEO path="/onboarding" /><Onboarding /></>} />
         <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms" element={<SiteTerms />} />
+        <Route path="/privacy" element={<><SEO path="/privacy" /><Privacy /></>} />
+        <Route path="/terms" element={<><SEO path="/terms" /><SiteTerms /></>} />
         <Route path="/online-booking-software" element={<OnlineBookingSoftware />} />
         <Route path="/business-management-software" element={<BusinessManagementSoftware />} />
         <Route path="/booking-software-south-africa" element={<BookingSoftwareSouthAfrica />} />
@@ -105,7 +105,7 @@ const MarketingRoutes = () => (
         <Route path="/payments" element={<Payments />} />
         <Route path="/business-growth" element={<BusinessGrowth />} />
         <Route path="/admin" element={<Navigate to="/login" replace />} />
-        <Route path="/superadmin" element={<SuperAdmin />} />
+        <Route path="/superadmin" element={<><SEO path="/superadmin" /><SuperAdmin /></>} />
         <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />
         <Route path="/reset-password" element={<><SEO path="/reset-password" /><ResetPassword /></>} />
         <Route path="/payment" element={<><SEO path="/payment" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
