@@ -170,7 +170,7 @@ const ScheduleStep = ({
   const ss = String(slotHold.secondsLeft % 60).padStart(2, "0");
 
   return (
-    <div className="booking-step booking-schedule flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
         Choose date &amp; time
       </h3>
@@ -277,7 +277,7 @@ const ScheduleStep = ({
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="booking-calendar glass-card-service rounded-2xl p-4">
+            <div className="glass-card-service rounded-2xl p-4">
               <div className="flex items-center justify-between mb-4">
                 <motion.button
                   whileTap={!isCurrentMonth ? { scale: 0.85 } : undefined}
@@ -314,7 +314,7 @@ const ScheduleStep = ({
                 ))}
               </div>
 
-              <div className="booking-calendar-grid grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: startDayOfWeek }).map((_, i) => (
                   <div key={`empty-${i}`} />
                 ))}
@@ -373,7 +373,7 @@ const ScheduleStep = ({
                   No slots available — tap the date above to pick another
                 </p>
               ) : (
-                <div className="booking-time-grid grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {dateSlots.map((time, i) => (
                     <motion.button
                       key={time}
