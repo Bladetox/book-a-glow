@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveTenantSync } from "@/lib/tenant-resolver";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,23 +72,7 @@ const LOADING_CTX: TenantContextValue = { tenantId: "", userId: "", tenant: null
  * Fallback:    empty string (caller must handle)
  */
 function resolveSubdomainTenantId(): string {
-  const hostname = window.location.hostname;
-  const isLocal =
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname.endsWith(".localhost");
-
-  if (isLocal) {
-    return new URLSearchParams(window.location.search).get("tenant") ?? "";
-  }
-
-  // e.g. "phenomebeauty.nextslot.co.za" → parts[0] = "phenomebeauty"
-  const parts = hostname.split(".");
-  // Only treat it as a tenant subdomain if there are 4+ parts
-  // (subdomain.nextslot.co.za) — 3 parts = nextslot.co.za (marketing site)
-  if (parts.length >= 4) return parts[0];
-
-  return "";
+  return resolveTenantSync().slug ?? "";
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -139,20 +124,24 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
 
           // Redirect to their own admin (if we know it), otherwise to login.
           if (userTenantId) {
-            const hostname = window.location.hostname;
-            const isLocal =
-              hostname === "localhost" ||
-              hostname === "127.0.0.1" ||
-              hostname.endsWith(".localhost");
-            const dest = isLocal
-              ? `${window.location.origin}/admin?tenant=${userTenantId}`
+            const resolution = resolveTenantSync();
+            const isPreview =
+              resolution.isPreviewEnvironment &&
+              (window.location.hostname === "localhost" ||
+                window.location.hostname === "127.0.0.1" ||
+                window.location.hostname.endsWith(".localhost") ||
+                window.location.hostname.endsWith(".vercel.app") ||
+                window.location.hostname.endsWith(".vercel.sh"));
+
+            const dest = isPreview
+              ? window.location.origin + "/admin?tenant=" + encodeURIComponent(userTenantId)
               : (() => {
-                  const parts = hostname.split(".");
+                  const parts = window.location.hostname.split(".");
                   const root =
                     parts.length >= 4
                       ? parts.slice(-3).join(".")
                       : parts.slice(-2).join(".");
-                  return `${window.location.protocol}//${userTenantId}.${root}/admin`;
+                  return window.location.protocol + "//" + userTenantId + "." + root + "/admin";
                 })();
             window.location.replace(dest);
           } else {
