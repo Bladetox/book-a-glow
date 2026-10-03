@@ -40,7 +40,7 @@ const STEPS = [
     tag: "The shift",
     headline: "Clarity is a competitive advantage.",
     body: "The data was already there. NextSlot just made it readable.",
-    stat: "2x bookings. 3 months.",
+    stat: "R63,851 over 90 days · +68% vs previous period",
     isFinal: true,
   },
 ] as const;
@@ -95,7 +95,7 @@ export const CaseStudySection = () => {
             marginBottom: isMobile ? 40 : 64,
           }}
         >
-          <Eyebrow text="3 month results. PhenomeBeauty." />
+          <Eyebrow text="What NextSlot helped PhenomeBeauty see" />
           <h2
             style={{
               fontFamily: FONT_DISPLAY,
@@ -107,8 +107,8 @@ export const CaseStudySection = () => {
               letterSpacing: "-0.02em",
             }}
           >
-            She was not doing less.{" "}
-            <span style={{ color: C.gold }}>She just did not know where to focus.</span>
+            What changed when the business became easier to run.<br />
+            <span style={{ color: C.gold }}>Then the numbers became easier to understand.</span>
           </h2>
           <p
             style={{
@@ -120,8 +120,7 @@ export const CaseStudySection = () => {
               fontFamily: FONT_BODY,
             }}
           >
-            17 years in beauty, 6 running PhenomeBeauty in Cape Town. NextSlot showed her
-            which services, time slots, and clients were actually driving growth.
+            PhenomeBeauty had been running on WhatsApp bookings, EFT deposits and manual tracking. NextSlot brought the booking activity and business performance into view.
           </p>
         </div>
 
@@ -353,7 +352,7 @@ export const CaseStudySection = () => {
                     margin: 0,
                   }}
                 >
-                  Owner, PhenomeBeauty · Mobile Beauty Therapist, Cape Town · 17 years in the industry
+                  Owner, PhenomeBeauty · Cape Town
                 </p>
               </div>
               <a
