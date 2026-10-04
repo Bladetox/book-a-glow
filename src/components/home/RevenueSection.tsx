@@ -2,7 +2,7 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
-import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
+// Mobile product snapshot intentionally uses the real responsive Admin composition.\nimport MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
 
 export const RevenueSection = () => {
   const width = useWindowWidth();
