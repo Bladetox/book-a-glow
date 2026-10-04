@@ -5,7 +5,6 @@ import { HOME_STYLES } from "@/components/home/homeStyles";
 import { HeroSection } from "@/components/home/HeroSection";
 import { ProofTicker } from "@/components/home/ProofTicker";
 import { CaseStudySection } from "@/components/home/CaseStudySection";
-import { NextyAISection } from "@/components/home/NextyAISection";
 import { RevenueSection } from "@/components/home/RevenueSection";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
 import { HeatmapSection } from "@/components/home/HeatmapSection";
@@ -41,7 +40,6 @@ const Index = () => {
       <FeaturesSection />
       <RevenueSection />
       <HeatmapSection />
-      <NextyAISection />
       <CaseStudySection />
       <CTASection />
     </main>
