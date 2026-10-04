@@ -99,7 +99,7 @@ const CaseStudy = () => {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                 <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
                 <Link
-                  to="/about#case-study"
+                  to="/about"
                   style={{
                     minHeight: 52,
                     padding: "15px 20px",
