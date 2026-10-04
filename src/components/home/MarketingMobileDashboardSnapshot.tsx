@@ -78,12 +78,17 @@ const NavItem = ({ icon: Icon, label, active }: {
   </div>
 );
 
-const MarketingMobileDashboardSnapshot = () => (
+const MarketingMobileDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => (
   <div
     aria-label="Example NextSlot mobile dashboard for a fictional business"
     style={{
-      width: "100%",
-      height: "100%",
+      width: 390,
+      height: 844,
+      transform: `scale(${scale})`,
+      transformOrigin: "top center",
+      borderRadius: 46,
+      border: "2px solid rgba(175,195,210,0.72)",
+      boxShadow: "0 18px 50px rgba(0,0,0,0.55)",
       background: "#000",
       color: "#fff",
       fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
@@ -92,6 +97,9 @@ const MarketingMobileDashboardSnapshot = () => (
       overflow: "hidden",
     }}
   >
+    <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 132, height: 27, borderRadius: "0 0 16px 16px", background: "#000", zIndex: 5 }} />
+    <div aria-hidden="true" style={{ position: "absolute", left: "50%", bottom: 7, transform: "translateX(-50%)", width: 116, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.9)", zIndex: 5 }} />
+
     {/* Device status area, matching the real mobile capture */}
     <div style={{ height: 22, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 13px", color: "rgba(255,255,255,0.78)", fontSize: 8, fontWeight: 600 }}>
       <span>5:30 PM</span>
