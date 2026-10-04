@@ -17,6 +17,38 @@ const esc = (value) => String(value)
 
 function schemaFor(route, page) {
   const url = siteUrl + (route === "/" ? "/" : route);
+  if (page.schema === "case-study") {
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Article",
+          "@id": url + "#case-study",
+          "url": url,
+          "headline": page.h1,
+          "description": page.description,
+          "publisher": { "@id": siteUrl + "/#organization" },
+          "about": { "@type": "Thing", "name": "PhenomeBeauty case study" }
+        },
+        {
+          "@type": "WebPage",
+          "@id": url + "#webpage",
+          "url": url,
+          "name": page.title,
+          "description": page.description,
+          "isPartOf": { "@id": siteUrl + "/#website" },
+          "about": { "@id": siteUrl + "/#organization" }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "NextSlot", "item": siteUrl + "/" },
+            { "@type": "ListItem", "position": 2, "name": "PhenomeBeauty case study", "item": url }
+          ]
+        }
+      ]
+    };
+  }
   if (route === "/") {
     return {
       "@context": "https://schema.org",
