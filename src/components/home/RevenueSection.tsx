@@ -4,20 +4,7 @@ import { Eyebrow } from "./Eyebrow";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
 import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
 
-const steps = [
-  {
-    title: "Bookings become a record",
-    body: "Appointments, payments and client activity stay connected.",
-  },
-  {
-    title: "The dashboard shows the pattern",
-    body: "Revenue, bookings, business health and services come into view together.",
-  },
-  {
-    title: "Decide where you want to grow",
-    body: "Turn your booking patterns into decisions that support the growth you want.",
-  },
-];
+
 
 export const RevenueSection = () => {
   const width = useWindowWidth();
@@ -73,145 +60,34 @@ export const RevenueSection = () => {
               marginBottom: 30,
             }}
           >
-            Every booking and payment adds to a clearer picture of the business. NextSlot brings revenue, booking activity, client information and what needs attention into one place, so you can make decisions from what is actually happening.
+            When your bookings, payments and client activity are connected, you get a clear picture of your business, not just what is happening today.
           </p>
 
-          {isMobile ? (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: `minmax(0, 1fr) ${mobileSnapshotWidth}px`,
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-                {steps.map((item, i) => (
-                  <div
-                    key={item.title}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "28px 1fr",
-                      gap: 12,
-                      alignItems: "start",
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: i === 2 ? C.gold : C.s2,
-                        color: i === 2 ? "#080808" : C.gold,
-                        border: i === 2 ? "none" : `1px solid ${C.border2}`,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: FONT_BODY,
-                      }}
-                    >
-                      {i + 1}
-                    </span>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: C.text,
-                          marginBottom: 3,
-                          fontFamily: FONT_BODY,
-                        }}
-                      >
-                        {item.title}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: C.faint,
-                          lineHeight: 1.55,
-                          fontFamily: FONT_BODY,
-                        }}
-                      >
-                        {item.body}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div
+            style={{
+              display: "inline-flex",
+              flexWrap: "wrap",
+              gap: 8,
+              padding: "14px 16px",
+              border: `1px solid ${C.border2}`,
+              borderRadius: 12,
+              background: "rgba(255,255,255,0.02)",
+              fontFamily: FONT_BODY,
+              fontSize: 12,
+              color: C.faint,
+              lineHeight: 1.5,
+            }}
+          >
+            <strong style={{ color: C.text, fontWeight: 700 }}>See your business clearly.</strong>
+            <span>Revenue. Bookings. Clients. Demand. Performance.</span>
+          </div>
 
-              <div
-                style={{
-                  width: mobileSnapshotWidth,
-                  height: mobileSnapshotWidth * (844 / 390),
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  filter: "drop-shadow(0 16px 32px rgba(0,0,0,0.42))",
-                }}
-              >
-                <MarketingMobileDashboardSnapshot scale={mobileSnapshotWidth / 390} />
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {steps.map((item, i) => (
-                <div
-                  key={item.title}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "28px 1fr",
-                    gap: 12,
-                    alignItems: "start",
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: i === 2 ? C.gold : C.s2,
-                      color: i === 2 ? "#080808" : C.gold,
-                      border: i === 2 ? "none" : `1px solid ${C.border2}`,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      fontFamily: FONT_BODY,
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: C.text,
-                        marginBottom: 3,
-                        fontFamily: FONT_BODY,
-                      }}
-                    >
-                      {item.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: C.faint,
-                        lineHeight: 1.55,
-                        fontFamily: FONT_BODY,
-                      }}
-                    >
-                      {item.body}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, margin: "16px 0 0", maxWidth: 480 }}>
+            Everything in one place, so you spend less time piecing together the picture and more time deciding what to do with it.
+          </p>
+        </div>
+
+        {!isMobile && (
         </div>
 
         {!isMobile && (
