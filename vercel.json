@@ -213,11 +213,6 @@
       "source": "/blog",
       "destination": "/resources",
       "permanent": true
-    },
-    {
-      "source": "/case-study/phenomebeauty",
-      "destination": "/about",
-      "permanent": true
     }
   ]
 }
