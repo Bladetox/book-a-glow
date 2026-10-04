@@ -7,7 +7,7 @@ import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
-  const snapshotWidth = isMobile ? Math.min(width - 32, 220) : 520;
+  const snapshotWidth = isMobile ? 150 : 520;
   const snapshotScale = snapshotWidth / 1000;
 
   return (
@@ -58,6 +58,20 @@ export const RevenueSection = () => {
           >
             Every booking and payment adds to a clearer picture of the business. NextSlot brings revenue, booking activity, client information and what needs attention into one place, so you can make decisions from what is actually happening.
           </p>
+
+          {isMobile && (
+            <div
+              style={{
+                float: "right",
+                width: snapshotWidth,
+                height: snapshotWidth * (844 / 390),
+                margin: "4px 0 20px 24px",
+                filter: "drop-shadow(0 18px 36px rgba(0,0,0,0.42))",
+              }}
+            >
+              <MarketingMobileDashboardSnapshot scale={snapshotWidth / 390} />
+            </div>
+          )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {[
@@ -129,27 +143,29 @@ export const RevenueSection = () => {
           </div>
         </div>
 
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            minHeight: isMobile ? snapshotWidth * (844 / 390) : 420,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        {!isMobile && (
           <div
             style={{
-              width: snapshotWidth,
-              height: isMobile ? snapshotWidth * (844 / 390) : 420,
-              maxWidth: "100%",
-              filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
+              position: "relative",
+              width: "100%",
+              minHeight: 420,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
             }}
           >
-            {isMobile ? <MarketingMobileDashboardSnapshot scale={snapshotWidth / 390} /> : <MarketingDashboardSnapshot scale={snapshotScale} />}
+            <div
+              style={{
+                width: snapshotWidth,
+                height: 420,
+                maxWidth: "100%",
+                filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
+              }}
+            >
+              <MarketingDashboardSnapshot scale={snapshotScale} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );
