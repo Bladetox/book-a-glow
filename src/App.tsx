@@ -27,7 +27,8 @@ const NotFound         = lazy(() => import("./pages/NotFound"));
 const TenantNotFound   = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess   = lazy(() => import("./pages/PaymentSuccess"));
 const BillingSuccess   = lazy(() => import("./pages/BillingSuccess"));
-const Demo             = lazy(() => import("./pages/Demo"));\nconst CaseStudy         = lazy(() => import("./pages/CaseStudy"));
+const Demo             = lazy(() => import("./pages/Demo"));
+const CaseStudy         = lazy(() => import("./pages/CaseStudy"));
 const OnlineBookingSoftware = lazy(() => import("./pages/OnlineBookingSoftware"));
 const BusinessManagementSoftware = lazy(() => import("./pages/BusinessManagementSoftware"));
 const BookingSoftwareSouthAfrica = lazy(() => import("./pages/BookingSoftwareSouthAfrica"));
@@ -116,7 +117,6 @@ const MarketingRoutes = () => (
         {/* Legacy redirects */}
         <Route path="/product" element={<Navigate to="/" replace />} />
         <Route path="/blog" element={<Navigate to="/resources" replace />} />
-        <Route path="/case-study/phenomebeauty" element={<Navigate to="/about" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
