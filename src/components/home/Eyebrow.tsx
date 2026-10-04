@@ -8,7 +8,7 @@ export const Eyebrow = ({ text }: { text: string }) => (
     color: C.muted,
     letterSpacing: "0.1em",
     textTransform: "uppercase",
-    marginBottom: 24,
+    marginBottom: 18,
     lineHeight: 1.4,
   } as React.CSSProperties}>
     {text}
