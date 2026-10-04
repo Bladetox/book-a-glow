@@ -134,7 +134,7 @@ export const HeatmapSection = () => {
                 type="growth"
                 speaker="Nexty"
                 label="Growth"
-                message="Thursday afternoons sit empty most weeks. Worth a promo to fill them."
+                message="Tuesday afternoons sit empty most weeks. Worth a promo to fill them."
                 action="See the gap"
                 delay={0}
               />
