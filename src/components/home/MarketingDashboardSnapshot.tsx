@@ -62,6 +62,8 @@ const MarketingDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => (
       background: "#000", color: "#fff",
       overflow: "hidden",
       fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      transform: `scale(${scale})`,
+      transformOrigin: "top left",
     }}
   >
     <aside style={{ width: 256, flexShrink: 0, background: "#000", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column" }}>
