@@ -22,7 +22,8 @@ const steps = [
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
-  const snapshotWidth = 520;
+  const desktopContentWidth = Math.min(1200, Math.max(0, width - 80));
+  const snapshotWidth = Math.max(0, (desktopContentWidth - 80) / 2);
   const snapshotScale = snapshotWidth / 1000;
   const mobileSnapshotWidth = width < 380 ? 138 : 148;
 
@@ -227,7 +228,7 @@ export const RevenueSection = () => {
             <div
               style={{
                 width: snapshotWidth,
-                height: 420,
+                height: snapshotWidth * 0.76,
                 maxWidth: "100%",
                 filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
               }}
