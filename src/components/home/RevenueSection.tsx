@@ -69,8 +69,8 @@ export const RevenueSection = () => {
                 body: "Revenue, bookings, business health and services come into view together.",
               },
               {
-                title: "The data gives you somewhere to act",
-                body: "Once the activity is visible, you can see what needs attention and where growth may be sitting.",
+                title: "Decide where you want to grow",
+                body: "Turn your booking patterns into decisions that support the growth you want.",
               },
             ].map((item, i) => (
               <div
