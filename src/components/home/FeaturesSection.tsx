@@ -60,7 +60,7 @@ export const FeaturesSection = () => {
         background: C.s1,
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
-        padding: isMobile ? "64px 16px" : "88px 40px",
+        padding: isMobile ? "64px 16px" : "80px 40px",
         overflow: "hidden",
       }}
     >
