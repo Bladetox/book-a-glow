@@ -1,5 +1,5 @@
 import tiktokIcon from "@/assets/tiktok_1.png";
-import { Link } from "react-router-dom";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
@@ -105,25 +105,7 @@ const About = () => {
                   service businesses. PayFast, Yoco, and PayShap are built in, not bolted on.
                   No workarounds. No sending banking details on WhatsApp.
                 </p>
-                <Link
-                  to="/onboarding"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    background: CTA_BG,
-                    boxShadow: CTA_SHADOW,
-                    color: "#080808",
-                    fontFamily: FONT_BODY,
-                    fontSize: 14,
-                    fontWeight: 700,
-                    padding: "13px 28px",
-                    borderRadius: 10,
-                    textDecoration: "none",
-                  }}
-                >
-                  Create Your Booking Page
-                </Link>
+                <PrimaryCTA to="/onboarding">Create Your Booking Page</PrimaryCTA>
               </div>
 
               {/* RIGHT: founder's belief card */}
