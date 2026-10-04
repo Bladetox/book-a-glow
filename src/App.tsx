@@ -27,7 +27,7 @@ const NotFound         = lazy(() => import("./pages/NotFound"));
 const TenantNotFound   = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess   = lazy(() => import("./pages/PaymentSuccess"));
 const BillingSuccess   = lazy(() => import("./pages/BillingSuccess"));
-const Demo             = lazy(() => import("./pages/Demo"));
+const Demo             = lazy(() => import("./pages/Demo"));\nconst CaseStudy         = lazy(() => import("./pages/CaseStudy"));
 const OnlineBookingSoftware = lazy(() => import("./pages/OnlineBookingSoftware"));
 const BusinessManagementSoftware = lazy(() => import("./pages/BusinessManagementSoftware"));
 const BookingSoftwareSouthAfrica = lazy(() => import("./pages/BookingSoftwareSouthAfrica"));
@@ -106,7 +106,7 @@ const MarketingRoutes = () => (
         <Route path="/business-growth" element={<BusinessGrowth />} />
         <Route path="/admin" element={<Navigate to="/login" replace />} />
         <Route path="/superadmin" element={<><SEO path="/superadmin" /><SuperAdmin /></>} />
-        <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />
+        <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />\n        <Route path="/case-study/phenomebeauty" element={<><SEO path="/case-study/phenomebeauty" /><CaseStudy /></>} />
         <Route path="/reset-password" element={<><SEO path="/reset-password" /><ResetPassword /></>} />
         <Route path="/payment" element={<><SEO path="/payment" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
         <Route path="/payment-success" element={<><SEO path="/payment-success" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
