@@ -32,7 +32,7 @@ export const HeatmapSection = () => {
   return (
     <section
       style={{
-        padding: isMobile ? "72px 16px" : "104px 40px",
+        padding: isMobile ? "64px 16px" : "80px 40px",
         background: C.s1,
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
@@ -53,7 +53,7 @@ export const HeatmapSection = () => {
               letterSpacing: "-0.02em",
             }}
           >
-            See what's hiding in your bookings.
+            See what's <span style={{ color: C.gold }}>hiding</span> in your bookings.
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, margin: 0 }}>
             Patterns become easier to spot when your booking history is in one place. Nexty helps turn those patterns into something worth acting on.
