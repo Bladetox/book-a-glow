@@ -2,12 +2,12 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
-// Mobile product snapshot intentionally uses the real responsive Admin composition.\nimport MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
+import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
 
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
-  const snapshotWidth = isMobile ? Math.min(width - 32, 520) : 520;
+  const snapshotWidth = isMobile ? Math.min(width - 32, 320) : 520;
   const snapshotScale = snapshotWidth / 1000;
 
   return (
@@ -23,7 +23,7 @@ export const RevenueSection = () => {
     >
       <div
         style={{
-          maxWidth: 1120,
+          maxWidth: 1200,
           margin: "0 auto",
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr" : "0.82fr 1.18fr",
@@ -90,7 +90,7 @@ export const RevenueSection = () => {
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
+                    justifyContent: "flex-end",
                     background: i === 2 ? C.gold : C.s2,
                     color: i === 2 ? "#080808" : C.gold,
                     border: i === 2 ? "none" : `1px solid ${C.border2}`,
@@ -133,7 +133,7 @@ export const RevenueSection = () => {
           style={{
             position: "relative",
             width: "100%",
-            minHeight: isMobile ? snapshotWidth * 0.76 : 420,
+            minHeight: isMobile ? snapshotWidth * (844 / 390) : 420,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -142,7 +142,7 @@ export const RevenueSection = () => {
           <div
             style={{
               width: snapshotWidth,
-              height: snapshotWidth * 0.76,
+              height: isMobile ? snapshotWidth * (844 / 390) : 420,
               maxWidth: "100%",
               filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
             }}
