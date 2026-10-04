@@ -183,5 +183,15 @@
     "title": "Terms of Service | NextSlot",
     "description": "NextSlot terms of service.",
     "indexable": false
+  },
+  "/case-study/phenomebeauty": {
+    "title": "PhenomeBeauty Case Study | NextSlot",
+    "description": "See how NextSlot helped PhenomeBeauty bring bookings, payments and business activity into view, resulting in R63,851 over 90 days.",
+    "indexable": true,
+    "lastmod": "2026-10-04",
+    "eyebrow": "PhenomeBeauty case study",
+    "h1": "A real service business. A real NextSlot story.",
+    "intro": "See what changed when a Cape Town mobile beauty business moved from WhatsApp bookings and manual payment tracking to a connected booking and business management system.",
+    "schema": "case-study"
   }
 }
