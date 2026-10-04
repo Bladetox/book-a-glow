@@ -4,6 +4,21 @@ import { Eyebrow } from "./Eyebrow";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
 import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
 
+const steps = [
+  {
+    title: "Bookings become a record",
+    body: "Appointments, payments and client activity stay connected.",
+  },
+  {
+    title: "The dashboard shows the pattern",
+    body: "Revenue, bookings, business health and services come into view together.",
+  },
+  {
+    title: "Decide where you want to grow",
+    body: "Turn your booking patterns into decisions that support the growth you want.",
+  },
+];
+
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
@@ -70,20 +85,7 @@ export const RevenueSection = () => {
               }}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-                {[
-                  {
-                    title: "Bookings become a record",
-                    body: "Appointments, payments and client activity stay connected.",
-                  },
-                  {
-                    title: "The dashboard shows the pattern",
-                    body: "Revenue, bookings, business health and services come into view together.",
-                  },
-                  {
-                    title: "Decide where you want to grow",
-                    body: "Turn your booking patterns into decisions that support the growth you want.",
-                  },
-                ].map((item, i) => (
+                {steps.map((item, i) => (
                   <div
                     key={item.title}
                     style={{
@@ -151,72 +153,60 @@ export const RevenueSection = () => {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {[
-              {
-                title: "Bookings become a record",
-                body: "Appointments, payments and client activity stay connected.",
-              },
-              {
-                title: "The dashboard shows the pattern",
-                body: "Revenue, bookings, business health and services come into view together.",
-              },
-              {
-                title: "Decide where you want to grow",
-                body: "Turn your booking patterns into decisions that support the growth you want.",
-              },
-            ].map((item, i) => (
-              <div
-                key={item.title}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "28px 1fr",
-                  gap: 12,
-                  alignItems: "start",
-                }}
-              >
-                <span
+              {steps.map((item, i) => (
+                <div
+                  key={item.title}
                   style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: i === 2 ? C.gold : C.s2,
-                    color: i === 2 ? "#080808" : C.gold,
-                    border: i === 2 ? "none" : `1px solid ${C.border2}`,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    fontFamily: FONT_BODY,
+                    display: "grid",
+                    gridTemplateColumns: "28px 1fr",
+                    gap: 12,
+                    alignItems: "start",
                   }}
                 >
-                  {i + 1}
-                </span>
-                <div>
-                  <div
+                  <span
                     style={{
-                      fontSize: 13,
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: i === 2 ? C.gold : C.s2,
+                      color: i === 2 ? "#080808" : C.gold,
+                      border: i === 2 ? "none" : `1px solid ${C.border2}`,
+                      fontSize: 11,
                       fontWeight: 700,
-                      color: C.text,
-                      marginBottom: 3,
                       fontFamily: FONT_BODY,
                     }}
                   >
-                    {item.title}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: C.faint,
-                      lineHeight: 1.55,
-                      fontFamily: FONT_BODY,
-                    }}
-                  >
-                    {item.body}
+                    {i + 1}
+                  </span>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: C.text,
+                        marginBottom: 3,
+                        fontFamily: FONT_BODY,
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: C.faint,
+                        lineHeight: 1.55,
+                        fontFamily: FONT_BODY,
+                      }}
+                    >
+                      {item.body}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           )}
         </div>
 
