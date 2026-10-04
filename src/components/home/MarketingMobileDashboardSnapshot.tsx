@@ -80,13 +80,24 @@ const NavItem = ({ icon: Icon, label, active }: {
 
 const MarketingMobileDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => (
   <div
-    aria-label="Example NextSlot mobile dashboard for a fictional business"
     style={{
-      width: 390,
-      height: 844,
-      transform: `scale(${scale})`,
-      transformOrigin: "top center",
-      borderRadius: 46,
+      width: 390 * scale,
+      height: 844 * scale,
+      position: "relative",
+      flexShrink: 0,
+    }}
+  >
+    <div
+      aria-label="Example NextSlot mobile dashboard for a fictional business"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: 390,
+        height: 844,
+        transform: `scale(${scale})`,
+        transformOrigin: "top left",
+        borderRadius: 46,
       border: "2px solid rgba(175,195,210,0.72)",
       boxShadow: "0 18px 50px rgba(0,0,0,0.55)",
       background: "#000",
@@ -229,7 +240,8 @@ const MarketingMobileDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => 
       <NavItem icon={ClientManagementIcon} label="Clients" />
       <NavItem icon={SettingsIcon} label="Business" />
     </nav>
-  </div>
+      </div>
+    </div>
 );
 
 export default MarketingMobileDashboardSnapshot;
