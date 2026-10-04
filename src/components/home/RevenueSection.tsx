@@ -2,12 +2,12 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
-import { ProductSnapshotFrame } from "./ProductSnapshotFrame";
 
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
   const snapshotWidth = isMobile ? Math.min(width - 32, 520) : 520;
+  const snapshotScale = snapshotWidth / 1000;
 
   return (
     <section
@@ -138,9 +138,16 @@ export const RevenueSection = () => {
             justifyContent: "center",
           }}
         >
-          <ProductSnapshotFrame width={snapshotWidth} shadow="section">
-            <MarketingDashboardSnapshot />
-          </ProductSnapshotFrame>
+          <div
+            style={{
+              width: snapshotWidth,
+              height: snapshotWidth * 0.76,
+              maxWidth: "100%",
+              filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
+            }}
+          >
+            <MarketingDashboardSnapshot scale={snapshotScale} />
+          </div>
         </div>
       </div>
     </section>

@@ -52,7 +52,7 @@ const MiniMetric = ({ label, value, sub, tone = "neutral" }: {
   </div>
 );
 
-const MarketingDashboardSnapshot = () => (
+const MarketingDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => (
   <div
     aria-label="Example NextSlot dashboard for a fictional business"
     style={{

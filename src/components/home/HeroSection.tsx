@@ -3,12 +3,12 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import heroImage from "../../assets/NexSlot_Hero.png";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
-import { ProductSnapshotFrame } from "./ProductSnapshotFrame";
 
 export const HeroSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
   const dashboardWidth = isMobile ? Math.min(width - 32, 560) : Math.min(540, Math.max(460, width * 0.38));
+  const dashboardScale = dashboardWidth / 1000;
   const dashboardHeight = dashboardWidth * 0.76;
 
   return (
@@ -176,11 +176,10 @@ export const HeroSection = () => {
               marginTop: isMobile ? 52 : 0,
               alignSelf: isMobile ? "center" : "auto",
               animation: "fadeSlideIn 0.7s 0.12s ease both",
+              filter: "drop-shadow(0 24px 44px rgba(0,0,0,0.38))",
             }}
           >
-            <ProductSnapshotFrame width={dashboardWidth} shadow="hero">
-              <MarketingDashboardSnapshot />
-            </ProductSnapshotFrame>
+            <MarketingDashboardSnapshot scale={dashboardScale} />
           </div>
         </div>
       </div>
