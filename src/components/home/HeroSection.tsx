@@ -118,7 +118,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s 0.16s ease both",
               }}
             >
-              Take bookings online. Collect deposits and payments. Keep client history, availability and the work behind each appointment in one place. Then use what your business is telling you to decide what to do next.
+              Take bookings online. Collect deposits and payments. Keep client history, availability and the work behind each appointment in one place. Then use what your business is telling you to help you grow.
             </p>
 
             <div
@@ -169,31 +169,18 @@ export const HeroSection = () => {
             style={{
               position: isMobile ? "relative" : "absolute",
               zIndex: 3,
-              right: isMobile ? "auto" : -4,
-              bottom: isMobile ? "auto" : 18,
+              right: isMobile ? "auto" : 18,
+              top: isMobile ? "auto" : 118,
+              bottom: isMobile ? "auto" : undefined,
               width: dashboardWidth,
               height: dashboardHeight,
               marginTop: isMobile ? 52 : 0,
               alignSelf: isMobile ? "center" : "auto",
               animation: "fadeSlideIn 0.7s 0.12s ease both",
+              filter: "drop-shadow(0 24px 44px rgba(0,0,0,0.38))",
             }}
           >
             <MarketingDashboardSnapshot scale={dashboardScale} />
-            <p
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: -26,
-                margin: 0,
-                textAlign: "center",
-                fontSize: 10,
-                color: "rgba(255,255,255,0.34)",
-                fontFamily: FONT_BODY,
-              }}
-            >
-              Example dashboard · fictional business data
-            </p>
           </div>
         </div>
       </div>
