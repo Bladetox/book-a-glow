@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { ArrowRight, Check } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
@@ -98,25 +97,6 @@ const CaseStudy = () => {
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                 <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
-                <Link
-                  to="/about"
-                  style={{
-                    minHeight: 52,
-                    padding: "15px 20px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 7,
-                    border: "1px solid " + C.border2,
-                    borderRadius: 8,
-                    color: C.text,
-                    textDecoration: "none",
-                    fontFamily: FONT_BODY,
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
-                  About NextSlot <ArrowRight size={15} />
-                </Link>
               </div>
             </div>
 
