@@ -170,7 +170,7 @@ export const HeroSection = () => {
               position: isMobile ? "relative" : "absolute",
               zIndex: 3,
               right: isMobile ? "auto" : 18,
-              top: isMobile ? "auto" : 118,
+              top: isMobile ? "auto" : 82,
               bottom: isMobile ? "auto" : undefined,
               width: dashboardWidth,
               height: dashboardHeight,
