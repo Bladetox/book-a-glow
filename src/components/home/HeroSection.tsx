@@ -3,8 +3,6 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import heroImage from "../../assets/NexSlot_Hero.png";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
-import { MobileFrame } from "@/components/site/DeviceFrames";
-import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
 
 export const HeroSection = () => {
   const width = useWindowWidth();
@@ -12,7 +10,6 @@ export const HeroSection = () => {
   const dashboardWidth = isMobile ? Math.min(width - 32, 560) : Math.min(540, Math.max(460, width * 0.38));
   const dashboardScale = dashboardWidth / 1000;
   const dashboardHeight = dashboardWidth * 0.76;
-  const phoneWidth = isMobile ? Math.min(210, width - 72) : 172;
 
   return (
     <section
@@ -171,7 +168,7 @@ export const HeroSection = () => {
             style={{
               position: isMobile ? "relative" : "absolute",
               zIndex: 3,
-              right: isMobile ? "auto" : 42,
+              right: isMobile ? "auto" : 18,
               top: isMobile ? "auto" : 82,
               bottom: isMobile ? "auto" : undefined,
               width: dashboardWidth,
@@ -183,23 +180,6 @@ export const HeroSection = () => {
             }}
           >
             <MarketingDashboardSnapshot scale={dashboardScale} />
-
-            <div
-              style={{
-                position: "absolute",
-                right: isMobile ? -4 : -34,
-                bottom: isMobile ? -12 : -38,
-                width: phoneWidth,
-                height: phoneWidth * (19.5 / 9),
-                zIndex: 5,
-                filter: "drop-shadow(0 18px 28px rgba(0,0,0,0.48))",
-                animation: "fadeSlideIn 0.7s 0.28s ease both",
-              }}
-            >
-              <MobileFrame interactive={false}>
-                <MarketingMobileDashboardSnapshot />
-              </MobileFrame>
-            </div>
           </div>
         </div>
       </div>
