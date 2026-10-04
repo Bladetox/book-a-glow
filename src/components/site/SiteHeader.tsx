@@ -5,9 +5,10 @@ import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 
 const navLinks = [
   { to: "/demo", label: "How it works" },
+  { to: "/about", label: "About" },
+  { to: "/case-study/phenomebeauty", label: "Case Study" },
   { to: "/pricing", label: "Pricing" },
   { to: "/resources", label: "Resources" },
-  { to: "/about#case-study", label: "Results" },
 ];
 
 const SiteHeader = () => {
