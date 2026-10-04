@@ -1,5 +1,6 @@
 import { PrimaryCTA } from "./PrimaryCTA";
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
+import { useWindowWidth } from "./useWindowWidth";
 import waIcon from "@/assets/whatsapp.png";
 
 export const CTASection = () => {
@@ -33,13 +34,18 @@ export const CTASection = () => {
 
         <div style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "stretch",
           justifyContent: "center",
           gap: 12,
           flexWrap: isMobile ? "wrap" : "nowrap",
           width: "100%",
         }}>
-          <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
+          <div style={{
+            flex: isMobile ? "1 1 100%" : "1 1 0",
+            width: isMobile ? "100%" : undefined,
+          }}>
+            <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
+          </div>
 
           <a
             href="https://wa.me/27686806115"
