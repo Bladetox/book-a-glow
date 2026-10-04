@@ -110,7 +110,7 @@ const MarketingRoutes = () => (
         <Route path="/reset-password" element={<><SEO path="/reset-password" /><ResetPassword /></>} />
         <Route path="/payment" element={<><SEO path="/payment" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
         <Route path="/payment-success" element={<><SEO path="/payment-success" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
-        {/* Platform billing return URL — iKhokha redirects here after checkout */}
+        {/* Platform billing return URL - iKhokha redirects here after checkout */}
         <Route path="/billing-success" element={<><SEO path="/billing-success" /><BillingSuccess /></>} />
         <Route path="/book" element={<><SEO path="/book" /><PublicTenantProvider><Book /></PublicTenantProvider></>} />
         {/* Legacy redirects */}
