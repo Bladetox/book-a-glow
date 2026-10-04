@@ -123,7 +123,7 @@
       ],
       [
         "Local payment options are part of the product.",
-        "Payment needs vary by business and plan. NextSlot supports PayShap for instant bank-to-bank payment flows and online card checkout through supported providers including Yoco, iKhokha and PayFast.",
+        "NextSlot supports South African payment workflows through PayShap and supported online payment providers including Yoco, iKhokha and PayFast. Payment status stays connected to the booking so the owner can see what has been paid and what is still outstanding.",
         [
           "PayShap",
           "Yoco",
@@ -141,6 +141,16 @@
           "Google Maps support",
           "Mobile and fixed-location workflows"
         ]
+      ],
+      [
+        "Connected to the tools local businesses already use.",
+        "The South African focus extends beyond payments. NextSlot supports Google Calendar for calendar workflows, Google Maps for mobile travel calculations, WhatsApp as a customer communication channel, and POPIA-aware handling of customer information.",
+        [
+          "Google Calendar",
+          "Google Maps",
+          "WhatsApp",
+          "POPIA-aware product positioning"
+        ]
       ]
     ],
     "fit": [
@@ -151,16 +161,16 @@
     ],
     "related": [
       [
+        "See the PhenomeBeauty case study",
+        "/case-study/phenomebeauty"
+      ],
+      [
         "Payments & deposits",
         "/payments"
       ],
       [
         "Mobile service businesses",
         "/mobile-service-businesses"
-      ],
-      [
-        "Online booking software",
-        "/online-booking-software"
       ]
     ]
   },
