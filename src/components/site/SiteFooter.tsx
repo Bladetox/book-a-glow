@@ -27,6 +27,8 @@ const SiteFooter = () => (
               { to: "/pricing", label: "Pricing" },
               { to: "/resources", label: "Resources" },
               { to: "/about", label: "About" },
+              { to: "/privacy", label: "Privacy" },
+              { to: "/terms", label: "Terms" },
             ].map(({ to, label }) => (
               <Link key={to} to={to} style={{ fontSize: 12, color: C.muted, textDecoration: "none", fontFamily: FONT_BODY }}>{label}</Link>
             ))}
