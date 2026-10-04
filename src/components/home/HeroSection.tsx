@@ -85,7 +85,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s ease both",
               }}
             >
-              For independent service businesses
+              More than bookings
             </p>
 
             <h1
@@ -117,7 +117,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s 0.16s ease both",
               }}
             >
-              NextSlot records your bookings, turns them into a clear picture of your business, and helps you make better growth decisions based on the patterns in your bookings.
+              NextSlot brings your bookings, payments, clients and business activity into one place, so you can see what is happening and make better decisions about what comes next.
             </p>
 
             <div
@@ -128,7 +128,7 @@ export const HeroSection = () => {
                 alignItems: isMobile ? "stretch" : "flex-start",
               }}
             >
-              <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
+              <PrimaryCTA to="/#how-it-works">See how it works</PrimaryCTA>
               <p
                 style={{
                   marginTop: 10,
@@ -139,29 +139,10 @@ export const HeroSection = () => {
                   textAlign: isMobile ? "center" : "left",
                 }}
               >
-                No payment required · Free trial · Built in South Africa
+                Built for independent service businesses · Proudly made in Cape Town, South Africa.
               </p>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "8px 18px",
-                marginTop: 28,
-                color: C.faint,
-                fontFamily: FONT_BODY,
-                fontSize: 11,
-                lineHeight: 1.5,
-                animation: "fadeUp 0.5s 0.32s ease both",
-              }}
-            >
-              <span>Bookings</span>
-              <span>Payments</span>
-              <span>Clients</span>
-              <span>Operations</span>
-              <span>Insights</span>
-            </div>
           </div>
 
           <div
