@@ -2,6 +2,7 @@ import { PrimaryCTA } from "./PrimaryCTA";
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import heroImage from "../../assets/NexSlot_Hero.png";
+import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
 
 export const HeroSection = () => {
   const width = useWindowWidth();
@@ -34,18 +35,65 @@ export const HeroSection = () => {
           </div>
         </div>
 
-        <div style={{ position: "relative", width: "100%", animation: "fadeSlideIn 0.7s 0.12s ease both" }}>
-          <div aria-hidden="true" style={{ position: "absolute", width: isMobile ? 220 : 360, height: isMobile ? 220 : 360, right: isMobile ? "4%" : "8%", top: "50%", transform: "translateY(-50%)", borderRadius: "50%", background: "rgba(212,165,116,0.12)", filter: "blur(70px)", pointerEvents: "none" }} />
-          <div style={{ position: "relative", border: "1px solid " + C.border2, borderRadius: 20, overflow: "hidden", background: C.s1, boxShadow: "0 24px 70px rgba(0,0,0,0.42), 0 0 0 1px rgba(212,165,116,0.04)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderBottom: "1px solid " + C.border, background: "rgba(255,255,255,0.025)" }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(255,255,255,0.20)" }} />
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(255,255,255,0.20)" }} />
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(255,255,255,0.20)" }} />
-              <span style={{ marginLeft: 8, color: C.faint, fontFamily: FONT_BODY, fontSize: 10, letterSpacing: "0.01em" }}>NextSlot</span>
-            </div>
-            <img src={heroImage} alt="NextSlot business management interface" style={{ display: "block", width: "100%", height: "auto", aspectRatio: "16 / 10", objectFit: "cover", objectPosition: "center" }} />
+        <div style={{ position: "relative", width: "100%", minHeight: isMobile ? 470 : 570, animation: "fadeSlideIn 0.7s 0.12s ease both" }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: isMobile ? "12px 0 54px" : "0 0 22px",
+              borderRadius: 24,
+              overflow: "hidden",
+              border: "1px solid " + C.border2,
+              background: C.s1,
+              boxShadow: "0 24px 70px rgba(0,0,0,0.42)",
+            }}
+          >
+            <img
+              src={heroImage}
+              alt=""
+              style={{
+                display: "block",
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(180deg, rgba(5,5,5,0.02) 0%, rgba(5,5,5,0.12) 38%, rgba(5,5,5,0.72) 100%)",
+              }}
+            />
           </div>
-          <p style={{ margin: "10px 4px 0", color: C.faint, fontFamily: FONT_BODY, fontSize: 10, lineHeight: 1.5 }}>A closer look at the product</p>
+
+          <div
+            style={{
+              position: "absolute",
+              zIndex: 2,
+              width: isMobile ? "96%" : "92%",
+              right: isMobile ? "2%" : "-3%",
+              bottom: isMobile ? 34 : 0,
+            }}
+          >
+            <MarketingDashboardSnapshot />
+          </div>
+
+          <p
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 4,
+              margin: 0,
+              color: C.faint,
+              fontFamily: FONT_BODY,
+              fontSize: 9,
+              lineHeight: 1.5,
+            }}
+          >
+            Example dashboard shown with fictional business data
+          </p>
         </div>
       </div>
     </section>
