@@ -7,14 +7,17 @@ import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
 export const HeroSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
+  const dashboardWidth = isMobile ? Math.min(width - 32, 560) : Math.min(540, Math.max(460, width * 0.38));
+  const dashboardScale = dashboardWidth / 1000;
+  const dashboardHeight = dashboardWidth * 0.76;
 
   return (
     <section
       style={{
         position: "relative",
-        minHeight: "calc(100vh - 64px)",
+        minHeight: isMobile ? "auto" : "calc(100vh - 64px)",
         display: "flex",
-        alignItems: "center",
+        alignItems: isMobile ? "stretch" : "center",
         overflow: "hidden",
         background: C.bg,
       }}
@@ -29,7 +32,7 @@ export const HeroSection = () => {
           width: "100%",
           height: "100%",
           objectFit: "cover",
-          objectPosition: "center 42%",
+          objectPosition: "center 40%",
         }}
       />
 
@@ -39,7 +42,7 @@ export const HeroSection = () => {
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(90deg, rgba(5,5,5,0.96) 0%, rgba(5,5,5,0.88) 38%, rgba(5,5,5,0.40) 68%, rgba(5,5,5,0.24) 100%), linear-gradient(180deg, rgba(5,5,5,0.42) 0%, rgba(5,5,5,0.18) 45%, rgba(5,5,5,0.68) 100%)",
+            "linear-gradient(90deg, rgba(5,5,5,0.82) 0%, rgba(5,5,5,0.66) 42%, rgba(5,5,5,0.24) 72%, rgba(5,5,5,0.18) 100%), linear-gradient(180deg, rgba(5,5,5,0.30) 0%, rgba(5,5,5,0.08) 48%, rgba(5,5,5,0.60) 100%)",
         }}
       />
 
@@ -50,23 +53,24 @@ export const HeroSection = () => {
           width: "100%",
           maxWidth: 1240,
           margin: "0 auto",
-          padding: isMobile ? "88px 24px 56px" : "96px 40px 84px",
+          padding: isMobile ? "76px 16px 48px" : "88px 40px 72px",
         }}
       >
         <div
           style={{
             position: "relative",
-            minHeight: isMobile ? 760 : 610,
-            display: "flex",
-            alignItems: "center",
+            minHeight: isMobile ? "auto" : 600,
+            display: isMobile ? "flex" : "block",
+            flexDirection: "column",
+            justifyContent: "center",
           }}
         >
           <div
             style={{
               position: "relative",
               zIndex: 4,
-              width: isMobile ? "100%" : "49%",
-              paddingBottom: isMobile ? 300 : 0,
+              width: isMobile ? "100%" : "47%",
+              paddingTop: isMobile ? 8 : 0,
             }}
           >
             <p
@@ -87,7 +91,7 @@ export const HeroSection = () => {
             <h1
               style={{
                 fontFamily: FONT_DISPLAY,
-                fontSize: isMobile ? "clamp(32px,8.5vw,46px)" : "clamp(38px,4vw,56px)",
+                fontSize: isMobile ? "clamp(34px,9vw,46px)" : "clamp(40px,4vw,56px)",
                 fontWeight: 700,
                 color: C.text,
                 lineHeight: 1.06,
@@ -163,17 +167,33 @@ export const HeroSection = () => {
 
           <div
             style={{
-              position: "absolute",
+              position: isMobile ? "relative" : "absolute",
               zIndex: 3,
-              right: isMobile ? "50%" : "-1%",
-              bottom: isMobile ? 0 : 2,
-              transform: isMobile ? "translateX(50%)" : "none",
-              width: isMobile ? "min(760px, 118vw)" : "min(760px, 62vw)",
-              maxWidth: 760,
+              right: isMobile ? "auto" : -4,
+              bottom: isMobile ? "auto" : 18,
+              width: dashboardWidth,
+              height: dashboardHeight,
+              marginTop: isMobile ? 52 : 0,
+              alignSelf: isMobile ? "center" : "auto",
               animation: "fadeSlideIn 0.7s 0.12s ease both",
             }}
           >
-            <MarketingDashboardSnapshot />
+            <MarketingDashboardSnapshot scale={dashboardScale} />
+            <p
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: -26,
+                margin: 0,
+                textAlign: "center",
+                fontSize: 10,
+                color: "rgba(255,255,255,0.34)",
+                fontFamily: FONT_BODY,
+              }}
+            >
+              Example dashboard · fictional business data
+            </p>
           </div>
         </div>
       </div>
