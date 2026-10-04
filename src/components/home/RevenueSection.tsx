@@ -7,8 +7,9 @@ import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
-  const snapshotWidth = isMobile ? 150 : 520;
+  const snapshotWidth = 520;
   const snapshotScale = snapshotWidth / 1000;
+  const mobileSnapshotWidth = width < 380 ? 116 : 132;
 
   return (
     <section
@@ -59,21 +60,97 @@ export const RevenueSection = () => {
             Every booking and payment adds to a clearer picture of the business. NextSlot brings revenue, booking activity, client information and what needs attention into one place, so you can make decisions from what is actually happening.
           </p>
 
-          {isMobile && (
+          {isMobile ? (
             <div
               style={{
-                float: "right",
-                width: snapshotWidth,
-                height: snapshotWidth * (844 / 390),
-                margin: "4px 0 20px 24px",
-                filter: "drop-shadow(0 18px 36px rgba(0,0,0,0.42))",
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) auto",
+                gap: 18,
+                alignItems: "start",
               }}
             >
-              <MarketingMobileDashboardSnapshot scale={snapshotWidth / 390} />
-            </div>
-          )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+                {[
+                  {
+                    title: "Bookings become a record",
+                    body: "Appointments, payments and client activity stay connected.",
+                  },
+                  {
+                    title: "The dashboard shows the pattern",
+                    body: "Revenue, bookings, business health and services come into view together.",
+                  },
+                  {
+                    title: "Decide where you want to grow",
+                    body: "Turn your booking patterns into decisions that support the growth you want.",
+                  },
+                ].map((item, i) => (
+                  <div
+                    key={item.title}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "28px 1fr",
+                      gap: 12,
+                      alignItems: "start",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: i === 2 ? C.gold : C.s2,
+                        color: i === 2 ? "#080808" : C.gold,
+                        border: i === 2 ? "none" : `1px solid ${C.border2}`,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: FONT_BODY,
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: C.text,
+                          marginBottom: 3,
+                          fontFamily: FONT_BODY,
+                        }}
+                      >
+                        {item.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: C.faint,
+                          lineHeight: 1.55,
+                          fontFamily: FONT_BODY,
+                        }}
+                      >
+                        {item.body}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div
+                style={{
+                  width: mobileSnapshotWidth,
+                  height: mobileSnapshotWidth * (844 / 390),
+                  flexShrink: 0,
+                  filter: "drop-shadow(0 16px 32px rgba(0,0,0,0.42))",
+                }}
+              >
+                <MarketingMobileDashboardSnapshot scale={mobileSnapshotWidth / 390} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {[
               {
                 title: "Bookings become a record",
@@ -140,7 +217,7 @@ export const RevenueSection = () => {
                 </div>
               </div>
             ))}
-          </div>
+          )}
         </div>
 
         {!isMobile && (
