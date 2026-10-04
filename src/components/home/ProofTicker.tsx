@@ -1,9 +1,14 @@
 import { FONT_BODY } from "./tokens";
 
 const ITEMS = [
-  "Online bookings", "Payments & deposits", "Client history", "Availability & calendar",
-  "Loyalty & retention", "Stock & inventory", "Business insights", "Nexty recommendations",
-  "Built for South African service businesses",
+  "Online bookings",
+  "Trusted payments (PayShap, Yoco, iKhokha, PayFast)",
+  "Deposits",
+  "Client history",
+  "Calendar & availability",
+  "Loyalty & retention",
+  "Business insights",
+  "Nexty recommendations",
 ];
 
 const GOLD = "#D4A574";
