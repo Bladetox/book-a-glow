@@ -26,6 +26,17 @@ export const PrimaryCTA = ({
       minHeight: 52,
       letterSpacing: "0.01em",
       whiteSpace: "nowrap",
+      transition: "transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = "#DDB487";
+      e.currentTarget.style.boxShadow = "0 8px 24px rgba(212,165,116,0.18)";
+      e.currentTarget.style.transform = "translateY(-1px)";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = C.gold;
+      e.currentTarget.style.boxShadow = "none";
+      e.currentTarget.style.transform = "translateY(0)";
     }}
   >
     {children}
