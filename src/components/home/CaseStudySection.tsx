@@ -97,7 +97,7 @@ export const CaseStudySection = () => {
             That meant more than easier booking admin. The business could see its revenue, demand and client activity clearly enough to make better decisions.
           </p>
           <Link
-            to="/about#case-study"
+            to="/case-study/phenomebeauty"
             style={{
               display: "inline-flex",
               alignItems: "center",
