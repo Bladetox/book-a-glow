@@ -158,6 +158,6 @@ const sitemap = [
   ].join("\n")),
   "</urlset>",
   ""
-].join("\\n");
+].join("\n");
 fs.writeFileSync(path.join(dist,"sitemap.xml"),sitemap);
 console.log("SEO pages generated:", indexable.map(([route]) => route).join(", "));
