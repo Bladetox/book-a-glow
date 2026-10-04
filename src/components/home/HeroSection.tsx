@@ -4,7 +4,7 @@ import { useWindowWidth } from "./useWindowWidth";
 import heroImage from "../../assets/NexSlot_Hero.png";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
 import { MobileFrame } from "@/components/site/DeviceFrames";
-import MobileDashboardPreview from "@/components/site/MobileDashboardPreview";
+import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
 
 export const HeroSection = () => {
   const width = useWindowWidth();
@@ -197,7 +197,7 @@ export const HeroSection = () => {
               }}
             >
               <MobileFrame interactive={false}>
-                <MobileDashboardPreview />
+                <MarketingMobileDashboardSnapshot />
               </MobileFrame>
             </div>
           </div>
