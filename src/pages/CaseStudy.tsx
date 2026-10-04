@@ -3,7 +3,7 @@ import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
 import { PrimaryCTA } from "@/components/home/PrimaryCTA";
-import { C, FONT_BODY, FONT_DISPLAY, BP } from "@/components/home/tokens";
+import { C, FONT_BODY, BP } from "@/components/home/tokens";
 import { useWindowWidth } from "@/components/home/useWindowWidth";
 
 const PHOTO = "https://iili.io/Cxw0jRI.jpg";
@@ -89,7 +89,7 @@ const CaseStudy = () => {
               <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, margin: "0 0 16px" }}>
                 A real business using NextSlot
               </p>
-              <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 38 : 60, lineHeight: 1.03, letterSpacing: "-0.035em", color: C.text, margin: "0 0 22px" }}>
+              <h1 style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 38 : 60, fontWeight: 700, lineHeight: 1.03, letterSpacing: "-0.035em", color: C.text, margin: "0 0 22px" }}>
                 What changed when PhenomeBeauty could finally see the business behind the bookings.
               </h1>
               <p style={{ fontFamily: FONT_BODY, fontSize: 17, lineHeight: 1.75, color: C.muted, maxWidth: 650, margin: "0 0 28px" }}>
@@ -135,7 +135,7 @@ const CaseStudy = () => {
           <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12 }}>
             {metrics.map((metric) => (
               <div key={metric.label} style={{ background: C.s2, border: "1px solid " + C.border2, borderRadius: 16, padding: isMobile ? "20px 16px" : "24px 20px" }}>
-                <p style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 22 : 30, fontWeight: 800, color: C.gold, margin: "0 0 8px" }}>{metric.value}</p>
+                <p style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 22 : 30, fontWeight: 800, color: C.gold, margin: "0 0 8px" }}>{metric.value}</p>
                 <p style={{ fontFamily: FONT_BODY, fontSize: 11, lineHeight: 1.5, color: C.muted, margin: 0 }}>{metric.label}</p>
               </div>
             ))}
@@ -148,7 +148,7 @@ const CaseStudy = () => {
               <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, margin: "0 0 12px" }}>
                 The shift
               </p>
-              <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 30 : 44, lineHeight: 1.08, color: C.text, margin: "0 0 16px" }}>
+              <h2 style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 30 : 44, lineHeight: 1.08, color: C.text, margin: "0 0 16px" }}>
                 From booking admin to business visibility.
               </h2>
               <p style={{ fontFamily: FONT_BODY, fontSize: 15, lineHeight: 1.75, color: C.muted, maxWidth: 620, margin: "0 auto" }}>
@@ -159,10 +159,10 @@ const CaseStudy = () => {
             <div style={{ display: "grid", gap: 18 }}>
               {journey.map((item) => (
                 <article key={item.number} style={{ background: C.bg, border: item.number === "03" ? "1.5px solid rgba(212,165,116,0.45)" : "1px solid " + C.border, borderRadius: 18, padding: isMobile ? "24px" : "30px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "74px 1fr", gap: 18 }}>
-                  <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 700, color: C.gold }}>{item.number}</div>
+                  <div style={{ fontFamily: FONT_BODY, fontSize: 18, fontWeight: 700, color: C.gold }}>{item.number}</div>
                   <div>
                     <p style={{ fontFamily: FONT_BODY, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.faint, margin: "0 0 8px" }}>{item.label}</p>
-                    <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 21 : 25, lineHeight: 1.15, color: C.text, margin: "0 0 12px" }}>{item.title}</h3>
+                    <h3 style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 21 : 25, lineHeight: 1.15, color: C.text, margin: "0 0 12px" }}>{item.title}</h3>
                     <p style={{ fontFamily: FONT_BODY, fontSize: 14, lineHeight: 1.75, color: C.muted, maxWidth: 700, margin: "0 0 18px" }}>{item.body}</p>
                     <div style={{ display: "grid", gap: 9 }}>
                       {item.points.map(point => (
@@ -183,7 +183,7 @@ const CaseStudy = () => {
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 40 }}>
             <div>
               <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, margin: "0 0 12px" }}>What the data showed</p>
-              <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 28 : 38, lineHeight: 1.1, color: C.text, margin: "0 0 18px" }}>The system made patterns visible.</h2>
+              <h2 style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 28 : 38, lineHeight: 1.1, color: C.text, margin: "0 0 18px" }}>The system made patterns visible.</h2>
               <p style={{ fontFamily: FONT_BODY, fontSize: 14, lineHeight: 1.75, color: C.muted, margin: 0 }}>
                 The value was not just having more records. It was being able to connect the records to decisions about acquisition, services, retention and operations.
               </p>
@@ -200,7 +200,7 @@ const CaseStudy = () => {
                     <p style={{ fontFamily: FONT_BODY, fontSize: 12, fontWeight: 700, color: C.text, margin: "0 0 3px" }}>{label}</p>
                     <p style={{ fontFamily: FONT_BODY, fontSize: 11, color: C.faint, margin: 0 }}>{detail}</p>
                   </div>
-                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 700, color: C.gold }}>{value}</span>
+                  <span style={{ fontFamily: FONT_BODY, fontSize: 18, fontWeight: 700, color: C.gold }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -210,7 +210,7 @@ const CaseStudy = () => {
         <section style={{ background: C.s1, borderTop: "1px solid " + C.border, borderBottom: "1px solid " + C.border, padding: isMobile ? "72px 24px" : "88px 40px" }}>
           <div style={{ maxWidth: 1000, margin: "0 auto" }}>
             <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, margin: "0 0 14px" }}>What Nexty found</p>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 28 : 40, lineHeight: 1.08, color: C.text, margin: "0 0 16px" }}>The dashboard showed what happened. Nexty helped identify what to do about it.</h2>
+            <h2 style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 28 : 40, lineHeight: 1.08, color: C.text, margin: "0 0 16px" }}>The dashboard showed what happened. Nexty helped identify what to do about it.</h2>
             <p style={{ fontFamily: FONT_BODY, fontSize: 14, lineHeight: 1.75, color: C.muted, maxWidth: 720, margin: "0 0 28px" }}>
               In this 90-day period, Nexty surfaced 7 growth insights, 2 retention insights and 2 operations insights. Across those insights, R13,038 in recoverable opportunity was identified.
             </p>
@@ -221,7 +221,7 @@ const CaseStudy = () => {
                 ["2", "Operations insights"],
               ].map(([value, label]) => (
                 <div key={label} style={{ background: C.bg, border: "1px solid " + C.border2, borderRadius: 14, padding: "20px" }}>
-                  <p style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 800, color: C.gold, margin: "0 0 5px" }}>{value}</p>
+                  <p style={{ fontFamily: FONT_BODY, fontSize: 26, fontWeight: 800, color: C.gold, margin: "0 0 5px" }}>{value}</p>
                   <p style={{ fontFamily: FONT_BODY, fontSize: 12, color: C.muted, margin: 0 }}>{label}</p>
                 </div>
               ))}
@@ -232,7 +232,7 @@ const CaseStudy = () => {
         <section style={{ padding: isMobile ? "64px 24px" : "80px 40px" }}>
           <div style={{ maxWidth: 760, margin: "0 auto", background: "rgba(212,165,116,0.06)", border: "1px solid rgba(212,165,116,0.24)", borderRadius: 20, padding: isMobile ? "28px 22px" : "38px 42px" }}>
             <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, margin: "0 0 18px" }}>Shu-meez on the change</p>
-            <p style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 23 : 30, lineHeight: 1.25, color: C.text, margin: "0 0 20px" }}>
+            <p style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 23 : 30, lineHeight: 1.25, color: C.text, margin: "0 0 20px" }}>
               "For the first time, business felt like it was running itself."
             </p>
             <p style={{ fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.7, color: C.muted, margin: "0 0 18px" }}>
@@ -250,7 +250,7 @@ const CaseStudy = () => {
 
         <section style={{ background: C.s1, borderTop: "1px solid " + C.border, padding: isMobile ? "64px 24px 80px" : "88px 40px 100px", textAlign: "center" }}>
           <p style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, margin: "0 0 14px" }}>The point</p>
-          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 28 : 42, lineHeight: 1.08, color: C.text, margin: "0 auto 16px", maxWidth: 700 }}>
+          <h2 style={{ fontFamily: FONT_BODY, fontSize: isMobile ? 28 : 42, lineHeight: 1.08, color: C.text, margin: "0 auto 16px", maxWidth: 700 }}>
             NextSlot did not just make booking easier.
           </h2>
           <p style={{ fontFamily: FONT_BODY, fontSize: 15, lineHeight: 1.75, color: C.muted, maxWidth: 620, margin: "0 auto 28px" }}>
