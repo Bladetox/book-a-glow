@@ -3,40 +3,24 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 
-const GROUPS: FeatureGroup[] = [
+const GROUPS = [
   {
     number: "01",
     stage: "Capture",
-    title: "Capture the work as it happens.",
-    description: "Bookings, payments, clients and daily operations stay connected.",
-    features: [
-      { name: "Bookings & Calendar", description: "Online booking, availability and Google Calendar sync." },
-      { name: "Payments & Deposits", description: "PayShap, Yoco, iKhokha, PayFast, deposits and balances." },
-      { name: "Clients & Records", description: "History, consultations, notes, loyalty and client controls." },
-      { name: "Business Operations", description: "Schedules, blocked dates, products, stock and alerts." },
-    ],
+    title: "Record the work as it happens.",
+    description: "Bookings, payments, clients and daily operations.",
   },
   {
     number: "02",
-    stage: "See",
+    stage: "Understand",
     title: "See the business behind the activity.",
-    description: "Your activity becomes a clearer picture of revenue, demand and clients.",
-    features: [
-      { name: "Business Dashboard", description: "Revenue, bookings, business health and demand patterns." },
-      { name: "Business Analytics", description: "Service performance, acquisition and client behaviour." },
-      { name: "Client Activity", description: "Returning clients, booking patterns and retention signals." },
-    ],
+    description: "Your booking activity becomes a clearer picture of revenue, demand and client behaviour.",
   },
   {
     number: "03",
-    stage: "Focus",
-    title: "Focus where it matters next.",
-    description: "NextSlot surfaces the patterns. You decide what matters to your business.",
-    features: [
-      { name: "Nexty Insights", description: "Growth, Retention and Operations insights from your data." },
-      { name: "Retention Opportunities", description: "Clients who may be due, overdue or ready to re-engage." },
-      { name: "Growth Opportunities", description: "Demand, service and revenue patterns worth your attention." },
-    ],
+    stage: "Grow",
+    title: "Focus on what matters to you.",
+    description: "NextSlot surfaces the patterns and opportunities. You decide on the next steps.",
   },
 ];
 
@@ -112,14 +96,12 @@ export const FeaturesSection = () => {
                 fontFamily: FONT_DISPLAY, fontSize: isMobile ? 22 : 24, fontWeight: 700,
                 lineHeight: 1.18, color: C.text, margin: "0 0 10px", letterSpacing: "-0.015em",
               }}>
-                <span style={{ color: C.gold }}>{group.stage}</span>{group.title.replace(group.stage, "")}
+                <span style={{ color: C.gold }}>{group.title.split(" ")[0]}</span>{" "}{group.title.split(" ").slice(1).join(" ")}
               </h3>
 
               <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, margin: "0 0 20px" }}>
                 {group.description}
               </p>
-
-/div>
             </article>
           ))}
         </div>
