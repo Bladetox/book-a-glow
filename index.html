@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Force browsers to always revalidate — prevents stale JS bundles after deploys -->
+    <!-- Force browsers to always revalidate - prevents stale JS bundles after deploys -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -44,7 +44,7 @@
       because it reliably follows the theme-color meta tag with no black flash.
 
       black-translucent was removed because it composites a black overlay
-      against the app background — causing black bars on first load and when
+      against the app background - causing black bars on first load and when
       BusinessThemeProvider updates the background on navigation.
     -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -52,16 +52,16 @@
     <!--
       Theme-color + admin dark mode: set synchronously before React boots so
       the iOS/Android status bar and body background match from the very first
-      frame — no flash, no white bar on admin routes.
+      frame - no flash, no white bar on admin routes.
 
       Resolution order:
-        1. /admin path               — always #000000 (admin shell is fully black).
+        1. /admin path               - always #000000 (admin shell is fully black).
                                        Also stamps html.dark + body background = #000
                                        so Safari safe-area regions are black before
                                        React hydrates and applies .dark itself.
-        2. localStorage ns_business_theme  — returning visitors get the exact
+        2. localStorage ns_business_theme  - returning visitors get the exact
            colour of their last-known tenant theme instantly, no flash.
-        3. Default #ffffff                 — first visit or unknown theme falls
+        3. Default #ffffff                 - first visit or unknown theme falls
            back to white (standard theme background), never black.
 
       BusinessThemeProvider updates this meta tag again after the Supabase
@@ -92,7 +92,7 @@
 
         // For admin: stamp .dark on <html> and force body background to black
         // synchronously so Safari reads the correct background colour for the
-        // safe-area regions on the very first paint — before React hydrates.
+        // safe-area regions on the very first paint - before React hydrates.
         if (isAdmin) {
           document.documentElement.classList.add('dark');
           document.documentElement.style.background = '#000000';
@@ -161,9 +161,9 @@
     }
     </script>
     <style>
-      /* Base reset only — no height or overflow locks here.
+      /* Base reset only - no height or overflow locks here.
          The .app-shell class in index.css applies those only to app routes.
-         Background is intentionally NOT set here — the inline script above
+         Background is intentionally NOT set here - the inline script above
          handles admin (#000) vs non-admin (#fff) synchronously so Safari
          reads the correct safe-area background on the very first paint. */
       html, body {
