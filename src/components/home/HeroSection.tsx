@@ -102,8 +102,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s 0.08s ease both",
               }}
             >
-              More than<br />
-              bookings. <span style={{ color: C.gold }}>Built for growth.</span>
+              Record. <span style={{ color: C.gold }}>Understand. Decide.</span>
             </h1>
 
             <p
@@ -118,7 +117,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s 0.16s ease both",
               }}
             >
-              Take bookings online. Collect deposits and payments. Keep client history, availability and the work behind each appointment in one place. Then use what your business is telling you to help you grow.
+              NextSlot helps you record what’s happening in your business, understand the patterns in your data, and decide where you want to grow.
             </p>
 
             <div
