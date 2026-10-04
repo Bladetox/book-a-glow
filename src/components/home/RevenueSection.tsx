@@ -88,9 +88,6 @@ export const RevenueSection = () => {
         </div>
 
         {!isMobile && (
-        </div>
-
-        {!isMobile && (
           <div
             style={{
               position: "relative",
@@ -111,6 +108,19 @@ export const RevenueSection = () => {
             >
               <MarketingDashboardSnapshot scale={snapshotScale} />
             </div>
+          </div>
+        )}
+
+        {isMobile && (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.42))",
+            }}
+          >
+            <MarketingDashboardSnapshot scale={Math.min((width - 32) / 1000, 0.72)} />
           </div>
         )}
       </div>
