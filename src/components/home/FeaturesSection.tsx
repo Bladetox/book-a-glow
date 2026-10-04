@@ -15,7 +15,7 @@ type FeatureGroup = {
 const GROUPS: FeatureGroup[] = [
   {
     number: "01",
-    stage: "Record",
+    stage: "Capture",
     title: "Capture the work as it happens.",
     description: "Bookings, payments, clients and daily operations stay connected.",
     features: [
@@ -27,7 +27,7 @@ const GROUPS: FeatureGroup[] = [
   },
   {
     number: "02",
-    stage: "Understand",
+    stage: "See",
     title: "See the business behind the activity.",
     description: "Your activity becomes a clearer picture of revenue, demand and clients.",
     features: [
@@ -38,8 +38,8 @@ const GROUPS: FeatureGroup[] = [
   },
   {
     number: "03",
-    stage: "Decide",
-    title: "Know where to focus next.",
+    stage: "Focus",
+    title: "Focus where it matters next.",
     description: "NextSlot surfaces the patterns. You decide what matters to your business.",
     features: [
       { name: "Nexty Insights", description: "Growth, Retention and Operations insights from your data." },
@@ -83,7 +83,7 @@ export const FeaturesSection = () => {
             fontFamily: FONT_DISPLAY, fontSize: isMobile ? 30 : 44, fontWeight: 800,
             lineHeight: 1.1, color: C.text, margin: "0 0 14px", letterSpacing: "-0.02em",
           }}>
-            From every booking to a clearer business.
+            From every booking to a <span style={{ color: C.gold }}>clearer business.</span>
           </h2>
           <p style={{
             fontSize: 15, color: C.muted, lineHeight: 1.65, maxWidth: 560, margin: "0 auto",
@@ -121,7 +121,7 @@ export const FeaturesSection = () => {
                 fontFamily: FONT_DISPLAY, fontSize: isMobile ? 22 : 24, fontWeight: 700,
                 lineHeight: 1.18, color: C.text, margin: "0 0 10px", letterSpacing: "-0.015em",
               }}>
-                {group.title}
+                <span style={{ color: C.gold }}>{group.stage}</span>{group.title.replace(group.stage, "")}
               </h3>
 
               <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, margin: "0 0 20px" }}>
