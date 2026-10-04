@@ -102,7 +102,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s 0.08s ease both",
               }}
             >
-              Record. <span style={{ color: C.gold }}>Understand. Decide.</span>
+              Record. <span style={{ color: C.gold }}>Understand.</span> Grow.
             </h1>
 
             <p
@@ -117,7 +117,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s 0.16s ease both",
               }}
             >
-              NextSlot helps you record what’s happening in your business, understand the patterns in your data, and decide where you want to grow.
+              NextSlot records your bookings, turns them into a clear picture of your business, and helps you make better growth decisions based on the patterns in your bookings.
             </p>
 
             <div
