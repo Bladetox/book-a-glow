@@ -1,5 +1,4 @@
-import { TrendingUp, ArrowRight, CalendarDays } from "lucide-react";
-import { DashboardIcon, BookingsIcon, ServicesIcon, ClientManagementIcon, SettingsIcon } from "@/components/icons/BrandIcons";
+import { TrendingUp, ArrowRight } from "lucide-react";
 
 const mockServices = [
   { name: "Signature Facial", count: 12, revenue: "R 4,800" },
@@ -8,12 +7,12 @@ const mockServices = [
 ];
 
 const nav = [
-  { label: "Dashboard", active: true, Icon: DashboardIcon },
-  { label: "Calendar", Icon: CalendarDays },
-  { label: "Schedule", group: true, Icon: BookingsIcon },
-  { label: "Catalogue", group: true, Icon: ServicesIcon },
-  { label: "Clients", group: true, Icon: ClientManagementIcon },
-  { label: "Business", group: true, Icon: SettingsIcon },
+  { label: "Dashboard", active: true },
+  { label: "Calendar" },
+  { label: "Schedule", group: true },
+  { label: "Catalogue", group: true },
+  { label: "Clients", group: true },
+  { label: "Business", group: true },
 ];
 
 const MockBusinessLogo = ({ small = false }: { small?: boolean }) => (
@@ -59,11 +58,12 @@ const MarketingDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => (
       width: 1000,
       height: 760,
       display: "flex",
-      background: "#000", color: "#fff",
-      overflow: "hidden",
-      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       transform: `scale(${scale})`,
       transformOrigin: "top left",
+      background: "#000", color: "#fff",
+      border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18,
+      overflow: "hidden", boxShadow: "0 32px 90px rgba(0,0,0,0.62)",
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     }}
   >
     <aside style={{ width: 256, flexShrink: 0, background: "#000", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column" }}>
@@ -77,12 +77,11 @@ const MarketingDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => (
       <nav style={{ display: "flex", flexDirection: "column", gap: 3, padding: 10 }}>
         {nav.map(item => (
           <div key={item.label} style={{
-            minHeight: 40, display: "flex", alignItems: "center", gap: 10, padding: "0 14px",
+            minHeight: 40, display: "flex", alignItems: "center", padding: "0 14px",
             borderRadius: 12, background: item.active ? "rgba(255,255,255,0.08)" : "transparent",
             color: item.active ? "rgba(255,255,255,0.90)" : "rgba(255,255,255,0.40)",
             fontSize: 13, fontWeight: 500,
           }}>
-            <item.Icon size={15} strokeWidth={1.7} aria-hidden="true" style={{ opacity: item.active ? 0.82 : 0.55, flexShrink: 0 }} />
             <span style={{ flex: 1 }}>{item.label}</span>
             {item.group && <span style={{ color: "rgba(255,255,255,0.22)", fontSize: 16 }}>›</span>}
           </div>
