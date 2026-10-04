@@ -17,12 +17,59 @@ export const HOME_STYLES = `
   @keyframes countUp       { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
   @keyframes shimmer       { 0%{background-position:-200% 0;} 100%{background-position:200% 0;} }
 
-  /* Nexty AI section orb */
-  @keyframes orbBgPulse    { 0%,100%{opacity:.6;transform:scale(1);}     50%{opacity:1;transform:scale(1.1);} }
+  @keyframes orbBgPulse    { 0%,100%{opacity:.6;transform:scale(1);}     50%{opacity:1;transform:scale(1.1);}  }
   @keyframes nextyOrbit    { to{transform:rotate(360deg);}  }
   @keyframes nextyOrbitR   { to{transform:rotate(-360deg);} }
   @keyframes nextyDot1     { from{transform:rotate(0deg)   translateX(84px) rotate(0deg);}   to{transform:rotate(360deg)  translateX(84px) rotate(-360deg);}  }
   @keyframes nextyDot2     { from{transform:rotate(180deg) translateX(66px) rotate(-180deg);} to{transform:rotate(540deg)  translateX(66px) rotate(-540deg);}  }
+
+  .marketing-site {
+    text-rendering: optimizeLegibility;
+  }
+
+  .marketing-site h1,
+  .marketing-site h2,
+  .marketing-site h3 {
+    text-wrap: balance;
+  }
+
+  .marketing-site p {
+    text-wrap: pretty;
+  }
+
+  .marketing-site a {
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+  }
+
+  .marketing-site a:focus-visible {
+    outline: 2px solid #D4A574;
+    outline-offset: 4px;
+  }
+
+  .marketing-site ::selection {
+    background: rgba(212,165,116,0.28);
+    color: #f0efec;
+  }
+
+  .marketing-site .surface {
+    background: #111110;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .marketing-site .surface-elevated {
+    background: #181816;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+  }
+
+  .marketing-site .section-copy {
+    max-width: 560px;
+  }
+
+  .marketing-site .content-width {
+    width: min(1120px, calc(100% - 48px));
+    margin-inline: auto;
+  }
 
   .feat-carousel {
     display: flex;
@@ -47,7 +94,21 @@ export const HOME_STYLES = `
   .proof-track { animation: proofScroll 28s linear infinite; }
   .proof-track:hover { animation-play-state: paused; }
 
-  /* ── Demo page device switcher ──────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .marketing-site *,
+    .marketing-site *::before,
+    .marketing-site *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+
+    .proof-track {
+      animation: none !important;
+    }
+  }
+
   .demo-devices-desktop { display: flex; }
   .demo-devices-mobile  { display: none; }
 
@@ -61,7 +122,6 @@ export const HOME_STYLES = `
     }
   }
 
-  /* ── Pricing page responsive grids ─────────────────────────── */
   @media (max-width: 767px) {
     .pricing-hero-grid {
       grid-template-columns: 1fr !important;
@@ -80,7 +140,6 @@ export const HOME_STYLES = `
     }
   }
 
-  /* ── About page responsive ──────────────────────────────────── */
   @media (max-width: 767px) {
     .about-hero-grid {
       grid-template-columns: 1fr !important;
