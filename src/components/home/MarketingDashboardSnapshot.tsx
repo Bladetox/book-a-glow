@@ -15,18 +15,26 @@ const nav = [
   { label: "Business", group: true },
 ];
 
-const MockBusinessLogo = () => (
+const MockBusinessLogo = ({ small = false }: { small?: boolean }) => (
   <div
     style={{
-      width: 36, height: 36, borderRadius: 10,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: "linear-gradient(135deg, #d7a36f, #8e603b)",
-      color: "#111", fontSize: 11, fontWeight: 800,
-      letterSpacing: "-0.06em",
-      boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.18)",
+      width: small ? 26 : 36,
+      height: small ? 26 : 36,
+      borderRadius: small ? 8 : 10,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#efe7da",
+      boxShadow: "inset 0 0 0 1px rgba(17,17,16,0.10)",
+      flexShrink: 0,
     }}
     aria-hidden="true"
-  >SM</div>
+  >
+    <svg width={small ? 16 : 22} height={small ? 16 : 22} viewBox="0 0 24 24" fill="none">
+      <path d="M4 18.5V5.5h3.1l4.9 7.1 4.9-7.1H20v13h-3.2v-7.2l-4.8 6.7-4.8-6.7v7.2H4Z" fill="#1A1815"/>
+      <circle cx="19.2" cy="5.2" r="2.1" fill="#B98955"/>
+    </svg>
+  </div>
 );
 
 const MiniMetric = ({ label, value, sub, tone = "neutral" }: {
@@ -43,11 +51,15 @@ const MiniMetric = ({ label, value, sub, tone = "neutral" }: {
   </div>
 );
 
-const MarketingDashboardSnapshot = () => (
+const MarketingDashboardSnapshot = ({ scale = 1 }: { scale?: number }) => (
   <div
     aria-label="Example NextSlot dashboard for a fictional business"
     style={{
-      width: 1000, height: 760, display: "flex",
+      width: 1000,
+      height: 760,
+      display: "flex",
+      transform: `scale(${scale})`,
+      transformOrigin: "top left",
       background: "#000", color: "#fff",
       border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18,
       overflow: "hidden", boxShadow: "0 32px 90px rgba(0,0,0,0.62)",
@@ -86,7 +98,7 @@ const MarketingDashboardSnapshot = () => (
         <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.90)" }}>Dashboard</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 26, height: 26, borderRadius: 8, overflow: "hidden", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <MockBusinessLogo />
+            <MockBusinessLogo small />
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.78)" }}>Studio M</div>
