@@ -16,7 +16,7 @@ const SiteHeader = () => {
   const isActive = (to: string) => { const path = to.split("#")[0]; return pathname === path || pathname.startsWith(path + "/"); };
 
   return (
-    <header className="fixed top-0 z-50 w-full backdrop-blur-lg" style={{ background: "rgba(0,0,0,.92)", borderBottom: "1px solid hsl(var(--accent) / .12)", boxShadow: "0 1px 0 0 hsl(var(--accent) / .06), 0 4px 16px -4px rgba(0,0,0,.8)" }}>
+    <header className="fixed top-0 z-50 w-full backdrop-blur-lg" style={{ background: "rgba(8,8,8,.94)", borderBottom: "1px solid rgba(255,255,255,.08)", boxShadow: "0 1px 0 rgba(255,255,255,.03), 0 4px 20px -4px rgba(0,0,0,.55)" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="NextSlot home">
@@ -27,7 +27,7 @@ const SiteHeader = () => {
           <nav className="hidden md:flex items-center gap-1" aria-label="Primary navigation">
             {navLinks.map(({ to, label }) => {
               const active = isActive(to);
-              return <Link key={to} to={to} className="relative px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200" style={{ color: active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", background: active ? "hsl(var(--accent) / .08)" : "transparent" }}>{label}{active && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: "hsl(var(--accent))" }} />}</Link>;
+              return <Link key={to} to={to} className="relative px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200" style={{ color: active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", background: active ? "rgba(212,165,116,.08)" : "transparent" }}>{label}{active && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: "#D4A574" }} />}</Link>;
             })}
           </nav>
 
@@ -40,7 +40,7 @@ const SiteHeader = () => {
         </div>
 
         {isMenuOpen && (
-          <div className="md:hidden py-4 animate-fade-in" style={{ borderTop: "1px solid hsl(var(--accent) / .12)", background: "#000" }}>
+          <div className="md:hidden py-4 animate-fade-in" style={{ borderTop: "1px solid rgba(255,255,255,.08)", background: "#080808" }}>
             <nav className="flex flex-col gap-1 mb-4" aria-label="Mobile navigation">
               {navLinks.map(({ to, label }) => <Link key={to} to={to} className="px-3 py-2.5 rounded-lg text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }} onClick={() => setIsMenuOpen(false)}>{label}</Link>)}
               <Link to="/login" className="px-3 py-2.5 rounded-lg text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }} onClick={() => setIsMenuOpen(false)}>Login</Link>
