@@ -90,7 +90,7 @@ export const RevenueSection = () => {
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "flex-end",
+                    justifyContent: "center",
                     background: i === 2 ? C.gold : C.s2,
                     color: i === 2 ? "#080808" : C.gold,
                     border: i === 2 ? "none" : `1px solid ${C.border2}`,
