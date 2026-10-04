@@ -12,7 +12,7 @@ export const CaseStudySection = () => {
     <section
       style={{
         background: C.bg,
-        padding: isMobile ? "72px 16px 80px" : "104px 40px 112px",
+        padding: isMobile ? "64px 16px 72px" : "80px 40px 88px",
         overflow: "hidden",
       }}
     >
