@@ -37,13 +37,8 @@ const GROUPS: FeatureGroup[] = [
         description: "Client history, notes, consultations and loyalty activity.",
       },
       {
-        name: "Availability",
+        name: "Operations",
         description: "Working hours, blocked dates, products and stock levels.",
-      },
-      {
-        name: "Stock & Inventory",
-        description:
-          "Track products, quantities and reorder levels. Import stock by CSV, update quantities and receive low-stock alerts in the dashboard.",
       },
     ],
   },
@@ -86,8 +81,6 @@ const GROUPS: FeatureGroup[] = [
       {
         name: "Business Opportunities",
         description: "Gaps in demand, service performance and revenue efficiency.",
-      },
-      {
       },
     ],
   },
