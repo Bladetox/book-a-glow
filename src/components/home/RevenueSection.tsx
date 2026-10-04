@@ -2,6 +2,7 @@ import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
+import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
 
 export const RevenueSection = () => {
   const width = useWindowWidth();
@@ -146,7 +147,7 @@ export const RevenueSection = () => {
               filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
             }}
           >
-            <MarketingDashboardSnapshot scale={snapshotScale} />
+            {isMobile ? <MarketingMobileDashboardSnapshot /> : <MarketingDashboardSnapshot scale={snapshotScale} />}
           </div>
         </div>
       </div>
