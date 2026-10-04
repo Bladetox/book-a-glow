@@ -20,29 +20,25 @@ const GROUPS: FeatureGroup[] = [
   {
     number: "01",
     stage: "Record",
-    title: "Keep the activity around your business connected.",
+    title: "Capture the work as it happens.",
     description:
-      "Bookings, payments, clients and day-to-day business information stay in one system.",
+      "Bookings, payments, clients and daily operations stay connected.",
     features: [
       {
         name: "Bookings & Calendar",
-        description:
-          "Let clients book online from the services and availability you set. Manage appointments, reschedule bookings and view payment status, with Google Calendar sync available.",
+        description: "Online booking, availability and Google Calendar sync.",
       },
       {
         name: "Payments & Deposits",
-        description:
-          "Accept payments through supported South African gateways including PayShap, Yoco, iKhokha and PayFast. Collect deposits, track outstanding balances and keep payment status connected to each booking.",
+        description: "Deposits, balances and supported payment gateways.",
       },
       {
         name: "Clients & Consultations",
-        description:
-          "Keep client details, booking history, notes, consultation information and relevant records together. Consultation forms can collect intake, health and consent information.",
+        description: "Client history, notes, consultations and loyalty activity.",
       },
       {
         name: "Availability",
-        description:
-          "Set recurring working hours, make date-specific changes and block dates when you are unavailable. Clients only see times that fall within the availability you set.",
+        description: "Working hours, blocked dates, products and stock levels.",
       },
       {
         name: "Stock & Inventory",
@@ -54,53 +50,44 @@ const GROUPS: FeatureGroup[] = [
   {
     number: "02",
     stage: "Understand",
-    title: "See what is actually happening in your business.",
+    title: "See the business behind the activity.",
     description:
-      "The activity you record becomes a clearer picture of revenue, demand, clients, services and business health.",
+      "Your activity becomes a clearer picture of revenue, demand and clients.",
     features: [
       {
         name: "Business Dashboard",
-        description:
-          "See revenue, bookings, business health, demand patterns, top services, client activity, acquisition channels and operational information in one place.",
+        description: "Revenue, bookings, business health and demand patterns.",
       },
       {
         name: "Business Analytics",
-        description:
-          "Understand service performance, booking activity, acquisition channels, client behaviour and how your time and capacity are being used.",
+        description: "Service performance, acquisition and client behaviour.",
       },
       {
         name: "Client & Loyalty Activity",
-        description:
-          "See returning clients, booking patterns and loyalty activity so you can understand who is coming back and where retention opportunities may exist.",
+        description: "Returning clients, booking patterns and retention signals.",
       },
     ],
   },
   {
     number: "03",
     stage: "Decide",
-    title: "Turn what you see into your next move.",
+    title: "Know where to focus next.",
     description:
-      "NextSlot surfaces information and patterns from your business so you can decide where to focus.",
+      "NextSlot surfaces the patterns. You decide what matters to your business.",
     features: [
       {
         name: "Nexty Insights",
-        description:
-          "Nexty analyses your booking and business activity to surface patterns, risks and opportunities across Growth, Retention and Operations.",
+        description: "Growth, Retention and Operations insights from your data.",
       },
       {
         name: "Retention Opportunities",
-        description:
-          "Identify clients who may be due to return, overdue or not yet being tracked in your loyalty programme, then decide who you want to follow up with.",
+        description: "Clients who may be due, overdue or ready to re-engage.",
       },
       {
         name: "Business Opportunities",
-        description:
-          "See gaps in demand, service performance, revenue efficiency and client behaviour so you can decide where your attention is most useful.",
+        description: "Gaps in demand, service performance and revenue efficiency.",
       },
       {
-        name: "You stay in control",
-        description:
-          "NextSlot surfaces the information. You decide what matters and what to do next.",
       },
     ],
   },
@@ -175,9 +162,7 @@ export const FeaturesSection = () => {
               margin: "0 auto",
             }}
           >
-            NextSlot keeps the activity around your business connected, turns it
-            into information you can understand, and helps you decide where to
-            focus next.
+            Record what happens. Understand what it means. Decide where to focus next.
           </p>
         </div>
 
