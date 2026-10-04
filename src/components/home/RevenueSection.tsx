@@ -24,7 +24,7 @@ export const RevenueSection = () => {
   const isMobile = width < BP;
   const snapshotWidth = 520;
   const snapshotScale = snapshotWidth / 1000;
-  const mobileSnapshotWidth = width < 380 ? 116 : 132;
+  const mobileSnapshotWidth = width < 380 ? 138 : 148;
 
   return (
     <section
@@ -42,8 +42,8 @@ export const RevenueSection = () => {
           maxWidth: 1200,
           margin: "0 auto",
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "0.82fr 1.18fr",
-          gap: isMobile ? 32 : 72,
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+          gap: isMobile ? 32 : 80,
           alignItems: "center",
         }}
       >
@@ -79,9 +79,9 @@ export const RevenueSection = () => {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) auto",
-                gap: 18,
-                alignItems: "start",
+                gridTemplateColumns: `minmax(0, 1fr) ${mobileSnapshotWidth}px`,
+                gap: 12,
+                alignItems: "center",
               }}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
@@ -145,6 +145,9 @@ export const RevenueSection = () => {
                   width: mobileSnapshotWidth,
                   height: mobileSnapshotWidth * (844 / 390),
                   flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   filter: "drop-shadow(0 16px 32px rgba(0,0,0,0.42))",
                 }}
               >
