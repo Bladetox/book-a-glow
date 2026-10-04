@@ -97,17 +97,18 @@ const MarketingRoutes = () => (
         <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
         <Route path="/privacy" element={<><SEO path="/privacy" /><Privacy /></>} />
         <Route path="/terms" element={<><SEO path="/terms" /><SiteTerms /></>} />
-        <Route path="/online-booking-software" element={<OnlineBookingSoftware />} />
-        <Route path="/business-management-software" element={<BusinessManagementSoftware />} />
-        <Route path="/booking-software-south-africa" element={<BookingSoftwareSouthAfrica />} />
-        <Route path="/client-management" element={<ClientManagement />} />
-        <Route path="/business-analytics" element={<BusinessAnalytics />} />
-        <Route path="/mobile-service-businesses" element={<MobileServiceBusinesses />} />
-        <Route path="/payments" element={<Payments />} />
-        <Route path="/business-growth" element={<BusinessGrowth />} />
+        <Route path="/online-booking-software" element={<><SEO path="/online-booking-software" /><OnlineBookingSoftware /></>} />
+        <Route path="/business-management-software" element={<><SEO path="/business-management-software" /><BusinessManagementSoftware /></>} />
+        <Route path="/booking-software-south-africa" element={<><SEO path="/booking-software-south-africa" /><BookingSoftwareSouthAfrica /></>} />
+        <Route path="/client-management" element={<><SEO path="/client-management" /><ClientManagement /></>} />
+        <Route path="/business-analytics" element={<><SEO path="/business-analytics" /><BusinessAnalytics /></>} />
+        <Route path="/mobile-service-businesses" element={<><SEO path="/mobile-service-businesses" /><MobileServiceBusinesses /></>} />
+        <Route path="/payments" element={<><SEO path="/payments" /><Payments /></>} />
+        <Route path="/business-growth" element={<><SEO path="/business-growth" /><BusinessGrowth /></>} />
         <Route path="/admin" element={<Navigate to="/login" replace />} />
         <Route path="/superadmin" element={<><SEO path="/superadmin" /><SuperAdmin /></>} />
-        <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />\n        <Route path="/case-study/phenomebeauty" element={<><SEO path="/case-study/phenomebeauty" /><CaseStudy /></>} />
+        <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />
+        <Route path="/case-study/phenomebeauty" element={<><SEO path="/case-study/phenomebeauty" /><CaseStudy /></>} />
         <Route path="/reset-password" element={<><SEO path="/reset-password" /><ResetPassword /></>} />
         <Route path="/payment" element={<><SEO path="/payment" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
         <Route path="/payment-success" element={<><SEO path="/payment-success" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
