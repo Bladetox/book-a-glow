@@ -7,7 +7,7 @@ import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
-  const snapshotWidth = isMobile ? Math.min(width - 32, 320) : 520;
+  const snapshotWidth = isMobile ? Math.min(width - 32, 220) : 520;
   const snapshotScale = snapshotWidth / 1000;
 
   return (
@@ -16,7 +16,7 @@ export const RevenueSection = () => {
         position: "relative",
         overflow: "hidden",
         background: C.bg,
-        padding: isMobile ? "72px 16px" : "104px 40px",
+        padding: isMobile ? "56px 16px" : "104px 40px",
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
       }}
@@ -27,7 +27,7 @@ export const RevenueSection = () => {
           margin: "0 auto",
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr" : "0.82fr 1.18fr",
-          gap: isMobile ? 48 : 72,
+          gap: isMobile ? 32 : 72,
           alignItems: "center",
         }}
       >
