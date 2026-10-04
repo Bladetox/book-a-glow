@@ -33,7 +33,7 @@ export const RevenueSection = () => {
         position: "relative",
         overflow: "hidden",
         background: C.bg,
-        padding: isMobile ? "56px 16px" : "104px 40px",
+        padding: isMobile ? "64px 16px" : "80px 40px",
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
       }}
