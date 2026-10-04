@@ -147,7 +147,7 @@ export const RevenueSection = () => {
               filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
             }}
           >
-            {isMobile ? <MarketingMobileDashboardSnapshot /> : <MarketingDashboardSnapshot scale={snapshotScale} />}
+            {isMobile ? <MarketingMobileDashboardSnapshot scale={snapshotWidth / 390} /> : <MarketingDashboardSnapshot scale={snapshotScale} />}
           </div>
         </div>
       </div>
