@@ -81,10 +81,12 @@
           'tattoo-artist': '#141414',
           'barber':        '#1e2530'
         };
-        var isAdmin = window.location.pathname.startsWith('/admin');
+        var isSuper = window.location.pathname.startsWith('/superadmin');
+        var isAdmin = isSuper || window.location.pathname.startsWith('/admin');
+        var adminBg = isSuper ? '#050505' : '#000000';
         var stored = '';
         try { stored = localStorage.getItem('ns_business_theme') || ''; } catch (e) {}
-        var color = isAdmin ? '#000000' : (THEME_BACKGROUNDS[stored] || '#ffffff');
+        var color = isAdmin ? adminBg : (THEME_BACKGROUNDS[stored] || '#ffffff');
 
         // Update theme-color meta so Safari status bar matches immediately.
         var meta = document.querySelector('meta[name="theme-color"]');
@@ -95,10 +97,10 @@
         // safe-area regions on the very first paint — before React hydrates.
         if (isAdmin) {
           document.documentElement.classList.add('dark');
-          document.documentElement.style.background = '#000000';
+          document.documentElement.style.background = adminBg;
           // Inline style on body is set here; index.css bg-background then
           // inherits the correct dark token once Tailwind loads.
-          document.write('<style>body{background:#000000!important}</style>');
+          document.write('<style>body{background:' + adminBg + '!important}</style>');
         }
       })();
     </script>

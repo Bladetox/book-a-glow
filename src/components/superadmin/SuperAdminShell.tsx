@@ -169,7 +169,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
 
   return (
     <div
-      className="min-h-screen text-[hsl(0,0%,88%)] flex overflow-hidden"
+      className="min-h-dvh text-[hsl(0,0%,88%)] flex overflow-hidden"
       style={{ background: "#050505" }}
     >
       {/* ── Sidebar ── */}
@@ -181,6 +181,8 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
         ].join(" ")}
         style={{
           background: "rgba(8,8,8,0.85)",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderRight: "1px solid rgba(255,255,255,0.05)",
@@ -269,13 +271,14 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
       )}
 
       {/* ── Main ── */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col min-h-dvh min-w-0">
 
         {/* Header */}
         <header
           className="flex items-center gap-4 px-5 sm:px-8 py-3.5 shrink-0 sticky top-0 z-30"
           style={{
             background: "rgba(6,6,6,0.80)",
+            paddingTop: "calc(0.875rem + env(safe-area-inset-top, 0px))",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
             borderBottom: "1px solid rgba(255,255,255,0.05)",
@@ -327,7 +330,7 @@ export default function SuperAdminShell({ onSignOut }: { onSignOut: () => void }
         {/* Content */}
         <main
           className="flex-1 overflow-y-auto p-5 sm:p-8"
-          style={{ background: "#050505" }}
+          style={{ background: "#050505", paddingBottom: "calc(2rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <Suspense fallback={<TabLoader />}>
             {renderView()}

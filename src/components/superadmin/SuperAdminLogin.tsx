@@ -33,7 +33,7 @@ export default function SuperAdminLogin({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(0,0%,3%)] flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-[#050505] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
 
         {/* Brand */}

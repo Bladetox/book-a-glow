@@ -3,8 +3,10 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
 import SuperAdminShell from "@/components/superadmin/SuperAdminShell";
+import { useShellBackground } from "@/hooks/useShellBackground";
 
 const SuperAdmin = () => {
+  useShellBackground("#050505");
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
 
   const checkSuperAdminSession = async () => {
@@ -41,7 +43,7 @@ const SuperAdmin = () => {
 
   if (authState === "loading") {
     return (
-      <div className="min-h-screen bg-[hsl(0,0%,3%)] flex items-center justify-center">
+      <div className="min-h-dvh bg-[#050505] flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
       </div>
     );
