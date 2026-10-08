@@ -85,7 +85,7 @@ export const HeroSection = () => {
                 animation: "fadeUp 0.5s ease both",
               }}
             >
-              More than bookings
+              For independent service businesses
             </p>
 
             <h1
