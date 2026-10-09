@@ -19,7 +19,7 @@ const Index = () => {
 
   return (
     <div
-    className="nextslot-theme dark-brand marketing-site"
+    className="nextslot-theme marketing-light marketing-site"
     style={{
       minHeight: "100dvh",
       overflowX: "hidden",
@@ -32,7 +32,7 @@ const Index = () => {
     } as React.CSSProperties}
   >
     <style>{HOME_STYLES}</style>
-    <style>{`html.marketing-page, html.marketing-page body { scrollbar-width: none; -ms-overflow-style: none; } html.marketing-page::-webkit-scrollbar { display: none; width: 0; }`}</style>
+    <style>{`html.marketing-page, html.marketing-page body { scrollbar-width: none; -ms-overflow-style: none; overflow-x: clip; } html.marketing-page::-webkit-scrollbar, html.marketing-page body::-webkit-scrollbar { display: none; width: 0; height: 0; }`}</style>
     <SiteHeader />
     <main>
       <HeroSection />

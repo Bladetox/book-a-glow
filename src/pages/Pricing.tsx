@@ -6,9 +6,10 @@ import { Link } from "react-router-dom";
 import { Check, Minus, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import waIcon from "@/assets/whatsapp.png";
 
-const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
+const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #B88B52 0%, #9C713D 52%, #9C713D 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
 // ─── Keyframes + IntersectionObserver reverse-scroll (desktop + mobile) ────────
@@ -560,7 +561,7 @@ const PricingHero = ({
         }} />
         <div style={{
           position: "absolute", inset: 0,
-          backgroundImage: `linear-gradient(rgba(212,165,116,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(212,165,116,0.045) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(rgba(184,139,82,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(184,139,82,0.045) 1px, transparent 1px)`,
           backgroundSize: "44px 44px",
           mixBlendMode: "color-dodge" as const,
           WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
@@ -617,7 +618,7 @@ const PricingHero = ({
             letterSpacing: "-0.03em",
             userSelect: "none" as const,
             display: "block",
-            textShadow: "0 0 120px rgba(212,165,116,0.18)",
+            textShadow: "0 0 120px rgba(184,139,82,0.18)",
           }}
         >
           R99
@@ -692,8 +693,8 @@ const PricingHero = ({
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
               padding: "13px 28px", borderRadius: 10,
-              background: "rgba(212,165,116,0.10)",
-              border: "1px solid rgba(212,165,116,0.25)",
+              background: "rgba(184,139,82,0.10)",
+              border: "1px solid rgba(184,139,82,0.25)",
               color: C.text,
             }}>
               You are on the {manageTierMeta?.label ?? "Starter"} plan
@@ -704,7 +705,7 @@ const PricingHero = ({
               style={{
                 background: CTA_BG,
                 boxShadow: CTA_SHADOW,
-                color: "#080808",
+                color: "#000000",
                 fontFamily: FONT_BODY,
                 fontSize: 14,
                 fontWeight: 700,
@@ -729,8 +730,8 @@ const PricingHero = ({
               marginTop: 12,
               padding: "5px 14px",
               borderRadius: 100,
-              background: "rgba(212,165,116,0.08)",
-              border: "1px solid rgba(212,165,116,0.20)",
+              background: "rgba(184,139,82,0.08)",
+              border: "1px solid rgba(184,139,82,0.20)",
               fontFamily: FONT_BODY,
               fontSize: 11,
               fontWeight: 600,
@@ -903,15 +904,15 @@ const Pricing = () => {
               <div
                 key={tier.name}
                 style={{
-                  background: tier.featured ? "rgba(212,165,116,0.06)" : C.s1,
-                  border: tier.featured ? "1.5px solid rgba(212,165,116,0.55)" : `1px solid ${C.border2}`,
+                  background: tier.featured ? "rgba(184,139,82,0.06)" : C.s1,
+                  border: tier.featured ? "1.5px solid rgba(184,139,82,0.55)" : `1px solid ${C.border2}`,
                   borderRadius: 20,
                   padding: "32px 28px",
                   position: "relative",
                   overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
-                  boxShadow: tier.featured ? "0 8px 40px -8px rgba(212,165,116,0.20)" : "none",
+                  boxShadow: tier.featured ? "0 8px 40px -8px rgba(184,139,82,0.20)" : "none",
                 }}
               >
                 {tier.featured && (
@@ -921,7 +922,7 @@ const Pricing = () => {
                     background: CTA_BG,
                     borderRadius: "0 0 10px 10px",
                     padding: "4px 14px",
-                    fontSize: 10, fontWeight: 700, color: "#080808",
+                    fontSize: 10, fontWeight: 700, color: "#000000",
                     letterSpacing: "0.08em", textTransform: "uppercase" as const,
                     fontFamily: FONT_BODY,
                   }}>
@@ -937,8 +938,8 @@ const Pricing = () => {
                       fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
                       textTransform: "uppercase" as const,
                       padding: "3px 10px", borderRadius: 100, marginBottom: 10,
-                      background: "rgba(212,165,116,0.08)",
-                      border: "1px solid rgba(212,165,116,0.20)",
+                      background: "rgba(184,139,82,0.08)",
+                      border: "1px solid rgba(184,139,82,0.20)",
                       color: C.gold, fontFamily: FONT_BODY,
                     }}>
                       Coming Soon
@@ -978,25 +979,9 @@ const Pricing = () => {
                   <>
                     <button
                       type="button"
+                      className={`marketing-cta pricing-plan-cta${isCurrent ? " is-current" : ""}`}
                       disabled={isCurrent || !!submittingPlan || tier.comingSoon}
                       onClick={() => !tier.comingSoon && handlePlanChange(tierPlan)}
-                      style={isCurrent ? {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
-                        background: "rgba(212,165,116,0.08)", color: C.text,
-                        border: "1px solid rgba(212,165,116,0.20)", opacity: 0.6,
-                      } : tier.featured ? {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
-                        padding: "13px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
-                        background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808", border: "none", opacity: tier.comingSoon ? 0.5 : 1,
-                      } : {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
-                        background: "transparent", color: C.muted, border: `1px solid ${C.border2}`, opacity: tier.comingSoon ? 0.5 : 1,
-                      }}
                     >
                       {isBusy ? "Saving..." : ctaLabel}
                     </button>
@@ -1007,32 +992,11 @@ const Pricing = () => {
                 ) : (
                   <>
                     {tier.comingSoon ? (
-                      <div style={{
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10,
-                        background: "rgba(212,165,116,0.06)", color: C.muted,
-                        border: `1px solid ${C.border}`,
-                      }}>
+                      <div className="marketing-cta pricing-plan-cta is-coming-soon" aria-disabled="true">
                         Coming Soon
                       </div>
                     ) : (
-                      <Link
-                        to="/onboarding"
-                        style={tier.featured ? {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
-                          padding: "13px 20px", borderRadius: 10,
-                          background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808",
-                          textDecoration: "none",
-                        } : {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                          padding: "12px 20px", borderRadius: 10,
-                          background: "transparent", color: C.muted,
-                          border: `1px solid ${C.border2}`, textDecoration: "none",
-                        }}
-                      >
+                      <Link to="/onboarding" className="marketing-cta pricing-plan-cta">
                         {tier.cta}
                       </Link>
                     )}
@@ -1053,7 +1017,7 @@ const Pricing = () => {
           <div style={{
             maxWidth: 1100, margin: "0 auto",
             background: C.s1,
-            border: "1px solid rgba(212,165,116,0.22)",
+            border: "1px solid rgba(184,139,82,0.22)",
             borderRadius: 20, padding: "40px 40px",
           }}>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
@@ -1148,8 +1112,8 @@ const Pricing = () => {
               key={faq.q}
               style={{
                 borderRadius: 12,
-                border: `1px solid ${openFaq === idx ? "rgba(212,165,116,0.35)" : C.border}`,
-                background: openFaq === idx ? "rgba(212,165,116,0.04)" : "transparent",
+                border: `1px solid ${openFaq === idx ? "rgba(184,139,82,0.35)" : C.border}`,
+                background: openFaq === idx ? "rgba(184,139,82,0.04)" : "transparent",
                 overflow: "hidden",
                 marginBottom: 4,
                 transition: "border-color 0.15s",
@@ -1157,12 +1121,8 @@ const Pricing = () => {
             >
               <button
                 type="button"
+                className="pricing-faq-trigger"
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                  padding: "16px 20px", background: "transparent", border: "none", cursor: "pointer",
-                  textAlign: "left",
-                }}
               >
                 <span style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, lineHeight: 1.4 }}>{faq.q}</span>
                 {openFaq === idx
@@ -1184,7 +1144,7 @@ const Pricing = () => {
         <div style={{
           borderRadius: 24, padding: "56px 48px",
           background: C.s1,
-          border: "1px solid rgba(212,165,116,0.25)",
+          border: "1px solid rgba(184,139,82,0.25)",
           boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
           textAlign: "center",
         }}>
@@ -1198,19 +1158,7 @@ const Pricing = () => {
             No payment required. No technical setup. Just your services, your availability, and your booking link ready to share.
           </p>
           {pricingMode === "signup" && (
-            <Link
-              to="/onboarding"
-              style={{
-                display: "inline-flex", alignItems: "center",
-                background: CTA_BG, boxShadow: CTA_SHADOW,
-                color: "#080808", fontFamily: FONT_BODY,
-                fontSize: 14, fontWeight: 700,
-                padding: "14px 32px", borderRadius: 10,
-                textDecoration: "none",
-              }}
-            >
-              Create Your Booking Page
-            </Link>
+            <PrimaryCTA to="/onboarding">Create Your Booking Page</PrimaryCTA>
           )}
         </div>
       </div>

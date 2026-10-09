@@ -12,7 +12,7 @@ export const CaseStudySection = () => {
     <section
       style={{
         background: C.bg,
-        padding: isMobile ? "64px 16px 72px" : "80px 40px 88px",
+        padding: isMobile ? "40px 16px 44px" : "64px 40px 68px",
         overflow: "hidden",
       }}
     >
@@ -35,8 +35,8 @@ export const CaseStudySection = () => {
               borderRadius: "50%",
               overflow: "hidden",
               flexShrink: 0,
-              border: "2px solid rgba(212,165,116,0.42)",
-              background: "rgba(212,165,116,0.08)",
+              border: "2px solid rgba(184,139,82,0.42)",
+              background: "rgba(184,139,82,0.08)",
             }}
           >
             <img
@@ -69,7 +69,7 @@ export const CaseStudySection = () => {
 
         <div
           style={{
-            margin: isMobile ? "40px auto 0" : "56px auto 0",
+            margin: isMobile ? "28px auto 0" : "40px auto 0",
             maxWidth: 760,
             background: C.s2,
             border: `1px solid ${C.border2}`,
@@ -96,26 +96,7 @@ export const CaseStudySection = () => {
           <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65, margin: "0 0 22px", fontFamily: FONT_BODY }}>
             That meant more than easier booking admin. The business could see its revenue, demand and client activity clearly enough to make better decisions.
           </p>
-          <Link
-            to="/case-study/phenomebeauty"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: 44,
-              padding: "12px 22px",
-              borderRadius: 10,
-              border: `1px solid rgba(212,165,116,0.28)`,
-              background: "rgba(212,165,116,0.05)",
-              color: C.gold,
-              fontFamily: FONT_BODY,
-              fontSize: 13,
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            Read the full story
-          </Link>
+          <Link to="/case-study/phenomebeauty" className="marketing-cta marketing-cta--secondary">Read the full story</Link>
         </div>
       </div>
     </section>

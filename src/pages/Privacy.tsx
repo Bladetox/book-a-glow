@@ -11,7 +11,7 @@ const bodyText: React.CSSProperties = {
 };
 
 const Privacy = () => (
-  <div className="nextslot-theme dark-brand" style={{ overflowX: "hidden" }}>
+  <div className="nextslot-theme marketing-light" style={{ overflowX: "hidden" }}>
     <style>{HOME_STYLES}</style>
     <SiteHeader />
     <main style={{ maxWidth: 800, margin: "0 auto", padding: "80px 24px 120px" }}>

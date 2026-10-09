@@ -16,7 +16,7 @@ const HEAT_ROWS = [
 
 const heatColor = (v: number) =>
   v < 4
-    ? "rgba(255,255,255,0.04)"
+    ? "rgba(126,96,58,0.08)"
     : v < 8
       ? "rgba(52,211,153,0.18)"
       : v < 12
@@ -30,15 +30,7 @@ export const HeatmapSection = () => {
   const isMobile = width < BP;
 
   return (
-    <section
-      style={{
-        padding: isMobile ? "64px 16px" : "80px 40px",
-        background: C.s1,
-        borderTop: `1px solid ${C.border}`,
-        borderBottom: `1px solid ${C.border}`,
-        overflow: "hidden",
-      }}
-    >
+    <section className="home-heatmap">
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto", padding: isMobile ? "0 8px" : 0 }}>
           <Eyebrow text="See the opportunity" />
@@ -64,9 +56,9 @@ export const HeatmapSection = () => {
           style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "1.15fr 0.85fr",
-            gap: isMobile ? 36 : 72,
+            gap: isMobile ? 24 : 44,
             alignItems: "center",
-            marginTop: isMobile ? 40 : 56,
+            marginTop: isMobile ? 24 : 36,
           }}
         >
           <div
@@ -75,7 +67,7 @@ export const HeatmapSection = () => {
               borderRadius: 20,
               padding: isMobile ? "20px 16px" : "28px 24px",
               border: `1px solid ${C.border2}`,
-              boxShadow: "0 16px 48px rgba(0,0,0,0.28)",
+              boxShadow: "0 10px 28px rgba(66,48,27,0.10)",
               fontFamily: FONT_BODY,
             }}
           >
@@ -100,7 +92,7 @@ export const HeatmapSection = () => {
                       height: isMobile ? 26 : 34,
                       borderRadius: 6,
                       background: heatColor(v),
-                      border: "1px solid rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(126,96,58,0.08)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",

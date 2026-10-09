@@ -15,29 +15,20 @@ export const RevenueSection = () => {
   const mobileSnapshotWidth = width < 380 ? 138 : 148;
 
   return (
-    <section
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        background: C.bg,
-        padding: isMobile ? "64px 16px" : "80px 40px",
-        borderTop: `1px solid ${C.border}`,
-        borderBottom: `1px solid ${C.border}`,
-      }}
-    >
+    <section className="home-revenue">
       <div
         style={{
           maxWidth: 1200,
           margin: "0 auto",
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-          gap: isMobile ? 32 : 80,
+          gap: isMobile ? 22 : 56,
           alignItems: "center",
         }}
       >
         <div style={{ maxWidth: 520 }}>
           <Eyebrow text="See the business behind the bookings" />
-          <h2
+          <h2 className="home-revenue__heading"
             style={{
               fontFamily: FONT_DISPLAY,
               fontSize: isMobile ? "clamp(28px,7vw,38px)" : "clamp(32px,3.4vw,46px)",
@@ -57,7 +48,7 @@ export const RevenueSection = () => {
               color: C.muted,
               lineHeight: 1.75,
               fontFamily: FONT_BODY,
-              marginBottom: 30,
+              marginBottom: 20,
             }}
           >
             When your bookings, payments and client activity are connected, you get a clear picture of your business, not just what is happening today.
@@ -71,7 +62,7 @@ export const RevenueSection = () => {
               padding: "14px 16px",
               border: `1px solid ${C.border2}`,
               borderRadius: 12,
-              background: "rgba(255,255,255,0.02)",
+              background: "rgba(126,96,58,0.06)",
               fontFamily: FONT_BODY,
               fontSize: 12,
               color: C.faint,
@@ -92,7 +83,7 @@ export const RevenueSection = () => {
             style={{
               position: "relative",
               width: "100%",
-              minHeight: 420,
+              minHeight: 340,
               display: "flex",
               alignItems: "center",
               justifyContent: "flex-end",

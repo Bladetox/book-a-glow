@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
@@ -12,9 +13,6 @@ import {
   EyeOff, SlidersHorizontal, LayoutGrid
 } from "lucide-react";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
-
-const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
-const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
 const customisationTips = [
   {
@@ -38,8 +36,8 @@ const DashboardCustomisationCallout = () => (
   <div style={{ maxWidth: 768, margin: "0 auto 32px" }}>
     <div style={{
       borderRadius: 16,
-      border: `1px solid rgba(212,165,116,0.30)`,
-      background: `rgba(212,165,116,0.06)`,
+      border: `1px solid rgba(184,139,82,0.30)`,
+      background: `rgba(184,139,82,0.06)`,
       padding: "16px 20px",
       marginBottom: 12,
       display: "flex",
@@ -50,8 +48,8 @@ const DashboardCustomisationCallout = () => (
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <div style={{
           width: 32, height: 32, borderRadius: 10,
-          background: `rgba(212,165,116,0.15)`,
-          border: `1px solid rgba(212,165,116,0.30)`,
+          background: `rgba(184,139,82,0.15)`,
+          border: `1px solid rgba(184,139,82,0.30)`,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <SlidersHorizontal style={{ height: 16, width: 16, color: C.gold }} strokeWidth={2} />
@@ -85,8 +83,8 @@ const DashboardCustomisationCallout = () => (
             <div style={{
               flexShrink: 0, marginTop: 2,
               width: 32, height: 32, borderRadius: 10,
-              background: `rgba(212,165,116,0.12)`,
-              border: `1px solid rgba(212,165,116,0.20)`,
+              background: `rgba(184,139,82,0.12)`,
+              border: `1px solid rgba(184,139,82,0.20)`,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <Icon style={{ height: 16, width: 16, color: C.gold }} strokeWidth={2} />
@@ -136,8 +134,8 @@ const Demo = () => {
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8,
-              background: `rgba(212,165,116,0.08)`,
-              border: `1px solid rgba(212,165,116,0.2)`,
+              background: `rgba(184,139,82,0.08)`,
+              border: `1px solid rgba(184,139,82,0.2)`,
               borderRadius: 100, padding: "5px 14px",
               fontSize: 11, fontWeight: 700, color: C.gold,
               letterSpacing: "0.09em", textTransform: "uppercase",
@@ -168,8 +166,8 @@ const Demo = () => {
 
           <div style={{
             display: "flex", alignItems: "flex-start", gap: 12,
-            background: `rgba(212,165,116,0.05)`,
-            border: `1px solid rgba(212,165,116,0.18)`,
+            background: `rgba(184,139,82,0.05)`,
+            border: `1px solid rgba(184,139,82,0.18)`,
             borderRadius: 16,
             padding: "16px 20px",
             maxWidth: 640, margin: "0 auto 40px",
@@ -182,38 +180,17 @@ const Demo = () => {
 
           {/* Tab switcher */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 40 }}>
-            <div style={{
-              display: "inline-flex", padding: 4, borderRadius: 16,
-              background: C.s1, border: `1px solid ${C.border}`, gap: 4,
-            }}>
+            <div className="demo-tab-switcher">
               <button
+                className={`demo-tab-button${tab === "dashboard" ? " is-active" : ""}`}
                 onClick={() => setTab("dashboard")}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "10px 20px", borderRadius: 12,
-                  fontSize: 13, fontWeight: 500, fontFamily: FONT_BODY,
-                  cursor: "pointer", transition: "all 0.2s",
-                  background: tab === "dashboard" ? C.s2 : "transparent",
-                  color: tab === "dashboard" ? C.text : C.muted,
-                  border: tab === "dashboard" ? `1px solid ${C.border2}` : "1px solid transparent",
-                  boxShadow: tab === "dashboard" ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
-                }}
               >
                 <LayoutDashboard style={{ width: 16, height: 16 }} />
                 Admin Dashboard
               </button>
               <button
+                className={`demo-tab-button${tab === "booking" ? " is-active" : ""}`}
                 onClick={() => setTab("booking")}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "10px 20px", borderRadius: 12,
-                  fontSize: 13, fontWeight: 500, fontFamily: FONT_BODY,
-                  cursor: "pointer", transition: "all 0.2s",
-                  background: tab === "booking" ? C.s2 : "transparent",
-                  color: tab === "booking" ? C.text : C.muted,
-                  border: tab === "booking" ? `1px solid ${C.border2}` : "1px solid transparent",
-                  boxShadow: tab === "booking" ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
-                }}
               >
                 <Smartphone style={{ width: 16, height: 16 }} />
                 Client Booking App
@@ -318,22 +295,11 @@ const Demo = () => {
             <p style={{ fontSize: 14, color: C.muted, fontFamily: FONT_BODY, margin: 0 }}>
               Get your own booking page live in minutes. No payment required.
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 16 }}>
-              <Link
-                to="/onboarding"
-                style={{
-                  background: CTA_BG, boxShadow: CTA_SHADOW,
-                  color: "#080808", fontFamily: FONT_BODY,
-                  fontSize: 14, fontWeight: 700,
-                  padding: "14px 30px", borderRadius: 10,
-                  textDecoration: "none",
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  minHeight: 48,
-                }}
-              >
+            <div className="marketing-cta-actions">
+              <PrimaryCTA to="/onboarding">
                 Create Your Booking Page
-                <ArrowRight style={{ height: 16, width: 16 }} />
-              </Link>
+                <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
+              </PrimaryCTA>
               <Link
                 to="/pricing"
                 style={{

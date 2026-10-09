@@ -1,16 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Clock, ExternalLink } from "lucide-react";
+import { ArrowUpRight, Clock, ExternalLink } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
-
-/* ─── constants ─────────────────────────────────────────────────── */
-const CTA_BG =
-  "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
-const CTA_SHADOW =
-  "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
+import tiktokIcon from "@/assets/tiktok_1.png";
 
 /* ─── tool data ─────────────────────────────────────────────────── */
 type Tool = {
@@ -137,8 +132,8 @@ const CategoryChip = ({
       alignItems: "center",
       borderRadius: 100,
       fontWeight: 600,
-      border: `1px solid rgba(212,165,116,0.30)`,
-      background: `rgba(212,165,116,${categoryOpacity[category]})`,
+      border: `1px solid rgba(184,139,82,0.30)`,
+      background: `rgba(184,139,82,${categoryOpacity[category]})`,
       color: C.text,
       padding: small ? "2px 8px" : "2px 10px",
       fontSize: small ? 10 : 11,
@@ -158,15 +153,15 @@ const FallbackBand = ({ tall = false }: { tall?: boolean }) => (
       alignItems: "center",
       justifyContent: "center",
       height: tall ? 176 : 128,
-      background: `linear-gradient(135deg, rgba(212,165,116,0.18) 0%, ${C.s2} 100%)`,
-      borderBottom: `1px solid rgba(212,165,116,0.12)`,
+      background: `linear-gradient(135deg, rgba(184,139,82,0.18) 0%, ${C.s2} 100%)`,
+      borderBottom: `1px solid rgba(184,139,82,0.12)`,
     }}
   >
     <span
       style={{
         fontSize: 30,
         fontWeight: 600,
-        color: "rgba(212,165,116,0.25)",
+        color: "rgba(184,139,82,0.25)",
         fontFamily: FONT_DISPLAY,
       }}
     >
@@ -192,7 +187,7 @@ const CoverImage = ({
         flexShrink: 0,
         overflow: "hidden",
         height: tall ? 176 : 128,
-        borderBottom: `1px solid rgba(212,165,116,0.12)`,
+        borderBottom: `1px solid rgba(184,139,82,0.12)`,
       }}
     >
       <img
@@ -239,7 +234,7 @@ const Resources = () => {
           gap: 0;
           border-radius: 20px;
           overflow: hidden;
-          border: 1px solid rgba(212,165,116,0.22);
+          border: 1px solid rgba(184,139,82,0.22);
           text-decoration: none;
           margin-bottom: 32px;
           transition: border-color 0.2s;
@@ -296,7 +291,7 @@ const Resources = () => {
             position: "relative",
             overflow: "hidden",
             background: C.s1,
-            borderBottom: `1px solid rgba(212,165,116,0.12)`,
+            borderBottom: `1px solid rgba(184,139,82,0.12)`,
           }}
         >
           <div
@@ -305,7 +300,7 @@ const Resources = () => {
               position: "absolute",
               inset: 0,
               background:
-                "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,165,116,0.07) 0%, transparent 70%)",
+                "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(184,139,82,0.07) 0%, transparent 70%)",
             }}
           />
           <div
@@ -398,7 +393,7 @@ const Resources = () => {
                     flexDirection: "column",
                     borderRadius: 16,
                     background: C.s2,
-                    border: `1px solid rgba(212,165,116,0.20)`,
+                    border: `1px solid rgba(184,139,82,0.20)`,
                     overflow: "hidden",
                     position: "relative",
                   }}
@@ -412,7 +407,7 @@ const Resources = () => {
                       width: 120,
                       height: 120,
                       borderRadius: "50%",
-                      background: "radial-gradient(circle, rgba(212,165,116,0.10) 0%, transparent 70%)",
+                      background: "radial-gradient(circle, rgba(184,139,82,0.10) 0%, transparent 70%)",
                     }}
                   />
                   <div style={{ padding: "28px 28px 0", position: "relative" }}>
@@ -442,8 +437,8 @@ const Resources = () => {
                           fontWeight: 600,
                           color: C.muted,
                           fontFamily: FONT_BODY,
-                          background: "rgba(212,165,116,0.08)",
-                          border: "1px solid rgba(212,165,116,0.18)",
+                          background: "rgba(184,139,82,0.08)",
+                          border: "1px solid rgba(184,139,82,0.18)",
                           borderRadius: 100,
                           padding: "2px 8px",
                         }}
@@ -520,8 +515,8 @@ const Resources = () => {
                         fontWeight: 700,
                         fontFamily: FONT_BODY,
                         color: C.text,
-                        background: "rgba(212,165,116,0.10)",
-                        border: "1px solid rgba(212,165,116,0.35)",
+                        background: "rgba(184,139,82,0.10)",
+                        border: "1px solid rgba(184,139,82,0.35)",
                         borderRadius: 10,
                         padding: "10px 18px",
                         textDecoration: "none",
@@ -529,13 +524,13 @@ const Resources = () => {
                       }}
                       onMouseEnter={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        el.style.background = "rgba(212,165,116,0.18)";
-                        el.style.borderColor = "rgba(212,165,116,0.55)";
+                        el.style.background = "rgba(184,139,82,0.18)";
+                        el.style.borderColor = "rgba(184,139,82,0.55)";
                       }}
                       onMouseLeave={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        el.style.background = "rgba(212,165,116,0.10)";
-                        el.style.borderColor = "rgba(212,165,116,0.35)";
+                        el.style.background = "rgba(184,139,82,0.10)";
+                        el.style.borderColor = "rgba(184,139,82,0.35)";
                       }}
                     >
                       {tool.cta}
@@ -552,7 +547,7 @@ const Resources = () => {
           style={{
             height: 1,
             background:
-              "linear-gradient(90deg, transparent, rgba(212,165,116,0.4), transparent)",
+              "linear-gradient(90deg, transparent, rgba(184,139,82,0.4), transparent)",
             margin: "0 24px",
           }}
         />
@@ -610,12 +605,12 @@ const Resources = () => {
                       cursor: "pointer",
                       border: `1px solid ${
                         activeCategory === cat
-                          ? "rgba(212,165,116,0.60)"
-                          : "rgba(212,165,116,0.20)"
+                          ? "rgba(184,139,82,0.60)"
+                          : "rgba(184,139,82,0.20)"
                       }`,
                       background:
                         activeCategory === cat
-                          ? "rgba(212,165,116,0.14)"
+                          ? "rgba(184,139,82,0.14)"
                           : "transparent",
                       color: activeCategory === cat ? C.text : C.muted,
                       transition: "all 0.15s",
@@ -641,10 +636,10 @@ const Resources = () => {
                   textDecoration: "none",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.50)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.50)";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.22)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.22)";
                 }}
               >
                 <div className="resources-featured-image">
@@ -739,16 +734,16 @@ const Resources = () => {
                       flexDirection: "column",
                       borderRadius: 16,
                       overflow: "hidden",
-                      border: `1px solid rgba(212,165,116,0.18)`,
+                      border: `1px solid rgba(184,139,82,0.18)`,
                       background: C.s2,
                       textDecoration: "none",
                       transition: "border-color 0.2s",
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.45)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.45)";
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.18)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.18)";
                     }}
                   >
                     <CoverImage src={article.image} alt={article.title} />
@@ -840,6 +835,119 @@ const Resources = () => {
           </div>
         </section>
 
+
+        {/* ── FOUNDER STORY ────────────────────────────────────────── */}
+        <section className="resources-founder-story" aria-label="The story behind NextSlot">
+          <div className="resources-story-inner">
+            <article className="resources-story-block resources-story-idea">
+              <p className="resources-story-eyebrow">The Idea Behind NextSlot</p>
+              <h2>Technology that feels like part of your business.</h2>
+              <p>
+                NextSlot is a platform designed to help service-based businesses manage bookings,
+                understand their data, and make smarter decisions. The goal goes beyond software.
+              </p>
+              <blockquote className="resources-story-quote resources-story-vision">
+                <strong>The vision is simple.</strong>
+                <p>
+                  To give service businesses tools that feel like they were built by someone who
+                  actually understands their world. Not overly complex. Not disconnected from
+                  reality. Just useful, thoughtful technology that helps businesses move forward.
+                </p>
+              </blockquote>
+              <p>
+                In a market like South Africa, where raising prices, losing clients, or making the
+                wrong decision can have real consequences, businesses need tools that are street
+                smart as well as professional. Because behind every booking, every client, and every
+                small studio is a person working hard to build something meaningful. NextSlot exists
+                to support that journey.
+              </p>
+              <div className="resources-story-principles">
+                <p>Not guru advice.</p>
+                <p>Not guesswork.</p>
+                <p>Real insights based on your business' real data.</p>
+              </div>
+            </article>
+
+            <article className="resources-story-block resources-story-creatives">
+              <p className="resources-story-eyebrow">A Platform Built for Creatives</p>
+              <h2>Relationships matter. Community matters. Reputation matters.</h2>
+              <p>
+                Creative service businesses are deeply human. NextSlot respects that. The platform
+                is designed to feel familiar and supportive rather than cold or overly technical.
+                It fits naturally into the way creative professionals already run their businesses,
+                helping them stay organised, understand their growth, and serve their clients better.
+              </p>
+              <blockquote className="resources-story-quote">
+                <p>
+                  It is technology that works quietly in the background while the real craft stays
+                  front and center.
+                </p>
+              </blockquote>
+            </article>
+
+            <article className="resources-story-block resources-story-founder">
+              <p className="resources-story-eyebrow">The Founder</p>
+              <div className="resources-founder-profile">
+                <img
+                  className="resources-founder-photo"
+                  src="https://iili.io/C9Ktrhu.jpg"
+                  alt="Arshad Segal, Founder of NextSlot"
+                  width={72}
+                  height={72}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div>
+                  <h2 className="resources-founder-name">Arshad Segal</h2>
+                  <p className="resources-founder-role">Founder of NextSlot</p>
+                </div>
+              </div>
+              <p>
+                NextSlot was founded by Arshad Segal, an entrepreneur and builder driven by a simple
+                belief.
+              </p>
+              <blockquote className="resources-story-quote resources-story-founder-quote">
+                <p>Sometimes the biggest barrier to progress is waiting too long to start.</p>
+              </blockquote>
+              <p>
+                Arshad has always been drawn to ideas that combine creativity, technology, and human
+                behaviour. His work often sits at the intersection of entrepreneurship, storytelling,
+                and systems thinking. He believes that when people are given the right tools and a
+                clear path forward, they can build extraordinary things from ordinary beginnings.
+              </p>
+              <p>
+                This philosophy is reflected in his broader creative work and personal brand, centred
+                on one belief he returns to constantly:
+              </p>
+              <a
+                className="resources-just-start-card"
+                href="https://www.tiktok.com/@chasing_dweams?_r=1&_t=ZS-94gSp7To9iS"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="resources-just-start-glow" aria-hidden="true" />
+                <span className="resources-just-start-copy">
+                  <span className="resources-story-eyebrow">Personal brand / TikTok</span>
+                  <span className="resources-just-start-title">Just Start.</span>
+                  <span className="resources-just-start-description">
+                    Creativity, entrepreneurship, and the courage to begin. Follow the journey on
+                    TikTok.
+                  </span>
+                  <span className="resources-just-start-handle">@chasing_dweams</span>
+                </span>
+                <span className="resources-tiktok-link">
+                  <img src={tiktokIcon} alt="TikTok" width={26} height={26} loading="lazy" decoding="async" />
+                  Watch on TikTok
+                </span>
+              </a>
+              <p>
+                NextSlot is a practical extension of that mindset, a tool created to help everyday
+                business owners take the next step, make better decisions, and grow with confidence.
+              </p>
+            </article>
+          </div>
+        </section>
+
         {/* ── CTA BANNER ───────────────────────────────────────────── */}
         <section style={{ padding: "80px 24px" }}>
           <div
@@ -849,7 +957,7 @@ const Resources = () => {
               borderRadius: 24,
               padding: "clamp(32px, 6vw, 56px) clamp(24px, 5vw, 48px)",
               background: C.s1,
-              border: `1px solid rgba(212,165,116,0.25)`,
+              border: `1px solid rgba(184,139,82,0.25)`,
               boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
               textAlign: "center",
             }}
@@ -892,25 +1000,7 @@ const Resources = () => {
               No payment required. No technical setup. Just your services, your availability,
               and your booking link ready to share.
             </p>
-            <Link
-              to="/onboarding"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                background: CTA_BG,
-                boxShadow: CTA_SHADOW,
-                color: "#080808",
-                fontFamily: FONT_BODY,
-                fontSize: 14,
-                fontWeight: 700,
-                padding: "14px 32px",
-                borderRadius: 10,
-                textDecoration: "none",
-              }}
-            >
-              Create Your Booking Page
-            </Link>
+            <PrimaryCTA to="/onboarding">Create Your Booking Page</PrimaryCTA>
           </div>
         </section>
 

@@ -24,28 +24,28 @@ const SeoLandingPage = ({ path }: { path:string }) => {
     <MarketingLayout>
       <SiteHeader />
       <main>
-        <section style={{maxWidth:1180,margin:"0 auto",padding:"132px 24px 76px",position:"relative"}}>
-          <div style={{position:"absolute",right:80,top:150,width:280,height:280,pointerEvents:"none",opacity:.8}}>
+        <section className="seo-landing__hero">
+          <div className="seo-landing__orb" aria-hidden="true">
             <Orb scale={1.15} />
           </div>
-          <div style={{maxWidth:760,position:"relative",zIndex:2}}>
+          <div className="seo-landing__hero-copy">
             <p style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.gold,margin:"0 0 16px",fontFamily:FONT_BODY}}>{data.eyebrow}</p>
             <h1 style={{fontFamily:FONT_DISPLAY,fontSize:"clamp(36px,5.5vw,66px)",lineHeight:1.03,letterSpacing:"-0.035em",color:C.text,margin:"0 0 22px",maxWidth:760}}>{data.h1}</h1>
             <p style={{fontFamily:FONT_BODY,fontSize:"clamp(16px,1.8vw,20px)",lineHeight:1.7,color:C.muted,maxWidth:680,margin:0}}>{data.intro}</p>
-            <div style={{display:"flex",flexWrap:"wrap",gap:14,marginTop:30}}>
+            <div className="seo-landing__hero-actions">
               <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
-              <Link to="/demo" style={{display:"inline-flex",alignItems:"center",gap:7,minHeight:52,padding:"15px 20px",border:"1px solid "+C.border2,borderRadius:8,color:C.text,textDecoration:"none",fontFamily:FONT_BODY,fontSize:14,fontWeight:600}}>
-                See how it works <ArrowRight size={15} />
-              </Link>
+              <PrimaryCTA to="/demo">
+                See how it works <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
+              </PrimaryCTA>
             </div>
           </div>
         </section>
 
-        <section style={{borderTop:"1px solid "+C.border,borderBottom:"1px solid "+C.border,background:C.s1}}>
-          <div style={{maxWidth:1180,margin:"0 auto",padding:"72px 24px"}}>
+        <section className="seo-landing__details">
+          <div className="seo-landing__details-inner">
             <div style={{display:"grid",gap:16}}>
               {page.sections.map((section,index)=>(
-                <article key={section[0]} style={{display:"grid",gridTemplateColumns:"72px minmax(0,1fr)",gap:22,padding:"28px 0",borderBottom:index===page.sections.length-1?"none":"1px solid "+C.border}}>
+                <article key={section[0]} className={`seo-landing__detail-row${index===page.sections.length-1?" is-last":""}`}>
                   <div style={{fontFamily:FONT_DISPLAY,fontSize:18,color:C.gold,paddingTop:2}}>{String(index+1).padStart(2,"0")}</div>
                   <div>
                     <h2 style={{fontFamily:FONT_DISPLAY,fontSize:"clamp(22px,2.7vw,32px)",lineHeight:1.15,color:C.text,margin:"0 0 12px"}}>{section[0]}</h2>
@@ -60,8 +60,8 @@ const SeoLandingPage = ({ path }: { path:string }) => {
           </div>
         </section>
 
-        <section style={{maxWidth:1180,margin:"0 auto",padding:"72px 24px"}}>
-          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(280px,420px)",gap:40,alignItems:"start"}}>
+        <section className="seo-landing__fit">
+          <div className="seo-landing__fit-grid">
             <div>
               <p style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.gold,margin:"0 0 14px",fontFamily:FONT_BODY}}>Could this be a fit?</p>
               <h2 style={{fontFamily:FONT_DISPLAY,fontSize:"clamp(26px,3vw,38px)",lineHeight:1.1,color:C.text,margin:"0 0 20px"}}>Built for independent service businesses.</h2>
@@ -69,7 +69,7 @@ const SeoLandingPage = ({ path }: { path:string }) => {
                 {page.fit.map(item=><div key={item} style={{display:"flex",gap:10,alignItems:"flex-start"}}><Check size={16} color={C.gold} style={{flexShrink:0,marginTop:2}} /><span style={{fontFamily:FONT_BODY,fontSize:14,lineHeight:1.6,color:C.muted}}>{item}</span></div>)}
               </div>
             </div>
-            <div style={{border:"1px solid "+C.border2,borderRadius:18,background:C.s1,padding:26}}>
+            <div className="seo-landing__related">
               <p style={{fontFamily:FONT_BODY,fontSize:12,fontWeight:700,color:C.text,margin:"0 0 15px"}}>Keep exploring</p>
               <div style={{display:"grid",gap:8}}>
                 {page.related.map(([label,to])=><Link key={to} to={to} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"12px 0",borderBottom:"1px solid "+C.border,color:C.text,textDecoration:"none",fontFamily:FONT_BODY,fontSize:13}}>{label}<ChevronRight size={15} color={C.gold} /></Link>)}
@@ -78,7 +78,7 @@ const SeoLandingPage = ({ path }: { path:string }) => {
           </div>
         </section>
 
-        <section style={{borderTop:"1px solid "+C.border,background:C.s1,textAlign:"center",padding:"72px 24px 82px"}}>
+        <section className="seo-landing__final-cta">
           <h2 style={{fontFamily:FONT_DISPLAY,fontSize:"clamp(26px,3.5vw,42px)",lineHeight:1.1,color:C.text,margin:"0 0 14px"}}>More than bookings. Built for growth.</h2>
           <p style={{fontFamily:FONT_BODY,fontSize:14,lineHeight:1.7,color:C.muted,maxWidth:560,margin:"0 auto 26px"}}>Get your booking page live, then let the system build a clearer picture of the business behind it.</p>
           <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>

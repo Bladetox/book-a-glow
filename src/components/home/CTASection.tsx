@@ -32,18 +32,8 @@ export const CTASection = () => {
           Set up your NextSlot workspace and start understanding your business from the inside out, so you can make better decisions about its growth.
         </p>
 
-        <div style={{
-          display: "flex",
-          alignItems: "stretch",
-          justifyContent: "center",
-          gap: 12,
-          flexWrap: isMobile ? "wrap" : "nowrap",
-          width: "100%",
-        }}>
-          <div style={{
-            flex: isMobile ? "1 1 100%" : "1 1 0",
-            width: isMobile ? "100%" : undefined,
-          }}>
+        <div className="marketing-cta-row">
+          <div className="marketing-cta-row__item">
             <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
           </div>
 
@@ -52,27 +42,9 @@ export const CTASection = () => {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Chat with us on WhatsApp"
-            style={{
-              background: "transparent",
-              border: `1px solid ${C.border2}`,
-              color: C.text,
-              fontFamily: FONT_BODY,
-              fontSize: 15,
-              fontWeight: 700,
-              padding: "15px 32px",
-              borderRadius: 8,
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              minHeight: 52,
-              flex: isMobile ? "1 1 100%" : "1 1 0",
-              width: isMobile ? "100%" : undefined,
-              boxSizing: "border-box",
-            }}
+            className="marketing-cta"
           >
-            <img src={waIcon} alt="" width={20} height={20} style={{ display: "block" }} />
+            <img src={waIcon} alt="" width={20} height={20} className="marketing-cta__icon" />
             Talk to us
           </a>
         </div>

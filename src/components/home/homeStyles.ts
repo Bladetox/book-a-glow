@@ -47,19 +47,19 @@ export const HOME_STYLES = `
   }
 
   .marketing-site ::selection {
-    background: rgba(212,165,116,0.28);
-    color: #f0efec;
+    background: rgba(184,139,82,0.24);
+    color: #000000;
   }
 
   .marketing-site .surface {
-    background: #111110;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: #EDE4D7;
+    border: 1px solid rgba(126,96,58,0.16);
   }
 
   .marketing-site .surface-elevated {
-    background: #181816;
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+    background: #E8D6B9;
+    border: 1px solid rgba(126,96,58,0.24);
+    box-shadow: 0 12px 32px rgba(66,48,27,0.10);
   }
 
   .marketing-site .section-copy {

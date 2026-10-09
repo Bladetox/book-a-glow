@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import { motion, AnimatePresence } from "framer-motion";
 
 const StickyCtaBar = () => {
@@ -20,10 +20,10 @@ const StickyCtaBar = () => {
               <p className="text-sm font-semibold">30 days free. No credit card required.</p>
               <p className="text-xs text-muted-foreground">Cancel anytime · POPIA compliant · Live in minutes</p>
             </div>
-            <Link to="/onboarding" className="group inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium px-6 py-2.5 rounded-[10px] ring-1 ring-accent shadow-[0_4px_16px_-4px_hsl(var(--accent)/0.35)] hover:scale-[1.02] transition-all duration-200 whitespace-nowrap">
+            <PrimaryCTA to="/onboarding">
               Start Your Free Trial
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+              <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
+            </PrimaryCTA>
           </div>
         </motion.div>
       )}

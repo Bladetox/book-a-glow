@@ -6,7 +6,7 @@ import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 import { ArrowRight } from "lucide-react";
 
-const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
+const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #B88B52 0%, #9C713D 52%, #7a4200 100%)";
 const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
 const NotFound = () => {
@@ -18,7 +18,7 @@ const NotFound = () => {
 
   return (
     <div
-      className="nextslot-theme dark-brand"
+      className="nextslot-theme marketing-light"
       style={{ background: C.bg, color: C.text, fontFamily: FONT_BODY, minHeight: "100vh", display: "flex", flexDirection: "column" }}
     >
       <style>{HOME_STYLES}</style>
@@ -40,7 +40,7 @@ const NotFound = () => {
           position: "absolute",
           width: 560, height: 560,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(212,165,116,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(184,139,82,0.06) 0%, transparent 70%)",
           top: "50%", left: "50%",
           transform: "translate(-50%, -50%)",
           pointerEvents: "none",
@@ -105,7 +105,7 @@ const NotFound = () => {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 background: CTA_BG, boxShadow: CTA_SHADOW,
-                color: "#080808", fontFamily: FONT_BODY,
+                color: "#F5F0E7", fontFamily: FONT_BODY,
                 fontSize: 14, fontWeight: 700,
                 padding: "13px 28px", borderRadius: 10,
                 textDecoration: "none",

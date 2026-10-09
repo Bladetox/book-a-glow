@@ -105,8 +105,8 @@ const CaseStudy = () => {
             position: "relative",
             overflow: "hidden",
             background: C.s1,
-            borderTop: `1px solid rgba(212,165,116,0.12)`,
-            borderBottom: `1px solid rgba(212,165,116,0.12)`,
+            borderTop: `1px solid rgba(184,139,82,0.12)`,
+            borderBottom: `1px solid rgba(184,139,82,0.12)`,
           }}
         >
           <div
@@ -116,7 +116,7 @@ const CaseStudy = () => {
               position: "absolute",
               inset: 0,
               background:
-                "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(212,165,116,0.09) 0%, transparent 70%)",
+                "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(184,139,82,0.09) 0%, transparent 70%)",
             }}
           />
           <div
@@ -184,8 +184,8 @@ const CaseStudy = () => {
                     borderRadius: 100,
                     fontSize: 11,
                     fontWeight: 500,
-                    background: "rgba(212,165,116,0.10)",
-                    border: "1px solid rgba(212,165,116,0.30)",
+                    background: "rgba(184,139,82,0.10)",
+                    border: "1px solid rgba(184,139,82,0.30)",
                     color: C.gold,
                     fontFamily: FONT_BODY,
                   }}
@@ -204,9 +204,9 @@ const CaseStudy = () => {
               style={{
                 borderRadius: 16,
                 padding: "28px 32px",
-                background: "rgba(212,165,116,0.07)",
-                border: "1.5px solid rgba(212,165,116,0.40)",
-                boxShadow: "0 4px 24px rgba(212,165,116,0.10)",
+                background: "rgba(184,139,82,0.07)",
+                border: "1.5px solid rgba(184,139,82,0.40)",
+                boxShadow: "0 4px 24px rgba(184,139,82,0.10)",
               }}
             >
               <p
@@ -268,10 +268,10 @@ const CaseStudy = () => {
                     color: C.gold,
                     textDecoration: "none",
                     fontFamily: FONT_BODY,
-                    border: "1px solid rgba(212,165,116,0.25)",
+                    border: "1px solid rgba(184,139,82,0.25)",
                     borderRadius: 8,
                     padding: "6px 12px",
-                    background: "rgba(212,165,116,0.05)",
+                    background: "rgba(184,139,82,0.05)",
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -310,14 +310,14 @@ const CaseStudy = () => {
                   padding: "24px 32px",
                   ...(card.isFinal
                     ? {
-                        background: "rgba(212,165,116,0.07)",
-                        border: "1.5px solid rgba(212,165,116,0.65)",
-                        boxShadow: "0 4px 24px rgba(212,165,116,0.15)",
+                        background: "rgba(184,139,82,0.07)",
+                        border: "1.5px solid rgba(184,139,82,0.65)",
+                        boxShadow: "0 4px 24px rgba(184,139,82,0.15)",
                       }
                     : card.isTara
                     ? {
-                        background: "rgba(212,165,116,0.04)",
-                        border: "1px dashed rgba(212,165,116,0.40)",
+                        background: "rgba(184,139,82,0.04)",
+                        border: "1px dashed rgba(184,139,82,0.40)",
                       }
                     : {
                         background: C.s1,
@@ -337,7 +337,7 @@ const CaseStudy = () => {
                     pointerEvents: "none",
                     userSelect: "none",
                     color: card.isFinal
-                      ? "rgba(212,165,116,0.12)"
+                      ? "rgba(184,139,82,0.12)"
                       : "rgba(232,232,230,0.04)",
                     fontFamily: FONT_BODY,
                   }}
@@ -444,10 +444,10 @@ const CaseStudy = () => {
                       fontWeight: 700,
                       fontFamily: FONT_BODY,
                       color: C.gold,
-                      border: "1px solid rgba(212,165,116,0.35)",
+                      border: "1px solid rgba(184,139,82,0.35)",
                       borderRadius: 8,
                       padding: "8px 16px",
-                      background: "rgba(212,165,116,0.06)",
+                      background: "rgba(184,139,82,0.06)",
                       textDecoration: "none",
                     }}
                   >
@@ -469,7 +469,7 @@ const CaseStudy = () => {
               borderRadius: 24,
               padding: "48px 40px",
               background: C.s1,
-              border: `1px solid rgba(212,165,116,0.25)`,
+              border: `1px solid rgba(184,139,82,0.25)`,
               boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
               textAlign: "center",
             }}
@@ -520,7 +520,7 @@ const CaseStudy = () => {
           style={{
             height: 1,
             background:
-              "linear-gradient(90deg, transparent, rgba(212,165,116,0.4), transparent)",
+              "linear-gradient(90deg, transparent, rgba(184,139,82,0.4), transparent)",
           }}
         />
 

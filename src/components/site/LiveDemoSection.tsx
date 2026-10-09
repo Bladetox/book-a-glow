@@ -1,5 +1,5 @@
 import { ArrowRight, Palette, Smartphone } from "lucide-react";
-import { Link } from "react-router-dom";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 
 const THEME_SWATCHES = [
   { label: "Classic", bg: "bg-gray-900" },
@@ -79,12 +79,9 @@ const LiveDemoSection = () => (
               >
                 Launch Demo <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <Link
-                to="/onboarding"
-                className="group w-full inline-flex items-center justify-center text-sm font-medium px-6 py-3 rounded-[10px] border border-border hover:border-accent/50 hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
-              >
-                Create your booking page <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
+              <PrimaryCTA to="/onboarding">
+                Create your booking page <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
+              </PrimaryCTA>
               <p className="text-center text-xs text-muted-foreground">No account required &middot; 100% mock data</p>
             </div>
 
