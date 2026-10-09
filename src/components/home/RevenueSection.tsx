@@ -12,7 +12,7 @@ export const RevenueSection = () => {
   const desktopContentWidth = Math.min(1200, Math.max(0, width - 80));
   const snapshotWidth = Math.max(0, (desktopContentWidth - 80) / 2);
   const snapshotScale = snapshotWidth / 1000;
-  const mobileSnapshotWidth = width < 380 ? 138 : 148;
+  const snapshotHeight = 760 * snapshotScale;
 
   return (
     <section className="home-revenue">
@@ -91,9 +91,11 @@ export const RevenueSection = () => {
           >
             <div
               style={{
+                position: "relative",
                 width: snapshotWidth,
-                height: snapshotWidth * 0.76,
                 maxWidth: "100%",
+                height: snapshotHeight,
+                overflow: "hidden",
                 filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
               }}
             >
@@ -106,12 +108,13 @@ export const RevenueSection = () => {
           <div
             style={{
               width: "100%",
+              minWidth: 0,
               display: "flex",
               justifyContent: "center",
               filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.42))",
             }}
           >
-            <MarketingDashboardSnapshot scale={Math.min((width - 32) / 1000, 0.72)} />
+            <MarketingMobileDashboardSnapshot scale={0.9} />
           </div>
         )}
       </div>

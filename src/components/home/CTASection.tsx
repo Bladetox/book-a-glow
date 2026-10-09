@@ -8,7 +8,7 @@ export const CTASection = () => {
   const isMobile = width < BP;
 
   return (
-    <section style={{ background: C.bg, padding: isMobile ? "64px 24px" : "80px 24px" }}>
+    <section className="home-cta" style={{ background: C.bg }}>
       <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
         <h2 style={{
           fontFamily: FONT_DISPLAY,

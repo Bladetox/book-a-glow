@@ -754,3 +754,48 @@
     font-size: 12px; 
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   UNIFORM SECTION PADDING
+   Reference: CaseStudySection, 64px 40px 68px desktop,
+   40px 16px 44px mobile.
+═══════════════════════════════════════════════════════════════ */
+.home-features,
+.home-revenue,
+.home-heatmap,
+.home-comparison,
+.home-case-study,
+.home-proof,
+.home-cta,
+.home-about {
+  padding: 64px 40px 68px;
+  overflow: hidden;
+}
+
+.home-hero__inner { padding: 120px 40px 68px; }
+.home-features__header { margin: 0 auto 40px; }
+
+@media (max-width: 1023px) {
+  .home-features,
+  .home-revenue,
+  .home-heatmap,
+  .home-comparison,
+  .home-case-study,
+  .home-proof,
+  .home-cta,
+  .home-about { padding: 48px 24px 52px; }
+  .home-hero__inner { padding: 100px 24px 52px; }
+}
+
+@media (max-width: 767px) {
+  .home-features,
+  .home-revenue,
+  .home-heatmap,
+  .home-comparison,
+  .home-case-study,
+  .home-proof,
+  .home-cta,
+  .home-about { padding: 40px 16px 44px; }
+  .home-hero__inner { padding: 90px 16px 44px; }
+}
