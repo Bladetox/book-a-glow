@@ -13,6 +13,7 @@ import { usePageSEO } from "@/hooks/usePageSEO";
 
 const Index            = lazy(() => import("./pages/Index"));
 const About            = lazy(() => import("./pages/About"));
+const DemoAdminEmbed   = lazy(() => import("./pages/DemoAdminEmbed"));
 const Resources        = lazy(() => import("./pages/Resources"));
 const Book             = lazy(() => import("./pages/Book"));
 const Pricing          = lazy(() => import("./pages/Pricing"));
@@ -108,6 +109,7 @@ const MarketingRoutes = () => (
         <Route path="/admin" element={<Navigate to="/login" replace />} />
         <Route path="/superadmin" element={<><SEO path="/superadmin" /><SuperAdmin /></>} />
         <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />
+        <Route path="/demo/admin-embed" element={<DemoAdminEmbed />} />
         <Route path="/case-study/phenomebeauty" element={<><SEO path="/case-study/phenomebeauty" /><CaseStudy /></>} />
         <Route path="/reset-password" element={<><SEO path="/reset-password" /><ResetPassword /></>} />
         <Route path="/payment" element={<><SEO path="/payment" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />

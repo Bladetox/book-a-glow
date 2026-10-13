@@ -288,34 +288,18 @@ const About = () => {
         }}>
           <div style={{ maxWidth: 1120, margin: "0 auto" }}>
             {eyebrow("The NextSlot approach")}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(260px,340px)",
-              gap: isMobile ? 40 : 72,
-              alignItems: "center",
-            }}>
-              <div>
+            <div className="about-approach">
+              <div className="about-approach__copy">
                 <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                   Record. Understand. Grow.
                 </h2>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "repeat(3, minmax(0,1fr))",
-                  gap: 0,
-                  borderTop: `1px solid ${C.border2}`,
-                  borderBottom: `1px solid ${C.border2}`,
-                }}>
+                <div className="about-approach__steps">
                   {[
                     ["01","Record","Your bookings, payments, clients and daily activity become part of one system."],
                     ["02","Understand","That activity becomes useful information, helping you see patterns and opportunities."],
                     ["03","Grow","NextSlot surfaces opportunities in your business. You decide what to do with them."],
-                  ].map(([number,title,copy], i) => (
-                    <div key={title} style={{
-                      padding: isMobile ? "24px 0" : "24px 20px 26px 0",
-                      marginRight: !isMobile && i < 2 ? 20 : 0,
-                      borderRight: !isMobile && i < 2 ? `1px solid ${C.border2}` : "none",
-                      borderBottom: isMobile && i < 2 ? `1px solid ${C.border2}` : "none",
-                    }}>
+                  ].map(([number,title,copy]) => (
+                    <div key={title} className="about-approach__step">
                       <div style={{
                         width: 30,
                         height: 30,
@@ -340,7 +324,7 @@ const About = () => {
                 </p>
               </div>
 
-              <div style={{
+              <div className="about-approach__card" style={{
                 position: "relative",
                 minHeight: 320,
                 borderRadius: 12,

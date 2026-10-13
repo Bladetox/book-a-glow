@@ -50,3 +50,17 @@ describe("mobile About + nav + hero CTA", () => {
     expect(grids.length).toBe(0);
   });
 });
+
+import DemoAdminEmbed from "@/pages/DemoAdminEmbed";
+
+describe("demo admin embed uses the real dashboard", () => {
+  it("renders the real shell and dashboard sections from sample data", async () => {
+    const { container } = wrap(<DemoAdminEmbed />);
+    expect(screen.getAllByText("Studio M").length).toBeGreaterThan(0);
+    expect(container.textContent).toContain("Revenue This Month");
+    expect(container.textContent).toContain("Today's Appointments");
+    expect(container.textContent).toContain("Signature Facial");
+    // no hook-backed widgets in demo mode
+    expect(container.textContent).not.toContain("Loading…");
+  });
+});

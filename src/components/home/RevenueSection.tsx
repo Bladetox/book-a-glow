@@ -105,16 +105,21 @@ export const RevenueSection = () => {
         )}
 
         {isMobile && (
-          <div
-            style={{
-              width: "100%",
-              minWidth: 0,
-              display: "flex",
-              justifyContent: "center",
-              filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.42))",
-            }}
-          >
-            <MarketingMobileDashboardSnapshot scale={0.9} />
+          <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center" }}>
+            {/* Cropped, smaller preview: shows the top of the dashboard and fades out so it
+                doesn't consume the whole screen on phones. */}
+            <div
+              style={{
+                width: 390 * 0.74,
+                maxWidth: "100%",
+                height: 560 * 0.74,
+                overflow: "hidden",
+                WebkitMaskImage: "linear-gradient(to bottom, #000 76%, transparent 100%)",
+                maskImage: "linear-gradient(to bottom, #000 76%, transparent 100%)",
+              }}
+            >
+              <MarketingMobileDashboardSnapshot scale={0.74} />
+            </div>
           </div>
         )}
       </div>

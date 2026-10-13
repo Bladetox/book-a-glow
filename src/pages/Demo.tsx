@@ -4,8 +4,7 @@ import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
-import DashboardPreview from "@/components/site/DashboardPreview";
-import MobileDashboardPreview from "@/components/site/MobileDashboardPreview";
+import DemoDeviceIframe from "@/components/site/DemoDeviceIframe";
 import BookingAppPreview from "@/components/site/BookingAppPreview";
 import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import {
@@ -60,7 +59,7 @@ const DashboardCustomisationCallout = () => (
         </p>
       </div>
       <p style={{ ...MK.small, fontSize: 14, flex: "1 1 260px" }}>
-        Look for the customise button in the dashboard header. Switch any card on or off so your view stays focused on the metrics that matter to your business.
+        Look for the Customise button at the top of the dashboard. Switch any card on or off so your view stays focused on the metrics that matter to your business.
       </p>
     </div>
 
@@ -186,13 +185,13 @@ const Demo = () => {
               {!isMobile && (
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
                   <div style={{ flex: 1, maxWidth: 860 }}>
-                    <LaptopFrame interactive={true}>
-                      <DashboardPreview />
+                    <LaptopFrame interactive={true} fill>
+                      <DemoDeviceIframe device="desktop" src="/demo/admin-embed" title="NextSlot admin dashboard (desktop demo)" />
                     </LaptopFrame>
                   </div>
-                  <div style={{ width: 160, flexShrink: 0, marginBottom: -4 }}>
-                    <MobileFrame interactive={true}>
-                      <MobileDashboardPreview />
+                  <div style={{ width: 220, flexShrink: 0, marginBottom: -4 }}>
+                    <MobileFrame interactive={true} fill>
+                      <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
                     </MobileFrame>
                   </div>
                 </div>
@@ -200,8 +199,8 @@ const Demo = () => {
 
               {isMobile && (
                 <div style={{ maxWidth: 300, margin: "0 auto", width: "100%" }}>
-                  <MobileFrame interactive={true}>
-                    <MobileDashboardPreview />
+                  <MobileFrame interactive={true} fill>
+                    <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
                   </MobileFrame>
                 </div>
               )}

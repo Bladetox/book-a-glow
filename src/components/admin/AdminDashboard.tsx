@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
-import { useClientAlerts } from "@/hooks/useClientAlerts";
+import { useClientAlerts, type OverdueLoyaltyClient, type InactiveClient } from "@/hooks/useClientAlerts";
 import ClientAlertsModal, { alertCardLayoutId } from "@/components/admin/ClientAlertsModal";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
@@ -495,14 +495,32 @@ function parseNextAppt(raw: string | null): { value: string; sub: string | null 
   return { value: raw.slice(0, idx), sub: raw.slice(idx + 3) };
 }
 
-const AdminDashboard = ({
-  onSelectAppointment,
-  onNavigate,
-}: {
+export interface AdminDashboardViewProps {
+  data: ReturnType<typeof useDashboardData>;
+  overdueClients: OverdueLoyaltyClient[];
+  inactiveClients: InactiveClient[];
+  alertsLoading?: boolean;
+  flags: { ai_insights?: boolean; payshap_payments?: boolean };
+  /** Marketing demo: static data, no hook-backed widgets, never reads/writes the admin's saved layout. */
+  demo?: boolean;
   onSelectAppointment?: (client: string) => void;
   onNavigate?: (view: string) => void;
-}) => {
-  const [visibility, setVisibility] = useState(getVisibility);
+}
+
+/** Presentational dashboard. The live admin feeds it real data; the marketing demo feeds it sample data. */
+export const AdminDashboardView = ({
+  data,
+  overdueClients,
+  inactiveClients,
+  alertsLoading = false,
+  flags,
+  demo = false,
+  onSelectAppointment,
+  onNavigate,
+}: AdminDashboardViewProps) => {
+  const [visibility, setVisibility] = useState<Record<SectionKey, boolean>>(() =>
+    demo ? (Object.fromEntries(ALL_SECTIONS.map((k) => [k, true])) as Record<SectionKey, boolean>) : getVisibility(),
+  );
   const [showCustomize, setShowCustomize] = useState(false);
   const [showHeatInfo, setShowHeatInfo] = useState(false);
   const [expandedCard, setExpandedCard] = useState<ExpandedCard | null>(null);
@@ -510,27 +528,12 @@ const AdminDashboard = ({
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
-  const data = useDashboardData();
-  const { tenantId, tenant } = useTenant();
-  const {
-    data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
-    isLoading: alertsLoading,
-  } = useClientAlerts(tenantId);
-
-  const overdueClients = overdueLoyaltyClients;
-
-  const { flags } = useFeatureFlags(
-    tenantId,
-    tenant?.is_lifetime_free,
-    tenant?.subscription_status,
-    tenant?.trial_ends_at,
-  );
-  const isNextyEnabled = flags.ai_insights;
+  const isNextyEnabled = !!flags.ai_insights;
 
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
     setVisibility(next);
-    saveVisibility(next);
+    if (!demo) saveVisibility(next);
   };
 
   if (data.coreLoading) {
@@ -617,13 +620,15 @@ const AdminDashboard = ({
   return (
     <div className="flex flex-col gap-6">
       <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
-      <ClientAlertsModal
-        isOpen={alertModalOpen}
-        onClose={() => setAlertModalOpen(false)}
-        alertType={alertModalType}
-        overdueClients={overdueClients}
-        inactiveClients={inactiveClients}
-      />
+      {!demo && (
+        <ClientAlertsModal
+          isOpen={alertModalOpen}
+          onClose={() => setAlertModalOpen(false)}
+          alertType={alertModalType}
+          overdueClients={overdueClients}
+          inactiveClients={inactiveClients}
+        />
+      )}
 
       <div className="flex items-center justify-end">
         <button
@@ -686,13 +691,13 @@ const AdminDashboard = ({
       )}
 
       {/* PayShap verification queue — gated by flags.payshap_payments */}
-      {flags.payshap_payments && <AdminPayshapQueue />}
-      <TrialCountdownNudge />
+      {!demo && flags.payshap_payments && <AdminPayshapQueue />}
+      {!demo && <TrialCountdownNudge />}
 
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5 flex flex-col gap-4">
-            <SetupChecklist onNavigate={onNavigate} />
+            {!demo && <SetupChecklist onNavigate={onNavigate} />}
 
             {/* ── Month revenue header ── */}
             <div className="flex items-start justify-between gap-3">
@@ -1007,6 +1012,40 @@ const AdminDashboard = ({
         <DashboardStockAlerts stockAlerts={stockAlerts} onNavigate={onNavigate} />
       )}
     </div>
+  );
+};
+
+const AdminDashboard = ({
+  onSelectAppointment,
+  onNavigate,
+}: {
+  onSelectAppointment?: (client: string) => void;
+  onNavigate?: (view: string) => void;
+}) => {
+  const data = useDashboardData();
+  const { tenantId, tenant } = useTenant();
+  const {
+    data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
+    isLoading: alertsLoading,
+  } = useClientAlerts(tenantId);
+
+  const { flags } = useFeatureFlags(
+    tenantId,
+    tenant?.is_lifetime_free,
+    tenant?.subscription_status,
+    tenant?.trial_ends_at,
+  );
+
+  return (
+    <AdminDashboardView
+      data={data}
+      overdueClients={overdueLoyaltyClients}
+      inactiveClients={inactiveClients}
+      alertsLoading={alertsLoading}
+      flags={flags}
+      onSelectAppointment={onSelectAppointment}
+      onNavigate={onNavigate}
+    />
   );
 };
 
