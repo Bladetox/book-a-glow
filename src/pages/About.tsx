@@ -1,44 +1,25 @@
 import { ArrowUpRight } from "lucide-react";
+import waIcon from "@/assets/whatsapp.png";
 import { Orb } from "@/components/home/Orb";
 import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
-import { C, FONT_BODY, FONT_DISPLAY, BP, RADIUS, SHADOW } from "@/components/home/tokens";
+import { C, FONT_BODY, FONT_DISPLAY, BP, MK, SECTION } from "@/components/home/tokens";
 import { useWindowWidth } from "@/components/home/useWindowWidth";
 import serviceProvidersImage from "@/assets/service-providers.png";
 import beauticianImage from "@/assets/beautician.jpg";
 
-const LIGHT_BG = "#f5f0e7";
+const LIGHT_BG = C.bg;
 
 const About = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
 
-  const eyebrow = (text: string) => (
-    <p style={{
-      fontSize: 11,
-      fontWeight: 700,
-      letterSpacing: "0.09em",
-      textTransform: "uppercase",
-      color: C.gold,
-      fontFamily: FONT_BODY,
-      marginBottom: 18,
-    }}>
-      {text}
-    </p>
-  );
-
-  const body = (text: string) => (
-    <p style={{
-      fontSize: 15,
-      color: C.muted,
-      lineHeight: 1.75,
-      fontFamily: FONT_BODY,
-    }}>
-      {text}
-    </p>
-  );
+  const eyebrow = (text: string) => <p style={MK.eyebrow}>{text}</p>;
+  const body = (text: string) => <p style={MK.body}>{text}</p>;
+  const sectionPad = isMobile ? SECTION.mobile : SECTION.desktop;
+  const surface = { ...MK.card, borderRadius: 2 } as const;
 
   return (
     <MarketingLayout>
@@ -49,7 +30,7 @@ const About = () => {
         <section style={{
           position: "relative",
           overflow: "hidden",
-          padding: isMobile ? "104px 24px 64px" : "128px 24px 96px",
+          padding: isMobile ? SECTION.heroMobile : "120px 24px 68px",
           background: LIGHT_BG,
         }}>
           <div style={{
@@ -62,18 +43,10 @@ const About = () => {
           }}>
             <div>
               {eyebrow("About NextSlot")}
-              <h1 style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: isMobile ? "clamp(32px,9vw,46px)" : "clamp(40px,4.5vw,58px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.05,
-                marginBottom: 22,
-                maxWidth: 600,
-              }}>
+              <h1 style={{ ...MK.h1, maxWidth: 600 }}>
                 Built from real challenges.
                 <br />
-                <span style={{ color: C.gold, fontStyle: "italic" }}>Not a boardroom.</span>
+                <span style={MK.accent}>Not a boardroom.</span>
               </h1>
               {body("NextSlot was built for independent service businesses that are doing the work, serving their clients and trying to grow, but do not always have the systems or information to see what is really happening.")}
               <div style={{
@@ -93,11 +66,11 @@ const About = () => {
             <div style={{
               position: "relative",
               minHeight: isMobile ? 280 : 420,
-              borderRadius: RADIUS.xl,
+              borderRadius: 2,
               overflow: "hidden",
               background: C.s1,
               border: `1px solid ${C.border2}`,
-              boxShadow: SHADOW.elevated,
+              boxShadow: "0 8px 30px rgba(66,48,27,0.08)",
             }}>
               <img
                 src={serviceProvidersImage}
@@ -117,15 +90,15 @@ const About = () => {
                 bottom: 20,
                 width: 190,
                 padding: "18px 20px",
-                borderRadius: RADIUS.lg,
+                borderRadius: 2,
                 background: "rgba(245,240,231,0.96)",
                 border: `1px solid ${C.border2}`,
-                boxShadow: SHADOW.card,
+                boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
               }}>
-                <p style={{ fontSize: 10, color: C.gold, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: FONT_BODY, marginBottom: 8 }}>
+                <p style={{ fontSize: 10, color: C.gold, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: FONT_BODY, marginBottom: 8 }}>
                   The NextSlot approach
                 </p>
-                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 19, color: C.text, lineHeight: 1.2 }}>
+                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text, lineHeight: 1.2 }}>
                   Record.<br />Understand.<br />Grow.
                 </p>
               </div>
@@ -135,7 +108,7 @@ const About = () => {
 
         {/* 02 · THE PROBLEM */}
         <section style={{
-          padding: isMobile ? "64px 24px" : "88px 24px",
+          padding: sectionPad,
           background: LIGHT_BG,
           borderTop: `1px solid ${C.border}`,
         }}>
@@ -144,20 +117,12 @@ const About = () => {
             margin: "0 auto",
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,320px),1fr))",
-            gap: isMobile ? 40 : 80,
+            gap: isMobile ? 40 : 72,
             alignItems: "center",
           }}>
             <div>
               {eyebrow("The problem")}
-              <h2 style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: isMobile ? "clamp(28px,7vw,38px)" : "clamp(32px,3.6vw,46px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.08,
-                marginBottom: 22,
-                maxWidth: 560,
-              }}>
+              <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                 The problem wasn't bookings.
                 <br />
                 It was everything around them.
@@ -179,11 +144,11 @@ const About = () => {
 
             <div style={{
               position: "relative",
-              borderRadius: RADIUS.xl,
+              borderRadius: 2,
               padding: isMobile ? 20 : 28,
               background: C.s1,
               border: `1px solid ${C.border2}`,
-              boxShadow: SHADOW.card,
+              boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
             }}>
               <div style={{
                 display: "grid",
@@ -199,7 +164,7 @@ const About = () => {
                 ].map((item) => (
                   <div key={item.label} style={{
                     padding: "16px 14px",
-                    borderRadius: RADIUS.md,
+                    borderRadius: 2,
                     background: C.s2,
                     border: `1px solid ${C.border}`,
                     display: "flex",
@@ -224,14 +189,14 @@ const About = () => {
               </div>
               <div style={{
                 padding: "18px",
-                borderRadius: RADIUS.md,
+                borderRadius: 2,
                 background: C.s2,
                 border: `1px solid ${C.border2}`,
               }}>
-                <p style={{ fontSize: 10, color: C.text, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: FONT_BODY, marginBottom: 7 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: C.text, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: FONT_BODY, marginBottom: 7 }}>
                   Before
                 </p>
-                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 21, color: C.text, lineHeight: 1.2 }}>
+                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text, lineHeight: 1.2 }}>
                   Information everywhere.
                 </p>
                 <p style={{ fontSize: 12, color: C.text, fontFamily: FONT_BODY, marginTop: 7 }}>
@@ -244,7 +209,7 @@ const About = () => {
 
         {/* 03 · THE IDEA */}
         <section style={{
-          padding: isMobile ? "64px 24px" : "88px 24px",
+          padding: sectionPad,
           background: C.s1,
           borderTop: `1px solid ${C.border}`,
         }}>
@@ -253,17 +218,17 @@ const About = () => {
             margin: "0 auto",
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,320px),1fr))",
-            gap: isMobile ? 40 : 80,
+            gap: isMobile ? 40 : 72,
             alignItems: "center",
           }}>
             <div style={{
               minHeight: isMobile ? 260 : 360,
-              borderRadius: RADIUS.xl,
+              borderRadius: 2,
               overflow: "hidden",
               position: "relative",
               background: C.s2,
               border: `1px solid ${C.border2}`,
-              boxShadow: SHADOW.card,
+              boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
             }}>
               <img
                 src={beauticianImage}
@@ -275,14 +240,14 @@ const About = () => {
                 left: 20,
                 bottom: 20,
                 padding: "14px 18px",
-                borderRadius: RADIUS.md,
+                borderRadius: 2,
                 background: "rgba(245,240,231,0.97)",
                 border: `1px solid ${C.border2}`,
               }}>
-                <p style={{ fontSize: 10, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: FONT_BODY, marginBottom: 6 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: FONT_BODY, marginBottom: 6 }}>
                   The idea
                 </p>
-                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: C.text }}>
+                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text }}>
                   Simple. Useful. Real.
                 </p>
               </div>
@@ -290,14 +255,7 @@ const About = () => {
 
             <div>
               {eyebrow("The idea")}
-              <h2 style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: isMobile ? "clamp(28px,7vw,38px)" : "clamp(32px,3.6vw,46px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.08,
-                marginBottom: 20,
-              }}>
+              <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                 Technology that feels like part of your business.
               </h2>
               {body("NextSlot is designed to work quietly in the background, bringing bookings, payments, clients and activity into one place. Not overly complex. Not disconnected from reality. Just useful, thoughtful technology that helps businesses move forward.")}
@@ -323,7 +281,7 @@ const About = () => {
 
         {/* 04 · RECORD / UNDERSTAND / GROW */}
         <section style={{
-          padding: isMobile ? "64px 24px" : "88px 24px",
+          padding: sectionPad,
           background: LIGHT_BG,
           borderTop: `1px solid ${C.border}`,
           overflow: "hidden",
@@ -337,14 +295,7 @@ const About = () => {
               alignItems: "center",
             }}>
               <div>
-                <h2 style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: isMobile ? "clamp(30px,8vw,42px)" : "clamp(36px,4vw,50px)",
-                  fontWeight: 700,
-                  color: C.text,
-                  lineHeight: 1.06,
-                  marginBottom: 34,
-                }}>
+                <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                   Record. Understand. Grow.
                 </h2>
                 <div style={{
@@ -391,10 +342,10 @@ const About = () => {
               <div style={{
                 position: "relative",
                 minHeight: 320,
-                borderRadius: RADIUS.xl,
+                borderRadius: 2,
                 background: C.s1,
                 border: `1px solid ${C.border2}`,
-                boxShadow: SHADOW.card,
+                boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -407,12 +358,12 @@ const About = () => {
                   left: 18,
                   right: 18,
                   padding: "13px 15px",
-                  borderRadius: RADIUS.md,
+                  borderRadius: 2,
                   background: "rgba(245,240,231,0.97)",
                   border: `1px solid ${C.border2}`,
                   zIndex: 20,
                 }}>
-                  <p style={{ fontSize: 10, color: C.gold, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: FONT_BODY, marginBottom: 4 }}>
+                  <p style={{ fontSize: 10, color: C.gold, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: FONT_BODY, marginBottom: 4 }}>
                     Nexty · Business Growth Advisor
                   </p>
                   <p style={{ fontSize: 12, color: C.text, fontFamily: FONT_BODY, lineHeight: 1.5 }}>
@@ -426,7 +377,7 @@ const About = () => {
 
         {/* 05 · PROOF + CTA */}
         <section style={{
-          padding: isMobile ? "64px 24px 72px" : "88px 24px 96px",
+          padding: sectionPad,
           background: C.s1,
           borderTop: `1px solid ${C.border}`,
         }}>
@@ -436,18 +387,11 @@ const About = () => {
               gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,320px),1fr))",
               gap: isMobile ? 40 : 72,
               alignItems: "center",
-              marginBottom: 72,
+              marginBottom: 56,
             }}>
               <div>
                 {eyebrow("The first real business")}
-                <h2 style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: isMobile ? "clamp(28px,7vw,38px)" : "clamp(32px,3.6vw,46px)",
-                  fontWeight: 700,
-                  color: C.text,
-                  lineHeight: 1.08,
-                  marginBottom: 20,
-                }}>
+                <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                   It started with PhenomeBeauty.
                 </h2>
                 {body("NextSlot wasn't designed around an imaginary business. It was shaped by the real challenges of PhenomeBeauty, a mobile beauty business in Cape Town.")}
@@ -459,7 +403,7 @@ const About = () => {
                   borderLeft: `2px solid ${C.gold}`,
                   paddingLeft: 18,
                 }}>
-                  <p style={{ fontFamily: FONT_DISPLAY, fontSize: 19, color: C.text, lineHeight: 1.35 }}>
+                  <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text, lineHeight: 1.35 }}>
                     “For the first time, the business felt like it was running itself.”
                   </p>
                   <p style={{ marginTop: 8, fontSize: 12, color: C.muted, fontFamily: FONT_BODY }}>
@@ -475,11 +419,11 @@ const About = () => {
               </div>
 
               <div style={{
-                borderRadius: RADIUS.xl,
+                borderRadius: 2,
                 padding: isMobile ? 22 : 30,
                 background: C.s2,
                 border: `1px solid ${C.border2}`,
-                boxShadow: SHADOW.card,
+                boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
               }}>
                 <div style={{
                   display: "grid",
@@ -495,12 +439,12 @@ const About = () => {
                   ].map(([label,value]) => (
                     <div key={label} style={{
                       padding: "18px 16px",
-                      borderRadius: RADIUS.md,
+                      borderRadius: 2,
                       background: C.s1,
                       border: `1px solid ${C.border}`,
                     }}>
-                      <p style={{ fontSize: 10, color: C.faint, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: FONT_BODY, marginBottom: 6 }}>{label}</p>
-                      <p style={{ fontFamily: FONT_DISPLAY, fontSize: 19, color: C.text }}>{value}</p>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: C.faint, textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: FONT_BODY, marginBottom: 6 }}>{label}</p>
+                      <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text }}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -511,8 +455,8 @@ const About = () => {
             </div>
 
             <div style={{
-              borderRadius: RADIUS.xl,
-              padding: isMobile ? "36px 24px" : "54px 56px",
+              borderRadius: 2,
+              padding: isMobile ? "36px 24px" : "48px 56px",
               background: C.bg,
               border: `1px solid ${C.border2}`,
               display: "flex",
@@ -523,14 +467,7 @@ const About = () => {
             }}>
               <div style={{ maxWidth: 650 }}>
                 {eyebrow("Ready to grow?")}
-                <h2 style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: isMobile ? "clamp(28px,7vw,38px)" : "clamp(32px,3.6vw,46px)",
-                  fontWeight: 700,
-                  color: C.text,
-                  lineHeight: 1.08,
-                  marginBottom: 12,
-                }}>
+                <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                   Your business is already telling you something.
                 </h2>
                 <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, fontFamily: FONT_BODY }}>
@@ -539,7 +476,16 @@ const About = () => {
               </div>
               <div className="marketing-cta-row">
                 <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
-                <PrimaryCTA to="/contact">Talk to us</PrimaryCTA>
+                <a
+                  href="https://wa.me/27686806115"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Chat with us on WhatsApp"
+                  className="marketing-cta marketing-cta--secondary"
+                >
+                  <img src={waIcon} alt="" width={20} height={20} className="marketing-cta__icon" />
+                  Talk to us
+                </a>
               </div>
             </div>
           </div>

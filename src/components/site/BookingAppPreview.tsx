@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-  Check, ChevronLeft, ChevronRight,
-  Scissors, Sparkles, HandMetal, PaintBucket, Eye, LayoutGrid,
-  MapPin, User, Phone, Mail, Loader2, Palette, Star, ShieldCheck
+  ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Minus, X,
+  Scissors, Sparkles, HandMetal, PaintBucket, Eye, LayoutGrid, CalendarDays, Clock,
+  MapPin, User, Phone, Mail, Palette, Star, ShieldCheck
 } from "lucide-react";
+import YocoImg from "@/assets/Yoco.svg";
 import { businessThemes, getThemeCssVars, BusinessTheme } from "@/data/themes";
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
@@ -233,185 +234,182 @@ const S = {
 
 /* ─────────────────────────────────────────────────────────────
    SCREEN TYPE
+   Mirrors the live public booking app (Book.tsx):
+   splash → 4 steps (services, schedule, details, review) → confirmation.
+   "theme" is a demo-only screen so visitors can preview other trades.
 ───────────────────────────────────────────────────────────── */
 type Screen = "splash" | "theme" | "services" | "schedule" | "details" | "review" | "done";
 
 const STEP_SCREENS: Screen[] = ["services", "schedule", "details", "review"];
 const STEP_LABELS  = ["Services", "Schedule", "Details", "Review"];
+const HOLD_SECONDS = 10 * 60;
 
-/* ─────────────────────────────────────────────────────────────
-   MAIN COMPONENT
-───────────────────────────────────────────────────────────── */
 const BookingAppPreview = () => {
   const [themeIdx, setThemeIdx]     = useState(0);
   const theme   = businessThemes[themeIdx];
   const cssVars = toStyleVars(theme);
   const tenant  = TENANT_BY_ID[theme.id] ?? TENANT_BY_ID["standard"];
   const TIcon   = tenant.Icon;
+  const isDark  = parseFloat((theme.colors.background.split(/\s+/)[2] ?? "50").replace("%", "")) < 50;
 
   const [screen, setScreen] = useState<Screen>("splash");
   const stepIdx = STEP_SCREENS.indexOf(screen);
 
   const [referral, setReferral] = useState("");
+  const [attempted, setAttempted] = useState(false);
 
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  // One entry per unit selected (same model as the live app) so quantities stack.
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
+  const [cartExpanded, setCartExpanded] = useState(false);
 
   const [currentMonth, setCurrentMonth]   = useState(new Date());
   const [selectedDate, setSelectedDate]   = useState<Date | null>(null);
   const [selectedTime, setSelectedTime]   = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen]   = useState(true);
+  const [holdLeft, setHoldLeft]           = useState(HOLD_SECONDS);
 
   const [isExisting, setIsExisting]       = useState<boolean | null>(null);
+  const [touched, setTouched]             = useState(false);
   const [form, setForm]                   = useState({ name: "", phone: "", email: "", address: "" });
+  const [termsOpen, setTermsOpen]         = useState(false);
 
   const today = useMemo(() => { const t = new Date(); t.setHours(0,0,0,0); return t; }, []);
+
+  // Slot hold countdown, as in the live Schedule step.
+  useEffect(() => {
+    if (!selectedTime || screen === "done") return;
+    setHoldLeft(HOLD_SECONDS);
+    const id = setInterval(() => setHoldLeft(v => Math.max(0, v - 1)), 1000);
+    return () => clearInterval(id);
+  }, [selectedTime, screen]);
 
   const activeCat = activeCategory ?? (tenant.categories[0]?.id ?? null);
   const visibleServices = activeCat
     ? tenant.services.filter(s => s.category === activeCat)
     : tenant.services;
 
-  const selectedServiceObjects = tenant.services.filter(s => selectedTreatments.includes(s.id));
-  const totalPrice    = selectedServiceObjects.reduce((sum, s) => sum + s.price, 0);
-  const totalDuration = selectedServiceObjects.reduce((sum, s) => sum + s.duration, 0);
+  const qtyFor = (id: string) => selectedTreatments.filter(x => x === id).length;
+  const uniqueIds = Array.from(new Set(selectedTreatments));
+  const cartItems = uniqueIds.flatMap(id => {
+    const svc = tenant.services.find(s => s.id === id);
+    return svc ? [{ svc, qty: qtyFor(id) }] : [];
+  });
+  const totalPrice    = cartItems.reduce((n, { svc, qty }) => n + svc.price * qty, 0);
+  const totalDuration = cartItems.reduce((n, { svc, qty }) => n + svc.duration * qty, 0);
   const depositAmt    = Math.ceil(totalPrice * 0.3);
   const balanceAmt    = totalPrice - depositAmt;
 
   const isCurrentMonth =
     currentMonth.getFullYear() === today.getFullYear() &&
     currentMonth.getMonth()    === today.getMonth();
-  const monthStart     = startOfMonth(currentMonth);
-  const monthEnd       = endOfMonth(currentMonth);
-  const days           = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const startDayOfWeek = getDay(monthStart);
+  const days           = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
+  const startDayOfWeek = getDay(startOfMonth(currentMonth));
+
+  const detailsValid =
+    isExisting !== null && !!form.name.trim() && !!form.phone.trim() &&
+    /\S+@\S+\.\S+/.test(form.email) && !!form.address.trim();
 
   const canProceed = (() => {
     if (screen === "services")  return selectedTreatments.length > 0;
     if (screen === "schedule")  return !!selectedDate && !!selectedTime;
-    if (screen === "details")   return isExisting !== null && !!form.name && !!form.phone && !!form.email;
+    if (screen === "details")   return detailsValid;
     return true;
   })();
 
   const goNext = () => {
-    if (screen === "services")  { setScreen("schedule"); return; }
-    if (screen === "schedule")  { setScreen("details");  return; }
-    if (screen === "details")   { setScreen("review");   return; }
-    if (screen === "review")    { setScreen("done");     return; }
+    if (screen === "details" && !detailsValid) { setTouched(true); return; }
+    if (!canProceed) return;
+    if (screen === "services") setScreen("schedule");
+    else if (screen === "schedule") setScreen("details");
+    else if (screen === "details") setScreen("review");
+    else if (screen === "review") setScreen("done");
   };
   const goPrev = () => {
-    if (screen === "review")   { setScreen("details");  return; }
-    if (screen === "details")  { setScreen("schedule"); return; }
-    if (screen === "schedule") { setScreen("services"); return; }
-    if (screen === "services") { setScreen("theme");    return; }
+    if (screen === "review") setScreen("details");
+    else if (screen === "details") setScreen("schedule");
+    else if (screen === "schedule") setScreen("services");
   };
 
   const resetAll = () => {
     setScreen("splash");
-    setReferral("");
-    setSelectedTreatments([]);
-    setActiveCategory(null);
-    setSelectedDate(null);
-    setSelectedTime(null);
+    setReferral(""); setAttempted(false);
+    setSelectedTreatments([]); setActiveCategory(null); setCartExpanded(false);
+    setSelectedDate(null); setSelectedTime(null); setCalendarOpen(true);
     setCurrentMonth(new Date());
-    setIsExisting(null);
+    setIsExisting(null); setTouched(false);
     setForm({ name: "", phone: "", email: "", address: "" });
   };
 
-  const toggleTreatment = (id: string) =>
-    setSelectedTreatments(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+  const addTreatment    = (id: string) => setSelectedTreatments(p => [...p, id]);
+  const removeTreatment = (id: string) => setSelectedTreatments(p => {
+    const i = p.lastIndexOf(id);
+    return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)];
+  });
+
+  const mm = String(Math.floor(holdLeft / 60)).padStart(2, "0");
+  const ss = String(holdLeft % 60).padStart(2, "0");
 
   /* ════════════════════════════════════════════════════════════
-     SPLASH SCREEN
+     SPLASH SCREEN — referral source is required, like the live app
   ═══════════════════════════════════════════════════════════ */
   if (screen === "splash") {
-    const orbs = [
-      { id: 0, x: 10,  y: 8,  size: 320, color: "rgba(220,235,255,0.13)" },
-      { id: 1, x: 80,  y: 70, size: 260, color: "rgba(200,220,255,0.09)" },
-      { id: 2, x: 48,  y: 38, size: 180, color: "rgba(235,245,255,0.08)" },
-    ];
+    const picked = referral.trim().length > 0;
+    const err = attempted && !picked;
+    const subtle  = isDark ? "rgba(255,255,255,0.38)" : "hsl(var(--muted-foreground))";
+    const faint   = isDark ? "rgba(255,255,255,0.18)" : "hsl(var(--muted-foreground) / 0.6)";
+    const chipOn  = isDark ? "rgba(255,255,255,0.35)" : "hsl(var(--primary) / 0.5)";
+    const chipOff = isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))";
     return (
       <div
         className="relative flex flex-col items-center w-full overflow-y-auto"
-        style={{ background: "#080808", minHeight: "100%" }}
+        style={{ ...cssVars, ...S.bg, minHeight: "100%" }}
       >
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {orbs.map(o => (
-            <div
-              key={o.id}
-              className="absolute rounded-full"
-              style={{
-                width: o.size, height: o.size,
-                left: `${o.x}%`, top: `${o.y}%`,
-                background: `radial-gradient(circle, ${o.color} 0%, transparent 70%)`,
-                filter: "blur(48px)",
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="relative flex flex-col items-center w-full px-6 pt-14 pb-10">
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: "radial-gradient(ellipse 90% 55% at 15% 5%, hsl(var(--primary) / 0.07) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 85% 90%, hsl(var(--primary) / 0.05) 0%, transparent 60%)",
+        }} />
+        <div className="relative flex flex-col items-center w-full px-6 pt-14 pb-8">
           <div
-            className="w-[72px] h-[72px] rounded-[22px] flex items-center justify-center mb-8"
+            className="w-[76px] h-[76px] rounded-[24px] flex items-center justify-center mb-6"
             style={{
-              background: "rgba(255,255,255,0.055)",
-              backdropFilter: "blur(24px)",
-              boxShadow: "0 0 0 0.5px rgba(220,235,255,0.12) inset, 0 8px 32px rgba(0,0,0,0.5)",
+              background: isDark ? "rgba(255,255,255,0.055)" : "hsl(var(--card))",
+              boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 4px 20px rgba(0,0,0,0.08)",
             }}
           >
-            <TIcon className="w-8 h-8" style={{ color: "rgba(220,238,255,0.85)" }} />
+            <TIcon className="w-8 h-8" style={S.fg} />
           </div>
 
-          <p
-            className="text-[9px] font-bold tracking-[0.5em] uppercase mb-2"
-            style={{ color: "rgba(210,228,255,0.38)" }}
-          >
+          <p className="text-[9px] font-bold tracking-[0.5em] uppercase mb-2" style={{ color: subtle }}>
             {tenant.splashWelcome}
           </p>
-
-          <h1
-            className="font-bold text-white text-center tracking-tight mb-5"
-            style={{ fontSize: "clamp(1.7rem,7vw,2.2rem)", lineHeight: 1.1 }}
-          >
+          <h1 className="font-bold text-center tracking-tight mb-4" style={{ ...S.fg, fontSize: "clamp(1.7rem,7vw,2.2rem)", lineHeight: 1.1 }}>
             {tenant.name}
           </h1>
-
-          <p className="text-[10px] font-semibold tracking-[0.35em] uppercase mb-1"
-            style={{ color: "rgba(215,232,255,0.42)" }}>
+          <p className="text-[10px] font-semibold tracking-[0.35em] uppercase mb-1 text-center" style={{ color: subtle }}>
             {tenant.splashTagline1}
           </p>
-          <p className="text-[9px] font-medium tracking-[0.3em] uppercase"
-            style={{ color: "rgba(215,232,255,0.2)" }}>
+          <p className="text-[10px] font-medium tracking-[0.3em] uppercase text-center" style={{ color: faint }}>
             {tenant.splashTagline2}
           </p>
+          <div className="mt-6 mb-6" style={{ width: 48, height: 1, background: "hsl(var(--border))" }} />
 
-          <div className="mt-7 mb-7" style={{
-            width: 40, height: 1,
-            background: "linear-gradient(90deg,transparent,rgba(210,228,255,0.35),transparent)"
-          }} />
-
-          <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-center mb-1"
-            style={{ color: "rgba(210,228,255,0.3)" }}>
+          <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-center mb-1" style={{ color: subtle }}>
             Where did you hear about us?
+            <span style={{ color: err ? "rgba(255,100,100,0.85)" : faint }}> *</span>
           </p>
-          <p className="text-[8px] text-center mb-3 tracking-wide"
-            style={{ color: "rgba(255,255,255,0.15)" }}>
-            Scroll to see all options
+          <p className="text-[8px] text-center mb-3 tracking-wide" style={{ color: err ? "rgba(255,120,120,0.85)" : faint }}>
+            {err ? "Please select an option to continue" : "Scroll to see all options"}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-2 w-full [&::-webkit-scrollbar]:hidden -mx-6 px-6">
             {tenant.referralOptions.map(opt => (
               <button
                 key={opt}
-                onClick={() => setReferral(referral === opt ? "" : opt)}
+                onClick={() => { setReferral(referral === opt ? "" : opt); setAttempted(false); }}
                 className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
                 style={{
-                  border: referral === opt
-                    ? "1px solid rgba(210,228,255,0.4)"
-                    : "1px solid rgba(255,255,255,0.08)",
-                  background: referral === opt ? "rgba(210,228,255,0.1)" : "transparent",
-                  color: referral === opt ? "rgba(225,240,255,0.95)" : "rgba(255,255,255,0.32)",
+                  border: `1px solid ${referral === opt ? chipOn : err ? "rgba(255,100,100,0.25)" : chipOff}`,
+                  background: referral === opt ? "hsl(var(--primary) / 0.1)" : "transparent",
+                  color: referral === opt ? "hsl(var(--foreground))" : err ? "rgba(255,120,120,0.7)" : "hsl(var(--muted-foreground))",
                 }}
               >
                 {opt}
@@ -420,22 +418,20 @@ const BookingAppPreview = () => {
           </div>
 
           <button
-            onClick={() => setScreen("theme")}
-            className="mt-8 w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase relative overflow-hidden cursor-pointer transition-all duration-300"
+            onClick={() => (picked ? setScreen("services") : setAttempted(true))}
+            className="mt-8 w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase transition-all duration-300"
             style={{
-              background: "rgba(210,228,255,0.07)",
-              backdropFilter: "blur(28px)",
-              border: "1px solid rgba(210,228,255,0.18)",
-              boxShadow: "0 0 40px rgba(210,228,255,0.04), 0 1px 0 rgba(220,236,255,0.14) inset",
-              color: "rgba(255,255,255,0.88)",
+              background: picked ? "hsl(var(--primary) / 0.1)" : "hsl(var(--foreground) / 0.03)",
+              border: `1px solid ${picked ? "hsl(var(--primary) / 0.4)" : "hsl(var(--border))"}`,
+              color: picked ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground) / 0.6)",
+              cursor: picked ? "pointer" : "default",
             }}
           >
             {tenant.splashCta}
           </button>
 
-          <p className="mt-6 text-[8px] tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.14)" }}>
-            Powered by{" "}
-            <span style={{ color: "rgba(210,228,255,0.35)" }}>nextslot.co.za</span>
+          <p className="mt-5 text-[8px] tracking-[0.2em]" style={{ color: faint }}>
+            Powered by <span style={{ color: "hsl(var(--primary))" }}>nextslot.co.za</span>
           </p>
         </div>
       </div>
@@ -443,62 +439,53 @@ const BookingAppPreview = () => {
   }
 
   /* ════════════════════════════════════════════════════════════
-     DONE SCREEN
+     CONFIRMATION — same sections as the live BookingConfirmation
   ═══════════════════════════════════════════════════════════ */
   if (screen === "done") {
     return (
-      <div
-        className="flex flex-col items-center justify-center px-6 py-12 text-center gap-6"
-        style={{ ...cssVars, ...S.bg, minHeight: "100%" }}
-      >
-        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={S.primary}>
-          <Check className="w-8 h-8" style={S.primaryFg} strokeWidth={3} />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold mb-2" style={S.fg}>Booking Confirmed!</h2>
-          <p className="text-sm" style={S.muted}>A confirmation has been sent to your email.</p>
-        </div>
+      <div className="flex flex-col gap-6 px-5 py-8 text-left" style={{ ...cssVars, ...S.bg, minHeight: "100%" }}>
+        <h2 className="font-display text-2xl font-bold text-center" style={S.fg}>Your booking is confirmed</h2>
+        <p className="text-sm italic text-center" style={S.muted}>I see you choosing you.</p>
+        <p className="text-sm leading-relaxed" style={S.muted}>
+          Thank you for your booking{form.name ? `, ${form.name.split(" ")[0]}` : ""}. A confirmation is on its way to your email.
+        </p>
 
-        <div className="w-full rounded-2xl p-4 text-left flex flex-col gap-2" style={S.card}>
-          {selectedServiceObjects.map(s => (
-            <div key={s.id} className="flex justify-between text-sm">
-              <span style={S.fg}>{s.name}</span>
-              <span style={S.muted}>R{s.price}</span>
-            </div>
-          ))}
-          <div className="h-px my-1" style={{ background: "hsl(var(--border))" }} />
-          <div className="flex justify-between text-sm">
-            <span style={S.muted}>{selectedDate ? format(selectedDate, "EEE, d MMM yyyy") : "—"} · {selectedTime}</span>
+        <div className="flex flex-col gap-4">
+          <h4 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>What happens next</h4>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold" style={S.fg}>The Arrival</span>
+            <span className="text-sm" style={S.muted}>
+              I'll be arriving on {selectedDate ? format(selectedDate, "EEEE, d MMMM yyyy") : "TBC"} at {selectedTime ?? "TBC"}.
+            </span>
           </div>
-          <div className="flex justify-between text-sm font-bold">
-            <span style={S.fg}>Deposit paid</span>
-            <span style={S.primaryText}>R{depositAmt}</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold" style={S.fg}>The Space</span>
+            <span className="text-sm" style={S.muted}>{form.address || "To be confirmed"}</span>
+            <span className="text-sm" style={S.muted}>Just find a spot where you feel most comfortable, and I'll handle the rest.</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span style={S.muted}>Balance due on day</span>
-            <span style={S.fg}>R{balanceAmt}</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold" style={S.fg}>The Intent</span>
+            <span className="text-sm" style={S.muted}>Bring nothing but yourself.</span>
           </div>
         </div>
 
-        <button onClick={resetAll} className="text-sm underline" style={S.muted}>
-          Book another appointment
-        </button>
+        <p className="text-sm leading-relaxed" style={S.muted}>We look forward to seeing you.</p>
+        <p className="text-sm font-semibold" style={S.fg}>Thank you.</p>
+
+        <button onClick={resetAll} className="btn-back w-full">Start over</button>
       </div>
     );
   }
 
   /* ════════════════════════════════════════════════════════════
-     THEME PICKER SCREEN
+     THEME PICKER — demo only (the live app sets the theme per business)
   ═══════════════════════════════════════════════════════════ */
   if (screen === "theme") {
     return (
       <div className="flex flex-col" style={{ ...cssVars, ...S.bg, minHeight: "100%" }}>
         <div className="px-6 pt-8 pb-5 text-center">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3" style={S.primary}>
-            <TIcon className="w-6 h-6" style={S.primaryFg} strokeWidth={2} />
-          </div>
-          <h1 className="text-lg font-bold" style={S.fg}>Choose your theme</h1>
-          <p className="text-xs mt-1" style={S.muted}>Personalise how your booking page looks</p>
+          <h1 className="text-lg font-bold" style={S.fg}>Preview another business</h1>
+          <p className="text-xs mt-1" style={S.muted}>Demo only. Every business gets its own theme.</p>
         </div>
 
         <div className="flex-1 px-5 space-y-2.5 overflow-y-auto [&::-webkit-scrollbar]:hidden">
@@ -510,124 +497,74 @@ const BookingAppPreview = () => {
             return (
               <button
                 key={bt.id}
-                onClick={() => { setThemeIdx(i); setActiveCategory(null); }}
+                onClick={() => { setThemeIdx(i); setActiveCategory(null); setSelectedTreatments([]); }}
                 className="w-full text-left flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200"
                 style={{
                   background: isActive ? "hsl(var(--primary) / 0.08)" : "hsl(var(--card))",
-                  border: isActive
-                    ? "2px solid hsl(var(--primary))"
-                    : "2px solid hsl(var(--border))",
+                  border: isActive ? "2px solid hsl(var(--primary))" : "2px solid hsl(var(--border))",
                 }}
               >
-                <div
-                  className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
-                  style={{ ...btVars, background: "hsl(var(--primary))" }}
-                >
+                <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center" style={{ ...btVars, background: "hsl(var(--primary))" }}>
                   <BtIcon style={{ color: "hsl(var(--primary-foreground))", width: 18, height: 18 }} strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold" style={S.fg}>{bt.label}</p>
                   <p className="text-[11px] truncate" style={S.muted}>{meta.name} · {bt.vibe}</p>
                 </div>
-                <div
-                  className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center"
-                  style={isActive
-                    ? { background: "hsl(var(--primary))", border: "2px solid hsl(var(--primary))" }
-                    : { background: "transparent", border: "2px solid hsl(var(--border))" }
-                  }
-                >
-                  {isActive && <Check className="w-3 h-3" style={S.primaryFg} strokeWidth={3} />}
-                </div>
               </button>
             );
           })}
         </div>
 
-        <div className="px-5 pb-8 pt-4">
-          <button
-            onClick={() => setScreen("services")}
-            className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-4 rounded-2xl transition-all"
-            style={{ ...S.primary, ...S.primaryFg }}
-          >
-            Start Booking <ChevronRight className="w-4 h-4" />
+        <div className="px-4 pb-4 pt-3">
+          <button onClick={() => setScreen("splash")} className="btn-next w-full">
+            Open booking page
           </button>
-          <p className="text-center text-xs mt-3" style={S.muted}>Powered by NextSlot</p>
         </div>
       </div>
     );
   }
 
   /* ════════════════════════════════════════════════════════════
-     BOOKING FLOW (services / schedule / details / review)
-     NOTE: minHeight uses "100%" not "100vh" so it fills its
-     container correctly whether inside MobileFrame (scaled)
-     or a raw card on mobile — avoids the black overflow strip.
+     BOOKING FLOW — header, step indicator, body, bottom bar
   ═══════════════════════════════════════════════════════════ */
   return (
     <div className="flex flex-col" style={{ ...cssVars, ...S.bg, minHeight: "100%" }}>
 
-      {/* APP HEADER */}
-      <div
-        className="px-5 pt-7 pb-4"
-        style={{ borderBottom: "1px solid hsl(var(--border))" }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={S.primary}>
-              <TIcon className="w-4.5 h-4.5" style={{ ...S.primaryFg, width: 18, height: 18 }} strokeWidth={2} />
-            </div>
-            <div>
-              <p className="text-sm font-bold leading-none" style={S.fg}>{tenant.name}</p>
-              <p className="text-[11px] leading-none mt-0.5" style={S.muted}>{tenant.tagline}</p>
-            </div>
+      {/* COMPACT HEADER */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-3 pb-3 border-b border-border/40">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl glass-card flex-shrink-0 flex items-center justify-center">
+            <TIcon style={{ ...S.fg, width: 16, height: 16 }} strokeWidth={2} />
           </div>
-          <button
-            onClick={() => setScreen("theme")}
-            className="flex items-center gap-1 text-[10px] transition-opacity hover:opacity-70"
-            style={S.muted}
-          >
-            <Palette className="w-3 h-3" /> Theme
-          </button>
+          <div className="min-w-0">
+            <p className="text-sm font-bold leading-tight truncate" style={S.fg}>{tenant.name}</p>
+            <p className="text-[10px] font-medium tracking-wide truncate leading-tight mt-0.5" style={S.muted}>{tenant.tagline}</p>
+          </div>
         </div>
+        <button
+          onClick={() => setScreen("theme")}
+          className="flex items-center gap-1 text-[10px] transition-opacity hover:opacity-70"
+          style={S.muted}
+          aria-label="Demo: preview another business theme"
+        >
+          <Palette className="w-3 h-3" /> Demo
+        </button>
+      </div>
 
-        {/* STEP INDICATOR */}
-        <div className="flex items-center justify-between w-full">
+      {/* STEP INDICATOR */}
+      <div className="flex-shrink-0 px-2 py-3 border-b border-border/20">
+        <div className="flex items-center justify-between w-full px-4">
           {STEP_LABELS.map((label, i) => {
             const status = i < stepIdx ? "completed" : i === stepIdx ? "active" : "upcoming";
             return (
-              <div key={label} className="flex flex-col items-center gap-1 flex-1">
+              <div key={label} className="flex flex-col items-center gap-1.5 flex-1">
                 <div className="w-full flex items-center">
-                  <div
-                    className="h-0.5 flex-1 transition-colors duration-300"
-                    style={{
-                      background: i === 0 ? "transparent" : i <= stepIdx ? "hsl(var(--primary))" : "hsl(var(--border))"
-                    }}
-                  />
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
-                    style={
-                      status === "completed"
-                        ? { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }
-                        : status === "active"
-                        ? { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }
-                        : { background: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))" }
-                    }
-                  >
-                    {status === "completed" ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : i + 1}
-                  </div>
-                  <div
-                    className="h-0.5 flex-1 transition-colors duration-300"
-                    style={{
-                      background: i === STEP_LABELS.length - 1 ? "transparent" : i < stepIdx ? "hsl(var(--primary))" : "hsl(var(--border))"
-                    }}
-                  />
+                  <div className={`h-0.5 flex-1 transition-colors duration-300 ${i === 0 ? "bg-transparent" : i <= stepIdx ? "bg-primary" : "bg-muted"}`} />
+                  <div className={`step-indicator ${status}`}>{i + 1}</div>
+                  <div className={`h-0.5 flex-1 transition-colors duration-300 ${i === STEP_LABELS.length - 1 ? "bg-transparent" : i < stepIdx ? "bg-primary" : "bg-muted"}`} />
                 </div>
-                <span
-                  className="text-[9px] font-semibold tracking-widest uppercase"
-                  style={S.muted}
-                >
-                  {label}
-                </span>
+                <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">{label}</span>
               </div>
             );
           })}
@@ -635,361 +572,391 @@ const BookingAppPreview = () => {
       </div>
 
       {/* SCROLLABLE BODY */}
-      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden px-5 py-5">
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden">
+        <div className="w-full px-4 pt-4 pb-6">
 
-        {/* SERVICES STEP */}
-        {screen === "services" && (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>
-                Select treatments
-              </h3>
-              {selectedTreatments.length > 0 && (
-                <span className="text-[10px] font-semibold" style={S.primaryText}>
-                  {selectedTreatments.length} selected
-                </span>
-              )}
-            </div>
+          {/* SERVICES */}
+          {screen === "services" && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>Select a service</h3>
+                {selectedTreatments.length > 0 && (
+                  <span className="text-[10px] font-semibold" style={S.primaryText}>{selectedTreatments.length} selected</span>
+                )}
+              </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden -mx-1 px-1">
-              {tenant.categories.map(cat => {
-                const isAct = activeCat === cat.id;
-                return (
+              <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden -mx-1 px-1">
+                {tenant.categories.map(cat => (
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
-                    className="whitespace-nowrap shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
-                    style={isAct
-                      ? { ...S.primary, ...S.primaryFg }
-                      : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
-                    }
+                    className={`category-pill whitespace-nowrap shrink-0 transition-all duration-200 ${activeCat === cat.id ? "active" : ""}`}
                   >
                     {cat.label}
                   </button>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              {visibleServices.map(t => {
-                const isSel = selectedTreatments.includes(t.id);
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => toggleTreatment(t.id)}
-                    className="rounded-xl px-4 py-3.5 flex items-center gap-3 text-left w-full transition-all duration-150"
-                    style={{
-                      background: isSel ? "hsl(var(--primary) / 0.08)" : "hsl(var(--card))",
-                      border: isSel ? "1.5px solid hsl(var(--primary))" : "1.5px solid hsl(var(--border))",
-                    }}
-                  >
-                    <div
-                      className="shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200"
-                      style={isSel
-                        ? { borderColor: "hsl(var(--primary))", background: "hsl(var(--primary))" }
-                        : { borderColor: "hsl(var(--muted-foreground) / 0.3)", background: "transparent" }
-                      }
-                    >
-                      {isSel && <Check className="w-2.5 h-2.5" style={S.primaryFg} strokeWidth={3} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="block text-sm font-semibold" style={S.fg}>{t.name}</span>
-                      {t.duration > 0 && (
-                        <span className="text-[10px]" style={S.muted}>{t.duration} min</span>
-                      )}
-                    </div>
-                    <span className="shrink-0 text-sm font-bold" style={S.fg}>R{t.price}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* SCHEDULE STEP */}
-        {screen === "schedule" && (
-          <div className="flex flex-col gap-5">
-            <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>
-              Choose date &amp; time
-            </h3>
-
-            <div className="rounded-2xl p-4" style={S.card}>
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  disabled={isCurrentMonth}
-                  onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))}
-                  className="p-1.5 rounded-full transition-colors"
-                  style={isCurrentMonth
-                    ? { color: "hsl(var(--muted-foreground) / 0.25)", cursor: "not-allowed" }
-                    : S.muted
-                  }
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-base font-semibold" style={S.fg}>
-                  {format(currentMonth, "MMMM yyyy")}
-                </span>
-                <button
-                  onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                  className="p-1.5 rounded-full transition-colors"
-                  style={S.muted}
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
-                  <span key={d} className="text-[10px] font-semibold uppercase" style={S.muted}>{d}</span>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1">
-                {Array.from({ length: startDayOfWeek }).map((_, i) => (
-                  <div key={`e-${i}`} />
-                ))}
-                {days.map(day => {
-                  const isPast     = isBefore(day, today) && !isToday(day);
-                  const isAvail    = isDemoAvailable(day);
-                  const isDisabled = isPast || !isAvail;
-                  const isActive   = selectedDate ? isSameDay(day, selectedDate) : false;
+              <div className="flex flex-col gap-2">
+                {visibleServices.map(t => {
+                  const qty = qtyFor(t.id);
+                  const isSel = qty > 0;
                   return (
-                    <button
-                      key={day.toISOString()}
-                      disabled={isDisabled}
-                      onClick={() => { setSelectedDate(day); setSelectedTime(null); }}
-                      className="w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200"
-                      style={
-                        isActive
-                          ? { ...S.primary, ...S.primaryFg }
-                          : isDisabled
-                          ? { color: "hsl(var(--muted-foreground) / 0.25)", cursor: "not-allowed" }
-                          : { color: "hsl(var(--foreground))" }
-                      }
+                    <div
+                      key={t.id}
+                      className={`glass-card-service rounded-xl px-4 py-3.5 flex items-center gap-3 w-full transition-all duration-150 ${isSel ? "selected" : ""}`}
+                      style={isSel ? { borderColor: "hsl(var(--primary))" } : undefined}
                     >
-                      {format(day, "d")}
-                    </button>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-sm font-semibold leading-snug" style={S.fg}>{t.name}</span>
+                        <span className="block text-[10px] leading-snug mt-0.5" style={{ color: "hsl(var(--muted-foreground) / 0.6)" }}>{t.duration} min</span>
+                      </div>
+                      <span className="shrink-0 text-sm font-bold" style={S.fg}>R{t.price}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {qty > 0 && (
+                          <>
+                            <button
+                              onClick={() => removeTreatment(t.id)}
+                              aria-label={`Remove one ${t.name}`}
+                              className="w-7 h-7 rounded-full flex items-center justify-center border border-muted-foreground/30 bg-transparent text-muted-foreground"
+                            >
+                              <Minus className="w-3 h-3" strokeWidth={2.5} />
+                            </button>
+                            <span className="w-4 text-center text-sm font-bold" style={S.fg}>{qty}</span>
+                          </>
+                        )}
+                        <button
+                          onClick={() => addTreatment(t.id)}
+                          aria-label={`Add one ${t.name}`}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center border transition-colors ${isSel ? "border-primary bg-primary" : "border-muted-foreground/30 bg-transparent text-muted-foreground"}`}
+                          style={isSel ? S.primaryFg : undefined}
+                        >
+                          <Plus className="w-3 h-3" strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
             </div>
+          )}
 
-            {selectedDate && (
-              <div>
-                <h4 className="text-xs font-semibold tracking-[0.15em] uppercase mb-3" style={S.muted}>
-                  Available times
-                </h4>
-                <div className="grid grid-cols-4 gap-2">
-                  {TIME_SLOTS.map(slot => (
+          {/* SCHEDULE */}
+          {screen === "schedule" && (
+            <div className="flex flex-col gap-5">
+              <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>Choose date &amp; time</h3>
+
+              {selectedTime && (
+                <div className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-2.5">
+                  <Clock className="w-3.5 h-3.5 shrink-0" style={S.primaryText} />
+                  <p className="text-xs" style={S.muted}>
+                    Slot held for <span className="font-semibold tabular-nums" style={S.fg}>{mm}:{ss}</span> — complete your booking before it expires
+                  </p>
+                </div>
+              )}
+
+              {selectedDate && !calendarOpen && (
+                <button
+                  onClick={() => setCalendarOpen(true)}
+                  className="glass-card-service rounded-2xl px-4 py-3 flex items-center justify-between w-full text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <CalendarDays className="w-4 h-4 shrink-0" style={S.primaryText} />
+                    <div>
+                      <p className="text-sm font-semibold" style={S.fg}>{format(selectedDate, "EEEE, d MMMM yyyy")}</p>
+                      <p className="text-[11px] mt-0.5" style={S.muted}>Tap to change date</p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4" style={S.muted} />
+                </button>
+              )}
+
+              {calendarOpen && (
+                <div className="glass-card-service rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-4">
                     <button
-                      key={slot}
-                      onClick={() => setSelectedTime(slot)}
-                      className="py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-                      style={selectedTime === slot
-                        ? { ...S.primary, ...S.primaryFg }
-                        : { ...S.card, color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" }
-                      }
+                      disabled={isCurrentMonth}
+                      onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))}
+                      aria-label="Previous month"
+                      className={`p-1.5 rounded-full transition-colors ${isCurrentMonth ? "text-muted-foreground/20 cursor-not-allowed" : "text-muted-foreground"}`}
                     >
-                      {slot}
+                      <ChevronLeft className="w-5 h-5" />
                     </button>
-                  ))}
+                    <span className="font-display text-base font-semibold" style={S.fg}>{format(currentMonth, "MMMM yyyy")}</span>
+                    <button
+                      onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                      aria-label="Next month"
+                      className="p-1.5 rounded-full text-muted-foreground"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                    {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
+                      <span key={d} className="text-[10px] font-semibold uppercase" style={S.muted}>{d}</span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: startDayOfWeek }).map((_, i) => <div key={`e-${i}`} />)}
+                    {days.map(day => {
+                      const isPast   = isBefore(day, today) && !isToday(day);
+                      const isAvail  = isDemoAvailable(day);
+                      const isActive = selectedDate ? isSameDay(day, selectedDate) : false;
+                      return (
+                        <button
+                          key={day.toISOString()}
+                          disabled={isPast}
+                          onClick={() => { setSelectedDate(day); setSelectedTime(null); setCalendarOpen(false); }}
+                          className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200 ${
+                            isPast ? "text-muted-foreground/20 cursor-not-allowed"
+                              : !isAvail ? "text-muted-foreground/30"
+                              : isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                              : "text-foreground"
+                          } ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : ""}`}
+                        >
+                          {format(day, "d")}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
 
-        {/* DETAILS STEP */}
-        {screen === "details" && (
-          <div className="flex flex-col gap-5">
-            <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>
-              Your details
-            </h3>
-
-            <div>
-              <p className="text-sm mb-3" style={S.fg}>Have you booked with us before?</p>
-              <div className="flex gap-3">
-                {[
-                  { label: "Existing Diva", value: true,  Icon: Star },
-                  { label: "New Diva",      value: false, Icon: Sparkles },
-                ].map(opt => (
-                  <button
-                    key={String(opt.value)}
-                    onClick={() => setIsExisting(opt.value)}
-                    className="flex-1 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
-                    style={isExisting === opt.value
-                      ? { ...S.primary, ...S.primaryFg }
-                      : { ...S.card, color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" }
-                    }
-                  >
-                    <opt.Icon className="w-4 h-4" />
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {isExisting === false && (
-              <div className="rounded-2xl p-4" style={S.card}>
-                <h4 className="text-sm font-semibold flex items-center gap-2 mb-1" style={S.fg}>
-                  <ShieldCheck className="w-4 h-4" /> New Client Safety Check
-                </h4>
-                <p className="text-xs" style={S.muted}>
-                  A short health questionnaire will be sent with your confirmation.
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-3">
-              {([
-                { icon: User,   key: "name",    placeholder: "Full Name *",        type: "text" },
-                { icon: Phone,  key: "phone",   placeholder: "Phone Number *",     type: "tel" },
-                { icon: Mail,   key: "email",   placeholder: "Email Address *",    type: "email" },
-                { icon: MapPin, key: "address", placeholder: "Home Address (optional)", type: "text" },
-              ] as { icon: React.ElementType; key: keyof typeof form; placeholder: string; type: string }[]).map(f => (
-                <div key={f.key} className="relative">
-                  <f.icon className="absolute left-3.5 top-3.5 w-4 h-4" style={S.muted} />
-                  <input
-                    id={`preview-${f.key}`}
-                    name={f.key}
-                    type={f.type}
-                    value={form[f.key]}
-                    onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder}
-                    className="w-full pl-10 pr-4 py-3.5 rounded-2xl text-sm focus:outline-none transition-colors"
-                    style={{
-                      background: "hsl(var(--card))",
-                      color: "hsl(var(--foreground))",
-                      border: "1.5px solid hsl(var(--border))",
-                    }}
-                  />
+              {selectedDate && !calendarOpen && (
+                <div>
+                  <h4 className="text-xs font-semibold tracking-[0.15em] uppercase mb-3" style={S.muted}>Available times</h4>
+                  {isDemoAvailable(selectedDate) ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {TIME_SLOTS.map(slot => (
+                        <button
+                          key={slot}
+                          onClick={() => setSelectedTime(slot)}
+                          className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                            selectedTime === slot ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "glass-card-service text-foreground"
+                          }`}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-center py-4" style={S.muted}>No slots available — tap the date above to pick another</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* REVIEW STEP */}
-        {screen === "review" && (
-          <div className="flex flex-col gap-4">
-            <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>
-              Review booking
-            </h3>
-
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={S.card}>
-              <h4 className="text-xs font-semibold tracking-wider uppercase mb-1" style={S.muted}>Schedule</h4>
-              <span className="text-sm" style={S.fg}>
-                {selectedDate ? format(selectedDate, "EEEE, d MMMM yyyy") : "—"}
-              </span>
-              <span className="text-sm" style={S.muted}>{selectedTime || "—"}</span>
-            </div>
-
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={S.card}>
-              <h4 className="text-xs font-semibold tracking-wider uppercase mb-1" style={S.muted}>Contact</h4>
-              <span className="text-sm" style={S.fg}>{form.name || "—"}</span>
-              <span className="text-sm" style={S.muted}>{form.phone}</span>
-              <span className="text-sm" style={S.muted}>{form.email || "—"}</span>
-              {form.address && <span className="text-sm" style={S.muted}>{form.address}</span>}
-            </div>
-
-            <div className="rounded-2xl p-4 flex flex-col gap-0" style={S.card}>
-              {selectedServiceObjects.map(t => (
-                <div key={t.id} className="flex items-baseline justify-between py-1.5">
-                  <span className="text-sm" style={S.fg}>{t.name}</span>
-                  <span className="text-sm font-semibold ml-4" style={S.fg}>R{t.price}</span>
-                </div>
-              ))}
-
-              <div className="h-px my-2" style={{ background: "hsl(var(--border) / 0.5)" }} />
-
-              <div className="flex justify-between items-baseline py-1">
-                <span className="text-base font-bold" style={S.fg}>Total</span>
-                <span className="text-base font-bold" style={S.fg}>R{totalPrice}</span>
-              </div>
-              <div className="flex justify-between items-baseline py-1">
-                <span className="text-sm" style={S.muted}>Deposit due now (30%)</span>
-                <span className="text-sm font-semibold" style={S.primaryText}>R{depositAmt}</span>
-              </div>
-              <div className="flex justify-between items-baseline py-1">
-                <span className="text-sm" style={S.muted}>Balance remaining</span>
-                <span className="text-sm font-semibold" style={S.fg}>R{balanceAmt}</span>
-              </div>
-
-              <div className="h-px my-3" style={{ background: "hsl(var(--border) / 0.3)" }} />
-
-              <p className="text-[10px] text-center mb-3" style={S.muted}>
-                By confirming you agree to our{" "}
-                <span className="underline font-medium" style={S.fg}>Terms &amp; Conditions</span>
-              </p>
-
-              <button
-                onClick={goNext}
-                className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-4 rounded-2xl transition-all"
-                style={{ background: "hsl(142 71% 35%)", color: "#fff" }}
-              >
-                <Sparkles className="w-4 h-4" />
-                Confirm &amp; Pay Deposit
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* STICKY BOTTOM BAR */}
-      {screen !== "review" && (
-        <div
-          className="px-5 pt-3 pb-6"
-          style={{ borderTop: "1px solid hsl(var(--border))" }}
-        >
-          {screen === "services" && selectedTreatments.length > 0 && (
-            <div
-              className="rounded-2xl px-4 py-3 mb-3 flex items-center justify-between"
-              style={S.card}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xs" style={S.muted}>
-                  {selectedTreatments.length} treatment{selectedTreatments.length !== 1 ? "s" : ""}
-                </span>
-                <span className="text-[10px]" style={{ color: "hsl(var(--muted-foreground) / 0.5)" }}>•</span>
-                <span className="text-xs" style={S.muted}>{totalDuration} min</span>
-              </div>
-              <span className="font-bold text-lg" style={S.fg}>R{totalPrice}</span>
+              )}
             </div>
           )}
 
-          <div className="flex gap-3">
-            {stepIdx > 0 && (
-              <button
-                onClick={goPrev}
-                className="flex-1 py-4 rounded-2xl text-sm font-semibold transition-all"
-                style={{ background: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))", border: "1.5px solid hsl(var(--border))" }}
-              >
-                Back
+          {/* DETAILS */}
+          {screen === "details" && (
+            <div className="flex flex-col gap-5">
+              <h3 className="text-xs font-semibold tracking-[0.2em] uppercase" style={S.muted}>Your details</h3>
+
+              <div>
+                <p className="text-sm mb-3" style={S.fg}>Have you booked with us before?</p>
+                <div className="flex gap-3">
+                  {[
+                    { label: "Existing client", value: true,  Icon: Star },
+                    { label: "New client",      value: false, Icon: Sparkles },
+                  ].map(opt => (
+                    <button
+                      key={String(opt.value)}
+                      onClick={() => setIsExisting(opt.value)}
+                      className={`flex-1 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                        isExisting === opt.value ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "glass-card-service text-foreground"
+                      }`}
+                    >
+                      <opt.Icon className="w-4 h-4" />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {isExisting === null && touched && (
+                  <p className="text-[11px] text-destructive mt-2">Please select one to continue</p>
+                )}
+              </div>
+
+              {isExisting === false && (
+                <div className="glass-card-service rounded-2xl p-4 flex flex-col gap-2">
+                  <h4 className="text-sm font-semibold flex items-center gap-2" style={S.fg}>
+                    <ShieldCheck className="w-4 h-4" /> New client safety check
+                  </h4>
+                  <p className="text-xs" style={S.muted}>A short health questionnaire is part of your confirmation.</p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3">
+                {([
+                  { icon: User,   key: "name",    placeholder: "Full Name *",             type: "text",  pad: "pl-10" },
+                  { icon: Phone,  key: "phone",   placeholder: "e.g. 82 123 4567 *",      type: "tel",   pad: "pl-[4.75rem]" },
+                  { icon: Mail,   key: "email",   placeholder: "Email Address *",         type: "email", pad: "pl-10" },
+                  { icon: MapPin, key: "address", placeholder: "Home Address *",          type: "text",  pad: "pl-10" },
+                ] as { icon: React.ElementType; key: keyof typeof form; placeholder: string; type: string; pad: string }[]).map(f => (
+                  <div key={f.key} className="relative">
+                    <f.icon className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+                    {f.key === "phone" && (
+                      <span className="absolute left-9 top-0 h-full flex items-center text-sm" style={S.fg}>+27</span>
+                    )}
+                    <input
+                      id={`preview-${f.key}`}
+                      name={f.key}
+                      type={f.type}
+                      value={form[f.key]}
+                      onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      className={`w-full glass-input rounded-2xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200 ${f.pad}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* REVIEW */}
+          {screen === "review" && (
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2 className="text-[17px] font-bold leading-tight" style={S.fg}>Review your booking</h2>
+                <p className="text-xs mt-0.5" style={S.muted}>Check everything looks right before confirming.</p>
+              </div>
+
+              <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+                <div className="px-4 pt-3 pb-2 border-b border-border/30">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={S.muted}>Services</p>
+                </div>
+                <div className="divide-y divide-border/20">
+                  {cartItems.map(({ svc, qty }) => (
+                    <div key={svc.id} className="flex items-center justify-between px-4 py-2.5">
+                      <div>
+                        <p className="text-sm font-medium" style={S.fg}>{svc.name}{qty > 1 ? ` x${qty}` : ""}</p>
+                        <p className="text-[11px]" style={S.muted}>{svc.duration * qty} min</p>
+                      </div>
+                      <p className="text-sm font-semibold" style={S.fg}>R{(svc.price * qty).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/30 bg-muted/20">
+                  <p className="text-sm font-bold" style={S.fg}>Total</p>
+                  <p className="text-sm font-bold" style={S.fg}>R{totalPrice.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+                <div className="px-4 pt-3 pb-2 border-b border-border/30">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={S.muted}>Appointment</p>
+                </div>
+                <div className="divide-y divide-border/20">
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <p className="text-sm" style={S.muted}>Date</p>
+                    <p className="text-sm font-medium" style={S.fg}>{selectedDate ? format(selectedDate, "EEE d MMM yyyy") : "—"}</p>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <p className="text-sm" style={S.muted}>Time</p>
+                    <p className="text-sm font-medium" style={S.fg}>{selectedTime ?? "—"}</p>
+                  </div>
+                  <div className="flex items-start justify-between px-4 py-2.5">
+                    <p className="text-sm shrink-0 pt-0.5" style={S.muted}>Location</p>
+                    <p className="text-sm font-medium text-right ml-3" style={S.fg}>{form.address || "Your address"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+                <div className="px-4 pt-3 pb-2 border-b border-border/30">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={S.muted}>Payment</p>
+                </div>
+                <div className="divide-y divide-border/20">
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <p className="text-sm" style={S.muted}>Deposit due now (30%)</p>
+                    <p className="text-sm font-semibold" style={S.primaryText}>R{depositAmt.toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <p className="text-sm" style={S.muted}>Balance on the day</p>
+                    <p className="text-sm font-medium" style={S.fg}>R{balanceAmt.toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <p className="text-sm" style={S.muted}>Pay with</p>
+                    <img src={YocoImg} alt="Yoco" className="h-5 w-auto object-contain" />
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={() => setTermsOpen(v => !v)} className="text-xs underline underline-offset-2 text-left" style={S.muted}>
+                {termsOpen ? "Hide" : "View"} terms &amp; conditions
               </button>
-            )}
+              {termsOpen && (
+                <p className="text-xs leading-relaxed rounded-2xl border border-border/50 bg-muted/20 p-4" style={S.muted}>
+                  Demo terms: deposits secure your slot and are non-refundable within 48 hours of the appointment.
+                  Each business sets its own terms, shown here before the client pays.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* BOTTOM BAR */}
+      <div>
+        {screen === "services" && cartItems.length > 0 && (
+          <div>
             <button
-              disabled={!canProceed}
-              onClick={goNext}
-              className="flex-1 py-4 rounded-2xl text-sm font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ ...S.primary, ...S.primaryFg }}
+              onClick={() => setCartExpanded(v => !v)}
+              className="w-full flex items-center justify-between px-4 pt-3 pb-2 text-left"
             >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold" style={S.fg}>
+                  {selectedTreatments.length} {selectedTreatments.length === 1 ? "service" : "services"}
+                </span>
+                <span className="text-[10px]" style={S.muted}>· {totalDuration} min · R{totalPrice}</span>
+              </div>
+              <span style={S.muted}>{cartExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}</span>
+            </button>
+            {cartExpanded && (
+              <div className="px-4 pb-2 flex flex-col gap-1.5">
+                {cartItems.map(({ svc, qty }) => (
+                  <div key={svc.id} className="flex items-center gap-2">
+                    <button
+                      onClick={() => removeTreatment(svc.id)}
+                      aria-label={`Remove ${svc.name}`}
+                      className="w-5 h-5 rounded-full flex items-center justify-center border border-muted-foreground/30 text-muted-foreground"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                    <span className="flex-1 min-w-0 text-xs font-medium truncate" style={S.fg}>
+                      {svc.name}{qty > 1 && <span className="ml-1" style={S.muted}>×{qty}</span>}
+                    </span>
+                    <span className="text-[10px] shrink-0" style={S.muted}>{svc.duration * qty} min</span>
+                    <span className="text-xs font-semibold shrink-0" style={S.fg}>R{svc.price * qty}</span>
+                  </div>
+                ))}
+                <div className="border-t border-border pt-1.5 mt-0.5 flex items-center justify-between">
+                  <span className="text-[10px]" style={S.muted}>{totalDuration} min total</span>
+                  <span className="text-xs font-bold" style={S.fg}>R{totalPrice}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="px-4 pb-4 pt-2 flex gap-3">
+          {stepIdx > 0 && <button className="btn-back flex-1" onClick={goPrev}>Back</button>}
+          {screen === "review" ? (
+            <button className="btn-next flex-1 flex items-center justify-center gap-2.5" onClick={goNext}>
+              <img src={YocoImg} alt="" className="h-4 w-auto object-contain shrink-0 invert" />
+              <span>Confirm &amp; Pay Deposit R{depositAmt.toLocaleString()}</span>
+            </button>
+          ) : (
+            <button className="btn-next flex-1" onClick={goNext} disabled={!canProceed && screen !== "details"}>
               {screen === "details" ? "Review" : "Next"}
             </button>
-          </div>
+          )}
         </div>
-      )}
-
-      {screen === "review" && (
-        <div className="px-5 pt-3 pb-6">
-          <button
-            onClick={goPrev}
-            className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all"
-            style={{ background: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))", border: "1.5px solid hsl(var(--border))" }}
-          >
-            Back
-          </button>
-        </div>
-      )}
+        <p className="text-[9px] text-center pb-3 tracking-[0.12em]" style={{ color: "hsl(var(--muted-foreground) / 0.4)" }}>
+          Powered by nextslot.co.za
+        </p>
+      </div>
     </div>
   );
 };

@@ -463,10 +463,10 @@
 /* ═══════════════════════════════════════════════════════════════
    RESOURCES – Founder Story
 ═══════════════════════════════════════════════════════════════ */
-.resources-founder-story { padding: 80px 24px; background: #F5F0E7; border-top: 1px solid rgba(126, 96, 58, 0.16); border-bottom: 1px solid rgba(126, 96, 58, 0.16); color: #000; }
+.resources-founder-story { padding: 64px 24px 68px; background: #F5F0E7; border-top: 1px solid rgba(126, 96, 58, 0.16); border-bottom: 1px solid rgba(126, 96, 58, 0.16); color: #000; }
 .resources-story-inner { max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
 .resources-story-block { display: flex; flex-direction: column; align-items: stretch; gap: 20px; min-width: 0; }
-.resources-story-eyebrow { margin: 0; color: #94672F; font: 700 11px/1.4 Inter, sans-serif; letter-spacing: 0.1em; text-transform: uppercase; }
+.resources-story-eyebrow { margin: 0; color: #94672F; font: 700 11px/1.4 Inter, sans-serif; letter-spacing: 0.15em; text-transform: uppercase; }
 .resources-story-block h2 { margin: 0; color: #000; font: 800 clamp(1.75rem, 2.6vw, 2.5rem)/1.2 'Montserrat', sans-serif; letter-spacing: -0.02em; }
 .resources-story-block > p:not(.resources-story-eyebrow) { margin: 0; color: #5E574E; font: 400 15px/1.8 Inter, sans-serif; }
 .resources-story-quote { margin: 0; padding: 4px 0 4px 24px; border-left: 3px solid #B88B52; color: #5E574E; }
@@ -707,7 +707,7 @@
 
   /* --- RESOURCES / FOUNDER STORY --- */
   .resources-founder-story { 
-    padding: 48px 16px 80px; 
+    padding: 48px 16px 52px; 
   }
   .resources-story-inner { 
     gap: 32px; 
@@ -799,3 +799,25 @@
   .home-about { padding: 40px 16px 44px; }
   .home-hero__inner { padding: 90px 16px 44px; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SHARED MARKETING PRIMITIVES
+═══════════════════════════════════════════════════════════════ */
+.marketing-eyebrow { margin: 0 0 16px; color: #94672F; font: 700 11px/1.4 'Inter', sans-serif; letter-spacing: 0.15em; text-transform: uppercase; }
+.marketing-cta-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; }
+.marketing-cta--whatsapp img, .marketing-cta__icon { display: block; width: 20px; height: 20px; object-fit: contain; }
+.marketing-layout h1, .marketing-layout h2, .marketing-layout h3 { text-wrap: balance; }
+.marketing-layout p { text-wrap: pretty; }
+.marketing-layout a:focus-visible, .marketing-layout button:focus-visible { outline: 2px solid #B88B52; outline-offset: 3px; }
+.marketing-layout { overflow-x: clip; }
+@media (max-width: 767px) {
+  .marketing-cta-row { flex-direction: column; width: 100%; }
+  .marketing-cta-row > * { width: 100%; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .pricing-plans-grid { grid-template-columns: 1fr !important; max-width: 560px; margin-inline: auto; }
+}
+.marketing-cta.pricing-plan-cta.is-coming-soon, .marketing-cta.pricing-plan-cta:disabled { background: transparent; color: #74695C; border-color: rgba(126,96,58,0.4); cursor: not-allowed; }
+.marketing-cta.pricing-plan-cta.is-current { background: transparent; color: #000; border-color: #B88B52; }

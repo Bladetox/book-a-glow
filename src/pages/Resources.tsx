@@ -3,7 +3,7 @@ import { ArrowUpRight, Clock, ExternalLink } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
-import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
+import { C, FONT_BODY, FONT_DISPLAY, MK, SECTION } from "@/components/home/tokens";
 import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import tiktokIcon from "@/assets/tiktok_1.png";
 
@@ -130,7 +130,7 @@ const CategoryChip = ({
     style={{
       display: "inline-flex",
       alignItems: "center",
-      borderRadius: 100,
+      borderRadius: 2,
       fontWeight: 600,
       border: `1px solid rgba(184,139,82,0.30)`,
       background: `rgba(184,139,82,${categoryOpacity[category]})`,
@@ -232,7 +232,7 @@ const Resources = () => {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 0;
-          border-radius: 20px;
+          border-radius: 2px;
           overflow: hidden;
           border: 1px solid rgba(184,139,82,0.22);
           text-decoration: none;
@@ -286,68 +286,15 @@ const Resources = () => {
       <main>
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
-        <section
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            background: C.s1,
-            borderBottom: `1px solid rgba(184,139,82,0.12)`,
-          }}
-        >
-          <div
-            style={{
-              pointerEvents: "none",
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(184,139,82,0.07) 0%, transparent 70%)",
-            }}
-          />
-          <div
-            style={{
-              maxWidth: 760,
-              margin: "0 auto",
-              padding: "72px 24px 64px",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                color: C.gold,
-                marginBottom: 16,
-                fontFamily: FONT_BODY,
-              }}
-            >
-              Resources
-            </p>
-            <h1
-              style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: "clamp(28px, 3.2vw, 44px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.1,
-                marginBottom: 16,
-              }}
-            >
+        <section style={{ background: C.bg, padding: "clamp(96px, 12vw, 120px) 24px 56px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <p style={MK.eyebrow}>Resources</p>
+            <h1 style={MK.h1}>
               Free tools and thinking
               <br />
-              <span style={{ color: C.gold, fontStyle: "italic" }}>for SA business owners.</span>
+              <span style={MK.accent}>for SA business owners.</span>
             </h1>
-            <p
-              style={{
-                fontSize: 15,
-                color: C.muted,
-                lineHeight: 1.75,
-                maxWidth: 520,
-                fontFamily: FONT_BODY,
-              }}
-            >
+            <p style={{ ...MK.lead, maxWidth: 560 }}>
               Everything here is free. No sign-up walls. No upsells. Just tools and articles built
               to help service businesses in South Africa make better decisions.
             </p>
@@ -355,31 +302,13 @@ const Resources = () => {
         </section>
 
         {/* ── FREE TOOLS ───────────────────────────────────────────── */}
-        <section style={{ padding: "64px 24px" }}>
+        <section style={{ padding: SECTION.desktop }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ marginBottom: 32 }}>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.09em",
-                  textTransform: "uppercase",
-                  color: C.gold,
-                  marginBottom: 8,
-                  fontFamily: FONT_BODY,
-                }}
-              >
+              <p style={MK.eyebrow}>
                 Free Tools
               </p>
-              <h2
-                style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: "clamp(20px, 2.2vw, 28px)",
-                  fontWeight: 700,
-                  color: C.text,
-                  lineHeight: 1.2,
-                }}
-              >
+              <h2 style={MK.h2}>
                 Built to solve real problems.
               </h2>
             </div>
@@ -391,8 +320,8 @@ const Resources = () => {
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    borderRadius: 16,
-                    background: C.s2,
+                    borderRadius: 2,
+                    background: C.s1,
                     border: `1px solid rgba(184,139,82,0.20)`,
                     overflow: "hidden",
                     position: "relative",
@@ -439,7 +368,7 @@ const Resources = () => {
                           fontFamily: FONT_BODY,
                           background: "rgba(184,139,82,0.08)",
                           border: "1px solid rgba(184,139,82,0.18)",
-                          borderRadius: 100,
+                          borderRadius: 2,
                           padding: "2px 8px",
                         }}
                       >
@@ -517,7 +446,7 @@ const Resources = () => {
                         color: C.text,
                         background: "rgba(184,139,82,0.10)",
                         border: "1px solid rgba(184,139,82,0.35)",
-                        borderRadius: 10,
+                        borderRadius: 2,
                         padding: "10px 18px",
                         textDecoration: "none",
                         transition: "background 0.15s, border-color 0.15s",
@@ -543,17 +472,8 @@ const Resources = () => {
           </div>
         </section>
 
-        <div
-          style={{
-            height: 1,
-            background:
-              "linear-gradient(90deg, transparent, rgba(184,139,82,0.4), transparent)",
-            margin: "0 24px",
-          }}
-        />
-
         {/* ── ARTICLES ─────────────────────────────────────────────── */}
-        <section style={{ background: C.s1, padding: "64px 24px" }}>
+        <section style={{ background: C.s1, padding: SECTION.desktop, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div
               style={{
@@ -566,28 +486,10 @@ const Resources = () => {
               }}
             >
               <div>
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: "0.09em",
-                    textTransform: "uppercase",
-                    color: C.gold,
-                    marginBottom: 8,
-                    fontFamily: FONT_BODY,
-                  }}
-                >
+                <p style={MK.eyebrow}>
                   Articles
                 </p>
-                <h2
-                  style={{
-                    fontFamily: FONT_DISPLAY,
-                    fontSize: "clamp(20px, 2.2vw, 28px)",
-                    fontWeight: 700,
-                    color: C.text,
-                    lineHeight: 1.15,
-                  }}
-                >
+                <h2 style={MK.h2}>
                   For business owners who think ahead.
                 </h2>
               </div>
@@ -598,7 +500,7 @@ const Resources = () => {
                     onClick={() => setActiveCategory(cat)}
                     style={{
                       padding: "6px 16px",
-                      borderRadius: 100,
+                      borderRadius: 2,
                       fontSize: 11,
                       fontWeight: 600,
                       fontFamily: FONT_BODY,
@@ -732,7 +634,7 @@ const Resources = () => {
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      borderRadius: 16,
+                      borderRadius: 2,
                       overflow: "hidden",
                       border: `1px solid rgba(184,139,82,0.18)`,
                       background: C.s2,
@@ -949,54 +851,11 @@ const Resources = () => {
         </section>
 
         {/* ── CTA BANNER ───────────────────────────────────────────── */}
-        <section style={{ padding: "80px 24px" }}>
-          <div
-            style={{
-              maxWidth: 760,
-              margin: "0 auto",
-              borderRadius: 24,
-              padding: "clamp(32px, 6vw, 56px) clamp(24px, 5vw, 48px)",
-              background: C.s1,
-              border: `1px solid rgba(184,139,82,0.25)`,
-              boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
-              textAlign: "center",
-            }}
-          >
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                color: C.gold,
-                marginBottom: 16,
-                fontFamily: FONT_BODY,
-              }}
-            >
-              Ready to start?
-            </p>
-            <h2
-              style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: "clamp(24px,2.8vw,36px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.15,
-                marginBottom: 16,
-              }}
-            >
-              Your booking page is 10 minutes away.
-            </h2>
-            <p
-              style={{
-                fontSize: 15,
-                color: C.muted,
-                lineHeight: 1.7,
-                maxWidth: 480,
-                margin: "0 auto 32px",
-                fontFamily: FONT_BODY,
-              }}
-            >
+        <section style={{ padding: SECTION.desktop }}>
+          <div style={{ ...MK.panel, maxWidth: 760, margin: "0 auto", padding: "clamp(32px, 6vw, 56px) clamp(24px, 5vw, 48px)" }}>
+            <p style={MK.eyebrow}>Ready to start?</p>
+            <h2 style={MK.h2}>Your booking page is 10 minutes away.</h2>
+            <p style={{ ...MK.body, maxWidth: 480, margin: "0 auto 32px" }}>
               No payment required. No technical setup. Just your services, your availability,
               and your booking link ready to share.
             </p>

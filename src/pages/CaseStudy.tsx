@@ -3,7 +3,7 @@ import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
-import { C, FONT_BODY, BP } from "@/components/home/tokens";
+import { C, BP, MK, SECTION } from "@/components/home/tokens";
 import { useWindowWidth } from "@/components/home/useWindowWidth";
 import tiktokIcon from "@/assets/tiktok_1.png";
 
@@ -93,81 +93,31 @@ const timeline = [
 const CaseStudy = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
+  const sectionPad = isMobile ? SECTION.mobile : SECTION.desktop;
+  const px = isMobile ? 16 : 24;
 
   return (
     <MarketingLayout>
       <SiteHeader />
       <main>
-        {/* ── CASE STUDY BANNER ────────────────────────────────────── */}
+        {/* ── HERO ─────────────────────────────────────────────────── */}
         <section
           id="case-study"
           style={{
-            position: "relative",
-            overflow: "hidden",
-            background: C.s1,
-            borderTop: `1px solid rgba(184,139,82,0.12)`,
-            borderBottom: `1px solid rgba(184,139,82,0.12)`,
+            padding: isMobile ? SECTION.heroMobile : SECTION.heroDesktop,
+            background: C.bg,
           }}
         >
-          <div
-            aria-hidden="true"
-            style={{
-              pointerEvents: "none",
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(184,139,82,0.09) 0%, transparent 70%)",
-            }}
-          />
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              width: "100%",
-              maxWidth: 760,
-              margin: "0 auto",
-              padding: "72px 24px 56px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                color: C.gold,
-                marginBottom: 12,
-                fontFamily: FONT_BODY,
-              }}
-            >
-              Where NextSlot came from
-            </p>
-            <h2
-              style={{
-                fontFamily: FONT_BODY,
-                fontSize: "clamp(26px,3vw,40px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.1,
-                marginBottom: 16,
-              }}
-            >
-              It all started with PhenomeBeauty.
-            </h2>
-            <p
-              style={{
-                fontSize: 15,
-                color: C.muted,
-                maxWidth: 560,
-                lineHeight: 1.7,
-                fontFamily: FONT_BODY,
-                marginBottom: 20,
-              }}
-            >
+          <div style={{ maxWidth: 760, margin: "0 auto" }}>
+            <p style={MK.eyebrow}>Where NextSlot came from</p>
+            <h1 style={MK.h1}>
+              It all started with <span style={MK.accent}>PhenomeBeauty.</span>
+            </h1>
+            <p style={{ ...MK.lead, maxWidth: 600, marginBottom: 24 }}>
               Shu-meez has been in the beauty industry for 17 years and has run PhenomeBeauty in
-              Cape Town for 6 of them. She was doing everything alone. Bookings on WhatsApp,
-              deposits via EFT, schedules in her head and in her diary. This is her journey and the reason
-              NextSlot exists.
+              Cape Town for 6 of them. She was doing everything alone: bookings on WhatsApp,
+              deposits via EFT, schedules in her head and in her diary. This is her journey and the
+              reason NextSlot exists.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {[
@@ -177,51 +127,35 @@ const CaseStudy = () => {
                 "WhatsApp bookings",
                 "Proof of payment chaos",
               ].map((tag) => (
-                <span
-                  key={tag}
-                  style={{
-                    padding: "4px 12px",
-                    borderRadius: 100,
-                    fontSize: 11,
-                    fontWeight: 500,
-                    background: "rgba(184,139,82,0.10)",
-                    border: "1px solid rgba(184,139,82,0.30)",
-                    color: C.gold,
-                    fontFamily: FONT_BODY,
-                  }}
-                >
-                  {tag}
-                </span>
+                <span key={tag} style={MK.chip}>{tag}</span>
               ))}
             </div>
           </div>
         </section>
 
         {/* ── PULL QUOTE ───────────────────────────────────────────── */}
-        <section style={{ padding: "48px 24px" }}>
-          <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <section style={{ padding: `0 ${px}px 40px` }}>
+          <div style={{ maxWidth: 760, margin: "0 auto" }}>
             <blockquote
               style={{
-                borderRadius: 16,
-                padding: "28px 32px",
-                background: "rgba(184,139,82,0.07)",
-                border: "1.5px solid rgba(184,139,82,0.40)",
-                boxShadow: "0 4px 24px rgba(184,139,82,0.10)",
+                ...MK.card,
+                margin: 0,
+                padding: isMobile ? "24px 20px" : "28px 32px",
+                borderLeft: `3px solid ${C.gold}`,
               }}
             >
               <p
                 style={{
+                  ...MK.lead,
                   fontSize: 18,
                   fontWeight: 500,
-                  lineHeight: 1.6,
-                  marginBottom: 20,
                   color: C.text,
-                  fontFamily: FONT_BODY,
+                  marginBottom: 20,
                 }}
               >
-                "For the first time, the business felt like it was running itself."
+                &ldquo;For the first time, the business felt like it was running itself.&rdquo;
               </p>
-        
+
               <div
                 style={{
                   display: "flex",
@@ -232,73 +166,35 @@ const CaseStudy = () => {
                 }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: C.text,
-                      fontFamily: FONT_BODY,
-                      margin: 0,
-                    }}
-                  >
-                    Shu-meez
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: C.muted,
-                      fontFamily: FONT_BODY,
-                      margin: 0,
-                    }}
-                  >
+                  <p style={{ ...MK.small, fontWeight: 700, color: C.text }}>Shu-meez</p>
+                  <p style={{ ...MK.small, fontSize: 12 }}>
                     Owner, PhenomeBeauty · Mobile Beauty Therapist, Cape Town · 17 years in the industry
                   </p>
                 </div>
-        
+
                 <a
                   href="https://www.tiktok.com/@phenomebeauty"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: C.gold,
-                    textDecoration: "none",
-                    fontFamily: FONT_BODY,
-                    border: "1px solid rgba(184,139,82,0.25)",
-                    borderRadius: 8,
-                    padding: "6px 12px",
-                    background: "rgba(184,139,82,0.05)",
-                    whiteSpace: "nowrap",
-                  }}
+                  className="resources-tiktok-link"
                 >
-                  <img
-                    src={tiktokIcon}
-                    alt="TikTok"
-                    width={26}
-                    height={26}
-                    loading="lazy"
-                    decoding="async"
-                    style={{ objectFit: "contain", flexShrink: 0 }}
-                  />
+                  <img src={tiktokIcon} alt="" width={20} height={20} loading="lazy" decoding="async" />
                   Watch on TikTok
                 </a>
               </div>
             </blockquote>
           </div>
         </section>
+
         {/* ── TIMELINE ─────────────────────────────────────────────── */}
-        <section style={{ padding: "0 24px 56px" }}>
+        <section style={{ padding: `0 ${px}px 64px` }}>
           <div
             style={{
-              maxWidth: 640,
+              maxWidth: 760,
               margin: "0 auto",
               display: "flex",
               flexDirection: "column",
-              gap: 24,
+              gap: 20,
             }}
           >
             {timeline.map((card) => (
@@ -306,46 +202,45 @@ const CaseStudy = () => {
                 key={card.step}
                 style={{
                   position: "relative",
-                  borderRadius: 16,
-                  padding: "24px 32px",
+                  overflow: "hidden",
+                  padding: isMobile ? "24px 20px" : "28px 32px",
+                  ...MK.card,
                   ...(card.isFinal
                     ? {
-                        background: "rgba(184,139,82,0.07)",
-                        border: "1.5px solid rgba(184,139,82,0.65)",
-                        boxShadow: "0 4px 24px rgba(184,139,82,0.15)",
+                        background: "rgba(184,139,82,0.10)",
+                        border: "1px solid rgba(184,139,82,0.65)",
                       }
                     : card.isTara
                     ? {
-                        background: "rgba(184,139,82,0.04)",
-                        border: "1px dashed rgba(184,139,82,0.40)",
+                        background: "transparent",
+                        border: "1px dashed rgba(184,139,82,0.55)",
+                        boxShadow: "none",
                       }
-                    : {
-                        background: C.s1,
-                        border: `1px solid ${C.border2}`,
-                      }),
+                    : {}),
                 }}
               >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    right: 20,
-                    bottom: 16,
-                    fontSize: 80,
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    pointerEvents: "none",
-                    userSelect: "none",
-                    color: card.isFinal
-                      ? "rgba(184,139,82,0.12)"
-                      : "rgba(232,232,230,0.04)",
-                    fontFamily: FONT_BODY,
-                  }}
-                >
-                  {card.isTara ? "" : card.step}
-                </span>
+                {!card.isTara && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      right: 20,
+                      bottom: 12,
+                      fontFamily: MK.h1.fontFamily,
+                      fontSize: 72,
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      color: card.isFinal ? "rgba(184,139,82,0.22)" : "rgba(126,96,58,0.10)",
+                    }}
+                  >
+                    {card.step}
+                  </span>
+                )}
                 <div
                   style={{
+                    position: "relative",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
@@ -356,71 +251,51 @@ const CaseStudy = () => {
                   <div>
                     <p
                       style={{
+                        ...MK.eyebrow,
                         fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: "0.09em",
-                        textTransform: "uppercase",
-                        color: card.isFinal ? C.gold : card.isTara ? C.gold : C.faint,
-                        marginBottom: 4,
-                        fontFamily: FONT_BODY,
+                        letterSpacing: "0.12em",
+                        margin: "0 0 4px",
+                        color: card.isFinal || card.isTara ? "#94672F" : C.faint,
                       }}
                     >
                       {card.version}
                     </p>
-                    <h3
-                      style={{
-                        fontFamily: FONT_BODY,
-                        fontSize: 17,
-                        fontWeight: 700,
-                        color: C.text,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {card.label}
-                    </h3>
+                    <h3 style={MK.h3}>{card.label}</h3>
                   </div>
                   {card.isFinal && (
-                    <Check
-                      style={{
-                        height: 20,
-                        width: 20,
-                        color: C.gold,
-                        flexShrink: 0,
-                      }}
-                    />
+                    <Check style={{ height: 20, width: 20, color: C.goldDim, flexShrink: 0 }} />
                   )}
                 </div>
                 <ul
                   style={{
+                    position: "relative",
                     listStyle: "none",
                     padding: 0,
                     margin: 0,
                     display: "flex",
                     flexDirection: "column",
-                    gap: 8,
+                    gap: 10,
                   }}
                 >
                   {card.points.map((point) => (
                     <li
                       key={point}
                       style={{
+                        ...MK.small,
                         display: "flex",
                         alignItems: "flex-start",
-                        gap: 10,
-                        fontSize: 13,
-                        color: C.muted,
-                        fontFamily: FONT_BODY,
-                        lineHeight: 1.55,
+                        gap: 12,
+                        fontSize: 14,
+                        paddingRight: isMobile ? 0 : 56,
                       }}
                     >
                       <span
                         style={{
                           display: "inline-block",
-                          width: 4,
-                          height: 4,
-                          borderRadius: "50%",
+                          width: 5,
+                          height: 5,
                           background: card.isFinal || card.isTara ? C.gold : C.faint,
-                          marginTop: 6,
+                          marginTop: 9,
                           flexShrink: 0,
                         }}
                       />
@@ -435,24 +310,11 @@ const CaseStudy = () => {
                     href="https://tara-s.vercel.app/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginTop: 20,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      fontFamily: FONT_BODY,
-                      color: C.gold,
-                      border: "1px solid rgba(184,139,82,0.35)",
-                      borderRadius: 8,
-                      padding: "8px 16px",
-                      background: "rgba(184,139,82,0.06)",
-                      textDecoration: "none",
-                    }}
+                    className="resources-tiktok-link"
+                    style={{ marginTop: 20 }}
                   >
                     Try TARA-S free
-                    <ArrowUpRight style={{ height: 12, width: 12 }} />
+                    <ArrowUpRight style={{ height: 14, width: 14 }} />
                   </a>
                 )}
               </div>
@@ -460,71 +322,25 @@ const CaseStudy = () => {
           </div>
         </section>
 
-        {/* ── CTA directly after case study ────────────────────────── */}
-        <section style={{ padding: "0 24px 80px" }}>
+        {/* ── CTA ──────────────────────────────────────────────────── */}
+        <section style={{ padding: `0 ${px}px ${isMobile ? 52 : 68}px` }}>
           <div
             style={{
-              maxWidth: 640,
+              ...MK.panel,
+              maxWidth: 760,
               margin: "0 auto",
-              borderRadius: 24,
-              padding: "48px 40px",
-              background: C.s1,
-              border: `1px solid rgba(184,139,82,0.25)`,
-              boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
-              textAlign: "center",
+              padding: isMobile ? "40px 24px" : "56px 48px",
             }}
           >
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                color: C.gold,
-                marginBottom: 16,
-                fontFamily: FONT_BODY,
-              }}
-            >
-              Ready to start?
-            </p>
-            <h2
-              style={{
-                fontFamily: FONT_BODY,
-                fontSize: "clamp(22px,2.4vw,32px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.15,
-                marginBottom: 16,
-              }}
-            >
-              Your booking page is 10 minutes away.
-            </h2>
-            <p
-              style={{
-                fontSize: 15,
-                color: C.muted,
-                lineHeight: 1.7,
-                maxWidth: 420,
-                margin: "0 auto 32px",
-                fontFamily: FONT_BODY,
-              }}
-            >
+            <p style={MK.eyebrow}>Ready to start?</p>
+            <h2 style={MK.h2}>Your booking page is 10 minutes away.</h2>
+            <p style={{ ...MK.body, maxWidth: 480, margin: "0 auto 32px" }}>
               No payment required. No technical setup. Just your services, your availability,
               and your booking link ready to share.
             </p>
             <PrimaryCTA to="/onboarding">Create Your Booking Page</PrimaryCTA>
           </div>
         </section>
-
-        <div
-          style={{
-            height: 1,
-            background:
-              "linear-gradient(90deg, transparent, rgba(184,139,82,0.4), transparent)",
-          }}
-        />
-
-
       </main>
       <SiteFooter />
     </MarketingLayout>

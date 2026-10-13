@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ArrowRight, Palette, Smartphone } from "lucide-react";
 import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 

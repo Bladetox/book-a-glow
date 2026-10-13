@@ -15,3 +15,63 @@ export const SHADOW = {
   card: "0 12px 32px rgba(66,48,27,0.10)",
   elevated: "0 20px 56px rgba(66,48,27,0.14)",
 } as const;
+
+/* ─── Shared marketing typography + surface styles ───────────────
+   Every marketing page (How it works, About, Case Study, Pricing,
+   Resources) pulls from these so headings, eyebrows, body copy,
+   cards and section rhythm stay identical across the site. */
+export const MK = {
+  eyebrow: {
+    margin: "0 0 16px", color: "#94672F", fontFamily: FONT_BODY,
+    fontSize: 11, fontWeight: 700, letterSpacing: "0.15em",
+    lineHeight: 1.4, textTransform: "uppercase",
+  },
+  h1: {
+    margin: "0 0 20px", color: "#000000", fontFamily: FONT_DISPLAY,
+    fontSize: "clamp(2.25rem, 4.6vw, 3.5rem)", fontWeight: 800,
+    letterSpacing: "-0.03em", lineHeight: 1.08,
+  },
+  h2: {
+    margin: "0 0 16px", color: "#000000", fontFamily: FONT_DISPLAY,
+    fontSize: "clamp(1.75rem, 3vw, 2.5rem)", fontWeight: 800,
+    letterSpacing: "-0.02em", lineHeight: 1.12,
+  },
+  h3: {
+    margin: 0, color: "#000000", fontFamily: FONT_DISPLAY,
+    fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2,
+  },
+  accent: {
+    color: "#94672F", fontFamily: "'Cormorant Garamond', serif",
+    fontStyle: "italic", fontWeight: 500,
+  },
+  lead: {
+    margin: 0, color: "#51483D", fontFamily: FONT_BODY,
+    fontSize: 16, lineHeight: 1.7,
+  },
+  body: {
+    margin: 0, color: "#51483D", fontFamily: FONT_BODY,
+    fontSize: 15, lineHeight: 1.7,
+  },
+  small: {
+    margin: 0, color: "#51483D", fontFamily: FONT_BODY,
+    fontSize: 13, lineHeight: 1.6,
+  },
+  card: {
+    background: "#EDE4D7", border: "1px solid rgba(126,96,58,0.24)",
+    borderRadius: 2, boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
+  },
+  panel: {
+    background: "#EDE4D7", border: "1px solid rgba(126,96,58,0.24)",
+    borderRadius: 2, textAlign: "center",
+  },
+  chip: {
+    display: "inline-flex", alignItems: "center", padding: "4px 12px",
+    border: "1px solid rgba(184,139,82,0.4)", borderRadius: 2,
+    background: "rgba(184,139,82,0.08)", color: "#94672F",
+    fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
+  },
+} as const satisfies Record<string, import("react").CSSProperties>;
+export const SECTION = {
+  desktop: "64px 24px 68px", mobile: "48px 16px 52px",
+  heroDesktop: "120px 24px 64px", heroMobile: "96px 16px 48px",
+} as const;
