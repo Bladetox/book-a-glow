@@ -41,3 +41,12 @@ describe("booking preview mirrors live flow", () => {
     expect(screen.getByText(/Choose date/i)).toBeTruthy();
   });
 });
+
+describe("mobile About + nav + hero CTA", () => {
+  it("About approach grid collapses to one column on mobile", () => {
+    Object.defineProperty(window, "innerWidth", { value: 390, configurable: true });
+    const { container } = wrap(<About />);
+    const grids = [...container.querySelectorAll<HTMLElement>("div")].filter(d => d.style.gridTemplateColumns.includes("340px"));
+    expect(grids.length).toBe(0);
+  });
+});

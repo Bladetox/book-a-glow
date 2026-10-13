@@ -17,7 +17,7 @@ export const SHADOW = {
 } as const;
 
 /* ─── Shared marketing typography + surface styles ───────────────
-   Every marketing page (How it works, About, Case Study, Pricing,
+   Every marketing page (Demo, About, Case Study, Pricing,
    Resources) pulls from these so headings, eyebrows, body copy,
    cards and section rhythm stay identical across the site. */
 export const MK = {
@@ -58,15 +58,15 @@ export const MK = {
   },
   card: {
     background: "#EDE4D7", border: "1px solid rgba(126,96,58,0.24)",
-    borderRadius: 2, boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
+    borderRadius: 14, boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
   },
   panel: {
     background: "#EDE4D7", border: "1px solid rgba(126,96,58,0.24)",
-    borderRadius: 2, textAlign: "center",
+    borderRadius: 16, textAlign: "center",
   },
   chip: {
     display: "inline-flex", alignItems: "center", padding: "4px 12px",
-    border: "1px solid rgba(184,139,82,0.4)", borderRadius: 2,
+    border: "1px solid rgba(184,139,82,0.4)", borderRadius: 8,
     background: "rgba(184,139,82,0.08)", color: "#94672F",
     fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
   },

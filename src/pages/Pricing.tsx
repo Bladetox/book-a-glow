@@ -679,7 +679,7 @@ const PricingHero = ({
             <div style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
-              padding: "13px 28px", borderRadius: 2,
+              padding: "13px 28px", borderRadius: 12,
               background: "rgba(184,139,82,0.10)",
               border: "1px solid rgba(184,139,82,0.25)",
               color: C.text,
@@ -698,7 +698,7 @@ const PricingHero = ({
               gap: 6,
               marginTop: 12,
               padding: "5px 14px",
-              borderRadius: 2,
+              borderRadius: 12,
               background: "rgba(184,139,82,0.08)",
               border: "1px solid rgba(184,139,82,0.20)",
               fontFamily: FONT_BODY,
@@ -860,7 +860,7 @@ const Pricing = () => {
                 style={{
                   background: tier.featured ? "rgba(184,139,82,0.06)" : C.s1,
                   border: tier.featured ? "1.5px solid rgba(184,139,82,0.55)" : `1px solid ${C.border2}`,
-                  borderRadius: 2,
+                  borderRadius: 12,
                   padding: "32px 28px",
                   position: "relative",
                   overflow: "hidden",
@@ -874,7 +874,7 @@ const Pricing = () => {
                     position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
                     display: "inline-flex", alignItems: "center", gap: 5,
                     background: C.gold,
-                    borderRadius: 0,
+                    borderRadius: "0 0 8px 8px",
                     padding: "4px 14px",
                     fontSize: 10, fontWeight: 700, color: "#FFFFFF",
                     letterSpacing: "0.08em", textTransform: "uppercase" as const,
@@ -891,7 +891,7 @@ const Pricing = () => {
                       display: "inline-flex", alignItems: "center", gap: 6,
                       fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
                       textTransform: "uppercase" as const,
-                      padding: "3px 10px", borderRadius: 2, marginBottom: 10,
+                      padding: "3px 10px", borderRadius: 12, marginBottom: 10,
                       background: "rgba(184,139,82,0.08)",
                       border: "1px solid rgba(184,139,82,0.20)",
                       color: C.gold, fontFamily: FONT_BODY,
@@ -972,7 +972,7 @@ const Pricing = () => {
             maxWidth: 1100, margin: "0 auto",
             background: C.s1,
             border: `1px solid ${C.border2}`,
-            borderRadius: 2, padding: "40px 40px",
+            borderRadius: 12, padding: "40px 40px",
           }}>
             <p style={MK.eyebrow}>
               What your 30 days builds
@@ -1003,7 +1003,7 @@ const Pricing = () => {
           style={{
             display: "flex", alignItems: "center", gap: 8, margin: "0 auto",
             background: "transparent", border: `1px solid ${C.border2}`,
-            borderRadius: 2, padding: "10px 20px",
+            borderRadius: 12, padding: "10px 20px",
             fontSize: 13, fontWeight: 600, color: C.muted,
             fontFamily: FONT_BODY, cursor: "pointer",
           }}
@@ -1065,7 +1065,7 @@ const Pricing = () => {
             <div
               key={faq.q}
               style={{
-                borderRadius: 2,
+                borderRadius: 12,
                 border: `1px solid ${openFaq === idx ? "rgba(184,139,82,0.35)" : C.border}`,
                 background: openFaq === idx ? "rgba(184,139,82,0.04)" : "transparent",
                 overflow: "hidden",

@@ -17,6 +17,14 @@ const Index = () => {
     return () => document.documentElement.classList.remove("marketing-page");
   }, []);
 
+  // Deep-link support, e.g. /#how-nextslot-works
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const t = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 150);
+    return () => window.clearTimeout(t);
+  }, []);
+
   return (
     <div
     className="nextslot-theme marketing-light marketing-site"

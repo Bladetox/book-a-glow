@@ -11,7 +11,7 @@ const GROUPS = [
 export const FeaturesSection = () => {
   const isMobile = useWindowWidth() < BP;
   return (
-    <section className={`home-features${isMobile ? " is-mobile" : ""}`}>
+    <section id="how-nextslot-works" className={`home-features${isMobile ? " is-mobile" : ""}`}>
       <div className="home-features__texture" aria-hidden="true" />
       <div className="home-features__inner">
         <header className="home-features__header">

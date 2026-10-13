@@ -130,7 +130,7 @@ const CategoryChip = ({
     style={{
       display: "inline-flex",
       alignItems: "center",
-      borderRadius: 2,
+      borderRadius: 12,
       fontWeight: 600,
       border: `1px solid rgba(184,139,82,0.30)`,
       background: `rgba(184,139,82,${categoryOpacity[category]})`,
@@ -320,7 +320,7 @@ const Resources = () => {
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    borderRadius: 2,
+                    borderRadius: 12,
                     background: C.s1,
                     border: `1px solid rgba(184,139,82,0.20)`,
                     overflow: "hidden",
@@ -368,7 +368,7 @@ const Resources = () => {
                           fontFamily: FONT_BODY,
                           background: "rgba(184,139,82,0.08)",
                           border: "1px solid rgba(184,139,82,0.18)",
-                          borderRadius: 2,
+                          borderRadius: 12,
                           padding: "2px 8px",
                         }}
                       >
@@ -446,7 +446,7 @@ const Resources = () => {
                         color: C.text,
                         background: "rgba(184,139,82,0.10)",
                         border: "1px solid rgba(184,139,82,0.35)",
-                        borderRadius: 2,
+                        borderRadius: 12,
                         padding: "10px 18px",
                         textDecoration: "none",
                         transition: "background 0.15s, border-color 0.15s",
@@ -500,7 +500,7 @@ const Resources = () => {
                     onClick={() => setActiveCategory(cat)}
                     style={{
                       padding: "6px 16px",
-                      borderRadius: 2,
+                      borderRadius: 12,
                       fontSize: 11,
                       fontWeight: 600,
                       fontFamily: FONT_BODY,
@@ -634,7 +634,7 @@ const Resources = () => {
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      borderRadius: 2,
+                      borderRadius: 12,
                       overflow: "hidden",
                       border: `1px solid rgba(184,139,82,0.18)`,
                       background: C.s2,

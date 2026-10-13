@@ -19,7 +19,7 @@ const About = () => {
   const eyebrow = (text: string) => <p style={MK.eyebrow}>{text}</p>;
   const body = (text: string) => <p style={MK.body}>{text}</p>;
   const sectionPad = isMobile ? SECTION.mobile : SECTION.desktop;
-  const surface = { ...MK.card, borderRadius: 2 } as const;
+  const surface = { ...MK.card, borderRadius: 12 } as const;
 
   return (
     <MarketingLayout>
@@ -66,7 +66,7 @@ const About = () => {
             <div style={{
               position: "relative",
               minHeight: isMobile ? 280 : 420,
-              borderRadius: 2,
+              borderRadius: 12,
               overflow: "hidden",
               background: C.s1,
               border: `1px solid ${C.border2}`,
@@ -90,7 +90,7 @@ const About = () => {
                 bottom: 20,
                 width: 190,
                 padding: "18px 20px",
-                borderRadius: 2,
+                borderRadius: 12,
                 background: "rgba(245,240,231,0.96)",
                 border: `1px solid ${C.border2}`,
                 boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
@@ -144,7 +144,7 @@ const About = () => {
 
             <div style={{
               position: "relative",
-              borderRadius: 2,
+              borderRadius: 12,
               padding: isMobile ? 20 : 28,
               background: C.s1,
               border: `1px solid ${C.border2}`,
@@ -164,7 +164,7 @@ const About = () => {
                 ].map((item) => (
                   <div key={item.label} style={{
                     padding: "16px 14px",
-                    borderRadius: 2,
+                    borderRadius: 12,
                     background: C.s2,
                     border: `1px solid ${C.border}`,
                     display: "flex",
@@ -189,7 +189,7 @@ const About = () => {
               </div>
               <div style={{
                 padding: "18px",
-                borderRadius: 2,
+                borderRadius: 12,
                 background: C.s2,
                 border: `1px solid ${C.border2}`,
               }}>
@@ -223,7 +223,7 @@ const About = () => {
           }}>
             <div style={{
               minHeight: isMobile ? 260 : 360,
-              borderRadius: 2,
+              borderRadius: 12,
               overflow: "hidden",
               position: "relative",
               background: C.s2,
@@ -240,7 +240,7 @@ const About = () => {
                 left: 20,
                 bottom: 20,
                 padding: "14px 18px",
-                borderRadius: 2,
+                borderRadius: 12,
                 background: "rgba(245,240,231,0.97)",
                 border: `1px solid ${C.border2}`,
               }}>
@@ -290,7 +290,7 @@ const About = () => {
             {eyebrow("The NextSlot approach")}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "minmax(0,1fr) minmax(260px,340px)",
+              gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(260px,340px)",
               gap: isMobile ? 40 : 72,
               alignItems: "center",
             }}>
@@ -300,7 +300,7 @@ const About = () => {
                 </h2>
                 <div style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
+                  gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "repeat(3, minmax(0,1fr))",
                   gap: 0,
                   borderTop: `1px solid ${C.border2}`,
                   borderBottom: `1px solid ${C.border2}`,
@@ -311,9 +311,10 @@ const About = () => {
                     ["03","Grow","NextSlot surfaces opportunities in your business. You decide what to do with them."],
                   ].map(([number,title,copy], i) => (
                     <div key={title} style={{
-                      padding: "24px 20px 26px 0",
-                      marginRight: i < 2 ? 20 : 0,
-                      borderRight: i < 2 ? `1px solid ${C.border2}` : "none",
+                      padding: isMobile ? "24px 0" : "24px 20px 26px 0",
+                      marginRight: !isMobile && i < 2 ? 20 : 0,
+                      borderRight: !isMobile && i < 2 ? `1px solid ${C.border2}` : "none",
+                      borderBottom: isMobile && i < 2 ? `1px solid ${C.border2}` : "none",
                     }}>
                       <div style={{
                         width: 30,
@@ -342,7 +343,7 @@ const About = () => {
               <div style={{
                 position: "relative",
                 minHeight: 320,
-                borderRadius: 2,
+                borderRadius: 12,
                 background: C.s1,
                 border: `1px solid ${C.border2}`,
                 boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
@@ -358,7 +359,7 @@ const About = () => {
                   left: 18,
                   right: 18,
                   padding: "13px 15px",
-                  borderRadius: 2,
+                  borderRadius: 12,
                   background: "rgba(245,240,231,0.97)",
                   border: `1px solid ${C.border2}`,
                   zIndex: 20,
@@ -419,7 +420,7 @@ const About = () => {
               </div>
 
               <div style={{
-                borderRadius: 2,
+                borderRadius: 12,
                 padding: isMobile ? 22 : 30,
                 background: C.s2,
                 border: `1px solid ${C.border2}`,
@@ -439,7 +440,7 @@ const About = () => {
                   ].map(([label,value]) => (
                     <div key={label} style={{
                       padding: "18px 16px",
-                      borderRadius: 2,
+                      borderRadius: 12,
                       background: C.s1,
                       border: `1px solid ${C.border}`,
                     }}>
@@ -455,7 +456,7 @@ const About = () => {
             </div>
 
             <div style={{
-              borderRadius: 2,
+              borderRadius: 12,
               padding: isMobile ? "36px 24px" : "48px 56px",
               background: C.bg,
               border: `1px solid ${C.border2}`,

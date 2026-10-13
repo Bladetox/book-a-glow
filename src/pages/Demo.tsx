@@ -48,7 +48,7 @@ const DashboardCustomisationCallout = () => (
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 2,
+          width: 32, height: 32, borderRadius: 8,
           background: "rgba(184,139,82,0.15)",
           border: "1px solid rgba(184,139,82,0.35)",
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -74,7 +74,7 @@ const DashboardCustomisationCallout = () => (
           >
             <div style={{
               flexShrink: 0, marginTop: 2,
-              width: 32, height: 32, borderRadius: 2,
+              width: 32, height: 32, borderRadius: 8,
               background: "rgba(184,139,82,0.12)",
               border: "1px solid rgba(184,139,82,0.25)",
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -122,7 +122,7 @@ const Demo = () => {
         <section style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? SECTION.heroMobile : "120px 24px 68px" }}>
 
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <p style={MK.eyebrow}>How it works · Interactive demo</p>
+            <p style={MK.eyebrow}>Demo · Interactive walkthrough</p>
             <h1 style={MK.h1}>
               See NextSlot <span style={MK.accent}>in action.</span>
             </h1>
