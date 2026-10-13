@@ -1059,7 +1059,7 @@ const Pricing = () => {
         <h2 style={{ ...MK.h2, marginBottom: 32, textAlign: "center" }}>
           Common questions.
         </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {faqs.map((faq, idx) => (
             <div
               key={faq.q}
@@ -1068,7 +1068,6 @@ const Pricing = () => {
                 border: `1px solid ${openFaq === idx ? "rgba(184,139,82,0.35)" : C.border}`,
                 background: openFaq === idx ? "rgba(184,139,82,0.04)" : "transparent",
                 overflow: "hidden",
-                marginBottom: 4,
                 transition: "border-color 0.15s",
               }}
             >
@@ -1083,8 +1082,8 @@ const Pricing = () => {
                   : <ChevronDown style={{ height: 16, width: 16, color: C.muted, flexShrink: 0 }} />}
               </button>
               {openFaq === idx && (
-                <div style={{ padding: "0 20px 18px" }}>
-                  <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.75, fontFamily: FONT_BODY }}>{faq.a}</p>
+                <div className="pricing-faq-answer" style={{ padding: "0 20px 20px" }}>
+                  <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, fontFamily: FONT_BODY }}>{faq.a}</p>
                 </div>
               )}
             </div>

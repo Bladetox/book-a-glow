@@ -528,7 +528,7 @@
 .demo-tab-button.is-active { background: #000000; color: #FFFFFF; }
 .demo-tab-button:hover:not(.is-active) { background: rgba(126, 96, 58, 0.08); color: #000000; }
 .pricing-plan-cta { width: 100%; }
-.pricing-faq-trigger { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 20px 0; border: 0; border-bottom: 1px solid rgba(126, 96, 58, 0.16); background: transparent; text-align: left; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; color: #000; transition: color 0.2s ease; }
+.pricing-faq-trigger { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; box-sizing: border-box; padding: 18px 20px; border: 0; background: transparent; text-align: left; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; color: #000; transition: color 0.2s ease; }
 .pricing-faq-trigger:hover { color: #94672F; }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -832,3 +832,5 @@
 html.marketing-page, html.marketing-page body, html.marketing-page #root { background-color: #F5F0E7 !important; }
 html.marketing-page, html.marketing-page * { scrollbar-width: none; -ms-overflow-style: none; }
 html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+@media (max-width: 767px) { .pricing-faq-trigger { padding: 16px; } .pricing-faq-answer { padding: 0 16px 18px !important; } }
