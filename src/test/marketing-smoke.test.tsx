@@ -64,3 +64,24 @@ describe("demo admin embed uses the real dashboard", () => {
     expect(container.textContent).not.toContain("Loading…");
   });
 });
+
+describe("marketing shell is scoped to marketing pages", () => {
+  it("sets page colour + theme-color while mounted and restores on unmount", () => {
+    const meta = document.createElement("meta");
+    meta.name = "theme-color"; meta.content = "#ffffff";
+    document.head.appendChild(meta);
+    const { unmount } = wrap(<About />);
+    expect(document.documentElement.classList.contains("marketing-page")).toBe(true);
+    expect(meta.content.toLowerCase()).toBe("#f5f0e7");
+    unmount();
+    expect(document.documentElement.classList.contains("marketing-page")).toBe(false);
+    expect(meta.content).toBe("#ffffff");
+    meta.remove();
+  });
+  it("headings contain no italic text", () => {
+    const { container } = wrap(<About />);
+    container.querySelectorAll("h1, h2, h3").forEach(h => {
+      expect((h as HTMLElement).outerHTML).not.toMatch(/italic/);
+    });
+  });
+});

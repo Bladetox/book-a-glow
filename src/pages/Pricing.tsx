@@ -716,7 +716,6 @@ const PricingHero = ({
             fontSize: 12,
             color: C.faint,
             fontFamily: FONT_BODY,
-            fontStyle: "italic",
             margin: "10px 0 0 0",
             letterSpacing: "0.01em",
           }}>

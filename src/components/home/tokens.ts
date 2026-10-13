@@ -40,10 +40,8 @@ export const MK = {
     margin: 0, color: "#000000", fontFamily: FONT_DISPLAY,
     fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2,
   },
-  accent: {
-    color: "#94672F", fontFamily: "'Cormorant Garamond', serif",
-    fontStyle: "italic", fontWeight: 500,
-  },
+  /** Gold emphasis inside a heading. Deliberately not italic: italics are reserved for quotes. */
+  accent: { color: "#94672F", fontStyle: "normal" },
   lead: {
     margin: 0, color: "#51483D", fontFamily: FONT_BODY,
     fontSize: 16, lineHeight: 1.7,

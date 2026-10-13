@@ -388,7 +388,7 @@
   font: 800 clamp(2.5rem, 5vw, 4rem)/1.05 'Montserrat', sans-serif; 
   letter-spacing: -0.03em; 
 }
-.home-hero__heading span { color: #94672F; font-style: italic; font-family: 'Cormorant Garamond', serif; font-weight: 500; }
+.home-hero__heading span { color: #94672F; font-style: normal; }
 .home-hero__description { max-width: 460px; margin: 0 0 32px; color: #3E382F; font: 400 16px/1.7 'Inter', sans-serif; }
 .home-hero__actions { display: flex; flex-direction: column; align-items: flex-start; }
 .home-hero__supporting { max-width: 400px; margin: 16px 0 0; color: #74695C; font: 400 11px/1.5 'Inter', sans-serif; letter-spacing: 0.02em; }
@@ -412,7 +412,7 @@
 .home-features__inner { position: relative; z-index: 1; width: 100%; max-width: 1200px; margin: 0 auto; }
 .home-features__header { max-width: 760px; margin: 0 auto 48px; text-align: center; }
 .home-features__header h2 { margin: 0 0 16px; color: #000; font: 800 clamp(2rem, 3.6vw, 3rem)/1.1 'Montserrat', sans-serif; letter-spacing: -0.03em; }
-.home-features__header h2 span { color: #94672F; font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; }
+.home-features__header h2 span { color: #94672F; font-style: normal; }
 .home-features__header > p:last-child { max-width: 520px; margin: 0 auto; color: #51483D; font: 400 15px/1.7 'Inter', sans-serif; }
 .home-features__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
 .home-features__card { 
@@ -425,7 +425,7 @@
 .home-features__stage { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; color: #94672F; font: 700 11px/1.4 'Inter', sans-serif; letter-spacing: 0.1em; text-transform: uppercase; }
 .home-features__stage span:first-child { font-size: 10px; }
 .home-features__card h3 { margin: 0 0 12px; color: #000; font: 700 20px/1.2 'Montserrat', sans-serif; letter-spacing: -0.02em; }
-.home-features__card h3 span { color: #94672F; font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; }
+.home-features__card h3 span { color: #94672F; font-style: normal; }
 .home-features__card p { margin: 0; color: #51483D; font: 400 14px/1.6 'Inter', sans-serif; }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -843,3 +843,8 @@
   .about-approach__step:not(:last-child) { border-bottom: 0; border-right: 1px solid rgba(126,96,58,0.24); }
   .about-approach__step:last-child { margin-right: 0; }
 }
+
+/* ── Marketing shell: page colour + no scrollbars (only while a marketing page is mounted) ── */
+html.marketing-page, html.marketing-page body, html.marketing-page #root { background-color: #F5F0E7 !important; }
+html.marketing-page, html.marketing-page * { scrollbar-width: none; -ms-overflow-style: none; }
+html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar { display: none; width: 0; height: 0; }

@@ -416,7 +416,6 @@ const Resources = () => {
                           fontSize: 12,
                           color: C.gold,
                           fontFamily: FONT_BODY,
-                          fontStyle: "italic",
                           lineHeight: 1.5,
                           marginTop: 4,
                         }}

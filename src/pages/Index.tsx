@@ -1,3 +1,4 @@
+import { useMarketingShell } from "@/components/home/useMarketingShell";
 import { useEffect } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
@@ -12,10 +13,7 @@ import { CTASection } from "@/components/home/CTASection";
 import { C, FONT_BODY } from "@/components/home/tokens";
 
 const Index = () => {
-  useEffect(() => {
-    document.documentElement.classList.add("marketing-page");
-    return () => document.documentElement.classList.remove("marketing-page");
-  }, []);
+  useMarketingShell();
 
   // Deep-link support, e.g. /#how-nextslot-works
   useEffect(() => {
