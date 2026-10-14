@@ -20,7 +20,7 @@ const SiteHeader = () => {
     <header className="site-header">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="NextSlot home">
+          <Link to="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="NextSlot">
             <img src="/web-app-manifest-192x192.png" alt="NextSlot logo" className="h-9 w-9 object-contain rounded-lg shrink-0 transition-transform duration-200 group-hover:scale-105" />
             <span className="site-header__wordmark site-wordmark text-base font-bold tracking-tight leading-none"><span className="site-header__wordmark-next">Next</span><span className="site-header__wordmark-slot">Slot</span></span>
           </Link>
