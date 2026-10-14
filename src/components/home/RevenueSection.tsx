@@ -65,7 +65,7 @@ export const RevenueSection = () => {
               background: "rgba(126,96,58,0.06)",
               fontFamily: FONT_BODY,
               fontSize: 12,
-              color: C.faint,
+              color: C.muted,
               lineHeight: 1.5,
             }}
           >
