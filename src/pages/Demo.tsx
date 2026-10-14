@@ -63,9 +63,9 @@ function useIsMobile(breakpoint = 768) {
 
 const demoContext: Record<"dashboard" | "booking", string> = {
   dashboard:
-    "This is where you run the business — bookings, services, staff, and payments.",
+    "This is your back office where you run the business. Bookings, services, payments, and clients.",
   booking:
-    "This is what your clients see when they book with you — no login, no app.",
+    "Your clients will love the frictionless booking. No login, no app download.",
 };
 
 const Demo = () => {
@@ -163,8 +163,7 @@ const Demo = () => {
 
                 {!isMobile && (
                   <div style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
-                    <div style={{ flex: 1, maxWidth: 860, position: "relative" }}>
-                      <span className="demo-badge">Owner view</span>
+                    <div style={{ flex: 1, maxWidth: 860 }}>
                       <LaptopFrame interactive={true} fill>
                         <DemoDeviceIframe device="desktop" src="/demo/admin-embed" title="NextSlot admin dashboard (desktop demo)" />
                       </LaptopFrame>
@@ -178,8 +177,7 @@ const Demo = () => {
                 )}
 
                 {isMobile && (
-                  <div style={{ maxWidth: 300, margin: "0 auto", width: "100%", position: "relative" }}>
-                    <span className="demo-badge">Owner view</span>
+                  <div style={{ maxWidth: 300, margin: "0 auto", width: "100%" }}>
                     <MobileFrame interactive={true} fill>
                       <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
                     </MobileFrame>
@@ -198,12 +196,11 @@ const Demo = () => {
                   <span className="demo-progress__sep">→</span>
                   <span className="demo-progress__step">Your details</span>
                   <span className="demo-progress__sep">→</span>
-                  <span className="demo-progress__step">Confirmation</span>
+                  <span className="demo-progress__step">Review + Pay</span>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "0 16px" : 0 }}>
-                  <div style={{ position: "relative", width: "100%", maxWidth: 320 }}>
-                    <span className="demo-badge demo-badge--client">Client view</span>
+                  <div style={{ width: "100%", maxWidth: 320 }}>
                     <MobileFrame interactive={true}>
                       <BookingAppPreview />
                     </MobileFrame>
