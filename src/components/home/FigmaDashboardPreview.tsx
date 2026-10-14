@@ -5,10 +5,7 @@ import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot
 
 /**
  * Responsive marketing-only dashboard preview.
- *
- * The admin product remains untouched. This component keeps the preview
- * contained at desktop/tablet widths and uses the compact mobile composition
- * on narrow screens, rather than forcing a fixed-width dashboard into view.
+ * The live admin application and its layouts are not changed.
  */
 export const FigmaDashboardPreview = () => {
   const width = useWindowWidth();
@@ -46,7 +43,9 @@ export const FigmaDashboardPreview = () => {
     );
   }
 
-  const availableWidth = Math.min(620, Math.max(0, width - 64));
+  const contentWidth = Math.min(1200, Math.max(0, width - 80));
+  const columnWidth = Math.max(0, (contentWidth - 56) / 2);
+  const availableWidth = Math.min(620, columnWidth);
   const scale = availableWidth / 1000;
   const previewHeight = 760 * scale;
 
