@@ -71,20 +71,20 @@ export const HeatmapSection = () => {
               fontFamily: FONT_BODY,
             }}
           >
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: C.text, marginBottom: 16 }}>
               Booking demand by day &amp; time
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 6 }}>
               <div />
               {TIME_LABELS.map((t) => (
-                <div key={t} style={{ fontSize: 9, color: C.muted, textAlign: "center" }}>{t}</div>
+                <div key={t} style={{ fontSize: 10, color: C.text, textAlign: "center", fontWeight: 600 }}>{t}</div>
               ))}
             </div>
 
             {HEAT_ROWS.map((row) => (
               <div key={row.day} style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 4 }}>
-                <div style={{ fontSize: 10, color: C.muted, display: "flex", alignItems: "center" }}>{row.day}</div>
+                <div style={{ fontSize: 11, color: C.text, fontWeight: 600, display: "flex", alignItems: "center" }}>{row.day}</div>
                 {row.slots.map((v, i) => (
                   <div
                     key={i}
@@ -98,13 +98,13 @@ export const HeatmapSection = () => {
                       justifyContent: "center",
                     }}
                   >
-                    <span style={{ fontSize: 9, color: C.text }}>{v}</span>
+                    <span style={{ fontSize: 10, color: C.text, fontWeight: 600 }}>{v}</span>
                   </div>
                 ))}
               </div>
             ))}
 
-            <div style={{ marginTop: 14, fontSize: 11, color: C.muted }}>
+            <div style={{ marginTop: 14, fontSize: 12, color: C.text }}>
               Saturday 11am is the peak slot · 18 bookings on average
             </div>
           </div>
