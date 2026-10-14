@@ -40,7 +40,7 @@ const DashboardCustomisationCallout = () => (
         </p>
       </div>
       <p style={{ ...MK.small, fontSize: 14, flex: "1 1 260px" }}>
-        The Customise button at the top of the dashboard lets you turn any card on or off so your view stays focused on what matters to you.
+        Select the highlighted eye icon in the dashboard to customise your view. Toggle a section off to see how your workspace adapts.
       </p>
     </div>
   </div>
