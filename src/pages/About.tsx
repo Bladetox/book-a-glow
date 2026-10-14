@@ -1,4 +1,3 @@
-import { ArrowUpRight } from "lucide-react";
 import waIcon from "@/assets/whatsapp.png";
 import { Orb } from "@/components/home/Orb";
 import { PrimaryCTA } from "@/components/home/PrimaryCTA";
@@ -48,7 +47,7 @@ const About = () => {
                 <br />
                 <span style={MK.accent}>Not a boardroom.</span>
               </h1>
-              {body("NextSlot was built for independent service businesses that are doing the work, serving their clients and trying to grow, but do not always have the systems or information to see what is really happening.")}
+              {body("You run your business on WhatsApp, memory, a diary, and an app that can't take payments. When nothing connects, you never quite see what's happening. NextSlot brings it together. You see the whole picture. You grow.")}
               <div style={{
                 marginTop: 24,
                 display: "flex",
@@ -62,29 +61,47 @@ const About = () => {
                 Built in Cape Town, South Africa.
               </div>
             </div>
-
+        
             <div style={{
               position: "relative",
-              minHeight: isMobile ? 280 : 420,
-              borderRadius: 12,
-              overflow: "hidden",
-              background: C.s1,
-              border: `1px solid ${C.border2}`,
-              boxShadow: "0 8px 30px rgba(66,48,27,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              gap: isMobile ? 16 : 0,
             }}>
-              <img
-                src={serviceProvidersImage}
-                alt="Independent service businesses"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  minHeight: isMobile ? 280 : 420,
-                  objectFit: "cover",
-                  display: "block",
-                  opacity: 0.86,
-                }}
-              />
+              {/* Image */}
               <div style={{
+                position: "relative",
+                minHeight: isMobile ? 280 : 420,
+                borderRadius: 12,
+                overflow: "hidden",
+                background: C.s1,
+                border: `1px solid ${C.border2}`,
+                boxShadow: "0 8px 30px rgba(66,48,27,0.08)",
+              }}>
+                <img
+                  src={serviceProvidersImage}
+                  alt="Independent service businesses"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    minHeight: isMobile ? 280 : 420,
+                    objectFit: "cover",
+                    display: "block",
+                    opacity: 0.86,
+                  }}
+                />
+              </div>
+        
+              {/* Approach card — flows below the image on mobile, overlays on desktop */}
+              <div style={isMobile ? {
+                position: "relative",
+                width: "100%",
+                padding: "20px 22px",
+                borderRadius: 12,
+                background: "rgba(245,240,231,0.98)",
+                border: `1px solid ${C.border2}`,
+                boxShadow: "0 4px 20px rgba(66,48,27,0.06)",
+              } : {
                 position: "absolute",
                 right: 20,
                 bottom: 20,
@@ -95,10 +112,23 @@ const About = () => {
                 border: `1px solid ${C.border2}`,
                 boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
               }}>
-                <p style={{ fontSize: 10, color: C.gold, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: FONT_BODY, marginBottom: 8 }}>
+                <p style={{
+                  fontSize: 10,
+                  color: C.gold,
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  fontFamily: FONT_BODY,
+                  marginBottom: 8,
+                }}>
                   The NextSlot approach
                 </p>
-                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text, lineHeight: 1.2 }}>
+                <p style={{
+                  fontFamily: FONT_DISPLAY,
+                  fontSize: isMobile ? 22 : 20,
+                  color: C.text,
+                  lineHeight: 1.2,
+                }}>
                   Record.<br />Understand.<br />Grow.
                 </p>
               </div>
@@ -248,7 +278,7 @@ const About = () => {
                   The idea
                 </p>
                 <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text }}>
-                  Simple. Useful. Real.
+                  Simple. Useful. Practical.
                 </p>
               </div>
             </div>
@@ -258,18 +288,18 @@ const About = () => {
               <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                 Technology that feels like part of your business.
               </h2>
-              {body("NextSlot is designed to work quietly in the background, bringing bookings, payments, clients and activity into one place. Not overly complex. Not disconnected from reality. Just useful, thoughtful technology that helps businesses move forward.")}
+              {body("NextSlot is designed to work quietly in the background, bringing bookings, payments, clients and activity into one place. Not overly complex. Not disconnected. Just useful, thoughtful technology that helps businesses move forward.")}
               <blockquote style={{
                 marginTop: 24,
                 borderLeft: `2px solid ${C.gold}`,
                 paddingLeft: 18,
               }}>
                 <p style={{ fontSize: 14, color: C.text, lineHeight: 1.7, fontFamily: FONT_BODY, fontWeight: 600 }}>
-                  Built for independent service businesses, not an imaginary version of them.
+                  Built for independent service businesses.
                 </p>
               </blockquote>
               <div style={{ marginTop: 26, display: "flex", flexWrap: "wrap", gap: 18 }}>
-                {["Barbers", "Beauty professionals", "Photographers", "Tattoo artists", "Mobile stylists"].map((item) => (
+                {["Barbers", "Beauty professionals", "Photographers", "Tattoo artists", "Mobile stylists", "Therapists"].map((item) => (
                   <span key={item} style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY }}>
                     {item}
                   </span>
@@ -352,7 +382,7 @@ const About = () => {
                     Nexty · Business Growth Advisor
                   </p>
                   <p style={{ fontSize: 12, color: C.text, fontFamily: FONT_BODY, lineHeight: 1.5 }}>
-                    Not guru advice. Not guesswork. Real insights based on your business's real activity.
+                    Practical advice. Not guesswork. Actual insights based on your business's day-to-day activity.
                   </p>
                 </div>
               </div>
@@ -375,11 +405,11 @@ const About = () => {
               marginBottom: 56,
             }}>
               <div>
-                {eyebrow("The first real business")}
+                {eyebrow("The first business")}
                 <h2 style={{ ...MK.h2, maxWidth: 600 }}>
                   It started with PhenomeBeauty.
                 </h2>
-                {body("NextSlot wasn't designed around an imaginary business. It was shaped by the real challenges of PhenomeBeauty, a mobile beauty business in Cape Town.")}
+                {body("NextSlot was designed and shaped around challenges of PhenomeBeauty, a mobile beauty business in Cape Town.")}
                 <p style={{ marginTop: 16, fontSize: 15, color: C.muted, lineHeight: 1.75, fontFamily: FONT_BODY }}>
                   What started as a need to manage bookings became a way to understand what was happening across the business and identify opportunities that were difficult to see before.
                 </p>
@@ -398,7 +428,6 @@ const About = () => {
                 <div style={{ marginTop: 24 }}>
                   <PrimaryCTA to="/case-study/phenomebeauty">
                     Read the case study
-                    <ArrowUpRight size={15} />
                   </PrimaryCTA>
                 </div>
               </div>
