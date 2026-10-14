@@ -42,7 +42,6 @@ const DemoDeviceIframe = ({
         <iframe
           title={title}
           src={src}
-          loading="lazy"
           style={{
             width: native,
             height: size.h / scale,
