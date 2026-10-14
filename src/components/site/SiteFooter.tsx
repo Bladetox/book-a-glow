@@ -29,7 +29,7 @@ const SiteFooter = () => (
               { to: "/privacy", label: "Privacy" },
               { to: "/terms", label: "Terms" },
             ].map(({ to, label }) => (
-              <Link key={to} to={to} className="site-footer__link">{label}</Link>
+              <Link key={to} to={to} className="site-footer__link inline-flex items-center min-h-6 py-1">{label}</Link>
             ))}
           </div>
         </nav>
