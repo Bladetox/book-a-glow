@@ -18,7 +18,7 @@ export const CTASection = () => {
           lineHeight: 1.08,
           marginBottom: 18,
         }}>
-          Ready to <span style={{ color: C.gold }}>grow?</span>
+          Ready to <span style={{ color: C.goldDim }}>grow?</span>
         </h2>
 
         <p style={{
