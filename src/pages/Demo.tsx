@@ -8,28 +8,10 @@ import DemoDeviceIframe from "@/components/site/DemoDeviceIframe";
 import BookingAppPreview from "@/components/site/BookingAppPreview";
 import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import {
-  ArrowRight, LayoutDashboard, Smartphone, Info,
-  EyeOff, SlidersHorizontal, LayoutGrid
+  LayoutDashboard, Smartphone, Info,
+  SlidersHorizontal
 } from "lucide-react";
 import { C, MK, SECTION } from "@/components/home/tokens";
-
-const customisationTips = [
-  {
-    icon: SlidersHorizontal,
-    title: "Toggle cards on or off",
-    desc: "Use the customise button in the dashboard header to show or hide any data card. Keep only what is relevant to your day.",
-  },
-  {
-    icon: EyeOff,
-    title: "Hide what you do not need",
-    desc: "Not tracking inventory? Not running loyalty yet? Turn those cards off so your dashboard stays clean and focused.",
-  },
-  {
-    icon: LayoutGrid,
-    title: "Your layout, your choice",
-    desc: "Every business is different. Your dashboard should reflect how you actually run yours, not a generic template.",
-  },
-];
 
 const DashboardCustomisationCallout = () => (
   <div style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
@@ -39,7 +21,6 @@ const DashboardCustomisationCallout = () => (
       border: "1px solid rgba(184,139,82,0.35)",
       boxShadow: "none",
       padding: "16px 20px",
-      marginBottom: 12,
       display: "flex",
       flexWrap: "wrap",
       alignItems: "center",
@@ -59,36 +40,8 @@ const DashboardCustomisationCallout = () => (
         </p>
       </div>
       <p style={{ ...MK.small, fontSize: 14, flex: "1 1 260px" }}>
-        Look for the Customise button at the top of the dashboard. Switch any card on or off so your view stays focused on the metrics that matter to your business.
+        The Customise button at the top of the dashboard lets you turn any card on or off so your view stays focused on what matters to you.
       </p>
-    </div>
-
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="demo-tips-grid">
-      {customisationTips.map((tip) => {
-        const Icon = tip.icon;
-        return (
-          <div
-            key={tip.title}
-            style={{ ...MK.card, display: "flex", alignItems: "flex-start", gap: 12, padding: 16 }}
-          >
-            <div style={{
-              flexShrink: 0, marginTop: 2,
-              width: 32, height: 32, borderRadius: 8,
-              background: "rgba(184,139,82,0.12)",
-              border: "1px solid rgba(184,139,82,0.25)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Icon style={{ height: 16, width: 16, color: C.goldDim }} strokeWidth={2} />
-            </div>
-            <div>
-              <p style={{ ...MK.small, fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>
-                {tip.title}
-              </p>
-              <p style={{ ...MK.small, fontSize: 13 }}>{tip.desc}</p>
-            </div>
-          </div>
-        );
-      })}
     </div>
   </div>
 );
@@ -108,6 +61,13 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
+const demoContext: Record<"dashboard" | "booking", string> = {
+  dashboard:
+    "This is where you run the business — bookings, services, staff, and payments.",
+  booking:
+    "This is what your clients see when they book with you — no login, no app.",
+};
+
 const Demo = () => {
   const [tab, setTab] = useState<"dashboard" | "booking">("dashboard");
   const isMobile = useIsMobile();
@@ -126,9 +86,9 @@ const Demo = () => {
               See NextSlot <span style={MK.accent}>in action.</span>
             </h1>
             <p style={{ ...MK.lead, maxWidth: 560, margin: "0 auto" }}>
-              Explore the admin dashboard you run your business from and the booking page your clients use.
-              Everything is fictional data for a mock bridal makeup studio called{" "}
-              <span style={{ fontWeight: 600, color: C.text }}>Brush &amp; Veil</span>. No account required.
+              Explore your admin dashboard, where you'll run your business, and the booking page your clients will use.
+              Example for a bridal makeup studio called{" "}
+              <span style={{ fontWeight: 600, color: C.text }}>Brush &amp; Veil</span>.
             </p>
           </div>
 
@@ -157,7 +117,7 @@ const Demo = () => {
                 onClick={() => setTab("dashboard")}
               >
                 <LayoutDashboard style={{ width: 16, height: 16 }} />
-                Admin dashboard
+                Owner dashboard
               </button>
               <button
                 role="tab"
@@ -166,62 +126,93 @@ const Demo = () => {
                 onClick={() => setTab("booking")}
               >
                 <Smartphone style={{ width: 16, height: 16 }} />
-                Public booking app
+                Client booking view
               </button>
             </div>
           </div>
 
-          {/* DASHBOARD TAB */}
-          {tab === "dashboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <DashboardCustomisationCallout />
+          {/* Animated stage — remounts per tab so the panel animation replays */}
+          <div
+            key={tab}
+            className={`demo-tab-panel demo-stage demo-stage--${tab}`}
+            style={{ paddingTop: isMobile ? 8 : 24 }}
+          >
 
-              <p style={{ ...MK.small, textAlign: "center", fontSize: 12, color: C.faint }}>
-                {isMobile
-                  ? "Tap the icons in the dashboard to explore each section."
-                  : "Click any sidebar icon to explore all dashboard sections."}
-              </p>
+            <p style={{
+              ...MK.small,
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 500,
+              color: C.text,
+              maxWidth: 480,
+              margin: "0 auto 24px",
+            }}>
+              {demoContext[tab]}
+            </p>
 
-              {!isMobile && (
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
-                  <div style={{ flex: 1, maxWidth: 860 }}>
-                    <LaptopFrame interactive={true} fill>
-                      <DemoDeviceIframe device="desktop" src="/demo/admin-embed" title="NextSlot admin dashboard (desktop demo)" />
-                    </LaptopFrame>
+            {/* DASHBOARD TAB */}
+            {tab === "dashboard" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <DashboardCustomisationCallout />
+
+                <p style={{ ...MK.small, textAlign: "center", fontSize: 12, color: C.faint }}>
+                  {isMobile
+                    ? "Tap the icons in the dashboard to explore each section."
+                    : "Click any sidebar icon to explore all dashboard sections."}
+                </p>
+
+                {!isMobile && (
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
+                    <div style={{ flex: 1, maxWidth: 860, position: "relative" }}>
+                      <span className="demo-badge">Owner view</span>
+                      <LaptopFrame interactive={true} fill>
+                        <DemoDeviceIframe device="desktop" src="/demo/admin-embed" title="NextSlot admin dashboard (desktop demo)" />
+                      </LaptopFrame>
+                    </div>
+                    <div style={{ width: 220, flexShrink: 0, marginBottom: -4 }}>
+                      <MobileFrame interactive={true} fill>
+                        <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
+                      </MobileFrame>
+                    </div>
                   </div>
-                  <div style={{ width: 220, flexShrink: 0, marginBottom: -4 }}>
+                )}
+
+                {isMobile && (
+                  <div style={{ maxWidth: 300, margin: "0 auto", width: "100%", position: "relative" }}>
+                    <span className="demo-badge">Owner view</span>
                     <MobileFrame interactive={true} fill>
                       <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
                     </MobileFrame>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            )}
 
-              {isMobile && (
-                <div style={{ maxWidth: 300, margin: "0 auto", width: "100%" }}>
-                  <MobileFrame interactive={true} fill>
-                    <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
-                  </MobileFrame>
+            {/* BOOKING APP TAB */}
+            {tab === "booking" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <div className="demo-progress" aria-label="Booking flow steps">
+                  <span className="demo-progress__step is-current">Service</span>
+                  <span className="demo-progress__sep">→</span>
+                  <span className="demo-progress__step">Date &amp; time</span>
+                  <span className="demo-progress__sep">→</span>
+                  <span className="demo-progress__step">Your details</span>
+                  <span className="demo-progress__sep">→</span>
+                  <span className="demo-progress__step">Confirmation</span>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* BOOKING APP TAB */}
-          {tab === "booking" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <p style={{ ...MK.small, textAlign: "center", fontSize: 12, color: C.faint }}>
-                Walk through the full booking flow your clients will experience.
-              </p>
-              <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "0 16px" : 0 }}>
-                <div style={{ width: "100%", maxWidth: 320 }}>
-                  <MobileFrame interactive={true}>
-                    <BookingAppPreview />
-                  </MobileFrame>
+                <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "0 16px" : 0 }}>
+                  <div style={{ position: "relative", width: "100%", maxWidth: 320 }}>
+                    <span className="demo-badge demo-badge--client">Client view</span>
+                    <MobileFrame interactive={true}>
+                      <BookingAppPreview />
+                    </MobileFrame>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+
+          </div>
 
         </section>
 
@@ -229,14 +220,13 @@ const Demo = () => {
         <section style={{ padding: isMobile ? SECTION.mobile : SECTION.desktop, background: C.s1, borderTop: `1px solid ${C.border}` }}>
           <div style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
             <p style={MK.eyebrow}>Ready to start?</p>
-            <h2 style={MK.h2}>Set this up for your business.</h2>
+            <h2 style={MK.h2}>Set this up for my business.</h2>
             <p style={{ ...MK.body, margin: "0 auto 32px" }}>
               Get your own booking page live in minutes.
             </p>
             <div className="marketing-cta-row">
               <PrimaryCTA to="/onboarding">
                 Create Your Booking Page
-                <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
               </PrimaryCTA>
               <Link to="/pricing" className="marketing-cta marketing-cta--secondary">
                 View pricing
