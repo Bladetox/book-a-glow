@@ -40,7 +40,7 @@ export const RevenueSection = () => {
             }}
           >
             Your bookings tell you{" "}
-            <span style={{ color: C.gold }}>more than who is coming next.</span>
+            <span style={{ color: C.goldDim }}>more than who is coming next.</span>
           </h2>
           <p
             style={{
