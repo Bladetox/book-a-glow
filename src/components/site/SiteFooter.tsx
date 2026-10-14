@@ -15,8 +15,8 @@ const SiteFooter = () => (
             </p>
           </div>
         </Link>
-        <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2">
-          <div className="site-footer__nav">
+        <nav className="flex flex-wrap justify-center">
+          <div className="site-footer__nav flex flex-wrap justify-center gap-x-6 gap-y-3">
             {[
               { to: "/online-booking-software", label: "Online booking" },
               { to: "/business-management-software", label: "Business management" },
