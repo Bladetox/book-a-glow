@@ -632,10 +632,15 @@ export const AdminDashboardView = ({
 
       <div className="flex items-center justify-end">
         <button
+          data-demo-customize-control={demo ? "toggle" : undefined}
           onClick={() => setShowCustomize((v) => !v)}
-          className="flex items-center gap-1.5 text-[10px] tracking-[0.1em] uppercase text-white/25 hover:text-white/50 transition-colors"
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[10px] tracking-[0.1em] uppercase transition-colors ${
+            demo
+              ? "border-[#B88B52]/50 bg-[#B88B52]/10 text-[#D6B47E] hover:bg-[#B88B52]/20 hover:text-[#F0D5A6]"
+              : "border-transparent text-white/25 hover:text-white/50"
+          }`}
         >
-          <Eye className="w-3 h-3" />
+          <Eye className="w-3.5 h-3.5" />
           Customise
         </button>
       </div>
@@ -654,6 +659,7 @@ export const AdminDashboardView = ({
                 {ALL_SECTIONS.map((key) => (
                   <button
                     key={key}
+                    data-demo-customize-control={demo ? "section-toggle" : undefined}
                     onClick={() => toggle(key)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors border ${
                       visibility[key]
