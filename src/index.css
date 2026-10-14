@@ -837,9 +837,9 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
 
 
 /* ═══════════════════════════════════════════════════════════════
-   DEMO — ENGAGED TAB EXPERIENCE  (new)
+   DEMO — ENGAGED TAB EXPERIENCE
    Supports Demo.tsx: panel transition, mode-tinted stage,
-   floating role badge, booking progress strip, active-tab pulse.
+   booking progress strip, active-tab pulse.
 ═══════════════════════════════════════════════════════════════ */
 
 /* Panel entrance — replays each time the tab changes (keyed wrapper) */
@@ -863,32 +863,6 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
 }
 .demo-stage--booking {
   background: radial-gradient(circle at 50% 0%, rgba(184, 139, 82, 0.12), transparent 62%);
-}
-
-/* Floating role badge over the device frame */
-.demo-badge {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid rgba(184, 139, 82, 0.45);
-  border-radius: 999px;
-  background: rgba(245, 240, 231, 0.94);
-  color: #94672F;
-  font: 600 10px/1.3 'Inter', sans-serif;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  pointer-events: none;
-}
-.demo-badge--client {
-  border-color: rgba(40, 122, 88, 0.45);
-  color: #287A58;
 }
 
 /* Booking progress strip */
@@ -931,6 +905,5 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
 /* Mobile tuning */
 @media (max-width: 767px) {
   .demo-stage { border-radius: 16px; }
-  .demo-badge { top: 10px; left: 10px; padding: 5px 10px; font-size: 9px; }
   .demo-progress { font-size: 10px; gap: 6px; }
 }
