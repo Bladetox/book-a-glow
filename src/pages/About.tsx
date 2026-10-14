@@ -153,9 +153,9 @@ const About = () => {
             <div>
               {eyebrow("The problem")}
               <h2 style={{ ...MK.h2, maxWidth: 600 }}>
-                The problem wasn't bookings.
+                The problem wasn't <span style={MK.accent}>bookings</span>.
                 <br />
-                It was everything around them.
+                It was <span style={MK.accent}>everything around them</span>.
               </h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 22 }}>
                 {[
@@ -286,7 +286,7 @@ const About = () => {
             <div>
               {eyebrow("The idea")}
               <h2 style={{ ...MK.h2, maxWidth: 600 }}>
-                Technology that feels like part of your business.
+                <span style={MK.accent}>Technology</span> that feels like <span style={MK.accent}>part of your business</span>.
               </h2>
               {body("NextSlot is designed to work quietly in the background, bringing bookings, payments, clients and activity into one place. Not overly complex. Not disconnected. Just useful, thoughtful technology that helps businesses move forward.")}
               <blockquote style={{
@@ -321,7 +321,7 @@ const About = () => {
             <div className="about-approach">
               <div className="about-approach__copy">
                 <h2 style={{ ...MK.h2, maxWidth: 600 }}>
-                  Record. Understand. Grow.
+                  Record. <span style={MK.accent}>Understand</span>. Grow.
                 </h2>
                 <div className="about-approach__steps">
                   {[
