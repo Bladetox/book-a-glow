@@ -114,10 +114,9 @@ const CaseStudy = () => {
               It all started with <span style={MK.accent}>PhenomeBeauty.</span>
             </h1>
             <p style={{ ...MK.lead, maxWidth: 600, marginBottom: 24 }}>
-              Shu-meez has been in the beauty industry for 17 years and has run PhenomeBeauty in
-              Cape Town for 6 of them. She was doing everything alone: bookings on WhatsApp,
-              deposits via EFT, schedules in her head and in her diary. This is her journey and the
-              reason NextSlot exists.
+              17 years in the beauty industry and 6 years running her own business. 
+              NextSlot helped her see her business's patterns, which gave her the confidence to take her side-hustle and turn it into a real business that grows.
+              This is her journey and the reason NextSlot exists.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {[
@@ -153,7 +152,7 @@ const CaseStudy = () => {
                   marginBottom: 20,
                 }}
               >
-                &ldquo;For the first time, the business felt like it was running itself.&rdquo;
+                &ldquo;I set a non-negotiable 50% deposit, which directly reduced the amount of no-shows my business had.&rdquo;
               </p>
 
               <div
@@ -168,7 +167,7 @@ const CaseStudy = () => {
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                   <p style={{ ...MK.small, fontWeight: 700, color: C.text }}>Shu-meez</p>
                   <p style={{ ...MK.small, fontSize: 12 }}>
-                    Owner, PhenomeBeauty · Mobile Beauty Therapist, Cape Town · 17 years in the industry
+                    Owner, PhenomeBeauty · Mobile Beauty Therapist, Cape Town ·
                   </p>
                 </div>
 
