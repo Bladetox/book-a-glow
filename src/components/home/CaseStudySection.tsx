@@ -94,7 +94,7 @@ export const CaseStudySection = () => {
             NextSlot facilitated bookings and business growth resulting in R63,851 over 90 days.
           </p>
           <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65, margin: "0 0 22px", fontFamily: FONT_BODY }}>
-            That meant more than easier booking admin. The business could see its revenue, demand and client activity clearly enough to make better decisions.
+            With less manual admin, Shu-meez could finally focus on other parts of her business; revenue growth became a by-product of doing what she loves.
           </p>
           <Link to="/case-study/phenomebeauty" className="marketing-cta marketing-cta--secondary">Read the full story</Link>
         </div>
