@@ -46,6 +46,25 @@ const DemoAdminEmbed = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    const blockNonCustomisation = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-demo-customize-control]")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
+    const blockNonCustomisationKeys = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-demo-customize-control]")) return;
+      if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    document.addEventListener("click", blockNonCustomisation, true);
+    document.addEventListener("keydown", blockNonCustomisationKeys, true);
     const root = document.documentElement;
     root.classList.add("dark");
     document.body.style.background = "#000";
@@ -54,7 +73,7 @@ const DemoAdminEmbed = () => {
     meta.name = "robots";
     meta.content = "noindex, nofollow";
     document.head.appendChild(meta);
-    return () => { meta.remove(); };
+    return () => { document.removeEventListener("click", blockNonCustomisation, true); document.removeEventListener("keydown", blockNonCustomisationKeys, true); meta.remove(); };
   }, []);
 
   const renderContent = () => {
