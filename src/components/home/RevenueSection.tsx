@@ -1,18 +1,11 @@
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
-import MarketingDashboardSnapshot from "./MarketingDashboardSnapshot";
-import MarketingMobileDashboardSnapshot from "./MarketingMobileDashboardSnapshot";
-
-
+import FigmaDashboardPreview from "./FigmaDashboardPreview";
 
 export const RevenueSection = () => {
   const width = useWindowWidth();
   const isMobile = width < BP;
-  const desktopContentWidth = Math.min(1200, Math.max(0, width - 80));
-  const snapshotWidth = Math.max(0, (desktopContentWidth - 80) / 2);
-  const snapshotScale = snapshotWidth / 1000;
-  const snapshotHeight = 760 * snapshotScale;
 
   return (
     <section className="home-revenue">
@@ -78,50 +71,7 @@ export const RevenueSection = () => {
           </p>
         </div>
 
-        {!isMobile && (
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              minHeight: 340,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-            }}
-          >
-            <div
-              style={{
-                position: "relative",
-                width: snapshotWidth,
-                maxWidth: "100%",
-                height: snapshotHeight,
-                overflow: "hidden",
-                filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
-              }}
-            >
-              <MarketingDashboardSnapshot scale={snapshotScale} />
-            </div>
-          </div>
-        )}
-
-        {isMobile && (
-          <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center" }}>
-            {/* Cropped, smaller preview: shows the top of the dashboard and fades out so it
-                doesn't consume the whole screen on phones. */}
-            <div
-              style={{
-                width: 390 * 0.74,
-                maxWidth: "100%",
-                height: 560 * 0.74,
-                overflow: "hidden",
-                WebkitMaskImage: "linear-gradient(to bottom, #000 76%, transparent 100%)",
-                maskImage: "linear-gradient(to bottom, #000 76%, transparent 100%)",
-              }}
-            >
-              <MarketingMobileDashboardSnapshot scale={0.74} />
-            </div>
-          </div>
-        )}
+        <FigmaDashboardPreview />
       </div>
     </section>
   );
