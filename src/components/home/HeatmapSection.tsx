@@ -45,7 +45,7 @@ export const HeatmapSection = () => {
               letterSpacing: "-0.02em",
             }}
           >
-            See what's <span style={{ color: C.gold }}>hiding</span> in your bookings.
+            See what's <span style={{ color: C.goldDim }}>hiding</span> in your bookings.
           </h2>
           <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, margin: 0 }}>
             Patterns become easier to spot when your booking history is in one place. Nexty helps turn those patterns into something worth acting on.
@@ -71,20 +71,20 @@ export const HeatmapSection = () => {
               fontFamily: FONT_BODY,
             }}
           >
-            <div style={{ fontSize: 11, color: C.faint, marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>
               Booking demand by day &amp; time
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 6 }}>
               <div />
               {TIME_LABELS.map((t) => (
-                <div key={t} style={{ fontSize: 9, color: C.faint, textAlign: "center" }}>{t}</div>
+                <div key={t} style={{ fontSize: 9, color: C.muted, textAlign: "center" }}>{t}</div>
               ))}
             </div>
 
             {HEAT_ROWS.map((row) => (
               <div key={row.day} style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 4 }}>
-                <div style={{ fontSize: 10, color: C.faint, display: "flex", alignItems: "center" }}>{row.day}</div>
+                <div style={{ fontSize: 10, color: C.muted, display: "flex", alignItems: "center" }}>{row.day}</div>
                 {row.slots.map((v, i) => (
                   <div
                     key={i}
@@ -98,13 +98,13 @@ export const HeatmapSection = () => {
                       justifyContent: "center",
                     }}
                   >
-                    <span style={{ fontSize: 9, color: v >= 12 ? "rgba(52,211,153,0.9)" : C.faint }}>{v}</span>
+                    <span style={{ fontSize: 9, color: C.text }}>{v}</span>
                   </div>
                 ))}
               </div>
             ))}
 
-            <div style={{ marginTop: 14, fontSize: 11, color: C.faint }}>
+            <div style={{ marginTop: 14, fontSize: 11, color: C.muted }}>
               Saturday 11am is the peak slot · 18 bookings on average
             </div>
           </div>
