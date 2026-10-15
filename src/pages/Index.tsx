@@ -85,7 +85,7 @@ const Index = () => {
       <main>
         <HeroSection />
         <ProofTicker />
-        <div className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted}>
+        <div className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted} inert={!journeyStarted}>
           <div className="home-journey-reveal__content">
             <HomeJourneyNav enabled={journeyStarted} />
             <WhoItsForSection />
