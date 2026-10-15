@@ -9,7 +9,8 @@ export const CTASection = () => {
 
   return (
     <section id="get-started" className="home-cta" style={{ background: C.bg }}>
-      <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>\n        05 · Get started</p>
+      <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
+        <p className="home-cta__eyebrow">05 · Get started</p>
         <h2 style={{
           fontFamily: FONT_DISPLAY,
           fontSize: isMobile ? "clamp(30px,8vw,42px)" : "clamp(34px,4vw,52px)",
