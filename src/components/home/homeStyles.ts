@@ -441,4 +441,82 @@ export const HOME_STYLES = `
     }
   }
 
+
+  /* Image slots preserve the agreed editorial rhythm until final product imagery is supplied. */
+  .home-features__visual {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    min-height: 148px;
+    margin: 18px 0 20px;
+    padding: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(126, 96, 58, .18);
+    border-radius: 10px;
+    background:
+      radial-gradient(ellipse at 78% 20%, rgba(184,139,82,.22), transparent 38%),
+      linear-gradient(135deg, #F8F4ED 0%, #E8DCCB 100%);
+  }
+
+  .home-features__visual::before {
+    content: "";
+    position: absolute;
+    inset: 16px 16px 34px;
+    border: 1px solid rgba(126, 96, 58, .18);
+    border-radius: 6px;
+    background: rgba(255, 252, 247, .46);
+  }
+
+  .home-features__visual-label {
+    position: relative;
+    z-index: 1;
+    color: #74695C;
+    font: 500 10px Inter, sans-serif;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .home-features__visual-lines {
+    position: absolute;
+    top: 32px;
+    left: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .home-features__visual-lines i {
+    display: block;
+    height: 5px;
+    width: 76%;
+    border-radius: 5px;
+    background: rgba(126, 96, 58, .14);
+  }
+
+  .home-features__visual-lines i:nth-child(2) { width: 54%; }
+  .home-features__visual-lines i:nth-child(3) { width: 66%; }
+
+  .home-features__visual--understand {
+    background:
+      radial-gradient(ellipse at 70% 35%, rgba(184,139,82,.20), transparent 36%),
+      linear-gradient(135deg, #F4EEE5 0%, #E5D6C2 100%);
+  }
+
+  .home-features__visual--grow {
+    background:
+      radial-gradient(ellipse at 72% 24%, rgba(184,139,82,.26), transparent 38%),
+      linear-gradient(135deg, #F8F4ED 0%, #E9DDCB 100%);
+  }
+
+  @media (max-width: 767px) {
+    .home-journey-nav {
+      width: 116px;
+      right: 8px;
+      bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    .home-journey-nav__link { min-height: 34px; font-size: 9px; gap: 5px; }
+    .home-features__visual { min-height: 124px; }
+  }
+
 `;
