@@ -6,6 +6,7 @@ const PLANS = [
   { name: "Starter", price: "R99", trial: "7-day free trial", description: "Bookings and the essentials to leave pen and paper behind." },
   { name: "Flow", price: "R399", trial: "30-day free trial", description: "Payment options, deposits and more client control." },
   { name: "Professional", price: "R699", trial: "30-day free trial", description: "Client loyalty, customisation and actionable recommendations." },
+  { name: "Studio", price: "R1,299", trial: "30-day free trial", description: "For independent operators bringing other independent practitioners into a shared space." },
 ];
 
 export const HomePricingPreview = () => {
