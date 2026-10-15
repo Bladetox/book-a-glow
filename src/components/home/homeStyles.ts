@@ -389,4 +389,59 @@ export const HOME_STYLES = `
     .home-journey-nav__link::after { transition: none; }
   }
 
+  /* Guided homepage reveal: the hero and proof ticker remain untouched. */
+  .home-journey-reveal {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition: grid-template-rows 420ms ease, opacity 260ms ease, visibility 0s linear 420ms;
+  }
+
+  .home-journey-reveal__content {
+    min-height: 0;
+    overflow: hidden;
+    background: #F5F0E7;
+  }
+
+  .home-journey-reveal.is-active {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+    transition: grid-template-rows 420ms ease, opacity 260ms ease;
+  }
+
+  .home-journey-reveal.is-active .home-journey-reveal__content {
+    overflow: visible;
+  }
+
+  .home-pricing-preview__plan.is-coming-soon {
+    background: rgba(126, 96, 58, 0.035);
+  }
+
+  .home-pricing-preview__plan.is-coming-soon .home-pricing-preview__trial {
+    font-weight: 600;
+    color: #94672F;
+  }
+
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .home-pricing-preview__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .home-pricing-preview__plan { padding: 22px; }
+  }
+
+  @media (max-width: 767px) {
+    .home-journey-reveal__content { overflow: hidden; }
+    .home-journey-reveal.is-active .home-journey-reveal__content { overflow: visible; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-journey-reveal,
+    .home-journey-reveal.is-active {
+      transition: none;
+    }
+  }
+
 `;
