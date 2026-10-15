@@ -15,10 +15,10 @@ const Card = ({ children, style = {} }: { children: React.ReactNode; style?: Rea
 );
 
 const MetricCard = ({ label, value, context, accent = WHITE }: { label: string; value: string; context: string; accent?: string }) => (
-  <Card style={{ minWidth: 0, height: 102, padding: "13px 15px", boxSizing: "border-box" }}>
+  <Card style={{ minWidth: 0, height: 82, padding: "10px 12px", boxSizing: "border-box" }}>
     <div style={{ color: DIM, font: "600 9px Inter, sans-serif", letterSpacing: ".04em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</div>
-    <div style={{ marginTop: 9, color: accent, font: "700 23px Montserrat, sans-serif", lineHeight: 1.1 }}>{value}</div>
-    <div style={{ marginTop: 7, color: MUTED, font: "400 10px Inter, sans-serif" }}>{context}</div>
+    <div style={{ marginTop: 6, color: accent, font: "700 21px Montserrat, sans-serif", lineHeight: 1.1 }}>{value}</div>
+    <div style={{ marginTop: 4, color: MUTED, font: "400 9px Inter, sans-serif" }}>{context}</div>
   </Card>
 );
 
@@ -54,16 +54,16 @@ const MobileFrame = () => (
       <div style={{ flex: 1, font: "700 18px Montserrat, sans-serif" }}>Dashboard</div>
       <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#28352e", display: "grid", placeItems: "center", color: WHITE, font: "600 10px Inter, sans-serif" }}>BV</div>
     </header>
-    <main style={{ padding: "15px 16px 22px" }}>
-      <div style={{ color: MUTED, font: "400 12px Inter, sans-serif", marginBottom: 19 }}>Your business at a glance</div>
-      <Card style={{ padding: 17, marginBottom: 14 }}>
+    <main style={{ padding: "10px 12px 12px" }}>
+      <div style={{ color: MUTED, font: "400 12px Inter, sans-serif", marginBottom: 10 }}>Your business at a glance</div>
+      <Card style={{ padding: 12, marginBottom: 10 }}>
         <div style={{ color: DIM, font: "600 9px Inter, sans-serif", letterSpacing: ".08em" }}>THIS MONTH</div>
-        <div style={{ marginTop: 7, font: "700 27px Montserrat, sans-serif" }}>R 18,420</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 9, font: "400 10px Inter, sans-serif" }}>
+        <div style={{ marginTop: 5, font: "700 24px Montserrat, sans-serif" }}>R 18,420</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 6, font: "400 9px Inter, sans-serif" }}>
           <span style={{ background: "#0c2d21", color: GREEN, padding: "6px 8px", borderRadius: 12 }}>↑ 18.6%</span>
           <span style={{ color: MUTED }}>vs previous month</span>
         </div>
-        <div style={{ borderTop: `1px solid ${LINE}`, marginTop: 12, paddingTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ borderTop: `1px solid ${LINE}`, marginTop: 8, paddingTop: 7, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <span style={{ color: DIM, font: "400 10px Inter, sans-serif" }}>Projected month end</span>
           <strong style={{ color: GREEN, font: "600 14px Montserrat, sans-serif" }}>R 26,280</strong>
         </div>
@@ -74,9 +74,9 @@ const MobileFrame = () => (
         <MetricCard label="Returning clients" value="51%" context="Retention" />
         <MetricCard label="Avg. booking" value="R 620" context="Across 31 bookings" />
       </div>
-      <section style={{ marginTop: 18 }}>
+      <section style={{ marginTop: 10 }}>
         <h3 style={{ margin: 0, font: "600 14px Montserrat, sans-serif" }}>Business health</h3>
-        <p style={{ margin: "6px 0 11px", color: DIM, font: "400 10px Inter, sans-serif" }}>Understand the signals behind your bookings.</p>
+        <p style={{ margin: "4px 0 7px", color: DIM, font: "400 10px Inter, sans-serif" }}>Understand the signals behind your bookings.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
           <MetricCard label="Fill rate" value="68%" context="Target 70%" accent={GREEN} />
           <MetricCard label="Cancellation rate" value="4.2%" context="↓ 1.1%" accent="#db7e32" />
@@ -84,7 +84,7 @@ const MobileFrame = () => (
           <MetricCard label="Client retention" value="35%" context="Returning clients" accent="#e03434" />
         </div>
       </section>
-      <section style={{ marginTop: 16 }}>
+      <section style={{ marginTop: 10 }}>
         <Card style={{ padding: 15 }}>
           <div style={{ font: "600 13px Montserrat, sans-serif" }}>Revenue trend</div>
           <div style={{ marginTop: 5, color: DIM, font: "400 10px Inter, sans-serif" }}>Last 30 days</div>
@@ -96,16 +96,15 @@ const MobileFrame = () => (
           </div>
         </Card>
       </section>
-      <section style={{ marginTop: 12 }}><Heatmap /></section>
+      <section style={{ marginTop: 8 }}><Heatmap /></section>
     </main>
   </div>
 );
 
 const FigmaDashboardPreview = () => {
   const width = useWindowWidth();
-  // Render the complete 402 × 874 reference frame at a compact 320px width.
-  const scale = Math.min(320 / 402, (width - 32) / 402);
-  const safeScale = Math.max(0.45, scale);
+  // Keep the entire phone visible at 280px on larger screens and scale down on narrow screens.
+  const safeScale = Math.min(280 / 402, Math.max(0.2, (width - 24) / 402));
   return (
     <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "visible" }}>
       <div style={{ width: 402 * safeScale, height: 874 * safeScale, overflow: "visible", flexShrink: 0 }}>
