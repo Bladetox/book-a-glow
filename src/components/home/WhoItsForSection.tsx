@@ -1,9 +1,4 @@
-import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
-import { useWindowWidth } from "./useWindowWidth";
-
 export const WhoItsForSection = () => {
-  const isMobile = useWindowWidth() < BP;
-
   return (
     <section id="who-its-for" className="home-audience">
       <div className="home-audience__inner">
