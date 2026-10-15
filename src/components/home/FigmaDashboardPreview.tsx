@@ -98,6 +98,7 @@ const MobileFrame = () => (
       </section>
       <section style={{ marginTop: 8 }}><Heatmap /></section>
     </main>
+    <div aria-hidden="true" style={{ position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)", width: 104, height: 4, borderRadius: 4, background: "#050505", zIndex: 4 }} />
   </div>
 );
 
