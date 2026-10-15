@@ -15,7 +15,7 @@ export const HomePricingPreview = () => {
   return (
     <section id="pricing-preview" className="home-pricing-preview">
       <div className="home-pricing-preview__inner">
-        <div className="home-pricing-preview__heading">\n          <p className="home-pricing-preview__eyebrow">04 · Pricing</p>
+        <div className="home-pricing-preview__heading">\n        04 · Pricing</p>
           <h2>A plan for where your business is today.</h2>
           <p>Start with what you need. Add more as your business grows.</p>
         </div>
