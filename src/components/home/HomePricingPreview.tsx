@@ -3,10 +3,10 @@ import { BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 
 const PLANS = [
-  { name: "Starter", price: "R99", trial: "7-day free trial", description: "Bookings and the essentials to leave pen and paper behind." },
-  { name: "Flow", price: "R399", trial: "30-day free trial", description: "Payment options, deposits and more client control." },
-  { name: "Professional", price: "R699", trial: "30-day free trial", description: "Client loyalty, customisation and actionable recommendations." },
-  { name: "Studio", price: "R1,299", trial: "30-day free trial", description: "For independent operators bringing other independent practitioners into a shared space." },
+  { name: "Starter", price: "R99", trial: "7-day free trial", description: "Automated bookings and the essentials to leave pen and paper behind.", available: true },
+  { name: "Flow", price: "R399", trial: "30-day free trial", description: "Payment options, deposits and more client control.", available: true },
+  { name: "Professional", price: "R699", trial: "30-day free trial", description: "Loyalty tools, customisation and actionable recommendations.", available: true },
+  { name: "Studio", price: "R1,299", trial: null, description: "For independent operators bringing other independent practitioners into a shared space.", available: false, note: "1 location · 3 staff included · R89 per additional staff member" },
 ];
 
 export const HomePricingPreview = () => {
@@ -21,11 +21,16 @@ export const HomePricingPreview = () => {
         </div>
         <div className={`home-pricing-preview__grid${isMobile ? " is-mobile" : ""}`}>
           {PLANS.map((plan) => (
-            <article className="home-pricing-preview__plan" key={plan.name}>
+            <article className={`home-pricing-preview__plan${plan.available ? "" : " is-coming-soon"}`} key={plan.name}>
               <h3>{plan.name}</h3>
               <p className="home-pricing-preview__price">{plan.price}<span> / month</span></p>
               <p className="home-pricing-preview__description">{plan.description}</p>
-              <p className="home-pricing-preview__trial">{plan.trial}. No payment required to start.</p>
+              {plan.note && <p className="home-pricing-preview__trial">{plan.note}</p>}
+              {plan.available && plan.trial ? (
+                <p className="home-pricing-preview__trial">{plan.trial}. No payment required to start.</p>
+              ) : (
+                <p className="home-pricing-preview__trial">Coming soon</p>
+              )}
             </article>
           ))}
         </div>
