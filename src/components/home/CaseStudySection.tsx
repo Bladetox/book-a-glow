@@ -18,6 +18,12 @@ export const CaseStudySection = () => {
       }}
     >
       <div style={{ maxWidth: 920, margin: "0 auto" }}>
+        <header style={{ maxWidth: 720, margin: "0 auto 28px", textAlign: "center" }}>
+          <Eyebrow text="03 · Who it has worked for" />
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 30 : 44, fontWeight: 800, lineHeight: 1.08, letterSpacing: "-0.03em", color: C.text, margin: "0 auto" }}>
+            See what changed for <span style={{ color: C.goldDim }}>PhenomeBeauty.</span>
+          </h2>
+        </header>
         <div
           style={{
             display: "flex",
@@ -92,7 +98,7 @@ export const CaseStudySection = () => {
               margin: "0 0 10px",
             }}
           >
-            See what changed for PhenomeBeauty. NextSlot facilitated bookings and business growth resulting in R63,851 over 90 days.
+            NextSlot facilitated bookings and business growth resulting in R63,851 over 90 days.
           </p>
           <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65, margin: "0 0 22px", fontFamily: FONT_BODY }}>
             With less manual admin, Shu-meez could finally focus on other parts of her business; revenue growth became a by-product of doing what she loves.
