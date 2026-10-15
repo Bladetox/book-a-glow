@@ -48,7 +48,7 @@ export const CaseStudySection = () => {
           </div>
 
           <div>
-            <Eyebrow text="What NextSlot helped PhenomeBeauty see" />
+            <Eyebrow text="03 · Who it has worked for" />
             <blockquote
               style={{
                 fontFamily: FONT_DISPLAY,
@@ -92,7 +92,7 @@ export const CaseStudySection = () => {
               margin: "0 0 10px",
             }}
           >
-            NextSlot facilitated bookings and business growth resulting in R63,851 over 90 days.
+            See what changed for PhenomeBeauty. NextSlot facilitated bookings and business growth resulting in R63,851 over 90 days.
           </p>
           <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65, margin: "0 0 22px", fontFamily: FONT_BODY }}>
             With less manual admin, Shu-meez could finally focus on other parts of her business; revenue growth became a by-product of doing what she loves.
