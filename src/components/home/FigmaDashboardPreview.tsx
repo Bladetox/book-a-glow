@@ -30,12 +30,12 @@ const Heatmap = () => {
       <div style={{ color: DIM, font: "10px Inter, sans-serif", marginTop: 5 }}>Booking activity by day and time</div>
       <div style={{ display: "grid", gridTemplateColumns: "18px repeat(12, minmax(0, 1fr))", gap: 4, marginTop: 16, alignItems: "center" }}>
         {["M","T","W","T","F","S","S"].map((day, row) => (
-          <>
-            <span key={`d${row}`} style={{ color: DIM, font: "8px Inter, sans-serif" }}>{day}</span>
+          <React.Fragment key={`row-${row}`}>
+            <span style={{ color: DIM, font: "8px Inter, sans-serif" }}>{day}</span>
             {colors.map((color, col) => (
               <span key={`${row}-${col}`} style={{ height: 9, borderRadius: 2, background: colors[(row * 3 + col) % colors.length] }} />
             ))}
-          </>
+          </React.Fragment>
         ))}
       </div>
     </Card>
