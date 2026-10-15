@@ -19,8 +19,10 @@ export const PrimaryCTA = ({
           const el = document.getElementById(id);
           if (el) {
             e.preventDefault();
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-            window.history.replaceState(null, "", `#${id}`);
+            window.dispatchEvent(new CustomEvent("nextslot:journey-start"));
+            window.history.pushState(null, "", `#${id}`);
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
           }
         }}
       >
