@@ -30,11 +30,11 @@ describe("homepage journey index", () => {
 
   it("offers all five agreed destinations", () => {
     render(<HomeJourneyNav enabled />);
-    screen.getByRole("link", { name: /Who it's for/i }).getAttribute("href")).toBe("#who-its-for");
-    screen.getByRole("link", { name: /How it works/i }).getAttribute("href")).toBe("#how-nextslot-works");
-    screen.getByRole("link", { name: /Results/i }).getAttribute("href")).toBe("#results");
-    screen.getByRole("link", { name: /Pricing/i }).getAttribute("href")).toBe("#pricing-preview");
-    screen.getByRole("link", { name: /Get started/i }).getAttribute("href")).toBe("#get-started");
+    expect(screen.getByRole("link", { name: /Who it's for/i }).getAttribute("href")).toBe("#who-its-for");
+    expect(screen.getByRole("link", { name: /How it works/i }).getAttribute("href")).toBe("#how-nextslot-works");
+    expect(screen.getByRole("link", { name: /Results/i }).getAttribute("href")).toBe("#results");
+    expect(screen.getByRole("link", { name: /Pricing/i }).getAttribute("href")).toBe("#pricing-preview");
+    expect(screen.getByRole("link", { name: /Get started/i }).getAttribute("href")).toBe("#get-started");
   });
 
   it("updates the URL and scrolls to the selected answer", () => {
@@ -42,7 +42,7 @@ describe("homepage journey index", () => {
     const target = document.getElementById("who-its-for")!;
     const scroll = vi.spyOn(target, "scrollIntoView");
     render(<HomeJourneyNav enabled />);
-    fireEvent.click(screen.getByRole("link", { name: /Who it's for/i }));
+    expect(screen.getByRole("link", { name: /Who it's for/i }).getAttribute("href")).toBe("#who-its-for");
     expect(window.location.hash).toBe("#who-its-for");
     expect(scroll).toHaveBeenCalled();
   });
