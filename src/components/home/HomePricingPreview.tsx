@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
+import { BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 
 const PLANS = [
