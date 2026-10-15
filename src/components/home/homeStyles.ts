@@ -166,45 +166,42 @@ export const HOME_STYLES = `
     scroll-margin-top: 132px;
   }
 
+  /* Fixed right-side journey index, visible while the page scrolls. */
   .home-journey-nav {
-    position: sticky;
-    top: 64px;
-    z-index: 40;
-    width: 100%;
-    background: rgba(245, 240, 231, 0.88);
-    border-bottom: 1px solid rgba(126, 96, 58, 0.16);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    position: fixed;
+    top: 50%;
+    right: clamp(12px, 2vw, 28px);
+    z-index: 80;
+    width: 164px;
+    transform: translateY(-50%);
+    background: rgba(245, 240, 231, 0.94);
+    border: 1px solid rgba(126, 96, 58, 0.20);
+    border-radius: 14px;
+    box-shadow: 0 12px 34px rgba(66, 48, 27, 0.10);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
   }
 
   .home-journey-nav__inner {
     display: flex;
+    flex-direction: column;
     align-items: stretch;
-    justify-content: center;
-    gap: clamp(12px, 3vw, 42px);
-    width: min(1120px, calc(100% - 48px));
-    margin-inline: auto;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    gap: 0;
+    padding: 8px;
   }
 
-  .home-journey-nav__inner::-webkit-scrollbar { display: none; }
-
   .home-journey-nav__link {
-    position: relative;
-    display: inline-flex;
-    flex: 0 0 auto;
+    display: flex;
     align-items: center;
-    gap: 7px;
-    min-height: 48px;
-    padding: 0 0 2px;
+    gap: 9px;
+    min-height: 42px;
+    padding: 0 9px;
     color: #51483D;
     font-size: 12px;
     line-height: 1.2;
     text-decoration: none;
     white-space: nowrap;
+    border-radius: 8px;
   }
 
   .home-journey-nav__number {
@@ -212,27 +209,19 @@ export const HOME_STYLES = `
     font-size: 10px;
     font-weight: 700;
     letter-spacing: .04em;
-  }
-
-  .home-journey-nav__link::after {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 2px;
-    background: #B88B52;
-    content: "";
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 180ms ease;
+    flex: 0 0 auto;
   }
 
   .home-journey-nav__link.is-active {
     color: #000;
     font-weight: 600;
+    background: rgba(184, 139, 82, 0.12);
   }
 
-  .home-journey-nav__link.is-active::after { transform: scaleX(1); }
+  .home-journey-nav__link:focus-visible {
+    outline: 2px solid #B88B52;
+    outline-offset: 2px;
+  }
 
   .home-audience {
     background: #EDE4D7;
@@ -363,16 +352,24 @@ export const HOME_STYLES = `
   }
 
   @media (max-width: 767px) {
-    .home-journey-nav { top: 64px; }
-    .home-journey-nav__inner {
-      justify-content: flex-start;
-      gap: 22px;
-      width: 100%;
-      padding: 0 16px;
+    .home-journey-nav {
+      top: auto;
+      right: 8px;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      width: 132px;
+      transform: none;
+      border-radius: 12px;
     }
-    .home-journey-nav__link { min-height: 46px; font-size: 11px; }
+    .home-journey-nav__inner { padding: 5px; }
+    .home-journey-nav__link {
+      min-height: 36px;
+      gap: 7px;
+      padding: 0 7px;
+      font-size: 10px;
+    }
+    .home-journey-nav__number { font-size: 9px; }
     .home-audience { padding: 48px 20px 52px; }
-    .home-audience__inner { grid-template-columns: 1fr; gap: 20px; }
+    .home-audience__inner { grid-template-columns: minmax(0, 1fr); gap: 20px; }
     .home-audience__examples { gap: 6px 16px; }
     .home-pricing-preview { padding: 48px 16px 52px; }
     .home-pricing-preview__heading { text-align: left; margin-bottom: 20px; }
@@ -382,7 +379,7 @@ export const HOME_STYLES = `
     .marketing-site [id="how-nextslot-works"],
     .marketing-site [id="results"],
     .marketing-site [id="pricing-preview"],
-    .marketing-site [id="get-started"] { scroll-margin-top: 118px; }
+    .marketing-site [id="get-started"] { scroll-margin-top: 24px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
