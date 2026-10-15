@@ -43,7 +43,7 @@ const Heatmap = () => {
 };
 
 const MobileFrame = () => (
-  <div style={{ width: 402, minHeight: 874, boxSizing: "border-box", overflow: "hidden", background: BG, color: WHITE, fontFamily: "Inter, sans-serif", border: `1px solid ${LINE}`, borderRadius: 54, border: "4px solid #69747b", boxShadow: "inset 0 0 0 2px #24292c", position: "relative" }}>
+  <div style={{ width: 402, height: 874, minHeight: 0, boxSizing: "border-box", overflow: "hidden", background: BG, color: WHITE, fontFamily: "Inter, sans-serif", borderRadius: 54, border: "4px solid #69747b", boxShadow: "inset 0 0 0 2px #24292c", position: "relative" }}>
     <div aria-hidden="true" style={{ position: "absolute", zIndex: 2, top: 8, left: "50%", transform: "translateX(-50%)", width: 118, height: 25, background: "#000", borderRadius: 18 }} />
     <header style={{ height: 58, background: BG, borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", padding: "0 15px", gap: 15, boxSizing: "border-box" }}>
       <div style={{ width: 24, display: "flex", flexDirection: "column", gap: 5 }} aria-hidden="true">
@@ -103,8 +103,8 @@ const MobileFrame = () => (
 
 const FigmaDashboardPreview = () => {
   const width = useWindowWidth();
-  // Keep the entire phone visible at 280px on larger screens and scale down on narrow screens.
-  const safeScale = Math.min(280 / 402, Math.max(0.2, (width - 24) / 402));
+  // Keep the complete 874px phone frame compact, including its lower bezel.
+  const safeScale = Math.min(240 / 402, Math.max(0.2, (width - 24) / 402));
   return (
     <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "visible" }}>
       <div style={{ width: 402 * safeScale, height: 874 * safeScale, overflow: "visible", flexShrink: 0 }}>
