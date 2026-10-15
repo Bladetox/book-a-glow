@@ -516,6 +516,82 @@ export const HOME_STYLES = `
   }
 
 
+  /* Keep the main story on one warm canvas, with a small number of deliberate chapter shifts. */
+  .home-features,
+  .home-revenue,
+  .home-heatmap {
+    background: #F5F0E7;
+    padding: clamp(48px, 6vw, 76px) 24px;
+  }
+
+  .home-features__inner,
+  .home-revenue > div,
+  .home-heatmap > div {
+    width: min(1120px, 100%);
+    margin-inline: auto;
+  }
+
+  .home-features__texture { display: none; }
+
+  .home-features__header {
+    max-width: 720px;
+    margin: 0 auto 34px;
+    text-align: center;
+  }
+
+  .home-features__header h2 {
+    margin: 0 0 14px;
+    color: #000;
+    font-family: 'Montserrat', sans-serif;
+    font-size: clamp(30px, 4vw, 48px);
+    line-height: 1.08;
+    letter-spacing: -.03em;
+  }
+
+  .home-features__header h2 span { color: #94672F; }
+  .home-features__header p { margin: 0; color: #51483D; font-size: 15px; line-height: 1.7; }
+
+  .home-features__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+  }
+
+  .home-features__card {
+    min-width: 0;
+    padding: 18px 0 0;
+    border-top: 1px solid rgba(126, 96, 58, .25);
+  }
+
+  .home-features__stage {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    color: #51483D;
+    font-size: 12px;
+  }
+
+  .home-features__stage span:first-child { color: #94672F; font-size: 10px; font-weight: 700; }
+  .home-features__card h3 { margin: 0 0 10px; font-size: clamp(18px, 1.8vw, 22px); line-height: 1.22; color: #000; }
+  .home-features__card h3 span { color: #94672F; }
+  .home-features__card p { margin: 0; color: #51483D; font-size: 13px; line-height: 1.65; }
+
+  .home-pricing-preview__eyebrow,
+  .home-cta__eyebrow,
+  .home-audience__eyebrow {
+    margin: 0 0 14px;
+    color: #94672F;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .home-pricing-preview__eyebrow { text-align: center; }
+  .home-cta__eyebrow { text-align: center; }
+
   /* Image slots preserve the agreed editorial rhythm until final product imagery is supplied. */
   .home-features__visual {
     position: relative;
@@ -584,13 +660,15 @@ export const HOME_STYLES = `
   }
 
   @media (max-width: 767px) {
-    .home-journey-nav {
-      width: 116px;
-      right: 8px;
-      bottom: max(16px, env(safe-area-inset-bottom));
-    }
-    .home-journey-nav__link { min-height: 34px; font-size: 9px; gap: 5px; }
+    .home-journey-nav { width: 106px; right: 0; bottom: auto; }
+    .home-journey-nav__link { min-height: 40px; font-size: 9px; gap: 5px; }
+    .home-features,
+    .home-revenue,
+    .home-heatmap { padding: 48px 16px 52px; }
+    .home-features__grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    .home-features__header { margin-bottom: 28px; text-align: left; }
     .home-features__visual { min-height: 124px; }
+    .home-pricing-preview__eyebrow { text-align: left; }
   }
 
 `;
