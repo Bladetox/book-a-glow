@@ -25,32 +25,41 @@ const Index = () => {
   });
 
   useEffect(() => {
-    const startJourney = () => setJourneyStarted(true);
+    let scrollTimer = 0;
+    const startJourney = (event: Event) => {
+      const customEvent = event as CustomEvent<{ targetId?: string }>;
+      const targetId = customEvent.detail?.targetId ?? window.location.hash.slice(1) ?? "who-its-for";
+      setJourneyStarted(true);
+      scrollTimer = window.setTimeout(() => {
+        const target = document.getElementById(targetId || "who-its-for");
+        if (!target) return;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        target.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
+      }, 80);
+    };
     const handleHashChange = () => {
-      if (window.location.hash) setJourneyStarted(true);
+      const id = window.location.hash.slice(1);
+      if (!id) return;
+      setJourneyStarted(true);
+      window.setTimeout(() => {
+        const target = document.getElementById(id);
+        if (target) target.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      }, 80);
     };
     window.addEventListener(JOURNEY_EVENT, startJourney);
     window.addEventListener("hashchange", handleHashChange);
 
-    // Preserve deep links into the homepage journey.
     const id = window.location.hash.slice(1);
     if (id) {
       setJourneyStarted(true);
-      const target = document.getElementById(id);
-      if (target) {
-        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const timer = window.setTimeout(() => {
-          target.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
-        }, 180);
-        return () => {
-          window.clearTimeout(timer);
-          window.removeEventListener(JOURNEY_EVENT, startJourney);
-          window.removeEventListener("hashchange", handleHashChange);
-        };
-      }
+      scrollTimer = window.setTimeout(() => {
+        const target = document.getElementById(id);
+        if (target) target.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      }, 180);
     }
 
     return () => {
+      window.clearTimeout(scrollTimer);
       window.removeEventListener(JOURNEY_EVENT, startJourney);
       window.removeEventListener("hashchange", handleHashChange);
     };
@@ -76,14 +85,18 @@ const Index = () => {
       <main>
         <HeroSection />
         <ProofTicker />
-        <HomeJourneyNav enabled={journeyStarted} />
-        <WhoItsForSection />
-        <FeaturesSection />
-        <RevenueSection />
-        <HeatmapSection />
-        <CaseStudySection />
-        <HomePricingPreview />
-        <CTASection />
+        <div className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted}>
+          <div className="home-journey-reveal__content">
+            <HomeJourneyNav enabled={journeyStarted} />
+            <WhoItsForSection />
+            <FeaturesSection />
+            <RevenueSection />
+            <HeatmapSection />
+            <CaseStudySection />
+            <HomePricingPreview />
+            <CTASection />
+          </div>
+        </div>
       </main>
       <SiteFooter />
     </div>
