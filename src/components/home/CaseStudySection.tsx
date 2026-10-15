@@ -54,8 +54,7 @@ export const CaseStudySection = () => {
           </div>
 
           <div>
-            <Eyebrow text="03 · Who it has worked for" />
-            <blockquote
+<blockquote
               style={{
                 fontFamily: FONT_DISPLAY,
                 fontSize: isMobile ? 24 : 34,
