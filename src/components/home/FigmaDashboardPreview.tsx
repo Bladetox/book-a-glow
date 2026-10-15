@@ -103,12 +103,13 @@ const MobileFrame = () => (
 
 const FigmaDashboardPreview = () => {
   const width = useWindowWidth();
-  const isMobile = width < BP;
-  const scale = isMobile ? Math.min(0.86, Math.max(0.72, (width - 32) / 402)) : Math.min(1, (width - 48) / 402);
+  // Render the complete 402 × 874 reference frame at a compact 320px width.
+  const scale = Math.min(320 / 402, (width - 32) / 402);
+  const safeScale = Math.max(0.45, scale);
   return (
-    <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "hidden" }}>
-      <div style={{ width: 402 * scale, height: Math.min(540, 874 * scale), overflow: "hidden", flexShrink: 0 }}>
-        <div style={{ width: 402, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+    <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "visible" }}>
+      <div style={{ width: 402 * safeScale, height: 874 * safeScale, overflow: "visible", flexShrink: 0 }}>
+        <div style={{ width: 402, height: 874, transform: `scale(${safeScale})`, transformOrigin: "top left" }}>
           <MobileFrame />
         </div>
       </div>
