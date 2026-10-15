@@ -258,7 +258,7 @@ export const HOME_STYLES = `
     padding: 12px;
     overflow: hidden;
     background: linear-gradient(145deg, #F8F4ED, #E5D5C0);
-    border-bottom: 1px solid rgba(126, 96, 58, .26);
+    border: 1px solid rgba(126, 96, 58, .16);
   }
 
   .home-audience__visual:nth-child(2) {
@@ -273,21 +273,20 @@ export const HOME_STYLES = `
   .home-audience__visual::before {
     content: "";
     position: absolute;
-    inset: 14px 12px 34px;
-    border: 1px solid rgba(126, 96, 58, .24);
-    background: rgba(255, 252, 247, .35);
+    inset: 0;
+    background: linear-gradient(180deg, rgba(245,240,231,0) 35%, rgba(66,48,27,.12) 100%);
   }
 
   .home-audience__visual::after {
     content: "";
     position: absolute;
-    left: 24px;
-    right: 24px;
-    top: 42px;
-    height: 34px;
+    width: 42%;
+    aspect-ratio: 1;
+    top: 16%;
+    right: 12%;
     border-radius: 50%;
-    background: rgba(184, 139, 82, .13);
-    filter: blur(12px);
+    background: rgba(184, 139, 82, .12);
+    filter: blur(22px);
   }
 
   .home-audience__visual span {
@@ -316,13 +315,24 @@ export const HOME_STYLES = `
     line-height: 1.12;
   }
 
-  .home-audience__copy p,
-  .home-pricing-preview__heading p {
+  .home-audience__copy > p:not(.home-audience__eyebrow),
+  .home-pricing-preview__heading > p:not(.home-pricing-preview__eyebrow) {
     max-width: 560px;
     margin: 0;
     color: #51483D;
     font-size: 15px;
     line-height: 1.7;
+  }
+
+  .home-audience__copy .home-audience__eyebrow,
+  .home-pricing-preview__heading .home-pricing-preview__eyebrow {
+    margin: 0 0 14px;
+    color: #94672F;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    line-height: 1.4;
+    text-transform: uppercase;
   }
 
   .home-audience__examples {
@@ -647,13 +657,13 @@ export const HOME_STYLES = `
   .home-features__visual-lines i:nth-child(2) { width: 54%; }
   .home-features__visual-lines i:nth-child(3) { width: 66%; }
 
-  .home-features__visual--understand {
+  .home-features__visual--see {
     background:
       radial-gradient(ellipse at 70% 35%, rgba(184,139,82,.20), transparent 36%),
       linear-gradient(135deg, #F4EEE5 0%, #E5D6C2 100%);
   }
 
-  .home-features__visual--grow {
+  .home-features__visual--focus {
     background:
       radial-gradient(ellipse at 72% 24%, rgba(184,139,82,.26), transparent 38%),
       linear-gradient(135deg, #F8F4ED 0%, #E9DDCB 100%);
