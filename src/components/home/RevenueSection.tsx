@@ -13,13 +13,11 @@ export const RevenueSection = () => {
         style={{
           maxWidth: 1200,
           margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-          gap: isMobile ? 22 : 56,
-          alignItems: "center",
+          display: "block",
         }}
       >
-        <div style={{ maxWidth: 520 }}>
+        <div style={{ maxWidth: 1040, margin: "0 auto", textAlign: "left" }}>
+          <FigmaDashboardPreview />
           <Eyebrow text="See the business behind the bookings" />
           <h2 className="home-revenue__heading"
             style={{
@@ -70,8 +68,7 @@ export const RevenueSection = () => {
             Everything in one place, so you spend less time piecing together the picture and more time deciding what to do with it.
           </p>
         </div>
-
-        <FigmaDashboardPreview />
+        </div>
       </div>
     </section>
   );
