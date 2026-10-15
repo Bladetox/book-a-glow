@@ -68,7 +68,6 @@ export const RevenueSection = () => {
             Everything in one place, so you spend less time piecing together the picture and more time deciding what to do with it.
           </p>
         </div>
-        </div>
       </div>
     </section>
   );
