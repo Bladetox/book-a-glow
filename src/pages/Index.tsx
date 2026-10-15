@@ -48,6 +48,7 @@ const Index = () => {
     };
     window.addEventListener(JOURNEY_EVENT, startJourney);
     window.addEventListener("hashchange", handleHashChange);
+    window.addEventListener("popstate", handleHashChange);
 
     const id = window.location.hash.slice(1);
     if (id) {
@@ -62,6 +63,7 @@ const Index = () => {
       window.clearTimeout(scrollTimer);
       window.removeEventListener(JOURNEY_EVENT, startJourney);
       window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("popstate", handleHashChange);
     };
   }, []);
 
