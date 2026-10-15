@@ -106,7 +106,7 @@ const FigmaDashboardPreview = () => {
   const scale = isMobile ? Math.min(0.86, Math.max(0.72, (width - 32) / 402)) : Math.min(1, (width - 48) / 402);
   return (
     <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "hidden" }}>
-      <div style={{ width: 402 * scale, height: 874 * scale, overflow: "hidden", flexShrink: 0, filter: "drop-shadow(0 22px 40px rgba(0,0,0,0.20))" }}>
+      <div style={{ width: 402 * scale, height: Math.min(430, 874 * scale), overflow: "hidden", flexShrink: 0, WebkitMaskImage: "linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)", maskImage: "linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)", filter: "drop-shadow(0 22px 40px rgba(0,0,0,0.20))" }}>
         <div style={{ width: 402, transform: `scale(${scale})`, transformOrigin: "top left" }}>
           <MobileFrame />
         </div>
