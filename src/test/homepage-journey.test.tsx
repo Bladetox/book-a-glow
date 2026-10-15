@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { HomeJourneyNav } from "@/components/home/HomeJourneyNav";
@@ -38,13 +38,16 @@ describe("homepage journey index", () => {
   });
 
   it("updates the URL and scrolls to the selected answer", () => {
-    document.body.innerHTML = '<section id="who-its-for"></section>';
-    const target = document.getElementById("who-its-for")!;
+    const target = document.createElement("section");
+    target.id = "who-its-for";
+    target.scrollIntoView = vi.fn();
+    document.body.appendChild(target);
     const scroll = vi.spyOn(target, "scrollIntoView");
     render(<HomeJourneyNav enabled />);
-    expect(screen.getByRole("link", { name: /Who it's for/i }).getAttribute("href")).toBe("#who-its-for");
+    fireEvent.click(screen.getByRole("link", { name: /Who it's for/i }));
     expect(window.location.hash).toBe("#who-its-for");
     expect(scroll).toHaveBeenCalled();
+    target.remove();
   });
 });
 
