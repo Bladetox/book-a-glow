@@ -10,6 +10,7 @@ export const CaseStudySection = () => {
 
   return (
     <section
+      id="results"
       style={{
         background: C.bg,
         padding: isMobile ? "40px 16px 44px" : "64px 40px 68px",
