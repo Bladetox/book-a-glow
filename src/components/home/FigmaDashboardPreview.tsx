@@ -30,12 +30,12 @@ const Heatmap = () => {
       <div style={{ color: DIM, font: "10px Inter, sans-serif", marginTop: 5 }}>Booking activity by day and time</div>
       <div style={{ display: "grid", gridTemplateColumns: "18px repeat(12, minmax(0, 1fr))", gap: 4, marginTop: 16, alignItems: "center" }}>
         {["M","T","W","T","F","S","S"].map((day, row) => (
-          <React.Fragment key={`row-${row}`}>
+          <div key={`row-${row}`} style={{ display: "contents" }}>
             <span style={{ color: DIM, font: "8px Inter, sans-serif" }}>{day}</span>
             {colors.map((color, col) => (
               <span key={`${row}-${col}`} style={{ height: 9, borderRadius: 2, background: colors[(row * 3 + col) % colors.length] }} />
             ))}
-          </React.Fragment>
+          </div>
         ))}
       </div>
     </Card>
@@ -43,7 +43,8 @@ const Heatmap = () => {
 };
 
 const MobileFrame = () => (
-  <div style={{ width: 402, minHeight: 874, boxSizing: "border-box", overflow: "hidden", background: BG, color: WHITE, fontFamily: "Inter, sans-serif", border: `1px solid ${LINE}`, borderRadius: 14 }}>
+  <div style={{ width: 402, minHeight: 874, boxSizing: "border-box", overflow: "hidden", background: BG, color: WHITE, fontFamily: "Inter, sans-serif", border: `1px solid ${LINE}`, borderRadius: 54, border: "5px solid #69747b", boxShadow: "inset 0 0 0 2px #24292c, 0 18px 46px rgba(0,0,0,0.28)", position: "relative" }}>
+    <div aria-hidden="true" style={{ position: "absolute", zIndex: 2, top: 8, left: "50%", transform: "translateX(-50%)", width: 118, height: 25, background: "#000", borderRadius: 18 }} />
     <header style={{ height: 58, background: BG, borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", padding: "0 15px", gap: 15, boxSizing: "border-box" }}>
       <div style={{ width: 24, display: "flex", flexDirection: "column", gap: 5 }} aria-hidden="true">
         <span style={{ height: 1, background: MUTED, width: 16 }} />
@@ -106,7 +107,7 @@ const FigmaDashboardPreview = () => {
   const scale = isMobile ? Math.min(0.86, Math.max(0.72, (width - 32) / 402)) : Math.min(1, (width - 48) / 402);
   return (
     <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "hidden" }}>
-      <div style={{ width: 402 * scale, height: Math.min(430, 874 * scale), overflow: "hidden", flexShrink: 0, WebkitMaskImage: "linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)", maskImage: "linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)", filter: "drop-shadow(0 22px 40px rgba(0,0,0,0.20))" }}>
+      <div style={{ width: 402 * scale, height: 874 * scale, overflow: "hidden", flexShrink: 0, filter: "drop-shadow(0 22px 40px rgba(0,0,0,0.20))" }}>
         <div style={{ width: 402, transform: `scale(${scale})`, transformOrigin: "top left" }}>
           <MobileFrame />
         </div>
