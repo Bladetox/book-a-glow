@@ -43,7 +43,7 @@ const Heatmap = () => {
 };
 
 const MobileFrame = () => (
-  <div style={{ width: 402, minHeight: 874, boxSizing: "border-box", overflow: "hidden", background: BG, color: WHITE, fontFamily: "Inter, sans-serif", border: `1px solid ${LINE}`, borderRadius: 54, border: "5px solid #69747b", boxShadow: "inset 0 0 0 2px #24292c, 0 18px 46px rgba(0,0,0,0.28)", position: "relative" }}>
+  <div style={{ width: 402, minHeight: 874, boxSizing: "border-box", overflow: "hidden", background: BG, color: WHITE, fontFamily: "Inter, sans-serif", border: `1px solid ${LINE}`, borderRadius: 54, border: "4px solid #69747b", boxShadow: "inset 0 0 0 2px #24292c", position: "relative" }}>
     <div aria-hidden="true" style={{ position: "absolute", zIndex: 2, top: 8, left: "50%", transform: "translateX(-50%)", width: 118, height: 25, background: "#000", borderRadius: 18 }} />
     <header style={{ height: 58, background: BG, borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", padding: "0 15px", gap: 15, boxSizing: "border-box" }}>
       <div style={{ width: 24, display: "flex", flexDirection: "column", gap: 5 }} aria-hidden="true">
@@ -107,7 +107,7 @@ const FigmaDashboardPreview = () => {
   const scale = isMobile ? Math.min(0.86, Math.max(0.72, (width - 32) / 402)) : Math.min(1, (width - 48) / 402);
   return (
     <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "hidden" }}>
-      <div style={{ width: 402 * scale, height: 874 * scale, overflow: "hidden", flexShrink: 0, filter: "drop-shadow(0 22px 40px rgba(0,0,0,0.20))" }}>
+      <div style={{ width: 402 * scale, height: Math.min(540, 874 * scale), overflow: "hidden", flexShrink: 0 }}>
         <div style={{ width: 402, transform: `scale(${scale})`, transformOrigin: "top left" }}>
           <MobileFrame />
         </div>
