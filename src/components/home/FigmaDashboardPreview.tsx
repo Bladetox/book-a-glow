@@ -105,9 +105,9 @@ const MobileFrame = () => (
 const FigmaDashboardPreview = () => {
   const width = useWindowWidth();
   // Keep the complete 874px phone frame compact, including its lower bezel.
-  const safeScale = Math.min(240 / 402, Math.max(0.2, (width - 24) / 402));
+  const safeScale = Math.min(120 / 402, Math.max(0.18, (width - 24) / 402));
   return (
-    <div style={{ width: "100%", minWidth: 0, display: "flex", justifyContent: "center", overflow: "visible" }}>
+    <div style={{ width: 402 * safeScale, maxWidth: "100%", minWidth: 0, display: "block", float: "right", margin: "0 0 12px 20px", overflow: "visible" }}>
       <div style={{ width: 402 * safeScale, height: 874 * safeScale, overflow: "visible", flexShrink: 0 }}>
         <div style={{ width: 402, height: 874, transform: `scale(${safeScale})`, transformOrigin: "top left" }}>
           <MobileFrame />
