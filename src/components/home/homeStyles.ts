@@ -379,7 +379,7 @@ export const HOME_STYLES = `
     .marketing-site [id="how-nextslot-works"],
     .marketing-site [id="results"],
     .marketing-site [id="pricing-preview"],
-    .marketing-site [id="get-started"] { scroll-margin-top: 24px; }
+    .marketing-site [id="get-started"] { scroll-margin-top: 88px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
