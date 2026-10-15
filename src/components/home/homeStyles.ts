@@ -157,4 +157,236 @@ export const HOME_STYLES = `
       gap: 12px !important;
     }
   }
+  /* Homepage journey index and editorial chapter layout */
+  .marketing-site [id="who-its-for"],
+  .marketing-site [id="how-nextslot-works"],
+  .marketing-site [id="results"],
+  .marketing-site [id="pricing-preview"],
+  .marketing-site [id="get-started"] {
+    scroll-margin-top: 132px;
+  }
+
+  .home-journey-nav {
+    position: sticky;
+    top: 64px;
+    z-index: 40;
+    width: 100%;
+    background: rgba(245, 240, 231, 0.88);
+    border-bottom: 1px solid rgba(126, 96, 58, 0.16);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+
+  .home-journey-nav__inner {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: clamp(12px, 3vw, 42px);
+    width: min(1120px, calc(100% - 48px));
+    margin-inline: auto;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .home-journey-nav__inner::-webkit-scrollbar { display: none; }
+
+  .home-journey-nav__link {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 7px;
+    min-height: 48px;
+    padding: 0 0 2px;
+    color: #51483D;
+    font-size: 12px;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .home-journey-nav__number {
+    color: #94672F;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+  }
+
+  .home-journey-nav__link::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: #B88B52;
+    content: "";
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 180ms ease;
+  }
+
+  .home-journey-nav__link.is-active {
+    color: #000;
+    font-weight: 600;
+  }
+
+  .home-journey-nav__link.is-active::after { transform: scaleX(1); }
+
+  .home-audience {
+    background: #EDE4D7;
+    padding: 64px 24px;
+  }
+
+  .home-audience__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr);
+    align-items: center;
+    gap: clamp(32px, 7vw, 100px);
+    width: min(1120px, 100%);
+    margin-inline: auto;
+  }
+
+  .home-audience__copy { max-width: 620px; }
+
+  .home-audience__copy h2,
+  .home-pricing-preview__heading h2 {
+    margin: 0 0 14px;
+    color: #000;
+    font-family: 'Montserrat', sans-serif;
+    font-size: clamp(28px, 3.2vw, 42px);
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1.12;
+  }
+
+  .home-audience__copy p,
+  .home-pricing-preview__heading p {
+    max-width: 560px;
+    margin: 0;
+    color: #51483D;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .home-audience__examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    align-content: center;
+    color: #51483D;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .home-audience__examples span {
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(126, 96, 58, .24);
+  }
+
+  .home-pricing-preview {
+    background: #EDE4D7;
+    padding: 64px 24px 68px;
+  }
+
+  .home-pricing-preview__inner {
+    width: min(1120px, 100%);
+    margin-inline: auto;
+  }
+
+  .home-pricing-preview__heading {
+    max-width: 620px;
+    margin: 0 auto 32px;
+    text-align: center;
+  }
+
+  .home-pricing-preview__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .home-pricing-preview__plan {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 24px;
+    border-top: 1px solid rgba(126, 96, 58, .28);
+    border-bottom: 1px solid rgba(126, 96, 58, .16);
+  }
+
+  .home-pricing-preview__plan h3 {
+    margin: 0 0 12px;
+    color: #000;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .home-pricing-preview__price {
+    margin: 0 0 12px;
+    color: #000;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+  }
+
+  .home-pricing-preview__price span {
+    color: #51483D;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  .home-pricing-preview__description {
+    flex: 1;
+    margin: 0 0 18px;
+    color: #51483D;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .home-pricing-preview__trial {
+    margin: 0;
+    color: #74695C;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .home-pricing-preview__footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 28px;
+  }
+
+  @media (max-width: 767px) {
+    .home-journey-nav { top: 64px; }
+    .home-journey-nav__inner {
+      justify-content: flex-start;
+      gap: 22px;
+      width: 100%;
+      padding: 0 16px;
+    }
+    .home-journey-nav__link { min-height: 46px; font-size: 11px; }
+    .home-audience { padding: 48px 20px 52px; }
+    .home-audience__inner { grid-template-columns: 1fr; gap: 20px; }
+    .home-audience__examples { gap: 6px 16px; }
+    .home-pricing-preview { padding: 48px 16px 52px; }
+    .home-pricing-preview__heading { text-align: left; margin-bottom: 20px; }
+    .home-pricing-preview__grid { grid-template-columns: 1fr; gap: 0; }
+    .home-pricing-preview__plan { padding: 20px 4px; }
+    .marketing-site [id="who-its-for"],
+    .marketing-site [id="how-nextslot-works"],
+    .marketing-site [id="results"],
+    .marketing-site [id="pricing-preview"],
+    .marketing-site [id="get-started"] { scroll-margin-top: 118px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-journey-nav__link::after { transition: none; }
+  }
+
 `;
