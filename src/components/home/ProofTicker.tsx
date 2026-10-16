@@ -14,7 +14,7 @@ const ITEMS = [
 const GOLD = "#B88B52";
 
 export const ProofTicker = () => (
-  <div style={{
+  <div className="home-proof-ticker" style={{
     borderTop:    "1px solid rgba(212,165,116,0.10)",
     borderBottom: "1px solid rgba(212,165,116,0.10)",
     padding: "14px 0",
