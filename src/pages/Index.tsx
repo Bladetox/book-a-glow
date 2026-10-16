@@ -48,14 +48,6 @@ const Index = () => {
     window.addEventListener("hashchange", handleHashChange);
     window.addEventListener("popstate", handleHashChange);
 
-    const id = window.location.hash.slice(1);
-    if (id) {
-      setJourneyStarted(true);
-      scrollTimer = window.setTimeout(() => {
-        const target = document.getElementById(id);
-        if (target) target.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-      }, 180);
-    }
 
     return () => {
       window.clearTimeout(scrollTimer);
