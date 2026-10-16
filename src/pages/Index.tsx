@@ -62,10 +62,11 @@ const Index = () => {
         <div className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted} inert={!journeyStarted}>
           <div className="home-journey-reveal__content">
             <WhoItsForSection /><FeaturesSection /><RevenueSection /><HeatmapSection />
-            <CaseStudySection /><HomePricingPreview /><CTASection /><SiteFooter />
+            <CaseStudySection /><HomePricingPreview /><CTASection />
           </div>
         </div>
       </main>
+      {journeyStarted && <SiteFooter />}
       <HomeJourneyNav enabled={journeyStarted} />
     </div>
   );
