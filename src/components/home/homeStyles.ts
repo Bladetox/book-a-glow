@@ -730,7 +730,7 @@ export const HOME_STYLES = `
   }
 
   @media (max-width: 767px) {
-    .home-journey-nav { width: 106px; right: 0; bottom: auto; }
+    .home-journey-nav { inset: 0; width: 100%; height: 100vh; height: 100dvh; min-height: 100svh; transform: none; background: rgba(245, 240, 231, .98); border: 0; box-shadow: none; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
     .home-journey-nav__link { min-height: 40px; font-size: 9px; gap: 5px; }
     .home-features,
     .home-revenue,
