@@ -537,7 +537,6 @@ export const HOME_STYLES = `
   }
 
   @media (max-width: 767px) {
-    .home-journey-nav__link { min-height: 40px; font-size: 9px; gap: 5px; }
     .home-features,
     .home-revenue,
     .home-heatmap { padding: 48px 16px 52px; }
