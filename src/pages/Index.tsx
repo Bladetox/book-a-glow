@@ -49,7 +49,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="nextslot-theme marketing-light marketing-site" style={{
+    <div className={`nextslot-theme marketing-light marketing-site${journeyStarted ? " journey-active" : ""}`} style={{
       minHeight: "100dvh", overflowX: "clip", background: C.bg, color: C.text,
       fontFamily: FONT_BODY, WebkitFontSmoothing: "antialiased",
       scrollbarWidth: "none", msOverflowStyle: "none",
