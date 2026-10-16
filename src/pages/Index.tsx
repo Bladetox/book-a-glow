@@ -26,14 +26,14 @@ const Index = () => {
     let scrollTimer = 0;
     const startJourney = (event: Event) => {
       const customEvent = event as CustomEvent<{ targetId?: string }>;
-      const targetId = customEvent.detail?.targetId || window.location.hash.slice(1) || "who-its-for";
+      const targetId = customEvent.detail?.targetId || "who-its-for";
       setJourneyStarted(true);
       scrollTimer = window.setTimeout(() => {
         const target = document.getElementById(targetId || "who-its-for");
         if (!target) return;
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         target.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
-      }, 80);
+      }, 520);
     };
     const handleHashChange = () => {
       const id = window.location.hash.slice(1);
