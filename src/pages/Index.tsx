@@ -14,6 +14,7 @@ import { FeaturesSection } from "@/components/home/FeaturesSection";
 import { HeatmapSection } from "@/components/home/HeatmapSection";
 import { CTASection } from "@/components/home/CTASection";
 import { C, FONT_BODY } from "@/components/home/tokens";
+import "@/components/home/homeJourneyLayout.css";
 
 const JOURNEY_EVENT = "nextslot:journey-start";
 
@@ -85,8 +86,10 @@ const Index = () => {
       <style>{`html.marketing-page, html.marketing-page body { scrollbar-width: none; -ms-overflow-style: none; overflow-x: clip; } html.marketing-page::-webkit-scrollbar, html.marketing-page body::-webkit-scrollbar { display: none; width: 0; height: 0; }`}</style>
       <SiteHeader />
       <main>
-        <HeroSection />
-        <ProofTicker />
+        <div className="home-hero-experience">
+          <HeroSection />
+          <ProofTicker />
+        </div>
         <div className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted} inert={!journeyStarted}>
           <div className="home-journey-reveal__content">
             <HomeJourneyNav enabled={journeyStarted} />
