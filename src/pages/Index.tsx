@@ -20,16 +20,13 @@ const JOURNEY_EVENT = "nextslot:journey-start";
 
 const Index = () => {
   useMarketingShell();
-  const [journeyStarted, setJourneyStarted] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return Boolean(window.location.hash);
-  });
+  const [journeyStarted, setJourneyStarted] = useState(false);
 
   useEffect(() => {
     let scrollTimer = 0;
     const startJourney = (event: Event) => {
       const customEvent = event as CustomEvent<{ targetId?: string }>;
-      const targetId = customEvent.detail?.targetId ?? window.location.hash.slice(1) ?? "who-its-for";
+      const targetId = customEvent.detail?.targetId || window.location.hash.slice(1) || "who-its-for";
       setJourneyStarted(true);
       scrollTimer = window.setTimeout(() => {
         const target = document.getElementById(targetId || "who-its-for");
