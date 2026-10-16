@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 
 const navLinks = [
-  { to: "/demo", label: "Demo" },
+  { to: "/demo", label: "How it works" },
   { to: "/about", label: "About" },
   { to: "/case-study/phenomebeauty", label: "Case Study" },
   { to: "/pricing", label: "Pricing" },
