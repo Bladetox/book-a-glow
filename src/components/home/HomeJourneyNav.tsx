@@ -19,6 +19,9 @@ export const HomeJourneyNav = ({ enabled }: HomeJourneyNavProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
+    if (enabled && window.matchMedia("(max-width: 767px)").matches) setMobileOpen(true);
+  }, [enabled]);
+  useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
     const update = () => setIsMobile(media.matches);
     update(); media.addEventListener("change", update);
@@ -39,6 +42,6 @@ export const HomeJourneyNav = ({ enabled }: HomeJourneyNavProps) => {
   if (isMobile && !mobileOpen) return <button type="button" className="home-journey-nav__mobile-trigger" onClick={() => setMobileOpen(true)} aria-label="Open homepage section navigation"><span>Explore sections</span></button>;
   return <nav className="home-journey-nav" aria-label="Explore the homepage">
     <div className="home-journey-nav__heading"><span>Explore NextSlot</span>{isMobile && <button type="button" className="home-journey-nav__close" onClick={() => setMobileOpen(false)} aria-label="Close section navigation"><X aria-hidden="true" size={22} /></button>}</div>
-    <div className="home-journey-nav__inner">{ITEMS.map(({ id, label, Icon }) => <a key={id} href={"#" + id} className={"home-journey-nav__link" + (activeId === id ? " is-active" : "")} aria-current={activeId === id ? "location" : undefined} onClick={(event) => { const target = document.getElementById(id); if (!target) return; event.preventDefault(); setActiveId(id); setMobileOpen(false); window.history.pushState(null, "", "#" + id); const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches; target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }); }}><Icon className="home-journey-nav__icon" aria-hidden="true" /><span className="home-journey-nav__label">{label}</span></a>)}</div>
+    <div className="home-journey-nav__inner">{ITEMS.map(({ id, label, Icon }) => <a key={id} href={"#" + id} className={"home-journey-nav__link" + (activeId === id ? " is-active" : "")} aria-current={activeId === id ? "location" : undefined} onClick={(event) => { const target = document.getElementById(id); if (!target) return; event.preventDefault(); setActiveId(id); window.history.pushState(null, "", "#" + id); const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches; target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }); }}><Icon className="home-journey-nav__icon" aria-hidden="true" /><span className="home-journey-nav__label">{label}</span></a>)}</div>
   </nav>;
 };
