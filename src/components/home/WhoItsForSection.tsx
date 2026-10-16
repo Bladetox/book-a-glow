@@ -8,14 +8,14 @@ export const WhoItsForSection = () => {
           <p>Beauty, barber, photography, tattoo, wellness and more. If you take bookings, NextSlot is for you.</p>
         </div>
         <div className="home-audience__visuals" aria-label="Examples of independent service businesses">
-          <div className="home-audience__visual" role="img" aria-label="Beauty and wellness services">
-            <span>Beauty & wellness<small>Bookings and client care</small></span>
+          <div className="home-audience__visual" role="img" aria-label="Beauty and wellness image placeholder">
+            <span>Beauty & wellness<small>Image placeholder</small></span>
           </div>
-          <div className="home-audience__visual" role="img" aria-label="Barber and grooming services">
-            <span>Barbers<small>Appointments and payments</small></span>
+          <div className="home-audience__visual" role="img" aria-label="Barber and grooming image placeholder">
+            <span>Barbers<small>Image placeholder</small></span>
           </div>
-          <div className="home-audience__visual" role="img" aria-label="Creative and mobile services">
-            <span>Creative & mobile<small>Flexible, on-the-go work</small></span>
+          <div className="home-audience__visual" role="img" aria-label="Creative and mobile services image placeholder">
+            <span>Creative & mobile<small>Image placeholder</small></span>
           </div>
         </div>
       </div>
