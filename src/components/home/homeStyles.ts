@@ -177,7 +177,7 @@ export const HOME_STYLES = `
     display: flex;
     flex-direction: column;
     transform: none;
-    background: rgba(245, 240, 231, 0.96);
+    background: rgba(245, 240, 231, 0.94);
     border: 0;
     border-right: 1px solid rgba(126, 96, 58, 0.22);
     border-radius: 0;
@@ -442,7 +442,7 @@ export const HOME_STYLES = `
       height: 100dvh;
       min-height: 100svh;
       transform: none;
-      background: rgba(245, 240, 231, .98);
+      background: rgba(245, 240, 231, .82);
       border: 0;
       box-shadow: none;
       overflow-y: auto;
@@ -742,3 +742,14 @@ export const HOME_STYLES = `
   }
 
 `;
+
+  /* Keep mobile journey sections within the viewport width and preserve breathing room. */
+  @media (max-width: 767px) {
+    .home-journey-reveal__content { padding-left: 0 !important; width: 100%; box-sizing: border-box; }
+    .home-features, .home-revenue, .home-heatmap, .home-audience, .home-pricing-preview { width: 100%; box-sizing: border-box; }
+    .home-features__inner, .home-audience__inner, .home-pricing-preview__inner { width: 100%; min-width: 0; }
+    .home-features__grid { grid-template-columns: minmax(0, 1fr) !important; width: 100%; }
+    .home-features__card, .home-features__visual { width: 100%; min-width: 0; box-sizing: border-box; }
+    .home-journey-nav { background: rgba(245, 240, 231, .80); }
+    .home-journey-nav__link { align-items: center; flex: 1 0 76px; min-height: 76px; }
+  }
