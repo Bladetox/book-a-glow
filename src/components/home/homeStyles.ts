@@ -776,4 +776,37 @@ export const HOME_STYLES = `
     .home-journey-reveal,.home-journey-reveal.is-active,.home-journey-nav,.home-journey-nav__link { animation:none !important; transition:none !important; }
   }
 
+
+  /* Approved guided homepage interaction fixes. Keep existing visual content intact. */
+  .home-hero-experience {
+    height: calc(100vh - var(--site-header-height, 64px));
+    height: calc(100dvh - var(--site-header-height, 64px));
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .home-hero-experience > .home-hero {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .home-hero-experience > .home-proof-ticker,
+  .home-hero-experience > [class*="proof-ticker"] {
+    flex: 0 0 auto;
+  }
+  .home-journey-nav__icon { display: block; opacity: 1; visibility: visible; flex: 0 0 auto; }
+  .home-journey-nav__label { display: block; opacity: 1; visibility: visible; }
+  .home-journey-nav__link { min-height: 76px; }
+  @media (min-width: 768px) {
+    .home-journey-reveal__content { padding-left: clamp(104px, 12vw, 144px); }
+    .home-journey-nav { width: clamp(104px, 12vw, 144px); }
+  }
+  @media (max-width: 767px) {
+    .home-hero-experience { height: calc(100vh - var(--site-header-height, 64px)); height: calc(100dvh - var(--site-header-height, 64px)); }
+    .home-journey-reveal__content { padding-left: 0 !important; width: 100%; box-sizing: border-box; }
+    .home-journey-nav { background: rgba(245, 240, 231, .80); }
+    .home-journey-nav__inner { min-height: calc(100dvh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+    .home-journey-nav__link { min-height: 76px; flex: 1 0 76px; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 14px; }
+  }
+
 `;
