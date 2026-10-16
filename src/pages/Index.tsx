@@ -23,50 +23,27 @@ const Index = () => {
   useMarketingShell();
   const [journeyStarted, setJourneyStarted] = useState(false);
   const revealRef = useRef<HTMLDivElement>(null);
-  const pendingTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
-    let fallbackTimer = 0;
     let frame = 0;
     const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const scrollToPendingTarget = () => {
-      const id = pendingTargetRef.current;
-      if (!id || !VALID_DESTINATIONS.has(id)) return;
-      const target = document.getElementById(id);
-      if (!target) return;
-      pendingTargetRef.current = null;
-      window.clearTimeout(fallbackTimer);
-      target.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
-    };
-    const onRevealTransitionEnd = (event: TransitionEvent) => {
-      if (event.target === revealRef.current && event.propertyName === "grid-template-rows") scrollToPendingTarget();
-    };
-    const startJourney = (event: Event) => {
-      const id = (event as CustomEvent<{ targetId?: string }>).detail?.targetId || "how-nextslot-works";
-      if (!VALID_DESTINATIONS.has(id)) return;
-      pendingTargetRef.current = id;
-      setJourneyStarted(true);
-      frame = window.requestAnimationFrame(() => {
-        if (reducedMotion()) { scrollToPendingTarget(); return; }
-        revealRef.current?.addEventListener("transitionend", onRevealTransitionEnd);
-        fallbackTimer = window.setTimeout(scrollToPendingTarget, 650);
-      });
-    };
+    const startJourney = () => setJourneyStarted(true);
     const handleHashChange = () => {
       const id = window.location.hash.slice(1);
       if (!VALID_DESTINATIONS.has(id)) return;
-      pendingTargetRef.current = id;
       setJourneyStarted(true);
-      frame = window.requestAnimationFrame(() => window.requestAnimationFrame(scrollToPendingTarget));
+      frame = window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        const target = document.getElementById(id);
+        if (target) target.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
+      }));
     };
     window.addEventListener(JOURNEY_EVENT, startJourney);
     window.addEventListener("hashchange", handleHashChange);
     window.addEventListener("popstate", handleHashChange);
     if (VALID_DESTINATIONS.has(window.location.hash.slice(1))) handleHashChange();
     return () => {
-      window.clearTimeout(fallbackTimer);
       window.cancelAnimationFrame(frame);
-      revealRef.current?.removeEventListener("transitionend", onRevealTransitionEnd);
+      revealRef.current?.removeEventListener("transitionend", () => undefined);
       window.removeEventListener(JOURNEY_EVENT, startJourney);
       window.removeEventListener("hashchange", handleHashChange);
       window.removeEventListener("popstate", handleHashChange);
