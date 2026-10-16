@@ -64,6 +64,7 @@ export const HomeJourneyNav = ({ enabled }: HomeJourneyNavProps) => {
           if (!target) return;
           event.preventDefault(); setActiveId(id); setHasChosenDestination(true);
           window.history.pushState(null, "", `#${id}`);
+          window.dispatchEvent(new CustomEvent("nextslot:journey-destination-selected"));
           const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           window.requestAnimationFrame(() => window.requestAnimationFrame(() => target.scrollIntoView({
             behavior: reducedMotion ? "auto" : "smooth", block: "start",

@@ -22,34 +22,39 @@ const VALID_DESTINATIONS = new Set(["who-its-for", "how-nextslot-works", "result
 const Index = () => {
   useMarketingShell();
   const [journeyStarted, setJourneyStarted] = useState(false);
+  const [destinationSelected, setDestinationSelected] = useState(false);
 
   useEffect(() => {
     let frame = 0;
     const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const startJourney = () => setJourneyStarted(true);
+    const destinationChosen = () => setDestinationSelected(true);
     const handleHashChange = () => {
       const id = window.location.hash.slice(1);
       if (!VALID_DESTINATIONS.has(id)) return;
       setJourneyStarted(true);
+      setDestinationSelected(true);
       frame = window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
         const target = document.getElementById(id);
         if (target) target.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
       }));
     };
     window.addEventListener(JOURNEY_EVENT, startJourney);
+    window.addEventListener("nextslot:journey-destination-selected", destinationChosen);
     window.addEventListener("hashchange", handleHashChange);
     window.addEventListener("popstate", handleHashChange);
     if (VALID_DESTINATIONS.has(window.location.hash.slice(1))) handleHashChange();
     return () => {
       window.cancelAnimationFrame(frame);
       window.removeEventListener(JOURNEY_EVENT, startJourney);
+      window.removeEventListener("nextslot:journey-destination-selected", destinationChosen);
       window.removeEventListener("hashchange", handleHashChange);
       window.removeEventListener("popstate", handleHashChange);
     };
   }, []);
 
   return (
-    <div className={`nextslot-theme marketing-light marketing-site${journeyStarted ? " journey-active" : ""}`} style={{
+    <div className={`nextslot-theme marketing-light marketing-site${journeyStarted ? " journey-active" : ""}${destinationSelected ? " journey-destination-selected" : ""}`} style={{
       minHeight: "100dvh", overflowX: "clip", background: C.bg, color: C.text,
       fontFamily: FONT_BODY, WebkitFontSmoothing: "antialiased",
       scrollbarWidth: "none", msOverflowStyle: "none",
