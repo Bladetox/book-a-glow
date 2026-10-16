@@ -1,4 +1,4 @@
-.home-hero-experience{min-height:calc(100svh - 64px);min-height:calc(100dvh - var(--site-header-height,64px));display:flex;flex-direction:column;position:relative}
+.home-hero-experience{height:calc(100vh - var(--site-header-height,64px));height:calc(100dvh - var(--site-header-height,64px));min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
 .home-hero-experience>.home-hero{flex:1 1 auto;min-height:0;display:flex;align-items:center}
 .home-hero-experience>.home-proof-ticker,.home-hero-experience>[class*=proof-ticker]{flex:0 0 auto}
 .home-journey-nav{position:fixed;inset:0 auto 0 0;z-index:100;width:clamp(88px,10vw,132px);height:100vh;height:100dvh;max-width:none;transform:none;background:rgba(245,240,231,.96);border-right:1px solid rgba(126,96,58,.2);box-shadow:8px 0 24px rgba(66,48,27,.045);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;flex-direction:column}
