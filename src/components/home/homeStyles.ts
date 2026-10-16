@@ -493,15 +493,20 @@ export const HOME_STYLES = `
       background: rgba(184, 139, 82, .12);
       border-left-color: #B88B52;
     }
-    .home-journey-nav__inner { padding: 5px 0; }
+    .home-journey-nav__inner { padding: 12px 24px max(20px, env(safe-area-inset-bottom)); }
     .home-journey-nav__link {
-      min-height: 40px;
-      gap: 5px;
-      padding: 0 6px;
-      font-size: 9px;
+      flex: 1 0 0;
+      min-height: 76px;
+      gap: 8px;
+      padding: 14px 8px;
+      font-size: 14px;
       white-space: normal;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
     }
-    .home-journey-nav__number { font-size: 8px; }
+    .home-journey-nav__number { font-size: 10px; }
     .home-audience { padding: 48px 20px 52px; }
     .home-audience__inner { grid-template-columns: minmax(0, 1fr); gap: 22px; }
     .home-audience__visuals { gap: 7px; }
