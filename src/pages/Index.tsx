@@ -1,5 +1,5 @@
 import { useMarketingShell } from "@/components/home/useMarketingShell";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { HOME_STYLES } from "@/components/home/homeStyles";
@@ -22,7 +22,6 @@ const VALID_DESTINATIONS = new Set(["who-its-for", "how-nextslot-works", "result
 const Index = () => {
   useMarketingShell();
   const [journeyStarted, setJourneyStarted] = useState(false);
-  const revealRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let frame = 0;
@@ -43,7 +42,6 @@ const Index = () => {
     if (VALID_DESTINATIONS.has(window.location.hash.slice(1))) handleHashChange();
     return () => {
       window.cancelAnimationFrame(frame);
-      revealRef.current?.removeEventListener("transitionend", () => undefined);
       window.removeEventListener(JOURNEY_EVENT, startJourney);
       window.removeEventListener("hashchange", handleHashChange);
       window.removeEventListener("popstate", handleHashChange);
@@ -61,7 +59,7 @@ const Index = () => {
       <SiteHeader />
       <main>
         <div className="home-hero-experience"><HeroSection /><ProofTicker /></div>
-        <div ref={revealRef} className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted} inert={!journeyStarted}>
+        <div className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted} inert={!journeyStarted}>
           <div className="home-journey-reveal__content">
             <WhoItsForSection /><FeaturesSection /><RevenueSection /><HeatmapSection />
             <CaseStudySection /><HomePricingPreview /><CTASection /><SiteFooter />
