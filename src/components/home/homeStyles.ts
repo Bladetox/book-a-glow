@@ -157,15 +157,6 @@ export const HOME_STYLES = `
       gap: 12px !important;
     }
   }
-  /* Homepage journey index and editorial chapter layout */
-  .marketing-site [id="who-its-for"],
-  .marketing-site [id="how-nextslot-works"],
-  .marketing-site [id="results"],
-  .marketing-site [id="pricing-preview"],
-  .marketing-site [id="get-started"] {
-    scroll-margin-top: 132px;
-  }
-
   /* Persistent chapter rail: full-height on the left, outside the content flow. */
   .home-audience {
     background: #EDE4D7;
@@ -380,11 +371,6 @@ export const HOME_STYLES = `
     .home-pricing-preview__heading { text-align: left; margin-bottom: 20px; }
     .home-pricing-preview__grid { grid-template-columns: 1fr; gap: 0; }
     .home-pricing-preview__plan { padding: 20px 4px; }
-    .marketing-site [id="who-its-for"],
-    .marketing-site [id="how-nextslot-works"],
-    .marketing-site [id="results"],
-    .marketing-site [id="pricing-preview"],
-    .marketing-site [id="get-started"] { scroll-margin-top: 88px; }
   }
 
 
@@ -405,13 +391,6 @@ export const HOME_STYLES = `
     .home-pricing-preview__plan { padding: 22px; }
   }
 
-
-  @media (prefers-reduced-motion: reduce) {
-    .home-journey-reveal,
-    .home-journey-reveal.is-active {
-      transition: none;
-    }
-  }
 
 
   /* Keep the main story on one warm canvas, with a small number of deliberate chapter shifts. */
@@ -558,7 +537,6 @@ export const HOME_STYLES = `
   }
 
   @media (max-width: 767px) {
-    .home-journey-nav { inset: 0; width: 100%; height: 100vh; height: 100dvh; min-height: 100svh; transform: none; background: rgba(245, 240, 231, .98); border: 0; box-shadow: none; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
     .home-journey-nav__link { min-height: 40px; font-size: 9px; gap: 5px; }
     .home-features,
     .home-revenue,
