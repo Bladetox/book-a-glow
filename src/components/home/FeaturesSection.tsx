@@ -22,8 +22,8 @@ export const FeaturesSection = () => {
         <div className="home-features__grid">
           {GROUPS.map(group => <article className="home-features__card" key={group.stage}>
             <div className="home-features__stage"><span>{group.number}</span><span>{group.stage}</span></div>
-            <div className={`home-features__visual home-features__visual--${group.stage.toLowerCase()}`} role="img" aria-label={`${group.stage} visual placeholder`}>
-              <span className="home-features__visual-label">Visual placeholder</span>
+            <div className={`home-features__visual home-features__visual--${group.stage.toLowerCase()}`} role="img" aria-label={`${group.stage} overview`}>
+              <span className="home-features__visual-label">{group.stage === "Capture" ? "Bookings · Payments · Clients" : group.stage === "See" ? "Revenue · Demand · Returns" : "Patterns · Opportunities · Next steps"}</span>
               <span className="home-features__visual-lines" aria-hidden="true"><i /><i /><i /></span>
             </div>
             <h3><span>{group.title.split(" ")[0]}</span>{" "}{group.title.split(" ").slice(1).join(" ")}</h3>
