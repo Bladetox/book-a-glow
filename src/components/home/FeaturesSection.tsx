@@ -59,11 +59,11 @@ export const FeaturesSection = () => {
             </div>
             <h3><span>{group.title.split(" ")[0]}</span>{" "}{group.title.split(" ").slice(1).join(" ")}</h3>
             <p>{group.description}</p>
+            {group.stage === "Capture" && <p className="home-features__card-footnote"><span aria-hidden="true">*</span> Starter plan workflow.</p>}
           </article>)}
         </div>
         <CarouselDots trackId="home-features-track" count={GROUPS.length} label="How NextSlot works" />
         <p className="home-features__swipe-hint">Swipe to explore all three stages</p>
-        <p className="home-features__footnote"><span aria-hidden="true">*</span> Starter plan workflow.</p>
       </div>
     </section>
   );
