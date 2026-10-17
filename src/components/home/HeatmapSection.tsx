@@ -16,12 +16,12 @@ const HEAT_ROWS = [
 
 const heatColor = (v: number) =>
   v < 4
-    ? "#302D29"
+    ? C.emDeep
     : v < 8
-      ? "#74695C"
+      ? C.em
       : v < 12
-        ? "#B88B52"
-        : "#E8D6B9";
+        ? C.emMid
+        : C.emLight;
 
 const TIME_LABELS = ["9am", "11am", "1pm", "3pm", "5pm"];
 
@@ -99,7 +99,7 @@ export const HeatmapSection = () => {
                       justifyContent: "center",
                     }}
                   >
-                    <span style={{ fontSize: 10, color: v >= 12 ? "#191918" : "#FFFFFF", fontWeight: 700 }}>{v}</span>
+                    <span style={{ fontSize: 10, color: v >= 8 ? "#191918" : "#FFFFFF", fontWeight: 700 }}>{v}</span>
                   </div>
                 ))}
               </div>
