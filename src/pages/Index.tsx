@@ -27,7 +27,7 @@ const Index = () => {
   useEffect(() => {
     let frame = 0;
     const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const startJourney = () => setJourneyStarted(true);
+    const startJourney = () => { setJourneyStarted(true); setDestinationSelected(false); };
     const destinationChosen = () => setDestinationSelected(true);
     const handleHashChange = () => {
       const id = window.location.hash.slice(1);
