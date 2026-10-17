@@ -899,7 +899,7 @@ export const HOME_STYLES = `
   .home-insights > .home-revenue > div,
   .home-insights > .home-heatmap > div {
     width: 100% !important;
-    max-width: 1200px !important;
+    max-width: 1560px !important;
     margin-inline: auto !important;
     box-sizing: border-box !important;
   }
@@ -932,14 +932,13 @@ export const HOME_STYLES = `
     font-weight: 700 !important;
     pointer-events: none !important;
   }
-  .home-features__footnote {
-    margin: 16px 0 0 !important;
+  .home-features__card-footnote {
+    margin: 10px 0 0 !important;
     color: #74695C !important;
-    font-size: 12px !important;
-    line-height: 1.5 !important;
-    text-align: center !important;
+    font-size: 11px !important;
+    line-height: 1.45 !important;
   }
-  .home-features__footnote span { color: #94672F !important; font-weight: 700 !important; }
+  .home-features__card-footnote span { color: #94672F !important; font-weight: 700 !important; }
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
