@@ -12,14 +12,16 @@ export const CaseStudySection = () => {
     <section
       id="results"
       style={{
-        background: C.bg,
+        background: C.s1,
         padding: isMobile ? "40px 16px 44px" : "64px 40px 68px",
         overflow: "hidden",
+        borderTop: `1px solid ${C.border}`,
+        borderBottom: `1px solid ${C.border}`,
       }}
     >
       <div style={{ maxWidth: 920, margin: "0 auto" }}>
         <header style={{ maxWidth: 720, margin: "0 auto 28px", textAlign: "center" }}>
-          <Eyebrow text="Who it has worked for" />
+          <Eyebrow text="Case study" />
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 30 : 44, fontWeight: 800, lineHeight: 1.08, letterSpacing: "-0.03em", color: C.text, margin: "0 auto" }}>
             See what changed for <span style={{ color: C.goldDim }}>PhenomeBeauty.</span>
           </h2>
@@ -54,7 +56,7 @@ export const CaseStudySection = () => {
           </div>
 
           <div>
-<blockquote
+            <blockquote
               style={{
                 fontFamily: FONT_DISPLAY,
                 fontSize: isMobile ? 24 : 34,
@@ -77,13 +79,15 @@ export const CaseStudySection = () => {
           style={{
             margin: isMobile ? "28px auto 0" : "40px auto 0",
             maxWidth: 760,
-            background: C.s2,
-            border: `1px solid ${C.border2}`,
+            background: "#191918",
+            color: "#FFFFFF",
+            border: "1px solid rgba(255,255,255,.12)",
             borderRadius: 18,
             padding: isMobile ? "20px 18px" : "24px 28px",
+            boxShadow: "0 18px 40px rgba(24,22,19,.14)",
           }}
         >
-          <RevenueChart />
+          <RevenueChart dark />
         </div>
 
         <div style={{ maxWidth: 680, margin: isMobile ? "28px auto 0" : "32px auto 0", textAlign: "center" }}>
