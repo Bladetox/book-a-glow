@@ -16,12 +16,12 @@ const HEAT_ROWS = [
 
 const heatColor = (v: number) =>
   v < 4
-    ? "rgba(126,96,58,0.07)"
+    ? "#302D29"
     : v < 8
-      ? "rgba(184,139,82,0.18)"
+      ? "#74695C"
       : v < 12
-        ? "rgba(184,139,82,0.34)"
-        : "rgba(184,139,82,0.58)";
+        ? "#B88B52"
+        : "#E8D6B9";
 
 const TIME_LABELS = ["9am", "11am", "1pm", "3pm", "5pm"];
 
@@ -63,28 +63,29 @@ export const HeatmapSection = () => {
         >
           <div
             style={{
-              background: C.s2,
+              background: "#191918",
               borderRadius: 20,
               padding: isMobile ? "20px 16px" : "28px 24px",
-              border: `1px solid ${C.border2}`,
-              boxShadow: "0 10px 28px rgba(66,48,27,0.10)",
+              border: "1px solid rgba(255,255,255,.14)",
+              boxShadow: "0 18px 40px rgba(24,22,19,.16)",
+              color: "#FFFFFF",
               fontFamily: FONT_BODY,
             }}
           >
-            <div style={{ fontSize: 12, color: C.text, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: "#F8F4ED", marginBottom: 16 }}>
               Booking demand by day &amp; time
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 6 }}>
               <div />
               {TIME_LABELS.map((t) => (
-                <div key={t} style={{ fontSize: 10, color: C.text, textAlign: "center", fontWeight: 600 }}>{t}</div>
+                <div key={t} style={{ fontSize: 10, color: "#D9D0C4", textAlign: "center", fontWeight: 600 }}>{t}</div>
               ))}
             </div>
 
             {HEAT_ROWS.map((row) => (
               <div key={row.day} style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 4 }}>
-                <div style={{ fontSize: 11, color: C.text, fontWeight: 600, display: "flex", alignItems: "center" }}>{row.day}</div>
+                <div style={{ fontSize: 11, color: "#F8F4ED", fontWeight: 600, display: "flex", alignItems: "center" }}>{row.day}</div>
                 {row.slots.map((v, i) => (
                   <div
                     key={i}
@@ -92,19 +93,19 @@ export const HeatmapSection = () => {
                       height: isMobile ? 26 : 34,
                       borderRadius: 6,
                       background: heatColor(v),
-                      border: "1px solid rgba(126,96,58,0.08)",
+                      border: "1px solid rgba(255,255,255,.08)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <span style={{ fontSize: 10, color: C.text, fontWeight: 600 }}>{v}</span>
+                    <span style={{ fontSize: 10, color: v >= 12 ? "#191918" : "#FFFFFF", fontWeight: 700 }}>{v}</span>
                   </div>
                 ))}
               </div>
             ))}
 
-            <div style={{ marginTop: 14, fontSize: 12, color: C.text }}>
+            <div style={{ marginTop: 14, fontSize: 12, color: "#F8F4ED" }}>
               Saturday 11am is the peak slot · 18 bookings on average
             </div>
           </div>
