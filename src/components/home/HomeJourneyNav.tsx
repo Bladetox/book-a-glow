@@ -38,12 +38,38 @@ export const HomeJourneyNav = ({ enabled }: HomeJourneyNavProps) => {
     if (!enabled) return;
     const sections = ITEMS.map(({ id }) => document.getElementById(id)).filter((section): section is HTMLElement => Boolean(section));
     if (!sections.length) return;
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible) setActiveId(visible.target.id);
-    }, { rootMargin: "-16% 0px -64% 0px", threshold: [0, 0.15, 0.35, 0.6] });
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+
+    let frame = 0;
+    const updateActiveSection = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        // Use a stable reading line instead of choosing among only the entries reported in one
+        // IntersectionObserver callback. This avoids leaving an old destination highlighted
+        // when the previous section exits before the next section's ratio crosses a threshold.
+        const activationLine = Math.max(96, Math.min(window.innerHeight * 0.28, 220));
+        let currentId = sections[0].id;
+        for (const section of sections) {
+          if (section.getBoundingClientRect().top <= activationLine) currentId = section.id;
+          else break;
+        }
+        setActiveId((previousId) => previousId === currentId ? previousId : currentId);
+      });
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
+    window.addEventListener("orientationchange", updateActiveSection);
+    window.addEventListener("hashchange", updateActiveSection);
+    window.addEventListener("popstate", updateActiveSection);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+      window.removeEventListener("orientationchange", updateActiveSection);
+      window.removeEventListener("hashchange", updateActiveSection);
+      window.removeEventListener("popstate", updateActiveSection);
+    };
   }, [enabled]);
 
   useEffect(() => {

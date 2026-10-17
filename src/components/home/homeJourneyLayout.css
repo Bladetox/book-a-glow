@@ -35,14 +35,19 @@
 @keyframes journeyOverlayEnter{from{transform:translateX(100%);opacity:.35}to{transform:translateX(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){.home-journey-reveal,.home-journey-reveal.is-active,.home-journey-nav,.home-journey-nav.is-rail,.home-journey-nav.is-intro-overlay,.home-journey-nav__link{animation:none!important;transition:none!important}.home-journey-nav.is-rail,.home-journey-nav.is-intro-overlay{transform:none}}
 
-/* Mobile third layer: a viewport-level menu above the page and journey rail. */
+/* Mobile third layer: modal menu above the page and journey rail. */
 @media(max-width:767px){
-/* A filtered header creates a containing block for fixed descendants and traps their stacking order. */
-.marketing-site.journey-destination-selected .site-header{z-index:160;background:transparent;border-bottom-color:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
-.marketing-site.journey-destination-selected .site-header__menu-button{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 32px);z-index:151;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;width:48px;height:48px;min-width:48px;min-height:48px;padding:0;border:1px solid rgba(126,96,58,.30);border-radius:999px;background:rgba(245,240,231,.94);color:#51483D;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 8px 24px rgba(66,48,27,.10)}
-.marketing-site.journey-destination-selected .site-header__mobile-menu{position:fixed;inset:0;z-index:150;width:100%;height:auto;min-height:100vh;min-height:100dvh;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top) + 88px) 24px calc(env(safe-area-inset-bottom) + 24px);background:rgba(245,240,231,.86);-webkit-backdrop-filter:blur(24px) saturate(115%);backdrop-filter:blur(24px) saturate(115%);isolation:isolate}
-.marketing-site.journey-destination-selected .site-header__mobile-menu nav,.marketing-site.journey-destination-selected .site-header__mobile-menu>div{width:100%;max-width:480px;margin-left:auto;margin-right:auto}
-.marketing-site.journey-destination-selected .site-header__mobile-menu .marketing-cta{width:100%;min-height:48px;padding:12px 20px;white-space:normal}
+/* Keep the header surface behind the brand/control while scrolling. Remove its backdrop filter so
+   the fixed menu remains viewport-relative rather than being trapped by the header's filter. */
+.marketing-site.journey-destination-selected .site-header{z-index:160;background:rgba(245,240,231,.96);border-bottom-color:rgba(126,96,58,.16);-webkit-backdrop-filter:none;backdrop-filter:none}
+.marketing-site.journey-destination-selected .site-header.is-mobile-menu-open{background:transparent;border-bottom-color:transparent}
+.marketing-site.journey-destination-selected .site-header__menu-button{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);z-index:151;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;width:48px;height:48px;min-width:48px;min-height:48px;padding:0;border:1px solid rgba(126,96,58,.30);border-radius:999px;background:rgba(245,240,231,.94);color:#51483D;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 8px 24px rgba(66,48,27,.10)}
+.marketing-site.journey-destination-selected .site-header__menu-button.is-menu-trigger-hidden{visibility:hidden;pointer-events:none}
+.marketing-site.journey-destination-selected .site-header__mobile-menu{position:fixed;inset:0;z-index:150;width:100%;height:auto;min-height:100vh;min-height:100dvh;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top) + 88px) 24px calc(env(safe-area-inset-bottom) + 24px);background:rgba(245,240,231,.82);-webkit-backdrop-filter:blur(24px) saturate(115%);backdrop-filter:blur(24px) saturate(115%);isolation:isolate}
+.marketing-site.journey-destination-selected .site-header__menu-button--close{position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:50%;z-index:2;transform:translateX(-50%)}
+.marketing-site.journey-destination-selected .site-header__mobile-menu nav{width:100%;max-width:480px;margin-left:auto;margin-right:auto}
+.marketing-site.journey-destination-selected .site-header__mobile-menu>div{width:100%;max-width:480px;box-sizing:border-box;margin-left:auto;margin-right:auto;text-align:center}
+.marketing-site.journey-destination-selected .site-header__mobile-menu .marketing-cta{width:auto;min-width:0;min-height:48px;padding:12px 20px;white-space:normal}
 .marketing-site.journey-destination-selected .site-header__mobile-menu a:focus-visible{outline:2px solid #94672F;outline-offset:3px}
 .marketing-site.journey-destination-selected .home-journey-reveal__content>.home-features,
 .marketing-site.journey-destination-selected .home-journey-reveal__content>.home-revenue,

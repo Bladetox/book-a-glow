@@ -14,6 +14,8 @@ const navLinks = [
 const SiteHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const headerRowRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
 
@@ -21,7 +23,11 @@ const SiteHeader = () => {
     if (!isMenuOpen) return;
     const menu = mobileMenuRef.current;
     const trigger = menuButtonRef.current;
-    if (!menu || !trigger) return;
+    const closeButton = menuCloseButtonRef.current;
+    const header = menu?.closest<HTMLElement>(".site-header");
+    const headerRow = headerRowRef.current;
+    const site = header?.closest<HTMLElement>(".marketing-site");
+    if (!menu || !trigger || !closeButton || !header || !headerRow) return;
 
     const scrollY = window.scrollY;
     const previousBodyStyles = {
@@ -37,10 +43,24 @@ const SiteHeader = () => {
     document.body.style.right = "0";
     document.body.style.width = "100%";
 
+    // Keep the visible page underneath the translucent menu, but remove it from interaction
+    // and the accessibility tree while the modal is open.
+    const inertTargets: HTMLElement[] = [headerRow];
+    if (site) {
+      for (const child of Array.from(site.children)) {
+        if (child !== header && child instanceof HTMLElement) inertTargets.push(child);
+      }
+    }
+    const previousInert = new Map<HTMLElement, boolean>();
+    inertTargets.forEach((element) => {
+      previousInert.set(element, element.inert);
+      element.inert = true;
+    });
+
     const focusable = () => Array.from(menu.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
     )).filter((element) => element.getAttribute("aria-hidden") !== "true");
-    window.requestAnimationFrame(() => focusable()[0]?.focus());
+    const focusFrame = window.requestAnimationFrame(() => closeButton.focus());
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -64,18 +84,22 @@ const SiteHeader = () => {
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", handleKeyDown);
+      previousInert.forEach((wasInert, element) => {
+        if (element.isConnected) element.inert = wasInert;
+      });
       Object.assign(document.body.style, previousBodyStyles);
       window.scrollTo(0, scrollY);
-      trigger.focus();
+      if (trigger.isConnected) trigger.focus();
     };
   }, [isMenuOpen]);
   const isActive = (to: string) => { const path = to.split("#")[0]; return pathname === path || pathname.startsWith(path + "/"); };
 
   return (
-    <header className="site-header">
+    <header className={`site-header${isMenuOpen ? " is-mobile-menu-open" : ""}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div ref={headerRowRef} className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="NextSlot">
             <img src="/web-app-manifest-192x192.png" alt="NextSlot logo" className="h-9 w-9 object-contain rounded-lg shrink-0 transition-transform duration-200 group-hover:scale-105" />
             <span className="site-header__wordmark site-wordmark text-base font-bold tracking-tight leading-none"><span className="site-header__wordmark-next">Next</span><span className="site-header__wordmark-slot">Slot</span></span>
@@ -93,11 +117,12 @@ const SiteHeader = () => {
             <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
           </div>
 
-          <button ref={menuButtonRef} type="button" className="site-header__menu-button md:hidden p-2 rounded-lg" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label={isMenuOpen ? "Close menu" : "Open menu"} aria-expanded={isMenuOpen} aria-controls="nextslot-mobile-menu">{isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
+          <button ref={menuButtonRef} type="button" className={`site-header__menu-button md:hidden p-2 rounded-lg${isMenuOpen ? " is-menu-trigger-hidden" : ""}`} onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Open menu" aria-expanded={isMenuOpen} aria-controls="nextslot-mobile-menu" aria-hidden={isMenuOpen ? true : undefined} tabIndex={isMenuOpen ? -1 : 0}><Menu className="h-5 w-5" /></button>
         </div>
 
         {isMenuOpen && (
           <div ref={mobileMenuRef} id="nextslot-mobile-menu" role="dialog" aria-modal="true" aria-label="Site navigation" className="site-header__mobile-menu md:hidden py-4 animate-fade-in" onClick={(event) => { if (event.target === event.currentTarget) setIsMenuOpen(false); }}>
+            <button ref={menuCloseButtonRef} type="button" className="site-header__menu-button site-header__menu-button--close" onClick={() => setIsMenuOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
             <nav className="flex flex-col gap-1 mb-4" aria-label="Mobile navigation">
               {navLinks.map(({ to, label }) => <Link key={to} to={to} className="site-header__mobile-link px-3 py-2.5 rounded-lg text-sm font-medium" onClick={() => setIsMenuOpen(false)}>{label}</Link>)}
               <Link to="/login" className="site-header__mobile-link px-3 py-2.5 rounded-lg text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Login</Link>
