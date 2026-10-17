@@ -14,14 +14,15 @@ const HEAT_ROWS = [
   { day: "Sun", slots: [3, 4, 2, 2, 1] },
 ];
 
+// Higher booking counts use deeper greens; lower counts use lighter greens.
 const heatColor = (v: number) =>
   v < 4
-    ? C.emDeep
+    ? C.emLight
     : v < 8
-      ? C.em
+      ? C.emMid
       : v < 12
-        ? C.emMid
-        : C.emLight;
+        ? C.em
+        : C.emDeep;
 
 const TIME_LABELS = ["9am", "11am", "1pm", "3pm", "5pm"];
 
@@ -99,7 +100,7 @@ export const HeatmapSection = () => {
                       justifyContent: "center",
                     }}
                   >
-                    <span style={{ fontSize: 10, color: v >= 8 ? "#191918" : "#FFFFFF", fontWeight: 700 }}>{v}</span>
+                    <span style={{ fontSize: 10, color: v < 8 ? "#191918" : "#FFFFFF", fontWeight: 700 }}>{v}</span>
                   </div>
                 ))}
               </div>
